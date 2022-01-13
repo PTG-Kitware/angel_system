@@ -1,7 +1,8 @@
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw
 import queue
 import socket
+import struct
 import time
 import threading
 import torch
@@ -12,9 +13,10 @@ from smqtk_detection.impls.detect_image_objects.resnet_frcnn import ResNetFRCNN
 
 HOST = '192.168.1.89'  # Standard loopback interface address (localhost)
 PORT = 11000        # Port to listen on (non-privileged ports are > 1023)
+IMAGE_FILENAME = "C:\\Users\\josh.anderson\\Desktop\\hololens_image.jpeg"
 
-def server_thread(image_queue):
-        # create TCP socket
+def server_thread(image_queue, bb_queue):
+    # create TCP socket
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind((HOST, PORT))
     s.settimeout(120)
@@ -68,6 +70,28 @@ def server_thread(image_queue):
         # send image to the queue
         image_queue.put(screenshot_data)
 
+        # try and get the bounding box result
+        object_type = bb_queue.get()
+        bounding_box = bb_queue.get()
+        print("Got bounding box", bounding_box, object_type)
+        print("Min vertex", list(bounding_box.min_vertex))
+        print("Max vertex", list(bounding_box.max_vertex))
+        
+        # convert to bytes
+        object_type = bytearray(struct.pack("I", object_type))
+        min_vertex0 = bytearray(struct.pack("f", bounding_box.min_vertex[0])) 
+        min_vertex1 = bytearray(struct.pack("f", bounding_box.min_vertex[1]))  
+        max_vertex0 = bytearray(struct.pack("f", bounding_box.max_vertex[0]))  
+        max_vertex1 = bytearray(struct.pack("f", bounding_box.max_vertex[1]))  
+
+        vertex_bytes = object_type + min_vertex0 + min_vertex1 + max_vertex0 + max_vertex1
+
+        # send result via socket
+        bytes_sent = conn.send(vertex_bytes)
+
+        print("Sent bytes", bytes_sent)
+
+
         '''
         image = screenshot_data
 
@@ -96,11 +120,9 @@ def server_thread(image_queue):
         plot.imshow(image_tensor.permute(1, 2, 0))
         plot.show()
         '''
-        
 
 
-
-def detector_thread(image_queue):
+def detector_thread(image_queue, bb_queue):
     print("Hello from detector thread")
 
     # instantiate detector
@@ -114,6 +136,7 @@ def detector_thread(image_queue):
         try:
             image = image_queue.get(timeout=60)
         except:
+            print("Timed out waiting for image")
             break
 
         width = ((image[0] & 0xFF << 24) |
@@ -135,7 +158,7 @@ def detector_thread(image_queue):
         image_np = np.flip(image_np, axis=0).copy()
 
         im = Image.fromarray(image_np.astype(np.uint8))
-        im.save("C:\\Users\\josh.anderson\\Desktop\\hololens_image.jpeg")
+        im.save(IMAGE_FILENAME)
 
         image_np = (image_np / 255.0).astype(np.float32)
         image_tensor = torch.from_numpy(image_np.transpose(2, 0, 1))
@@ -149,7 +172,6 @@ def detector_thread(image_queue):
 
         # send to detector
         detections = detector.detect_objects(image_tensor)
-
         for detection in detections:
             #print("detection", detection)
             for i in detection:
@@ -161,23 +183,35 @@ def detector_thread(image_queue):
 
                 if list(class_dict_sorted.items())[0][1] > 0.90:
                     print("Found something:", list(class_dict_sorted.items())[0], bounding_box)
+                
+                    source_img = Image.open(IMAGE_FILENAME).convert("RGB")
+
+                    draw = ImageDraw.Draw(source_img)
+                    draw.rectangle(((bounding_box.min_vertex[0], bounding_box.min_vertex[1]),
+                                    (bounding_box.max_vertex[0], bounding_box.max_vertex[1])),
+                                    outline="black", width=10)
+
+                    source_img.save(IMAGE_FILENAME, "JPEG")
+
+                    # send bounding box coordinates back
+                    #if list(class_dict_sorted.items())[0][0] == 76:
+                    bb_queue.put(list(class_dict_sorted.items())[0][0])
+                    bb_queue.put(bounding_box)
                 else:
                     #print("Results sorted:", list(class_dict_sorted.items())[:5])
                     #print(list(class_dict_sorted.items())[0][1])
                     pass
 
-        #print("results:", results[0])
-        #print("results:", results[2])
-
 
 def main():
-    q = queue.Queue()
+    image_q = queue.Queue()
+    bb_q = queue.Queue()
     
-    server_t = threading.Thread(target=server_thread, args=(q, ))
+    server_t = threading.Thread(target=server_thread, args=(image_q, bb_q, ))
     server_t.daemon = True
     server_t.start()
 
-    detector_t = threading.Thread(target=detector_thread, args=(q, ))
+    detector_t = threading.Thread(target=detector_thread, args=(image_q, bb_q, ))
     detector_t.daemon = True
     detector_t.start()
 

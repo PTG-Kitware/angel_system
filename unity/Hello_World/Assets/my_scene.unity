@@ -211,6 +211,10 @@ PrefabInstance:
     m_TransformParent: {fileID: 0}
     m_Modifications:
     - target: {fileID: 676094571621763008, guid: 1536741d94dedac47bd9697f4eb22a45, type: 3}
+      propertyPath: maxLines
+      value: 36
+      objectReference: {fileID: 0}
+    - target: {fileID: 676094571621763008, guid: 1536741d94dedac47bd9697f4eb22a45, type: 3}
       propertyPath: debugAreaText
       value: 
       objectReference: {fileID: 949346326}
@@ -457,13 +461,25 @@ PrefabInstance:
   m_Modification:
     m_TransformParent: {fileID: 1460581920}
     m_Modifications:
+    - target: {fileID: 2167203843161592031, guid: 0b303b05d16ccbf4b86c7e7cb8d26d75, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.2131645
+      objectReference: {fileID: 0}
     - target: {fileID: 2167203843369421108, guid: 0b303b05d16ccbf4b86c7e7cb8d26d75, type: 3}
       propertyPath: m_Name
       value: DebugPanel
       objectReference: {fileID: 0}
     - target: {fileID: 2167203843369421109, guid: 0b303b05d16ccbf4b86c7e7cb8d26d75, type: 3}
       propertyPath: m_RootOrder
-      value: 2
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2167203843369421109, guid: 0b303b05d16ccbf4b86c7e7cb8d26d75, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 0.6
+      objectReference: {fileID: 0}
+    - target: {fileID: 2167203843369421109, guid: 0b303b05d16ccbf4b86c7e7cb8d26d75, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 0.6
       objectReference: {fileID: 0}
     - target: {fileID: 2167203843369421109, guid: 0b303b05d16ccbf4b86c7e7cb8d26d75, type: 3}
       propertyPath: m_LocalPosition.x
@@ -471,7 +487,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2167203843369421109, guid: 0b303b05d16ccbf4b86c7e7cb8d26d75, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.3
+      value: 0.2
       objectReference: {fileID: 0}
     - target: {fileID: 2167203843369421109, guid: 0b303b05d16ccbf4b86c7e7cb8d26d75, type: 3}
       propertyPath: m_LocalPosition.z
@@ -505,7 +521,20 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    - target: {fileID: 6014013532491843453, guid: 0b303b05d16ccbf4b86c7e7cb8d26d75, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 0.7229916
+      objectReference: {fileID: 0}
+    - target: {fileID: 6014013532491843453, guid: 0b303b05d16ccbf4b86c7e7cb8d26d75, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 0.6
+      objectReference: {fileID: 0}
+    - target: {fileID: 6438007448947064786, guid: 0b303b05d16ccbf4b86c7e7cb8d26d75, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 606.7765
+      objectReference: {fileID: 0}
+    m_RemovedComponents:
+    - {fileID: 2167203843935009059, guid: 0b303b05d16ccbf4b86c7e7cb8d26d75, type: 3}
   m_SourcePrefab: {fileID: 100100000, guid: 0b303b05d16ccbf4b86c7e7cb8d26d75, type: 3}
 --- !u!1 &1935261248
 GameObject:
@@ -524,7 +553,6 @@ GameObject:
   - component: {fileID: 1935261253}
   - component: {fileID: 1935261255}
   - component: {fileID: 1935261259}
-  - component: {fileID: 1935261257}
   - component: {fileID: 1935261258}
   m_Layer: 0
   m_Name: SimpleButton
@@ -541,7 +569,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1935261248}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0.1}
+  m_LocalPosition: {x: 0.3, y: 0.1, z: 0.6}
   m_LocalScale: {x: 0.1, y: 0.10000002, z: 0.10000002}
   m_Children: []
   m_Father: {fileID: 1460581920}
@@ -836,18 +864,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   routingTarget: {fileID: 1935261255}
   InteractableOnClick: 1
---- !u!114 &1935261257
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1935261248}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: acfc1a0ada0f0b9498e22f836ea92f3d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!114 &1935261258
 MonoBehaviour:
   m_ObjectHideFlags: 0
