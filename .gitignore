@@ -34,7 +34,6 @@
 /unity/Hello_World/.consulo/
 *.csproj
 *.unityproj
-*.sln
 *.suo
 *.tmp
 *.user
