@@ -1,7 +1,5 @@
 # HoloLens2-ResearchMode-Unity
-Unity Plugin for using research mode functionality in HoloLens 2. Modified based on [HoloLens2ForCV](https://github.com/microsoft/HoloLens2ForCV).
-
-![Depth Map Example](https://github.com/petergu684/HoloLens2-ResearchMode-Unity/blob/master/DepthMapExample.jpg)
+Unity Plugin for using research mode functionality in HoloLens 2. Modified based on [HoloLens2-ResearchMode-Unity](https://github.com/petergu684/HoloLens2-ResearchMode-Unity).
 
 Skeleton to wrap HoloLens 2 research mode api into Windows Runtime extension. 
 
