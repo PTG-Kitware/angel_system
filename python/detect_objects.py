@@ -8,7 +8,11 @@ import threading
 import torch
 from torchvision import datasets, transforms
 
+import cv2
+
 from matplotlib import pyplot as plot
+#from matplotlib.animation import FuncAnimation
+
 from smqtk_detection.impls.detect_image_objects.resnet_frcnn import ResNetFRCNN
 
 HOST = '192.168.1.89'  # Standard loopback interface address (localhost)
@@ -43,8 +47,11 @@ def server_thread(image_queue, bb_queue):
         start_time = time.time()
 
         if data[0:4] != b'\x1a\xcf\xfc\x1d':
-            print("Invalid sync pattern")
+            print("Invalid sync pattern", data[0:4])
+            print(data[0:4].decode())
             break
+
+        #print("got sync")
 
         total_message_length = list(bytes(data[4:8]))
         total_message_length = ((total_message_length[0] << 24) |
@@ -52,74 +59,56 @@ def server_thread(image_queue, bb_queue):
                                 (total_message_length[2] << 8) | 
                                 (total_message_length[3] << 0)) 
 
+        #print("message length", total_message_length)
+
         # read the rest of the message from the socket using the given length
         screenshot_data = []
         bytes_read = 0
-        read_size = 4096
+        default_read_size = 8192
         while (bytes_read != total_message_length):
-            if read_size > total_message_length:
+            bytes_remaining = total_message_length - bytes_read
+            if default_read_size > bytes_remaining:
+                read_size = bytes_remaining
+            elif default_read_size > total_message_length:
                 read_size = total_message_length
+            else:
+                read_size = default_read_size
 
             message = list(conn.recv(read_size))
             bytes_read += len(message)
+            #print("bytes_read", bytes_read)
             screenshot_data.extend(message)
 
         end_time = time.time()
         print("Read %d bytes in %f seconds" % (bytes_read, end_time - start_time))
 
+        
         # send image to the queue
         image_queue.put(screenshot_data)
 
         # try and get the bounding box result
-        object_type = bb_queue.get()
-        bounding_box = bb_queue.get()
-        print("Got bounding box", bounding_box, object_type)
-        print("Min vertex", list(bounding_box.min_vertex))
-        print("Max vertex", list(bounding_box.max_vertex))
-        
-        # convert to bytes
-        object_type = bytearray(struct.pack("I", object_type))
-        min_vertex0 = bytearray(struct.pack("f", bounding_box.min_vertex[0])) 
-        min_vertex1 = bytearray(struct.pack("f", bounding_box.min_vertex[1]))  
-        max_vertex0 = bytearray(struct.pack("f", bounding_box.max_vertex[0]))  
-        max_vertex1 = bytearray(struct.pack("f", bounding_box.max_vertex[1]))  
+        vertex_bytes = bytearray()
+        detections = bb_queue.get(timeout=20.0)
+        for detection in detections:
+            object_type = detection[0]
+            bounding_box = detection[1]
+            print("Got bounding box", bounding_box, object_type)
+            print("Min vertex", list(bounding_box.min_vertex))
+            print("Max vertex", list(bounding_box.max_vertex))
 
-        vertex_bytes = object_type + min_vertex0 + min_vertex1 + max_vertex0 + max_vertex1
+            # convert to bytes
+            object_type = bytearray(struct.pack("I", object_type))
+            min_vertex0 = bytearray(struct.pack("f", bounding_box.min_vertex[0])) 
+            min_vertex1 = bytearray(struct.pack("f", bounding_box.min_vertex[1]))  
+            max_vertex0 = bytearray(struct.pack("f", bounding_box.max_vertex[0]))  
+            max_vertex1 = bytearray(struct.pack("f", bounding_box.max_vertex[1]))  
+
+            vertex_bytes += object_type + min_vertex0 + min_vertex1 + max_vertex0 + max_vertex1
 
         # send result via socket
         bytes_sent = conn.send(vertex_bytes)
 
         print("Sent bytes", bytes_sent)
-
-
-        '''
-        image = screenshot_data
-
-        width = ((image[0] & 0xFF << 24) |
-                 (image[1] << 16) | 
-                 (image[2] << 8) | 
-                 (image[3] << 0)) 
-        height = ((image[4] << 24) |
-                 (image[5] << 16) | 
-                 (image[6] << 8) | 
-                 (image[7] << 0)) 
-
-        image = image[8:]
-
-        # convert to np-array
-        image_np = np.array(image)
-
-        print("image_np stuff", image_np.shape, image_np.dtype, image_np[0:12])
-
-        image_np = np.reshape(image_np, (height, width, 3))
-        image_np = np.flip(image_np, axis=0).copy()
-
-        print("image_np stuff", image_np.shape, image_np.dtype)
-
-        image_tensor = torch.from_numpy(image_np.transpose(2, 0, 1))
-        plot.imshow(image_tensor.permute(1, 2, 0))
-        plot.show()
-        '''
 
 
 def detector_thread(image_queue, bb_queue):
@@ -154,7 +143,7 @@ def detector_thread(image_queue, bb_queue):
         image_np = np.array(image)
         print("image_np stuff", image_np.shape, image_np.dtype, height, width)
 
-        image_np = np.reshape(image_np, (height, width, 3))
+        image_np = np.reshape(image_np, (height, width, 4))
         image_np = np.flip(image_np, axis=0).copy()
 
         im = Image.fromarray(image_np.astype(np.uint8))
@@ -172,6 +161,8 @@ def detector_thread(image_queue, bb_queue):
 
         # send to detector
         detections = detector.detect_objects(image_tensor)
+
+        threshold_detections = []
         for detection in detections:
             #print("detection", detection)
             for i in detection:
@@ -182,7 +173,7 @@ def detector_thread(image_queue, bb_queue):
                 #print("Results sorted:", list(class_dict_sorted.items())[:5])
 
                 if list(class_dict_sorted.items())[0][1] > 0.90:
-                    print("Found something:", list(class_dict_sorted.items())[0], bounding_box)
+                    #print("Found something:", list(class_dict_sorted.items())[0], bounding_box)
                 
                     source_img = Image.open(IMAGE_FILENAME).convert("RGB")
 
@@ -193,14 +184,14 @@ def detector_thread(image_queue, bb_queue):
 
                     source_img.save(IMAGE_FILENAME, "JPEG")
 
-                    # send bounding box coordinates back
-                    #if list(class_dict_sorted.items())[0][0] == 76:
-                    bb_queue.put(list(class_dict_sorted.items())[0][0])
-                    bb_queue.put(bounding_box)
+                    threshold_detections.append((list(class_dict_sorted.items())[0][0],
+                                                 bounding_box))
                 else:
                     #print("Results sorted:", list(class_dict_sorted.items())[:5])
                     #print(list(class_dict_sorted.items())[0][1])
                     pass
+
+        bb_queue.put(threshold_detections)
 
 
 def main():
@@ -218,7 +209,7 @@ def main():
     server_t.join()
     detector_t.join()
     
-    #server_thread(q)
+    #server_thread(image_q, bb_q)
 
 if __name__ == "__main__":
     main()
