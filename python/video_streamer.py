@@ -122,7 +122,7 @@ def server_thread():
         idx += 1
         '''
 
-        #im1.set_data(image_np)
+        im1.set_data(image_np)
 
         plot.gcf().canvas.flush_events()
         plot.show(block=False)
