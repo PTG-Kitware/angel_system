@@ -6,7 +6,6 @@
 #include <stdio.h>
 #include <thread>
 #include <iostream>
-#include <opencv2/opencv2.hpp>
 
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/string.hpp"
