@@ -18,11 +18,6 @@ using UnityEngine.Windows.WebCam;
 using DilmerGames.Core.Singletons;
 using TMPro;
 using System.Runtime.InteropServices;
-//using ROS2;
-//using ROS2.Utils;
-//using sensor_msgs.msg;
-//using std_msgs.msg;
-
 
 #if ENABLE_WINMD_SUPPORT
 using HL2UnityPlugin;
@@ -95,8 +90,6 @@ public class CaptureSensorData : MonoBehaviour
     void Start()
     {
         Logger log = logger();
-
-        //RCLdotnet.Init();
 
 #if ENABLE_WINMD_SUPPORT
         // Configure research mode
@@ -209,11 +202,6 @@ public class CaptureSensorData : MonoBehaviour
 
     public void LFCameraThread()
     {
-        //INode node = RCLdotnet.CreateNode("LFTalker");
-        //IPublisher<std_msgs.msg.ByteMultiArray> framePub = node.CreatePublisher<std_msgs.msg.ByteMultiArray>("LFFrames", QosProfile.Profile.SensorData);
-
-        //std_msgs.msg.ByteMultiArray rosMsg = new std_msgs.msg.ByteMultiArray();
-
 #if ENABLE_WINMD_SUPPORT
         while (true)
         {
@@ -253,19 +241,6 @@ public class CaptureSensorData : MonoBehaviour
                     // Send the data through the socket.
                     tcpStream1.Write(frame, 0, frame.Length);
                     tcpStream1.Flush();
-
-                    //rosMsg.Data = new List<byte>(framePayload);
-                    //rosMsg.Data = "Hello world";
-                    //Stopwatch stopWatch = new Stopwatch();
-                    //stopWatch.Start();
-                    //framePub.Publish(rosMsg);
-                    //stopWatch.Stop();
-
-                    // Get the elapsed time as a TimeSpan value.
-                    //TimeSpan t = stopWatch.Elapsed;
-                    // Format and display the TimeSpan value.
-                    //string elapsedTime = String.Format("{0:00}:{1:000}", t.Seconds, t.Milliseconds);
-                    //debugString = "Publish time: " + elapsedTime;
                 } // end if length > 0
             } // end if image available
 
@@ -276,11 +251,6 @@ public class CaptureSensorData : MonoBehaviour
 
     public void RFCameraThread()
     {
-        //INode node = RCLdotnet.CreateNode("RFTalker");
-        //IPublisher<std_msgs.msg.ByteMultiArray> framePub = node.CreatePublisher<std_msgs.msg.ByteMultiArray>("RFFrames", QosProfile.Profile.SensorData);
-
-        //std_msgs.msg.ByteMultiArray rosMsg = new std_msgs.msg.ByteMultiArray();
-
 #if ENABLE_WINMD_SUPPORT
         while (true)
         {
@@ -320,9 +290,6 @@ public class CaptureSensorData : MonoBehaviour
                     // Send the data through the socket.
                     tcpStream2.Write(frame, 0, frame.Length);
                     tcpStream2.Flush();
-
-                    //rosMsg.Data = new List<byte>(framePayload);
-                    //framePub.Publish(rosMsg);
                 } // end if length > 0
             } // end if image available
 
