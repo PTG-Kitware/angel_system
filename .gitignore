@@ -71,6 +71,7 @@
 /unity/Hello_World/[Aa]ssets/[Ss]treamingAssets/aa/*
 
 # ROS build logs
+/ros/bags/
 /ros/cpp/build/
 /ros/cpp/log/
 /ros/python/build/
