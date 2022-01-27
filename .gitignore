@@ -70,6 +70,8 @@
 /unity/Hello_World/[Aa]ssets/[Ss]treamingAssets/aa.meta
 /unity/Hello_World/[Aa]ssets/[Ss]treamingAssets/aa/*
 
-# ROS build logs 
+# ROS build logs
+/ros/cpp/build/
 /ros/cpp/log/
+/ros/python/build/
 /ros/python/log/
