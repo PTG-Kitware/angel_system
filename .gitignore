@@ -69,3 +69,7 @@
 # Temporary auto-generated Android Assets
 /unity/Hello_World/[Aa]ssets/[Ss]treamingAssets/aa.meta
 /unity/Hello_World/[Aa]ssets/[Ss]treamingAssets/aa/*
+
+# ROS build logs 
+/ros/cpp/log/
+/ros/python/log/

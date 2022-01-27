@@ -3,6 +3,7 @@ from PIL import Image, ImageDraw
 import queue
 import socket
 import struct
+import sys
 import time
 import threading
 
@@ -34,10 +35,10 @@ def get_im():
 # get_im()
 
 
-def server_thread():
+def server_thread(name, port):
     # create TCP socket
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.bind((HOST, PORT))
+    s.bind((HOST, int(port)))
     s.settimeout(120)
 
     print("Listening to socket...")
@@ -74,15 +75,15 @@ def server_thread():
         if prev_time == -1:
             prev_time = time.time()
         elif (time.time() - prev_time > 1):
-            print("Frames rcvd", frames_recvd)
+            print("Frames rcvd", name, frames_recvd)
             frames_recvd = 0
             prev_time = time.time()
 
         total_message_length = list(bytes(data[4:8]))
         total_message_length = ((total_message_length[0] << 24) |
-                                (total_message_length[1] << 16) | 
-                                (total_message_length[2] << 8) | 
-                                (total_message_length[3] << 0)) 
+                                (total_message_length[1] << 16) |
+                                (total_message_length[2] << 8) |
+                                (total_message_length[3] << 0))
 
         #print("message length", total_message_length)
 
@@ -125,7 +126,17 @@ def server_thread():
 
         image_np = np.reshape(image_np_orig, (height, width, 1))
         image_np = image_np.astype(np.uint8)
-        image_np = np.rot90(image_np, k=3)
+
+        if name == "LF":
+            image_np = np.rot90(image_np, k=3)
+        elif name == "RF":
+            image_np = np.rot90(image_np, k=1)
+        elif name == "LL":
+            image_np = np.rot90(image_np, k=1)
+        elif name == "RR":
+            image_np = np.rot90(image_np, k=3)
+
+
 
         # NOTE: to save images to disk
         '''
@@ -142,7 +153,31 @@ def server_thread():
 
 
 def main():
-    server_thread()
+    '''
+    server_t1 = threading.Thread(target=server_thread, args=("LF", 11000, ))
+    server_t1.daemon = True
+    server_t1.start()
+
+    server_t2 = threading.Thread(target=server_thread, args=("RF", 11001, ))
+    server_t2.daemon = True
+    server_t2.start()
+
+    server_t3 = threading.Thread(target=server_thread, args=("LL", 11002, ))
+    server_t3.daemon = True
+    server_t3.start()
+
+    #server_t4 = threading.Thread(target=server_thread, args=("RR", 11003, ))
+    #server_t4.daemon = True
+    #server_t4.start()
+
+
+    server_t1.join()
+    server_t2.join()
+    server_t3.join()
+    #server_t4.join()
+    '''
+
+    server_thread(sys.argv[1], sys.argv[2])
 
 
 if __name__ == "__main__":

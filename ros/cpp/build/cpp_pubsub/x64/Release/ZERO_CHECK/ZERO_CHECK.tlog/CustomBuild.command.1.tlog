@@ -1,0 +1,10 @@
+^C:\USERS\JOSH.ANDERSON\PROJECTS\PTG\ROS_CPP\BUILD\CPP_PUBSUB\CMAKEFILES\2D3470F903D4B2B554AD7A251DAF9312\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/josh.anderson/Projects/PTG/ros_cpp/src/cpp_pubsub -BC:/Users/josh.anderson/Projects/PTG/ros_cpp/build/cpp_pubsub --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file C:/Users/josh.anderson/Projects/PTG/ros_cpp/build/cpp_pubsub/cpp_pubsub.sln
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

@@ -2,6 +2,7 @@ using Microsoft.MixedReality.Toolkit;
 using Microsoft.MixedReality.Toolkit.SpatialAwareness;
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -9,6 +10,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using Unity.Collections;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -16,6 +18,11 @@ using UnityEngine.Windows.WebCam;
 using DilmerGames.Core.Singletons;
 using TMPro;
 using System.Runtime.InteropServices;
+//using ROS2;
+//using ROS2.Utils;
+//using sensor_msgs.msg;
+//using std_msgs.msg;
+
 
 #if ENABLE_WINMD_SUPPORT
 using HL2UnityPlugin;
@@ -40,8 +47,14 @@ public class CaptureSensorData : MonoBehaviour
 #endif
 
     // Network stuff
-    System.Net.Sockets.TcpClient tcpClient;
-    NetworkStream tcpStream;
+    System.Net.Sockets.TcpClient tcpClient1;
+    NetworkStream tcpStream1;
+    System.Net.Sockets.TcpClient tcpClient2;
+    NetworkStream tcpStream2;
+    System.Net.Sockets.TcpClient tcpClient3;
+    NetworkStream tcpStream3;
+    System.Net.Sockets.TcpClient tcpClient4;
+    NetworkStream tcpStream4;
 
     private Logger _logger = null;
 
@@ -68,6 +81,8 @@ public class CaptureSensorData : MonoBehaviour
         }
         return ref this._logger;
     }
+    uint framesRcvd;
+    string debugString = "";
 
     private void Awake()
     {
@@ -81,6 +96,8 @@ public class CaptureSensorData : MonoBehaviour
     {
         Logger log = logger();
 
+        //RCLdotnet.Init();
+
 #if ENABLE_WINMD_SUPPORT
         // Configure research mode
         log.LogInfo("Trying to enable research mode...");
@@ -90,7 +107,7 @@ public class CaptureSensorData : MonoBehaviour
         // Depth sensor should be initialized in only one mode
         if (depthSensorMode == DepthSensorMode.LongThrow) researchMode.InitializeLongDepthSensor();
         else if (depthSensorMode == DepthSensorMode.ShortThrow) researchMode.InitializeDepthSensor();
-        
+
         researchMode.InitializeSpatialCamerasFront();
         researchMode.SetReferenceCoordinateSystem(unityWorldOrigin);
         researchMode.SetPointCloudDepthOffset(0);
@@ -104,19 +121,64 @@ public class CaptureSensorData : MonoBehaviour
 #endif
 
         // Connect to the python TCP server
-        this.tcpClient = new System.Net.Sockets.TcpClient();
+        this.tcpClient1 = new System.Net.Sockets.TcpClient();
         try
         {
-            log.LogInfo("Attempting to connect to TCP socket @ IP address " + 
-                        ip_address + ":" + ip_port);
-            this.tcpClient.Connect(ip_address, ip_port);
-            log.LogInfo("TCP client connected!");
-            this.tcpStream = this.tcpClient.GetStream();
+            this.tcpClient1.Connect(ip_address, 11000);
+            this.loggerObject.GetComponent<Logger>().LogInfo("TCP client 1 connected!");
+            this.tcpStream1 = this.tcpClient1.GetStream();
+        }
+        catch (Exception e)
+        {
+            this.loggerObject.GetComponent<Logger>().LogInfo(e.ToString());
+        }
+
+        // Connect to the python TCP server
+        this.tcpClient2 = new System.Net.Sockets.TcpClient();
+        try
+        {
+            this.tcpClient2.Connect(ip_address, 11001);
+            this.loggerObject.GetComponent<Logger>().LogInfo("TCP client 2 connected!");
+            this.tcpStream2 = this.tcpClient2.GetStream();
+        }
+        catch (Exception e)
+        {
+            this.loggerObject.GetComponent<Logger>().LogInfo(e.ToString());
+        }
+
+        this.tcpClient3 = new System.Net.Sockets.TcpClient();
+        try
+        {
+            this.tcpClient3.Connect(ip_address, 11002);
+            this.loggerObject.GetComponent<Logger>().LogInfo("TCP client 3 connected!");
+            this.tcpStream3 = this.tcpClient3.GetStream();
         }
         catch (Exception e)
         {
             log.LogInfo(e.ToString());
         }
+
+        this.tcpClient4 = new System.Net.Sockets.TcpClient();
+        try
+        {
+            this.tcpClient4.Connect(ip_address, 11003);
+            this.loggerObject.GetComponent<Logger>().LogInfo("TCP client 4 connected!");
+            this.tcpStream4 = this.tcpClient4.GetStream();
+        }
+        catch (Exception e)
+        {
+            this.loggerObject.GetComponent<Logger>().LogInfo(e.ToString());
+        }
+
+        // Start the publishing thread
+        Thread tLFCameraThread = new Thread(LFCameraThread);
+        tLFCameraThread.Start();
+        Thread tRFCameraThread = new Thread(RFCameraThread);
+        tRFCameraThread.Start();
+        Thread tLLCameraThread = new Thread(LLCameraThread);
+        tLLCameraThread.Start();
+        Thread tRRCameraThread = new Thread(RRCameraThread);
+        tRRCameraThread.Start();
     }
 
     void Update()
@@ -138,95 +200,233 @@ public class CaptureSensorData : MonoBehaviour
                 }
             }
         }
+
+        if (debugString != "")
+        {
+            //this.loggerObject.GetComponent<Logger>().LogInfo(debugString);
+        }
     }
 
-    void LateUpdate()
+    public void LFCameraThread()
     {
+        //INode node = RCLdotnet.CreateNode("LFTalker");
+        //IPublisher<std_msgs.msg.ByteMultiArray> framePub = node.CreatePublisher<std_msgs.msg.ByteMultiArray>("LFFrames", QosProfile.Profile.SensorData);
+
+        //std_msgs.msg.ByteMultiArray rosMsg = new std_msgs.msg.ByteMultiArray();
+
 #if ENABLE_WINMD_SUPPORT
-        while (true) 
+        while (true)
         {
             // Try to get the frame from research mode
             if (researchMode.LFImageUpdated())
             {
-                //this.loggerObject.GetComponent<Logger>().LogInfo("LF image available");
-
                 long ts;
-                byte[] frameTexture = researchMode.GetLFCameraBuffer(out ts);
+                byte [] framePayload = researchMode.GetLFCameraBuffer(out ts);
 
-                //this.loggerObject.GetComponent<Logger>().LogInfo("time diff: " + (ts - prev_ts).ToString());
-                prev_ts = ts;
-               
-                //this.loggerObject.GetComponent<Logger>().LogInfo(researchMode.PrintDebugString());
-                //this.loggerObject.GetComponent<Logger>().LogInfo(frameTexture[0].ToString());
-                //this.loggerObject.GetComponent<Logger>().LogInfo(researchMode.PrintLFResolution());
-                //this.loggerObject.GetComponent<Logger>().LogInfo(researchMode.PrintLFFrameBuffer());
-                //this.loggerObject.GetComponent<Logger>().LogInfo(researchMode.PrintLFExtrinsics());
-                //this.loggerObject.GetComponent<Logger>().LogInfo("TS: " + ts.ToString());
-                //this.loggerObject.GetComponent<Logger>().LogInfo("LF image: " + researchMode.m_lastSpatialFrame.LFFrame.image.Length.ToString());
+                //debugString = (ts - prev_ts).ToString();
 
-                if (frameTexture.Length > 0)
+                //prev_ts = ts;
+                if (framePayload.Length > 0)
                 {
-                    //this.loggerObject.GetComponent<Logger>().LogInfo("got something: " + frameTexture.Length.ToString());
-                
                     // Prepend width and length
                     uint width = 640;
                     uint height = 480;
-                    List<byte> screenshotBytes = new List<byte>();
+                    byte[] frameHeader = { 0x1A, 0xCF, 0xFC, 0x1D,
+                                        (byte)(((framePayload.Length + 8) & 0xFF000000) >> 24),
+                                        (byte)(((framePayload.Length + 8) & 0x00FF0000) >> 16),
+                                        (byte)(((framePayload.Length + 8) & 0x0000FF00) >> 8),
+                                        (byte)(((framePayload.Length + 8) & 0x000000FF) >> 0),
+                                        (byte)((width & 0xFF000000) >> 24),
+                                        (byte)((width & 0x00FF0000) >> 16),
+                                        (byte)((width & 0x0000FF00) >> 8),
+                                        (byte)((width & 0x000000FF) >> 0),
+                                        (byte)((height & 0xFF000000) >> 24),
+                                        (byte)((height & 0x00FF0000) >> 16),
+                                        (byte)((height & 0x0000FF00) >> 8),
+                                        (byte)((height & 0x000000FF) >> 0) };
 
-                    screenshotBytes.Add((byte)((width & 0xFF000000) >> 24));
-                    screenshotBytes.Add((byte)((width & 0x00FF0000) >> 16));
-                    screenshotBytes.Add((byte)((width & 0x0000FF00) >> 8));
-                    screenshotBytes.Add((byte)((width & 0x000000FF) >> 0));
-                    screenshotBytes.Add((byte)((height & 0xFF000000) >> 24));
-                    screenshotBytes.Add((byte)((height & 0x00FF0000) >> 16));
-                    screenshotBytes.Add((byte)((height & 0x0000FF00) >> 8));
-                    screenshotBytes.Add((byte)((height & 0x000000FF) >> 0));
+                    byte[] frame = new byte[framePayload.Length + 16];
 
-                    for (int i = 0; i < frameTexture.Length; i++)
-                    {
-                        screenshotBytes.Add(frameTexture[i]);
-                    }
+                    System.Buffer.BlockCopy(frameHeader, 0, frame, 0, frameHeader.Length);
+                    System.Buffer.BlockCopy(framePayload, 0, frame, frameHeader.Length, framePayload.Length);
 
-                    byte[] screenshotBytesArray = AddMessageHeader(screenshotBytes.ToArray());
+                    // Send the data through the socket.
+                    tcpStream1.Write(frame, 0, frame.Length);
+                    tcpStream1.Flush();
 
-                    // Send the data through the socket.  
-                    this.tcpStream.Write(screenshotBytesArray, 0, screenshotBytesArray.Length);
-                    this.tcpStream.Flush();
-                }
-            
-            }
-            else
-            {
-                //this.loggerObject.GetComponent<Logger>().LogInfo("No frame available");
-                //this.loggerObject.GetComponent<Logger>().LogInfo(researchMode.PrintDebugString());
-                break;
-            }
-        }
+                    //rosMsg.Data = new List<byte>(framePayload);
+                    //rosMsg.Data = "Hello world";
+                    //Stopwatch stopWatch = new Stopwatch();
+                    //stopWatch.Start();
+                    //framePub.Publish(rosMsg);
+                    //stopWatch.Stop();
+
+                    // Get the elapsed time as a TimeSpan value.
+                    //TimeSpan t = stopWatch.Elapsed;
+                    // Format and display the TimeSpan value.
+                    //string elapsedTime = String.Format("{0:00}:{1:000}", t.Seconds, t.Milliseconds);
+                    //debugString = "Publish time: " + elapsedTime;
+                } // end if length > 0
+            } // end if image available
+
+            Thread.Sleep(1);
+        } // end while loop
 #endif
+    } // end method
 
-    }
-
-    /// <summary>
-    /// Add a sync marker of 0x1ACFFC1D and a 4 byte length
-    /// to the given message
-    /// </summary>
-    /// <param name="message"></param>
-    /// <returns></returns>
-    private static byte[] AddMessageHeader(byte[] message)
+    public void RFCameraThread()
     {
-        //Debug.Log(String.Format("Adding sync and length marker. Message length = {0}", message.Length));
-        byte[] sync = { 0x1A, 0xCF, 0xFC, 0x1D };
-        byte[] length = {(byte)((message.Length & 0xFF000000) >> 24),
-                         (byte)((message.Length & 0x00FF0000) >> 16),
-                         (byte)((message.Length & 0x0000FF00) >> 8),
-                         (byte)((message.Length & 0x000000FF) >> 0)};
-        byte[] newMessage = new byte[message.Length + 8]; // 4 byte sync + 4 byte length
+        //INode node = RCLdotnet.CreateNode("RFTalker");
+        //IPublisher<std_msgs.msg.ByteMultiArray> framePub = node.CreatePublisher<std_msgs.msg.ByteMultiArray>("RFFrames", QosProfile.Profile.SensorData);
 
-        System.Buffer.BlockCopy(sync, 0, newMessage, 0, sync.Length);
-        System.Buffer.BlockCopy(length, 0, newMessage, sync.Length, length.Length);
-        System.Buffer.BlockCopy(message, 0, newMessage, sync.Length + length.Length, message.Length);
+        //std_msgs.msg.ByteMultiArray rosMsg = new std_msgs.msg.ByteMultiArray();
 
-        return newMessage;
-    }
+#if ENABLE_WINMD_SUPPORT
+        while (true)
+        {
+            // Try to get the frame from research mode
+            if (researchMode.RFImageUpdated())
+            {
+                long ts;
+                byte [] framePayload = researchMode.GetRFCameraBuffer(out ts);
+
+                //debugString = (ts - prev_ts).ToString();
+
+                //prev_ts = ts;
+                if (framePayload.Length > 0)
+                {
+                    // Prepend width and length
+                    uint width = 640;
+                    uint height = 480;
+                    byte[] frameHeader = { 0x1A, 0xCF, 0xFC, 0x1D,
+                                        (byte)(((framePayload.Length + 8) & 0xFF000000) >> 24),
+                                        (byte)(((framePayload.Length + 8) & 0x00FF0000) >> 16),
+                                        (byte)(((framePayload.Length + 8) & 0x0000FF00) >> 8),
+                                        (byte)(((framePayload.Length + 8) & 0x000000FF) >> 0),
+                                        (byte)((width & 0xFF000000) >> 24),
+                                        (byte)((width & 0x00FF0000) >> 16),
+                                        (byte)((width & 0x0000FF00) >> 8),
+                                        (byte)((width & 0x000000FF) >> 0),
+                                        (byte)((height & 0xFF000000) >> 24),
+                                        (byte)((height & 0x00FF0000) >> 16),
+                                        (byte)((height & 0x0000FF00) >> 8),
+                                        (byte)((height & 0x000000FF) >> 0) };
+
+                    byte[] frame = new byte[framePayload.Length + 16];
+
+                    System.Buffer.BlockCopy(frameHeader, 0, frame, 0, frameHeader.Length);
+                    System.Buffer.BlockCopy(framePayload, 0, frame, frameHeader.Length, framePayload.Length);
+
+                    // Send the data through the socket.
+                    tcpStream2.Write(frame, 0, frame.Length);
+                    tcpStream2.Flush();
+
+                    //rosMsg.Data = new List<byte>(framePayload);
+                    //framePub.Publish(rosMsg);
+                } // end if length > 0
+            } // end if image available
+
+            Thread.Sleep(1);
+        } // end while loop
+#endif
+    } // end method
+
+    public void LLCameraThread()
+    {
+#if ENABLE_WINMD_SUPPORT
+        while (true)
+        {
+            // Try to get the frame from research mode
+            if (researchMode.LLImageUpdated())
+            {
+                long ts;
+                byte [] framePayload = researchMode.GetLLCameraBuffer(out ts);
+
+                //debugString = (ts - prev_ts).ToString();
+
+                //prev_ts = ts;
+                if (framePayload.Length > 0)
+                {
+                    // Prepend width and length
+                    uint width = 640;
+                    uint height = 480;
+                    byte[] frameHeader = { 0x1A, 0xCF, 0xFC, 0x1D,
+                                        (byte)(((framePayload.Length + 8) & 0xFF000000) >> 24),
+                                        (byte)(((framePayload.Length + 8) & 0x00FF0000) >> 16),
+                                        (byte)(((framePayload.Length + 8) & 0x0000FF00) >> 8),
+                                        (byte)(((framePayload.Length + 8) & 0x000000FF) >> 0),
+                                        (byte)((width & 0xFF000000) >> 24),
+                                        (byte)((width & 0x00FF0000) >> 16),
+                                        (byte)((width & 0x0000FF00) >> 8),
+                                        (byte)((width & 0x000000FF) >> 0),
+                                        (byte)((height & 0xFF000000) >> 24),
+                                        (byte)((height & 0x00FF0000) >> 16),
+                                        (byte)((height & 0x0000FF00) >> 8),
+                                        (byte)((height & 0x000000FF) >> 0) };
+
+                    byte[] frame = new byte[framePayload.Length + 16];
+
+                    System.Buffer.BlockCopy(frameHeader, 0, frame, 0, frameHeader.Length);
+                    System.Buffer.BlockCopy(framePayload, 0, frame, frameHeader.Length, framePayload.Length);
+
+                    // Send the data through the socket.
+                    tcpStream3.Write(frame, 0, frame.Length);
+                    tcpStream3.Flush();
+                } // end if length > 0
+            } // end if image available
+
+            Thread.Sleep(1);
+        } // end while loop
+#endif
+    } // end method
+
+    public void RRCameraThread()
+    {
+#if ENABLE_WINMD_SUPPORT
+        while (true)
+        {
+            // Try to get the frame from research mode
+            if (researchMode.RRImageUpdated())
+            {
+                long ts;
+                byte [] framePayload = researchMode.GetRRCameraBuffer(out ts);
+
+                //debugString = (ts - prev_ts).ToString();
+
+                //prev_ts = ts;
+                if (framePayload.Length > 0)
+                {
+                    // Prepend width and length
+                    uint width = 640;
+                    uint height = 480;
+                    byte[] frameHeader = { 0x1A, 0xCF, 0xFC, 0x1D,
+                                        (byte)(((framePayload.Length + 8) & 0xFF000000) >> 24),
+                                        (byte)(((framePayload.Length + 8) & 0x00FF0000) >> 16),
+                                        (byte)(((framePayload.Length + 8) & 0x0000FF00) >> 8),
+                                        (byte)(((framePayload.Length + 8) & 0x000000FF) >> 0),
+                                        (byte)((width & 0xFF000000) >> 24),
+                                        (byte)((width & 0x00FF0000) >> 16),
+                                        (byte)((width & 0x0000FF00) >> 8),
+                                        (byte)((width & 0x000000FF) >> 0),
+                                        (byte)((height & 0xFF000000) >> 24),
+                                        (byte)((height & 0x00FF0000) >> 16),
+                                        (byte)((height & 0x0000FF00) >> 8),
+                                        (byte)((height & 0x000000FF) >> 0) };
+
+                    byte[] frame = new byte[framePayload.Length + 16];
+
+                    System.Buffer.BlockCopy(frameHeader, 0, frame, 0, frameHeader.Length);
+                    System.Buffer.BlockCopy(framePayload, 0, frame, frameHeader.Length, framePayload.Length);
+
+                    // Send the data through the socket.
+                    tcpStream4.Write(frame, 0, frame.Length);
+                    tcpStream4.Flush();
+                } // end if length > 0
+            } // end if image available
+
+            Thread.Sleep(1);
+        } // end while loop
+#endif
+    } // end method
 
 }
