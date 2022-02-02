@@ -73,6 +73,7 @@
 # ROS build logs
 /ros/bags/
 /ros/cpp/build/
+/ros/cpp/build/cpp_pubsub/
 /ros/cpp/log/
 /ros/python/build/
 /ros/python/log/

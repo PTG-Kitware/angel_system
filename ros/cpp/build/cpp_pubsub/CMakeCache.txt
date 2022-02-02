@@ -251,7 +251,7 @@ SSL_EAY_RELEASE:FILEPATH=C:/Program Files/OpenSSL-Win64/lib/VC/libssl64MD.lib
 TinyXML2_DIR:PATH=C:/ProgramData/chocolatey/lib/tinyxml2/share/cmake
 
 //Path to a library.
-_lib:FILEPATH=C:/dev/ros2_foxy/ros2-foxy-20211013-windows-release-amd64/ros2-windows/Lib/std_msgs__rosidl_typesupport_fastrtps_cpp.lib
+_lib:FILEPATH=C:/dev/ros2_foxy/ros2-foxy-20211013-windows-release-amd64/ros2-windows/Lib/sensor_msgs__rosidl_typesupport_fastrtps_cpp.lib
 
 //The directory containing a CMake configuration file for ament_cmake.
 ament_cmake_DIR:PATH=C:/dev/ros2_foxy/ros2-foxy-20211013-windows-release-amd64/ros2-windows/share/ament_cmake/cmake
@@ -298,11 +298,23 @@ ament_cmake_test_DIR:PATH=C:/dev/ros2_foxy/ros2-foxy-20211013-windows-release-am
 //The directory containing a CMake configuration file for ament_cmake_version.
 ament_cmake_version_DIR:PATH=C:/dev/ros2_foxy/ros2-foxy-20211013-windows-release-amd64/ros2-windows/share/ament_cmake_version/cmake
 
+//The directory containing a CMake configuration file for ament_index_cpp.
+ament_index_cpp_DIR:PATH=C:/dev/ros2_foxy/ros2-foxy-20211013-windows-release-amd64/ros2-windows/share/ament_index_cpp/cmake
+
 //The directory containing a CMake configuration file for builtin_interfaces.
 builtin_interfaces_DIR:PATH=C:/dev/ros2_foxy/ros2-foxy-20211013-windows-release-amd64/ros2-windows/share/builtin_interfaces/cmake
 
+//The directory containing a CMake configuration file for class_loader.
+class_loader_DIR:PATH=C:/dev/ros2_foxy/ros2-foxy-20211013-windows-release-amd64/ros2-windows/share/class_loader/cmake
+
+//The directory containing a CMake configuration file for composition_interfaces.
+composition_interfaces_DIR:PATH=C:/dev/ros2_foxy/ros2-foxy-20211013-windows-release-amd64/ros2-windows/share/composition_interfaces/cmake
+
 //The directory containing a CMake configuration file for connext_cmake_module.
 connext_cmake_module_DIR:PATH=C:/dev/ros2_foxy/ros2-foxy-20211013-windows-release-amd64/ros2-windows/share/connext_cmake_module/cmake
+
+//The directory containing a CMake configuration file for console_bridge.
+console_bridge_DIR:PATH=C:/dev/ros2_foxy/ros2-foxy-20211013-windows-release-amd64/ros2-windows/CMake
 
 //Value Computed by CMake
 cpp_pubsub_BINARY_DIR:STATIC=C:/Users/josh.anderson/Projects/PTG/ros/cpp/build/cpp_pubsub
@@ -324,6 +336,9 @@ fastrtps_cmake_module_DIR:PATH=C:/dev/ros2_foxy/ros2-foxy-20211013-windows-relea
 
 //The directory containing a CMake configuration file for foonathan_memory.
 foonathan_memory_DIR:PATH=C:/dev/ros2_foxy/ros2-foxy-20211013-windows-release-amd64/ros2-windows/share/foonathan_memory/cmake
+
+//The directory containing a CMake configuration file for geometry_msgs.
+geometry_msgs_DIR:PATH=C:/dev/ros2_foxy/ros2-foxy-20211013-windows-release-amd64/ros2-windows/share/geometry_msgs/cmake
 
 //The directory containing a CMake configuration file for libstatistics_collector.
 libstatistics_collector_DIR:PATH=C:/dev/ros2_foxy/ros2-foxy-20211013-windows-release-amd64/ros2-windows/share/libstatistics_collector/cmake
@@ -348,6 +363,9 @@ rcl_yaml_param_parser_DIR:PATH=C:/dev/ros2_foxy/ros2-foxy-20211013-windows-relea
 
 //The directory containing a CMake configuration file for rclcpp.
 rclcpp_DIR:PATH=C:/dev/ros2_foxy/ros2-foxy-20211013-windows-release-amd64/ros2-windows/share/rclcpp/cmake
+
+//The directory containing a CMake configuration file for rclcpp_components.
+rclcpp_components_DIR:PATH=C:/dev/ros2_foxy/ros2-foxy-20211013-windows-release-amd64/ros2-windows/share/rclcpp_components/cmake
 
 //The directory containing a CMake configuration file for rcpputils.
 rcpputils_DIR:PATH=C:/dev/ros2_foxy/ros2-foxy-20211013-windows-release-amd64/ros2-windows/share/rcpputils/cmake
@@ -420,6 +438,9 @@ rosidl_typesupport_introspection_cpp_DIR:PATH=C:/dev/ros2_foxy/ros2-foxy-2021101
 
 //The directory containing a CMake configuration file for rticonnextmsgcpp.
 rticonnextmsgcpp_DIR:PATH=rticonnextmsgcpp_DIR-NOTFOUND
+
+//The directory containing a CMake configuration file for sensor_msgs.
+sensor_msgs_DIR:PATH=C:/dev/ros2_foxy/ros2-foxy-20211013-windows-release-amd64/ros2-windows/share/sensor_msgs/cmake
 
 //The directory containing a CMake configuration file for spdlog.
 spdlog_DIR:PATH=C:/dev/ros2_foxy/ros2-foxy-20211013-windows-release-amd64/ros2-windows/lib/cmake/spdlog
