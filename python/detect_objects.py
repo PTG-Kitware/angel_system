@@ -8,10 +8,7 @@ import threading
 import torch
 from torchvision import datasets, transforms
 
-import cv2
-
 from matplotlib import pyplot as plot
-#from matplotlib.animation import FuncAnimation
 
 from smqtk_detection.impls.detect_image_objects.resnet_frcnn import ResNetFRCNN
 

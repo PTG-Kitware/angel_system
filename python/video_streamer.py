@@ -8,7 +8,6 @@ import threading
 
 from matplotlib import pyplot as plot
 import matplotlib
-matplotlib.use('QtAgg') 
 
 
 HOST = '192.168.1.89'
