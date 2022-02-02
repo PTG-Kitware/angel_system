@@ -45,6 +45,7 @@
 *.mdb
 *.opendb
 *.VC.db
+*.ipch
 
 # Unity3D generated meta files
 *.pidb.meta
