@@ -1,32 +1,38 @@
-import rclpy
-from rclpy.node import Node
-
-from std_msgs.msg import String, ByteMultiArray
-
 import numpy as np
-from PIL import Image, ImageDraw
 import queue
 import socket
 import struct
+import sys
 import time
 import threading
 
 from matplotlib import pyplot as plot
 import matplotlib
 
-# create axes
-ax1 = plot.subplot(111)
-im1 = ax1.imshow(np.zeros(shape=(480, 640, 1)), cmap='gray', vmin=0, vmax=255)
-plot.ion()
-plot.show()
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import String, ByteMultiArray
+from sensor_msgs.msg import Image
+
+import cv2
+
+TOPICS = ["LFFrames", "RFFrames", "LLFrames", "RRFrames", "PVFrames"]
+
 
 class MinimalSubscriber(Node):
 
-    def __init__(self):
+    def __init__(self, topic):
         super().__init__('minimal_subscriber')
+
+        if topic not in TOPICS:
+            print("Error! Invalid topic name")
+            sys.exit()
+
+        self.topic = topic
+
         self.subscription = self.create_subscription(
-            ByteMultiArray,
-            'LFFrames',
+            Image,
+            self.topic,
             self.listener_callback,
             100)
         self.subscription  # prevent unused variable warning
@@ -34,68 +40,54 @@ class MinimalSubscriber(Node):
         self.frames_recvd = 0
         self.prev_time = -1
 
+        # create axes
+        self.ax1 = plot.subplot(111)
+        if self.topic == "PVFrames":
+            self.im1 = self.ax1.imshow(np.zeros(shape=(720, 1280, 3)), vmin=0, vmax=255)
+        else:
+            self.im1 = self.ax1.imshow(np.zeros(shape=(480, 640, 1)), cmap='gray', vmin=0, vmax=255)
+        
+        #plot.ion()
+        #plot.show()
+
+
     def listener_callback(self, msg):
-        #self.get_logger().info('Frame rcvd: %d bytes' % (len(msg.data)))
-
-        data = [int.from_bytes(x, "big") for x in msg.data]
-
-        '''
-        if data[0:4] != b'\x1a\xcf\xfc\x1d':
-            print("Invalid sync pattern", data[0:4])
-            return
-        '''
-
-        #print(data[0:20])
-
         self.frames_recvd += 1
         if self.prev_time == -1:
             self.prev_time = time.time()
         elif (time.time() - self.prev_time > 1):
             print("Frames rcvd", self.frames_recvd)
+            #print(msg.header, msg.height, msg.width, msg.encoding, len(msg.data), msg.data[0:10])
             self.frames_recvd = 0
             self.prev_time = time.time()
 
-        '''
-        total_message_length = data[4:8]
-        total_message_length = ((total_message_length[0] << 24) |
-                                (total_message_length[1] << 16) | 
-                                (total_message_length[2] << 8) | 
-                                (total_message_length[3] << 0)) 
+        return
 
-        #print("message length", total_message_length)
-        '''
+        if self.topic == "PVFrames":
+            yuv_data = np.frombuffer(msg.data, np.uint8).reshape(720*3//2, 1280)
+            rgb = cv2.cvtColor(yuv_data, cv2.COLOR_YUV2RGB_NV12);
 
-        image = data
+            self.im1.set_data(rgb)
+        else:
+            image_np_orig = np.frombuffer(msg.data, np.uint8)
 
-        width = ((image[0] & 0xFF << 24) |
-                 (image[1] << 16) | 
-                 (image[2] << 8) | 
-                 (image[3] << 0)) 
-        height = ((image[4] << 24) |
-                 (image[5] << 16) | 
-                 (image[6] << 8) | 
-                 (image[7] << 0)) 
-        image = image[8:]
+            image_np = np.reshape(image_np_orig, (msg.height, msg.width, 1))
+            image_np = image_np.astype(np.uint8)
+            image_np = np.rot90(image_np, k=3)
 
-        # convert to np-array
-        image_np_orig = np.array(image)
-
-        image_np = np.reshape(image_np_orig, (height, width, 1))
-        image_np = image_np.astype(np.uint8)
-        image_np = np.rot90(image_np, k=3)
-
-        im1.set_data(image_np)
+            self.im1.set_data(image_np)
 
         plot.gcf().canvas.flush_events()
         plot.show(block=False)
 
 
-def main(args=None):
-    rclpy.init(args=args)
+def main():
+    topic_name = sys.argv[1]
 
-    minimal_subscriber = MinimalSubscriber()
+    rclpy.init()
 
-    print("hi josh")
+    minimal_subscriber = MinimalSubscriber(topic_name)
+
     rclpy.spin(minimal_subscriber)
 
     # Destroy the node explicitly

@@ -7,7 +7,10 @@
 
 :: source chained prefixes
 call:_colcon_prefix_chain_bat_call_script "C:\dev\ros2_foxy\ros2-foxy-20211013-windows-release-amd64\ros2-windows\local_setup.bat"
+call:_colcon_prefix_chain_bat_call_script "C:\Users\josh.anderson\Projects\PTG\ros\cpp\install\local_setup.bat"
 call:_colcon_prefix_chain_bat_call_script "C:\dev\ros2_foxy\ros2-foxy-20211013-windows-release-amd64\ros2-windows\\local_setup.bat"
+call:_colcon_prefix_chain_bat_call_script "C:\Users\josh.anderson\Projects\PTG\ros\cpp\install\\local_setup.bat"
+call:_colcon_prefix_chain_bat_call_script "C:\Users\josh.anderson\Projects\PTG\ros\python\install\\local_setup.bat"
 
 :: source this prefix
 call:_colcon_prefix_chain_bat_call_script "%%~dp0local_setup.bat"
