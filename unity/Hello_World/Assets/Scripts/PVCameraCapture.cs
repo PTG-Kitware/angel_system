@@ -42,6 +42,9 @@ public class PVCameraCapture : MonoBehaviour
     uint framesRcvd;
     string debugString = "";
 
+    public const string TcpServerIPAddr = "169.254.103.120";
+    public const int PVTcpPort = 11008;
+
     [ComImport]
     [Guid("5B0D3235-4DBA-4D44-865E-8F1D0E4FD04D")]
     [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
@@ -68,11 +71,7 @@ public class PVCameraCapture : MonoBehaviour
         this.tcpClient = new System.Net.Sockets.TcpClient();
         try
         {
-            //socket = new StreamSocket();
-            //var hostName = new Windows.Networking.HostName("169.254.103.120");
-            //await socket.ConnectAsync(hostName, "11006");
-            // dw = new DataWriter(socket.OutputStream);
-            this.tcpClient.Connect("169.254.103.120", 11006);
+            this.tcpClient.Connect(TcpServerIPAddr, PVTcpPort);
             this.loggerObject.GetComponent<Logger>().LogInfo("TCP client PV connected!");
             this.tcpStream = this.tcpClient.GetStream();
         }
@@ -91,16 +90,6 @@ public class PVCameraCapture : MonoBehaviour
 #endif
     }
 
-    /*
-    void Update()
-    {
-        if (debugString != "")
-        {
-            //this.loggerObject.GetComponent<Logger>().LogInfo(debugString);
-        }
-    }
-    */
-
 #if ENABLE_WINMD_SUPPORT
     public async Task<bool> InitializeMediaCaptureAsyncTask()
     {
@@ -118,7 +107,7 @@ public class PVCameraCapture : MonoBehaviour
         {
             var group = allGroups[i];
             //this.loggerObject.GetComponent<Logger>().LogInfo(group.DisplayName + ", " + group.Id + " " + allGroups.Count.ToString());
-            this.loggerObject.GetComponent<Logger>().LogInfo(group.DisplayName);
+            //this.loggerObject.GetComponent<Logger>().LogInfo(group.DisplayName);
             if (group.DisplayName == "QC Back Camera")
             {
                 selectedGroupIndex = i;
@@ -176,14 +165,14 @@ public class PVCameraCapture : MonoBehaviour
                 {
                     if (targetResFormat == null)
                     {
-                        this.loggerObject.GetComponent<Logger>().LogInfo("Found matching format");
+                        //this.loggerObject.GetComponent<Logger>().LogInfo("Found matching format");
                         targetResFormat = f;
                         framerateDiffMin = Mathf.Abs(f.FrameRate.Numerator / f.FrameRate.Denominator - targetVideoFrameRate);
                     }
                     else if (Mathf.Abs(f.FrameRate.Numerator / f.FrameRate.Denominator - targetVideoFrameRate) < framerateDiffMin)
                     {
                         targetResFormat = f;
-                        this.loggerObject.GetComponent<Logger>().LogInfo("Else?");
+                        //this.loggerObject.GetComponent<Logger>().LogInfo("Else?");
                         framerateDiffMin = Mathf.Abs(f.FrameRate.Numerator / f.FrameRate.Denominator - targetVideoFrameRate);
                     }
                 }
@@ -196,7 +185,7 @@ public class PVCameraCapture : MonoBehaviour
             }
 
             await mediaFrameSourceVideo.SetFormatAsync(targetResFormat);
-            this.loggerObject.GetComponent<Logger>().LogInfo("Sub type " + targetResFormat.Subtype);
+            //this.loggerObject.GetComponent<Logger>().LogInfo("Sub type " + targetResFormat.Subtype);
 
             frameReader = await mediaCapture.CreateFrameReaderAsync(mediaFrameSourceVideo, targetResFormat.Subtype);
             frameReader.FrameArrived += OnFrameArrived;

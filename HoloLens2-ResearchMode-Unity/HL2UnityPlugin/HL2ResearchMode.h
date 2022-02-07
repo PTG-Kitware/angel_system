@@ -25,13 +25,17 @@
 #define HEADER_LEN        (16)
 #define DEFAULT_READ_SIZE (8192)
 #define DEFAULT_BUFLEN    (1024 * 1024)
-#define LF_VLC_TCP_PORT   (11000)
-#define RF_VLC_TCP_PORT   (11001)
-#define LL_VLC_TCP_PORT   (11002)
-#define RR_VLC_TCP_PORT   (11003)
-#define PV_TCP_PORT       (11004)
-#define DEPTH_TCP_PORT    (11005)
-#define DEPTH_AB_TCP_PORT (11006)
+
+#define LF_VLC_TCP_PORT        (11000)
+#define RF_VLC_TCP_PORT        (11001)
+#define LL_VLC_TCP_PORT        (11002)
+#define RR_VLC_TCP_PORT        (11003)
+#define DEPTH_TCP_PORT         (11004)
+#define DEPTH_AB_TCP_PORT      (11005)
+#define LONG_DEPTH_TCP_PORT    (11006)
+#define LONG_DEPTH_AB_TCP_PORT (11007)
+#define PV_TCP_PORT            (11008)
+
 
 namespace winrt::HL2UnityPlugin::implementation
 {
@@ -120,6 +124,8 @@ namespace winrt::HL2UnityPlugin::implementation
         SOCKET m_socketRR = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
         SOCKET m_socketDepth = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
         SOCKET m_socketDepthAb = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+        SOCKET m_socketLongDepth = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+        SOCKET m_socketLongDepthAb = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 
         std::vector<SOCKET> m_sockets;
 

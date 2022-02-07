@@ -17,7 +17,8 @@ from sensor_msgs.msg import Image
 import cv2
 
 TOPICS = ["LFFrames", "RFFrames", "LLFrames", "RRFrames",
-          "PVFrames", "DepthFrames", "DepthABFrames"]
+          "PVFrames", "DepthFrames", "DepthABFrames",
+          "LongDepthFrames", "LongDepthABFrames"]
 
 
 class MinimalSubscriber(Node):
@@ -47,6 +48,8 @@ class MinimalSubscriber(Node):
             self.im1 = self.ax1.imshow(np.zeros(shape=(720, 1280, 3)), vmin=0, vmax=255)
         elif self.topic == "DepthFrames" or self.topic == "DepthABFrames":
             self.im1 = self.ax1.imshow(np.zeros(shape=(512, 512, 1)), cmap='gray', vmin=0, vmax=255)
+        elif self.topic == "LongDepthFrames" or self.topic == "LongDepthABFrames":
+            self.im1 = self.ax1.imshow(np.zeros(shape=(288, 320, 1)), cmap='gray', vmin=0, vmax=255)
         else:
             self.im1 = self.ax1.imshow(np.zeros(shape=(480, 640, 1)), cmap='gray', vmin=0, vmax=255)
         
@@ -69,52 +72,9 @@ class MinimalSubscriber(Node):
             rgb = cv2.cvtColor(yuv_data, cv2.COLOR_YUV2RGB_NV12);
 
             self.im1.set_data(rgb)
-        elif self.topic == "DepthFrames":
+        elif self.topic == "DepthFrames" or self.topic == "DepthABFrames":
             image_np_orig = np.frombuffer(msg.data, np.uint8)
-            #print(image_np_orig[0:10])
-
-
-            '''
-            dt = np.dtype(np.uint16)
-            dt = dt.newbyteorder('>')
-            image_np_orig = np.frombuffer(msg.data, dtype=dt)
-            #print(image_np_orig[0:10])
-
-            for i in range(len(image_np_orig)):
-                if image_np_orig[i] > 4090:
-                    image_np_orig[i] = 0
-                else:
-                    image_np_orig[i] = int((image_np_orig[i] / 1000.0 * 255)) & 0xFF
-            
-
-            image_np_orig[image_np_orig > 4090] = 0
-
-            image_np_orig = (image_np_orig / 1000.0 * 255)
-            
-            #print(image_np_orig[0:10])
-            '''
             image_np = np.reshape(image_np_orig, (msg.height, msg.width, 1))
-            #image_np = image_np.astype(np.uint8)
-
-            self.im1.set_data(image_np)
-
-        elif self.topic == "DepthABFrames":
-            image_np_orig = np.frombuffer(msg.data, np.uint8)
-
-            '''
-            dt = np.dtype(np.uint16)
-            dt = dt.newbyteorder('>')
-            image_np_orig = np.frombuffer(msg.data, dtype=dt)
-
-            image_np_orig = (image_np_orig / 1000.0 * 255)
-            image_np_orig[image_np_orig > 255] = 0xFF
-
-            #print(image_np_orig[0:10])
-            '''
-
-            image_np = np.reshape(image_np_orig, (msg.height, msg.width, 1))
-            #image_np = image_np.astype(np.uint8)
-
             self.im1.set_data(image_np)
         else:
             image_np_orig = np.frombuffer(msg.data, np.uint8)

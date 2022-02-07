@@ -73,6 +73,8 @@ namespace winrt::HL2UnityPlugin::implementation
         m_sockets.push_back(m_socketRR);
         m_sockets.push_back(m_socketDepth);
         m_sockets.push_back(m_socketDepthAb);
+        m_sockets.push_back(m_socketLongDepth);
+        m_sockets.push_back(m_socketLongDepthAb);
 
         if (WSAStartup(0x0202, &w))
         {
@@ -433,10 +435,12 @@ namespace winrt::HL2UnityPlugin::implementation
                 
                 send(pHL2ResearchMode->m_socketDepth, &frame[0], outBufferCount + 16, 0);
 
-                //frameAb.insert(frameAb.begin(), &frameHeader[0], &frameHeader[16]);
-                //frameAb.insert(frameAb.end(), &pAbTexture[0], &pAbTexture[outBufferCount]);
-                //send(pHL2ResearchMode->m_socketDepthAb, &frameAb[0], outBufferCount + 16, 0);
-
+#if 0
+                // To send brightness images
+                frameAb.insert(frameAb.begin(), &frameHeader[0], &frameHeader[16]);
+                frameAb.insert(frameAb.end(), &pAbTexture[0], &pAbTexture[outBufferCount]);
+                send(pHL2ResearchMode->m_socketDepthAb, &frameAb[0], outBufferCount + 16, 0);
+#endif
                 if (pHL2ResearchMode->m_reconstructShortThrowPointCloud) pHL2ResearchMode->m_pointCloudUpdated = true;
 
                 pDepthTexture.reset();
@@ -475,6 +479,11 @@ namespace winrt::HL2UnityPlugin::implementation
 
     void HL2ResearchMode::LongDepthSensorLoop(HL2ResearchMode* pHL2ResearchMode)
     {
+        unsigned int width = 320;
+        unsigned int height = 288;
+        std::vector<char> frame;
+        std::vector<char> frameAb;
+
         // prevent starting loop for multiple times
         if (!pHL2ResearchMode->m_longDepthSensorLoopStarted)
         {
@@ -551,6 +560,7 @@ namespace winrt::HL2UnityPlugin::implementation
                         UINT16 depth = pDepth[idx];
                         depth = (pSigma[idx] & 0x80) ? 0 : depth - pHL2ResearchMode->m_depthOffset;
 
+                        /*
                         if (pHL2ResearchMode->m_reconstructLongThrowPointCloud)
                         {
                             // back-project point cloud within Roi
@@ -576,6 +586,7 @@ namespace winrt::HL2UnityPlugin::implementation
                                 }
                             }
                         }
+                        */
 
                         // save as grayscale texture pixel into temp buffer
                         if (depth == 0) { pDepthTexture.get()[idx] = 0; }
@@ -589,6 +600,7 @@ namespace winrt::HL2UnityPlugin::implementation
 
                         pAbTexture.get()[idx] = processedAbValue;
 
+                        /*
                         // save the depth of center pixel
                         if (pHL2ResearchMode->m_reconstructLongThrowPointCloud &&
                             i == (UINT)(0.35 * resolution.Height) && j == (UINT)(0.5 * resolution.Width)
@@ -603,9 +615,11 @@ namespace winrt::HL2UnityPlugin::implementation
                                 pHL2ResearchMode->m_centerPoint[2] = *(pointCloud.end() - 1);
                             }
                         }
+                        */
                     }
                 }
 
+                /*
                 // save data
                 {
                     std::lock_guard<std::mutex> l(pHL2ResearchMode->mu);
@@ -655,9 +669,30 @@ namespace winrt::HL2UnityPlugin::implementation
                     }
                     memcpy(pHL2ResearchMode->m_longAbImageTexture, pAbTexture.get(), outBufferCount * sizeof(UINT8));
                 }
+                */
                 pHL2ResearchMode->m_longAbImageTextureUpdated = true;
                 pHL2ResearchMode->m_longDepthMapTextureUpdated = true;
                 if (pHL2ResearchMode->m_reconstructLongThrowPointCloud) pHL2ResearchMode->m_longThrowPointCloudUpdated = true;
+
+                // send depth image via socket
+                char frameHeader[16] = { 0x1A, 0xCF, 0xFC, 0x1D,
+                                        (((outBufferCount + 8) & 0xFF000000) >> 24),
+                                        (((outBufferCount + 8) & 0x00FF0000) >> 16),
+                                        (((outBufferCount + 8) & 0x0000FF00) >> 8),
+                                        (((outBufferCount + 8) & 0x000000FF) >> 0),
+                                        ((width & 0xFF000000) >> 24),
+                                        ((width & 0x00FF0000) >> 16),
+                                        ((width & 0x0000FF00) >> 8),
+                                        ((width & 0x000000FF) >> 0),
+                                        ((height & 0xFF000000) >> 24),
+                                        ((height & 0x00FF0000) >> 16),
+                                        ((height & 0x0000FF00) >> 8),
+                                        ((height & 0x000000FF) >> 0) };
+
+                frame.insert(frame.begin(), &frameHeader[0], &frameHeader[16]);
+                frame.insert(frame.end(), &pDepthTexture[0], &pDepthTexture[outBufferCount]);
+
+                send(pHL2ResearchMode->m_socketLongDepth, &frame[0], outBufferCount + 16, 0);
 
                 pDepthTexture.reset();
 
@@ -670,6 +705,9 @@ namespace winrt::HL2UnityPlugin::implementation
                 {
                     pDepthSensorFrame->Release();
                 }
+
+                frame.clear();
+                frameAb.clear();
             }
         }
         catch (...) {}

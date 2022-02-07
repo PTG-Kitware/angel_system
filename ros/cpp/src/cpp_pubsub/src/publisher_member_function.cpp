@@ -26,13 +26,16 @@
 #define HEADER_LEN        (16)
 #define DEFAULT_READ_SIZE (8192)
 #define DEFAULT_BUFLEN    (1024 * 1024)
-#define LF_VLC_TCP_PORT   (11000)
-#define RF_VLC_TCP_PORT   (11001)
-#define LL_VLC_TCP_PORT   (11002)
-#define RR_VLC_TCP_PORT   (11003)
-#define DEPTH_TCP_PORT    (11004)
-#define DEPTH_AB_TCP_PORT (11005)
-#define PV_TCP_PORT       (11006)
+
+#define LF_VLC_TCP_PORT        (11000)
+#define RF_VLC_TCP_PORT        (11001)
+#define LL_VLC_TCP_PORT        (11002)
+#define RR_VLC_TCP_PORT        (11003)
+#define DEPTH_TCP_PORT         (11004)
+#define DEPTH_AB_TCP_PORT      (11005)
+#define LONG_DEPTH_TCP_PORT    (11006)
+#define LONG_DEPTH_AB_TCP_PORT (11007)
+#define PV_TCP_PORT            (11008)
 
 
 using namespace std::chrono_literals;
@@ -110,6 +113,18 @@ class MinimalPublisher : public rclcpp::Node
         publisher_ = this->create_publisher<sensor_msgs::msg::Image>("DepthABFrames", 10);
         frame_id = "Depth AB camera";
         std::cout << "Created AB Depth publisher\n";
+      }
+      else if (port == LONG_DEPTH_TCP_PORT)
+      {
+        publisher_ = this->create_publisher<sensor_msgs::msg::Image>("LongDepthFrames", 10);
+        frame_id = "Long Depth camera";
+        std::cout << "Created Long Depth publisher\n";
+      }
+      else if (port == LONG_DEPTH_AB_TCP_PORT)
+      {
+        publisher_ = this->create_publisher<sensor_msgs::msg::Image>("LongDepthABFrames", 10);
+        frame_id = "Depth AB camera";
+        std::cout << "Created Long Depth AB publisher\n";
       }
       else
       {
@@ -248,11 +263,6 @@ class MinimalPublisher : public rclcpp::Node
           message.encoding = "rgb8";
           message.step = 1280;
         }
-        else if ((port == DEPTH_TCP_PORT) || (port == DEPTH_AB_TCP_PORT))
-        {
-          message.encoding = "mono16";
-          message.step = width * 2;
-        }
         else
         {
           message.encoding = "mono8";
@@ -292,7 +302,6 @@ int main(int argc, char * argv[])
 
   std::shared_ptr<MinimalPublisher> mp = std::make_shared<MinimalPublisher>();
 
-  // start the server threads
   std::thread t1 = mp->StartTCPServerThread(LF_VLC_TCP_PORT);
   std::thread t2 = mp->StartTCPServerThread(RF_VLC_TCP_PORT);
   std::thread t3 = mp->StartTCPServerThread(LL_VLC_TCP_PORT);
@@ -300,7 +309,9 @@ int main(int argc, char * argv[])
   std::thread t5 = mp->StartTCPServerThread(PV_TCP_PORT);
   std::thread t6 = mp->StartTCPServerThread(DEPTH_TCP_PORT);
   std::thread t7 = mp->StartTCPServerThread(DEPTH_AB_TCP_PORT);
-
+  std::thread t8 = mp->StartTCPServerThread(LONG_DEPTH_TCP_PORT);
+  std::thread t9 = mp->StartTCPServerThread(LONG_DEPTH_AB_TCP_PORT);
+  
   rclcpp::spin(mp);
 
   t1.join();
@@ -310,6 +321,8 @@ int main(int argc, char * argv[])
   t5.join();
   t6.join();
   t7.join();
+  t8.join();
+  t9.join();
 
   // start the server threads
   //std::thread t1 = mp->StartTCPServerThread(port);
