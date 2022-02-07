@@ -62,6 +62,41 @@ namespace winrt::HL2UnityPlugin::implementation
         winrt::check_hresult(m_pSensorDevice->GetSensorCount(&sensorCount));
         m_sensorDescriptors.resize(sensorCount);
         winrt::check_hresult(m_pSensorDevice->GetSensorDescriptors(m_sensorDescriptors.data(), m_sensorDescriptors.size(), &sensorCount));
+
+        // set up TCP sockets
+        WSADATA w;
+        std::string server_ip_addr = "169.254.103.120";
+
+        m_sockets.push_back(m_socketLF);
+        m_sockets.push_back(m_socketRF);
+        m_sockets.push_back(m_socketLL);
+        m_sockets.push_back(m_socketRR);
+        m_sockets.push_back(m_socketDepth);
+        m_sockets.push_back(m_socketDepthAb);
+
+        if (WSAStartup(0x0202, &w))
+        {
+            return;
+        }
+
+        for (std::size_t i = 0; i < m_sockets.size(); i++)
+        {
+            SOCKADDR_IN addr;
+
+            addr.sin_family = AF_INET;
+            addr.sin_port = htons(LF_VLC_TCP_PORT + i);
+            inet_pton(AF_INET, server_ip_addr.c_str(), &(addr.sin_addr));
+
+            if (connect(m_sockets[i], (struct sockaddr*)&addr, sizeof(addr)) < 0)
+            {
+                // error
+                m_debugString += "socket error!\n";
+
+            }
+        }
+
+
+
     }
 
     void HL2ResearchMode::InitializeDepthSensor() 
@@ -176,6 +211,11 @@ namespace winrt::HL2UnityPlugin::implementation
 
     void HL2ResearchMode::DepthSensorLoop(HL2ResearchMode* pHL2ResearchMode)
     {
+        unsigned int width = 512;
+        unsigned int height = 512;
+        std::vector<char> frame;
+        std::vector<char> frameAb;
+
         // prevent starting loop for multiple times
         if (!pHL2ResearchMode->m_depthSensorLoopStarted)
         {
@@ -188,16 +228,17 @@ namespace winrt::HL2UnityPlugin::implementation
         try 
         {
             UINT64 lastTs = 0;
+
             while (pHL2ResearchMode->m_depthSensorLoopStarted)
             {
                 IResearchModeSensorFrame* pDepthSensorFrame = nullptr;
                 ResearchModeSensorResolution resolution;
-                pHL2ResearchMode->m_depthSensor->GetNextBuffer(&pDepthSensorFrame);
 
-                // process sensor frame
+                pHL2ResearchMode->m_depthSensor->GetNextBuffer(&pDepthSensorFrame);
                 pDepthSensorFrame->GetResolution(&resolution);
                 pHL2ResearchMode->m_depthResolution = resolution;
-                
+
+                // process sensor frame
                 IResearchModeSensorDepthFrame* pDepthFrame = nullptr;
                 winrt::check_hresult(pDepthSensorFrame->QueryInterface(IID_PPV_ARGS(&pDepthFrame)));
 
@@ -205,20 +246,25 @@ namespace winrt::HL2UnityPlugin::implementation
                 const UINT16* pDepth = nullptr;
                 pDepthFrame->GetBuffer(&pDepth, &outBufferCount);
                 pHL2ResearchMode->m_depthBufferSize = outBufferCount;
-                size_t outAbBufferCount = 0;
-                const UINT16* pAbImage = nullptr;
-                pDepthFrame->GetAbDepthBuffer(&pAbImage, &outAbBufferCount);
+                
+                //size_t outAbBufferCount = 0;
+                //const UINT16* pAbImage = nullptr;
+                //pDepthFrame->GetAbDepthBuffer(&pAbImage, &outAbBufferCount);
 
                 auto pDepthTexture = std::make_unique<uint8_t[]>(outBufferCount);
-                auto pAbTexture = std::make_unique<uint8_t[]>(outAbBufferCount);
+                //auto pAbTexture = std::make_unique<uint8_t[]>(outAbBufferCount);
                 std::vector<float> pointCloud;
 
                 ResearchModeSensorTimestamp timestamp;
                 pDepthSensorFrame->GetTimeStamp(&timestamp);
 
+                //auto ts = PerceptionTimestampHelper::FromSystemRelativeTargetTime(HundredsOfNanoseconds(checkAndConvertUnsigned(timestamp.HostTicks)));
+                //pHL2ResearchMode->m_debugString += std::to_string(ts.TargetTime().time_since_epoch().count()) + "\n";
+
                 if (timestamp.HostTicks == lastTs) continue;
                 lastTs = timestamp.HostTicks;
 
+                /*
                 // get tracking transform
                 Windows::Perception::Spatial::SpatialLocation transToWorld = nullptr;
                 if (pHL2ResearchMode->m_reconstructShortThrowPointCloud) 
@@ -227,11 +273,12 @@ namespace winrt::HL2UnityPlugin::implementation
                     transToWorld = pHL2ResearchMode->m_locator.TryLocateAtTimestamp(ts, pHL2ResearchMode->m_refFrame);
                     if (transToWorld == nullptr) continue;
                 }
-
+                
                 XMMATRIX depthToWorld = XMMatrixIdentity();
                 if (pHL2ResearchMode->m_reconstructShortThrowPointCloud)
                     depthToWorld = pHL2ResearchMode->m_depthCameraPoseInvMatrix * SpatialLocationToDxMatrix(transToWorld);
-
+                */
+                
                 pHL2ResearchMode->mu.lock();
                 auto roiCenterFloat = XMFLOAT3(pHL2ResearchMode->m_roiCenter[0], pHL2ResearchMode->m_roiCenter[1], pHL2ResearchMode->m_roiCenter[2]);
                 auto roiBoundFloat = XMFLOAT3(pHL2ResearchMode->m_roiBound[0], pHL2ResearchMode->m_roiBound[1], pHL2ResearchMode->m_roiBound[2]);
@@ -243,11 +290,12 @@ namespace winrt::HL2UnityPlugin::implementation
                 for (UINT i = 0; i < resolution.Height; i++)
                 {
                     for (UINT j = 0; j < resolution.Width; j++)
-                    {
+                    {                                            
                         auto idx = resolution.Width * i + j;
                         UINT16 depth = pDepth[idx];
                         depth = (depth > 4090) ? 0 : depth - pHL2ResearchMode->m_depthOffset;
-
+                        
+                        /*
                         if (pHL2ResearchMode->m_reconstructShortThrowPointCloud)
                         {
                             // back-project point cloud within Roi
@@ -273,19 +321,20 @@ namespace winrt::HL2UnityPlugin::implementation
                                 }
                             }
                         }
-
+                        */
+                                                
                         // save depth map as grayscale texture pixel into temp buffer
                         if (depth == 0) { pDepthTexture.get()[idx] = 0; }
                         else { pDepthTexture.get()[idx] = (uint8_t)((float)depth / 1000 * 255); }
 
                         // save AbImage as grayscale texture pixel into temp buffer
-                        UINT16 abValue = pAbImage[idx];
-                        uint8_t processedAbValue = 0;
-                        if (abValue > 1000) { processedAbValue = 0xFF; }
-                        else { processedAbValue = (uint8_t)((float)abValue / 1000 * 255); }
-
-                        pAbTexture.get()[idx] = processedAbValue;
-
+                        //UINT16 abValue = pAbImage[idx];
+                        //uint8_t processedAbValue = 0;
+                        //if (abValue > 1000) { processedAbValue = 0xFF; }
+                        //else { processedAbValue = (uint8_t)((float)abValue / 1000 * 255); }
+                        //pAbTexture.get()[idx] = processedAbValue;
+                        
+                        /*
                         // save the depth of center pixel
                         if (pHL2ResearchMode->m_reconstructShortThrowPointCloud && 
                             i == (UINT)(0.35 * resolution.Height) && j == (UINT)(0.5 * resolution.Width)
@@ -300,10 +349,13 @@ namespace winrt::HL2UnityPlugin::implementation
                                 pHL2ResearchMode->m_centerPoint[2] = *(pointCloud.end() - 1);
                             }
                         }
+                        */
                     }
-                }
-
+                
+                }                
+                
                 // save data
+                /*
                 {
                     std::lock_guard<std::mutex> l(pHL2ResearchMode->mu);
 
@@ -320,7 +372,6 @@ namespace winrt::HL2UnityPlugin::implementation
                         pHL2ResearchMode->m_pointcloudLength = pointCloud.size();
                     }
                     
-
                     // save raw depth map
                     if (!pHL2ResearchMode->m_depthMap)
                     {
@@ -328,7 +379,7 @@ namespace winrt::HL2UnityPlugin::implementation
                         pHL2ResearchMode->m_depthMap = new UINT16[outBufferCount];
                     }
                     memcpy(pHL2ResearchMode->m_depthMap, pDepth, outBufferCount * sizeof(UINT16));
-
+                    
                     // save pre-processed depth map texture (for visualization)
                     if (!pHL2ResearchMode->m_depthMapTexture)
                     {
@@ -336,6 +387,7 @@ namespace winrt::HL2UnityPlugin::implementation
                         pHL2ResearchMode->m_depthMapTexture = new UINT8[outBufferCount];
                     }
                     memcpy(pHL2ResearchMode->m_depthMapTexture, pDepthTexture.get(), outBufferCount * sizeof(UINT8));
+                    
 
                     // save raw AbImage
                     if (!pHL2ResearchMode->m_shortAbImage)
@@ -344,7 +396,7 @@ namespace winrt::HL2UnityPlugin::implementation
                         pHL2ResearchMode->m_shortAbImage = new UINT16[outBufferCount];
                     }
                     memcpy(pHL2ResearchMode->m_shortAbImage, pAbImage, outBufferCount * sizeof(UINT16));
-
+                    
                     // save pre-processed AbImage texture (for visualization)
                     if (!pHL2ResearchMode->m_shortAbImageTexture)
                     {
@@ -352,9 +404,39 @@ namespace winrt::HL2UnityPlugin::implementation
                         pHL2ResearchMode->m_shortAbImageTexture = new UINT8[outBufferCount];
                     }
                     memcpy(pHL2ResearchMode->m_shortAbImageTexture, pAbTexture.get(), outBufferCount * sizeof(UINT8));
+                    
                 }
+                */
+
+                pHL2ResearchMode->m_shortAbImageUpdated = true;
                 pHL2ResearchMode->m_shortAbImageTextureUpdated = true;
                 pHL2ResearchMode->m_depthMapTextureUpdated = true;
+                pHL2ResearchMode->m_depthMapUpdated = true;
+
+                // send depth image via socket
+                char frameHeader[16] = { 0x1A, 0xCF, 0xFC, 0x1D,
+                                        (((outBufferCount + 8) & 0xFF000000) >> 24),
+                                        (((outBufferCount + 8) & 0x00FF0000) >> 16),
+                                        (((outBufferCount + 8) & 0x0000FF00) >> 8),
+                                        (((outBufferCount + 8) & 0x000000FF) >> 0),
+                                        ((width & 0xFF000000) >> 24),
+                                        ((width & 0x00FF0000) >> 16),
+                                        ((width & 0x0000FF00) >> 8),
+                                        ((width & 0x000000FF) >> 0),
+                                        ((height & 0xFF000000) >> 24),
+                                        ((height & 0x00FF0000) >> 16),
+                                        ((height & 0x0000FF00) >> 8),
+                                        ((height & 0x000000FF) >> 0) };
+
+                frame.insert(frame.begin(), &frameHeader[0], &frameHeader[16]);
+                frame.insert(frame.end(), &pDepthTexture[0], &pDepthTexture[outBufferCount]);
+                
+                send(pHL2ResearchMode->m_socketDepth, &frame[0], outBufferCount + 16, 0);
+
+                //frameAb.insert(frameAb.begin(), &frameHeader[0], &frameHeader[16]);
+                //frameAb.insert(frameAb.end(), &pAbTexture[0], &pAbTexture[outBufferCount]);
+                //send(pHL2ResearchMode->m_socketDepthAb, &frameAb[0], outBufferCount + 16, 0);
+
                 if (pHL2ResearchMode->m_reconstructShortThrowPointCloud) pHL2ResearchMode->m_pointCloudUpdated = true;
 
                 pDepthTexture.reset();
@@ -368,10 +450,12 @@ namespace winrt::HL2UnityPlugin::implementation
                 {
                     pDepthSensorFrame->Release();
                 }
-                
+
+                frame.clear();
+                frameAb.clear();
             }
         }
-        catch (...)  {}
+        catch (...) {}
         pHL2ResearchMode->m_depthSensor->CloseStream();
         pHL2ResearchMode->m_depthSensor->Release();
         pHL2ResearchMode->m_depthSensor = nullptr;
@@ -603,15 +687,20 @@ namespace winrt::HL2UnityPlugin::implementation
         }
 
         //m_debugString += "Starting spatial camera loop";
-     
+        //m_pSpatialCamerasLFUpdateThread = new std::thread(HL2ResearchMode::SpatialCamerasFrontLoop, this);
+
         m_pSpatialCamerasLFUpdateThread = new std::thread(HL2ResearchMode::SpatialCamerasLFLoop, this);
         m_pSpatialCamerasRFUpdateThread = new std::thread(HL2ResearchMode::SpatialCamerasRFLoop, this);
-        m_pSpatialCamerasLLUpdateThread = new std::thread(HL2ResearchMode::SpatialCamerasLLLoop, this);
-        m_pSpatialCamerasRRUpdateThread = new std::thread(HL2ResearchMode::SpatialCamerasRRLoop, this);
+        //m_pSpatialCamerasLLUpdateThread = new std::thread(HL2ResearchMode::SpatialCamerasLLLoop, this);
+        //m_pSpatialCamerasRRUpdateThread = new std::thread(HL2ResearchMode::SpatialCamerasRRLoop, this);
     }
 
     void HL2ResearchMode::SpatialCamerasLFLoop(HL2ResearchMode* pHL2ResearchMode)
     {
+        unsigned int width = 640;
+        unsigned int height = 480;
+        std::vector<char> frame;
+
         // prevent starting loop for multiple times
         if (!pHL2ResearchMode->m_spatialCamerasLFLoopStarted)
         {
@@ -625,18 +714,18 @@ namespace winrt::HL2UnityPlugin::implementation
 
         try
         {
+
             while (pHL2ResearchMode->m_spatialCamerasLFLoopStarted)
             {
-                //pHL2ResearchMode->m_debugString += "hi 3\n";
 
                 IResearchModeSensorFrame* pLFCameraFrame = nullptr;
                 ResearchModeSensorResolution LFResolution;
-                pHL2ResearchMode->m_LFSensor->GetNextBuffer(&pLFCameraFrame);
 
-                // process sensor frame
+                pHL2ResearchMode->m_LFSensor->GetNextBuffer(&pLFCameraFrame);
                 pLFCameraFrame->GetResolution(&LFResolution);
                 pHL2ResearchMode->m_LFResolution = LFResolution;
 
+                // process sensor frame
                 IResearchModeSensorVLCFrame* pLFFrame = nullptr;
                 winrt::check_hresult(pLFCameraFrame->QueryInterface(IID_PPV_ARGS(&pLFFrame)));
 
@@ -666,6 +755,7 @@ namespace winrt::HL2UnityPlugin::implementation
                 auto LfToWorld = pHL2ResearchMode->m_LFCameraPoseInvMatrix * SpatialLocationToDxMatrix(rigToWorld_l);
                 auto RfToWorld = pHL2ResearchMode->m_RFCameraPoseInvMatrix * SpatialLocationToDxMatrix(rigToWorld_r);*/
 
+                /*
                 // save data
                 {
                     std::lock_guard<std::mutex> l(pHL2ResearchMode->mu);
@@ -673,20 +763,45 @@ namespace winrt::HL2UnityPlugin::implementation
                     pHL2ResearchMode->m_lastSpatialFrame.LFFrame.timestamp = timestamp_left.HostTicks;
                     pHL2ResearchMode->m_lastSpatialFrame.LFFrame.timestamp_ft = ts_left.TargetTime().time_since_epoch().count();
 
-                    // save LF and RF images
+                    
+                    // save LF image
                     if (!pHL2ResearchMode->m_lastSpatialFrame.LFFrame.image)
                     {
                         OutputDebugString(L"Create Space for Left Front Image...\n");
                         pHL2ResearchMode->m_lastSpatialFrame.LFFrame.image = new UINT8[LFOutBufferCount];
                     }
                     memcpy(pHL2ResearchMode->m_lastSpatialFrame.LFFrame.image, pLFImage, LFOutBufferCount * sizeof(UINT8));
+                    
                 }
+                */
                 pHL2ResearchMode->m_LFImageUpdated = true;
+
+                // send LF image via socket
+                char frameHeader[16] = { 0x1A, 0xCF, 0xFC, 0x1D,
+                                        (((LFOutBufferCount + 8) & 0xFF000000) >> 24),
+                                        (((LFOutBufferCount + 8) & 0x00FF0000) >> 16),
+                                        (((LFOutBufferCount + 8) & 0x0000FF00) >> 8),
+                                        (((LFOutBufferCount + 8) & 0x000000FF) >> 0),
+                                        ((width & 0xFF000000) >> 24),
+                                        ((width & 0x00FF0000) >> 16),
+                                        ((width & 0x0000FF00) >> 8),
+                                        ((width & 0x000000FF) >> 0),
+                                        ((height & 0xFF000000) >> 24),
+                                        ((height & 0x00FF0000) >> 16),
+                                        ((height & 0x0000FF00) >> 8),
+                                        ((height & 0x000000FF) >> 0) };
+
+                frame.insert(frame.begin(), &frameHeader[0], &frameHeader[16]);
+                frame.insert(frame.end(), &pLFImage[0], &pLFImage[LFOutBufferCount]);
+
+                send(pHL2ResearchMode->m_socketLF, &frame[0], LFOutBufferCount + 16, 0);
 
                 // release space
                 if (pLFFrame) pLFFrame->Release();
 
                 if (pLFCameraFrame) pLFCameraFrame->Release();
+
+                frame.clear();
             }
         }
         catch (...) {}
@@ -697,6 +812,10 @@ namespace winrt::HL2UnityPlugin::implementation
 
     void HL2ResearchMode::SpatialCamerasRFLoop(HL2ResearchMode* pHL2ResearchMode)
     {
+        unsigned int width = 640;
+        unsigned int height = 480;
+        std::vector<char> frame;
+
         // prevent starting loop for multiple times
         if (!pHL2ResearchMode->m_spatialCamerasRFLoopStarted)
         {
@@ -712,16 +831,14 @@ namespace winrt::HL2UnityPlugin::implementation
         {
             while (pHL2ResearchMode->m_spatialCamerasRFLoopStarted)
             {
-                //pHL2ResearchMode->m_debugString += "hi 4\n";
-
                 IResearchModeSensorFrame* pRFCameraFrame = nullptr;
                 ResearchModeSensorResolution RFResolution;
-                pHL2ResearchMode->m_RFSensor->GetNextBuffer(&pRFCameraFrame);
 
-                // process sensor frame
+                pHL2ResearchMode->m_RFSensor->GetNextBuffer(&pRFCameraFrame);
                 pRFCameraFrame->GetResolution(&RFResolution);
                 pHL2ResearchMode->m_RFResolution = RFResolution;
 
+                // process sensor frame
                 IResearchModeSensorVLCFrame* pRFFrame = nullptr;
                 winrt::check_hresult(pRFCameraFrame->QueryInterface(IID_PPV_ARGS(&pRFFrame)));
 
@@ -751,6 +868,7 @@ namespace winrt::HL2UnityPlugin::implementation
                 auto RfToWorld = pHL2ResearchMode->m_RFCameraPoseInvMatrix * SpatialLocationToDxMatrix(rigToWorld_r);*/
 
                 // save data
+                /*
                 {
                     std::lock_guard<std::mutex> l(pHL2ResearchMode->mu);
 
@@ -765,11 +883,35 @@ namespace winrt::HL2UnityPlugin::implementation
                     }
                     memcpy(pHL2ResearchMode->m_lastSpatialFrame.RFFrame.image, pRFImage, RFOutBufferCount * sizeof(UINT8));
                 }
+
+                */
                 pHL2ResearchMode->m_RFImageUpdated = true;
+
+                // send RF image via socket
+                char frameHeader[16] = { 0x1A, 0xCF, 0xFC, 0x1D,
+                                        (((RFOutBufferCount + 8) & 0xFF000000) >> 24),
+                                        (((RFOutBufferCount + 8) & 0x00FF0000) >> 16),
+                                        (((RFOutBufferCount + 8) & 0x0000FF00) >> 8),
+                                        (((RFOutBufferCount + 8) & 0x000000FF) >> 0),
+                                        ((width & 0xFF000000) >> 24),
+                                        ((width & 0x00FF0000) >> 16),
+                                        ((width & 0x0000FF00) >> 8),
+                                        ((width & 0x000000FF) >> 0),
+                                        ((height & 0xFF000000) >> 24),
+                                        ((height & 0x00FF0000) >> 16),
+                                        ((height & 0x0000FF00) >> 8),
+                                        ((height & 0x000000FF) >> 0) };
+
+                frame.insert(frame.begin(), &frameHeader[0], &frameHeader[16]);
+                frame.insert(frame.end(), &pRFImage[0], &pRFImage[RFOutBufferCount]);
+
+                send(pHL2ResearchMode->m_socketRF, &frame[0], RFOutBufferCount + 16, 0);
 
                 // release space
                 if (pRFFrame) pRFFrame->Release();
                 if (pRFCameraFrame) pRFCameraFrame->Release();
+
+                frame.clear();
             }
         }
         catch (...) {}
@@ -781,6 +923,10 @@ namespace winrt::HL2UnityPlugin::implementation
 
     void HL2ResearchMode::SpatialCamerasLLLoop(HL2ResearchMode* pHL2ResearchMode)
     {
+        unsigned int width = 640;
+        unsigned int height = 480;
+        std::vector<char> frame;
+
         // prevent starting loop for multiple times
         if (!pHL2ResearchMode->m_spatialCamerasLLLoopStarted)
         {
@@ -794,16 +940,17 @@ namespace winrt::HL2UnityPlugin::implementation
 
         try
         {
+
             while (pHL2ResearchMode->m_spatialCamerasLLLoopStarted)
             {
                 IResearchModeSensorFrame* pLLCameraFrame = nullptr;
                 ResearchModeSensorResolution LLResolution;
-                pHL2ResearchMode->m_LLSensor->GetNextBuffer(&pLLCameraFrame);
 
-                // process sensor frame
+                pHL2ResearchMode->m_LLSensor->GetNextBuffer(&pLLCameraFrame);
                 pLLCameraFrame->GetResolution(&LLResolution);
                 pHL2ResearchMode->m_LLResolution = LLResolution;
 
+                // process sensor frame
                 IResearchModeSensorVLCFrame* pLLFrame = nullptr;
                 winrt::check_hresult(pLLCameraFrame->QueryInterface(IID_PPV_ARGS(&pLLFrame)));
 
@@ -833,6 +980,7 @@ namespace winrt::HL2UnityPlugin::implementation
                 auto LfToWorld = pHL2ResearchMode->m_LFCameraPoseInvMatrix * SpatialLocationToDxMatrix(rigToWorld_l);
                 auto RfToWorld = pHL2ResearchMode->m_RFCameraPoseInvMatrix * SpatialLocationToDxMatrix(rigToWorld_r);*/
 
+                /*
                 // save data
                 {
                     std::lock_guard<std::mutex> l(pHL2ResearchMode->mu);
@@ -847,12 +995,35 @@ namespace winrt::HL2UnityPlugin::implementation
                     }
                     memcpy(pHL2ResearchMode->m_lastSpatialFrame.LLFrame.image, pLLImage, LLOutBufferCount * sizeof(UINT8));
                 }
+                */
                 pHL2ResearchMode->m_LLImageUpdated = true;
+
+                // send LL image via socket
+                char frameHeader[16] = { 0x1A, 0xCF, 0xFC, 0x1D,
+                                        (((LLOutBufferCount + 8) & 0xFF000000) >> 24),
+                                        (((LLOutBufferCount + 8) & 0x00FF0000) >> 16),
+                                        (((LLOutBufferCount + 8) & 0x0000FF00) >> 8),
+                                        (((LLOutBufferCount + 8) & 0x000000FF) >> 0),
+                                        ((width & 0xFF000000) >> 24),
+                                        ((width & 0x00FF0000) >> 16),
+                                        ((width & 0x0000FF00) >> 8),
+                                        ((width & 0x000000FF) >> 0),
+                                        ((height & 0xFF000000) >> 24),
+                                        ((height & 0x00FF0000) >> 16),
+                                        ((height & 0x0000FF00) >> 8),
+                                        ((height & 0x000000FF) >> 0) };
+
+                frame.insert(frame.begin(), &frameHeader[0], &frameHeader[16]);
+                frame.insert(frame.end(), &pLLImage[0], &pLLImage[LLOutBufferCount]);
+
+                send(pHL2ResearchMode->m_socketLL, &frame[0], LLOutBufferCount + 16, 0);
 
                 // release space
                 if (pLLFrame) pLLFrame->Release();
 
                 if (pLLCameraFrame) pLLCameraFrame->Release();
+
+                frame.clear();
             }
         }
         catch (...) {}
@@ -863,6 +1034,10 @@ namespace winrt::HL2UnityPlugin::implementation
 
     void HL2ResearchMode::SpatialCamerasRRLoop(HL2ResearchMode* pHL2ResearchMode)
     {
+        unsigned int width = 640;
+        unsigned int height = 480;
+        std::vector<char> frame;
+
         // prevent starting loop for multiple times
         if (!pHL2ResearchMode->m_spatialCamerasRRLoopStarted)
         {
@@ -880,12 +1055,12 @@ namespace winrt::HL2UnityPlugin::implementation
             {
                 IResearchModeSensorFrame* pRRCameraFrame = nullptr;
                 ResearchModeSensorResolution RRResolution;
-                pHL2ResearchMode->m_RRSensor->GetNextBuffer(&pRRCameraFrame);
 
-                // process sensor frame
+                pHL2ResearchMode->m_RRSensor->GetNextBuffer(&pRRCameraFrame);
                 pRRCameraFrame->GetResolution(&RRResolution);
                 pHL2ResearchMode->m_RRResolution = RRResolution;
 
+                // process sensor frame
                 IResearchModeSensorVLCFrame* pRRFrame = nullptr;
                 winrt::check_hresult(pRRCameraFrame->QueryInterface(IID_PPV_ARGS(&pRRFrame)));
 
@@ -915,6 +1090,7 @@ namespace winrt::HL2UnityPlugin::implementation
                 auto LfToWorld = pHL2ResearchMode->m_LFCameraPoseInvMatrix * SpatialLocationToDxMatrix(rigToWorld_l);
                 auto RfToWorld = pHL2ResearchMode->m_RFCameraPoseInvMatrix * SpatialLocationToDxMatrix(rigToWorld_r);*/
 
+                /*
                 // save data
                 {
                     std::lock_guard<std::mutex> l(pHL2ResearchMode->mu);
@@ -929,12 +1105,35 @@ namespace winrt::HL2UnityPlugin::implementation
                     }
                     memcpy(pHL2ResearchMode->m_lastSpatialFrame.RRFrame.image, pRRImage, RROutBufferCount * sizeof(UINT8));
                 }
+                */
                 pHL2ResearchMode->m_RRImageUpdated = true;
+
+                // send RR image via socket
+                char frameHeader[16] = { 0x1A, 0xCF, 0xFC, 0x1D,
+                                        (((RROutBufferCount + 8) & 0xFF000000) >> 24),
+                                        (((RROutBufferCount + 8) & 0x00FF0000) >> 16),
+                                        (((RROutBufferCount + 8) & 0x0000FF00) >> 8),
+                                        (((RROutBufferCount + 8) & 0x000000FF) >> 0),
+                                        ((width & 0xFF000000) >> 24),
+                                        ((width & 0x00FF0000) >> 16),
+                                        ((width & 0x0000FF00) >> 8),
+                                        ((width & 0x000000FF) >> 0),
+                                        ((height & 0xFF000000) >> 24),
+                                        ((height & 0x00FF0000) >> 16),
+                                        ((height & 0x0000FF00) >> 8),
+                                        ((height & 0x000000FF) >> 0) };
+
+                frame.insert(frame.begin(), &frameHeader[0], &frameHeader[16]);
+                frame.insert(frame.end(), &pRRImage[0], &pRRImage[RROutBufferCount]);
+
+                send(pHL2ResearchMode->m_socketRR, &frame[0], RROutBufferCount + 16, 0);
 
                 // release space
                 if (pRRFrame) pRRFrame->Release();
 
                 if (pRRCameraFrame) pRRCameraFrame->Release();
+
+                frame.clear();
             }
         }
         catch (...) {}
@@ -956,6 +1155,8 @@ namespace winrt::HL2UnityPlugin::implementation
 
         pHL2ResearchMode->m_LFSensor->OpenStream();
         pHL2ResearchMode->m_RFSensor->OpenStream();
+        pHL2ResearchMode->m_LLSensor->OpenStream();
+        pHL2ResearchMode->m_RRSensor->OpenStream();
 
         try
         {
@@ -963,39 +1164,68 @@ namespace winrt::HL2UnityPlugin::implementation
             {
                 IResearchModeSensorFrame* pLFCameraFrame = nullptr;
                 IResearchModeSensorFrame* pRFCameraFrame = nullptr;
+                IResearchModeSensorFrame* pLLCameraFrame = nullptr;
+                IResearchModeSensorFrame* pRRCameraFrame = nullptr;
                 ResearchModeSensorResolution LFResolution;
                 ResearchModeSensorResolution RFResolution;
+                ResearchModeSensorResolution LLResolution;
+                ResearchModeSensorResolution RRResolution;
                 pHL2ResearchMode->m_LFSensor->GetNextBuffer(&pLFCameraFrame);
 				pHL2ResearchMode->m_RFSensor->GetNextBuffer(&pRFCameraFrame);
+                pHL2ResearchMode->m_LLSensor->GetNextBuffer(&pLLCameraFrame);
+                pHL2ResearchMode->m_RRSensor->GetNextBuffer(&pRRCameraFrame);
 
                 // process sensor frame
                 pLFCameraFrame->GetResolution(&LFResolution);
                 pHL2ResearchMode->m_LFResolution = LFResolution;
                 pRFCameraFrame->GetResolution(&RFResolution);
                 pHL2ResearchMode->m_RFResolution = RFResolution;
+                pLFCameraFrame->GetResolution(&LLResolution);
+                pHL2ResearchMode->m_LLResolution = LLResolution;
+                pRFCameraFrame->GetResolution(&RRResolution);
+                pHL2ResearchMode->m_RRResolution = RRResolution;
 
                 IResearchModeSensorVLCFrame* pLFFrame = nullptr;
                 winrt::check_hresult(pLFCameraFrame->QueryInterface(IID_PPV_ARGS(&pLFFrame)));
                 IResearchModeSensorVLCFrame* pRFFrame = nullptr;
                 winrt::check_hresult(pRFCameraFrame->QueryInterface(IID_PPV_ARGS(&pRFFrame)));
+                IResearchModeSensorVLCFrame* pLLFrame = nullptr;
+                winrt::check_hresult(pLLCameraFrame->QueryInterface(IID_PPV_ARGS(&pLLFrame)));
+                IResearchModeSensorVLCFrame* pRRFrame = nullptr;
+                winrt::check_hresult(pRRCameraFrame->QueryInterface(IID_PPV_ARGS(&pRRFrame)));
 
                 size_t LFOutBufferCount = 0;
                 const BYTE *pLFImage = nullptr;
                 pLFFrame->GetBuffer(&pLFImage, &LFOutBufferCount);
                 pHL2ResearchMode->m_LFbufferSize = LFOutBufferCount;
+
 				size_t RFOutBufferCount = 0;
 				const BYTE *pRFImage = nullptr;
 				pRFFrame->GetBuffer(&pRFImage, &RFOutBufferCount);
 				pHL2ResearchMode->m_RFbufferSize = RFOutBufferCount;
 
+                size_t LLOutBufferCount = 0;
+                const BYTE* pLLImage = nullptr;
+                pLFFrame->GetBuffer(&pLLImage, &LLOutBufferCount);
+                pHL2ResearchMode->m_LLbufferSize = LLOutBufferCount;
+
+                size_t RROutBufferCount = 0;
+                const BYTE* pRRImage = nullptr;
+                pRFFrame->GetBuffer(&pRRImage, &RROutBufferCount);
+                pHL2ResearchMode->m_RRbufferSize = RROutBufferCount;
+
                 // get tracking transform
-                ResearchModeSensorTimestamp timestamp_left, timestamp_right;
+                ResearchModeSensorTimestamp timestamp_left, timestamp_right, timestamp_left_l, timestamp_right_r;
                 pLFCameraFrame->GetTimeStamp(&timestamp_left);
                 pRFCameraFrame->GetTimeStamp(&timestamp_right);
+                pLLCameraFrame->GetTimeStamp(&timestamp_left_l);
+                pRRCameraFrame->GetTimeStamp(&timestamp_right_r);
 
                 auto ts_left = PerceptionTimestampHelper::FromSystemRelativeTargetTime(HundredsOfNanoseconds(checkAndConvertUnsigned(timestamp_left.HostTicks)));
                 auto ts_right = PerceptionTimestampHelper::FromSystemRelativeTargetTime(HundredsOfNanoseconds(checkAndConvertUnsigned(timestamp_right.HostTicks)));
-                
+                auto ts_left_l = PerceptionTimestampHelper::FromSystemRelativeTargetTime(HundredsOfNanoseconds(checkAndConvertUnsigned(timestamp_left_l.HostTicks)));
+                auto ts_right_r = PerceptionTimestampHelper::FromSystemRelativeTargetTime(HundredsOfNanoseconds(checkAndConvertUnsigned(timestamp_right_r.HostTicks)));
+
                 // uncomment the block below if their transform is needed
                 /*auto rigToWorld_l = pHL2ResearchMode->m_locator.TryLocateAtTimestamp(ts_left, pHL2ResearchMode->m_refFrame);
                 auto rigToWorld_r = rigToWorld_l;
@@ -1017,10 +1247,13 @@ namespace winrt::HL2UnityPlugin::implementation
 
                     pHL2ResearchMode->m_lastSpatialFrame.LFFrame.timestamp = timestamp_left.HostTicks;
                     pHL2ResearchMode->m_lastSpatialFrame.RFFrame.timestamp = timestamp_right.HostTicks;
+                    pHL2ResearchMode->m_lastSpatialFrame.LLFrame.timestamp = timestamp_left_l.HostTicks;
+                    pHL2ResearchMode->m_lastSpatialFrame.RRFrame.timestamp = timestamp_right_r.HostTicks;
 
                     pHL2ResearchMode->m_lastSpatialFrame.LFFrame.timestamp_ft = ts_left.TargetTime().time_since_epoch().count();
                     pHL2ResearchMode->m_lastSpatialFrame.RFFrame.timestamp_ft = ts_right.TargetTime().time_since_epoch().count();
-
+                    pHL2ResearchMode->m_lastSpatialFrame.LLFrame.timestamp_ft = ts_left_l.TargetTime().time_since_epoch().count();
+                    pHL2ResearchMode->m_lastSpatialFrame.RRFrame.timestamp_ft = ts_right_r.TargetTime().time_since_epoch().count();
 
 					// save LF and RF images
 					if (!pHL2ResearchMode->m_lastSpatialFrame.LFFrame.image)
@@ -1036,16 +1269,36 @@ namespace winrt::HL2UnityPlugin::implementation
 						pHL2ResearchMode->m_lastSpatialFrame.RFFrame.image = new UINT8[RFOutBufferCount];
 					}
 					memcpy(pHL2ResearchMode->m_lastSpatialFrame.RFFrame.image, pRFImage, RFOutBufferCount * sizeof(UINT8));
+
+                    if (!pHL2ResearchMode->m_lastSpatialFrame.LLFrame.image)
+                    {
+                        OutputDebugString(L"Create Space for Left left Image...\n");
+                        pHL2ResearchMode->m_lastSpatialFrame.LLFrame.image = new UINT8[LLOutBufferCount];
+                    }
+                    memcpy(pHL2ResearchMode->m_lastSpatialFrame.LLFrame.image, pLLImage, LLOutBufferCount * sizeof(UINT8));
+
+                    if (!pHL2ResearchMode->m_lastSpatialFrame.RRFrame.image)
+                    {
+                        OutputDebugString(L"Create Space for Right right Image...\n");
+                        pHL2ResearchMode->m_lastSpatialFrame.RRFrame.image = new UINT8[RROutBufferCount];
+                    }
+                    memcpy(pHL2ResearchMode->m_lastSpatialFrame.RRFrame.image, pRRImage, RROutBufferCount * sizeof(UINT8));
                 }
 				pHL2ResearchMode->m_LFImageUpdated = true;
 				pHL2ResearchMode->m_RFImageUpdated = true;
+                pHL2ResearchMode->m_LLImageUpdated = true;
+                pHL2ResearchMode->m_RRImageUpdated = true;
 
                 // release space
 				if (pLFFrame) pLFFrame->Release();
 				if (pRFFrame) pRFFrame->Release();
+                if (pLLFrame) pLLFrame->Release();
+                if (pRRFrame) pRRFrame->Release();
 
 				if (pLFCameraFrame) pLFCameraFrame->Release();
 				if (pRFCameraFrame) pRFCameraFrame->Release();
+                if (pLLCameraFrame) pLLCameraFrame->Release();
+                if (pRRCameraFrame) pRRCameraFrame->Release();
             }
         }
         catch (...) {}
@@ -1056,6 +1309,14 @@ namespace winrt::HL2UnityPlugin::implementation
 		pHL2ResearchMode->m_RFSensor->CloseStream();
 		pHL2ResearchMode->m_RFSensor->Release();
 		pHL2ResearchMode->m_RFSensor = nullptr;
+
+        pHL2ResearchMode->m_LLSensor->CloseStream();
+        pHL2ResearchMode->m_LLSensor->Release();
+        pHL2ResearchMode->m_LLSensor = nullptr;
+
+        pHL2ResearchMode->m_RRSensor->CloseStream();
+        pHL2ResearchMode->m_RRSensor->Release();
+        pHL2ResearchMode->m_RRSensor = nullptr;
     }
 
     void HL2ResearchMode::StartAccelSensorLoop()
@@ -1282,9 +1543,15 @@ namespace winrt::HL2UnityPlugin::implementation
 
     inline int HL2ResearchMode::GetDepthBufferSize() { return m_depthBufferSize; }
 
+    inline bool HL2ResearchMode::DepthMapUpdated() { return m_depthMapUpdated; }
+
     inline bool HL2ResearchMode::DepthMapTextureUpdated() { return m_depthMapTextureUpdated; }
 
+    inline bool HL2ResearchMode::ShortAbImageUpdated() { return m_shortAbImageUpdated; }
+
     inline bool HL2ResearchMode::ShortAbImageTextureUpdated() { return m_shortAbImageTextureUpdated; }
+
+    inline bool HL2ResearchMode::LongAbImageUpdated() { return m_longAbImageUpdated; }
 
     inline bool HL2ResearchMode::LongAbImageTextureUpdated() { return m_longAbImageTextureUpdated; }
 
@@ -1293,6 +1560,8 @@ namespace winrt::HL2UnityPlugin::implementation
     inline bool HL2ResearchMode::LongThrowPointCloudUpdated() { return m_longThrowPointCloudUpdated; }
 
     inline int HL2ResearchMode::GetLongDepthBufferSize() { return m_longDepthBufferSize; }
+
+    inline bool HL2ResearchMode::LongDepthMapUpdated() { return m_longDepthMapUpdated; }
 
     inline bool HL2ResearchMode::LongDepthMapTextureUpdated() { return m_longDepthMapTextureUpdated; }
 
@@ -1487,7 +1756,7 @@ namespace winrt::HL2UnityPlugin::implementation
             return com_array<uint16_t>();
         }
         com_array<UINT16> tempBuffer = com_array<UINT16>(m_depthMap, m_depthMap + m_depthBufferSize);
-        
+        m_depthMapUpdated = false;
         return tempBuffer;
     }
 
@@ -1499,7 +1768,7 @@ namespace winrt::HL2UnityPlugin::implementation
             return com_array<uint16_t>();
         }
         com_array<UINT16> tempBuffer = com_array<UINT16>(m_shortAbImage, m_shortAbImage + m_depthBufferSize);
-
+        m_shortAbImageUpdated = false;
         return tempBuffer;
     }
 

@@ -16,6 +16,23 @@
 #include<winrt/Windows.Perception.Spatial.h>
 #include<winrt/Windows.Perception.Spatial.Preview.h>
 
+#define WIN32_LEAN_AND_MEAN
+
+#include <windows.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
+
+#define HEADER_LEN        (16)
+#define DEFAULT_READ_SIZE (8192)
+#define DEFAULT_BUFLEN    (1024 * 1024)
+#define LF_VLC_TCP_PORT   (11000)
+#define RF_VLC_TCP_PORT   (11001)
+#define LL_VLC_TCP_PORT   (11002)
+#define RR_VLC_TCP_PORT   (11003)
+#define PV_TCP_PORT       (11004)
+#define DEPTH_TCP_PORT    (11005)
+#define DEPTH_AB_TCP_PORT (11006)
+
 namespace winrt::HL2UnityPlugin::implementation
 {
     struct HL2ResearchMode : HL2ResearchModeT<HL2ResearchMode>
@@ -50,11 +67,15 @@ namespace winrt::HL2UnityPlugin::implementation
 
         void StopAllSensorDevice();
 
+        bool DepthMapUpdated();
         bool DepthMapTextureUpdated();
+        bool ShortAbImageUpdated();
         bool ShortAbImageTextureUpdated();
+        bool LongAbImageUpdated();
         bool LongAbImageTextureUpdated();
         bool PointCloudUpdated();
         bool LongThrowPointCloudUpdated();
+        bool LongDepthMapUpdated();
         bool LongDepthMapTextureUpdated();
 		bool LFImageUpdated();
 		bool RFImageUpdated();
@@ -93,6 +114,15 @@ namespace winrt::HL2UnityPlugin::implementation
 
 
     private:
+        SOCKET m_socketLF = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+        SOCKET m_socketRF = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+        SOCKET m_socketLL = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+        SOCKET m_socketRR = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+        SOCKET m_socketDepth = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+        SOCKET m_socketDepthAb = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+
+        std::vector<SOCKET> m_sockets;
+
         float* m_pointCloud = nullptr;
         int m_pointcloudLength = 0;
         float* m_longThrowPointCloud = nullptr;
@@ -159,8 +189,12 @@ namespace winrt::HL2UnityPlugin::implementation
         std::atomic_bool m_magSensorLoopStarted = false;
 
         std::atomic_bool m_depthMapTextureUpdated = false;
+        std::atomic_bool m_depthMapUpdated = false;
+        std::atomic_bool m_shortAbImageUpdated = false;
         std::atomic_bool m_shortAbImageTextureUpdated = false;
+        std::atomic_bool m_longAbImageUpdated = false;
         std::atomic_bool m_longAbImageTextureUpdated = false;
+        std::atomic_bool m_longDepthMapUpdated = false;
         std::atomic_bool m_longDepthMapTextureUpdated = false;
         std::atomic_bool m_pointCloudUpdated = false;
         std::atomic_bool m_longThrowPointCloudUpdated = false;

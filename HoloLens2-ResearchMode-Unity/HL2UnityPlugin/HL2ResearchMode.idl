@@ -39,10 +39,14 @@ namespace HL2UnityPlugin
         String PrintLFFrameBuffer();
         String PrintDebugString();
 
+        Boolean DepthMapUpdated();
         Boolean DepthMapTextureUpdated();
+        Boolean ShortAbImageUpdated();
         Boolean ShortAbImageTextureUpdated();
+        Boolean LongAbImageUpdated();
         Boolean LongAbImageTextureUpdated();
         Boolean PointCloudUpdated();
+        Boolean LongDepthMapUpdated();
         Boolean LongDepthMapTextureUpdated();
         Boolean LongThrowPointCloudUpdated();
 
