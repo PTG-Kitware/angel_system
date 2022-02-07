@@ -6,18 +6,12 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Unity.Collections;
 using UnityEngine;
-using UnityEngine.Rendering;
-using UnityEngine.Windows.WebCam;
-using DilmerGames.Core.Singletons;
-using TMPro;
 using System.Runtime.InteropServices;
 
 
@@ -34,6 +28,7 @@ using System.Runtime.InteropServices.WindowsRuntime;
 #endif
 
 
+
 public class ResearchModeCapture : MonoBehaviour
 {
 
@@ -46,20 +41,32 @@ public class ResearchModeCapture : MonoBehaviour
         None
     };
     DepthSensorMode depthSensorMode = DepthSensorMode.ShortThrow;
-    bool enablePointCloud = true;
+    bool enablePointCloud = false;
 
     Windows.Perception.Spatial.SpatialCoordinateSystem unityWorldOrigin;
 #endif
 
     // Network stuff
-    System.Net.Sockets.TcpClient tcpClient1;
-    NetworkStream tcpStream1;
-    System.Net.Sockets.TcpClient tcpClient2;
-    NetworkStream tcpStream2;
-    System.Net.Sockets.TcpClient tcpClient3;
-    NetworkStream tcpStream3;
-    System.Net.Sockets.TcpClient tcpClient4;
-    NetworkStream tcpStream4;
+    System.Net.Sockets.TcpClient tcpClientLF;
+    NetworkStream tcpStreamLF;
+    System.Net.Sockets.TcpClient tcpClientRF;
+    NetworkStream tcpStreamRF;
+    System.Net.Sockets.TcpClient tcpClientLL;
+    NetworkStream tcpStreamLL;
+    System.Net.Sockets.TcpClient tcpClientRR;
+    NetworkStream tcpStreamRR;
+    System.Net.Sockets.TcpClient tcpClientDepth;
+    NetworkStream tcpStreamDepth;
+    System.Net.Sockets.TcpClient tcpClientAbDepth;
+    NetworkStream tcpStreamAbDepth;
+
+    public const int LF_VLC_Tcp_Port = 11000;
+    public const int RF_VLC_Tcp_Port = 11001;
+    public const int LL_VLC_Tcp_Port = 11002;
+    public const int RR_VLC_Tcp_Port = 11003;
+    public const int Depth_Tcp_Port = 11004;
+    public const int Depth_Ab_Tcp_Port = 11005;
+    public const string TcpServerIPAddr = "169.254.103.120";
 
     GameObject loggerObject = null;
 
@@ -67,8 +74,6 @@ public class ResearchModeCapture : MonoBehaviour
     IEnumerable<SpatialAwarenessMeshObject> meshes;
     IMixedRealitySpatialAwarenessMeshObserver observer = null;
 
-    long prev_ts;
-    uint framesRcvd;
     string debugString = "";
 
     private void Awake()
@@ -83,33 +88,45 @@ public class ResearchModeCapture : MonoBehaviour
     {
         this.loggerObject = GameObject.Find("Logger");
 
+        /*
         // Connect to the python TCP servers
-        this.tcpClient1 = new System.Net.Sockets.TcpClient();
-        this.tcpClient2 = new System.Net.Sockets.TcpClient();
-        this.tcpClient3 = new System.Net.Sockets.TcpClient();
-        this.tcpClient4 = new System.Net.Sockets.TcpClient();
+        this.tcpClientLF = new System.Net.Sockets.TcpClient();
+        this.tcpClientRF = new System.Net.Sockets.TcpClient();
+        this.tcpClientLL = new System.Net.Sockets.TcpClient();
+        this.tcpClientRR = new System.Net.Sockets.TcpClient();
+        this.tcpClientDepth = new System.Net.Sockets.TcpClient();
+        this.tcpClientAbDepth = new System.Net.Sockets.TcpClient();
         try
         {
-            this.tcpClient1.Connect("169.254.103.120", 11000);
-            this.loggerObject.GetComponent<Logger>().LogInfo("TCP client 1 connected!");
-            this.tcpStream1 = this.tcpClient1.GetStream();
+            this.tcpClientLF.Connect(TcpServerIPAddr, LF_VLC_Tcp_Port);
+            this.loggerObject.GetComponent<Logger>().LogInfo("TCP client LF connected!");
+            this.tcpStreamLF = this.tcpClientLF.GetStream();
 
-            this.tcpClient2.Connect("169.254.103.120", 11001);
-            this.loggerObject.GetComponent<Logger>().LogInfo("TCP client 2 connected!");
-            this.tcpStream2 = this.tcpClient2.GetStream();
+            this.tcpClientRF.Connect(TcpServerIPAddr, RF_VLC_Tcp_Port);
+            this.loggerObject.GetComponent<Logger>().LogInfo("TCP client RF connected!");
+            this.tcpStreamRF = this.tcpClientRF.GetStream();
 
-            this.tcpClient3.Connect("169.254.103.120", 11002);
-            this.loggerObject.GetComponent<Logger>().LogInfo("TCP client 3 connected!");
-            this.tcpStream3 = this.tcpClient3.GetStream();
+            this.tcpClientLL.Connect(TcpServerIPAddr, LL_VLC_Tcp_Port);
+            this.loggerObject.GetComponent<Logger>().LogInfo("TCP client LL connected!");
+            this.tcpStreamLL = this.tcpClientLL.GetStream();
 
-            this.tcpClient4.Connect("169.254.103.120", 11003);
-            this.loggerObject.GetComponent<Logger>().LogInfo("TCP client 4 connected!");
-            this.tcpStream4 = this.tcpClient4.GetStream();
+            this.tcpClientRR.Connect(TcpServerIPAddr, RR_VLC_Tcp_Port);
+            this.loggerObject.GetComponent<Logger>().LogInfo("TCP client RR connected!");
+            this.tcpStreamRR = this.tcpClientRR.GetStream();
+
+            this.tcpClientDepth.Connect(TcpServerIPAddr, Depth_Tcp_Port);
+            this.loggerObject.GetComponent<Logger>().LogInfo("TCP client Depth connected!");
+            this.tcpStreamDepth = this.tcpClientDepth.GetStream();
+
+            this.tcpClientAbDepth.Connect(TcpServerIPAddr, Depth_Ab_Tcp_Port);
+            this.loggerObject.GetComponent<Logger>().LogInfo("TCP client AB Depth connected!");
+            this.tcpStreamAbDepth = this.tcpClientAbDepth.GetStream();
         }
         catch (Exception e)
         {
             this.loggerObject.GetComponent<Logger>().LogInfo(e.ToString());
         }
+        */
 
 #if ENABLE_WINMD_SUPPORT
         // Configure research mode
@@ -132,14 +149,18 @@ public class ResearchModeCapture : MonoBehaviour
         this.loggerObject.GetComponent<Logger>().LogInfo("Research mode initialized");
 
         // Start the publishing thread
-        Thread tLFCameraThread = new Thread(LFCameraThread);
-        tLFCameraThread.Start();
-        Thread tRFCameraThread = new Thread(RFCameraThread);
-        tRFCameraThread.Start();
-        Thread tLLCameraThread = new Thread(LLCameraThread);
-        tLLCameraThread.Start();
-        Thread tRRCameraThread = new Thread(RRCameraThread);
-        tRRCameraThread.Start();
+        //Thread tLFCameraThread = new Thread(LFCameraThread);
+        //tLFCameraThread.Start();
+        //Thread tRFCameraThread = new Thread(RFCameraThread);
+        //tRFCameraThread.Start();
+        //Thread tLLCameraThread = new Thread(LLCameraThread);
+        //tLLCameraThread.Start();
+        //Thread tRRCameraThread = new Thread(RRCameraThread);
+        //tRRCameraThread.Start();
+        //Thread tDepthCameraThread = new Thread(DepthCameraThread);
+        //tDepthCameraThread.Start();
+        //Thread tDepthCameraAbThread = new Thread(DepthCameraAbThread);
+        //tDepthCameraAbThread.Start();
 #endif
     }
 
@@ -155,13 +176,19 @@ public class ResearchModeCapture : MonoBehaviour
                 {
                     observer = observers;
                     observer.DisplayOption = SpatialAwarenessMeshDisplayOptions.None;
-                    //observer.LevelOfDetail = SpatialAwarenessMeshLevelOfDetail.Unlimited;
-                    //observer.UpdateInterval = 0.5f;
                     this.loggerObject.GetComponent<Logger>().LogInfo("Detail level: " + observer.LevelOfDetail.ToString());
                     this.loggerObject.GetComponent<Logger>().LogInfo("Update interval: " + observer.UpdateInterval.ToString());
                 }
             }
         }
+
+#if ENABLE_WINMD_SUPPORT
+
+        if (researchMode.PrintDebugString() != "")
+        {
+            this.loggerObject.GetComponent<Logger>().LogInfo(researchMode.PrintDebugString());
+        }
+#endif
 
         if (debugString != "")
         {
@@ -187,9 +214,7 @@ public class ResearchModeCapture : MonoBehaviour
                     sendImage = true;
                     continue;
                 }
-                //debugString = (ts - prev_ts).ToString();
 
-                //prev_ts = ts;
                 if (framePayload.Length > 0)
                 {
                     // Prepend width and length
@@ -215,13 +240,13 @@ public class ResearchModeCapture : MonoBehaviour
                     System.Buffer.BlockCopy(framePayload, 0, frame, frameHeader.Length, framePayload.Length);
 
                     // Send the data through the socket.  
-                    tcpStream1.Write(frame, 0, frame.Length);
-                    tcpStream1.Flush();
+                    tcpStreamLF.Write(frame, 0, frame.Length);
+                    tcpStreamLF.Flush();
                     //sendImage = false;
                 } // end if length > 0
             } // end if image available
 
-            Thread.Sleep(3);
+            Thread.Sleep(5);
         } // end while loop
 #endif
     } // end method
@@ -245,9 +270,7 @@ public class ResearchModeCapture : MonoBehaviour
                     sendImage = true;
                     continue;
                 }
-                //debugString = (ts - prev_ts).ToString();
 
-                //prev_ts = ts;
                 if (framePayload.Length > 0)
                 {
                     // Prepend width and length
@@ -273,14 +296,14 @@ public class ResearchModeCapture : MonoBehaviour
                     System.Buffer.BlockCopy(framePayload, 0, frame, frameHeader.Length, framePayload.Length);
 
                     // Send the data through the socket.  
-                    tcpStream2.Write(frame, 0, frame.Length);
-                    tcpStream2.Flush();
+                    tcpStreamRF.Write(frame, 0, frame.Length);
+                    tcpStreamRF.Flush();
                     //sendImage = false;
 
                 } // end if length > 0
             } // end if image available
 
-            Thread.Sleep(3);
+            Thread.Sleep(5);
         } // end while loop
 #endif
     } // end method
@@ -298,14 +321,12 @@ public class ResearchModeCapture : MonoBehaviour
                 long ts;
                 byte [] framePayload = researchMode.GetLLCameraBuffer(out ts);
 
-                //debugString = (ts - prev_ts).ToString();
                 // only send every other image
                 if (!(sendImage))
                 {
                     sendImage = true;
                     continue;
                 }
-                //prev_ts = ts;
                 if (framePayload.Length > 0)
                 {
                     // Prepend width and length
@@ -331,15 +352,15 @@ public class ResearchModeCapture : MonoBehaviour
                     System.Buffer.BlockCopy(framePayload, 0, frame, frameHeader.Length, framePayload.Length);
 
                     // Send the data through the socket.  
-                    tcpStream3.Write(frame, 0, frame.Length);
-                    tcpStream3.Flush();
+                    tcpStreamLL.Write(frame, 0, frame.Length);
+                    tcpStreamLL.Flush();
 
                     //sendImage = false;
 
                 } // end if length > 0
             } // end if image available
 
-            Thread.Sleep(3);
+            Thread.Sleep(5);
         } // end while loop
 #endif
     } // end method
@@ -364,9 +385,6 @@ public class ResearchModeCapture : MonoBehaviour
                     continue;
                 }
 
-                //debugString = (ts - prev_ts).ToString();
-
-                //prev_ts = ts;
                 if (framePayload.Length > 0)
                 {
                     // Prepend width and length
@@ -392,15 +410,148 @@ public class ResearchModeCapture : MonoBehaviour
                     System.Buffer.BlockCopy(framePayload, 0, frame, frameHeader.Length, framePayload.Length);
 
                     // Send the data through the socket.  
-                    tcpStream4.Write(frame, 0, frame.Length);
-                    tcpStream4.Flush();
+                    tcpStreamRR.Write(frame, 0, frame.Length);
+                    tcpStreamRR.Flush();
                     //sendImage = false;
                 } // end if length > 0
             } // end if image available
 
-            Thread.Sleep(3);
+            Thread.Sleep(5);
         } // end while loop
 #endif
     } // end method
+
+    public void DepthCameraThread()
+    {
+#if ENABLE_WINMD_SUPPORT
+        while (true)
+        {
+            // Try to get the frame from research mode
+            if (researchMode.DepthMapUpdated())
+            {
+                //debugString = researchMode.PrintDepthResolution();
+                //debugString += researchMode.PrintDepthExtrinsics();
+
+                UInt16 [] depthBuffer = researchMode.GetDepthMapBuffer();
+                //byte [] depthTexture = researchMode.GetDepthMapTextureBuffer();
+                //UInt16 [] abBuffer = researchMode.GetShortAbImageBuffer();
+                //byte [] abTexture = researchMode.GetShortAbImageTextureBuffer();
+
+                if (depthBuffer.Length > 0)
+                {
+                    //debugString = "\nDepth buffer length" + depthBuffer.Length.ToString();
+                    //debugString += "\nDepth texture length" + depthTexture.Length.ToString();
+                    //debugString += "\nDepth AB buffer length" + abBuffer.Length.ToString();
+                    //debugString += "\nDepth AB texture length" + abTexture.Length.ToString();
+
+                    try
+                    {
+                        // Prepend width and length
+                        uint width = 512;
+                        uint height = 512;
+                        int depthBufferLength = depthBuffer.Length * 2;
+                        byte[] frameHeader = { 0x1A, 0xCF, 0xFC, 0x1D,
+                                            (byte)(((depthBufferLength + 8) & 0xFF000000) >> 24),
+                                            (byte)(((depthBufferLength + 8) & 0x00FF0000) >> 16),
+                                            (byte)(((depthBufferLength + 8) & 0x0000FF00) >> 8),
+                                            (byte)(((depthBufferLength + 8) & 0x000000FF) >> 0),
+                                            (byte)((width & 0xFF000000) >> 24),
+                                            (byte)((width & 0x00FF0000) >> 16),
+                                            (byte)((width & 0x0000FF00) >> 8),
+                                            (byte)((width & 0x000000FF) >> 0),
+                                            (byte)((height & 0xFF000000) >> 24),
+                                            (byte)((height & 0x00FF0000) >> 16),
+                                            (byte)((height & 0x0000FF00) >> 8),
+                                            (byte)((height & 0x000000FF) >> 0) };
+
+                        byte[] frame = new byte[(depthBufferLength) + 16];
+
+                        System.Buffer.BlockCopy(frameHeader, 0, frame, 0, frameHeader.Length);
+
+                        for (int i = 0; i < frame.Length - 16; i += 2)
+                        {
+                            frame[i + 16] = (byte)((depthBuffer[i / 2] & 0xFF00) >> 8); // extract upper byte
+                            frame[i + 17] = (byte) (depthBuffer[i / 2] & 0x00FF);   // extract lower byte
+                        }
+                        
+                        //System.Buffer.BlockCopy(depthTexture, 0, frame, frameHeader.Length, depthTexture.Length);
+
+                        // Send the data through the socket.  
+                        tcpStreamDepth.Write(frame, 0, frame.Length);
+                        tcpStreamDepth.Flush();
+                    }
+                    catch (Exception e)
+                    {
+                        debugString += e.ToString();
+                    }
+                } // end if length > 0
+            } // end if image available
+
+            Thread.Sleep(5);
+        } // end while loop
+#endif
+    } // end method
+
+    public void DepthCameraAbThread()
+    {
+#if ENABLE_WINMD_SUPPORT
+        while (true)
+        {
+            // Try to get the frame from research mode
+            if (researchMode.ShortAbImageUpdated())
+            {
+                //debugString = researchMode.PrintDepthResolution();
+                //debugString += researchMode.PrintDepthExtrinsics();
+
+                UInt16 [] AbBuffer = researchMode.GetShortAbImageBuffer();
+
+                if (AbBuffer.Length > 0)
+                {
+                    try
+                    {
+                        // Prepend width and length
+                        uint width = 512;
+                        uint height = 512;
+                        int AbBufferLength = AbBuffer.Length * 2;
+                        byte[] frameHeader = { 0x1A, 0xCF, 0xFC, 0x1D,
+                                            (byte)(((AbBufferLength + 8) & 0xFF000000) >> 24),
+                                            (byte)(((AbBufferLength + 8) & 0x00FF0000) >> 16),
+                                            (byte)(((AbBufferLength + 8) & 0x0000FF00) >> 8),
+                                            (byte)(((AbBufferLength + 8) & 0x000000FF) >> 0),
+                                            (byte)((width & 0xFF000000) >> 24),
+                                            (byte)((width & 0x00FF0000) >> 16),
+                                            (byte)((width & 0x0000FF00) >> 8),
+                                            (byte)((width & 0x000000FF) >> 0),
+                                            (byte)((height & 0xFF000000) >> 24),
+                                            (byte)((height & 0x00FF0000) >> 16),
+                                            (byte)((height & 0x0000FF00) >> 8),
+                                            (byte)((height & 0x000000FF) >> 0) };
+
+                        byte[] frame = new byte[(AbBufferLength) + 16];
+
+                        System.Buffer.BlockCopy(frameHeader, 0, frame, 0, frameHeader.Length);
+
+                        for (int i = 0; i < frame.Length - 16; i += 2)
+                        {
+                            frame[i + 16] = (byte)((AbBuffer[i / 2] & 0xFF00) >> 8); // extract upper byte
+                            frame[i + 17] = (byte) (AbBuffer[i / 2] & 0x00FF);   // extract lower byte
+                        }
+                        
+                        // Send the data through the socket.  
+                        tcpStreamAbDepth.Write(frame, 0, frame.Length);
+                        tcpStreamAbDepth.Flush();
+                    }
+                    catch (Exception e)
+                    {
+                        debugString += e.ToString();
+                    }
+                } // end if length > 0
+            } // end if image available
+
+            Thread.Sleep(5);
+        } // end while loop
+#endif
+    } // end method
+
 
 }

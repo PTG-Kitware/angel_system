@@ -12,12 +12,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Unity.Collections;
 using UnityEngine;
-using UnityEngine.Rendering;
-using UnityEngine.Windows.WebCam;
-using DilmerGames.Core.Singletons;
-using TMPro;
 using System.Runtime.InteropServices;
 
 #if ENABLE_WINMD_SUPPORT
@@ -28,7 +23,6 @@ using Windows.Media.Capture.Frames;
 using Windows.Media.MediaProperties;
 using System.Runtime.InteropServices.WindowsRuntime;
 #endif
-
 
 public class PVCameraCapture : MonoBehaviour
 {
@@ -42,7 +36,6 @@ public class PVCameraCapture : MonoBehaviour
     // Network stuff
     System.Net.Sockets.TcpClient tcpClient;
     NetworkStream tcpStream;
-
     GameObject loggerObject = null;
 
     long prev_ts;
@@ -69,11 +62,17 @@ public class PVCameraCapture : MonoBehaviour
     {
         this.loggerObject = GameObject.Find("Logger");
 
+#if ENABLE_WINMD_SUPPORT
+
         // Connect to the python TCP server
         this.tcpClient = new System.Net.Sockets.TcpClient();
         try
         {
-            this.tcpClient.Connect("169.254.103.120", 11004);
+            //socket = new StreamSocket();
+            //var hostName = new Windows.Networking.HostName("169.254.103.120");
+            //await socket.ConnectAsync(hostName, "11006");
+            // dw = new DataWriter(socket.OutputStream);
+            this.tcpClient.Connect("169.254.103.120", 11006);
             this.loggerObject.GetComponent<Logger>().LogInfo("TCP client PV connected!");
             this.tcpStream = this.tcpClient.GetStream();
         }
@@ -82,7 +81,6 @@ public class PVCameraCapture : MonoBehaviour
             this.loggerObject.GetComponent<Logger>().LogInfo(e.ToString());
         }
 
-#if ENABLE_WINMD_SUPPORT
         await InitializeMediaCaptureAsyncTask();
 
         MediaFrameReaderStartStatus mediaFrameReaderStartStatus = await frameReader.StartAsync();
@@ -90,28 +88,28 @@ public class PVCameraCapture : MonoBehaviour
         {
 		    this.loggerObject.GetComponent<Logger>().LogInfo("StartFrameReaderAsyncTask() is not successful, status = " + mediaFrameReaderStartStatus);
 		}
-
 #endif
     }
 
+    /*
     void Update()
     {
         if (debugString != "")
         {
-            this.loggerObject.GetComponent<Logger>().LogInfo(debugString);
+            //this.loggerObject.GetComponent<Logger>().LogInfo(debugString);
         }
     }
-
+    */
 
 #if ENABLE_WINMD_SUPPORT
     public async Task<bool> InitializeMediaCaptureAsyncTask()
     {
         int targetVideoWidth, targetVideoHeight;
         float targetVideoFrameRate;
-        //targetVideoWidth = 1280;
-        //targetVideoHeight = 720;
-        targetVideoWidth = 1920;
-        targetVideoHeight = 1080;
+        targetVideoWidth = 1280;
+        targetVideoHeight = 720;
+        //targetVideoWidth = 1920;
+        //targetVideoHeight = 1080;
         targetVideoFrameRate = 30.0f;
 
         var allGroups = await MediaFrameSourceGroup.FindAllAsync();
@@ -203,7 +201,7 @@ public class PVCameraCapture : MonoBehaviour
             frameReader = await mediaCapture.CreateFrameReaderAsync(mediaFrameSourceVideo, targetResFormat.Subtype);
             frameReader.FrameArrived += OnFrameArrived;
 
-            frameData = new byte[(int) (1920 * targetResFormat.VideoFormat.Height * 1.5) + 16];
+            frameData = new byte[(int) (targetResFormat.VideoFormat.Width * targetResFormat.VideoFormat.Height * 1.5) + 16];
             this.loggerObject.GetComponent<Logger>().LogInfo("FrameReader is successfully initialized, " + targetResFormat.VideoFormat.Width + "x" + targetResFormat.VideoFormat.Height +
                 ", Framerate: " + targetResFormat.FrameRate.Numerator + "/" + targetResFormat.FrameRate.Denominator);
         }
@@ -277,7 +275,6 @@ public class PVCameraCapture : MonoBehaviour
                         // Send the data through the socket.  
                         tcpStream.Write(frameData, 0, frameData.Length);
                         tcpStream.Flush();
-
                         originalSoftwareBitmap?.Dispose();
                     }
                     

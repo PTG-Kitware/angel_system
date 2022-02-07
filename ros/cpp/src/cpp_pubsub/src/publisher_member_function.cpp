@@ -23,10 +23,17 @@
 #pragma comment (lib, "Mswsock.lib")
 #pragma comment (lib, "AdvApi32.lib")
 
-
 #define HEADER_LEN        (16)
 #define DEFAULT_READ_SIZE (8192)
 #define DEFAULT_BUFLEN    (1024 * 1024)
+#define LF_VLC_TCP_PORT   (11000)
+#define RF_VLC_TCP_PORT   (11001)
+#define LL_VLC_TCP_PORT   (11002)
+#define RR_VLC_TCP_PORT   (11003)
+#define DEPTH_TCP_PORT    (11004)
+#define DEPTH_AB_TCP_PORT (11005)
+#define PV_TCP_PORT       (11006)
+
 
 using namespace std::chrono_literals;
 
@@ -46,8 +53,8 @@ class MinimalPublisher : public rclcpp::Node
     }
 
   private:
-    //rclcpp::Publisher<std_msgs::msg::ByteMultiArray>::SharedPtr publisher_;
     size_t count_;
+    std::string server_ip_addr = "169.254.103.120";
     
     void TCPServerThread(int port)
     {
@@ -62,38 +69,51 @@ class MinimalPublisher : public rclcpp::Node
       char recv_buf[DEFAULT_READ_SIZE];
       unsigned int frames_received = 0;
 
-      if (port == 11000) 
+      if (port == LF_VLC_TCP_PORT) 
       {
         publisher_ = this->create_publisher<sensor_msgs::msg::Image>("LFFrames", 10);
         frame_id = "LFFrame VLC";
         std::cout << "Created LFFrame publisher\n";
       } 
-      else if (port == 11001)
+      else if (port == RF_VLC_TCP_PORT)
       {
         publisher_ = this->create_publisher<sensor_msgs::msg::Image>("RFFrames", 10);
         frame_id = "RFFrame VLC";
         std::cout << "Created RFFrame publisher\n";
       }
-      else if (port == 11002)
+      else if (port == LL_VLC_TCP_PORT)
       {
         publisher_ = this->create_publisher<sensor_msgs::msg::Image>("LLFrames", 10);
         frame_id = "LLFrame VLC";
         std::cout << "Created LLFrame publisher\n";
       }
-      else if (port == 11003)
+      else if (port == RR_VLC_TCP_PORT)
       {
         publisher_ = this->create_publisher<sensor_msgs::msg::Image>("RRFrames", 10);
         frame_id = "RRFrame VLC";
         std::cout << "Created RRFrame publisher\n";
       }
-      else if (port == 11004)
+      else if (port == PV_TCP_PORT)
       {
         publisher_ = this->create_publisher<sensor_msgs::msg::Image>("PVFrames", 10);
         frame_id = "PV camera";
         std::cout << "Created PV publisher\n";
       }
+      else if (port == DEPTH_TCP_PORT)
+      {
+        publisher_ = this->create_publisher<sensor_msgs::msg::Image>("DepthFrames", 10);
+        frame_id = "Depth camera";
+        std::cout << "Created Depth publisher\n";
+      }
+      else if (port == DEPTH_AB_TCP_PORT)
+      {
+        publisher_ = this->create_publisher<sensor_msgs::msg::Image>("DepthABFrames", 10);
+        frame_id = "Depth AB camera";
+        std::cout << "Created AB Depth publisher\n";
+      }
       else
       {
+        std::cout << "Invalid port number entered!\n";
         return;
       }
 
@@ -104,7 +124,7 @@ class MinimalPublisher : public rclcpp::Node
 
       addr.sin_family = AF_INET;
       addr.sin_port = htons(port);
-      inet_pton(AF_INET, "169.254.103.120", &(addr.sin_addr));
+      inet_pton(AF_INET, server_ip_addr.c_str(), &(addr.sin_addr));
 
       s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
       if (s == INVALID_SOCKET)
@@ -148,7 +168,7 @@ class MinimalPublisher : public rclcpp::Node
           && ((unsigned char) recv_buf_hdr[2] == 0xFC)
           && ((unsigned char) recv_buf_hdr[3] == 0x1D)))
         {
-          std::cout << "Sync mismatch!";
+          std::cout << frame_id << ": sync mismatch!";
           break;
         }
 
@@ -201,13 +221,15 @@ class MinimalPublisher : public rclcpp::Node
 
         frames_received++;
 
+        //std::cout << std::to_string(frame_data.size()) << std::endl;
+
         std::chrono::steady_clock::time_point time_now = std::chrono::steady_clock::now();
 
         if (std::chrono::duration_cast<std::chrono::seconds> (time_now - time_prev).count() >= 1)
         {
-          //std::cout << frame_id << " frames received: " << std::to_string(frames_received) << std::endl;
-          //frames_received = 0;
-          //time_prev = time_now;
+          std::cout << frame_id << " frames received: " << std::to_string(frames_received) << std::endl;
+          frames_received = 0;
+          time_prev = time_now;
         }
 
         //continue;
@@ -219,17 +241,21 @@ class MinimalPublisher : public rclcpp::Node
         message.header.frame_id = frame_id;
         message.height = height;
         message.width = width;
+        message.is_bigendian = false;
 
-        if (port == 11004)
+        if (port == PV_TCP_PORT)
         {
           message.encoding = "rgb8";
-          message.is_bigendian = false;
           message.step = 1280;
+        }
+        else if ((port == DEPTH_TCP_PORT) || (port == DEPTH_AB_TCP_PORT))
+        {
+          message.encoding = "mono16";
+          message.step = width * 2;
         }
         else
         {
           message.encoding = "mono8";
-          message.is_bigendian = false;
           message.step = width;
         }
 
@@ -246,9 +272,7 @@ int main(int argc, char * argv[])
 {
   rclcpp::init(argc, argv);
 
-  std::cout << "Args: " << std::to_string(argc) << std::endl;
-
-
+  /*
   int port;
   if (argc >= 2)
   {
@@ -264,17 +288,18 @@ int main(int argc, char * argv[])
     std::cout << "Please enter port number" << std::endl;
     return 0;
   }
-
+  */
 
   std::shared_ptr<MinimalPublisher> mp = std::make_shared<MinimalPublisher>();
 
-  /*
   // start the server threads
-  std::thread t1 = mp->StartTCPServerThread(11000);
-  std::thread t2 = mp->StartTCPServerThread(11001);
-  std::thread t3 = mp->StartTCPServerThread(11002);
-  std::thread t4 = mp->StartTCPServerThread(11003);
-  std::thread t5 = mp->StartTCPServerThread(11004);
+  std::thread t1 = mp->StartTCPServerThread(LF_VLC_TCP_PORT);
+  std::thread t2 = mp->StartTCPServerThread(RF_VLC_TCP_PORT);
+  std::thread t3 = mp->StartTCPServerThread(LL_VLC_TCP_PORT);
+  std::thread t4 = mp->StartTCPServerThread(RR_VLC_TCP_PORT);
+  std::thread t5 = mp->StartTCPServerThread(PV_TCP_PORT);
+  std::thread t6 = mp->StartTCPServerThread(DEPTH_TCP_PORT);
+  std::thread t7 = mp->StartTCPServerThread(DEPTH_AB_TCP_PORT);
 
   rclcpp::spin(mp);
 
@@ -283,14 +308,13 @@ int main(int argc, char * argv[])
   t3.join();
   t4.join();
   t5.join();
-  */
+  t6.join();
+  t7.join();
 
   // start the server threads
-  std::thread t1 = mp->StartTCPServerThread(port);
-
-  rclcpp::spin(mp);
-
-  t1.join();
+  //std::thread t1 = mp->StartTCPServerThread(port);
+  //rclcpp::spin(mp);
+  //t1.join();
 
   rclcpp::shutdown();
   return 0;
