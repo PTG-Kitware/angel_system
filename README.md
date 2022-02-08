@@ -9,6 +9,8 @@ Unity - 2020.3.25f1 - https://unity3d.com/get-unity/download/archive
 Visual Studio 2019 - 16.11.8 - https://visualstudio.microsoft.com/vs/older-downloads/  
 Mixed Reality Feature Tool - 1.02111-Preview - https://www.microsoft.com/en-us/download/details.aspx?id=102778  
 HoloLens 2 headset
+Anaconda/Miniconda - py3.9
+
 
 # First time build/deploy instructions
 
