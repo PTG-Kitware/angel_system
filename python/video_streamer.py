@@ -10,15 +10,28 @@ from matplotlib import pyplot as plot
 import matplotlib
 
 
+# Need to open the incoming port in your firewall first.
 HOST = '192.168.1.89'
 PORT = 11000
 IMAGE_FILENAME = "C:\\Users\\josh.anderson\\Desktop\\hololens_image_"
 
-# create axes
-ax1 = plot.subplot(111)
-im1 = ax1.imshow(np.zeros(shape=(480, 640, 1)), cmap='gray', vmin=0, vmax=255)
+# Enable interactive mode
 plot.ion()
-plot.show()
+plot.show(block=False)
+
+
+def get_im():
+    try:
+        return get_im._im1
+    except AttributeError:
+        get_im._ax1 = ax1 = plot.subplot(111)
+        get_im._im1 = im1 = (
+            ax1.imshow(np.zeros(shape=(480, 640, 1)), cmap='gray', vmin=0, vmax=255)
+        )
+    return get_im()
+
+
+# get_im()
 
 
 def server_thread():
@@ -27,9 +40,10 @@ def server_thread():
     s.bind((HOST, PORT))
     s.settimeout(120)
 
-    print("Waiting for connection")
+    print("Listening to socket...")
     s.listen()
     try:
+        print("Waiting for connection")
         conn, addr = s.accept()
     except:
         print("Timed out waiting for connection")
@@ -78,7 +92,7 @@ def server_thread():
         default_read_size = 8192
         while (bytes_read != total_message_length):
             bytes_remaining = total_message_length - bytes_read
-            
+
             if default_read_size > bytes_remaining:
                 read_size = bytes_remaining
             elif default_read_size > total_message_length:
@@ -121,7 +135,7 @@ def server_thread():
         idx += 1
         '''
 
-        im1.set_data(image_np)
+        get_im().set_data(image_np)
 
         plot.gcf().canvas.flush_events()
         plot.show(block=False)

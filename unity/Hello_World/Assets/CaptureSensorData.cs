@@ -43,13 +43,31 @@ public class CaptureSensorData : MonoBehaviour
     System.Net.Sockets.TcpClient tcpClient;
     NetworkStream tcpStream;
 
-    GameObject loggerObject = null;
+    private Logger _logger = null;
 
     // Spatial awareness stuff
     IEnumerable<SpatialAwarenessMeshObject> meshes;
     IMixedRealitySpatialAwarenessMeshObserver observer = null;
 
     long prev_ts;
+    // IP Address hosting the server to connect to.
+    // USB-C :: Worked after opening up incoming port through the firewall.
+    string ip_address = "169.254.70.247";
+    int ip_port = 11000;
+
+    /// <summary>
+    /// Lazy acquire the logger object and return the reference to it.
+    /// </summary>
+    /// <returns>Logger instance reference.</returns>
+    private ref Logger logger()
+    {
+        if( this._logger == null )
+        {
+            // TODO: Error handling for null loggerObject?
+            this._logger = GameObject.Find("Logger").GetComponent<Logger>();
+        }
+        return ref this._logger;
+    }
 
     private void Awake()
     {
@@ -61,12 +79,13 @@ public class CaptureSensorData : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        this.loggerObject = GameObject.Find("Logger");
+        Logger log = logger();
 
 #if ENABLE_WINMD_SUPPORT
         // Configure research mode
-        this.loggerObject.GetComponent<Logger>().LogInfo("Research mode enabled");
+        log.LogInfo("Trying to enable research mode...");
         researchMode = new HL2ResearchMode();
+        log.LogInfo("Research mode enabled");
 
         // Depth sensor should be initialized in only one mode
         if (depthSensorMode == DepthSensorMode.LongThrow) researchMode.InitializeLongDepthSensor();
@@ -81,21 +100,22 @@ public class CaptureSensorData : MonoBehaviour
         else if (depthSensorMode == DepthSensorMode.ShortThrow) researchMode.StartDepthSensorLoop(enablePointCloud);
 
         researchMode.StartSpatialCamerasFrontLoop();
-        this.loggerObject.GetComponent<Logger>().LogInfo("Research mode initialized");
+        log.LogInfo("Research mode initialized");
 #endif
 
         // Connect to the python TCP server
         this.tcpClient = new System.Net.Sockets.TcpClient();
         try
         {
-            this.loggerObject.GetComponent<Logger>().LogInfo("Attempting to connect to TCP socket @ IP address 192.168.1.89");
-            this.tcpClient.Connect("192.168.1.89", 11000);
-            this.loggerObject.GetComponent<Logger>().LogInfo("TCP client connected!");
+            log.LogInfo("Attempting to connect to TCP socket @ IP address " + 
+                        ip_address + ":" + ip_port);
+            this.tcpClient.Connect(ip_address, ip_port);
+            log.LogInfo("TCP client connected!");
             this.tcpStream = this.tcpClient.GetStream();
         }
         catch (Exception e)
         {
-            this.loggerObject.GetComponent<Logger>().LogInfo(e.ToString());
+            log.LogInfo(e.ToString());
         }
     }
 
@@ -113,8 +133,8 @@ public class CaptureSensorData : MonoBehaviour
                     observer.DisplayOption = SpatialAwarenessMeshDisplayOptions.None;
                     //observer.LevelOfDetail = SpatialAwarenessMeshLevelOfDetail.Unlimited;
                     //observer.UpdateInterval = 0.5f;
-                    this.loggerObject.GetComponent<Logger>().LogInfo("Detail level: " + observer.LevelOfDetail.ToString());
-                    this.loggerObject.GetComponent<Logger>().LogInfo("Update interval: " + observer.UpdateInterval.ToString());
+                    this.logger().LogInfo("Detail level: " + observer.LevelOfDetail.ToString());
+                    this.logger().LogInfo("Update interval: " + observer.UpdateInterval.ToString());
                 }
             }
         }
