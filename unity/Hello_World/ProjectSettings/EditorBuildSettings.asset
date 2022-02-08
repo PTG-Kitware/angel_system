@@ -6,11 +6,12 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/my_scene.unity
+    path: Assets/Scenes/my_scene.unity
     guid: 652a6ebc7d02a79459a4259bd2025fb3
   - enabled: 0
     path: Assets/Samples/Mixed Reality Toolkit Examples/2.7.2/Demos - HandTracking/Scenes/HandInteractionExamples.unity
     guid: 3dd4a396b5225f8469b9a1eb608bfa57
   m_configObjects:
+    UnityEditor.XR.ARKit.ARKitSettings: {fileID: 11400000, guid: f70ea7d0e18721e4583bc951e6f7bbfc, type: 2}
     com.unity.xr.management.loader_settings: {fileID: 11400000, guid: aba23145b8872e44091e5ad4fc79c2b0, type: 2}
     com.unity.xr.openxr.settings4: {fileID: 11400000, guid: d5af298d434800c49bc83a4b5492e0d2, type: 2}

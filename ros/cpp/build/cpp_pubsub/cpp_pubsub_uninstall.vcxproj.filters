@@ -1,0 +1,17 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\josh.anderson\Projects\PTG\ros\cpp\build\cpp_pubsub\CMakeFiles\cd44fcd8227872c10085989ed3fa0ebc\cpp_pubsub_uninstall.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\josh.anderson\Projects\PTG\ros\cpp\src\cpp_pubsub\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="C:\Users\josh.anderson\Projects\PTG\ros\cpp\build\cpp_pubsub\CMakeFiles\cpp_pubsub_uninstall" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{3E8FB348-BFC4-3163-B43F-D61DEB89EE73}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

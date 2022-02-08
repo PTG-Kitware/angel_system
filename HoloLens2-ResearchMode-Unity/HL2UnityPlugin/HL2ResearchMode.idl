@@ -19,6 +19,8 @@ namespace HL2UnityPlugin
 
         UInt8[] GetLFCameraBuffer(out Int64 ts);
         UInt8[] GetRFCameraBuffer(out Int64 ts);
+        UInt8[] GetLLCameraBuffer(out Int64 ts);
+        UInt8[] GetRRCameraBuffer(out Int64 ts);
         UInt8[] GetLRFCameraBuffer(out Int64 ts_left, out Int64 ts_right);
         
         Single[] GetAccelSample();
@@ -37,15 +39,21 @@ namespace HL2UnityPlugin
         String PrintLFFrameBuffer();
         String PrintDebugString();
 
+        Boolean DepthMapUpdated();
         Boolean DepthMapTextureUpdated();
+        Boolean ShortAbImageUpdated();
         Boolean ShortAbImageTextureUpdated();
+        Boolean LongAbImageUpdated();
         Boolean LongAbImageTextureUpdated();
         Boolean PointCloudUpdated();
+        Boolean LongDepthMapUpdated();
         Boolean LongDepthMapTextureUpdated();
         Boolean LongThrowPointCloudUpdated();
 
 		Boolean LFImageUpdated();
 		Boolean RFImageUpdated();
+        Boolean LLImageUpdated();
+        Boolean RRImageUpdated();
         Boolean AccelSampleUpdated();
         Boolean GyroSampleUpdated();
         Boolean MagSampleUpdated();

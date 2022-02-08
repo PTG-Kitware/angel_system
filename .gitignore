@@ -45,6 +45,7 @@
 *.mdb
 *.opendb
 *.VC.db
+*.ipch
 
 # Unity3D generated meta files
 *.pidb.meta
@@ -69,3 +70,11 @@
 # Temporary auto-generated Android Assets
 /unity/Hello_World/[Aa]ssets/[Ss]treamingAssets/aa.meta
 /unity/Hello_World/[Aa]ssets/[Ss]treamingAssets/aa/*
+
+# ROS build logs
+/ros/bags/
+/ros/cpp/build/
+/ros/cpp/build/cpp_pubsub/
+/ros/cpp/log/
+/ros/python/build/
+/ros/python/log/

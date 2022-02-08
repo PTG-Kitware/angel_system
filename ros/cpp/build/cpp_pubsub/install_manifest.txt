@@ -1,0 +1,15 @@
+C:/Users/josh.anderson/Projects/PTG/ros/cpp/install/lib/cpp_pubsub/talker.exe
+C:/Users/josh.anderson/Projects/PTG/ros/cpp/install/lib/cpp_pubsub/listener.exe
+C:/Users/josh.anderson/Projects/PTG/ros/cpp/install/share/ament_index/resource_index/package_run_dependencies/cpp_pubsub
+C:/Users/josh.anderson/Projects/PTG/ros/cpp/install/share/ament_index/resource_index/parent_prefix_path/cpp_pubsub
+C:/Users/josh.anderson/Projects/PTG/ros/cpp/install/share/cpp_pubsub/environment/ament_prefix_path.bat
+C:/Users/josh.anderson/Projects/PTG/ros/cpp/install/share/cpp_pubsub/environment/ament_prefix_path.dsv
+C:/Users/josh.anderson/Projects/PTG/ros/cpp/install/share/cpp_pubsub/environment/path.bat
+C:/Users/josh.anderson/Projects/PTG/ros/cpp/install/share/cpp_pubsub/environment/path.dsv
+C:/Users/josh.anderson/Projects/PTG/ros/cpp/install/share/cpp_pubsub/local_setup.bat
+C:/Users/josh.anderson/Projects/PTG/ros/cpp/install/share/cpp_pubsub/local_setup.dsv
+C:/Users/josh.anderson/Projects/PTG/ros/cpp/install/share/cpp_pubsub/package.dsv
+C:/Users/josh.anderson/Projects/PTG/ros/cpp/install/share/ament_index/resource_index/packages/cpp_pubsub
+C:/Users/josh.anderson/Projects/PTG/ros/cpp/install/share/cpp_pubsub/cmake/cpp_pubsubConfig.cmake
+C:/Users/josh.anderson/Projects/PTG/ros/cpp/install/share/cpp_pubsub/cmake/cpp_pubsubConfig-version.cmake
+C:/Users/josh.anderson/Projects/PTG/ros/cpp/install/share/cpp_pubsub/package.xml
