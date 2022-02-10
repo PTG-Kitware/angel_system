@@ -84,3 +84,4 @@
 /ros/python/log/
 /ros/python/install/setup.bat
 /ros/python/install/setup.ps1
+/ros/python/install/Lib/site-packages/py_pubsub/__pycache__/
