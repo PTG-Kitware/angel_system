@@ -36,7 +36,8 @@ public class PVCameraCapture : MonoBehaviour
     // Network stuff
     System.Net.Sockets.TcpClient tcpClient;
     NetworkStream tcpStream;
-    GameObject loggerObject = null;
+
+    private Logger _logger = null;
 
     long prev_ts;
     uint framesRcvd;
@@ -60,24 +61,37 @@ public class PVCameraCapture : MonoBehaviour
         void GetBuffer(out byte* buffer, out uint capacity);
     }
 
+    /// <summary>
+    /// Lazy acquire the logger object and return the reference to it.
+    /// </summary>
+    /// <returns>Logger instance reference.</returns>
+    private ref Logger logger()
+    {
+        if (this._logger == null)
+        {
+            // TODO: Error handling for null loggerObject?
+            this._logger = GameObject.Find("Logger").GetComponent<Logger>();
+        }
+        return ref this._logger;
+    }
+
     // Start is called before the first frame update
     async void Start()
     {
-        this.loggerObject = GameObject.Find("Logger");
+        Logger log = logger();
 
 #if ENABLE_WINMD_SUPPORT
-
         // Connect to the python TCP server
         this.tcpClient = new System.Net.Sockets.TcpClient();
         try
         {
             this.tcpClient.Connect(TcpServerIPAddr, PVTcpPort);
-            this.loggerObject.GetComponent<Logger>().LogInfo("TCP client PV connected!");
+            log.LogInfo("TCP client PV connected!");
             this.tcpStream = this.tcpClient.GetStream();
         }
         catch (Exception e)
         {
-            this.loggerObject.GetComponent<Logger>().LogInfo(e.ToString());
+            log.LogInfo(e.ToString());
         }
 
         await InitializeMediaCaptureAsyncTask();
@@ -85,7 +99,7 @@ public class PVCameraCapture : MonoBehaviour
         MediaFrameReaderStartStatus mediaFrameReaderStartStatus = await frameReader.StartAsync();
         if (!(mediaFrameReaderStartStatus == MediaFrameReaderStartStatus.Success))
         {
-		    this.loggerObject.GetComponent<Logger>().LogInfo("StartFrameReaderAsyncTask() is not successful, status = " + mediaFrameReaderStartStatus);
+		    log.LogInfo("StartFrameReaderAsyncTask() is not successful, status = " + mediaFrameReaderStartStatus);
 		}
 #endif
     }
@@ -106,19 +120,19 @@ public class PVCameraCapture : MonoBehaviour
         for (int i = 0; i < allGroups.Count; i++)
         {
             var group = allGroups[i];
-            //this.loggerObject.GetComponent<Logger>().LogInfo(group.DisplayName + ", " + group.Id + " " + allGroups.Count.ToString());
-            //this.loggerObject.GetComponent<Logger>().LogInfo(group.DisplayName);
+            //this.logger().LogInfo(group.DisplayName + ", " + group.Id + " " + allGroups.Count.ToString());
+            //this.logger().LogInfo(group.DisplayName);
             if (group.DisplayName == "QC Back Camera")
             {
                 selectedGroupIndex = i;
-                this.loggerObject.GetComponent<Logger>().LogInfo("Selected group " + i + " on HoloLens 2");
+                this.logger().LogInfo("Selected group " + i + " on HoloLens 2");
                 break;
             }
         }
 
         if (selectedGroupIndex == -1)
         {
-            this.loggerObject.GetComponent<Logger>().LogInfo("InitializeMediaCaptureAsyncTask() fails because there is no suitable source group");
+            this.logger().LogInfo("InitializeMediaCaptureAsyncTask() fails because there is no suitable source group");
             return false;
         }
 
@@ -158,21 +172,21 @@ public class PVCameraCapture : MonoBehaviour
             float framerateDiffMin = 60f;
             foreach (var f in mediaFrameSourceVideo.SupportedFormats.OrderBy(x => x.VideoFormat.Width * x.VideoFormat.Height))
             {
-                //this.loggerObject.GetComponent<Logger>().LogInfo("Format width: " + f.VideoFormat.Width.ToString());
-                //this.loggerObject.GetComponent<Logger>().LogInfo("Format height: " + f.VideoFormat.Height.ToString());
+                //this.logger().LogInfo("Format width: " + f.VideoFormat.Width.ToString());
+                //this.logger().LogInfo("Format height: " + f.VideoFormat.Height.ToString());
 
                 if (f.VideoFormat.Width == targetVideoWidth && f.VideoFormat.Height == targetVideoHeight)
                 {
                     if (targetResFormat == null)
                     {
-                        //this.loggerObject.GetComponent<Logger>().LogInfo("Found matching format");
+                        //this.logger().LogInfo("Found matching format");
                         targetResFormat = f;
                         framerateDiffMin = Mathf.Abs(f.FrameRate.Numerator / f.FrameRate.Denominator - targetVideoFrameRate);
                     }
                     else if (Mathf.Abs(f.FrameRate.Numerator / f.FrameRate.Denominator - targetVideoFrameRate) < framerateDiffMin)
                     {
                         targetResFormat = f;
-                        //this.loggerObject.GetComponent<Logger>().LogInfo("Else?");
+                        //this.logger().LogInfo("Else?");
                         framerateDiffMin = Mathf.Abs(f.FrameRate.Numerator / f.FrameRate.Denominator - targetVideoFrameRate);
                     }
                 }
@@ -180,28 +194,28 @@ public class PVCameraCapture : MonoBehaviour
             if (targetResFormat == null)
             {
                 targetResFormat = mediaFrameSourceVideo.SupportedFormats[0];
-                this.loggerObject.GetComponent<Logger>().LogInfo("Unable to choose the selected format, fall back");
+                this.logger().LogInfo("Unable to choose the selected format, fall back");
                 targetResFormat = mediaFrameSourceVideo.SupportedFormats.OrderBy(x => x.VideoFormat.Width * x.VideoFormat.Height).FirstOrDefault();
             }
 
             await mediaFrameSourceVideo.SetFormatAsync(targetResFormat);
-            //this.loggerObject.GetComponent<Logger>().LogInfo("Sub type " + targetResFormat.Subtype);
+            //this.logger().LogInfo("Sub type " + targetResFormat.Subtype);
 
             frameReader = await mediaCapture.CreateFrameReaderAsync(mediaFrameSourceVideo, targetResFormat.Subtype);
             frameReader.FrameArrived += OnFrameArrived;
 
             frameData = new byte[(int) (targetResFormat.VideoFormat.Width * targetResFormat.VideoFormat.Height * 1.5) + 16];
-            this.loggerObject.GetComponent<Logger>().LogInfo("FrameReader is successfully initialized, " + targetResFormat.VideoFormat.Width + "x" + targetResFormat.VideoFormat.Height +
+            this.logger().LogInfo("FrameReader is successfully initialized, " + targetResFormat.VideoFormat.Width + "x" + targetResFormat.VideoFormat.Height +
                 ", Framerate: " + targetResFormat.FrameRate.Numerator + "/" + targetResFormat.FrameRate.Denominator);
         }
         catch (Exception e)
         {
-            this.loggerObject.GetComponent<Logger>().LogInfo("FrameReader is not initialized");
-            this.loggerObject.GetComponent<Logger>().LogInfo("Exception: " + e);
+            this.logger().LogInfo("FrameReader is not initialized");
+            this.logger().LogInfo("Exception: " + e);
             return false;
         }
 
-        this.loggerObject.GetComponent<Logger>().LogInfo("InitializeMediaCaptureAsyncTask() is successful");
+        this.logger().LogInfo("InitializeMediaCaptureAsyncTask() is successful");
 
         return true;
     }
@@ -218,7 +232,7 @@ public class PVCameraCapture : MonoBehaviour
                     float[] cameraToWorldMatrixAsFloat = null;                
                     if (HL2TryGetCameraToWorldMatrix(frame, out cameraToWorldMatrixAsFloat) == false)
                     {
-                        this.loggerObject.GetComponent<Logger>().LogInfo("HL2TryGetCameraToWorldMatrix failed");
+                        this.logger().LogInfo("HL2TryGetCameraToWorldMatrix failed");
                         return;
                     }
 
