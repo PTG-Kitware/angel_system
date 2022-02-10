@@ -21,10 +21,10 @@ TOPICS = ["LFFrames", "RFFrames", "LLFrames", "RRFrames",
           "LongDepthFrames", "LongDepthABFrames"]
 
 
-class MinimalSubscriber(Node):
+class VideoSubscriber(Node):
 
     def __init__(self, topic):
-        super().__init__('minimal_subscriber')
+        super().__init__('video_subscriber')
 
         if topic not in TOPICS:
             print("Error! Invalid topic name")
@@ -102,9 +102,9 @@ def main():
 
     rclpy.init()
 
-    minimal_subscriber = MinimalSubscriber(topic_name)
+    video_subscriber = VideoSubscriber(topic_name)
 
-    rclpy.spin(minimal_subscriber)
+    rclpy.spin(video_subscriber)
 
     # Destroy the node explicitly
     # (optional - otherwise it will be done automatically
