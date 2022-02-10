@@ -9,9 +9,10 @@ setup.py
 ../build/py_pubsub/py_pubsub.egg-info/top_level.txt
 ../build/py_pubsub/py_pubsub.egg-info/zip-safe
 py_pubsub/__init__.py
+py_pubsub/audio_subscriber.py
 py_pubsub/publisher_member_function.py
 py_pubsub/ros_publisher.py
-py_pubsub/subscriber_member_function.py
+py_pubsub/video_subscriber.py
 resource/py_pubsub
 test/test_copyright.py
 test/test_flake8.py
