@@ -1,8 +1,0 @@
-C:/Users/josh.anderson/Projects/PTG/ros/cpp/build/cpp_pubsub/CMakeFiles/uninstall.dir
-C:/Users/josh.anderson/Projects/PTG/ros/cpp/build/cpp_pubsub/CMakeFiles/cpp_pubsub_uninstall.dir
-C:/Users/josh.anderson/Projects/PTG/ros/cpp/build/cpp_pubsub/CMakeFiles/talker.dir
-C:/Users/josh.anderson/Projects/PTG/ros/cpp/build/cpp_pubsub/CMakeFiles/listener.dir
-C:/Users/josh.anderson/Projects/PTG/ros/cpp/build/cpp_pubsub/CMakeFiles/RUN_TESTS.dir
-C:/Users/josh.anderson/Projects/PTG/ros/cpp/build/cpp_pubsub/CMakeFiles/INSTALL.dir
-C:/Users/josh.anderson/Projects/PTG/ros/cpp/build/cpp_pubsub/CMakeFiles/ALL_BUILD.dir
-C:/Users/josh.anderson/Projects/PTG/ros/cpp/build/cpp_pubsub/CMakeFiles/ZERO_CHECK.dir

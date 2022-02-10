@@ -19,7 +19,6 @@ public class AudioCapture : MonoBehaviour
 
     public const string TcpServerIPAddr = "169.254.103.120";
     public const int AudioTcpPort = 11009;
-    //private byte[] frameData = null;
 
     /// <summary>
     /// Lazy acquire the logger object and return the reference to it.
@@ -39,6 +38,19 @@ public class AudioCapture : MonoBehaviour
     void Start()
     {
         Logger log = logger();
+
+        // Connect to the python TCP server
+        this.tcpClient = new System.Net.Sockets.TcpClient();
+        try
+        {
+            this.tcpClient.Connect(TcpServerIPAddr, AudioTcpPort);
+            log.LogInfo("TCP client PV connected!");
+            this.tcpStream = this.tcpClient.GetStream();
+        }
+        catch (Exception e)
+        {
+            log.LogInfo(e.ToString());
+        }
 
         log.LogInfo("Setting up audio capture");
         foreach (var device in Microphone.devices)
@@ -66,19 +78,6 @@ public class AudioCapture : MonoBehaviour
         catch (Exception e)
         {
             log.LogInfo("Exception: " + e);
-        }
-
-        // Connect to the python TCP server
-        this.tcpClient = new System.Net.Sockets.TcpClient();
-        try
-        {
-            this.tcpClient.Connect(TcpServerIPAddr, AudioTcpPort);
-            log.LogInfo("TCP client PV connected!");
-            this.tcpStream = this.tcpClient.GetStream();
-        }
-        catch (Exception e)
-        {
-            log.LogInfo(e.ToString());
         }
     }
 
@@ -115,9 +114,13 @@ public class AudioCapture : MonoBehaviour
         System.Buffer.BlockCopy(frameHeader, 0, frameData, 0, frameHeader.Length);
         System.Buffer.BlockCopy(scaledData, 0, frameData, 8, scaledData.Length * sizeof(float));
 
-        // Send the data through the socket.  
-        tcpStream.Write(frameData, 0, frameData.Length);
-        tcpStream.Flush();
+        // Send the data through the socket.
+        if (tcpStream != null)
+        {
+            tcpStream.Write(frameData, 0, frameData.Length);
+            tcpStream.Flush();
+        }
+
     }
 
 }

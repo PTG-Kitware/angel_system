@@ -40,13 +40,25 @@ public class ResearchModeCapture : MonoBehaviour
     Windows.Perception.Spatial.SpatialCoordinateSystem unityWorldOrigin;
 #endif
 
-    GameObject loggerObject = null;
+    private Logger _logger = null;
 
     // Spatial awareness stuff
     IEnumerable<SpatialAwarenessMeshObject> meshes;
     IMixedRealitySpatialAwarenessMeshObserver observer = null;
 
-    string debugString = "";
+    /// <summary>
+    /// Lazy acquire the logger object and return the reference to it.
+    /// </summary>
+    /// <returns>Logger instance reference.</returns>
+    private ref Logger logger()
+    {
+        if (this._logger == null)
+        {
+            // TODO: Error handling for null loggerObject?
+            this._logger = GameObject.Find("Logger").GetComponent<Logger>();
+        }
+        return ref this._logger;
+    }
 
     private void Awake()
     {
@@ -58,11 +70,11 @@ public class ResearchModeCapture : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        this.loggerObject = GameObject.Find("Logger");
+        Logger log = logger();
 
 #if ENABLE_WINMD_SUPPORT
         // Configure research mode
-        this.loggerObject.GetComponent<Logger>().LogInfo("Research mode enabled");
+        log.LogInfo("Research mode enabled");
         researchMode = new HL2ResearchMode();
 
         // Depth sensor should be initialized in only one mode
@@ -78,7 +90,7 @@ public class ResearchModeCapture : MonoBehaviour
         else if (depthSensorMode == DepthSensorMode.ShortThrow) researchMode.StartDepthSensorLoop(enablePointCloud);
 
         researchMode.StartSpatialCamerasFrontLoop();
-        this.loggerObject.GetComponent<Logger>().LogInfo("Research mode initialized");
+        log.LogInfo("Research mode initialized");
 #endif
     }
 
@@ -94,7 +106,7 @@ public class ResearchModeCapture : MonoBehaviour
                 {
                     observer = observers;
                     observer.DisplayOption = SpatialAwarenessMeshDisplayOptions.None;
-                    this.loggerObject.GetComponent<Logger>().LogInfo("Detail level: " + observer.LevelOfDetail.ToString());
+                    this.logger().LogInfo("Detail level: " + observer.LevelOfDetail.ToString());
                 }
             }
         }
@@ -102,14 +114,9 @@ public class ResearchModeCapture : MonoBehaviour
 #if ENABLE_WINMD_SUPPORT
         //if (researchMode.PrintDebugString() != "")
         // {
-        //    this.loggerObject.GetComponent<Logger>().LogInfo(researchMode.PrintDebugString());
+        //    this.logger().LogInfo(researchMode.PrintDebugString());
         //}
 #endif
-
-        if (debugString != "")
-        {
-            //this.loggerObject.GetComponent<Logger>().LogInfo(debugString);
-        }
     }
 
 }
