@@ -1,0 +1,51 @@
+##############################################################################
+# Base system packages and depedencies
+#
+FROM osrf/ros:foxy-desktop AS ros
+MAINTAINER josh.anderson@kitware.com
+
+SHELL ["/bin/bash", "-c"]
+
+# System Package dependencies
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get -y update \
+ && apt-get -y install \
+        curl \
+        less \
+        parallel \
+        python3-dev \
+        python3-pip \
+        sudo \
+        vim \
+        ros-foxy-rmw-cyclonedds-cpp \
+        ros-foxy-demo-nodes-cpp \
+        ros-foxy-demo-nodes-py \
+ # Clean up apt resources.
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
+# Python package requirements for Caffe/FAISS + deps for SMQTK parts for
+# postgresql/mongo. Add some nice-to-haves in there, too.
+RUN pip3 install \
+        # Update version of six
+        six==1.14.0 \
+        # Caffe/FAISS python deps
+        numpy==1.18.4
+
+# Export language options to use UTF-8, desired by Click
+ENV LC_ALL=C.UTF-8 \
+    LANG=C.UTF-8
+
+# Export language options to use UTF-8, desired by Click
+ENV LC_ALL=C.UTF-8 \
+    LANG=C.UTF-8
+
+RUN mkdir /object_detector_node/
+
+# Add ``object_detector`` user
+RUN useradd -mr -s /bin/bash object_detector \
+ # sudo permission for modifying permissions at runtime (see entrypoint.sh).
+ # TODO: Remove this eventually since its defeating the point of having a user.
+ && echo "object_detector ALL=(ALL:ALL) NOPASSWD:ALL" >>/etc/sudoers
+
+USER object_detector
+WORKDIR /home/object_detector
