@@ -71,17 +71,12 @@
 /unity/Hello_World/[Aa]ssets/[Ss]treamingAssets/aa.meta
 /unity/Hello_World/[Aa]ssets/[Ss]treamingAssets/aa/*
 
-# ROS build logs
+# ROS build files and logs
 /ros/bags/
 /ros/cpp/build/
-/ros/cpp/build/cpp_pubsub/
 /ros/cpp/log/
-/ros/cpp/install/lib/cpp_pubsub/
-/ros/cpp/install/setup.bat
-/ros/cpp/install/setup.ps1
-/ros/cpp/install/share/ament_index/resource_index/parent_prefix_path/cpp_pubsub
+/ros/cpp/install/
+/ros/cpp/src/cpp_pubsub/out/
 /ros/python/build/
 /ros/python/log/
-/ros/python/install/setup.bat
-/ros/python/install/setup.ps1
-/ros/python/install/Lib/site-packages/py_pubsub/__pycache__/
+/ros/python/install/
