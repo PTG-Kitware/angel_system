@@ -26,7 +26,7 @@ docker run --rm -it \
   --gpus all \
   --privileged \
   "$@" \
-  osrf/ros:foxy-desktop
+  kitware/ptg/object_detector:latest-object-detector
 docker_rc="$?"
 set -e
 echo "docker retcode: $docker_rc"
