@@ -15,10 +15,16 @@ echo "Temp auth file: $tmp_xauth_file"
 docker_xauth_path="/tmp/.docker.xauth"
 set +e
 docker run --rm -it \
+  -v /dev/shm:/dev/shm \
+  -v "$PWD":"$PWD" \
+  -w "$PWD" \
   -v /tmp/.X11-unix:/tmp/.X11-unix:rw \
   -v "$tmp_xauth_file":"$docker_xauth_path":rw \
   --env="DISPLAY" \
   --env="XAUTHORITY=${docker_xauth_path}" \
+  --net=host \
+  --privileged \
+  "$@" \
   osrf/ros:foxy-desktop
 docker_rc="$?"
 set -e

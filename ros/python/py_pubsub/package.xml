@@ -6,8 +6,15 @@
   <description>TODO: Package description</description>
   <maintainer email="josh.anderson@todo.todo">josh.anderson</maintainer>
   <license>TODO: License declaration</license>
-  <exec_depend>rclpy</exec_depend>
-  <exec_depend>std_msgs</exec_depend>
+
+  <depend>rclpy</depend>
+  <depend>std_msgs</depend>
+
+  <depend>image_transport</depend>
+  <depend>cv_bridge</depend>
+  <depend>sensor_msgs</depend>
+  <depend>python3-opencv</depend>
+
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
   <test_depend>ament_pep257</test_depend>
