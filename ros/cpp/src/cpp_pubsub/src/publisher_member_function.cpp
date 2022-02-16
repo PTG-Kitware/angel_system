@@ -15,6 +15,7 @@
 
 #include "sensor_msgs/msg/image.hpp"
 
+#ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 
 #include <windows.h>
@@ -25,6 +26,18 @@
 #pragma comment (lib, "Ws2_32.lib")
 #pragma comment (lib, "Mswsock.lib")
 #pragma comment (lib, "AdvApi32.lib")
+#endif
+
+#ifdef __linux__
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <unistd.h>
+
+typedef int SOCKET;
+
+#endif
 
 #define AUDIO_HEADER_LEN  (8)
 #define VIDEO_HEADER_LEN  (16)
@@ -67,7 +80,7 @@ class MinimalPublisher : public rclcpp::Node
 
     std::thread StartTCPServerThread(int port)
     {
-      std::thread t;      
+      std::thread t;
       if ((port < LF_VLC_TCP_PORT) || (port > AUDIO_TCP_PORT))
       {
         std::cout << "Invalid port number entered!\n";
@@ -87,8 +100,8 @@ class MinimalPublisher : public rclcpp::Node
 
   private:
     size_t count_;
-    std::string server_ip_addr = "169.254.103.120";
-    
+    std::string server_ip_addr = "192.167.1.90";
+
     void TCPServerVideoThread(int port)
     {
       rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr publisher_;
@@ -111,7 +124,7 @@ class MinimalPublisher : public rclcpp::Node
       {
         recv(cs, recv_buf_hdr, recv_buf_hdr_len, 0);
 
-        if (!(((unsigned char) recv_buf_hdr[0] == 0x1A) 
+        if (!(((unsigned char) recv_buf_hdr[0] == 0x1A)
           && ((unsigned char) recv_buf_hdr[1] == 0xCF)
           && ((unsigned char) recv_buf_hdr[2] == 0xFC)
           && ((unsigned char) recv_buf_hdr[3] == 0x1D)))
@@ -120,33 +133,31 @@ class MinimalPublisher : public rclcpp::Node
           break;
         }
 
-        unsigned int frame_length, height, width;
         int total_bytes_read = 0;
-        unsigned int bytes_remaining;
-        unsigned int read_size;
+        unsigned int bytes_remaining, height, width, read_size;
         std::vector<unsigned char> frame_data;
 
         // length in sent message includes width and height (8 bytes)
         // so subtract that to get frame length
-        frame_length = (((unsigned char)recv_buf_hdr[4] << 24) |
-                        ((unsigned char)recv_buf_hdr[5] << 16) | 
-                        ((unsigned char)recv_buf_hdr[6] << 8) | 
-                        ((unsigned char)recv_buf_hdr[7] << 0)) - 8;
+        int frame_length = (((unsigned char)recv_buf_hdr[4] << 24) |
+                           ((unsigned char)recv_buf_hdr[5] << 16) |
+                           ((unsigned char)recv_buf_hdr[6] << 8) |
+                           ((unsigned char)recv_buf_hdr[7] << 0)) - 8;
 
         width = (((unsigned char)recv_buf_hdr[8] << 24) |
-                 ((unsigned char)recv_buf_hdr[9] << 16) | 
-                   ((unsigned char)recv_buf_hdr[10] << 8) | 
+                 ((unsigned char)recv_buf_hdr[9] << 16) |
+                   ((unsigned char)recv_buf_hdr[10] << 8) |
                    ((unsigned char)recv_buf_hdr[11] << 0));
 
         height = (((unsigned char)recv_buf_hdr[12] << 24) |
-                  ((unsigned char)recv_buf_hdr[13] << 16) | 
-                  ((unsigned char)recv_buf_hdr[14] << 8) | 
+                  ((unsigned char)recv_buf_hdr[13] << 16) |
+                  ((unsigned char)recv_buf_hdr[14] << 8) |
                   ((unsigned char)recv_buf_hdr[15] << 0));
 
         while (total_bytes_read != (frame_length))
         {
           bytes_remaining = frame_length - total_bytes_read;
-          
+
           if (DEFAULT_READ_SIZE > bytes_remaining)
           {
             read_size = bytes_remaining;
@@ -162,7 +173,7 @@ class MinimalPublisher : public rclcpp::Node
 
           int bytes_read = recv(cs, recv_buf, read_size, 0);
           total_bytes_read += bytes_read;
-             
+
           // append buffer to our frame structure
           frame_data.insert(frame_data.end(), &recv_buf[0], &recv_buf[bytes_read]);
         }
@@ -203,7 +214,7 @@ class MinimalPublisher : public rclcpp::Node
         }
 
         message.data = frame_data;
-    
+
         publisher_->publish(message);
         //std::cout << "Published!" << std::endl;
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -215,7 +226,7 @@ class MinimalPublisher : public rclcpp::Node
       rclcpp::Publisher<std_msgs::msg::UInt8MultiArray>::SharedPtr publisher_;
       std::string frame_id;
       int recv_buf_hdr_len = AUDIO_HEADER_LEN;
-      
+
       char * recv_buf_hdr = new char[recv_buf_hdr_len];
       char * recv_buf = new char[DEFAULT_READ_SIZE];
       unsigned int frames_received = 0;
@@ -234,7 +245,7 @@ class MinimalPublisher : public rclcpp::Node
 
         //std::cout << "Got something!!\n";
 
-        if (!(((unsigned char) recv_buf_hdr[0] == 0x1A) 
+        if (!(((unsigned char) recv_buf_hdr[0] == 0x1A)
           && ((unsigned char) recv_buf_hdr[1] == 0xCF)
           && ((unsigned char) recv_buf_hdr[2] == 0xFC)
           && ((unsigned char) recv_buf_hdr[3] == 0x1D)))
@@ -243,21 +254,19 @@ class MinimalPublisher : public rclcpp::Node
           break;
         }
 
-        unsigned int data_length;
         int total_bytes_read = 0;
-        unsigned int bytes_remaining;
-        unsigned int read_size;
+        unsigned int bytes_remaining, read_size;
         std::vector<unsigned char> frame_data;
 
-        data_length = (((unsigned char)recv_buf_hdr[4] << 24) |
-                        ((unsigned char)recv_buf_hdr[5] << 16) | 
-                        ((unsigned char)recv_buf_hdr[6] << 8) | 
-                        ((unsigned char)recv_buf_hdr[7] << 0));
+        int data_length = (((unsigned char)recv_buf_hdr[4] << 24) |
+                           ((unsigned char)recv_buf_hdr[5] << 16) |
+                           ((unsigned char)recv_buf_hdr[6] << 8) |
+                           ((unsigned char)recv_buf_hdr[7] << 0));
 
         while (total_bytes_read != (data_length))
         {
           bytes_remaining = data_length - total_bytes_read;
-          
+
           if (DEFAULT_READ_SIZE > bytes_remaining)
           {
             read_size = bytes_remaining;
@@ -273,7 +282,7 @@ class MinimalPublisher : public rclcpp::Node
 
           int bytes_read = recv(cs, recv_buf, read_size, 0);
           total_bytes_read += bytes_read;
-             
+
           // append buffer to our frame structure
           frame_data.insert(frame_data.end(), &recv_buf[0], &recv_buf[bytes_read]);
         }
@@ -306,9 +315,10 @@ class MinimalPublisher : public rclcpp::Node
     SOCKET connectSocket(int port)
     {
       SOCKET s, cs;
-      WSADATA w;
-      SOCKADDR_IN addr;
 
+#ifdef _WIN32
+      SOCKADDR_IN addr;
+      WSADATA w;
       if (WSAStartup (0x0202, &w))
       {
       }
@@ -320,10 +330,11 @@ class MinimalPublisher : public rclcpp::Node
       s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
       if (s == INVALID_SOCKET)
       {
+          std::cout << "Error creating socket" << std::endl;
       }
       if (::bind(s, (SOCKADDR *)&addr, sizeof(addr)) == SOCKET_ERROR)
       {
-          std::cout << "socket error\n";
+          std::cout << "Socket bind error" << std::endl;
           std::cout << std::to_string(WSAGetLastError());
       }
       if (listen(s, SOMAXCONN ) == SOCKET_ERROR)
@@ -332,10 +343,10 @@ class MinimalPublisher : public rclcpp::Node
           WSACleanup();
       }
 
-      std::cout << "Listening for connection...\n";
+      std::cout << "Listening for connection..." << std::endl;
       cs = accept(s, NULL, NULL);
-      if (cs == INVALID_SOCKET) {
-
+      if (cs == INVALID_SOCKET)
+      {
           std::cout << "Invalid socket!\n";
           closesocket(s);
           WSACleanup();
@@ -343,6 +354,37 @@ class MinimalPublisher : public rclcpp::Node
 
       std::cout << "Connected port " << port << std::endl;
       closesocket(s);
+      WSACleanup();
+#endif
+#ifdef __linux__
+      struct sockaddr_in addr;
+
+      addr.sin_family = AF_INET;
+      addr.sin_port = htons(port);
+      inet_pton(AF_INET, server_ip_addr.c_str(), &(addr.sin_addr));
+
+      s = socket(AF_INET, SOCK_STREAM, 0);
+      if (s < 0)
+      {
+          std::cout << "Error creating socket" << std::endl;
+      }
+      if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+      {
+          std::cout << "Socket bind error" << std::endl;
+      }
+      listen(s, SOMAXCONN);
+
+      std::cout << "Listening for connection..." << std::endl;
+      cs = accept(s, NULL, NULL);
+      if (cs == -1)
+      {
+          std::cout << "Invalid socket!" << std::endl;
+          close(s);
+      }
+
+      std::cout << "Connected port " << port << std::endl;
+      close(s);
+#endif
 
       return cs;
     }
@@ -352,29 +394,6 @@ class MinimalPublisher : public rclcpp::Node
 int main(int argc, char * argv[])
 {
   rclcpp::init(argc, argv);
-
-  /*
-  int port;
-  if (argc >= 2)
-  {
-    std::istringstream iss( argv[1] );
-
-    if (!(iss >> port))
-    {
-      return 0;
-    }
-  }
-  else 
-  {
-    std::cout << "Please enter port number" << std::endl;
-    return 0;
-  }
-
-  // start the server threads
-  std::thread t1 = mp->StartTCPServerThread(port);
-  rclcpp::spin(mp);
-  t1.join();
-  */
 
   std::shared_ptr<MinimalPublisher> mp = std::make_shared<MinimalPublisher>();
 
@@ -392,7 +411,7 @@ int main(int argc, char * argv[])
   std::thread t10 = mp->StartTCPServerThread(AUDIO_TCP_PORT);
 
   rclcpp::spin(mp);
-  
+
   t1.join();
   t2.join();
   t3.join();
