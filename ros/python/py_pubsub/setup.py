@@ -20,10 +20,11 @@ setup(
     tests_require=['pytest'],
     entry_points={
             'console_scripts': [
-                    'talker = py_pubsub.publisher_member_function:main',
-                    'video_listener = py_pubsub.video_subscriber:main',
-                    'audio_listener = py_pubsub.audio_subscriber:main',
-                    'frame_publisher = py_pubsub.ros_publisher:main',
+                'talker = py_pubsub.publisher_member_function:main',
+                'video_listener = py_pubsub.video_subscriber:main',
+                'audio_listener = py_pubsub.audio_subscriber:main',
+                'frame_publisher = py_pubsub.ros_publisher:main',
+                'generate_images = py_pubsub.generate_images:main',
             ],
     },
 )
