@@ -1,0 +1,14 @@
+version: "3.4"
+
+services:
+  #
+  # Object Detection Module
+  #
+  object-detector:
+    image: ${PTG_REGISTRY}/object_detector:${PTG_TAG}-object-detector
+    build:
+      # Repo root
+      context: ..
+      dockerfile: docker/object_detector/Dockerfile
+      cache_from:
+        - ${PTG_REGISTRY}/object_detector:${PTG_TAG}-object-detector

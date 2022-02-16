@@ -80,7 +80,7 @@ public class ResearchModeCapture : MonoBehaviour
         // Depth sensor should be initialized in only one mode
         if (depthSensorMode == DepthSensorMode.LongThrow) researchMode.InitializeLongDepthSensor();
         else if (depthSensorMode == DepthSensorMode.ShortThrow) researchMode.InitializeDepthSensor();
-        
+
         researchMode.InitializeSpatialCamerasFront();
         researchMode.SetReferenceCoordinateSystem(unityWorldOrigin);
         researchMode.SetPointCloudDepthOffset(0);
