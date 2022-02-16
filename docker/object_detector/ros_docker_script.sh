@@ -23,6 +23,7 @@ docker run --rm -it \
   --env="DISPLAY" \
   --env="XAUTHORITY=${docker_xauth_path}" \
   --net=host \
+  --gpus all \
   --privileged \
   "$@" \
   osrf/ros:foxy-desktop
