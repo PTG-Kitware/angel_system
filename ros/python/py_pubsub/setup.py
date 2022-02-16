@@ -25,6 +25,7 @@ setup(
                 'audio_listener = py_pubsub.audio_subscriber:main',
                 'frame_publisher = py_pubsub.ros_publisher:main',
                 'generate_images = py_pubsub.generate_images:main',
+                'object_detector = py_pubsub.object_detector:main',
             ],
     },
 )
