@@ -1,11 +1,2 @@
-# ROS2 build files and logs
-/bags
-/build
-/log
-/install
 # Windows build artifacts
 /cpp/src/cpp_pubsub/out/
-
-# From docker X11 passthrough.
-# These should auto-cleanup, but in case any are left behind...
-/docker_xauth.*
