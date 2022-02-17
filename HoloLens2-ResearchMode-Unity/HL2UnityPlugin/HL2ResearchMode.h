@@ -41,7 +41,7 @@ namespace winrt::HL2UnityPlugin::implementation
 {
     struct HL2ResearchMode : HL2ResearchModeT<HL2ResearchMode>
     {
-        HL2ResearchMode();
+        HL2ResearchMode(hstring ipAddress);
 
         UINT16 GetCenterDepth();
         int GetDepthBufferSize();
@@ -128,6 +128,7 @@ namespace winrt::HL2UnityPlugin::implementation
         SOCKET m_socketLongDepthAb = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 
         std::vector<SOCKET> m_sockets;
+        hstring m_ipAddress;
 
         float* m_pointCloud = nullptr;
         int m_pointcloudLength = 0;

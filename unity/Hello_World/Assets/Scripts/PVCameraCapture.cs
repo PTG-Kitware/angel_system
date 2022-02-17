@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
@@ -35,6 +36,7 @@ public class PVCameraCapture : MonoBehaviour
 
     // Network stuff
     System.Net.Sockets.TcpClient tcpClient;
+    System.Net.Sockets.TcpListener tcpServer;
     NetworkStream tcpStream;
 
     private Logger _logger = null;
@@ -43,7 +45,7 @@ public class PVCameraCapture : MonoBehaviour
     uint framesRcvd;
     string debugString = "";
 
-    public const string TcpServerIPAddr = "169.254.103.120";
+    public string TcpServerIPAddr = "";
     public const int PVTcpPort = 11008;
 
     [ComImport]
@@ -75,32 +77,58 @@ public class PVCameraCapture : MonoBehaviour
         return ref this._logger;
     }
 
+    private int GetIPv4AddressString()
+    {
+        int status = -1;
+        NetworkInterface[] interfaces = NetworkInterface.GetAllNetworkInterfaces();
+        foreach (NetworkInterface adapter in interfaces)
+        {
+            if (adapter.Supports(NetworkInterfaceComponent.IPv4) &&
+                adapter.OperationalStatus == OperationalStatus.Up &&
+                adapter.NetworkInterfaceType == NetworkInterfaceType.Ethernet)
+            {
+                foreach (UnicastIPAddressInformation ip in adapter.GetIPProperties().UnicastAddresses)
+                {
+                    if (ip.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+                    {
+                        TcpServerIPAddr = ip.Address.ToString();
+                        status = 0;
+                        break;
+                    }
+                }
+            }
+        }
+
+        return status;
+    }
+
     // Start is called before the first frame update
     async void Start()
     {
         Logger log = logger();
 
-#if ENABLE_WINMD_SUPPORT
-        // Connect to the python TCP server
-        this.tcpClient = new System.Net.Sockets.TcpClient();
-        try
+        if (GetIPv4AddressString() != 0)
         {
-            this.tcpClient.Connect(TcpServerIPAddr, PVTcpPort);
-            log.LogInfo("TCP client PV connected!");
-            this.tcpStream = this.tcpClient.GetStream();
-        }
-        catch (Exception e)
-        {
-            log.LogInfo(e.ToString());
+            log.LogInfo("Could not get valid IPv4 address. Exiting.");
+            return;
         }
 
+        log.LogInfo("Using IPv4 addr: " + TcpServerIPAddr);
+
+        Thread tPVCapture = new Thread(SetupPVCapture);
+        tPVCapture.Start();
+        log.LogInfo("Waiting for PV TCP connections");
+
+#if ENABLE_WINMD_SUPPORT
         await InitializeMediaCaptureAsyncTask();
 
         MediaFrameReaderStartStatus mediaFrameReaderStartStatus = await frameReader.StartAsync();
         if (!(mediaFrameReaderStartStatus == MediaFrameReaderStartStatus.Success))
         {
-		    log.LogInfo("StartFrameReaderAsyncTask() is not successful, status = " + mediaFrameReaderStartStatus);
-		}
+            log.LogInfo("StartFrameReaderAsyncTask() is not successful, status = " + mediaFrameReaderStartStatus);
+        }
+
+        log.LogInfo("Media capture started");
 #endif
     }
 
@@ -275,12 +303,14 @@ public class PVCameraCapture : MonoBehaviour
 
                         Marshal.Copy((IntPtr)inputBytes, frameData, 16, (int)inputCapacity);
 
-                        // Send the data through the socket.  
-                        tcpStream.Write(frameData, 0, frameData.Length);
-                        tcpStream.Flush();
+                        // Send the data through the socket.
+                        if (tcpStream != null)
+                        {
+                            tcpStream.Write(frameData, 0, frameData.Length);
+                            tcpStream.Flush();
+                        }
                         originalSoftwareBitmap?.Dispose();
                     }
-                    
                 }
             }
         }
@@ -290,5 +320,40 @@ public class PVCameraCapture : MonoBehaviour
         }
     }
 #endif
+
+    void Update()
+    {
+#if ENABLE_WINMD_SUPPORT
+        if (debugString != "")
+        {
+            //this.logger().LogInfo(debugString);
+        }
+#endif
+    }
+
+    void SetupPVCapture()
+    {
+#if ENABLE_WINMD_SUPPORT
+        try
+        {
+            IPAddress localAddr = IPAddress.Parse(TcpServerIPAddr);
+
+            // TcpListener server = new TcpListener(port);
+            tcpServer = new TcpListener(localAddr, PVTcpPort);
+
+            // Start listening for client requests.
+            tcpServer.Start();
+
+            // Perform a blocking call to accept requests.
+            // You could also use server.AcceptSocket() here.
+            tcpClient = tcpServer.AcceptTcpClient();
+            tcpStream = tcpClient.GetStream();
+        }
+        catch (Exception e)
+        {
+            debugString += e.ToString();
+        }
+#endif
+    }
 
 }
