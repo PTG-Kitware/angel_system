@@ -317,6 +317,7 @@ class MinimalPublisher : public rclcpp::Node
       SOCKET s, cs;
 
 #ifdef _WIN32
+      /*
       SOCKADDR_IN addr;
       WSADATA w;
       if (WSAStartup (0x0202, &w))
@@ -354,9 +355,24 @@ class MinimalPublisher : public rclcpp::Node
 
       std::cout << "Connected port " << port << std::endl;
       closesocket(s);
-      WSACleanup();
+      */
+      SOCKADDR_IN addr;
+      WSADATA w;
+      if (WSAStartup (0x0202, &w))
+      {
+      }
+
+      addr.sin_family = AF_INET;
+      addr.sin_port = htons(port);
+      inet_pton(AF_INET, server_ip_addr.c_str(), &(addr.sin_addr));
+
+      if (connect(s, (SOCKADDR *)&addr, sizeof(addr)) < 0)
+      {
+          std::cout << "Error creating socket" << std::endl;
+      }
 #endif
 #ifdef __linux__
+      /*
       struct sockaddr_in addr;
 
       addr.sin_family = AF_INET;
@@ -384,9 +400,21 @@ class MinimalPublisher : public rclcpp::Node
 
       std::cout << "Connected port " << port << std::endl;
       close(s);
+      */
+
+      struct sockaddr_in addr;
+
+      addr.sin_family = AF_INET;
+      addr.sin_port = htons(port);
+      inet_pton(AF_INET, server_ip_addr.c_str(), &(addr.sin_addr));
+
+      if (connect(s, (struct sockaddr*)&addr, sizeof(addr)) < 0)
+      {
+          std::cout << "Error creating socket" << std::endl;
+      }
 #endif
 
-      return cs;
+      return s;
     }
 
 };
