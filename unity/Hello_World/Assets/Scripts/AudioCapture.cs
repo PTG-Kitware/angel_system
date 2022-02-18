@@ -37,45 +37,24 @@ public class AudioCapture : MonoBehaviour
         return ref this._logger;
     }
 
-    private int GetIPv4AddressString()
-    {
-        int status = -1;
-        NetworkInterface[] interfaces = NetworkInterface.GetAllNetworkInterfaces();
-        foreach (NetworkInterface adapter in interfaces)
-        {
-            if (adapter.Supports(NetworkInterfaceComponent.IPv4) &&
-                adapter.OperationalStatus == OperationalStatus.Up &&
-                adapter.NetworkInterfaceType == NetworkInterfaceType.Ethernet)
-            {
-                foreach (UnicastIPAddressInformation ip in adapter.GetIPProperties().UnicastAddresses)
-                {
-                    if (ip.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
-                    {
-                        TcpServerIPAddr = ip.Address.ToString();
-                        status = 0;
-                        break;
-                    }
-                }
-            }
-        }
-
-        return status;
-    }
-
     // Start is called before the first frame update
     void Start()
     {
         Logger log = logger();
 
-        if (GetIPv4AddressString() != 0)
+        try
         {
-            log.LogInfo("Could not get valid IPv4 address. Exiting.");
+            TcpServerIPAddr = PTGUtilities.getIPv4AddressString();
+        }
+        catch (InvalidIPConfiguration e)
+        {
+            log.LogInfo(e.ToString());
             return;
         }
 
         Thread tAudioCapture = new Thread(SetupAudioCapture);
         tAudioCapture.Start();
-        log.LogInfo("Waiting for PV TCP connections");
+        log.LogInfo("Waiting for audio TCP connections");
 
         log.LogInfo("Setting up audio capture");
         foreach (var device in Microphone.devices)
@@ -128,7 +107,7 @@ public class AudioCapture : MonoBehaviour
         }
 
         byte[] frameData = new byte[(scaledData.Length * sizeof(float)) + 8];
-        
+
         // Add header
         byte[] frameHeader = { 0x1A, 0xCF, 0xFC, 0x1D,
                                (byte)(((data.Length * sizeof(float)) & 0xFF000000) >> 24),

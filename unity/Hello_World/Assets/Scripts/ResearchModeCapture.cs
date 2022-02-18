@@ -62,32 +62,6 @@ public class ResearchModeCapture : MonoBehaviour
         return ref this._logger;
     }
 
-
-    private int GetIPv4AddressString()
-    {
-        int status = -1;
-        NetworkInterface[] interfaces = NetworkInterface.GetAllNetworkInterfaces();
-        foreach (NetworkInterface adapter in interfaces)
-        {
-            if (adapter.Supports(NetworkInterfaceComponent.IPv4) &&
-                adapter.OperationalStatus == OperationalStatus.Up &&
-                adapter.NetworkInterfaceType == NetworkInterfaceType.Ethernet)
-            {
-                foreach (UnicastIPAddressInformation ip in adapter.GetIPProperties().UnicastAddresses)
-                {
-                    if (ip.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
-                    {
-                        TcpServerIPAddr = ip.Address.ToString();
-                        status = 0;
-                        break;
-                    }
-                }
-            }
-        }
-
-        return status;
-    }
-
     private void Awake()
     {
 #if ENABLE_WINMD_SUPPORT
@@ -100,9 +74,13 @@ public class ResearchModeCapture : MonoBehaviour
     {
         Logger log = logger();
 
-        if (GetIPv4AddressString() != 0)
+        try
         {
-            log.LogInfo("Could not get valid IPv4 address. Exiting.");
+            TcpServerIPAddr = PTGUtilities.getIPv4AddressString();
+        }
+        catch (InvalidIPConfiguration e)
+        {
+            log.LogInfo(e.ToString());
             return;
         }
 

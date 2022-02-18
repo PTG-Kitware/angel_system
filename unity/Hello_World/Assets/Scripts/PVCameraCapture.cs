@@ -16,6 +16,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 using System.Runtime.InteropServices;
 
+
 #if ENABLE_WINMD_SUPPORT
 using Windows.Graphics.Imaging;
 using Windows.Media;
@@ -77,39 +78,18 @@ public class PVCameraCapture : MonoBehaviour
         return ref this._logger;
     }
 
-    private int GetIPv4AddressString()
-    {
-        int status = -1;
-        NetworkInterface[] interfaces = NetworkInterface.GetAllNetworkInterfaces();
-        foreach (NetworkInterface adapter in interfaces)
-        {
-            if (adapter.Supports(NetworkInterfaceComponent.IPv4) &&
-                adapter.OperationalStatus == OperationalStatus.Up &&
-                adapter.NetworkInterfaceType == NetworkInterfaceType.Ethernet)
-            {
-                foreach (UnicastIPAddressInformation ip in adapter.GetIPProperties().UnicastAddresses)
-                {
-                    if (ip.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
-                    {
-                        TcpServerIPAddr = ip.Address.ToString();
-                        status = 0;
-                        break;
-                    }
-                }
-            }
-        }
-
-        return status;
-    }
-
     // Start is called before the first frame update
     async void Start()
     {
         Logger log = logger();
 
-        if (GetIPv4AddressString() != 0)
+        try
         {
-            log.LogInfo("Could not get valid IPv4 address. Exiting.");
+            TcpServerIPAddr = PTGUtilities.getIPv4AddressString();
+        }
+        catch (InvalidIPConfiguration e)
+        {
+            log.LogInfo(e.ToString());
             return;
         }
 
@@ -190,7 +170,7 @@ public class PVCameraCapture : MonoBehaviour
             // instead of preferring GPU D3DSurface images.
             MemoryPreference = MediaCaptureMemoryPreference.Cpu
         };
-        
+
         try
         {
             await mediaCapture.InitializeAsync(settings);
@@ -257,7 +237,7 @@ public class PVCameraCapture : MonoBehaviour
                 if (frame != null)
                 {
                     /*
-                    float[] cameraToWorldMatrixAsFloat = null;                
+                    float[] cameraToWorldMatrixAsFloat = null;
                     if (HL2TryGetCameraToWorldMatrix(frame, out cameraToWorldMatrixAsFloat) == false)
                     {
                         this.logger().LogInfo("HL2TryGetCameraToWorldMatrix failed");
