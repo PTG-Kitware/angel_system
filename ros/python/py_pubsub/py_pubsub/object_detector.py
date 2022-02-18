@@ -9,8 +9,8 @@ import numpy as np
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
+from std_msgs.msg import UInt8MultiArray
 import cv2
-import PIL
 import torch
 from torchvision import datasets, transforms
 from matplotlib import pyplot as plot
@@ -44,6 +44,12 @@ class ObjectDetector(Node):
             100)
         self._subscription  # prevent unused variable warning
 
+        self._publisher = self.create_publisher(
+            UInt8MultiArray,
+            "ObjectDetections",
+            10
+        )
+
         self._frames_recvd = 0
         self._prev_time = -1
 
@@ -51,12 +57,6 @@ class ObjectDetector(Node):
         self._detector = ResNetFRCNN(img_batch_size=1)
         print("Ready to detect", self._detector, self._detector.use_cuda)
         self._images = []
-
-        self._ax1 = plot.subplot(111)
-        self._im1 = self._ax1.imshow(np.zeros(shape=(720, 1280, 3)), vmin=0, vmax=255)
-
-        plot.ion()
-        plot.show()
 
 
     def listener_callback(self, image):
@@ -71,7 +71,6 @@ class ObjectDetector(Node):
         # convert NV12 image to RGB
         yuv_image = np.frombuffer(image.data, np.uint8).reshape(image.height*3//2, image.width)
         rgb_image = cv2.cvtColor(yuv_image, cv2.COLOR_YUV2RGB_NV12)
-        pil_image = PIL.Image.fromarray(rgb_image)
         #print(type(rgb), rgb.size, rgb.shape)
         #print("image_np stuff", rgb.shape, rgb.dtype, image.height, image.width, rgb[0:2])
 
@@ -88,7 +87,7 @@ class ObjectDetector(Node):
             start = time.time()
             detections = self._detector.detect_objects(self._images)
             end = time.time()
-            print("Time to perform detections", end - start)
+            #print("Time to perform detections", end - start)
 
             threshold_detections = []
             for detection in detections:
@@ -101,23 +100,21 @@ class ObjectDetector(Node):
                     #print("Results sorted:", list(class_dict_sorted.items())[:5])
 
                     if list(class_dict_sorted.items())[0][1] > self._detection_threshold:
-                        print("Found something:", list(class_dict_sorted.items())[0], bounding_box)
+                        #print("Found something:", list(class_dict_sorted.items())[0], bounding_box)
+                        object_type = list(class_dict_sorted.items())[0][0]
 
-                        draw = PIL.ImageDraw.Draw(pil_image)
-                        draw.rectangle(((bounding_box.min_vertex[0], bounding_box.min_vertex[1]),
-                                        (bounding_box.max_vertex[0], bounding_box.max_vertex[1])),
-                                        outline="black", width=10)
+                        # publish to the detections topic
+                        msg = UInt8MultiArray()
+                        object_type = bytearray(struct.pack("I", object_type))
+                        min_vertex0 = bytearray(struct.pack("f", bounding_box.min_vertex[0]))
+                        min_vertex1 = bytearray(struct.pack("f", bounding_box.min_vertex[1]))
+                        max_vertex0 = bytearray(struct.pack("f", bounding_box.max_vertex[0]))
+                        max_vertex1 = bytearray(struct.pack("f", bounding_box.max_vertex[1]))
+                        msg.data = object_type + min_vertex0 + min_vertex1 + max_vertex0 + max_vertex1
+                        self._publisher.publish(msg)
+                        #print("Published!", object_type)
 
-                    else:
-                        #print("Results sorted:", list(class_dict_sorted.items())[:5])
-                        #print(list(class_dict_sorted.items())[0][1])
-                        pass
             self._images = []
-
-        self._im1.set_data(pil_image)
-
-        plot.gcf().canvas.flush_events()
-        plot.show(block=False)
 
 
 def main():
@@ -125,14 +122,27 @@ def main():
 
     rclpy.init()
 
-    object_detector = ObjectDetector(topic_name)
 
+    object_detector = ObjectDetector(topic_name)
+    '''
+    detection_publisher = DetectionPublisher()
+
+    executor = rclpy.executors.SingleThreadedExecutor()
+    executor.add_node(object_detector)
+    executor.add_node(detection_publisher)
+
+    executor.spin()
+    '''
     rclpy.spin(object_detector)
 
     # Destroy the node explicitly
     # (optional - otherwise it will be done automatically
     # when the garbage collector destroys the node object)
-    minimal_subscriber.destroy_node()
+    #executor.remove_node(object_detector)
+    #executor.remove_node(detection_publisher)
+    object_detector.destroy_node()
+    #detection_publisher.destroy_node()
+
     rclpy.shutdown()
 
 

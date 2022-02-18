@@ -26,6 +26,7 @@ setup(
                 'frame_publisher = py_pubsub.ros_publisher:main',
                 'generate_images = py_pubsub.generate_images:main',
                 'object_detector = py_pubsub.object_detector:main',
+                'object_detector_debug = py_pubsub.object_detector_debug:main',
             ],
     },
 )
