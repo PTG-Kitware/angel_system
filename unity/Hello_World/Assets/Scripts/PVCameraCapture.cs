@@ -14,6 +14,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.XR.WindowsMR;
 using System.Runtime.InteropServices;
 
 
@@ -23,6 +24,7 @@ using Windows.Media;
 using Windows.Media.Capture;
 using Windows.Media.Capture.Frames;
 using Windows.Media.MediaProperties;
+using Windows.Perception.Spatial;
 using System.Runtime.InteropServices.WindowsRuntime;
 #endif
 
@@ -33,6 +35,9 @@ public class PVCameraCapture : MonoBehaviour
     MediaCapture mediaCapture = null;
     private MediaFrameReader frameReader = null;
     private byte[] frameData = null;
+
+    public static Matrix4x4 latestLocatableCameraToWorld = Matrix4x4.identity;
+    Windows.Perception.Spatial.SpatialCoordinateSystem worldOrigin;
 #endif
 
     // Network stuff
@@ -78,6 +83,13 @@ public class PVCameraCapture : MonoBehaviour
         return ref this._logger;
     }
 
+    private void Awake()
+    {
+#if ENABLE_WINMD_SUPPORT
+        worldOrigin = Windows.Perception.Spatial.SpatialLocator.GetDefault().CreateStationaryFrameOfReferenceAtCurrentLocation().CoordinateSystem;
+#endif
+    }
+
     // Start is called before the first frame update
     async void Start()
     {
@@ -112,7 +124,42 @@ public class PVCameraCapture : MonoBehaviour
 #endif
     }
 
+    void Update()
+    {
+        if (debugString != "")
+        {
+            this.logger().LogInfo(debugString);
+        }
+    }
+
+    void SetupPVCapture()
+    {
 #if ENABLE_WINMD_SUPPORT
+        try
+        {
+            IPAddress localAddr = IPAddress.Parse(TcpServerIPAddr);
+
+            // TcpListener server = new TcpListener(port);
+            tcpServer = new TcpListener(localAddr, PVTcpPort);
+
+            // Start listening for client requests.
+            tcpServer.Start();
+
+            // Perform a blocking call to accept requests.
+            // You could also use server.AcceptSocket() here.
+            tcpClient = tcpServer.AcceptTcpClient();
+            tcpStream = tcpClient.GetStream();
+        }
+        catch (Exception e)
+        {
+            debugString += e.ToString();
+        }
+#endif
+    }
+
+#if ENABLE_WINMD_SUPPORT
+    // The following functions were adapted from:
+    // https://github.com/qian256/HoloLensARToolKit/blob/master/HoloLensARToolKit/Assets/ARToolKitUWP/Scripts/ARUWPVideo.cs
     public async Task<bool> InitializeMediaCaptureAsyncTask()
     {
         int targetVideoWidth, targetVideoHeight;
@@ -236,7 +283,10 @@ public class PVCameraCapture : MonoBehaviour
             {
                 if (frame != null)
                 {
+<<<<<<< HEAD
                     /*
+=======
+>>>>>>> Add camera matrix helper functions
                     float[] cameraToWorldMatrixAsFloat = null;
                     if (HL2TryGetCameraToWorldMatrix(frame, out cameraToWorldMatrixAsFloat) == false)
                     {
@@ -245,7 +295,7 @@ public class PVCameraCapture : MonoBehaviour
                     }
 
                     latestLocatableCameraToWorld = ConvertFloatArrayToMatrix4x4(cameraToWorldMatrixAsFloat);
-                    */
+                    debugString = "Camera pos: " + latestLocatableCameraToWorld.ToString();
 
                     var originalSoftwareBitmap = frame.VideoMediaFrame.SoftwareBitmap;
 
@@ -299,41 +349,81 @@ public class PVCameraCapture : MonoBehaviour
             debugString += ("Frame Arrived Exception: " + e);
         }
     }
+
+	public bool HL2TryGetCameraToWorldMatrix(MediaFrameReference frameReference, out float[] outMatrix)
+	{
+
+		if (worldOrigin == null)
+		{
+			outMatrix = GetIdentityMatrixFloatArray();
+			return false;
+		}
+
+		SpatialCoordinateSystem cameraCoordinateSystem = frameReference.CoordinateSystem;
+		if (cameraCoordinateSystem == null)
+		{
+			outMatrix = GetIdentityMatrixFloatArray();
+			return false;
+		}
+
+		System.Numerics.Matrix4x4? cameraCoordsToUnityCoordsMatrix = cameraCoordinateSystem.TryGetTransformTo(worldOrigin);
+		if (cameraCoordsToUnityCoordsMatrix == null)
+		{
+			outMatrix = GetIdentityMatrixFloatArray();
+			return false;
+		}
+
+		System.Numerics.Matrix4x4 cameraCoordsToUnityCoords = System.Numerics.Matrix4x4.Transpose(cameraCoordsToUnityCoordsMatrix.Value);
+
+		// Change from right handed coordinate system to left handed UnityEngine
+		cameraCoordsToUnityCoords.M31 *= -1f;
+		cameraCoordsToUnityCoords.M32 *= -1f;
+		cameraCoordsToUnityCoords.M33 *= -1f;
+		cameraCoordsToUnityCoords.M34 *= -1f;
+
+		outMatrix = ConvertMatrixToFloatArray(cameraCoordsToUnityCoords);
+
+		return true;
+	}
+
+    private float[] ConvertMatrixToFloatArray(System.Numerics.Matrix4x4 matrix)
+	{
+		return new float[16] {
+				matrix.M11, matrix.M12, matrix.M13, matrix.M14,
+				matrix.M21, matrix.M22, matrix.M23, matrix.M24,
+				matrix.M31, matrix.M32, matrix.M33, matrix.M34,
+				matrix.M41, matrix.M42, matrix.M43, matrix.M44 };
+	}
+
+    static float[] GetIdentityMatrixFloatArray()
+	{
+		return new float[] { 1f, 0, 0, 0, 0, 1f, 0, 0, 0, 0, 1f, 0, 0, 0, 0, 1f };
+	}
+
+	public static UnityEngine.Matrix4x4 ConvertFloatArrayToMatrix4x4(float[] matrixAsArray)
+	{
+		//There is probably a better way to be doing this but System.Numerics.Matrix4x4 is not available
+		//in Unity and we do not include UnityEngine in the plugin.
+		UnityEngine.Matrix4x4 m = new UnityEngine.Matrix4x4();
+		m.m00 = matrixAsArray[0];
+		m.m01 = matrixAsArray[1];
+		m.m02 = -matrixAsArray[2];
+		m.m03 = matrixAsArray[3];
+		m.m10 = matrixAsArray[4];
+		m.m11 = matrixAsArray[5];
+		m.m12 = -matrixAsArray[6];
+		m.m13 = matrixAsArray[7];
+		m.m20 = matrixAsArray[8];
+		m.m21 = matrixAsArray[9];
+		m.m22 = -matrixAsArray[10];
+		m.m23 = matrixAsArray[11];
+		m.m30 = matrixAsArray[12];
+		m.m31 = matrixAsArray[13];
+		m.m32 = matrixAsArray[14];
+		m.m33 = matrixAsArray[15];
+
+		return m;
+	}
 #endif
-
-    void Update()
-    {
-#if ENABLE_WINMD_SUPPORT
-        if (debugString != "")
-        {
-            //this.logger().LogInfo(debugString);
-        }
-#endif
-    }
-
-    void SetupPVCapture()
-    {
-#if ENABLE_WINMD_SUPPORT
-        try
-        {
-            IPAddress localAddr = IPAddress.Parse(TcpServerIPAddr);
-
-            // TcpListener server = new TcpListener(port);
-            tcpServer = new TcpListener(localAddr, PVTcpPort);
-
-            // Start listening for client requests.
-            tcpServer.Start();
-
-            // Perform a blocking call to accept requests.
-            // You could also use server.AcceptSocket() here.
-            tcpClient = tcpServer.AcceptTcpClient();
-            tcpStream = tcpClient.GetStream();
-        }
-        catch (Exception e)
-        {
-            debugString += e.ToString();
-        }
-#endif
-    }
 
 }
