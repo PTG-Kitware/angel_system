@@ -3,6 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
+using System.Net.NetworkInformation;
+using System.Threading;
 using UnityEngine;
 
 public class AudioCapture : MonoBehaviour
@@ -15,9 +17,10 @@ public class AudioCapture : MonoBehaviour
     string debugString = "";
 
     System.Net.Sockets.TcpClient tcpClient;
+    System.Net.Sockets.TcpListener tcpServer;
     NetworkStream tcpStream;
 
-    public const string TcpServerIPAddr = "169.254.103.120";
+    public string TcpServerIPAddr = "";
     public const int AudioTcpPort = 11009;
 
     /// <summary>
@@ -39,18 +42,19 @@ public class AudioCapture : MonoBehaviour
     {
         Logger log = logger();
 
-        // Connect to the python TCP server
-        this.tcpClient = new System.Net.Sockets.TcpClient();
         try
         {
-            this.tcpClient.Connect(TcpServerIPAddr, AudioTcpPort);
-            log.LogInfo("TCP client PV connected!");
-            this.tcpStream = this.tcpClient.GetStream();
+            TcpServerIPAddr = PTGUtilities.getIPv4AddressString();
         }
-        catch (Exception e)
+        catch (InvalidIPConfiguration e)
         {
             log.LogInfo(e.ToString());
+            return;
         }
+
+        Thread tAudioCapture = new Thread(SetupAudioCapture);
+        tAudioCapture.Start();
+        log.LogInfo("Waiting for audio TCP connections");
 
         log.LogInfo("Setting up audio capture");
         foreach (var device in Microphone.devices)
@@ -103,7 +107,7 @@ public class AudioCapture : MonoBehaviour
         }
 
         byte[] frameData = new byte[(scaledData.Length * sizeof(float)) + 8];
-        
+
         // Add header
         byte[] frameHeader = { 0x1A, 0xCF, 0xFC, 0x1D,
                                (byte)(((data.Length * sizeof(float)) & 0xFF000000) >> 24),
@@ -122,5 +126,31 @@ public class AudioCapture : MonoBehaviour
         }
 
     }
+
+    void SetupAudioCapture()
+    {
+#if ENABLE_WINMD_SUPPORT
+        try
+        {
+            IPAddress localAddr = IPAddress.Parse(TcpServerIPAddr);
+
+            // TcpListener server = new TcpListener(port);
+            tcpServer = new TcpListener(localAddr, AudioTcpPort);
+
+            // Start listening for client requests.
+            tcpServer.Start();
+
+            // Perform a blocking call to accept requests.
+            // You could also use server.AcceptSocket() here.
+            tcpClient = tcpServer.AcceptTcpClient();
+            tcpStream = tcpClient.GetStream();
+        }
+        catch (Exception e)
+        {
+            debugString += e.ToString();
+        }
+#endif
+    }
+
 
 }

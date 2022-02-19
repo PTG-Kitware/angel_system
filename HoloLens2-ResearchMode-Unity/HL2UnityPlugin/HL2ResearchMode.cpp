@@ -21,7 +21,7 @@ using namespace winrt::Windows::Perception::Spatial::Preview;
 
 namespace winrt::HL2UnityPlugin::implementation
 {
-    HL2ResearchMode::HL2ResearchMode() 
+    HL2ResearchMode::HL2ResearchMode(hstring ipAddress) : m_ipAddress{ ipAddress }
     {
         // Load Research Mode library
         camConsentGiven = CreateEvent(nullptr, true, false, nullptr);
@@ -65,39 +65,67 @@ namespace winrt::HL2UnityPlugin::implementation
 
         // set up TCP sockets
         WSADATA w;
-        std::string server_ip_addr = "169.254.103.120";
-
-        m_sockets.push_back(m_socketLF);
-        m_sockets.push_back(m_socketRF);
-        m_sockets.push_back(m_socketLL);
-        m_sockets.push_back(m_socketRR);
-        m_sockets.push_back(m_socketDepth);
-        m_sockets.push_back(m_socketDepthAb);
-        m_sockets.push_back(m_socketLongDepth);
-        m_sockets.push_back(m_socketLongDepthAb);
 
         if (WSAStartup(0x0202, &w))
         {
             return;
         }
 
-        for (std::size_t i = 0; i < m_sockets.size(); i++)
+        std::vector<SOCKET> hostSockets;
+        
+        for (std::size_t i = 0; i < 8; i++)
         {
+            SOCKET s;
             SOCKADDR_IN addr;
 
             addr.sin_family = AF_INET;
             addr.sin_port = htons(LF_VLC_TCP_PORT + i);
-            inet_pton(AF_INET, server_ip_addr.c_str(), &(addr.sin_addr));
+            inet_pton(AF_INET, winrt::to_string(m_ipAddress).c_str(), &(addr.sin_addr));
 
-            if (connect(m_sockets[i], (struct sockaddr*)&addr, sizeof(addr)) < 0)
+            s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+            if (s == INVALID_SOCKET)
             {
-                // error
-                m_debugString += "socket error!\n";
-
+                m_debugString += "Error creating socket\n";
             }
+            if (::bind(s, (SOCKADDR*)&addr, sizeof(addr)) == SOCKET_ERROR)
+            {
+                m_debugString += "Socket bind error\n";
+            }
+            if (listen(s, SOMAXCONN) == SOCKET_ERROR)
+            {
+                closesocket(s);
+                WSACleanup();
+            }
+
+            hostSockets.push_back(s);
         }
 
+        //m_debugString += "Sockets created " + std::to_string(hostSockets.size()) + "\n";
 
+        for (std::size_t i = 0; i < 8; i++)
+        {
+            //m_debugString += "Listening for connection...\n";
+            SOCKET cs = accept(hostSockets[i], NULL, NULL);
+            if (cs == INVALID_SOCKET)
+            {
+                closesocket(hostSockets[i]);
+                WSACleanup();
+            }
+            m_sockets.push_back(cs);
+
+            //m_debugString += "Connected port " + std::to_string(LF_VLC_TCP_PORT + i) + "\n";
+            closesocket(hostSockets[i]);
+        }
+
+        // TODO: there is probably a better way to do this
+        m_socketLF = m_sockets[0];
+        m_socketRF = m_sockets[1];
+        m_socketLL = m_sockets[2];
+        m_socketRR = m_sockets[3];
+        m_socketDepth = m_sockets[4];
+        m_socketDepthAb = m_sockets[5];
+        m_socketLongDepth = m_sockets[6];
+        m_socketLongDepthAb = m_sockets[7];
 
     }
 
@@ -692,7 +720,7 @@ namespace winrt::HL2UnityPlugin::implementation
                 frame.insert(frame.begin(), &frameHeader[0], &frameHeader[16]);
                 frame.insert(frame.end(), &pDepthTexture[0], &pDepthTexture[outBufferCount]);
 
-                send(pHL2ResearchMode->m_socketLongDepth, &frame[0], outBufferCount + 16, 0);
+                int num_bytes = send(pHL2ResearchMode->m_socketLongDepth, &frame[0], outBufferCount + 16, 0);
 
                 pDepthTexture.reset();
 

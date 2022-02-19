@@ -2,7 +2,7 @@ namespace HL2UnityPlugin
 {
     runtimeclass HL2ResearchMode
     {
-        HL2ResearchMode();
+        HL2ResearchMode(String ipAddress);
 
         UInt16 GetCenterDepth();
         UInt16[] GetDepthMapBuffer();

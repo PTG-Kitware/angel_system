@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
+using System.Net.NetworkInformation;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -41,6 +42,7 @@ public class ResearchModeCapture : MonoBehaviour
 #endif
 
     private Logger _logger = null;
+    public string TcpServerIPAddr = "";
 
     // Spatial awareness stuff
     IEnumerable<SpatialAwarenessMeshObject> meshes;
@@ -72,26 +74,19 @@ public class ResearchModeCapture : MonoBehaviour
     {
         Logger log = logger();
 
-#if ENABLE_WINMD_SUPPORT
-        // Configure research mode
-        log.LogInfo("Research mode enabled");
-        researchMode = new HL2ResearchMode();
+        try
+        {
+            TcpServerIPAddr = PTGUtilities.getIPv4AddressString();
+        }
+        catch (InvalidIPConfiguration e)
+        {
+            log.LogInfo(e.ToString());
+            return;
+        }
 
-        // Depth sensor should be initialized in only one mode
-        if (depthSensorMode == DepthSensorMode.LongThrow) researchMode.InitializeLongDepthSensor();
-        else if (depthSensorMode == DepthSensorMode.ShortThrow) researchMode.InitializeDepthSensor();
-
-        researchMode.InitializeSpatialCamerasFront();
-        researchMode.SetReferenceCoordinateSystem(unityWorldOrigin);
-        researchMode.SetPointCloudDepthOffset(0);
-
-        // Depth sensor should be initialized in only one mode
-        if (depthSensorMode == DepthSensorMode.LongThrow) researchMode.StartLongDepthSensorLoop(enablePointCloud);
-        else if (depthSensorMode == DepthSensorMode.ShortThrow) researchMode.StartDepthSensorLoop(enablePointCloud);
-
-        researchMode.StartSpatialCamerasFrontLoop();
-        log.LogInfo("Research mode initialized");
-#endif
+        Thread tResearchMode = new Thread(SetupResearchMode);
+        tResearchMode.Start();
+        log.LogInfo("Waiting for research mode TCP connections");
     }
 
     void Update()
@@ -113,9 +108,31 @@ public class ResearchModeCapture : MonoBehaviour
 
 #if ENABLE_WINMD_SUPPORT
         //if (researchMode.PrintDebugString() != "")
-        // {
+        //{
         //    this.logger().LogInfo(researchMode.PrintDebugString());
         //}
+#endif
+    }
+
+    void SetupResearchMode()
+    {
+#if ENABLE_WINMD_SUPPORT
+        // Configure research mode
+        researchMode = new HL2ResearchMode(TcpServerIPAddr);
+
+        // Depth sensor should be initialized in only one mode
+        if (depthSensorMode == DepthSensorMode.LongThrow) researchMode.InitializeLongDepthSensor();
+        else if (depthSensorMode == DepthSensorMode.ShortThrow) researchMode.InitializeDepthSensor();
+
+        researchMode.InitializeSpatialCamerasFront();
+        researchMode.SetReferenceCoordinateSystem(unityWorldOrigin);
+        researchMode.SetPointCloudDepthOffset(0);
+
+        // Depth sensor should be initialized in only one mode
+        if (depthSensorMode == DepthSensorMode.LongThrow) researchMode.StartLongDepthSensorLoop(enablePointCloud);
+        else if (depthSensorMode == DepthSensorMode.ShortThrow) researchMode.StartDepthSensorLoop(enablePointCloud);
+
+        researchMode.StartSpatialCamerasFrontLoop();
 #endif
     }
 

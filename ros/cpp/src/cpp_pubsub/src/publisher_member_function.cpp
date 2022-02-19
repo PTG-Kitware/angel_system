@@ -100,7 +100,7 @@ class MinimalPublisher : public rclcpp::Node
 
   private:
     size_t count_;
-    std::string server_ip_addr = "192.167.1.90";
+    std::string server_ip_addr = "169.254.64.13";
 
     void TCPServerVideoThread(int port)
     {
@@ -314,9 +314,10 @@ class MinimalPublisher : public rclcpp::Node
 
     SOCKET connectSocket(int port)
     {
-      SOCKET s, cs;
+      SOCKET s;
 
 #ifdef _WIN32
+      s = socket(AF_INET, SOCK_STREAM, 0);
       SOCKADDR_IN addr;
       WSADATA w;
       if (WSAStartup (0x0202, &w))
@@ -327,66 +328,27 @@ class MinimalPublisher : public rclcpp::Node
       addr.sin_port = htons(port);
       inet_pton(AF_INET, server_ip_addr.c_str(), &(addr.sin_addr));
 
-      s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-      if (s == INVALID_SOCKET)
+      if (connect(s, (SOCKADDR *)&addr, sizeof(addr)) < 0)
       {
           std::cout << "Error creating socket" << std::endl;
       }
-      if (::bind(s, (SOCKADDR *)&addr, sizeof(addr)) == SOCKET_ERROR)
-      {
-          std::cout << "Socket bind error" << std::endl;
-          std::cout << std::to_string(WSAGetLastError());
-      }
-      if (listen(s, SOMAXCONN ) == SOCKET_ERROR)
-      {
-          closesocket(s);
-          WSACleanup();
-      }
-
-      std::cout << "Listening for connection..." << std::endl;
-      cs = accept(s, NULL, NULL);
-      if (cs == INVALID_SOCKET)
-      {
-          std::cout << "Invalid socket!\n";
-          closesocket(s);
-          WSACleanup();
-      }
-
-      std::cout << "Connected port " << port << std::endl;
-      closesocket(s);
-      WSACleanup();
 #endif
 #ifdef __linux__
-      struct sockaddr_in addr;
+      s = socket(AF_INET, SOCK_STREAM, 0);
 
+      struct sockaddr_in addr;
       addr.sin_family = AF_INET;
       addr.sin_port = htons(port);
       inet_pton(AF_INET, server_ip_addr.c_str(), &(addr.sin_addr));
 
-      s = socket(AF_INET, SOCK_STREAM, 0);
-      if (s < 0)
+      if (connect(s, (struct sockaddr*)&addr, sizeof(addr)) < 0)
       {
           std::cout << "Error creating socket" << std::endl;
       }
-      if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0)
-      {
-          std::cout << "Socket bind error" << std::endl;
-      }
-      listen(s, SOMAXCONN);
-
-      std::cout << "Listening for connection..." << std::endl;
-      cs = accept(s, NULL, NULL);
-      if (cs == -1)
-      {
-          std::cout << "Invalid socket!" << std::endl;
-          close(s);
-      }
-
-      std::cout << "Connected port " << port << std::endl;
-      close(s);
 #endif
 
-      return cs;
+      std::cout << "Socket connected!" << std::endl;
+      return s;
     }
 
 };

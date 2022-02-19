@@ -7,7 +7,6 @@ import time
 import threading
 
 from matplotlib import pyplot as plot
-import matplotlib
 
 import rclpy
 from rclpy.node import Node
@@ -51,8 +50,8 @@ class VideoSubscriber(Node):
         elif self.topic == "LongDepthFrames" or self.topic == "LongDepthABFrames":
             self.im1 = self.ax1.imshow(np.zeros(shape=(288, 320, 1)), cmap='gray', vmin=0, vmax=255)
         else:
-            self.im1 = self.ax1.imshow(np.zeros(shape=(480, 640, 1)), cmap='gray', vmin=0, vmax=255)
-        
+            self.im1 = self.ax1.imshow(np.zeros(shape=(480, 640, 1)).squeeze(), cmap='gray', vmin=0, vmax=255)
+
         plot.ion()
         plot.show()
 
@@ -91,7 +90,7 @@ class VideoSubscriber(Node):
             if self.topic == "RRFrames":
                 image_np = np.rot90(image_np, k=3)
 
-            self.im1.set_data(image_np)
+            self.im1.set_data(image_np.squeeze())
 
         plot.gcf().canvas.flush_events()
         plot.show(block=False)
