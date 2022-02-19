@@ -55,6 +55,7 @@ services:
       # assume this file exists, should be created before running.
       - ${XAUTH_FILEPATH}:/tmp/.docker.xauth
     environment:
+      CYCLONE_DDS_INTERFACE:  # from .env file
       DISPLAY:  # pull from current environment
       XAUTHORITY: /tmp/.docker.xauth
 

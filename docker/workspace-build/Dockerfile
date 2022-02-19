@@ -32,6 +32,7 @@ COPY --from=tmp_package_files /angel_workspace /angel_workspace
 
 RUN apt-get -y update \
  && apt-get -y install \
+        gettext-base \
         python3-pip \
         python3-venv \
         ros-${ROS_DISTRO}-rmw-cyclonedds-cpp \
@@ -60,7 +61,8 @@ WORKDIR /angel_workspace
 COPY docker/workspace_build.sh /angel_workspace/
 RUN /angel_workspace/workspace_build.sh
 
-COPY docker/workspace_entrypoint.sh \
+COPY docker/cyclonedds_profile.xml.tmpl \
+     docker/workspace_entrypoint.sh \
      docker/workspace_setenv.sh \
      /angel_workspace/
 

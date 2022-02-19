@@ -107,6 +107,11 @@ but these will be lost upon container shutdown.
 * Additional development only dependencies should be added to the
   `./docker/workspace-base-dev` image definition.
 
+### Container Cyclone DDS configuration
+A basic template config may be auto-generated to specify which host network
+interface for it to use by uncommenting and setting the `CYCLONE_DDS_INTERFACE`
+in the `docker/.env` or exporting it on your commandline to the desired value.
+
 ## Lessons Learned
 ### `rosdep`
 References to the lists that rosdep uses to resolve names:
