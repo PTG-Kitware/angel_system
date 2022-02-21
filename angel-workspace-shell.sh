@@ -48,17 +48,25 @@ done
 
 SERVICE_NAME="${positional[0]:-${DEFAULT_SERVICE_NAME}}"
 
-# make local xauth file if not already there
-export XAUTH_FILEPATH="${SCRIPT_DIR}/docker/.container_xauth/local.xauth"
-if [[ ! -f "$XAUTH_FILEPATH" ]]
-then
-  log "[INFO] Creating local xauth file: $XAUTH_FILEPATH"
-  touch "$XAUTH_FILEPATH"
-  xauth nlist "$DISPLAY" | sed -e 's/^..../ffff/' | xauth -f "$XAUTH_FILEPATH" nmerge -
-fi
+# Create a permissions file for xauthority.
+XAUTH_DIR="${SCRIPT_DIR}/docker/.container_xauth"
+# Exporting to be used in replacement in docker-compose file.
+export XAUTH_FILEPATH="$(mktemp "${XAUTH_DIR}/local-XXXXXX.xauth")"
+log "[INFO] Creating local xauth file: $XAUTH_FILEPATH"
+touch "$XAUTH_FILEPATH"
+xauth nlist "$DISPLAY" | sed -e 's/^..../ffff/' | xauth -f "$XAUTH_FILEPATH" nmerge -
 
+set +e
 docker-compose \
   --env-file "$SCRIPT_DIR"/docker/.env \
   -f "$SCRIPT_DIR"/docker/docker-compose.yml \
   run --rm \
   "$SERVICE_NAME" "$@"
+DC_RUN_RET_CODE="$?"
+set -e
+log "[INFO] Container run exited with code: $DC_RUN_RET_CODE"
+
+log "[INFO] Removing local xauth file: ${XAUTH_FILEPATH}"
+rm "${XAUTH_FILEPATH}"
+
+exit "$DC_RUN_RET_CODE"
