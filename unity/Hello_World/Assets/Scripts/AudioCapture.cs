@@ -129,7 +129,6 @@ public class AudioCapture : MonoBehaviour
 
     void SetupAudioCapture()
     {
-#if ENABLE_WINMD_SUPPORT
         try
         {
             IPAddress localAddr = IPAddress.Parse(TcpServerIPAddr);
@@ -149,8 +148,6 @@ public class AudioCapture : MonoBehaviour
         {
             debugString += e.ToString();
         }
-#endif
     }
-
 
 }

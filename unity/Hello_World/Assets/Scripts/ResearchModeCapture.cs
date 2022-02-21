@@ -44,10 +44,6 @@ public class ResearchModeCapture : MonoBehaviour
     private Logger _logger = null;
     public string TcpServerIPAddr = "";
 
-    // Spatial awareness stuff
-    IEnumerable<SpatialAwarenessMeshObject> meshes;
-    IMixedRealitySpatialAwarenessMeshObserver observer = null;
-
     /// <summary>
     /// Lazy acquire the logger object and return the reference to it.
     /// </summary>
@@ -91,21 +87,6 @@ public class ResearchModeCapture : MonoBehaviour
 
     void Update()
     {
-        // Setup the spatial awareness observer
-        if (observer == null)
-        {
-            var meshObservers = (CoreServices.SpatialAwarenessSystem as IMixedRealityDataProviderAccess).GetDataProviders<IMixedRealitySpatialAwarenessMeshObserver>();
-            foreach (var observers in meshObservers)
-            {
-                if (observers.Meshes.Count != 0)
-                {
-                    observer = observers;
-                    observer.DisplayOption = SpatialAwarenessMeshDisplayOptions.None;
-                    this.logger().LogInfo("Detail level: " + observer.LevelOfDetail.ToString());
-                }
-            }
-        }
-
 #if ENABLE_WINMD_SUPPORT
         //if (researchMode.PrintDebugString() != "")
         //{

@@ -36,7 +36,6 @@ public class PVCameraCapture : MonoBehaviour
     private MediaFrameReader frameReader = null;
     private byte[] frameData = null;
 
-    public static Matrix4x4 latestLocatableCameraToWorld = Matrix4x4.identity;
     Windows.Perception.Spatial.SpatialCoordinateSystem worldOrigin;
 #endif
 
@@ -129,12 +128,12 @@ public class PVCameraCapture : MonoBehaviour
         if (debugString != "")
         {
             this.logger().LogInfo(debugString);
+            debugString = "";
         }
     }
 
     void SetupPVCapture()
     {
-#if ENABLE_WINMD_SUPPORT
         try
         {
             IPAddress localAddr = IPAddress.Parse(TcpServerIPAddr);
@@ -154,7 +153,6 @@ public class PVCameraCapture : MonoBehaviour
         {
             debugString += e.ToString();
         }
-#endif
     }
 
 #if ENABLE_WINMD_SUPPORT
@@ -283,19 +281,23 @@ public class PVCameraCapture : MonoBehaviour
             {
                 if (frame != null)
                 {
-<<<<<<< HEAD
-                    /*
-=======
->>>>>>> Add camera matrix helper functions
                     float[] cameraToWorldMatrixAsFloat = null;
-                    if (HL2TryGetCameraToWorldMatrix(frame, out cameraToWorldMatrixAsFloat) == false)
+
+                    try
                     {
-                        this.logger().LogInfo("HL2TryGetCameraToWorldMatrix failed");
-                        return;
+                        if (HL2TryGetCameraToWorldMatrix(frame, out cameraToWorldMatrixAsFloat) == false)
+                        {
+                            debugString += "HL2TryGetCameraToWorldMatrix failed";
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        debugString += e.ToString();
                     }
 
-                    latestLocatableCameraToWorld = ConvertFloatArrayToMatrix4x4(cameraToWorldMatrixAsFloat);
-                    debugString = "Camera pos: " + latestLocatableCameraToWorld.ToString();
+                    Matrix4x4 latestLocatableCameraToWorld = latestLocatableCameraToWorld = ConvertFloatArrayToMatrix4x4(cameraToWorldMatrixAsFloat);
+                    //debugString = "Camera pos: " + latestLocatableCameraToWorld.ToString();
+                    //debugString = "Multiply point: " + latestLocatableCameraToWorld.MultiplyPoint(new Vector3(0, 0, 0)).ToString() + "\n";
 
                     var originalSoftwareBitmap = frame.VideoMediaFrame.SoftwareBitmap;
 
@@ -352,48 +354,47 @@ public class PVCameraCapture : MonoBehaviour
 
 	public bool HL2TryGetCameraToWorldMatrix(MediaFrameReference frameReference, out float[] outMatrix)
 	{
+        if (worldOrigin == null)
+        {
+            outMatrix = GetIdentityMatrixFloatArray();
+            return false;
+        }
 
-		if (worldOrigin == null)
-		{
-			outMatrix = GetIdentityMatrixFloatArray();
-			return false;
-		}
+        SpatialCoordinateSystem cameraCoordinateSystem = frameReference.CoordinateSystem;
+        if (cameraCoordinateSystem == null)
+        {
+            outMatrix = GetIdentityMatrixFloatArray();
+            return false;
+        }
 
-		SpatialCoordinateSystem cameraCoordinateSystem = frameReference.CoordinateSystem;
-		if (cameraCoordinateSystem == null)
-		{
-			outMatrix = GetIdentityMatrixFloatArray();
-			return false;
-		}
+        System.Numerics.Matrix4x4? cameraCoordsToUnityCoordsMatrix = cameraCoordinateSystem.TryGetTransformTo(worldOrigin);
+        if (cameraCoordsToUnityCoordsMatrix == null)
+        {
+            outMatrix = GetIdentityMatrixFloatArray();
+            return false;
+        }
 
-		System.Numerics.Matrix4x4? cameraCoordsToUnityCoordsMatrix = cameraCoordinateSystem.TryGetTransformTo(worldOrigin);
-		if (cameraCoordsToUnityCoordsMatrix == null)
-		{
-			outMatrix = GetIdentityMatrixFloatArray();
-			return false;
-		}
+        System.Numerics.Matrix4x4 cameraCoordsToUnityCoords = System.Numerics.Matrix4x4.Transpose(cameraCoordsToUnityCoordsMatrix.Value);
 
-		System.Numerics.Matrix4x4 cameraCoordsToUnityCoords = System.Numerics.Matrix4x4.Transpose(cameraCoordsToUnityCoordsMatrix.Value);
-
-		// Change from right handed coordinate system to left handed UnityEngine
+        // Change from right handed coordinate system to left handed UnityEngine
 		cameraCoordsToUnityCoords.M31 *= -1f;
 		cameraCoordsToUnityCoords.M32 *= -1f;
 		cameraCoordsToUnityCoords.M33 *= -1f;
 		cameraCoordsToUnityCoords.M34 *= -1f;
 
-		outMatrix = ConvertMatrixToFloatArray(cameraCoordsToUnityCoords);
+        outMatrix = ConvertMatrixToFloatArray(cameraCoordsToUnityCoords);
 
-		return true;
+        return true;
 	}
 
     private float[] ConvertMatrixToFloatArray(System.Numerics.Matrix4x4 matrix)
-	{
-		return new float[16] {
-				matrix.M11, matrix.M12, matrix.M13, matrix.M14,
-				matrix.M21, matrix.M22, matrix.M23, matrix.M24,
-				matrix.M31, matrix.M32, matrix.M33, matrix.M34,
-				matrix.M41, matrix.M42, matrix.M43, matrix.M44 };
-	}
+    {
+        return new float[16] {
+            matrix.M11, matrix.M12, matrix.M13, matrix.M14,
+            matrix.M21, matrix.M22, matrix.M23, matrix.M24,
+            matrix.M31, matrix.M32, matrix.M33, matrix.M34,
+            matrix.M41, matrix.M42, matrix.M43, matrix.M44 };
+    }
 
     static float[] GetIdentityMatrixFloatArray()
 	{
@@ -424,6 +425,39 @@ public class PVCameraCapture : MonoBehaviour
 
 		return m;
 	}
+
+    private System.Numerics.Matrix4x4 ConvertByteArrayToMatrix4x4(byte[] matrixAsBytes)
+    {
+        if (matrixAsBytes == null)
+        {
+            throw new ArgumentNullException("matrixAsBytes");
+        }
+
+        if (matrixAsBytes.Length != 64)
+        {
+            throw new Exception("Cannot convert byte[] to Matrix4x4. Size of array should be 64, but it is " + matrixAsBytes.Length);
+        }
+
+        var m = matrixAsBytes;
+        return new System.Numerics.Matrix4x4(
+            BitConverter.ToSingle(m, 0),
+            BitConverter.ToSingle(m, 4),
+            BitConverter.ToSingle(m, 8),
+            BitConverter.ToSingle(m, 12),
+            BitConverter.ToSingle(m, 16),
+            BitConverter.ToSingle(m, 20),
+            BitConverter.ToSingle(m, 24),
+            BitConverter.ToSingle(m, 28),
+            BitConverter.ToSingle(m, 32),
+            BitConverter.ToSingle(m, 36),
+            BitConverter.ToSingle(m, 40),
+            BitConverter.ToSingle(m, 44),
+            BitConverter.ToSingle(m, 48),
+            BitConverter.ToSingle(m, 52),
+            BitConverter.ToSingle(m, 56),
+            BitConverter.ToSingle(m, 60)
+        );
+    }
 #endif
 
 }
