@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "angel_system"
+version = "0.1.0"
+description = ""
+authors = ["Kitware, Inc. <kitware@kitware.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.8,<3.10"
+matplotlib = "^3.5.1"
+numpy = "^1.22.2"
+Pillow = "^8"
+simpleaudio = "^1.0.4"
+smqtk-detection = ">=0.18.1"
+torch = "^1.10.2"
+torchvision = "^0.11.3"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core==1.0.7"]
+build-backend = "poetry.core.masonry.api"

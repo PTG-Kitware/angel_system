@@ -1,0 +1,84 @@
+version: "3.4"
+
+services:
+
+  #
+  # Build requirements
+  #
+
+  workspace-base-dev:
+    image: ${PTG_REGISTRY}/workspace-base-dev:${PTG_TAG}
+    build:
+      context: ..  # repo root
+      dockerfile: docker/workspace-base-dev/Dockerfile
+      cache_from:
+        - ${PTG_REGISTRY}/workspace-base-dev:${PTG_TAG}
+    profiles:
+      - build-only
+
+
+  workspace-build-dev:
+    image: ${PTG_REGISTRY}/workspace-build-dev:${PTG_TAG}
+    depends_on:
+      - workspace-base-dev
+    build:
+      context: ..  # repo root
+      dockerfile: docker/workspace-build/Dockerfile
+      args:
+        BASE_IMAGE: workspace-base-dev
+        PTG_REGISTRY:  # from .env file
+        PTG_TAG:  # from .env file
+      cache_from:
+        - ${PTG_REGISTRY}/workspace-build-dev:${PTG_TAG}
+    profiles:
+      - build-only
+
+  #
+  # Runnable services
+  #
+
+  workspace-shell-dev:
+    # Development workspace shell, including source and build mounting.
+    # Includes X11 passthrough.
+    image: ${PTG_REGISTRY}/workspace-build-dev:${PTG_TAG}
+    working_dir: "/angel_workspace"
+    privileged: true
+    network_mode: host
+    tty: true
+    volumes:
+      - /dev/shm:/dev/shm
+      - ../ros:/angel_workspace/src
+      - ../.workspace-shell-dev/build:/angel_workspace/build
+      - ../.workspace-shell-dev/install:/angel_workspace/install
+      - ../.workspace-shell-dev/log:/angel_workspace/log
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      # assume this file exists, should be created before running.
+      - ${XAUTH_FILEPATH}:/tmp/.docker.xauth
+    environment:
+      CYCLONE_DDS_INTERFACE:  # from .env file
+      DISPLAY:  # pull from current environment
+      XAUTHORITY: /tmp/.docker.xauth
+
+  workspace-shell-dev-gpu:
+    extends:
+      service: workspace-shell-dev
+    # https://docs.docker.com/compose/gpu-support/
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [ gpu ]
+              driver: nvidia
+              count: all
+              # device_ids: ['0', '3']  # mutually exclusive with count
+
+  workspace-shell-run:
+    # Service for running ros2 commands in the context of the image's build
+    # workspace.
+    image: ${PTG_REGISTRY}/workspace-build-dev:${PTG_TAG}
+    working_dir: "/angel_workspace"
+    privileged: true
+    network_mode: host
+    volumes:
+      - /dev/shm:/dev/shm
+    command: bash -c ". /angel_workspace/install/setup.bash && bash"
