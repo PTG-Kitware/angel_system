@@ -50,6 +50,9 @@ public class PVCameraCapture : MonoBehaviour
     uint framesRcvd;
     string debugString = "";
 
+    const int worldMatrixSize = 16 * 4;
+    const int headerLength = 16;
+
     public string TcpServerIPAddr = "";
     public const int PVTcpPort = 11008;
 
@@ -257,7 +260,7 @@ public class PVCameraCapture : MonoBehaviour
             frameReader = await mediaCapture.CreateFrameReaderAsync(mediaFrameSourceVideo, targetResFormat.Subtype);
             frameReader.FrameArrived += OnFrameArrived;
 
-            frameData = new byte[(int) (targetResFormat.VideoFormat.Width * targetResFormat.VideoFormat.Height * 1.5) + 16];
+            frameData = new byte[(int) (targetResFormat.VideoFormat.Width * targetResFormat.VideoFormat.Height * 1.5) + headerLength + worldMatrixSize];
             this.logger().LogInfo("FrameReader is successfully initialized, " + targetResFormat.VideoFormat.Width + "x" + targetResFormat.VideoFormat.Height +
                 ", Framerate: " + targetResFormat.FrameRate.Numerator + "/" + targetResFormat.FrameRate.Denominator);
         }
@@ -295,7 +298,7 @@ public class PVCameraCapture : MonoBehaviour
                         debugString += e.ToString();
                     }
 
-                    Matrix4x4 latestLocatableCameraToWorld = latestLocatableCameraToWorld = ConvertFloatArrayToMatrix4x4(cameraToWorldMatrixAsFloat);
+                    Matrix4x4 latestLocatableCameraToWorld = ConvertFloatArrayToMatrix4x4(cameraToWorldMatrixAsFloat);
                     //debugString = "Camera pos: " + latestLocatableCameraToWorld.ToString();
                     //debugString = "Multiply point: " + latestLocatableCameraToWorld.MultiplyPoint(new Vector3(0, 0, 0)).ToString() + "\n";
 
@@ -319,10 +322,10 @@ public class PVCameraCapture : MonoBehaviour
 
                         // add header
                         byte[] frameHeader = { 0x1A, 0xCF, 0xFC, 0x1D,
-                                        (byte)(((inputCapacity + 8) & 0xFF000000) >> 24),
-                                        (byte)(((inputCapacity + 8) & 0x00FF0000) >> 16),
-                                        (byte)(((inputCapacity + 8) & 0x0000FF00) >> 8),
-                                        (byte)(((inputCapacity + 8) & 0x000000FF) >> 0),
+                                        (byte)(((inputCapacity + 8 + cameraToWorldMatrixAsFloat.Length) & 0xFF000000) >> 24),
+                                        (byte)(((inputCapacity + 8 + cameraToWorldMatrixAsFloat.Length) & 0x00FF0000) >> 16),
+                                        (byte)(((inputCapacity + 8 + cameraToWorldMatrixAsFloat.Length) & 0x0000FF00) >> 8),
+                                        (byte)(((inputCapacity + 8 + cameraToWorldMatrixAsFloat.Length) & 0x000000FF) >> 0),
                                         (byte)((originalSoftwareBitmap.PixelWidth & 0xFF000000) >> 24),
                                         (byte)((originalSoftwareBitmap.PixelWidth & 0x00FF0000) >> 16),
                                         (byte)((originalSoftwareBitmap.PixelWidth & 0x0000FF00) >> 8),
@@ -333,7 +336,11 @@ public class PVCameraCapture : MonoBehaviour
                                         (byte)((originalSoftwareBitmap.PixelHeight & 0x000000FF) >> 0) };
                         System.Buffer.BlockCopy(frameHeader, 0, frameData, 0, frameHeader.Length);
 
-                        Marshal.Copy((IntPtr)inputBytes, frameData, 16, (int)inputCapacity);
+                        // add worldMatrix
+                        System.Buffer.BlockCopy(cameraToWorldMatrixAsFloat, 0, frameData, frameHeader.Length , cameraToWorldMatrixAsFloat.Length * sizeof(float));
+
+                        // add image data
+                        Marshal.Copy((IntPtr)inputBytes, frameData, frameHeader.Length + worldMatrixSize, (int)inputCapacity);
 
                         // Send the data through the socket.
                         if (tcpStream != null)
