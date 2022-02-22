@@ -47,6 +47,8 @@ services:
     tty: true
     volumes:
       - /dev/shm:/dev/shm
+      - ../poetry.lock:/angel_workspace/poetry.lock
+      - ../pyproject.toml:/angel_workspace/pyproject.toml
       - ../ros:/angel_workspace/src
       - ../.workspace-shell-dev/build:/angel_workspace/build
       - ../.workspace-shell-dev/install:/angel_workspace/install
@@ -81,4 +83,6 @@ services:
     network_mode: host
     volumes:
       - /dev/shm:/dev/shm
+    environment:
+      CYCLONE_DDS_INTERFACE:  # from .env file
     command: bash -c ". /angel_workspace/install/setup.bash && bash"
