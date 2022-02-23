@@ -9,8 +9,9 @@ from rclpy.node import Node
 from sensor_msgs.msg import Image, CompressedImage
 from std_msgs.msg import UInt8MultiArray
 import cv2
-import PIL
-import PIL.ImageDraw, PIL.ImageFont
+import PIL.Image
+import PIL.ImageDraw
+import PIL.ImageFont
 
 
 TOPICS = ["PVFrames"]
@@ -94,8 +95,11 @@ class ObjectDetector(Node):
             self._prev_time = time.time()
 
         # convert NV12 image to RGB
-        yuv_image = np.frombuffer(image.data, np.uint8).reshape(image.height*3//2, image.width)
-        rgb_image = cv2.cvtColor(yuv_image, cv2.COLOR_YUV2RGB_NV12)
+        try:
+            yuv_image = np.frombuffer(image.data, np.uint8).reshape(image.height*3//2, image.width)
+            rgb_image = cv2.cvtColor(yuv_image, cv2.COLOR_YUV2RGB_NV12)
+        except ValueError:
+            rgb_image = BRIDGE.imgmsg_to_cv2(image, desired_encoding="rgb8")
         pil_image = PIL.Image.fromarray(rgb_image)
 
         draw = PIL.ImageDraw.Draw(pil_image)

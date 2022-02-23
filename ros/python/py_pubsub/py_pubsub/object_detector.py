@@ -5,6 +5,7 @@ import sys
 import time
 import threading
 
+from cv_bridge import CvBridge
 import numpy as np
 import rclpy
 from rclpy.node import Node
@@ -16,7 +17,11 @@ from torchvision import datasets, transforms
 from matplotlib import pyplot as plot
 from smqtk_detection.impls.detect_image_objects.resnet_frcnn import ResNetFRCNN
 
+
 TOPICS = ["PVFrames"]
+
+
+BRIDGE = CvBridge()
 
 
 class ObjectDetector(Node):
@@ -69,8 +74,11 @@ class ObjectDetector(Node):
             self._prev_time = time.time()
 
         # convert NV12 image to RGB
-        yuv_image = np.frombuffer(image.data, np.uint8).reshape(image.height*3//2, image.width)
-        rgb_image = cv2.cvtColor(yuv_image, cv2.COLOR_YUV2RGB_NV12)
+        try:
+            yuv_image = np.frombuffer(image.data, np.uint8).reshape(image.height*3//2, image.width)
+            rgb_image = cv2.cvtColor(yuv_image, cv2.COLOR_YUV2RGB_NV12)
+        except ValueError:
+            rgb_image = BRIDGE.imgmsg_to_cv2(image, desired_encoding="rgb8")
         #print(type(rgb), rgb.size, rgb.shape)
         #print("image_np stuff", rgb.shape, rgb.dtype, image.height, image.width, rgb[0:2])
 
