@@ -1,22 +1,22 @@
-import queue
-import socket
 import struct
 import sys
 import time
-import threading
 
+from cv_bridge import CvBridge
 import numpy as np
 import rclpy
 from rclpy.node import Node
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import Image, CompressedImage
 from std_msgs.msg import UInt8MultiArray
 import cv2
 import PIL
 import PIL.ImageDraw, PIL.ImageFont
-import torch
-from matplotlib import pyplot as plot
+
 
 TOPICS = ["PVFrames"]
+
+
+BRIDGE = CvBridge()
 
 
 class ObjectDetector(Node):
@@ -50,17 +50,16 @@ class ObjectDetector(Node):
             100
         )
 
+        self._pub_debug_detections_image = self.create_publisher(
+            Image,  # CompressedImage,
+            "ObjectDetectionsDebug",
+            10
+        )
+
         self._frames_recvd = 0
         self._prev_time = -1
 
         self._detections = []
-
-        self._ax1 = plot.subplot(111)
-        self._im1 = self._ax1.imshow(np.zeros(shape=(720, 1280, 3)), vmin=0, vmax=255)
-
-        plot.ion()
-        plot.show()
-
 
     def detection_callback(self, detection):
         object_type = struct.unpack("I", detection.data[0:4])[0]
@@ -85,12 +84,11 @@ class ObjectDetector(Node):
                                                       max_vertex0, max_vertex1),
                                      "frames_displayed": 0}) # frames displayed
 
-
     def listener_callback(self, image):
         self._frames_recvd += 1
         if self._prev_time == -1:
             self._prev_time = time.time()
-        elif (time.time() - self._prev_time > 1):
+        elif time.time() - self._prev_time > 1:
             print("Frames rcvd", self._frames_recvd)
             self._frames_recvd = 0
             self._prev_time = time.time()
@@ -117,10 +115,11 @@ class ObjectDetector(Node):
             if d["frames_displayed"] >= 60:
                 self._detections.remove(d)
 
-        self._im1.set_data(pil_image)
-
-        plot.gcf().canvas.flush_events()
-        plot.show(block=False)
+        img_mat = np.asarray(pil_image)
+        img_msg = BRIDGE.cv2_to_imgmsg(img_mat, encoding="rgb8")
+        # img_msg = BRIDGE.cv2_to_compressed_imgmsg(img_mat, dst_format='jpg')
+        img_msg.header = image.header
+        self._pub_debug_detections_image.publish(img_msg)
 
 
 def convert_class_num_to_label(num):
