@@ -40,6 +40,9 @@ Anaconda/Miniconda - py3.9
 10) Deploy the app to the Hololens by clicking ``Build -> Deploy Solution``
 11) After deployment completes, open the Windows menu in the Hololens and select All Apps, and then click on the Hello_World application.
 
+## Running application without a development environment
+See unity/README.md for instructions on creating an application package and installing it via the HoloLens 2 device portal.
+
 ## Misc. notes
 
 - Research mode must be enabled in the HoloLens headset (see "Enabling Research Mode" section here https://docs.microsoft.com/en-us/windows/mixed-reality/develop/advanced-concepts/research-mode).  
