@@ -12,4 +12,4 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 # shellcheck disable=SC1090
 source "/opt/ros/${ROS_DISTRO}/setup.bash"
-colcon build --merge-install "$@"
+colcon build --continue-on-error --merge-install "$@"

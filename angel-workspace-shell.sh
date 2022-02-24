@@ -4,24 +4,28 @@
 #
 set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/docker/.env"
 
 DEFAULT_SERVICE_NAME="workspace-shell-dev-gpu"
 
 function usage()
 {
   echo "
-Usage: $0 [-h|--help] [-s|--service SERVICE_NAME]
+Usage: $0 [-h|--help] [-s|--service=SERVICE_NAME] [--] ...
 
 Start up a temporary container instance.
 By default this will launch the ${DEFAULT_SERVICE_NAME} service.
 Available services that may be specified may be found in the
 ./docker/docker-compose.yml configuration file.
 
-SERVICE         Name of the angel-system service to start a container for.
+Additional arguments, and explicitly those after a '--' are passed as command
+arguments to the service run.
 
 Options:
-  -h | --help   Display this message.
+  -h | --help                   Display this message.
+  -r | --run-setup              Start the service with the workspace setup
+                                script already sourced, allowing the ready
+                                invocation of workspace products.
+  -s | --service=SERVICE_NAME   Explicitly use the provide service.
 "
 }
 
@@ -38,6 +42,10 @@ do
     -h|--help)
       usage
       exit 0
+      ;;
+    -r|--run-setup)
+      shift
+      export SETUP_WORKSPACE_INSTALL=true
       ;;
     -s|--service)
       # Use a specific service
