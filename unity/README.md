@@ -12,7 +12,7 @@
 
 ![Signing screen](docs/images/signing_method.PNG)
 
-5) Choose the app's output location and ensure the ARM64 architecture is selected. Click `Create` to create the package.
+5) Choose the app's output location and ensure the ARM64 architecture is selected (the other architectures can be deselected). Click `Create` to create the package.
 
 ![Package screen](docs/images/package_configuration.PNG)
 
