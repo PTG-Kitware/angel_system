@@ -182,42 +182,49 @@ public class SpatialMappingCapture : MonoBehaviour, IMixedRealitySpatialAwarenes
         // Send the observation via the TCP socket
         if (tcpStream != null)
         {
-            //Thread tSendObject = new Thread(() => SendMeshObject(eventData.SpatialObject));
-            //tSendObject.Start();
+            // Copy over the mesh data we need because we cannot access it outside of the main thread
+            Vector3[] vertices = eventData.SpatialObject.Filter.mesh.vertices;
+            int[] triangles = eventData.SpatialObject.Filter.mesh.triangles;
+            int id = eventData.SpatialObject.Id;
+            Thread tSendObject = new Thread(() => SendMeshObjectAddition(vertices,
+                                                                         triangles,
+                                                                         id));
+            tSendObject.Start();
 
-            SendMeshObject(eventData.SpatialObject);
+            //SendMeshObjectAddition(eventData.SpatialObject);
             //this.logger().LogInfo("t started, sent mesh id: " + eventData.SpatialObject.Id.ToString());
         }
     }
 
     public virtual void OnObservationUpdated(MixedRealitySpatialAwarenessEventData<SpatialAwarenessMeshObject> eventData)
     {
-        // Do stuff
-        this.logger().LogInfo("update!");
-
-        // TODO: send update message
-        SendMeshObject(eventData.SpatialObject);
-
-        this.logger().LogInfo("update sent");
-
-
+        // Copy over the mesh data we need because we cannot access it outside of the main thread
+        Vector3[] vertices = eventData.SpatialObject.Filter.mesh.vertices;
+        int[] triangles = eventData.SpatialObject.Filter.mesh.triangles;
+        int id = eventData.SpatialObject.Id;
+        Thread tSendObject = new Thread(() => SendMeshObjectAddition(vertices,
+                                                                     triangles,
+                                                                     id));
+        tSendObject.Start();
     }
 
     public virtual void OnObservationRemoved(MixedRealitySpatialAwarenessEventData<SpatialAwarenessMeshObject> eventData)
     {
-        // Do stuff
-        this.logger().LogInfo("removed!");
 
+        this.logger().LogInfo("removal! " + eventData.SpatialObject.Id.ToString());
+
+        int id = eventData.SpatialObject.Id;
+        Thread tSendObject = new Thread(() => SendMeshObjectRemoval(id));
+        tSendObject.Start();
     }
 
-    private void SendMeshObject(SpatialAwarenessMeshObject meshObject)
+    private void SendMeshObjectAddition(Vector3[] vertices, int[] triangles, int id)
     {
-        int numVertices = meshObject.Filter.mesh.vertices.Length;
-        int numTriangles = meshObject.Filter.mesh.triangles.Length;
-        int meshId = meshObject.Id;
+        int numVertices = vertices.Length;
+        int numTriangles = triangles.Length;
+        int meshId = id;
 
         int messageLength = 4 + 4 + 4 + (12 * numVertices) + (4 * numTriangles);
-        //debugString += "Message length: " + messageLength.ToString();
 
         byte[] serializedMesh = new byte[messageLength + 8];
 
@@ -234,23 +241,23 @@ public class SpatialMappingCapture : MonoBehaviour, IMixedRealitySpatialAwarenes
         // Triangle list:
         //  - 32 bit index
         byte[] frameHeader = { 0x1A, 0xCF, 0xFC, 0x1D,
-                                   (byte)((messageLength & 0xFF000000) >> 24),
-                                   (byte)((messageLength & 0x00FF0000) >> 16),
-                                   (byte)((messageLength & 0x0000FF00) >> 8),
-                                   (byte)(messageLength >> 0),
-                                   (byte)((meshId & 0xFF000000) >> 24),
-                                   (byte)((meshId & 0x00FF0000) >> 16),
-                                   (byte)((meshId & 0x0000FF00) >> 8),
-                                   (byte)(meshId >> 0),
-                                   (byte)((numVertices & 0xFF000000) >> 24),
-                                   (byte)((numVertices & 0x00FF0000) >> 16),
-                                   (byte)((numVertices & 0x0000FF00) >> 8),
-                                   (byte)(numVertices >> 0),
-                                   (byte)((numTriangles & 0xFF000000) >> 24),
-                                   (byte)((numTriangles & 0x00FF0000) >> 16),
-                                   (byte)((numTriangles & 0x0000FF00) >> 8),
-                                   (byte)(numTriangles >> 0)
-                                 };
+                                (byte)((messageLength & 0xFF000000) >> 24),
+                                (byte)((messageLength & 0x00FF0000) >> 16),
+                                (byte)((messageLength & 0x0000FF00) >> 8),
+                                (byte)(messageLength >> 0),
+                                (byte)((meshId & 0xFF000000) >> 24),
+                                (byte)((meshId & 0x00FF0000) >> 16),
+                                (byte)((meshId & 0x0000FF00) >> 8),
+                                (byte)(meshId >> 0),
+                                (byte)((numVertices & 0xFF000000) >> 24),
+                                (byte)((numVertices & 0x00FF0000) >> 16),
+                                (byte)((numVertices & 0x0000FF00) >> 8),
+                                (byte)(numVertices >> 0),
+                                (byte)((numTriangles & 0xFF000000) >> 24),
+                                (byte)((numTriangles & 0x00FF0000) >> 16),
+                                (byte)((numTriangles & 0x0000FF00) >> 8),
+                                (byte)(numTriangles >> 0)
+                            };
         System.Buffer.BlockCopy(frameHeader, 0, serializedMesh, 0, frameHeader.Length);
 
         //debugString += meshObject.Filter.mesh.vertices[0].x.ToString() + " ";
@@ -258,18 +265,46 @@ public class SpatialMappingCapture : MonoBehaviour, IMixedRealitySpatialAwarenes
         //debugString += meshObject.Filter.mesh.vertices[0].z.ToString() + " ";
 
         // add vertices
-        for (int i = 0; i < (numVertices * 12); i+=12)
+        for (int i = 0; i < (numVertices * 12); i += 12)
         {
-            System.Buffer.BlockCopy(BitConverter.GetBytes(meshObject.Filter.mesh.vertices[i / 12].x), 0, serializedMesh, frameHeader.Length + i, sizeof(float));
-            System.Buffer.BlockCopy(BitConverter.GetBytes(meshObject.Filter.mesh.vertices[i / 12].y), 0, serializedMesh, frameHeader.Length + (i + 4), sizeof(float));
-            System.Buffer.BlockCopy(BitConverter.GetBytes(meshObject.Filter.mesh.vertices[i / 12].z), 0, serializedMesh, frameHeader.Length + (i + 8), sizeof(float));
+            System.Buffer.BlockCopy(BitConverter.GetBytes(vertices[i / 12].x), 0, serializedMesh, frameHeader.Length + i, sizeof(float));
+            System.Buffer.BlockCopy(BitConverter.GetBytes(vertices[i / 12].y), 0, serializedMesh, frameHeader.Length + (i + 4), sizeof(float));
+            System.Buffer.BlockCopy(BitConverter.GetBytes(vertices[i / 12].z), 0, serializedMesh, frameHeader.Length + (i + 8), sizeof(float));
         }
         for (int i = 0; i < (numTriangles * 4); i += 4)
         {
-            System.Buffer.BlockCopy(BitConverter.GetBytes(meshObject.Filter.mesh.triangles[i / 4]), 0, serializedMesh, frameHeader.Length + (numVertices * 12) + i, sizeof(float));
+            System.Buffer.BlockCopy(BitConverter.GetBytes(triangles[i / 4]), 0, serializedMesh, frameHeader.Length + (numVertices * 12) + i, sizeof(float));
         }
 
         tcpStream.Write(serializedMesh, 0, serializedMesh.Length);
+
     }
 
+    private void SendMeshObjectRemoval(int id)
+    {
+        debugString += "object removal thread";
+        int messageLength = 4 + 4 + 4;
+        byte[] serializedMesh = new byte[messageLength + 8];
+
+        // Format:
+        // 32-bit sync
+        // 32-bit length
+        // 32-bit mesh ID
+        // 32-bit vertex count = 0
+        // 32-bit triangle count = 0
+        byte[] frameHeader = { 0x1A, 0xCF, 0xFC, 0x1D,
+                                   (byte)((messageLength & 0xFF000000) >> 24),
+                                   (byte)((messageLength & 0x00FF0000) >> 16),
+                                   (byte)((messageLength & 0x0000FF00) >> 8),
+                                   (byte)(messageLength >> 0),
+                                   (byte)((id & 0xFF000000) >> 24),
+                                   (byte)((id & 0x00FF0000) >> 16),
+                                   (byte)((id & 0x0000FF00) >> 8),
+                                   (byte)(id >> 0),
+                                   0, 0, 0, 0, 0, 0, 0, 0
+                             };
+        System.Buffer.BlockCopy(frameHeader, 0, serializedMesh, 0, frameHeader.Length);
+
+        tcpStream.Write(serializedMesh, 0, serializedMesh.Length);
+    }
 }
