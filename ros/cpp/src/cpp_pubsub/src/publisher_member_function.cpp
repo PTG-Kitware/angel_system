@@ -40,10 +40,12 @@ typedef int SOCKET;
 
 #endif
 
-#define AUDIO_HEADER_LEN  (8)
-#define VIDEO_HEADER_LEN  (16)
-#define DEFAULT_READ_SIZE (8192)
-#define DEFAULT_BUFLEN    (1024 * 1024)
+#define AUDIO_HEADER_LEN     (8)
+#define VIDEO_HEADER_LEN     (16)
+#define SM_HEADER_LEN        (8)
+#define PV_VIDEO_HEADER_LEN  (16 + 64)
+#define DEFAULT_READ_SIZE    (8192)
+#define DEFAULT_BUFLEN       (1024 * 1024)
 
 #define LF_VLC_TCP_PORT        (11000)
 #define RF_VLC_TCP_PORT        (11001)
@@ -55,6 +57,7 @@ typedef int SOCKET;
 #define LONG_DEPTH_AB_TCP_PORT (11007)
 #define PV_TCP_PORT            (11008)
 #define AUDIO_TCP_PORT         (11009)
+#define SM_TCP_PORT            (11010)
 
 using namespace std::chrono_literals;
 
@@ -68,7 +71,8 @@ std::map<int, std::string> PORT_TOPIC_MAP = {
     { LONG_DEPTH_TCP_PORT,    "LongDepthFrames" },
     { LONG_DEPTH_AB_TCP_PORT, "LongDepthABFrames" },
     { PV_TCP_PORT,            "PVFrames" },
-    { AUDIO_TCP_PORT,         "AudioData" }
+    { AUDIO_TCP_PORT,         "AudioData" },
+    { SM_TCP_PORT,            "SpatialMapData" }
 };
 
 class MinimalPublisher : public rclcpp::Node
@@ -96,7 +100,7 @@ class MinimalPublisher : public rclcpp::Node
     std::thread StartTCPServerThread(int port)
     {
       std::thread t;
-      if ((port < LF_VLC_TCP_PORT) || (port > AUDIO_TCP_PORT))
+      if ((port < LF_VLC_TCP_PORT) || (port > SM_TCP_PORT))
       {
         std::cout << "Invalid port number entered!\n";
       }
@@ -104,6 +108,10 @@ class MinimalPublisher : public rclcpp::Node
       if (port == AUDIO_TCP_PORT)
       {
         t = std::thread(&MinimalPublisher::TCPServerAudioThread, this, port);
+      }
+      else if (port == SM_TCP_PORT)
+      {
+        t = std::thread(&MinimalPublisher::TCPServerSMThread, this, port);
       }
       else
       {
@@ -155,9 +163,9 @@ class MinimalPublisher : public rclcpp::Node
         // length in sent message includes width and height (8 bytes)
         // so subtract that to get frame length
         int frame_length = (((unsigned char)recv_buf_hdr[4] << 24) |
-                           ((unsigned char)recv_buf_hdr[5] << 16) |
-                           ((unsigned char)recv_buf_hdr[6] << 8) |
-                           ((unsigned char)recv_buf_hdr[7] << 0)) - 8;
+                            ((unsigned char)recv_buf_hdr[5] << 16) |
+                            ((unsigned char)recv_buf_hdr[6] << 8) |
+                            ((unsigned char)recv_buf_hdr[7] << 0)) - 8;
 
         width = (((unsigned char)recv_buf_hdr[8] << 24) |
                  ((unsigned char)recv_buf_hdr[9] << 16) |
@@ -236,7 +244,7 @@ class MinimalPublisher : public rclcpp::Node
       }
     }
 
-     void TCPServerAudioThread(int port)
+    void TCPServerAudioThread(int port)
     {
       rclcpp::Publisher<std_msgs::msg::UInt8MultiArray>::SharedPtr publisher_;
       std::string frame_id;
@@ -326,6 +334,91 @@ class MinimalPublisher : public rclcpp::Node
       }
     }
 
+    void TCPServerSMThread(int port)
+    {
+      rclcpp::Publisher<std_msgs::msg::UInt8MultiArray>::SharedPtr publisher_;
+      std::string frame_id;
+      int recv_buf_hdr_len = SM_HEADER_LEN;
+
+      char * recv_buf_hdr = new char[recv_buf_hdr_len];
+      char * recv_buf = new char[DEFAULT_READ_SIZE];
+      unsigned int frames_received = 0;
+
+      publisher_ = this->create_publisher<std_msgs::msg::UInt8MultiArray>(PORT_TOPIC_MAP[port], 10);
+      frame_id = PORT_TOPIC_MAP[port];
+      std::cout << "Created " << PORT_TOPIC_MAP[port] << " publisher\n";
+
+      SOCKET cs = connectSocket(port);
+
+      std::chrono::steady_clock::time_point time_prev = std::chrono::steady_clock::now();
+
+      while (true)
+      {
+        recv(cs, recv_buf_hdr, recv_buf_hdr_len, 0);
+
+        //std::cout << "Got something!!\n";
+
+        if (!(((unsigned char) recv_buf_hdr[0] == 0x1A)
+          && ((unsigned char) recv_buf_hdr[1] == 0xCF)
+          && ((unsigned char) recv_buf_hdr[2] == 0xFC)
+          && ((unsigned char) recv_buf_hdr[3] == 0x1D)))
+        {
+          std::cout << frame_id << ": sync mismatch!";
+          break;
+        }
+
+        int total_bytes_read = 0;
+        unsigned int bytes_remaining, read_size;
+        std::vector<unsigned char> frame_data;
+
+        int data_length = (((unsigned char)recv_buf_hdr[4] << 24) |
+                           ((unsigned char)recv_buf_hdr[5] << 16) |
+                           ((unsigned char)recv_buf_hdr[6] << 8) |
+                           ((unsigned char)recv_buf_hdr[7] << 0));
+
+        while (total_bytes_read != (data_length))
+        {
+          bytes_remaining = data_length - total_bytes_read;
+
+          if (DEFAULT_READ_SIZE > bytes_remaining)
+          {
+            read_size = bytes_remaining;
+          }
+          else if (DEFAULT_READ_SIZE > data_length)
+          {
+            read_size = data_length;
+          }
+          else
+          {
+            read_size = DEFAULT_READ_SIZE;
+          }
+
+          int bytes_read = recv(cs, recv_buf, read_size, 0);
+          total_bytes_read += bytes_read;
+
+          // append buffer to our frame structure
+          frame_data.insert(frame_data.end(), &recv_buf[0], &recv_buf[bytes_read]);
+        }
+
+        frames_received++;
+
+        std::chrono::steady_clock::time_point time_now = std::chrono::steady_clock::now();
+
+        if (std::chrono::duration_cast<std::chrono::seconds> (time_now - time_prev).count() >= 1)
+        {
+          std::cout << frame_id << " frames received: " << std::to_string(frames_received) << std::endl;
+          frames_received = 0;
+          time_prev = time_now;
+        }
+
+        // send ROS message
+        std_msgs::msg::UInt8MultiArray message = std_msgs::msg::UInt8MultiArray();
+        message.data = frame_data;
+        publisher_->publish(message);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+      }
+    }
+
 
     SOCKET connectSocket(int port)
     {
@@ -389,6 +482,7 @@ int main(int argc, char * argv[])
   std::thread t8 = mp->StartTCPServerThread(LONG_DEPTH_TCP_PORT);
   std::thread t9 = mp->StartTCPServerThread(LONG_DEPTH_AB_TCP_PORT);
   std::thread t10 = mp->StartTCPServerThread(AUDIO_TCP_PORT);
+  std::thread t11 = mp->StartTCPServerThread(SM_TCP_PORT);
 
   rclcpp::spin(mp);
 
@@ -402,6 +496,7 @@ int main(int argc, char * argv[])
   t8.join();
   t9.join();
   t10.join();
+  t11.join();
 
   rclcpp::shutdown();
   return 0;
