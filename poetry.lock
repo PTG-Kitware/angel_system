@@ -488,7 +488,8 @@ version = "0.18.1"
 description = "Algorithms, data structures and utilities around performing detection of inputs"
 category = "main"
 optional = false
-python-versions = ">=3.6.2,<3.10"
+python-versions = "^3.6.2,<3.10"
+develop = false
 
 [package.dependencies]
 smqtk-classifier = ">=0.19.0"
@@ -499,6 +500,12 @@ smqtk-image-io = ">=0.16.2"
 [package.extras]
 torch = ["torch (>=1.10.0,<2.0.0)", "torchvision (>=0.11.1,<0.12.0)"]
 centernet = ["torch (>=1.10.0,<2.0.0)", "opencv-python (>=4.5.2.0,<4.6.0.0)", "numba (>=0.53.0,<0.54.0)"]
+
+[package.source]
+type = "git"
+url = "https://github.com/Kitware/SMQTK-Detection"
+reference = "master"
+resolved_reference = "c84f4aaec455f6697dd2e6d98a46fa3785c1ce13"
 
 [[package]]
 name = "smqtk-image-io"
@@ -608,7 +615,7 @@ python-versions = "*"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8,<3.10"
-content-hash = "21ff2a6a707bf99cea67e822dcec135053e7738af56ca8eb83b92a61dc9f39e1"
+content-hash = "68df2f84a71bba6c5334443d838e9f1e74d029533581973adb8e1faf0430ccc6"
 
 [metadata.files]
 appnope = [
@@ -932,10 +939,7 @@ smqtk-descriptors = [
     {file = "smqtk_descriptors-0.18.1-py3-none-any.whl", hash = "sha256:c1163109ed24907005f0681c0e9d54b6a6ed3a7b8d9c1f23b69aa85ca25a7b8e"},
     {file = "smqtk_descriptors-0.18.1.tar.gz", hash = "sha256:1392a9ecd415c445c629378e378a02fc4aec476da0ab67e80f5cb6f3e8bd94f1"},
 ]
-smqtk-detection = [
-    {file = "smqtk-detection-0.18.1.tar.gz", hash = "sha256:fc41b9649c9f07c2dfd74e3bdbc7d81f106cffe523b714083d14d9772585a5ef"},
-    {file = "smqtk_detection-0.18.1-py3-none-any.whl", hash = "sha256:6f06e274325869d06bb277bd187d8a4af1f1dd92eadb588f5970779e17673bcc"},
-]
+smqtk-detection = []
 smqtk-image-io = [
     {file = "smqtk_image_io-0.16.3-py3-none-any.whl", hash = "sha256:21cb5f7d7b6fa77a0c616a7dcdb28473ceb769007edf69cad937e64b4cda42b7"},
     {file = "smqtk_image_io-0.16.3.tar.gz", hash = "sha256:9eabf9a6d60a835a7d5938dd0ce073d97cc243fc811141a3f147e270e20ccbd3"},
