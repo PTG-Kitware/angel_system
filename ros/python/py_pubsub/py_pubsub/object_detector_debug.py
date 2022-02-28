@@ -6,15 +6,14 @@ from cv_bridge import CvBridge
 import numpy as np
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import Image, CompressedImage
-from std_msgs.msg import UInt8MultiArray
 import cv2
 import PIL.Image
 import PIL.ImageDraw
 import PIL.ImageFont
 
-
-TOPICS = ["PVFrames"]
+from angel_msgs.msg import ObjectDetection
 
 
 BRIDGE = CvBridge()
@@ -22,39 +21,36 @@ BRIDGE = CvBridge()
 
 class ObjectDetector(Node):
 
-    def __init__(self,
-        topic: str,
-        node_name: str = None,
-        detection_threshold: float = 0.8,
-    ):
-        if node_name is None:
-            node_name = self.__class__.__name__
-        super().__init__(node_name)
+    def __init__(self):
+        super().__init__(self.__class__.__name__)
 
-        if topic not in TOPICS:
-            print("Error! Invalid topic name")
-            sys.exit()
+        self.declare_parameter("image_topic", "PVFrames")
+        self.declare_parameter("det_topic", "ObjectDetections")
+        self.declare_parameter("out_image_topic",
+                               "ObjectDetectionsDebug")
 
-        self._topic = topic
+        self._image_topic = self.get_parameter("image_topic").get_parameter_value().string_value
+        self._det_topic = self.get_parameter("det_topic").get_parameter_value().string_value
+        self._out_image_topic = self.get_parameter("out_image_topic").get_parameter_value().string_value
 
         self._image_subscription = self.create_subscription(
             Image,
-            self._topic,
+            self._image_topic,
             self.listener_callback,
-            100
+            1
         )
 
         self._detection_subscription = self.create_subscription(
-            UInt8MultiArray,
-            "ObjectDetections",
+            ObjectDetection,
+            self._det_topic,
             self.detection_callback,
-            100
+            1
         )
 
         self._pub_debug_detections_image = self.create_publisher(
             Image,  # CompressedImage,
-            "ObjectDetectionsDebug",
-            10
+            self._out_image_topic,
+            1
         )
 
         self._frames_recvd = 0
@@ -63,16 +59,27 @@ class ObjectDetector(Node):
         self._detections = []
 
     def detection_callback(self, detection):
-        object_type = struct.unpack("I", detection.data[0:4])[0]
-        min_vertex0 = struct.unpack("f", detection.data[4:8])[0]
-        min_vertex1 = struct.unpack("f", detection.data[8:12])[0]
-        max_vertex0 = struct.unpack("f", detection.data[12:16])[0]
-        max_vertex1 = struct.unpack("f", detection.data[16:20])[0]
+        log = self.get_logger()
+        log.info(f"Received detection: {detection}")
+        if len(detection.label_vec) <= 0:
+            log.warning(
+                f"Detection received that had no classification content? "
+                f":: {detection}"
+            )
+
+        object_conf, object_type = sorted(
+            zip(detection.label_confidence_vec, detection.label_vec),
+            reverse=True
+        )[0]
+        min_vertex0 = detection.left
+        min_vertex1 = detection.top
+        max_vertex0 = detection.right
+        max_vertex1 = detection.bottom
 
         # check if we have a similar object already
         add_object = True
         for d in self._detections:
-            if d["object_type"] == convert_class_num_to_label(object_type):
+            if d["object_type"] == object_type:
                 # already have an object of this time so don't add it
                 add_object = False
 
@@ -80,17 +87,18 @@ class ObjectDetector(Node):
             #if (min_vertex0 * 0.95 < d[1] < min_vertex1)
 
         if add_object:
-            self._detections.append({"object_type": convert_class_num_to_label(object_type),
+            self._detections.append({"object_type": object_type,
                                      "bounding_box": (min_vertex0, min_vertex1,
                                                       max_vertex0, max_vertex1),
-                                     "frames_displayed": 0}) # frames displayed
+                                     "frames_displayed": 0})
 
     def listener_callback(self, image):
+        log = self.get_logger()
         self._frames_recvd += 1
         if self._prev_time == -1:
             self._prev_time = time.time()
         elif time.time() - self._prev_time > 1:
-            print("Frames rcvd", self._frames_recvd)
+            log.info(f"Frames rcvd {self._frames_recvd}")
             self._frames_recvd = 0
             self._prev_time = time.time()
 
@@ -223,11 +231,11 @@ def convert_class_num_to_label(num):
 
     return label_list[num - 1]
 
+
 def main():
-    topic_name = sys.argv[1]
     rclpy.init()
 
-    object_detector = ObjectDetector(topic_name)
+    object_detector = ObjectDetector()
 
     rclpy.spin(object_detector)
 
