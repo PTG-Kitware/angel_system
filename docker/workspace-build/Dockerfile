@@ -35,7 +35,7 @@ RUN apt-get -y update \
         gettext-base \
         python3-pip \
         python3-venv \
-        ros-${ROS_DISTRO}-compressed-image-transport\
+        ros-${ROS_DISTRO}-image-transport-plugins \
         ros-${ROS_DISTRO}-rmw-cyclonedds-cpp \
         # for python simpleaudio
         libasound2-dev \
