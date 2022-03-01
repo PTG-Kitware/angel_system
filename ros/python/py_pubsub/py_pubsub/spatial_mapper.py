@@ -143,6 +143,7 @@ class SpatialMapSubscriber(Node):
         #print("origin", camera_origin, camera_origin.shape)
 
         # convert detection screen pixel coordinates to world pos
+        corners_world_pos = []
         for p in corners_screen_pos:
             # scale by image width and height and convert to -1:1 coordinates
             image_pos_zero_to_one = np.array([p[0] / image_width, 1 - (p[1] / image_height)])
@@ -180,17 +181,20 @@ class SpatialMapSubscriber(Node):
                 return
 
             try:
-                #print("point pos ", point_pos, point_pos.shape)
+                print("points found ", point_pos, point_pos.shape, object_type)
                 point_pos = point_pos[0]
 
-                vs = np.array([camera_origin[0], point_pos])
-                el = trimesh.path.entities.Line([0, 1])
-                path = trimesh.path.Path3D(entities=[el], vertices=vs)
-                self.scene.add_geometry(path)
+                # TODO: if there is more than one point found, use the closest one to the camera?
+                corners_world_pos.append(point_pos)
             except Exception as e:
                 print(e)
                 pass
 
+        vs = np.array([corners_world_pos[0], corners_world_pos[1],
+                       corners_world_pos[2], corners_world_pos[3]])
+        el = trimesh.path.entities.Line([0, 1, 2, 3, 0])
+        path = trimesh.path.Path3D(entities=[el], vertices=vs)
+        self.scene.add_geometry(path)
         self.show_plot()
 
     def show_plot(self):
