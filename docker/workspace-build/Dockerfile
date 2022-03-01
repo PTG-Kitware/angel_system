@@ -43,6 +43,8 @@ RUN apt-get -y update \
  && rm -rf /var/lib/apt/lists/*
 
 # Bring in poetry for standard python package installation.
+# NODE: Installing "dev" dependencies here because why not. Stop if the desire
+#       becomes to create a minimal image.
 ENV PATH=/root/.local/bin:${PATH}
 ENV POETRY_VERSION=1.1.13
 RUN pip3 install --user pip==22.0.3 \
@@ -50,10 +52,16 @@ RUN pip3 install --user pip==22.0.3 \
  && poetry config virtualenvs.create false
 COPY poetry.lock pyproject.toml /angel_workspace/
 RUN cd /angel_workspace \
- && poetry export -f requirements.txt | pip3 install --user -r /dev/stdin \
-    # poetry extraneously finds matplotlib requiring setuptools-scm. \
-    # theoretically being "fixed" in matplotlib 3.6
+    # TODO: Re-enable use of hashes once editable/git deps are removed. \
+    #       - Remove `--without-hashes` option. \
+    # * Poetry extraneously finds matplotlib requiring setuptools-scm.
+    #   theoretically being "fixed" in matplotlib 3.6
+ && poetry export --without-hashes --dev -f requirements.txt | \
+      pip3 install --no-deps --user -r /dev/stdin \
  && pip uninstall -y setuptools-scm
+
+# Load in any model files the workspace will require at runtime.
+# TODO
 
 COPY ./ros /angel_workspace/src
 WORKDIR /angel_workspace

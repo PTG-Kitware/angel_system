@@ -10,11 +10,12 @@ matplotlib = "^3.5.1"
 numpy = "^1.22.2"
 Pillow = "^8"
 simpleaudio = "^1.0.4"
-smqtk-detection = ">=0.18.1"
+smqtk-detection = {git = "https://github.com/Kitware/SMQTK-Detection", rev = "master"}
 torch = "^1.10.2"
 torchvision = "^0.11.3"
 
 [tool.poetry.dev-dependencies]
+ipython = "^8.0.1"
 
 [build-system]
 requires = ["poetry-core==1.0.7"]

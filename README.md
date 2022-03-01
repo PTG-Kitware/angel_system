@@ -79,6 +79,8 @@ To develop adequately in docker, the container environment needs to have access
 to the source code that is being edited, likely by an IDE on the host.
 Running `./angel-workspace-shell.sh` will create a temporary docker container
 and drop into a bash shell.
+This script has some usage output that can be seen by passing a `-h`/`--help`
+option.
 By default, the `workspace-shell-dev-gpu` service will be run.
 The definition of this service is found in the `docker/docker-compose.yml`
 configuration.

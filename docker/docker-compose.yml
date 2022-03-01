@@ -47,15 +47,25 @@ services:
     tty: true
     volumes:
       - /dev/shm:/dev/shm
+      - ../poetry.lock:/angel_workspace/poetry.lock
+      - ../pyproject.toml:/angel_workspace/pyproject.toml
       - ../ros:/angel_workspace/src
-      - ../.workspace-shell-dev/build:/angel_workspace/build
-      - ../.workspace-shell-dev/install:/angel_workspace/install
-      - ../.workspace-shell-dev/log:/angel_workspace/log
+      - ./workspace_build.sh:/angel_workspace/workspace_build.sh
+      - ./workspace_entrypoint.sh:/angel_workspace/workspace_entrypoint.sh
+      - ./workspace_setenv.sh:/angel_workspace/workspace_setenv.sh
+      # Build environment things
+      - ${WORKSPACE_SHELL_HOST_DIR}/build:/angel_workspace/build
+      - ${WORKSPACE_SHELL_HOST_DIR}/install:/angel_workspace/install
+      - ${WORKSPACE_SHELL_HOST_DIR}/log:/angel_workspace/log
+      - ${WORKSPACE_SHELL_HOST_DIR}/stuff:/angel_workspace/stuff
+      # X11 things
       - /tmp/.X11-unix:/tmp/.X11-unix
       # assume this file exists, should be created before running.
       - ${XAUTH_FILEPATH}:/tmp/.docker.xauth
     environment:
-      CYCLONE_DDS_INTERFACE:  # from .env file
+      HISTFILE: /angel_workspace/stuff/bash_history
+      CYCLONE_DDS_INTERFACE:  # from .env file or parent environment
+      SETUP_WORKSPACE_INSTALL:  # from .env file or parent environment
       DISPLAY:  # pull from current environment
       XAUTHORITY: /tmp/.docker.xauth
 
@@ -81,4 +91,6 @@ services:
     network_mode: host
     volumes:
       - /dev/shm:/dev/shm
+    environment:
+      CYCLONE_DDS_INTERFACE:  # from .env file
     command: bash -c ". /angel_workspace/install/setup.bash && bash"
