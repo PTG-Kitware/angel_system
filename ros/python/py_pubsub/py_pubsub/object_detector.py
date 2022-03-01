@@ -9,7 +9,8 @@ from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import Image
 from smqtk_detection.impls.detect_image_objects.resnet_frcnn import ResNetFRCNN
 
-from angel_msgs.msg import ObjectDetection
+from angel_msgs.msg import ObjectDetection2dSet
+from angel_utils.conversion import from_detect_image_objects_result
 
 
 BRIDGE = CvBridge()
@@ -39,13 +40,13 @@ class ObjectDetector(Node):
             Image,
             self._image_topic,
             self.listener_callback,
-            100
+            1
         )
 
         self._publisher = self.create_publisher(
-            ObjectDetection,
+            ObjectDetection2dSet,
             self._det_topic,
-            10
+            1
         )
 
         self._frames_recvd = 0
@@ -60,7 +61,7 @@ class ObjectDetector(Node):
         self._frames_recvd += 1
         if self._prev_time == -1:
             self._prev_time = time.time()
-        elif (time.time() - self._prev_time > 1):
+        elif time.time() - self._prev_time > 1:
             log.info(f"Frames rcvd: {self._frames_recvd}")
             self._frames_recvd = 0
             self._prev_time = time.time()
@@ -71,43 +72,31 @@ class ObjectDetector(Node):
             rgb_image = cv2.cvtColor(yuv_image, cv2.COLOR_YUV2RGB_NV12)
         except ValueError:
             rgb_image = BRIDGE.imgmsg_to_cv2(image, desired_encoding="rgb8")
-        #print(type(rgb), rgb.size, rgb.shape)
-        #print("image_np stuff", rgb.shape, rgb.dtype, image.height, image.width, rgb[0:2])
 
-        # convert np array to tensor
-        # image_tensor = transforms.ToTensor()(rgb_image)
-        image_tensor = rgb_image
+        # Send to Detector
+        #
+        # Since we're passing a single image, we are also just enumerating the
+        # returned iterator out to the expected list of size one (containing
+        # another iterator)
+        #
+        detections = list(self._detector.detect_objects([rgb_image]))[0]
 
-        # send to detector
-        start = time.time()
-        detections = self._detector.detect_objects([image_tensor])
-        end = time.time()
-        #print("Time to perform detections", end - start)
+        # Construct output message
+        #
+        # Arbitrarily deciding that output detections, when vectorized, are in
+        # descending-score order.
+        #
+        det_set_msg = from_detect_image_objects_result(
+            detections,
+            detection_threshold=self._detection_threshold
+        )
+        # This message time
+        det_set_msg.header.stamp = self.get_clock().now().to_msg()
+        # Trace to the source
+        det_set_msg.header.frame_id = image.header.frame_id
+        det_set_msg.source_stamp = image.header.stamp
 
-        for detection in detections:
-            for i in detection:
-                bounding_box = i[0]
-                class_dict = i[1]
-                # Previous use-case: push single highest confidence
-                # detection if above set threshold
-                highest_conf_item = sorted(
-                    class_dict.items(), key=lambda item: item[1],
-                    reverse=True)[0]
-                highest_conf_label = highest_conf_item[0]
-                highest_conf_value = highest_conf_item[1]
-                if highest_conf_value > self._detection_threshold:
-                    left, top = bounding_box.min_vertex
-                    right, bottom = bounding_box.max_vertex
-                    det_msg = ObjectDetection(
-                        left=float(left),
-                        right=float(right),
-                        top=float(top),
-                        bottom=float(bottom),
-                        label_vec=[highest_conf_label],
-                        label_confidence_vec=[highest_conf_value],
-                    )
-                    log.debug(f"Publishing detection msg: {det_msg}")
-                    self._publisher.publish(det_msg)
+        self._publisher.publish(det_set_msg)
 
 
 def main():
