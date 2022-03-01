@@ -98,7 +98,8 @@ class ObjectDetectorDebug(Node):
 
         # convert NV12 image to RGB
         try:
-            yuv_image = np.frombuffer(image.data, np.uint8).reshape(image.height*3//2, image.width)
+            image_data_offset = 128
+            yuv_image = np.frombuffer(image.data[image_data_offset:], np.uint8).reshape(image.height*3//2, image.width)
             rgb_image = cv2.cvtColor(yuv_image, cv2.COLOR_YUV2RGB_NV12)
             # TODO: swap R/B channels here?
         except ValueError:
