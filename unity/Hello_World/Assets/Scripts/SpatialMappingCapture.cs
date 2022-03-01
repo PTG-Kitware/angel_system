@@ -60,58 +60,6 @@ public class SpatialMappingCapture : MonoBehaviour, IMixedRealitySpatialAwarenes
         // Suspend Mesh Observation from all Observers until we connect to the TCP socket
         CoreServices.SpatialAwarenessSystem.SuspendObservers();
 
-        /*
-        // This call should grant the access we need.
-        await SceneObserver.RequestAccessAsync();
-
-        // Create Query settings for the scene update
-        SceneQuerySettings querySettings;
-
-        querySettings.EnableSceneObjectQuads = true;                                       // Requests that the scene updates quads.
-        querySettings.EnableSceneObjectMeshes = true;                                      // Requests that the scene updates watertight mesh data.
-        querySettings.EnableOnlyObservedSceneObjects = false;                              // Do not explicitly turn off quad inference.
-        querySettings.EnableWorldMesh = true;                                              // Requests a static version of the spatial mapping mesh.
-        querySettings.RequestedMeshLevelOfDetail = SceneMeshLevelOfDetail.Medium;          // Requests the finest LOD of the static spatial mapping mesh.
-
-        // Initialize a new Scene
-        worldScene = SceneObserver.ComputeAsync(querySettings, 3.0f).GetAwaiter().GetResult();
-        sceneUnderstandingObserver = CoreServices.GetSpatialAwarenessSystemDataProvider<IMixedRealitySceneUnderstandingObserver>();
-
-        if (sceneUnderstandingObserver == null)
-        {
-            log.LogInfo("Couldn't access Scene Understanding Observer!");
-            return;
-        }
-        instantiatedPrefabs = new List<GameObject>();
-        observedSceneObjects = new Dictionary<SpatialAwarenessSurfaceTypes, Dictionary<int, SpatialAwarenessSceneObject>>();
-
-        log.LogInfo("World scene initialized!");
-        log.LogInfo("Observer info:");
-        log.LogInfo("Observer is running: " + sceneUnderstandingObserver.IsRunning.ToString());
-        log.LogInfo("Observer auto update: " + sceneUnderstandingObserver.AutoUpdate.ToString());
-        log.LogInfo("Observer scene objects: " + sceneUnderstandingObserver.SceneObjects.ToString());
-        log.LogInfo("Observer update interval: " + sceneUnderstandingObserver.UpdateInterval.ToString());
-        log.LogInfo("Observer surface types: " + sceneUnderstandingObserver.SurfaceTypes.ToString());
-
-        NOTE: loop to access the meshes from the scene understanding SDK
-        // Find the first quad
-        foreach (KeyValuePair<int, SpatialAwarenessSceneObject> sceneObject in sceneUnderstandingObserver.SceneObjects)
-        {
-            //this.logger().LogInfo("object: " + sceneObject.Value.SurfaceType.ToString() + " " + sceneObject.Value.Position);
-
-            // Get the meshes
-            var meshes = sceneObject.Value.Meshes;
-            foreach (var mesh in meshes)
-            {
-                //this.logger().LogInfo("mesh vertices: " + mesh.Vertices.ToString());
-                foreach (var v in mesh.Vertices)
-                {
-                    this.logger().LogInfo("mesh vertices: " + v.ToString());
-                }
-            }
-        }
-        */
-
         try
         {
             TcpServerIPAddr = PTGUtilities.getIPv4AddressString();
@@ -145,24 +93,17 @@ public class SpatialMappingCapture : MonoBehaviour, IMixedRealitySpatialAwarenes
 
     void SetupSpatialMappingCapture()
     {
-        try
-        {
-            IPAddress localAddr = IPAddress.Parse(TcpServerIPAddr);
+        IPAddress localAddr = IPAddress.Parse(TcpServerIPAddr);
 
-            tcpServer = new TcpListener(localAddr, SMTcpPort);
+        tcpServer = new TcpListener(localAddr, SMTcpPort);
 
-            // Start listening for client requests.
-            tcpServer.Start();
+        // Start listening for client requests.
+        tcpServer.Start();
 
-            // Perform a blocking call to accept requests.
-            // You could also use server.AcceptSocket() here.
-            tcpClient = tcpServer.AcceptTcpClient();
-            tcpStream = tcpClient.GetStream();
-        }
-        catch (Exception e)
-        {
-            debugString += e.ToString();
-        }
+        // Perform a blocking call to accept requests.
+        // You could also use server.AcceptSocket() here.
+        tcpClient = tcpServer.AcceptTcpClient();
+        tcpStream = tcpClient.GetStream();
     }
 
     private void OnEnable()
@@ -191,7 +132,6 @@ public class SpatialMappingCapture : MonoBehaviour, IMixedRealitySpatialAwarenes
                                                                          id));
             tSendObject.Start();
 
-            //SendMeshObjectAddition(eventData.SpatialObject);
             //this.logger().LogInfo("t started, sent mesh id: " + eventData.SpatialObject.Id.ToString());
         }
     }

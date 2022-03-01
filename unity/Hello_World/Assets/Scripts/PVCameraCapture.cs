@@ -50,11 +50,14 @@ public class PVCameraCapture : MonoBehaviour
     uint framesRcvd;
     string debugString = "";
 
+    const int projectionMatrixSize = 16 * 4;
     const int worldMatrixSize = 16 * 4;
     const int headerLength = 16;
 
     public string TcpServerIPAddr = "";
     public const int PVTcpPort = 11008;
+
+    Matrix4x4 projectionMatrix;
 
     [ComImport]
     [Guid("5B0D3235-4DBA-4D44-865E-8F1D0E4FD04D")]
@@ -133,6 +136,17 @@ public class PVCameraCapture : MonoBehaviour
             this.logger().LogInfo(debugString);
             debugString = "";
         }
+
+        //this.logger().LogInfo("cameras: " + Camera.allCamerasCount.ToString());
+        //this.logger().LogInfo("camera fov: " + Camera.main.fieldOfView.ToString());
+
+        //this.logger().LogInfo("camera far clip: " + Camera.main.farClipPlane.ToString());
+        //this.logger().LogInfo("camera near clp: " + Camera.main.nearClipPlane.ToString());
+
+        projectionMatrix = Camera.main.projectionMatrix;
+        //this.logger().LogInfo("projection matrix: " + projectionMatrix.ToString());
+
+        //this.logger().LogInfo("world matrix: " + Camera.main.cameraToWorldMatrix.ToString());
     }
 
     void SetupPVCapture()
@@ -260,7 +274,7 @@ public class PVCameraCapture : MonoBehaviour
             frameReader = await mediaCapture.CreateFrameReaderAsync(mediaFrameSourceVideo, targetResFormat.Subtype);
             frameReader.FrameArrived += OnFrameArrived;
 
-            frameData = new byte[(int) (targetResFormat.VideoFormat.Width * targetResFormat.VideoFormat.Height * 1.5) + headerLength + worldMatrixSize];
+            frameData = new byte[(int) (targetResFormat.VideoFormat.Width * targetResFormat.VideoFormat.Height * 1.5) + headerLength + worldMatrixSize + projectionMatrixSize];
             this.logger().LogInfo("FrameReader is successfully initialized, " + targetResFormat.VideoFormat.Width + "x" + targetResFormat.VideoFormat.Height +
                 ", Framerate: " + targetResFormat.FrameRate.Numerator + "/" + targetResFormat.FrameRate.Denominator);
         }
@@ -284,8 +298,9 @@ public class PVCameraCapture : MonoBehaviour
             {
                 if (frame != null)
                 {
-                    float[] cameraToWorldMatrixAsFloat = null;
+                    float[] projectionMatrixAsFloat = ConvertUnityMatrixToFloatArray(projectionMatrix);
 
+                    float[] cameraToWorldMatrixAsFloat = null;
                     try
                     {
                         if (HL2TryGetCameraToWorldMatrix(frame, out cameraToWorldMatrixAsFloat) == false)
@@ -298,7 +313,7 @@ public class PVCameraCapture : MonoBehaviour
                         debugString += e.ToString();
                     }
 
-                    Matrix4x4 latestLocatableCameraToWorld = ConvertFloatArrayToMatrix4x4(cameraToWorldMatrixAsFloat);
+                    //Matrix4x4 latestLocatableCameraToWorld = ConvertFloatArrayToMatrix4x4(cameraToWorldMatrixAsFloat);
                     //debugString = "Camera pos: " + latestLocatableCameraToWorld.ToString();
                     //debugString = "Multiply point: " + latestLocatableCameraToWorld.MultiplyPoint(new Vector3(0, 0, 0)).ToString() + "\n";
 
@@ -322,10 +337,10 @@ public class PVCameraCapture : MonoBehaviour
 
                         // add header
                         byte[] frameHeader = { 0x1A, 0xCF, 0xFC, 0x1D,
-                                        (byte)(((inputCapacity + 8 + cameraToWorldMatrixAsFloat.Length) & 0xFF000000) >> 24),
-                                        (byte)(((inputCapacity + 8 + cameraToWorldMatrixAsFloat.Length) & 0x00FF0000) >> 16),
-                                        (byte)(((inputCapacity + 8 + cameraToWorldMatrixAsFloat.Length) & 0x0000FF00) >> 8),
-                                        (byte)(((inputCapacity + 8 + cameraToWorldMatrixAsFloat.Length) & 0x000000FF) >> 0),
+                                        (byte)(((inputCapacity + 8 + worldMatrixSize + projectionMatrixSize) & 0xFF000000) >> 24),
+                                        (byte)(((inputCapacity + 8 + worldMatrixSize + projectionMatrixSize) & 0x00FF0000) >> 16),
+                                        (byte)(((inputCapacity + 8 + worldMatrixSize + projectionMatrixSize) & 0x0000FF00) >> 8),
+                                        (byte)(((inputCapacity + 8 + worldMatrixSize + projectionMatrixSize) & 0x000000FF) >> 0),
                                         (byte)((originalSoftwareBitmap.PixelWidth & 0xFF000000) >> 24),
                                         (byte)((originalSoftwareBitmap.PixelWidth & 0x00FF0000) >> 16),
                                         (byte)((originalSoftwareBitmap.PixelWidth & 0x0000FF00) >> 8),
@@ -337,10 +352,13 @@ public class PVCameraCapture : MonoBehaviour
                         System.Buffer.BlockCopy(frameHeader, 0, frameData, 0, frameHeader.Length);
 
                         // add worldMatrix
-                        System.Buffer.BlockCopy(cameraToWorldMatrixAsFloat, 0, frameData, frameHeader.Length , cameraToWorldMatrixAsFloat.Length * sizeof(float));
+                        System.Buffer.BlockCopy(cameraToWorldMatrixAsFloat, 0, frameData, frameHeader.Length, worldMatrixSize);
+
+                        // add projectionMatrix
+                        System.Buffer.BlockCopy(projectionMatrixAsFloat, 0, frameData, frameHeader.Length + worldMatrixSize, projectionMatrixSize);
 
                         // add image data
-                        Marshal.Copy((IntPtr)inputBytes, frameData, frameHeader.Length + worldMatrixSize, (int)inputCapacity);
+                        Marshal.Copy((IntPtr)inputBytes, frameData, frameHeader.Length + worldMatrixSize + projectionMatrixSize, (int)inputCapacity);
 
                         // Send the data through the socket.
                         if (tcpStream != null)
@@ -400,7 +418,18 @@ public class PVCameraCapture : MonoBehaviour
             matrix.M11, matrix.M12, matrix.M13, matrix.M14,
             matrix.M21, matrix.M22, matrix.M23, matrix.M24,
             matrix.M31, matrix.M32, matrix.M33, matrix.M34,
-            matrix.M41, matrix.M42, matrix.M43, matrix.M44 };
+            matrix.M41, matrix.M42, matrix.M43, matrix.M44
+        };
+    }
+
+    private float[] ConvertUnityMatrixToFloatArray(Matrix4x4 matrix)
+    {
+        return new float[16] {
+            matrix[0, 0], matrix[0, 1], matrix[0, 2], matrix[0, 3],
+            matrix[1, 0], matrix[1, 1], matrix[1, 2], matrix[1, 3],
+            matrix[2, 0], matrix[2, 1], matrix[2, 2], matrix[2, 3],
+            matrix[3, 0], matrix[3, 1], matrix[3, 2], matrix[3, 3]
+        };
     }
 
     static float[] GetIdentityMatrixFloatArray()
