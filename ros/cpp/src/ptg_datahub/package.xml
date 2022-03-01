@@ -3,7 +3,7 @@
 <package format="3">
   <name>ptg_datahub</name>
   <version>0.1.0</version>
-  <description>Datahub between Hololens 2 and ROS 2 network </description>
+  <description>Datahub between Hololens 2 and the ROS 2 network</description>
   <maintainer email="kitware@kitware.com">root</maintainer>
   <license>BSD 3-Clause</license>
 

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(cpp_pubsub)
+project(ptg_datahub)
 
 # Default to C++14
 if(NOT CMAKE_CXX_STANDARD)
@@ -17,12 +17,11 @@ find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(angel_msgs REQUIRED)
 
-add_executable(talker src/publisher_member_function.cpp)
+add_executable(talker src/ptg_datahub.cpp)
 ament_target_dependencies(talker rclcpp std_msgs sensor_msgs angel_msgs)
 
 install(TARGETS
   talker
-  listener
   DESTINATION lib/${PROJECT_NAME})
 
 ament_package()
