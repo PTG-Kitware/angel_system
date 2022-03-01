@@ -85,6 +85,18 @@ def from_detect_image_objects_result(
     return msg
 
 
+def to_confidence_matrix(msg: ObjectDetection2dSet) -> np.ndarray:
+    """
+    Get the detection predicted confidences as a 2D matrix.
+    :param msg: Message to get the matrix confidences from.
+    :return: New numpy ndarray of 2 dimensions with shape [nDets x nClasses].
+    """
+    return (
+        np.asarray(msg.label_confidences)
+          .reshape((msg.num_detections, len(msg.label_vec)))
+    )
+
+
 def to_detect_image_objects_result(
     msg: ObjectDetection2dSet
 ) -> List[Tuple[AxisAlignedBoundingBox, Dict[Hashable, float]]]:
@@ -96,3 +108,6 @@ def to_detect_image_objects_result(
     :param msg: Message instance to convert from.
     :return:
     """
+    pairs_list = []
+
+    return pairs_list
