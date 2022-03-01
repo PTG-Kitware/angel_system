@@ -22,6 +22,7 @@ find_package( std_msgs REQUIRED )
 rosidl_generate_interfaces( ${PROJECT_NAME}
   msg/ObjectDetection2d.msg
   msg/ObjectDetection2dSet.msg
+  msg/SpatialMesh.msg
   DEPENDENCIES builtin_interfaces std_msgs
   )
 
