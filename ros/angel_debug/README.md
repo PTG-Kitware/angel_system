@@ -12,5 +12,5 @@ The intent is to show basic detection capabilities.
 To run this:
 ```bash
 ./angel-workspace-shell.sh -r
-ros2 launch angel_debug debug_offline_object_detection.yaml
+ros2 launch angel_debug offline_debug_demo.py
 ```
