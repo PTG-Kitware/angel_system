@@ -1,5 +1,5 @@
 cmake_minimum_required( VERSION 3.5 )
-project( angel_msgs )
+project( angel_utils )
 
 # Default to C++14
 if( NOT CMAKE_CXX_STANDARD )
@@ -10,20 +10,22 @@ if( CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang" )
   add_compile_options( -Wall -Wextra -Wpedantic )
 endif()
 
-# find dependencies
+# Find required bits
 find_package( ament_cmake REQUIRED )
-# uncomment the following section in order to fill in
-# further dependencies manually.
-# find_package(<dependency> REQUIRED)
-find_package( rosidl_default_generators REQUIRED )
-find_package( builtin_interfaces REQUIRED )
-find_package( std_msgs REQUIRED )
+find_package( ament_cmake_python REQUIRED )
+find_package( rclcpp REQUIRED )
+find_package( rclpy REQUIRED )
+find_package( angel_msgs REQUIRED )
 
-rosidl_generate_interfaces( ${PROJECT_NAME}
-  msg/ObjectDetection2d.msg
-  msg/ObjectDetection2dSet.msg
-  DEPENDENCIES builtin_interfaces std_msgs
-  )
+#
+# Cpp things
+#
+add_subdirectory( cpp )
+
+#
+# Python things
+#
+add_subdirectory( python )
 
 if( BUILD_TESTING )
   find_package( ament_lint_auto REQUIRED )

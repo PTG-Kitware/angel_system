@@ -1,6 +1,7 @@
 import struct
 import sys
 import time
+from typing import Optional
 
 from cv_bridge import CvBridge
 import numpy as np
@@ -13,13 +14,14 @@ import PIL.Image
 import PIL.ImageDraw
 import PIL.ImageFont
 
-from angel_msgs.msg import ObjectDetection
+from angel_msgs.msg import ObjectDetection2dSet
+from angel_utils.conversion import to_confidence_matrix
 
 
 BRIDGE = CvBridge()
 
 
-class ObjectDetector(Node):
+class ObjectDetectorDebug(Node):
 
     def __init__(self):
         super().__init__(self.__class__.__name__)
@@ -41,56 +43,35 @@ class ObjectDetector(Node):
         )
 
         self._detection_subscription = self.create_subscription(
-            ObjectDetection,
+            ObjectDetection2dSet,
             self._det_topic,
             self.detection_callback,
             1
         )
 
+        # Directly publishing compressed images is the only way for the python
+        # node to keep up. Publishing raw images is too much for maintaining
+        # higher frame-rates.
         self._pub_debug_detections_image = self.create_publisher(
-            Image,  # CompressedImage,
-            self._out_image_topic,
+            CompressedImage,
+            self._out_image_topic + "/compressed",
             1
         )
 
         self._frames_recvd = 0
         self._prev_time = -1
 
-        self._detections = []
+        # The latest detections message received
+        self._detection_i = 0
+        self._detections: Optional[ObjectDetection2dSet] = None
 
-    def detection_callback(self, detection):
+    def detection_callback(self, msg: ObjectDetection2dSet):
         log = self.get_logger()
-        log.info(f"Received detection: {detection}")
-        if len(detection.label_vec) <= 0:
-            log.warning(
-                f"Detection received that had no classification content? "
-                f":: {detection}"
-            )
+        log.info(f"Received detection #{self._detection_i} with "
+                 f"{msg.num_detections} detections")
 
-        object_conf, object_type = sorted(
-            zip(detection.label_confidence_vec, detection.label_vec),
-            reverse=True
-        )[0]
-        min_vertex0 = detection.left
-        min_vertex1 = detection.top
-        max_vertex0 = detection.right
-        max_vertex1 = detection.bottom
-
-        # check if we have a similar object already
-        add_object = True
-        for d in self._detections:
-            if d["object_type"] == object_type:
-                # already have an object of this time so don't add it
-                add_object = False
-
-            # calculate proximity to other boxes
-            #if (min_vertex0 * 0.95 < d[1] < min_vertex1)
-
-        if add_object:
-            self._detections.append({"object_type": object_type,
-                                     "bounding_box": (min_vertex0, min_vertex1,
-                                                      max_vertex0, max_vertex1),
-                                     "frames_displayed": 0})
+        self._detections = msg
+        self._detection_i += 1
 
     def listener_callback(self, image):
         log = self.get_logger()
@@ -110,26 +91,36 @@ class ObjectDetector(Node):
             rgb_image = BRIDGE.imgmsg_to_cv2(image, desired_encoding="rgb8")
         pil_image = PIL.Image.fromarray(rgb_image)
 
-        draw = PIL.ImageDraw.Draw(pil_image)
-        for d in self._detections:
-            draw.rectangle(
-                            ((d["bounding_box"][0], d["bounding_box"][1]),
-                             (d["bounding_box"][2], d["bounding_box"][3])),
-                            outline="blue", width=10
-                          )
-
+        latest_dets_msg = self._detections
+        # If there are no detections yet, nothing to draw.
+        if self._detections is not None:
+            # Draw detections onto the image
+            draw = PIL.ImageDraw.Draw(pil_image)
             fontpath = "/usr/share/fonts/truetype/ttf-bitstream-vera/Vera.ttf"
             font = PIL.ImageFont.truetype(fontpath, 32)
-            draw.text((d["bounding_box"][0], d["bounding_box"][1] - 30), d["object_type"],
-                      font=font)
-            d["frames_displayed"] += 1
+            det_label_list = latest_dets_msg.label_vec
+            det_conf_mat = to_confidence_matrix(latest_dets_msg)
+            log.info(f"Drawing {det_conf_mat.shape[0]} detections")
+            for i in range(latest_dets_msg.num_detections):
+                # Get the maximum confidence label
+                label = sorted(zip(det_conf_mat[i], det_label_list))[-1][1]
+                # Draw the box and label
+                draw.rectangle(
+                    [(latest_dets_msg.left[i], latest_dets_msg.top[i]),
+                     (latest_dets_msg.right[i], latest_dets_msg.bottom[i])],
+                    outline="blue", width=10
+                )
+                txt_height_px = font.getsize(label)[1]
+                draw.text(
+                    (latest_dets_msg.left[i], latest_dets_msg.top[i] - txt_height_px),
+                    label,
+                    font=font
+                )
 
-            if d["frames_displayed"] >= 60:
-                self._detections.remove(d)
-
+        # Publish out drawn-on image.
         img_mat = np.asarray(pil_image)
-        img_msg = BRIDGE.cv2_to_imgmsg(img_mat, encoding="rgb8")
-        # img_msg = BRIDGE.cv2_to_compressed_imgmsg(img_mat, dst_format='jpg')
+        # img_msg = BRIDGE.cv2_to_imgmsg(img_mat, encoding="rgb8")
+        img_msg = BRIDGE.cv2_to_compressed_imgmsg(img_mat, dst_format='jpg')
         img_msg.header = image.header
         self._pub_debug_detections_image.publish(img_msg)
 
@@ -137,7 +128,7 @@ class ObjectDetector(Node):
 def main():
     rclpy.init()
 
-    object_detector = ObjectDetector()
+    object_detector = ObjectDetectorDebug()
 
     rclpy.spin(object_detector)
 
