@@ -22,6 +22,7 @@ find_package( geometry_msgs REQUIRED )
 find_package( shape_msgs REQUIRED )
 
 rosidl_generate_interfaces( ${PROJECT_NAME}
+  msg/HeadsetPoseData.msg
   msg/ObjectDetection2d.msg
   msg/ObjectDetection2dSet.msg
   msg/SpatialMesh.msg

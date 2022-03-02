@@ -72,12 +72,7 @@ class ObjectDetector(Node):
             return
 
         # convert NV12 image to RGB
-        image_data_offset = 128
-        try:
-            yuv_image = np.frombuffer(image.data[image_data_offset:], np.uint8).reshape(image.height*3//2, image.width)
-            rgb_image = cv2.cvtColor(yuv_image, cv2.COLOR_YUV2RGB_NV12)
-        except ValueError:
-            rgb_image = BRIDGE.imgmsg_to_cv2(image, desired_encoding="rgb8")
+        rgb_image = BRIDGE.imgmsg_to_cv2(image, desired_encoding="rgb8")
 
         # Send to Detector
         #

@@ -96,14 +96,7 @@ class ObjectDetectorDebug(Node):
             self._frames_recvd = 0
             self._prev_time = time.time()
 
-        # convert NV12 image to RGB
-        try:
-            image_data_offset = 128
-            yuv_image = np.frombuffer(image.data[image_data_offset:], np.uint8).reshape(image.height*3//2, image.width)
-            rgb_image = cv2.cvtColor(yuv_image, cv2.COLOR_YUV2RGB_NV12)
-            # TODO: swap R/B channels here?
-        except ValueError:
-            rgb_image = BRIDGE.imgmsg_to_cv2(image, desired_encoding="rgb8")
+        rgb_image = BRIDGE.imgmsg_to_cv2(image, desired_encoding="rgb8")
         pil_image = PIL.Image.fromarray(rgb_image)
 
         latest_dets_msg = self._detections

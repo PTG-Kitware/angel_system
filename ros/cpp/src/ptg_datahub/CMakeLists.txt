@@ -18,9 +18,20 @@ find_package(sensor_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(shape_msgs REQUIRED)
 find_package(angel_msgs REQUIRED)
+find_package(cv_bridge REQUIRED )
+find_package(OpenCV REQUIRED COMPONENTS core )
 
 add_executable(talker src/ptg_datahub.cpp)
-ament_target_dependencies(talker rclcpp std_msgs sensor_msgs geometry_msgs angel_msgs shape_msgs)
+ament_target_dependencies(talker 
+  rclcpp
+  std_msgs
+  sensor_msgs
+  geometry_msgs
+  angel_msgs
+  shape_msgs
+  cv_bridge
+  OpenCV
+  )
 
 install(TARGETS
   talker

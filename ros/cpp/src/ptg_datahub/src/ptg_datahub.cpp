@@ -16,6 +16,10 @@
 
 #include "sensor_msgs/msg/image.hpp"
 #include "angel_msgs/msg/spatial_mesh.hpp"
+#include "angel_msgs/msg/headset_pose_data.hpp"
+
+#include <opencv2/opencv.hpp>
+#include <opencv2/core.hpp>
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -129,6 +133,7 @@ class MinimalPublisher : public rclcpp::Node
     void TCPServerVideoThread(int port)
     {
       rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr publisher_;
+      rclcpp::Publisher<angel_msgs::msg::HeadsetPoseData>::SharedPtr pose_publisher_;
       std::string frame_id;
       int recv_buf_hdr_len = VIDEO_HEADER_LEN;
       char * recv_buf_hdr = new char[recv_buf_hdr_len];
@@ -137,6 +142,11 @@ class MinimalPublisher : public rclcpp::Node
       unsigned int frames_received = 0;
 
       publisher_ = this->create_publisher<sensor_msgs::msg::Image>(PORT_TOPIC_MAP[port], 10);
+
+      if (port == PV_TCP_PORT)
+      {
+        pose_publisher_ = this->create_publisher<angel_msgs::msg::HeadsetPoseData>("HeadsetPoseData", 10);
+      }
       frame_id = PORT_TOPIC_MAP[port];
       std::cout << "[" << frame_id << "] Created publisher\n";
 
@@ -218,28 +228,54 @@ class MinimalPublisher : public rclcpp::Node
         //continue;
 
         // send ROS message
-        sensor_msgs::msg::Image message = sensor_msgs::msg::Image();
+        sensor_msgs::msg::Image image_message = sensor_msgs::msg::Image();
 
-        message.header.stamp = this->now();
-        message.header.frame_id = frame_id;
-        message.height = height;
-        message.width = width;
-        message.is_bigendian = false;
+        image_message.header.stamp = this->now();
+        image_message.header.frame_id = frame_id;
+        image_message.height = height;
+        image_message.width = width;
+        image_message.is_bigendian = false;
 
         if (port == PV_TCP_PORT)
         {
-          message.encoding = "rgb8";
-          message.step = 1280;
+          // create pose message
+          angel_msgs::msg::HeadsetPoseData pose_message = angel_msgs::msg::HeadsetPoseData();
+          pose_message.header.stamp = image_message.header.stamp;
+          pose_message.header.frame_id = image_message.header.frame_id;
+
+          // copy world matrix
+          for (int i = 0; i < 64; i+=4)
+          {
+            float value;
+            memcpy(&value, &frame_data[i], sizeof(value));
+            pose_message.world_matrix.insert(pose_message.world_matrix.end(), value);
+          }
+
+          for (int i = 64; i < 128; i+=4)
+          {
+            float value;
+            memcpy(&value, &frame_data[i], sizeof(value));
+            pose_message.projection_matrix.insert(pose_message.projection_matrix.end(), value);
+          }
+          pose_publisher_->publish(pose_message);
+
+          // convert NV12 image data to RGB8
+          cv::Mat nv12_image = cv::Mat(height * 3/2, width, CV_8UC1, &frame_data[128]);
+          cv::Mat rgb_image;
+          cv::cvtColor(nv12_image, rgb_image, cv::COLOR_YUV2RGB_NV12);
+          image_message.encoding = "rgb8";
+          image_message.step = width * 3;
+          std::vector<unsigned char> v(rgb_image.data, rgb_image.data + height * width * 3);
+          image_message.data = v;
         }
         else
         {
-          message.encoding = "mono8";
-          message.step = width;
+          image_message.encoding = "mono8";
+          image_message.step = width;
+          image_message.data = frame_data;
         }
 
-        message.data = frame_data;
-
-        publisher_->publish(message);
+        publisher_->publish(image_message);
         //std::cout << "Published!" << std::endl;
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
       }

@@ -9,7 +9,7 @@ import pickle
 import numpy as np
 import rclpy
 from rclpy.node import Node
-from angel_msgs.msg import ObjectDetection, SpatialMesh
+from angel_msgs.msg import ObjectDetection2dSet, SpatialMesh, HeadsetPoseData
 
 import trimesh
 import trimesh.viewer
@@ -22,13 +22,16 @@ class SpatialMapSubscriber(Node):
 
         self.declare_parameter("spatial_map_topic", "SpatialMapData")
         self.declare_parameter("det_topic", "ObjectDetections")
+        self.declare_parameter("pose_topic", "HeadsetPoseData")
 
         self._spatial_map_topic = self.get_parameter("spatial_map_topic").get_parameter_value().string_value
         self._det_topic = self.get_parameter("det_topic").get_parameter_value().string_value
+        self._pose_topic = self.get_parameter("pose_topic").get_parameter_value().string_value
 
         log = self.get_logger()
         log.info(f"Spatial map topic: {self._spatial_map_topic}")
         log.info(f"Detection topic: {self._det_topic}")
+        log.info(f"Pose topic: {self._pose_topic}")
 
         self.subscription = self.create_subscription(
             SpatialMesh,
@@ -37,9 +40,16 @@ class SpatialMapSubscriber(Node):
             100)
 
         self._detection_subscription = self.create_subscription(
-            ObjectDetection,
+            ObjectDetection2dSet,
             self._det_topic,
             self.detection_callback,
+            100
+        )
+
+        self._pose_subscription = self.create_subscription(
+            HeadsetPoseData,
+            self._pose_topic,
+            self.headset_pose_callback,
             100
         )
 
@@ -48,6 +58,8 @@ class SpatialMapSubscriber(Node):
         self.meshes = {}
 
         self.scene = trimesh.Scene()
+
+        self.poses = []
 
 
     def spatial_map_callback(self, msg):
@@ -96,10 +108,66 @@ class SpatialMapSubscriber(Node):
         self.scene.add_geometry(mesh)
 
 
+    def headset_pose_callback(self, pose):
+        log = self.get_logger()
+
+        #log.info(f"World matrix: {pose.world_matrix}")
+        #log.info(f"Projection matrix: {pose.projection_matrix}")
+        #log.info(f"pose stamp: {pose.header.stamp}")
+
+        self.poses.append(pose)
+
+
     def detection_callback(self, detection):
         log = self.get_logger()
         image_width = 1280.0
         image_height = 720.0
+
+        #log.info(f"Num detections: {detection.num_detections}")
+        log.info(f"image stamp: {detection.source_stamp}")
+        #log.info(f"Frame id: {detection.header.frame_id}")
+        #log.info(f"labels: {len(detection.label_vec)}")
+
+        #for i in range(len(detection.label_vec)):
+        #    log.info(f"object: {detection.label_vec[i]}, {detection.label_confidences[i]}")
+
+        world_matrix_1d = None
+        projection_matrix_1d = None
+        
+        for i in range(len(self.poses)):
+            if detection.source_stamp == self.poses[i].header.stamp:
+                log.info("Found our pose!!")
+                world_matrix_1d = self.poses[i].world_matrix
+                projection_matrix_1d = self.poses[i].projection_matrix
+
+                # can clear out our pose list now assuming we won't get
+                # image frame detections out of order
+                self.poses = self.poses[i:]
+                break
+
+        if world_matrix_1d == None or projection_matrix_1d == None:
+            log.info("Did not get world or projection matrix")
+            return
+
+        # get world matrix from detection
+        world_matrix_2d = [[], [], [], []]
+        for row in range(4):
+            for col in range(4):
+                idx = row * 4 + col
+                world_matrix_2d[row].append(world_matrix_1d[idx])
+
+        # negate z component of world matrix
+        world_matrix_2d[0][2] = -world_matrix_2d[0][2]
+        world_matrix_2d[1][2] = -world_matrix_2d[1][2]
+        world_matrix_2d[2][2] = -world_matrix_2d[2][2]
+        print(world_matrix_2d)
+
+        # get projection matrix from detection
+        projection_matrix_2d = [[], [], [], []]
+        for row in range(4):
+            for col in range(4):
+                idx = row * 4 + col
+                projection_matrix_2d[row].append(projection_matrix_1d[idx])
 
         # get pixel positions of detected object box and form into box corners
         object_type = detection.label_vec
@@ -112,37 +180,12 @@ class SpatialMapSubscriber(Node):
         corners_screen_pos = [[min_vertex0, min_vertex1], [min_vertex0, max_vertex1],
                               [max_vertex0, max_vertex1], [max_vertex0, min_vertex1]]
 
-        # get world matrix from detection
-        location_matrix = [[], [], [], []]
-        location_matrix_offset = 0
-        for row in range(4):
-            for col in range(4):
-                idx = location_matrix_offset + row * 16 + col * 4
-                value = detection.matrices[idx:idx + 4]
-                location_matrix[row].append(struct.unpack("f", value)[0])
-        #print(location_matrix)
-
-        # negate z component of location matrix
-        location_matrix[0][2] = -location_matrix[0][2]
-        location_matrix[1][2] = -location_matrix[1][2]
-        location_matrix[2][2] = -location_matrix[2][2]
-
-        # get projection matrix from detection
-        projection_matrix = [[], [], [], []]
-        projection_matrix_offset = location_matrix_offset + 64
-        for row in range(4):
-            for col in range(4):
-                idx = projection_matrix_offset + row * 16 + col * 4
-                value = detection.matrices[idx:idx + 4]
-                projection_matrix[row].append(struct.unpack("f", value)[0])
-        #print(projection_matrix)
-
         # get the inverse of the projection matrix
-        projection_inv = np.linalg.inv(projection_matrix)
+        projection_inv = np.linalg.inv(projection_matrix_2d)
         #print(projection_inv)
 
         # get position of the camera at the time of the frame
-        camera_origin = self.get_world_position(location_matrix,
+        camera_origin = self.get_world_position(world_matrix_2d,
                                                 np.array([0.0, 0.0, 0.0]))
         camera_origin = camera_origin.reshape((1, 3))
         log.debug(f"origin: {camera_origin} {camera_origin.shape}")
@@ -163,7 +206,7 @@ class SpatialMapSubscriber(Node):
             #print("object position in camera space 1", image_pos_projected)
 
             # convert camera position to world position
-            world_space_box_pos = self.get_world_position(location_matrix,
+            world_space_box_pos = self.get_world_position(world_matrix_2d,
                                                           np.array([image_pos_projected[0][0],
                                                                     image_pos_projected[1][0],
                                                                     1]))
