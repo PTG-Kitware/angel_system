@@ -337,7 +337,7 @@ class MinimalPublisher : public rclcpp::Node
 
     void TCPServerSMThread(int port)
     {
-      rclcpp::Publisher<std_msgs::msg::UInt8MultiArray>::SharedPtr publisher_;
+      rclcpp::Publisher<angel_msgs::msg::SpatialMesh>::SharedPtr publisher_;
       std::string frame_id;
       int recv_buf_hdr_len = SM_HEADER_LEN;
 
@@ -345,7 +345,7 @@ class MinimalPublisher : public rclcpp::Node
       char * recv_buf = new char[DEFAULT_READ_SIZE];
       unsigned int frames_received = 0;
 
-      publisher_ = this->create_publisher<std_msgs::msg::UInt8MultiArray>(PORT_TOPIC_MAP[port], 10);
+      publisher_ = this->create_publisher<angel_msgs::msg::SpatialMesh>(PORT_TOPIC_MAP[port], 10);
       frame_id = PORT_TOPIC_MAP[port];
       std::cout << "Created " << PORT_TOPIC_MAP[port] << " publisher\n";
 
@@ -357,12 +357,10 @@ class MinimalPublisher : public rclcpp::Node
       {
         recv(cs, recv_buf_hdr, recv_buf_hdr_len, 0);
 
-        //std::cout << "Got something!!\n";
-
         if (!(((unsigned char) recv_buf_hdr[0] == 0x1A)
-          && ((unsigned char) recv_buf_hdr[1] == 0xCF)
-          && ((unsigned char) recv_buf_hdr[2] == 0xFC)
-          && ((unsigned char) recv_buf_hdr[3] == 0x1D)))
+           && ((unsigned char) recv_buf_hdr[1] == 0xCF)
+           && ((unsigned char) recv_buf_hdr[2] == 0xFC)
+           && ((unsigned char) recv_buf_hdr[3] == 0x1D)))
         {
           std::cout << frame_id << ": sync mismatch!";
           break;
@@ -412,9 +410,80 @@ class MinimalPublisher : public rclcpp::Node
           time_prev = time_now;
         }
 
-        // send ROS message
-        std_msgs::msg::UInt8MultiArray message = std_msgs::msg::UInt8MultiArray();
-        message.data = frame_data;
+        // SpatialMesh TCP message format:
+        // 32-bit sync
+        // 32-bit length
+        // 32-bit mesh ID
+        // 32-bit vertex count
+        // 32-bit triangle count
+        // Vertex list:
+        //   - 32 bit x
+        //   - 32 bit y
+        //   - 32 bit z
+        // Triangle list:
+        //   - 32 bit index
+
+        // form the spatial mesh message
+        angel_msgs::msg::SpatialMesh message = angel_msgs::msg::SpatialMesh();
+        message.mesh_id = ((frame_data[0] << 24) |
+                           (frame_data[1] << 16) |
+                           (frame_data[2] << 8) |
+                           (frame_data[3]));
+        int vertex_count = ((frame_data[4] << 24) |
+                           (frame_data[5] << 16) |
+                           (frame_data[6] << 8) |
+                           (frame_data[7]));
+        int triangle_count = ((frame_data[8] << 24) |
+                             (frame_data[9] << 16) |
+                             (frame_data[10] << 8) |
+                             (frame_data[11]));
+        triangle_count /= 3;
+
+        // check if this mesh should be removed from the spatial map
+        if ((vertex_count == 0) && (triangle_count == 0))
+        {
+          message.removal = true;
+          message.mesh = shape_msgs::msg::Mesh();
+        }
+        else
+        {
+          message.removal = false;
+          message.mesh = shape_msgs::msg::Mesh();
+          std::vector<shape_msgs::msg::MeshTriangle> triangle_list;
+          std::vector<geometry_msgs::msg::Point> vertex_list;
+
+          int vertex_offset = 12;
+          for (int i = 0; i < (vertex_count * 12); i += 12)
+          {
+            geometry_msgs::msg::Point p = geometry_msgs::msg::Point();
+
+            float x;
+            float y;
+            float z;
+            memcpy(&x, &frame_data[vertex_offset + i], sizeof(x));
+            memcpy(&y, &frame_data[vertex_offset + i + 4], sizeof(y));
+            memcpy(&z, &frame_data[vertex_offset + i + 8], sizeof(z));
+            p.x = x;
+            p.y = y;
+            p.z = z;
+
+            vertex_list.insert(vertex_list.end(), p);
+          }
+
+          int triangle_offset = vertex_offset + 12 * vertex_count;
+          for (int i = 0; i < (triangle_count * 12); i += 12)
+          {
+            shape_msgs::msg::MeshTriangle t = shape_msgs::msg::MeshTriangle();
+            memcpy(&t.vertex_indices[0], &frame_data[triangle_offset + i], sizeof(t.vertex_indices[0]));
+            memcpy(&t.vertex_indices[1], &frame_data[triangle_offset + i + 4], sizeof(t.vertex_indices[1]));
+            memcpy(&t.vertex_indices[2], &frame_data[triangle_offset + i + 8], sizeof(t.vertex_indices[2]));
+            triangle_list.insert(triangle_list.end(), t);
+          }
+
+          message.mesh.vertices = vertex_list;
+          message.mesh.triangles = triangle_list;
+        }
+
         publisher_->publish(message);
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
       }
@@ -470,8 +539,6 @@ int main(int argc, char * argv[])
   rclcpp::init(argc, argv);
 
   std::shared_ptr<MinimalPublisher> mp = std::make_shared<MinimalPublisher>();
-
-  std::cout << "Hi starting threads!" << std::endl;
 
   std::thread t1 = mp->StartTCPServerThread(LF_VLC_TCP_PORT);
   std::thread t2 = mp->StartTCPServerThread(RF_VLC_TCP_PORT);

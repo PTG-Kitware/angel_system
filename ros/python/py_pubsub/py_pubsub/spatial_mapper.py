@@ -9,8 +9,7 @@ import pickle
 import numpy as np
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import UInt8MultiArray
-from angel_msgs.msg import ObjectDetection
+from angel_msgs.msg import ObjectDetection, SpatialMesh
 
 import trimesh
 import trimesh.viewer
@@ -32,7 +31,7 @@ class SpatialMapSubscriber(Node):
         log.info(f"Detection topic: {self._det_topic}")
 
         self.subscription = self.create_subscription(
-            UInt8MultiArray,
+            SpatialMesh,
             self._spatial_map_topic,
             self.spatial_map_callback,
             100)
@@ -57,49 +56,43 @@ class SpatialMapSubscriber(Node):
 
         #print(len(msg.data), msg.data[0:12])
 
-        mesh_id = (msg.data[0] << 24 | msg.data[1] << 16 | msg.data[2] << 8 | msg.data[3])
-        num_vertices = (msg.data[4] << 24 | msg.data[5] << 16 | msg.data[6] << 8 | msg.data[7])
-        num_triangles = (msg.data[8] << 24 | msg.data[9] << 16 | msg.data[10] << 8 | msg.data[11])
-        #print(mesh_id, num_vertices, num_triangles, len(msg.data))
+        mesh_id = msg.mesh_id
+        num_vertices = len(msg.mesh.vertices)
+        num_triangles = len(msg.mesh.triangles)
+        #print(mesh_id, num_vertices, num_triangles)
+        #print(msg.mesh.vertices)
+        #print(msg.mesh.triangles)
 
         # extract the vertices into np arrays
         vertices = np.array([])
-        msg_idx = 12
-        for i in range(num_vertices):
-            v = np.array([struct.unpack("f", msg.data[msg_idx:msg_idx + 4])[0],
-                          struct.unpack("f", msg.data[msg_idx + 4:msg_idx + 8])[0],
-                          struct.unpack("f", msg.data[msg_idx + 8:msg_idx + 12])[0]])
+
+        for v in msg.mesh.vertices:
             if vertices.size == 0:
-                vertices = v
+                vertices = np.array([v.x, v.y, v.z])
             else:
-                vertices = np.vstack([vertices, v])
-            msg_idx += 12
-        #print (vertices.shape)
-        #print (vertices)
+                vertices = np.vstack([vertices, np.array([v.x, v.y, v.z])])
 
         # extract the triangles into np arrays
         triangles = np.array([])
-        msg_idx = 12 + num_vertices * 12
-        for i in range(int(num_triangles / 3)):
-            t = np.array([struct.unpack("i", msg.data[msg_idx:msg_idx + 4])[0],
-                          struct.unpack("i", msg.data[msg_idx + 4:msg_idx + 8])[0],
-                          struct.unpack("i", msg.data[msg_idx + 8:msg_idx + 12])[0]])
+        for t in msg.mesh.triangles:
             if triangles.size == 0:
-                triangles = t
+                triangles = np.array([t.vertex_indices[0],
+                                      t.vertex_indices[1],
+                                      t.vertex_indices[2]
+                                     ])
             else:
-                triangles = np.vstack([triangles, t])
-            msg_idx += 12
-        #print (triangles.shape)
-        #print (triangles)
+                triangles = np.vstack([triangles,
+                                       np.array([t.vertex_indices[0],
+                                                 t.vertex_indices[1],
+                                                 t.vertex_indices[2]
+                                                ])])
 
-        if (num_vertices == 0 and num_triangles == 0):
+        if msg.removal:
             log.debug("Got a removal!")
-
-        self.meshes[mesh_id] = [vertices, triangles]
-        #self.create_plot()
+            # TODO: remove from the spatial map
 
         mesh = trimesh.Trimesh(vertices=vertices, faces=triangles)
-        self.meshes[mesh_id] = mesh
+        self.meshes[msg.mesh_id] = mesh
         self.scene.add_geometry(mesh)
 
 
@@ -229,11 +222,6 @@ class SpatialMapSubscriber(Node):
             self.scene.show()
         except:
             pass
-        #image = self.scene.save_image()
-        #with open("scene.png", "wb") as f:
-        #    f.write(image)
-
-        #print("image!", image)
 
     def cast_ray(self, origin, direction):
         intersection_point = None
@@ -244,7 +232,6 @@ class SpatialMapSubscriber(Node):
             if (len(intersection[0])) != 0:
                 intersection_point = intersection[0]
                 #print("point", intersection_point)
-
 
         return intersection_point
 
