@@ -1,5 +1,3 @@
-import struct
-import sys
 import time
 from typing import Optional
 
@@ -19,6 +17,7 @@ from angel_utils.conversion import to_confidence_matrix
 
 
 BRIDGE = CvBridge()
+COMPRESSED_SUFFIX = "/compressed"
 
 
 class ObjectDetectorDebug(Node):
@@ -31,9 +30,23 @@ class ObjectDetectorDebug(Node):
         self.declare_parameter("out_image_topic",
                                "ObjectDetectionsDebug")
 
-        self._image_topic = self.get_parameter("image_topic").get_parameter_value().string_value
-        self._det_topic = self.get_parameter("det_topic").get_parameter_value().string_value
-        self._out_image_topic = self.get_parameter("out_image_topic").get_parameter_value().string_value
+        self._image_topic: str = self.get_parameter("image_topic").get_parameter_value().string_value
+        self._det_topic: str = self.get_parameter("det_topic").get_parameter_value().string_value
+        self._out_image_topic: str = self.get_parameter("out_image_topic").get_parameter_value().string_value
+
+        # Output topic is set to publish compressed images, so the topic needs
+        # to have the "/compressed" suffix on it.
+        if not self._out_image_topic.endswith(COMPRESSED_SUFFIX):
+            raise ValueError(
+                f"Output image topic will transmit compressed images so it "
+                f"must end with '{COMPRESSED_SUFFIX}'. Was given "
+                f"'{self._out_image_topic}' instead. Please update to use the "
+                f"above suffix."
+            )
+        elif self._out_image_topic == COMPRESSED_SUFFIX:
+            raise ValueError(
+                f"The output image topic cannot just be `{COMPRESSED_SUFFIX}`."
+            )
 
         self._image_subscription = self.create_subscription(
             Image,
@@ -54,7 +67,7 @@ class ObjectDetectorDebug(Node):
         # higher frame-rates.
         self._pub_debug_detections_image = self.create_publisher(
             CompressedImage,
-            self._out_image_topic + "/compressed",
+            self._out_image_topic,
             1
         )
 
