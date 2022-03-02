@@ -10,6 +10,7 @@ import numpy as np
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import UInt8MultiArray
+from angel_msgs.msg import ObjectDetection
 
 import trimesh
 import trimesh.viewer
@@ -18,18 +19,27 @@ import trimesh.viewer
 class SpatialMapSubscriber(Node):
 
     def __init__(self):
-        super().__init__('spatial_map_subscriber')
+        super().__init__(self.__class__.__name__)
+
+        self.declare_parameter("spatial_map_topic", "SpatialMapData")
+        self.declare_parameter("det_topic", "ObjectDetections")
+
+        self._spatial_map_topic = self.get_parameter("spatial_map_topic").get_parameter_value().string_value
+        self._det_topic = self.get_parameter("det_topic").get_parameter_value().string_value
+
+        log = self.get_logger()
+        log.info(f"Spatial map topic: {self._spatial_map_topic}")
+        log.info(f"Detection topic: {self._det_topic}")
 
         self.subscription = self.create_subscription(
             UInt8MultiArray,
-            "SpatialMapData",
-            self.listener_callback,
+            self._spatial_map_topic,
+            self.spatial_map_callback,
             100)
-        self.subscription  # prevent unused variable warning
 
         self._detection_subscription = self.create_subscription(
-            UInt8MultiArray,
-            "ObjectDetections",
+            ObjectDetection,
+            self._det_topic,
             self.detection_callback,
             100
         )
@@ -41,7 +51,8 @@ class SpatialMapSubscriber(Node):
         self.scene = trimesh.Scene()
 
 
-    def listener_callback(self, msg):
+    def spatial_map_callback(self, msg):
+        log = self.get_logger()
         self.frames_recvd += 1
 
         #print(len(msg.data), msg.data[0:12])
@@ -82,7 +93,7 @@ class SpatialMapSubscriber(Node):
         #print (triangles)
 
         if (num_vertices == 0 and num_triangles == 0):
-            print("Got a removal!")
+            log.debug("Got a removal!")
 
         self.meshes[mesh_id] = [vertices, triangles]
         #self.create_plot()
@@ -93,15 +104,16 @@ class SpatialMapSubscriber(Node):
 
 
     def detection_callback(self, detection):
+        log = self.get_logger()
         image_width = 1280.0
         image_height = 720.0
 
         # get pixel positions of detected object box and form into box corners
-        object_type = struct.unpack("I", detection.data[0:4])[0]
-        min_vertex0 = struct.unpack("f", detection.data[4:8])[0]
-        min_vertex1 = struct.unpack("f", detection.data[8:12])[0]
-        max_vertex0 = struct.unpack("f", detection.data[12:16])[0]
-        max_vertex1 = struct.unpack("f", detection.data[16:20])[0]
+        object_type = detection.label_vec
+        min_vertex0 = detection.left
+        min_vertex1 = detection.top
+        max_vertex0 = detection.right
+        max_vertex1 = detection.bottom
 
         #print(object_type, min_vertex0, min_vertex1, max_vertex0, max_vertex1)
         corners_screen_pos = [[min_vertex0, min_vertex1], [min_vertex0, max_vertex1],
@@ -109,11 +121,11 @@ class SpatialMapSubscriber(Node):
 
         # get world matrix from detection
         location_matrix = [[], [], [], []]
-        location_matrix_offset = 20
+        location_matrix_offset = 0
         for row in range(4):
             for col in range(4):
                 idx = location_matrix_offset + row * 16 + col * 4
-                value = detection.data[idx:idx + 4]
+                value = detection.matrices[idx:idx + 4]
                 location_matrix[row].append(struct.unpack("f", value)[0])
         #print(location_matrix)
 
@@ -128,7 +140,7 @@ class SpatialMapSubscriber(Node):
         for row in range(4):
             for col in range(4):
                 idx = projection_matrix_offset + row * 16 + col * 4
-                value = detection.data[idx:idx + 4]
+                value = detection.matrices[idx:idx + 4]
                 projection_matrix[row].append(struct.unpack("f", value)[0])
         #print(projection_matrix)
 
@@ -140,7 +152,7 @@ class SpatialMapSubscriber(Node):
         camera_origin = self.get_world_position(location_matrix,
                                                 np.array([0.0, 0.0, 0.0]))
         camera_origin = camera_origin.reshape((1, 3))
-        #print("origin", camera_origin, camera_origin.shape)
+        log.debug(f"origin: {camera_origin} {camera_origin.shape}")
 
         # convert detection screen pixel coordinates to world pos
         corners_world_pos = []
@@ -174,18 +186,33 @@ class SpatialMapSubscriber(Node):
             '''
 
             # cast ray from camera origin to the object
-            point_pos = self.cast_ray(camera_origin, world_space_box_pos - camera_origin)
+            intersecting_points = self.cast_ray(camera_origin, world_space_box_pos - camera_origin)
 
-            if point_pos is None:
-                print("No intersecting meshes found!")
+            if intersecting_points is None:
+                log.info("No intersecting meshes found!")
                 return
 
             try:
-                print("points found ", point_pos, point_pos.shape, object_type)
-                point_pos = point_pos[0]
+                log.debug(f"Points found {intersecting_points}, {object_type}")
 
-                # TODO: if there is more than one point found, use the closest one to the camera?
-                corners_world_pos.append(point_pos)
+                # if there is more than one point found, use the closest one to the camera
+                min_distance = -1
+                closest_point = None
+                for p in intersecting_points:
+                    # calculate distance between this point and the camera
+                    distance = ((camera_origin[0][0] - p[0]) ** 2 +
+                                (camera_origin[0][1] - p[1]) ** 2 +
+                                (camera_origin[0][2] - p[2]) ** 2) ** 0.5
+                    log.debug(f"Point {p}: distance = {distance}")
+                    if min_distance == -1:
+                        min_distance = distance
+                        closest_point = p
+                    elif distance < min_distance:
+                        min_distance = distance
+                        closest_point = p
+
+                log.debug(f"Closest point = {closest_point}")
+                corners_world_pos.append(closest_point)
             except Exception as e:
                 print(e)
                 pass

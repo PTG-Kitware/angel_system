@@ -8,6 +8,7 @@ from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import Image
 from smqtk_detection.impls.detect_image_objects.resnet_frcnn import ResNetFRCNN
+import PIL
 
 from angel_msgs.msg import ObjectDetection2dSet
 from angel_utils.conversion import from_detect_image_objects_result
@@ -23,7 +24,7 @@ class ObjectDetector(Node):
 
         self.declare_parameter("image_topic", "PVFrames")
         self.declare_parameter("det_topic", "ObjectDetections")
-        self.declare_parameter("use_cuda", False)
+        self.declare_parameter("use_cuda", True)
         self.declare_parameter("detection_threshold", 0.8)
 
         self._image_topic = self.get_parameter("image_topic").get_parameter_value().string_value
@@ -56,6 +57,8 @@ class ObjectDetector(Node):
         self._detector = ResNetFRCNN(img_batch_size=1, use_cuda=self._use_cuda)
         log.info(f"Ready to detect using {self._detector}")
 
+        self.stop = False
+
     def listener_callback(self, image):
         log = self.get_logger()
         self._frames_recvd += 1
@@ -65,6 +68,8 @@ class ObjectDetector(Node):
             log.info(f"Frames rcvd: {self._frames_recvd}")
             self._frames_recvd = 0
             self._prev_time = time.time()
+        if self.stop:
+            return
 
         # convert NV12 image to RGB
         image_data_offset = 128

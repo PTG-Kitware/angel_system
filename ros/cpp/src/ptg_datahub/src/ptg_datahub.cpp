@@ -15,6 +15,7 @@
 #include "std_msgs/msg/u_int8_multi_array.hpp"
 
 #include "sensor_msgs/msg/image.hpp"
+#include "angel_msgs/msg/spatial_mesh.hpp"
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN

@@ -20,3 +20,5 @@ float64[] label_confidence_vec
 
 # Prediction classification labels.
 string[] label_vec
+
+uint8[] matrices
