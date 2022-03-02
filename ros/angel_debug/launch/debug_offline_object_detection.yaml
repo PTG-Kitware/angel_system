@@ -1,0 +1,73 @@
+#
+# Launch to demonstrate object detection of 2D images and show debugging
+# overlay output.
+#
+
+# Anchors not supported, assumes a single root object.
+
+launch:
+  # Args that can be set from the command line or a default will be used
+  - arg:
+      name: "ns"
+      default: "debug"
+  - arg:
+      name: "source_image_topic"
+      default: "image_source"
+  - arg:
+      name: "debug_image_topic"
+      default: "image_debug"
+  - arg:
+      name: "detections_topic"
+      default: "detections"
+
+  - node:
+      namespace: "$(var ns)"
+      pkg: image_tools
+      exec: cam2image
+      name: image_feed
+      param:
+        # Uncomment to use generated burger images instead of your webcam
+        #- name: burger_mode
+        #  value: true
+        - name: width
+          value: 1920
+        - name: height
+          value: 1080
+        - name: frequency
+          value: 30.0
+      remap:
+        - from: image
+          to: $(var source_image_topic)
+
+  - node:
+      namespace: "$(var ns)"
+      pkg: py_pubsub
+      exec: object_detector
+      name: object_detector
+      param:
+        - name: image_topic
+          value: $(var source_image_topic)
+        - name: det_topic
+          value: $(var detections_topic)
+        - name: use_cuda
+          value: true
+
+  - node:
+      namespace: $(var ns)
+      pkg: py_pubsub
+      exec: object_detector_debug
+      name: object_detector_debug
+      param:
+        - name: image_topic
+          value: $(var source_image_topic)
+        - name: out_image_topic
+          value: $(var debug_image_topic)
+        - name: det_topic
+          value: $(var detections_topic)
+
+  - node:
+      namespace: $(var ns)
+      pkg: rqt_image_view
+      exec: rqt_image_view
+      name: rqt_view_source
+      arguments: "/$(var ns)/$(var debug_image_topic)/compressed"

@@ -49,6 +49,9 @@ class ObjectDetectorDebug(Node):
             1
         )
 
+        # Directly publishing compressed images is the only way for the python
+        # node to keep up. Publishing raw images is too much for maintaining
+        # higher frame-rates.
         self._pub_debug_detections_image = self.create_publisher(
             CompressedImage,
             self._out_image_topic + "/compressed",
