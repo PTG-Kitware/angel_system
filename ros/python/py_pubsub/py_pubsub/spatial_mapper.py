@@ -9,8 +9,14 @@ import pickle
 import numpy as np
 import rclpy
 from rclpy.node import Node
-from angel_msgs.msg import ObjectDetection2dSet, SpatialMesh, HeadsetPoseData
+from angel_msgs.msg import (
+    ObjectDetection2dSet,
+    ObjectDetection3dSet,
+    SpatialMesh,
+    HeadsetPoseData
+)
 from angel_utils.conversion import to_confidence_matrix
+from geometry_msgs.msg import Point
 
 import trimesh
 import trimesh.viewer
@@ -23,10 +29,12 @@ class SpatialMapSubscriber(Node):
 
         self.declare_parameter("spatial_map_topic", "SpatialMapData")
         self.declare_parameter("det_topic", "ObjectDetections")
+        self.declare_parameter("3d_det_topic", "ObjectDetections3d")
         self.declare_parameter("pose_topic", "HeadsetPoseData")
 
         self._spatial_map_topic = self.get_parameter("spatial_map_topic").get_parameter_value().string_value
         self._det_topic = self.get_parameter("det_topic").get_parameter_value().string_value
+        self._3d_det_topic = self.get_parameter("3d_det_topic").get_parameter_value().string_value
         self._pose_topic = self.get_parameter("pose_topic").get_parameter_value().string_value
 
         log = self.get_logger()
@@ -34,7 +42,7 @@ class SpatialMapSubscriber(Node):
         log.info(f"Detection topic: {self._det_topic}")
         log.info(f"Pose topic: {self._pose_topic}")
 
-        self.subscription = self.create_subscription(
+        self._spatial_mesh_subscription = self.create_subscription(
             SpatialMesh,
             self._spatial_map_topic,
             self.spatial_map_callback,
@@ -54,6 +62,12 @@ class SpatialMapSubscriber(Node):
             100
         )
 
+        self._object_3d_publisher = self.create_publisher(
+            ObjectDetection3dSet,
+            self._3d_det_topic,
+            1
+        )
+
         self.frames_recvd = 0
         self.prev_time = -1
         self.meshes = {}
@@ -70,18 +84,8 @@ class SpatialMapSubscriber(Node):
         log = self.get_logger()
         self.frames_recvd += 1
 
-        #print(len(msg.data), msg.data[0:12])
-
-        mesh_id = msg.mesh_id
-        num_vertices = len(msg.mesh.vertices)
-        num_triangles = len(msg.mesh.triangles)
-        #print(mesh_id, num_vertices, num_triangles)
-        #print(msg.mesh.vertices)
-        #print(msg.mesh.triangles)
-
         # extract the vertices into np arrays
         vertices = np.array([])
-
         for v in msg.mesh.vertices:
             if vertices.size == 0:
                 vertices = np.array([v.x, v.y, v.z])
@@ -123,10 +127,6 @@ class SpatialMapSubscriber(Node):
     def detection_callback(self, detection):
         log = self.get_logger()
 
-        # TODO: don't hardcode these
-        image_width = 1280.0
-        image_height = 720.0
-
         if detection.num_detections == 0:
             log.debug("No detections for this image")
             return
@@ -147,7 +147,6 @@ class SpatialMapSubscriber(Node):
         if world_matrix_1d == None or projection_matrix_1d == None:
             log.info("Did not get world or projection matrix")
             log.debug(f"image stamp: {detection.source_stamp}")
-            log.debug(f"pose stamps: {len(self.poses)}")
             for i in range(len(self.poses)):
                 log.info(f"pose stamp: {self.poses[i].header.stamp}")
             return
@@ -171,9 +170,14 @@ class SpatialMapSubscriber(Node):
         camera_origin = self.get_world_position(world_matrix_2d,
                                                 np.array([0.0, 0.0, 0.0]))
         camera_origin = camera_origin.reshape((1, 3))
-        #log.debug(f"origin: {camera_origin} {camera_origin.shape}")
+        #log.debug(f"origin: {camejra_origin} {camera_origin.shape}")
 
         det_conf_mat = to_confidence_matrix(detection)
+
+        det_3d_set_msg = ObjectDetection3dSet()
+        det_3d_set_msg.header.stamp = self.get_clock().now().to_msg()
+        det_3d_set_msg.header.frame_id = detection.header.frame_id
+        det_3d_set_msg.source_stamp = detection.source_stamp
 
         for i in range(detection.num_detections):
             object_type = sorted(zip(det_conf_mat[i], detection.label_vec))[-1][1]
@@ -190,64 +194,12 @@ class SpatialMapSubscriber(Node):
             # convert detection screen pixel coordinates to world coordinates
             corners_world_pos = []
             for p in corners_screen_pos:
-                # scale by image width and height and convert to -1:1 coordinates
-                image_pos_zero_to_one = np.array([p[0] / image_width, 1 - (p[1] / image_height)])
-                image_pos_zero_to_one = (image_pos_zero_to_one * 2) - np.array([1, 1])
-
-                # convert screen point to camera point
-                image_pos_projected = self.get_world_position(projection_inv,
-                                                              np.array([image_pos_zero_to_one[0],
-                                                                        image_pos_zero_to_one[1],
-                                                                        1]))
-                #print("object position in camera space 1", image_pos_projected)
-
-                # convert camera position to world position
-                world_space_box_pos = self.get_world_position(world_matrix_2d,
-                                                              np.array([image_pos_projected[0][0],
-                                                                        image_pos_projected[1][0],
-                                                                        1]))
-                world_space_box_pos = world_space_box_pos.reshape((1, 3))
-                #print("object position in world space ", world_space_box_pos, world_space_box_pos.shape)
-
-                '''
-                # draw debug vector
-                vs = np.array([camera_origin[0], world_space_box_pos[0]])
-                el = trimesh.path.entities.Line([0, 1])
-                path = trimesh.path.Path3D(entities=[el], vertices=vs, colors=np.array([255, 0, 0, 255]).reshape(1, 4))
-                self.scene.add_geometry(path)
-                '''
-
-                # cast ray from camera origin to the object
-                intersecting_points = self.cast_ray(camera_origin,
-                                                    world_space_box_pos - camera_origin)
-
-                if intersecting_points is None:
-                    log.info("No intersecting meshes found!")
+                point_3d = self.convert_2d_coord_to_3d_coord(world_matrix_2d,
+                                                             projection_inv,
+                                                             p, camera_origin)
+                if point_3d is None:
                     return
-
-                try:
-                    #log.debug(f"Points found {intersecting_points}, {object_type}")
-
-                    # if there is more than one point found, use the closest one to the camera
-                    min_distance = -1
-                    closest_point = None
-                    for p in intersecting_points:
-                        # calculate distance between this point and the camera
-                        distance = ((camera_origin[0][0] - p[0]) ** 2 +
-                                    (camera_origin[0][1] - p[1]) ** 2 +
-                                    (camera_origin[0][2] - p[2]) ** 2) ** 0.5
-                        #log.debug(f"Point {p}: distance = {distance}")
-                        if min_distance == -1:
-                            min_distance = distance
-                            closest_point = p
-                        elif distance < min_distance:
-                            min_distance = distance
-                            closest_point = p
-
-                    #log.debug(f"Closest point = {closest_point}")
-                    corners_world_pos.append(closest_point)
-                except Exception as e:
-                    log.info(e)
+                corners_world_pos.append(point_3d)
 
             log.info(f"Drawing box for {object_type}")
 
@@ -256,6 +208,29 @@ class SpatialMapSubscriber(Node):
             el = trimesh.path.entities.Line([0, 1, 2, 3, 0])
             path = trimesh.path.Path3D(entities=[el], vertices=vs)
             self.scene.add_geometry(path)
+
+            # since we were able to find this object's 3D position,
+            # add it to 3d detection message
+            det_3d_set_msg.object_labels.append(object_type)
+            det_3d_set_msg.num_objects += 1
+
+            for p in range(4):
+                point_3d = Point()
+                point_3d.x = corners_world_pos[p][0]
+                point_3d.y = corners_world_pos[p][1]
+                point_3d.z = corners_world_pos[p][2]
+
+                if p == 0:
+                    det_3d_set_msg.left.append(point_3d)
+                elif p == 1:
+                    det_3d_set_msg.top.append(point_3d)
+                elif p == 2:
+                    det_3d_set_msg.right.append(point_3d)
+                elif p == 3:
+                    det_3d_set_msg.bottom.append(point_3d)
+
+        # form and publish the 3d object detection message
+        self._object_3d_publisher.publish(det_3d_set_msg)
 
         # uncomment this to visualize the scene
         #self.show_plot()
@@ -293,6 +268,66 @@ class SpatialMapSubscriber(Node):
                 matrix_2d[row].append(matrix_1d[idx])
 
         return matrix_2d
+
+
+    def convert_2d_coord_to_3d_coord(self, world_matrix, projection_matrix_inv,
+                                     point, camera_origin):
+        log = self.get_logger()
+
+        # TODO: don't hardcode these
+        image_width = 1280.0
+        image_height = 720.0
+
+        # scale by image width and height and convert to -1:1 coordinates
+        image_pos_zero_to_one = np.array([point[0] / image_width, 1 - (point[1] / image_height)])
+        image_pos_zero_to_one = (image_pos_zero_to_one * 2) - np.array([1, 1])
+
+        # convert screen point to camera point
+        image_pos_projected = self.get_world_position(projection_matrix_inv,
+                                                      np.array([image_pos_zero_to_one[0],
+                                                                image_pos_zero_to_one[1],
+                                                                1]))
+        #print("object position in camera space 1", image_pos_projected)
+
+        # convert camera position to world position
+        world_space_box_pos = self.get_world_position(world_matrix,
+                                                      np.array([image_pos_projected[0][0],
+                                                                image_pos_projected[1][0],
+                                                                1]))
+        world_space_box_pos = world_space_box_pos.reshape((1, 3))
+        #print("object position in world space ", world_space_box_pos, world_space_box_pos.shape)
+
+        # cast ray from camera origin to the object
+        intersecting_points = self.cast_ray(camera_origin,
+                                            world_space_box_pos - camera_origin)
+        if intersecting_points is None:
+            log.info("No intersecting meshes found!")
+            return None
+
+        closest_point = None
+        try:
+            #log.debug(f"Points found {intersecting_points}, {object_type}")
+
+            # if there is more than one point found, use the closest one to the camera
+            min_distance = -1
+            for p in intersecting_points:
+                # calculate distance between this point and the camera
+                distance = ((camera_origin[0][0] - p[0]) ** 2 +
+                            (camera_origin[0][1] - p[1]) ** 2 +
+                            (camera_origin[0][2] - p[2]) ** 2) ** 0.5
+                #log.debug(f"Point {p}: distance = {distance}")
+                if min_distance == -1:
+                    min_distance = distance
+                    closest_point = p
+                elif distance < min_distance:
+                    min_distance = distance
+                    closest_point = p
+
+            #log.debug(f"Closest point = {closest_point}")
+        except Exception as e:
+            log.info(e)
+
+        return closest_point
 
 
 def main():
