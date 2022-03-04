@@ -85,12 +85,14 @@ class SpatialMapSubscriber(Node):
         self.frames_recvd += 1
 
         # extract the vertices into np arrays
+        # NOTE: negating the x-component because Unity uses a left-handed
+        # coordinate system and trimesh uses a right-handed coordinate system
         vertices = np.array([])
         for v in msg.mesh.vertices:
             if vertices.size == 0:
-                vertices = np.array([v.x, v.y, v.z])
+                vertices = np.array([-v.x, v.y, v.z])
             else:
-                vertices = np.vstack([vertices, np.array([v.x, v.y, v.z])])
+                vertices = np.vstack([vertices, np.array([-v.x, v.y, v.z])])
 
         # extract the triangles into np arrays
         triangles = np.array([])
@@ -145,10 +147,8 @@ class SpatialMapSubscriber(Node):
                 break
 
         if world_matrix_1d == None or projection_matrix_1d == None:
-            log.info("Did not get world or projection matrix")
+            #log.info("Did not get world or projection matrix")
             log.debug(f"image stamp: {detection.source_stamp}")
-            for i in range(len(self.poses)):
-                log.info(f"pose stamp: {self.poses[i].header.stamp}")
             return
 
         # get world matrix from detection
@@ -229,11 +229,13 @@ class SpatialMapSubscriber(Node):
                 elif p == 3:
                     det_3d_set_msg.bottom.append(point_3d)
 
+        #log.info(f"left point {det_3d_set_msg.left}")
+
         # form and publish the 3d object detection message
         self._object_3d_publisher.publish(det_3d_set_msg)
 
         # uncomment this to visualize the scene
-        #self.show_plot()
+        self.show_plot()
 
 
     def show_plot(self):
@@ -295,7 +297,18 @@ class SpatialMapSubscriber(Node):
                                                                 image_pos_projected[1][0],
                                                                 1]))
         world_space_box_pos = world_space_box_pos.reshape((1, 3))
+
+        # NOTE: negating the x-component because Unity uses a left-handed
+        # coordinate system and trimesh uses a right-handed coordinate system
+        world_space_box_pos[0][0] = -world_space_box_pos[0][0]
+
         #print("object position in world space ", world_space_box_pos, world_space_box_pos.shape)
+
+        # draw debug vector
+        vs = np.array([camera_origin[0], world_space_box_pos[0]])
+        el = trimesh.path.entities.Line([0, 1])
+        path = trimesh.path.Path3D(entities=[el], vertices=vs, colors=np.array([255, 0, 0, 255]).reshape(1, 4))
+        self.scene.add_geometry(path)
 
         # cast ray from camera origin to the object
         intersecting_points = self.cast_ray(camera_origin,

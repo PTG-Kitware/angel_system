@@ -3,6 +3,7 @@
 #include <iostream>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <stdexcept>
 #include <stdio.h>
 #include <stdlib.h>
@@ -17,6 +18,7 @@
 #include "sensor_msgs/msg/image.hpp"
 #include "angel_msgs/msg/spatial_mesh.hpp"
 #include "angel_msgs/msg/headset_pose_data.hpp"
+#include "angel_msgs/msg/object_detection3d_set.hpp"
 
 #include <opencv2/opencv.hpp>
 #include <opencv2/core.hpp>
@@ -65,6 +67,7 @@ typedef int SOCKET;
 #define SM_TCP_PORT            (11010)
 
 using namespace std::chrono_literals;
+using std::placeholders::_1;
 
 std::map<int, std::string> PORT_TOPIC_MAP = {
     { LF_VLC_TCP_PORT,        "LFFrames" },
@@ -80,11 +83,11 @@ std::map<int, std::string> PORT_TOPIC_MAP = {
     { SM_TCP_PORT,            "SpatialMapData" }
 };
 
-class MinimalPublisher : public rclcpp::Node
+class PTGDataHub : public rclcpp::Node
 {
   public:
-    MinimalPublisher()
-    : Node("minimal_publisher"), count_(0)
+    PTGDataHub()
+    : Node("ptg_datahub"), count_(0)
     {
       try
       {
@@ -100,6 +103,12 @@ class MinimalPublisher : public rclcpp::Node
       RCLCPP_INFO( this->get_logger(),
                    "Starting talker, intending to connect to TCP server @ %s",
                    tcp_server_uri.c_str() );
+
+      _object_3d_subscriber = this->create_subscription<angel_msgs::msg::ObjectDetection3dSet>(
+        "ObjectDetections3d", 100,
+        std::bind(&PTGDataHub::object_detection_3d_callback, this, _1 )
+      );
+
     }
 
     std::thread StartTCPServerThread(int port)
@@ -112,23 +121,182 @@ class MinimalPublisher : public rclcpp::Node
 
       if (port == AUDIO_TCP_PORT)
       {
-        t = std::thread(&MinimalPublisher::TCPServerAudioThread, this, port);
+        t = std::thread(&PTGDataHub::TCPServerAudioThread, this, port);
       }
       else if (port == SM_TCP_PORT)
       {
-        t = std::thread(&MinimalPublisher::TCPServerSMThread, this, port);
+        t = std::thread(&PTGDataHub::TCPServerSMThread, this, port);
       }
       else
       {
-        t = std::thread(&MinimalPublisher::TCPServerVideoThread, this, port);
+        t = std::thread(&PTGDataHub::TCPServerVideoThread, this, port);
       }
 
       return t;
     }
 
+
   private:
+    rclcpp::Subscription< angel_msgs::msg::ObjectDetection3dSet >::SharedPtr _object_3d_subscriber;
     size_t count_;
     std::string tcp_server_uri;
+    std::vector<angel_msgs::msg::ObjectDetection3dSet::SharedPtr> _detections;
+    std::mutex _detection_mutex;
+
+    std::vector<unsigned char> uint_to_vector(unsigned int x)
+    {
+      std::vector<unsigned char> v(4);
+      memcpy(&v[0], &x, sizeof(x));
+      return v;
+    }
+
+    std::vector<unsigned char> float_to_vector(float x)
+    {
+      std::vector<unsigned char> v(4);
+      memcpy(&v[0], &x, sizeof(x));
+      return v;
+    }
+
+    std::vector<unsigned char> serialize_detection_message( angel_msgs::msg::ObjectDetection3dSet::SharedPtr
+                                                            const detection_msg )
+    {
+      // serialize the detection message
+      std::vector<unsigned char> byte_message;
+
+      unsigned int ros_message_length = 0;
+
+      // PTG header:
+      //   -- 32-bit sync = 4 bytes
+      //   -- 32-bit ros msg length = 4 bytes
+      // ROS2 message:
+      //  header
+      //   -- 32 bit seconds = 4 bytes
+      //   -- 32 bit nanoseconds = 4 bytes
+      //   -- frame id string
+      //  source_stamp
+      //   -- 32 bit seconds
+      //   -- 32 bit nanoseconds
+      //  num_objects
+      //   -- 32 bit num objects
+      //  labels
+      //   -- string * num_objects
+      //  3d points: 12 * 4 * num_objects
+      //   -- left points (12 bytes)
+      //     -- 32 bit float x
+      //     -- 32 bit float y
+      //     -- 32 bit float z
+      //   -- top points (12 bytes)
+      //     -- 32 bit float x
+      //     -- 32 bit float y
+      //     -- 32 bit float z
+      //   -- right points (12 bytes)
+      //     -- 32 bit float x
+      //     -- 32 bit float y
+      //     -- 32 bit float z
+      //   -- bottom points (12 bytes)
+      //     -- 32 bit float x
+      //     -- 32 bit float y
+      //     -- 32 bit float z
+
+      // convert the frame id to bytes
+      std::vector<char> frame_id_bytes(detection_msg->header.frame_id.begin(),
+                                       detection_msg->header.frame_id.end());
+      frame_id_bytes.push_back('\0');
+      ros_message_length += frame_id_bytes.size();
+
+      // convert the object labels to bytes
+      std::vector<char> object_labels;
+      for (int i = 0; i < detection_msg->num_objects; i++)
+      {
+        object_labels.insert(object_labels.end(),
+                             detection_msg->object_labels[i].begin(),
+                             detection_msg->object_labels[i].end());
+        object_labels.push_back('\0');
+      }
+      ros_message_length += object_labels.size();
+
+      ros_message_length += (4 + // header seconds
+                             4 + // header nanoseconds
+                             // frame id length added already
+                             4 + // source seconds
+                             4 + // source nanoseconds
+                             4 + // num objects
+                             // labels length added already
+                             (detection_msg->num_objects * 4 * 12));
+
+      // add sync
+      std::vector<unsigned char> sync = uint_to_vector(0x1ACFFC1D);
+      byte_message.insert(byte_message.end(), sync.begin(), sync.end());
+
+      // add length
+      std::vector<unsigned char> length = uint_to_vector(ros_message_length);
+      byte_message.insert(byte_message.end(), length.begin(), length.end());
+
+      // add header time stamp
+      std::vector<unsigned char> seconds = uint_to_vector(detection_msg->header.stamp.sec);
+      byte_message.insert(byte_message.end(), seconds.begin(), seconds.end());
+      std::vector<unsigned char> nanoseconds = uint_to_vector(detection_msg->header.stamp.nanosec);
+      byte_message.insert(byte_message.end(), nanoseconds.begin(), nanoseconds.end());
+
+      // add frame id
+      byte_message.insert(byte_message.end(), frame_id_bytes.begin(), frame_id_bytes.end());
+
+      // add source stamp
+      seconds = uint_to_vector(detection_msg->source_stamp.sec);
+      byte_message.insert(byte_message.end(), seconds.begin(), seconds.end());
+      nanoseconds = uint_to_vector(detection_msg->source_stamp.nanosec);
+      byte_message.insert(byte_message.end(), nanoseconds.begin(), nanoseconds.end());
+
+      // add num objects
+      std::vector<unsigned char> num_objects = uint_to_vector(detection_msg->num_objects);
+      byte_message.insert(byte_message.end(), num_objects.begin(), num_objects.end());
+
+      // add labels
+      byte_message.insert(byte_message.end(), object_labels.begin(), object_labels.end());
+
+      // add points
+      for (int i = 0; i < 4; i++)
+      {
+        for (int j = 0; j < detection_msg->num_objects; j++)
+        {
+          geometry_msgs::msg::Point p;
+          if (i == 0)
+          {
+            p = detection_msg->left[j];
+          }
+          else if (i == 1)
+          {
+            p = detection_msg->top[j];
+          }
+          else if (i == 2)
+          {
+            p = detection_msg->right[j];
+          }
+          else if (i == 3)
+          {
+            p = detection_msg->bottom[j];
+          }
+
+          std::vector<unsigned char> point_x = float_to_vector(p.x);
+          std::vector<unsigned char> point_y = float_to_vector(p.y);
+          std::vector<unsigned char> point_z = float_to_vector(p.z);
+          byte_message.insert(byte_message.end(), point_x.begin(), point_x.end());
+          byte_message.insert(byte_message.end(), point_y.begin(), point_y.end());
+          byte_message.insert(byte_message.end(), point_z.begin(), point_z.end());
+        }
+      }
+
+
+      return byte_message;
+    }
+
+    void object_detection_3d_callback( angel_msgs::msg::ObjectDetection3dSet::SharedPtr
+                                       const detection_msg )
+    {
+        _detection_mutex.lock();
+        _detections.insert(_detections.end(), detection_msg);
+        _detection_mutex.unlock();
+    }
 
     void TCPServerVideoThread(int port)
     {
@@ -277,7 +445,7 @@ class MinimalPublisher : public rclcpp::Node
 
         publisher_->publish(image_message);
         //std::cout << "Published!" << std::endl;
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        //std::this_thread::sleep_for(std::chrono::milliseconds(1));
       }
     }
 
@@ -302,8 +470,6 @@ class MinimalPublisher : public rclcpp::Node
       while (true)
       {
         recv(cs, recv_buf_hdr, recv_buf_hdr_len, 0);
-
-        //std::cout << "Got something!!\n";
 
         if (!(((unsigned char) recv_buf_hdr[0] == 0x1A)
           && ((unsigned char) recv_buf_hdr[1] == 0xCF)
@@ -349,8 +515,6 @@ class MinimalPublisher : public rclcpp::Node
 
         frames_received++;
 
-        //std::cout << std::to_string(frame_data.size()) << std::endl;
-
         std::chrono::steady_clock::time_point time_now = std::chrono::steady_clock::now();
 
         if (std::chrono::duration_cast<std::chrono::seconds> (time_now - time_prev).count() >= 1)
@@ -391,6 +555,20 @@ class MinimalPublisher : public rclcpp::Node
 
       while (true)
       {
+        // send any detections if there are any
+        _detection_mutex.lock();
+        for (auto d : _detections)
+        {
+            // serialize the detection message
+            std::vector<unsigned char> byte_message = serialize_detection_message(d);
+
+            // send via the TCP socket
+            int bytes_sent = send(cs, &byte_message[0], byte_message.size(), 0);
+        }
+        _detections.clear();
+        _detection_mutex.unlock();
+
+        // wait for spatial mesh from Hololens
         recv(cs, recv_buf_hdr, recv_buf_hdr_len, 0);
 
         if (!(((unsigned char) recv_buf_hdr[0] == 0x1A)
@@ -444,6 +622,7 @@ class MinimalPublisher : public rclcpp::Node
           std::cout << frame_id << " frames received: " << std::to_string(frames_received) << std::endl;
           frames_received = 0;
           time_prev = time_now;
+
         }
 
         // SpatialMesh TCP message format:
@@ -521,7 +700,7 @@ class MinimalPublisher : public rclcpp::Node
         }
 
         publisher_->publish(message);
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        //std::this_thread::sleep_for(std::chrono::milliseconds(1));
       }
     }
 
@@ -574,7 +753,7 @@ int main(int argc, char * argv[])
 {
   rclcpp::init(argc, argv);
 
-  std::shared_ptr<MinimalPublisher> mp = std::make_shared<MinimalPublisher>();
+  std::shared_ptr<PTGDataHub> mp = std::make_shared<PTGDataHub>();
 
   std::thread t1 = mp->StartTCPServerThread(LF_VLC_TCP_PORT);
   std::thread t2 = mp->StartTCPServerThread(RF_VLC_TCP_PORT);
