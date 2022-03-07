@@ -12,6 +12,7 @@ services:
       context: ..  # repo root
       dockerfile: docker/workspace-base-dev/Dockerfile
       cache_from:
+        - ${PTG_REGISTRY}/workspace-base-dev:latest
         - ${PTG_REGISTRY}/workspace-base-dev:${PTG_TAG}
     profiles:
       - build-only
@@ -29,6 +30,7 @@ services:
         PTG_REGISTRY:  # from .env file
         PTG_TAG:  # from .env file
       cache_from:
+        - ${PTG_REGISTRY}/workspace-build-dev:latest
         - ${PTG_REGISTRY}/workspace-build-dev:${PTG_TAG}
     profiles:
       - build-only
@@ -47,6 +49,7 @@ services:
     tty: true
     volumes:
       - /dev/shm:/dev/shm
+      # Host sharing
       - ../poetry.lock:/angel_workspace/poetry.lock
       - ../pyproject.toml:/angel_workspace/pyproject.toml
       - ../ros:/angel_workspace/src
@@ -63,6 +66,7 @@ services:
       # assume this file exists, should be created before running.
       - ${XAUTH_FILEPATH}:/tmp/.docker.xauth
     environment:
+      PYTHONDONTWRITEBYTECODE: "true"
       HISTFILE: /angel_workspace/stuff/bash_history
       CYCLONE_DDS_INTERFACE:  # from .env file or parent environment
       SETUP_WORKSPACE_INSTALL:  # from .env file or parent environment

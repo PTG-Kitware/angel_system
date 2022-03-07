@@ -2,7 +2,7 @@
 # Project Ignores
 #
 /.workspace-shell-dev/
-/docker/.container_xauth
+/.container_xauth
 
 # This .gitignore file should be placed at the root of your Unity project directory
 #
