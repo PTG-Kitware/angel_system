@@ -100,7 +100,8 @@ class MinimalPublisher : public rclcpp::Node
 
   private:
     size_t count_;
-    std::string server_ip_addr = "169.254.64.13";
+    // std::string server_ip_addr = "10.50.59.115";
+    std::string server_ip_addr = "192.168.1.101";
 
     void TCPServerVideoThread(int port)
     {
@@ -114,7 +115,7 @@ class MinimalPublisher : public rclcpp::Node
 
       publisher_ = this->create_publisher<sensor_msgs::msg::Image>(PORT_TOPIC_MAP[port], 10);
       frame_id = PORT_TOPIC_MAP[port];
-      std::cout << "Created " << PORT_TOPIC_MAP[port] << " publisher\n";
+      std::cout << "[" << frame_id << "] Created publisher\n";
 
       SOCKET cs = connectSocket(port);
 
@@ -129,7 +130,7 @@ class MinimalPublisher : public rclcpp::Node
           && ((unsigned char) recv_buf_hdr[2] == 0xFC)
           && ((unsigned char) recv_buf_hdr[3] == 0x1D)))
         {
-          std::cout << frame_id << ": sync mismatch!" <<  std::to_string((unsigned char)recv_buf_hdr[0]) << std::endl;
+          std::cout << "[" << frame_id << "] sync mismatch!" <<  std::to_string((unsigned char)recv_buf_hdr[0]) << std::endl;
           break;
         }
 
@@ -330,7 +331,7 @@ class MinimalPublisher : public rclcpp::Node
 
       if (connect(s, (SOCKADDR *)&addr, sizeof(addr)) < 0)
       {
-          std::cout << "Error creating socket" << std::endl;
+          std::cout << "Error creating socket for port: " << port << std::endl;
       }
 #endif
 #ifdef __linux__
@@ -343,11 +344,14 @@ class MinimalPublisher : public rclcpp::Node
 
       if (connect(s, (struct sockaddr*)&addr, sizeof(addr)) < 0)
       {
-          std::cout << "Error creating socket" << std::endl;
+          std::cout << "Error creating socket for port: " << port << std::endl;
       }
 #endif
+      else
+      {
+        std::cout << "Socket connected!" << std::endl;
+      }
 
-      std::cout << "Socket connected!" << std::endl;
       return s;
     }
 

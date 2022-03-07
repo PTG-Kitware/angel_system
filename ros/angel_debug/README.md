@@ -14,3 +14,9 @@ To run this:
 ./angel-workspace-shell.sh -r
 ros2 launch angel_debug offline_debug_demo.py
 ```
+
+## Online (with HL2) object detection demonstration
+```bash
+./angel-workspace-shell.sh -r
+ros2 launch angel_debug online_debug_demo.py
+```
