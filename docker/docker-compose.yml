@@ -41,7 +41,7 @@ services:
 
   workspace-shell-dev:
     # Development workspace shell, including source and build mounting.
-    # Includes X11 passthrough.
+    # Includes X11 passthrough. Requires XAUTH_FILEPATH to be defined in env.
     image: ${PTG_REGISTRY}/workspace-build-dev:${PTG_TAG}
     working_dir: "/angel_workspace"
     privileged: true
