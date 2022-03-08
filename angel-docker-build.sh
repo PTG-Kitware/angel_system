@@ -19,6 +19,11 @@ Options:
 "
 }
 
+function log()
+{
+  >&2 echo "$@"
+}
+
 # Option parsing
 dc_forward_params=()
 while [[ $# -gt 0 ]]
@@ -29,7 +34,7 @@ do
       exit 0
       ;;
     --force)
-      echo "Forcing build regardless of workspace hygiene."
+      log "Forcing build regardless of workspace hygiene."
       shift
       FORCE_BUILD=1
       ;;
@@ -39,15 +44,35 @@ do
   esac
 done
 
-git_status="$(git status --porcelain "${SCRIPT_DIR}/ros")"
-if [[ -n "$git_status" ]]
+# Check if there are modified or "new" files in the workspace.
+# NODE: `warn_build_spaces` should be expanded if more things start to become
+#       part of docker builds. Maybe read this in from somewhere else instead
+#       of encoding here?
+warn_build_spaces=(
+  "${SCRIPT_DIR}/ros"
+  "${SCRIPT_DIR}/docker"
+  "${SCRIPT_DIR}/pyproject.toml"
+  "${SCRIPT_DIR}/poetry.lock"
+)
+git_status="$(git status --porcelain "${warn_build_spaces[@]}")"
+# Check if there are ignored files in the workspace that should not be there.
+git_clean_dr="$(git clean "${warn_build_spaces[@]}" -xdn)"
+if [[ -n "${git_status}" ]] || [[ -n "${git_clean_dr}" ]]
 then
-  echo "WARNING: ROS workspace subtree is not clean."
+  log "WARNING: ROS workspace subtree is modified and/or un-clean."
+  if [[ -n "${git_status}" ]]
+  then
+    log "WARNING: -- There are modified / new files."
+  fi
+  if [[ -n "${git_clean_dr}" ]]
+  then
+    log "WARNING: -- There are unexpected ignored files (check git clean -xdn)."
+  fi
   if [[ -n "$FORCE_BUILD" ]]
   then
-    echo "WARNING: Force enabled, building anyway."
+    log "WARNING: Force enabled, building anyway."
   else
-    echo "ERROR: Refusing to build images."
+    log "ERROR: Refusing to build images."
     exit 1
   fi
 fi
@@ -55,7 +80,7 @@ fi
 if [[ "${#dc_forward_params[@]}" -gt 0 ]]
 then
   # shellcheck disable=SC2145
-  echo "Forwarding to docker-compose: ${dc_forward_params[@]}"
+  log "Forwarding to docker-compose: ${dc_forward_params[@]}"
 fi
 
 docker-compose \
