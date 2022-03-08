@@ -27,9 +27,6 @@ RUN find /angel_workspace/src -type f \! -name "package.xml" -print | xargs rm
 #
 FROM base AS build
 
-# Bring in just package files from source tree for rosdep to use.
-COPY --from=tmp_package_files /angel_workspace /angel_workspace
-
 RUN apt-get -y update \
  && apt-get -y install \
         gettext-base \
@@ -37,9 +34,9 @@ RUN apt-get -y update \
         python3-venv \
         ros-${ROS_DISTRO}-image-transport-plugins \
         ros-${ROS_DISTRO}-rmw-cyclonedds-cpp \
+        tmuxinator \
         # for python simpleaudio
         libasound2-dev \
- && rosdep install -i --from-path /angel_workspace --rosdistro ${ROS_DISTRO} -y \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
@@ -51,6 +48,15 @@ ENV POETRY_VERSION=1.1.13
 RUN pip3 install --user pip==22.0.3 \
  && (curl -sSL 'https://install.python-poetry.org' | python3 -) \
  && poetry config virtualenvs.create false
+
+# Bring in just package files from source tree for rosdep to use.
+COPY --from=tmp_package_files /angel_workspace /angel_workspace
+RUN apt-get -y update \
+ && rosdep install -i --from-path /angel_workspace --rosdistro ${ROS_DISTRO} -y \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
+
+# Install tracked python dependencies
 COPY poetry.lock pyproject.toml /angel_workspace/
 RUN cd /angel_workspace \
     # TODO: Re-enable use of hashes once editable/git deps are removed. \
