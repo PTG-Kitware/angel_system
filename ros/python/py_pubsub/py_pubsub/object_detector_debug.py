@@ -100,6 +100,7 @@ class ObjectDetectorDebug(Node):
         try:
             yuv_image = np.frombuffer(image.data, np.uint8).reshape(image.height*3//2, image.width)
             rgb_image = cv2.cvtColor(yuv_image, cv2.COLOR_YUV2RGB_NV12)
+            # TODO: swap R/B channels here?
         except ValueError:
             rgb_image = BRIDGE.imgmsg_to_cv2(image, desired_encoding="rgb8")
         pil_image = PIL.Image.fromarray(rgb_image)

@@ -59,10 +59,10 @@ git_status="$(git status --porcelain "${warn_build_spaces[@]}")"
 git_clean_dr="$(git clean "${warn_build_spaces[@]}" -xdn)"
 if [[ -n "${git_status}" ]] || [[ -n "${git_clean_dr}" ]]
 then
-  log "WARNING: ROS workspace subtree is modified and/or un-clean."
+  log "WARNING: Docker/ROS workspace subtree is modified and/or un-clean."
   if [[ -n "${git_status}" ]]
   then
-    log "WARNING: -- There are modified / new files."
+    log "WARNING: -- There are modified / new files (check git status)."
   fi
   if [[ -n "${git_clean_dr}" ]]
   then
