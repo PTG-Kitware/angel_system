@@ -80,6 +80,11 @@ COPY ./ros "${ANGEL_WORKSPACE_DIR}/src"
 COPY docker/workspace_build.sh "${ANGEL_WORKSPACE_DIR}"/
 RUN "${ANGEL_WORKSPACE_DIR}/workspace_build.sh"
 
+# Bring in tmux run configurations
+# - add symlink to tmuxinator's expected "config home"
+COPY ./tmux "${ANGEL_WORKSPACE_DIR}"/tmux
+RUN ln -s "${ANGEL_WORKSPACE_DIR}"/tmux "${HOME}/.tmuxinator"
+
 COPY docker/cyclonedds_profile.xml.tmpl \
      docker/workspace_entrypoint.sh \
      docker/workspace_setenv.sh \

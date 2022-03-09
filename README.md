@@ -117,6 +117,35 @@ A basic template config may be auto-generated to specify which host network
 interface for it to use by uncommenting and setting the `CYCLONE_DDS_INTERFACE`
 in the `docker/.env` or exporting it on your commandline to the desired value.
 
+## Run Configurations -- Tmuxinator
+The "standard" way to set up and run collections of nodes in ROS2 is via launch
+files.
+This is all well and good and provides great features, but what it doesn't do
+is provide access to individual components at runtime.
+During development, and often in the field as well, it is important to be able
+to get at individual components to see what might be going wrong or to
+restart/tweak one thing without impacting everything else that is running.
+We utilize tmux, configured and run by tmuxinator, to manage multiple
+windows/panes to host individual components.
+
+Tmuxinator configurations are stored in the `./tmux/` directory.
+
+### Example: Object detection system fragment
+```bash
+./angel-workspace-shell.sh -r -- tmuxinator start -p tmux/fragment_object_detection_debug.yml
+```
+Anatomy of the call:
+1) (Re)uses `angel-workspace-shell.sh` to run a command in a docker container.
+2) `-r` option to script sets "use our built workspace" flag.
+3) Things to the right of `--` are run inside the container.
+4) `tmux` directory is (by default) in the same directory as the working
+   directory the container starts in.
+5) `tmuxinator` command creates a new server session defined by the given
+   config.
+
+As a rosetta stone, this example configuration is symmetric to the launch file
+version located at `ros/angel_debug/launch/online_debug_demo.py`.
+
 ## Lessons Learned
 ### `rosdep`
 References to the lists that rosdep uses to resolve names:

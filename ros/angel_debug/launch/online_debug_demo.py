@@ -18,7 +18,7 @@ def generate_launch_description():
         ),
         # Arguments with defaults
         DeclareLaunchArgument(
-            "ns", default_value="",
+            "ns", default_value="/debug",
             description="Namespace nodes in this launch file should run under "
                         "(except rqt). This should always start with a slash "
                         "(/) unless no namespace is to be used."
