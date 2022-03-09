@@ -67,4 +67,3 @@ windows:
       -p out_image_topic:=image_debug/compressed
   - rqt: rqt -s rqt_image_view/ImageView 
       --args ${ROS_NAMESPACE}/image_debug/compressed 
-      ~image_transport:=compressed
