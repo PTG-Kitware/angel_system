@@ -1,12 +1,13 @@
 #include <chrono>
 #include <functional>
-#include <memory>
-#include <string>
-#include <stdlib.h>
-#include <stdio.h>
-#include <thread>
 #include <iostream>
 #include <map>
+#include <memory>
+#include <stdexcept>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string>
+#include <thread>
 
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/string.hpp"
@@ -68,7 +69,6 @@ std::map<int, std::string> PORT_TOPIC_MAP = {
     { LONG_DEPTH_AB_TCP_PORT, "LongDepthABFrames" },
     { PV_TCP_PORT,            "PVFrames" },
     { AUDIO_TCP_PORT,         "AudioData" }
-
 };
 
 class MinimalPublisher : public rclcpp::Node
@@ -76,7 +76,22 @@ class MinimalPublisher : public rclcpp::Node
   public:
     MinimalPublisher()
     : Node("minimal_publisher"), count_(0)
-    {}
+    {
+      try
+      {
+        tcp_server_uri =
+          this->declare_parameter( "tcp_server_uri" ).get< std::string >();
+      }
+      catch( rclcpp::ParameterTypeException const &ex )
+      {
+        std::stringstream ss;
+        ss << "Server IP address cannot be empty: " << ex.what();
+        throw std::invalid_argument( ss.str() );
+      }
+      RCLCPP_INFO( this->get_logger(),
+                   "Starting talker, intending to connect to TCP server @ %s",
+                   tcp_server_uri.c_str() );
+    }
 
     std::thread StartTCPServerThread(int port)
     {
@@ -100,8 +115,7 @@ class MinimalPublisher : public rclcpp::Node
 
   private:
     size_t count_;
-    // std::string server_ip_addr = "10.50.59.115";
-    std::string server_ip_addr = "192.168.1.101";
+    std::string tcp_server_uri;
 
     void TCPServerVideoThread(int port)
     {
@@ -327,7 +341,7 @@ class MinimalPublisher : public rclcpp::Node
 
       addr.sin_family = AF_INET;
       addr.sin_port = htons(port);
-      inet_pton(AF_INET, server_ip_addr.c_str(), &(addr.sin_addr));
+      inet_pton(AF_INET, tcp_server_uri.c_str(), &(addr.sin_addr));
 
       if (connect(s, (SOCKADDR *)&addr, sizeof(addr)) < 0)
       {
@@ -340,7 +354,7 @@ class MinimalPublisher : public rclcpp::Node
       struct sockaddr_in addr;
       addr.sin_family = AF_INET;
       addr.sin_port = htons(port);
-      inet_pton(AF_INET, server_ip_addr.c_str(), &(addr.sin_addr));
+      inet_pton(AF_INET, tcp_server_uri.c_str(), &(addr.sin_addr));
 
       if (connect(s, (struct sockaddr*)&addr, sizeof(addr)) < 0)
       {

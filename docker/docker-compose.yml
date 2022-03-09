@@ -66,7 +66,6 @@ services:
       # assume this file exists, should be created before running.
       - ${XAUTH_FILEPATH}:/tmp/.docker.xauth
     environment:
-      PYTHONDONTWRITEBYTECODE: "true"
       HISTFILE: /angel_workspace/stuff/bash_history
       CYCLONE_DDS_INTERFACE:  # from .env file or parent environment
       SETUP_WORKSPACE_INSTALL:  # from .env file or parent environment
