@@ -15,18 +15,7 @@ SHELL ["/bin/bash", "-c"]
 ENV LC_ALL=C.UTF-8 \
     LANG=C.UTF-8
 
-#
-# Isolate package.xml files for rosdep dependency installation.
-#
-FROM base AS tmp_package_files
-COPY ./ros /angel_workspace/src
-RUN find /angel_workspace/src -type f \! -name "package.xml" -print | xargs rm
-
-#
-# Build our workspace
-#
-FROM base AS build
-
+# Basic system package installations
 RUN apt-get -y update \
  && apt-get -y install \
         gettext-base \
@@ -49,16 +38,33 @@ RUN pip3 install --user pip==22.0.3 \
  && (curl -sSL 'https://install.python-poetry.org' | python3 -) \
  && poetry config virtualenvs.create false
 
+# Location to root our installation and workspace.
+# This should be an absolute path.
+ARG ANGEL_WORKSPACE_DIR
+ENV ANGEL_WORKSPACE_DIR="${ANGEL_WORKSPACE_DIR}"
+
+#
+# Isolate package.xml files for rosdep dependency installation.
+#
+FROM base AS tmp_package_files
+COPY ./ros "${ANGEL_WORKSPACE_DIR}"/src
+RUN find "${ANGEL_WORKSPACE_DIR}"/src -type f \! -name "package.xml" -print | xargs rm
+
+#
+# Build our workspace
+#
+FROM base AS build
+
 # Bring in just package files from source tree for rosdep to use.
-COPY --from=tmp_package_files /angel_workspace /angel_workspace
+COPY --from=tmp_package_files "${ANGEL_WORKSPACE_DIR}" "${ANGEL_WORKSPACE_DIR}"
 RUN apt-get -y update \
- && rosdep install -i --from-path /angel_workspace --rosdistro ${ROS_DISTRO} -y \
+ && rosdep install -i --from-path "${ANGEL_WORKSPACE_DIR}" --rosdistro ${ROS_DISTRO} -y \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
 # Install tracked python dependencies
-COPY poetry.lock pyproject.toml /angel_workspace/
-RUN cd /angel_workspace \
+COPY poetry.lock pyproject.toml "${ANGEL_WORKSPACE_DIR}"/
+RUN cd "${ANGEL_WORKSPACE_DIR}" \
     # TODO: Re-enable use of hashes once editable/git deps are removed. \
     #       - Remove `--without-hashes` option. \
     # * Poetry extraneously finds matplotlib requiring setuptools-scm.
@@ -70,16 +76,15 @@ RUN cd /angel_workspace \
 # Load in any model files the workspace will require at runtime.
 # TODO
 
-COPY ./ros /angel_workspace/src
-WORKDIR /angel_workspace
-
-COPY docker/workspace_build.sh /angel_workspace/
-RUN /angel_workspace/workspace_build.sh
+COPY ./ros "${ANGEL_WORKSPACE_DIR}/src"
+COPY docker/workspace_build.sh "${ANGEL_WORKSPACE_DIR}"/
+RUN "${ANGEL_WORKSPACE_DIR}/workspace_build.sh"
 
 COPY docker/cyclonedds_profile.xml.tmpl \
      docker/workspace_entrypoint.sh \
      docker/workspace_setenv.sh \
-     /angel_workspace/
+     "${ANGEL_WORKSPACE_DIR}"/
 
-ENTRYPOINT ["/angel_workspace/workspace_entrypoint.sh"]
+WORKDIR "${ANGEL_WORKSPACE_DIR}"
+ENTRYPOINT ["./workspace_entrypoint.sh"]
 CMD ["bash"]

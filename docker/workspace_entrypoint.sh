@@ -12,11 +12,11 @@ source "/opt/ros/${ROS_DISTRO}/setup.bash"
 # If the variable is set, activate our workspace install setup
 if [[ -n "$SETUP_WORKSPACE_INSTALL" ]]
 then
-  source /angel_workspace/install/setup.bash
+  source "${ANGEL_WORKSPACE_DIR}/install/setup.bash"
 fi
 
 # Activate our workspace
-source /angel_workspace/workspace_setenv.sh
+source "${ANGEL_WORKSPACE_DIR}/workspace_setenv.sh"
 
 # If CYCLONE_DDS_INTERFACE is defined to a value, then template
 if [[ -n "$CYCLONE_DDS_INTERFACE" ]]
