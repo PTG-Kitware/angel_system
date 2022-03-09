@@ -10,6 +10,13 @@ from launch_ros.actions import PushRosNamespace
 
 def generate_launch_description():
     launch_arguments = [
+        # Required arguments
+        DeclareLaunchArgument(
+            "hl2_ip",
+            description="IP address of the Hololens2 device running the "
+                        "sensor publishing package."
+        ),
+        # Arguments with defaults
         DeclareLaunchArgument(
             "ns", default_value="",
             description="Namespace nodes in this launch file should run under "
@@ -33,6 +40,9 @@ def generate_launch_description():
             package="cpp_pubsub",
             executable="talker",
             name="data_hub",
+            parameters=[{
+                "tcp_server_uri": LaunchConfiguration("hl2_ip"),
+            }],
             remappings=[
                 ("PVFrames", LaunchConfiguration("source_image_topic")),
             ]
