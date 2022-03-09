@@ -133,8 +133,13 @@ class ObjectDetectorDebug(Node):
 
         # Publish out drawn-on image.
         img_mat = np.asarray(pil_image)
-        # img_msg = BRIDGE.cv2_to_imgmsg(img_mat, encoding="rgb8")
-        img_msg = BRIDGE.cv2_to_compressed_imgmsg(img_mat, dst_format='jpg')
+
+        # the to-compressed-image simply takes in a matrix which it assumes is
+        # an OpenCV matrix, which by standard is a BGR matrix, so we need to
+        # swap the R/B channels before passing to this.
+        img_mat_bgr = img_mat[:, :, ::-1]
+
+        img_msg = BRIDGE.cv2_to_compressed_imgmsg(img_mat_bgr, dst_format='jpg')
         img_msg.header = image.header
         self._pub_debug_detections_image.publish(img_msg)
 
