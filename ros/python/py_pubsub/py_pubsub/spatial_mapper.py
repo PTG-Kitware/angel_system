@@ -28,19 +28,15 @@ class SpatialMapSubscriber(Node):
     def __init__(self):
         super().__init__(self.__class__.__name__)
 
-        self.declare_parameter("spatial_map_topic", "SpatialMapData")
-        self.declare_parameter("det_topic", "ObjectDetections")
-        self.declare_parameter("3d_det_topic", "ObjectDetections3d")
-        self.declare_parameter("pose_topic", "HeadsetPoseData")
-
-        self._spatial_map_topic = self.get_parameter("spatial_map_topic").get_parameter_value().string_value
-        self._det_topic = self.get_parameter("det_topic").get_parameter_value().string_value
-        self._3d_det_topic = self.get_parameter("3d_det_topic").get_parameter_value().string_value
-        self._pose_topic = self.get_parameter("pose_topic").get_parameter_value().string_value
+        self._spatial_map_topic = self.declare_parameter("spatial_map_topic", "SpatialMapData").get_parameter_value().string_value
+        self._det_topic = self.declare_parameter("det_topic", "ObjectDetections").get_parameter_value().string_value
+        self._pose_topic = self.declare_parameter("pose_topic", "HeadsetPoseData").get_parameter_value().string_value
+        self._det_topic_3d = self.declare_parameter("det_topic_3d", "ObjectDetections3d").get_parameter_value().string_value
 
         log = self.get_logger()
         log.info(f"Spatial map topic: {self._spatial_map_topic}")
         log.info(f"Detection topic: {self._det_topic}")
+        log.info(f"Detection3d topic: {self._det_topic_3d}")
         log.info(f"Pose topic: {self._pose_topic}")
 
         self._spatial_mesh_subscription = self.create_subscription(
@@ -65,7 +61,7 @@ class SpatialMapSubscriber(Node):
 
         self._object_3d_publisher = self.create_publisher(
             ObjectDetection3dSet,
-            self._3d_det_topic,
+            self._det_topic_3d,
             1
         )
 
