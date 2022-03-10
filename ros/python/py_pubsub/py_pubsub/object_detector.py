@@ -8,7 +8,6 @@ from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import Image
 from smqtk_detection.impls.detect_image_objects.resnet_frcnn import ResNetFRCNN
-import PIL
 
 from angel_msgs.msg import ObjectDetection2dSet
 from angel_utils.conversion import from_detect_image_objects_result
@@ -24,7 +23,7 @@ class ObjectDetector(Node):
 
         self.declare_parameter("image_topic", "PVFrames")
         self.declare_parameter("det_topic", "ObjectDetections")
-        self.declare_parameter("use_cuda", True)
+        self.declare_parameter("use_cuda", False)
         self.declare_parameter("detection_threshold", 0.8)
 
         self._image_topic = self.get_parameter("image_topic").get_parameter_value().string_value

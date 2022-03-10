@@ -52,12 +52,12 @@ tmux_options: -f <%= ENV["ANGEL_WORKSPACE_DIR"] %>/tmux/tmux.conf
 # attach: false
 
 windows:
-  - datahub: ros2 run ptg_datahub talker --ros-args 
-      -r __ns:=${ROS_NAMESPACE} 
+  - datahub: ros2 run ptg_datahub datahub --ros-args
+      -r __ns:=${ROS_NAMESPACE}
       -p tcp_server_uri:=${HL2_IP}
-  - detector: ros2 run py_pubsub object_detector --ros-args 
-      -r __ns:=${ROS_NAMESPACE} 
-      -p image_topic:=PVFrames 
+  - detector: ros2 run py_pubsub object_detector --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p image_topic:=PVFrames
       -p det_topic:=detections
       -p use_cuda:=true
   - debug_overlay: ros2 run py_pubsub object_detector_debug --ros-args
@@ -65,8 +65,8 @@ windows:
       -p image_topic:=PVFrames
       -p det_topic:=detections
       -p out_image_topic:=image_debug/compressed
-  - rqt: rqt -s rqt_image_view/ImageView 
-      --args ${ROS_NAMESPACE}/image_debug/compressed 
+  - rqt: rqt -s rqt_image_view/ImageView
+      --args ${ROS_NAMESPACE}/image_debug/compressed
   - spatial_mapper: ros2 run py_pubsub spatial_mapper --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p spatial_map_topic:=SpatialMapData

@@ -21,8 +21,8 @@ find_package(angel_msgs REQUIRED)
 find_package(cv_bridge REQUIRED )
 find_package(OpenCV REQUIRED COMPONENTS core )
 
-add_executable(talker src/ptg_datahub.cpp)
-ament_target_dependencies(talker 
+add_executable(datahub src/ptg_datahub.cpp)
+ament_target_dependencies(datahub
   rclcpp
   std_msgs
   sensor_msgs
@@ -34,7 +34,7 @@ ament_target_dependencies(talker
   )
 
 install(TARGETS
-  talker
+  datahub
   DESTINATION lib/${PROJECT_NAME})
 
 ament_package()

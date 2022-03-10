@@ -101,7 +101,7 @@ class PTGDataHub : public rclcpp::Node
         throw std::invalid_argument( ss.str() );
       }
       RCLCPP_INFO( this->get_logger(),
-                   "Starting talker, intending to connect to TCP server @ %s",
+                   "Starting datahub, intending to connect to TCP server @ %s",
                    tcp_server_uri.c_str() );
 
       _object_3d_subscriber = this->create_subscription<angel_msgs::msg::ObjectDetection3dSet>(
