@@ -26,8 +26,19 @@ RUN apt-get -y update \
         tmuxinator \
         # for python simpleaudio
         libasound2-dev \
+        # for opengl use with trimesh
+        libglvnd0 \
+        libgl1 \
+        libglx0 \
+        libegl1 \
+        libxext6 \
+        libx11-6 \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
+
+# Env vars for the nvidia-container-runtime.
+ENV NVIDIA_VISIBLE_DEVICES all
+ENV NVIDIA_DRIVER_CAPABILITIES graphics,utility,compute
 
 # Bring in poetry for standard python package installation.
 # NODE: Installing "dev" dependencies here because why not. Stop if the desire
