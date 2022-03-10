@@ -100,12 +100,34 @@ class PTGDataHub : public rclcpp::Node
         ss << "Server IP address cannot be empty: " << ex.what();
         throw std::invalid_argument( ss.str() );
       }
+      try
+      {
+        det_3d_topic =
+          this->declare_parameter( "det_3d_topic" ).get< std::string >();
+      }
+      catch( rclcpp::ParameterTypeException const &ex )
+      {
+        std::stringstream ss;
+        ss << "Detections 3D topic cannot be empty: " << ex.what();
+        throw std::invalid_argument( ss.str() );
+      }
+      try
+      {
+        headset_pose_topic =
+          this->declare_parameter( "headset_pose_topic" ).get< std::string >();
+      }
+      catch( rclcpp::ParameterTypeException const &ex )
+      {
+        std::stringstream ss;
+        ss << "Headset pose topic cannot be empty: " << ex.what();
+        throw std::invalid_argument( ss.str() );
+      }
       RCLCPP_INFO( this->get_logger(),
                    "Starting datahub, intending to connect to TCP server @ %s",
                    tcp_server_uri.c_str() );
 
       _object_3d_subscriber = this->create_subscription<angel_msgs::msg::ObjectDetection3dSet>(
-        "ObjectDetections3d", 100,
+        det_3d_topic, 100,
         std::bind(&PTGDataHub::object_detection_3d_callback, this, _1 )
       );
 
@@ -140,6 +162,8 @@ class PTGDataHub : public rclcpp::Node
     rclcpp::Subscription< angel_msgs::msg::ObjectDetection3dSet >::SharedPtr _object_3d_subscriber;
     size_t count_;
     std::string tcp_server_uri;
+    std::string det_3d_topic;
+    std::string headset_pose_topic;
     std::vector<angel_msgs::msg::ObjectDetection3dSet::SharedPtr> _detections;
     std::mutex _detection_mutex;
 
@@ -313,7 +337,7 @@ class PTGDataHub : public rclcpp::Node
 
       if (port == PV_TCP_PORT)
       {
-        pose_publisher_ = this->create_publisher<angel_msgs::msg::HeadsetPoseData>("HeadsetPoseData", 10);
+        pose_publisher_ = this->create_publisher<angel_msgs::msg::HeadsetPoseData>(headset_pose_topic, 10);
       }
       frame_id = PORT_TOPIC_MAP[port];
       std::cout << "[" << frame_id << "] Created publisher\n";
@@ -563,7 +587,11 @@ class PTGDataHub : public rclcpp::Node
             std::vector<unsigned char> byte_message = serialize_detection_message(d);
 
             // send via the TCP socket
-            int bytes_sent = send(cs, &byte_message[0], byte_message.size(), 0);
+            unsigned int bytes_sent = send(cs, &byte_message[0], byte_message.size(), 0);
+            if (bytes_sent != byte_message.size())
+            {
+              std::cout << "Warning! Did not send full detection message" << std::endl;
+            }
         }
         _detections.clear();
         _detection_mutex.unlock();

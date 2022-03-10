@@ -55,6 +55,8 @@ windows:
   - datahub: ros2 run ptg_datahub datahub --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p tcp_server_uri:=${HL2_IP}
+      -p det_3d_topic:=ObjectDetections3d
+      -p headset_pose_topic:=HeadsetPoseData
   - detector: ros2 run py_pubsub object_detector --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p image_topic:=PVFrames
@@ -71,5 +73,5 @@ windows:
       -r __ns:=${ROS_NAMESPACE}
       -p spatial_map_topic:=SpatialMapData
       -p det_topic:=detections
-      -p det_topic_3d:=ObjectDetections3d
-      -p pose_topic:=HeadsetPoseData
+      -p det_3d_topic:=ObjectDetections3d
+      -p headset_pose_topic:=HeadsetPoseData

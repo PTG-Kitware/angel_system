@@ -30,14 +30,14 @@ class SpatialMapSubscriber(Node):
 
         self._spatial_map_topic = self.declare_parameter("spatial_map_topic", "SpatialMapData").get_parameter_value().string_value
         self._det_topic = self.declare_parameter("det_topic", "ObjectDetections").get_parameter_value().string_value
-        self._pose_topic = self.declare_parameter("pose_topic", "HeadsetPoseData").get_parameter_value().string_value
-        self._det_topic_3d = self.declare_parameter("det_topic_3d", "ObjectDetections3d").get_parameter_value().string_value
+        self._headset_pose_topic = self.declare_parameter("headset_pose_topic", "HeadsetPoseData").get_parameter_value().string_value
+        self._det_3d_topic = self.declare_parameter("det_3d_topic", "ObjectDetections3d").get_parameter_value().string_value
 
         log = self.get_logger()
         log.info(f"Spatial map topic: {self._spatial_map_topic}")
         log.info(f"Detection topic: {self._det_topic}")
-        log.info(f"Detection3d topic: {self._det_topic_3d}")
-        log.info(f"Pose topic: {self._pose_topic}")
+        log.info(f"Detection3d topic: {self._det_3d_topic}")
+        log.info(f"Pose topic: {self._headset_pose_topic}")
 
         self._spatial_mesh_subscription = self.create_subscription(
             SpatialMesh,
@@ -52,16 +52,16 @@ class SpatialMapSubscriber(Node):
             100
         )
 
-        self._pose_subscription = self.create_subscription(
+        self._headset_pose_subscription = self.create_subscription(
             HeadsetPoseData,
-            self._pose_topic,
+            self._headset_pose_topic,
             self.headset_pose_callback,
             100
         )
 
         self._object_3d_publisher = self.create_publisher(
             ObjectDetection3dSet,
-            self._det_topic_3d,
+            self._det_3d_topic,
             1
         )
 
