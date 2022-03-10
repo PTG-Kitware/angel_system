@@ -12,6 +12,7 @@ EditorBuildSettings:
     path: Assets/Samples/Mixed Reality Toolkit Examples/2.7.2/Demos - HandTracking/Scenes/HandInteractionExamples.unity
     guid: 3dd4a396b5225f8469b9a1eb608bfa57
   m_configObjects:
+    Unity.XR.WindowsMR.Settings: {fileID: 11400000, guid: 95f898116f619a3409d30671b28ea368, type: 2}
     UnityEditor.XR.ARKit.ARKitSettings: {fileID: 11400000, guid: f70ea7d0e18721e4583bc951e6f7bbfc, type: 2}
     com.unity.xr.management.loader_settings: {fileID: 11400000, guid: aba23145b8872e44091e5ad4fc79c2b0, type: 2}
     com.unity.xr.openxr.settings4: {fileID: 11400000, guid: d5af298d434800c49bc83a4b5492e0d2, type: 2}

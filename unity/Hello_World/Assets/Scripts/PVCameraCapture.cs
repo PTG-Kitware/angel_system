@@ -24,7 +24,9 @@ using Windows.Media;
 using Windows.Media.Capture;
 using Windows.Media.Capture.Frames;
 using Windows.Media.MediaProperties;
+using Windows.Media.Devices.Core;
 using Windows.Perception.Spatial;
+using Windows.Perception;
 using System.Runtime.InteropServices.WindowsRuntime;
 #endif
 
@@ -36,7 +38,8 @@ public class PVCameraCapture : MonoBehaviour
     private MediaFrameReader frameReader = null;
     private byte[] frameData = null;
 
-    Windows.Perception.Spatial.SpatialCoordinateSystem worldOrigin;
+    SpatialCoordinateSystem worldOrigin;
+
 #endif
 
     // Network stuff
@@ -88,13 +91,6 @@ public class PVCameraCapture : MonoBehaviour
         return ref this._logger;
     }
 
-    private void Awake()
-    {
-#if ENABLE_WINMD_SUPPORT
-        worldOrigin = Windows.Perception.Spatial.SpatialLocator.GetDefault().CreateStationaryFrameOfReferenceAtCurrentLocation().CoordinateSystem;
-#endif
-    }
-
     // Start is called before the first frame update
     async void Start()
     {
@@ -126,6 +122,20 @@ public class PVCameraCapture : MonoBehaviour
         }
 
         log.LogInfo("Media capture started");
+
+        try
+        {
+            worldOrigin = Marshal.GetObjectForIUnknown(UnityEngine.XR.WindowsMR.WindowsMREnvironment.OriginSpatialCoordinateSystem) as SpatialCoordinateSystem;
+            if (worldOrigin == null)
+            {
+                log.LogInfo("Unable to get world origin");
+            }
+        }
+        catch (Exception e)
+        {
+            log.LogInfo(e.ToString());
+        }
+
 #endif
     }
 
@@ -137,16 +147,7 @@ public class PVCameraCapture : MonoBehaviour
             debugString = "";
         }
 
-        //this.logger().LogInfo("cameras: " + Camera.allCamerasCount.ToString());
-        //this.logger().LogInfo("camera fov: " + Camera.main.fieldOfView.ToString());
-
-        //this.logger().LogInfo("camera far clip: " + Camera.main.farClipPlane.ToString());
-        //this.logger().LogInfo("camera near clp: " + Camera.main.nearClipPlane.ToString());
-
         projectionMatrix = Camera.main.projectionMatrix;
-        //this.logger().LogInfo("projection matrix: " + projectionMatrix.ToString());
-
-        //this.logger().LogInfo("world matrix: " + Camera.main.cameraToWorldMatrix.ToString());
     }
 
     void SetupPVCapture()
@@ -179,10 +180,10 @@ public class PVCameraCapture : MonoBehaviour
     {
         int targetVideoWidth, targetVideoHeight;
         float targetVideoFrameRate;
-        targetVideoWidth = 1280;
-        targetVideoHeight = 720;
-        //targetVideoWidth = 1920;
-        //targetVideoHeight = 1080;
+        //targetVideoWidth = 1280;
+        //targetVideoHeight = 720;
+        targetVideoWidth = 1920;
+        targetVideoHeight = 1080;
         targetVideoFrameRate = 30.0f;
 
         var allGroups = await MediaFrameSourceGroup.FindAllAsync();
@@ -256,7 +257,6 @@ public class PVCameraCapture : MonoBehaviour
                     else if (Mathf.Abs(f.FrameRate.Numerator / f.FrameRate.Denominator - targetVideoFrameRate) < framerateDiffMin)
                     {
                         targetResFormat = f;
-                        //this.logger().LogInfo("Else?");
                         framerateDiffMin = Mathf.Abs(f.FrameRate.Numerator / f.FrameRate.Denominator - targetVideoFrameRate);
                     }
                 }
@@ -285,8 +285,6 @@ public class PVCameraCapture : MonoBehaviour
             return false;
         }
 
-        this.logger().LogInfo("InitializeMediaCaptureAsyncTask() is successful");
-
         return true;
     }
 
@@ -314,6 +312,7 @@ public class PVCameraCapture : MonoBehaviour
                     }
 
                     //Matrix4x4 latestLocatableCameraToWorld = ConvertFloatArrayToMatrix4x4(cameraToWorldMatrixAsFloat);
+
                     //debugString = "Camera pos: " + latestLocatableCameraToWorld.ToString();
                     //debugString = "Multiply point: " + latestLocatableCameraToWorld.MultiplyPoint(new Vector3(0, 0, 0)).ToString() + "\n";
 
@@ -386,6 +385,7 @@ public class PVCameraCapture : MonoBehaviour
         }
 
         SpatialCoordinateSystem cameraCoordinateSystem = frameReference.CoordinateSystem;
+
         if (cameraCoordinateSystem == null)
         {
             outMatrix = GetIdentityMatrixFloatArray();
@@ -393,6 +393,7 @@ public class PVCameraCapture : MonoBehaviour
         }
 
         System.Numerics.Matrix4x4? cameraCoordsToUnityCoordsMatrix = cameraCoordinateSystem.TryGetTransformTo(worldOrigin);
+
         if (cameraCoordsToUnityCoordsMatrix == null)
         {
             outMatrix = GetIdentityMatrixFloatArray();
