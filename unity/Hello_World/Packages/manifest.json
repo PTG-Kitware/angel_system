@@ -10,6 +10,7 @@
   ],
   "dependencies": {
     "com.microsoft.mixedreality.openxr": "file:MixedReality/com.microsoft.mixedreality.openxr-1.2.1.tgz",
+    "com.microsoft.mixedreality.sceneunderstanding": "file:MixedReality/com.microsoft.mixedreality.sceneunderstanding-0.6.0.tgz",
     "com.microsoft.mixedreality.toolkit.examples": "file:MixedReality/com.microsoft.mixedreality.toolkit.examples-2.7.2.tgz",
     "com.microsoft.mixedreality.toolkit.extensions": "file:MixedReality/com.microsoft.mixedreality.toolkit.extensions-2.7.2.tgz",
     "com.microsoft.mixedreality.toolkit.foundation": "file:MixedReality/com.microsoft.mixedreality.toolkit.foundation-2.7.2.tgz",
@@ -24,6 +25,7 @@
     "com.unity.timeline": "1.4.8",
     "com.unity.ugui": "1.0.0",
     "com.unity.xr.openxr": "1.3.1",
+    "com.unity.xr.windowsmr": "4.6.2",
     "com.unity.modules.ai": "1.0.0",
     "com.unity.modules.androidjni": "1.0.0",
     "com.unity.modules.animation": "1.0.0",
