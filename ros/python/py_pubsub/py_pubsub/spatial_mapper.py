@@ -73,6 +73,10 @@ class SpatialMapSubscriber(Node):
 
         self.poses = []
 
+        # TODO: get this from a ROS message?
+        self.image_height = 1080
+        self.image_width = 1920
+
         log = self.get_logger()
         #log.set_level(10)
 
@@ -117,9 +121,7 @@ class SpatialMapSubscriber(Node):
 
     def headset_pose_callback(self, pose):
         log = self.get_logger()
-
-        #log.info(f"pose stamp: {pose.header.stamp}")
-
+        log.debug(f"pose stamp: {pose.header.stamp}")
         self.poses.append(pose)
 
 
@@ -130,6 +132,8 @@ class SpatialMapSubscriber(Node):
             log.debug("No detections for this image")
             return
 
+        # locate the headset poses for this detection using
+        # the detection source timestamp
         world_matrix_1d = None
         projection_matrix_1d = None
 
@@ -138,7 +142,7 @@ class SpatialMapSubscriber(Node):
                 world_matrix_1d = self.poses[i].world_matrix
                 projection_matrix_1d = self.poses[i].projection_matrix
 
-                log.info(f"time stamps: {self.poses[i].header.stamp} {detection.source_stamp}")
+                log.debug(f"time stamps: {self.poses[i].header.stamp} {detection.source_stamp}")
 
                 # can clear out our pose list now assuming we won't get
                 # image frame detections out of order
@@ -146,15 +150,20 @@ class SpatialMapSubscriber(Node):
                 break
 
         if world_matrix_1d == None or projection_matrix_1d == None:
-            #log.info("Did not get world or projection matrix")
-            log.debug(f"image stamp: {detection.source_stamp}")
+            log.debug(f"Did not get world or projection matrix.")
             return
 
         # get world matrix from detection
         world_matrix_2d = self.convert_1d_4x4_to_2d_matrix(world_matrix_1d)
+        log.debug(f"world matrix {world_matrix_2d}")
 
-        log.info(f"world matrix {world_matrix_2d}")
+        # get position of the camera at the time of the frame
+        camera_origin = self.get_world_position(world_matrix_2d,
+                                                np.array([0.0, 0.0, 0.0]))
+        camera_origin[0][0] = -camera_origin[0][0]
+        camera_origin = camera_origin.reshape((1, 3))
 
+        # compute the x, y, and z axes for this image
         x_dir = self.get_world_position(world_matrix_2d,
                                         np.array([1.0, 0.0, 0.0]))
         x_dir[0][0] = -x_dir[0][0]
@@ -170,15 +179,7 @@ class SpatialMapSubscriber(Node):
         z_dir[0][0] = -z_dir[0][0]
         z_dir = z_dir.reshape((1, 3))
 
-        # get projection matrix from detection
-        projection_matrix_2d = self.convert_1d_4x4_to_2d_matrix(projection_matrix_1d)
-
-        # get position of the camera at the time of the frame
-        camera_origin = self.get_world_position(world_matrix_2d,
-                                                np.array([0.0, 0.0, 0.0]))
-        camera_origin[0][0] = -camera_origin[0][0]
-        camera_origin = camera_origin.reshape((1, 3))
-
+        # plot the x, y, and z axes on the scene
         vs = np.array([camera_origin[0], x_dir[0]])
         el = trimesh.path.entities.Line([0, 1])
         path = trimesh.path.Path3D(entities=[el], vertices=vs,
@@ -197,31 +198,28 @@ class SpatialMapSubscriber(Node):
                                    colors=np.array([0, 0, 255, 255]).reshape(1, 4))
         self.scene.add_geometry(path)
 
-        det_conf_mat = to_confidence_matrix(detection)
+        # get projection matrix from detection
+        projection_matrix_2d = self.convert_1d_4x4_to_2d_matrix(projection_matrix_1d)
 
+        # start creating the 3D detection set message
         det_3d_set_msg = ObjectDetection3dSet()
         det_3d_set_msg.header.stamp = self.get_clock().now().to_msg()
         det_3d_set_msg.header.frame_id = detection.header.frame_id
         det_3d_set_msg.source_stamp = detection.source_stamp
 
+        det_conf_mat = to_confidence_matrix(detection)
         for i in range(detection.num_detections):
             object_type = sorted(zip(det_conf_mat[i], detection.label_vec))[-1][1]
 
             # get pixel positions of detected object box and form into box corners
-            '''
             min_vertex0 = detection.left[i]
             min_vertex1 = detection.top[i]
             max_vertex0 = detection.right[i]
             max_vertex1 = detection.bottom[i]
-            '''
-            min_vertex0 = detection.left[i]
-            min_vertex1 = detection.top[i]
-            max_vertex0 = detection.right[i]
-            max_vertex1 = detection.bottom[i]
-            b_min_vertex0 = 0
-            b_min_vertex1 = 0
-            b_max_vertex0 = 1920
-            b_max_vertex1 = 1080
+            image_min_vertex0 = 0
+            image_min_vertex1 = 0
+            image_max_vertex0 = self.image_width
+            image_max_vertex1 = self.image_height
 
             corners_screen_pos = [[min_vertex0, min_vertex1], [min_vertex0, max_vertex1],
                                   [max_vertex0, max_vertex1], [max_vertex0, min_vertex1]]
@@ -235,54 +233,22 @@ class SpatialMapSubscriber(Node):
                 log.info(f"point 3d: {point_3d}")
                 if point_3d is None:
                     log.info(f"No point found!")
-                    #self.scene.show()
                     return
                 corners_world_pos.append(point_3d)
-                '''
-                log.info(f"x dir: {point_3d}")
-                log.info(f"{x_dir[0] * (box_width / 2)}")
-                log.info(f"{y_dir[0] * (box_height / 2)}")
-
-                point_corner1 = point_3d + x_dir[0] * (box_width / 2) + y_dir[0] * (box_height / 2)
-                point_corner2 = point_3d + x_dir[0] * (box_width / 2) - y_dir[0] * (box_height / 2)
-                point_corner3 = point_3d - x_dir[0] * (box_width / 2) - y_dir[0] * (box_height / 2)
-                point_corner4 = point_3d - x_dir[0] * (box_width / 2) + y_dir[0] * (box_height / 2)
-                corners_world_pos.append(point_corner1)
-                corners_world_pos.append(point_corner2)
-                corners_world_pos.append(point_corner3)
-                corners_world_pos.append(point_corner4)
-                vs = np.array([point_3d, point_x_away])
-                el = trimesh.path.entities.Line([0, 1])
-                path = trimesh.path.Path3D(entities=[el], vertices=vs,
-                                           colors=np.array([255, 255, 0, 255]).reshape(1, 4))
-                self.scene.add_geometry(path)
-                '''
 
             log.info(f"Drawing box for {object_type}")
-
             vs = np.array([corners_world_pos[0], corners_world_pos[1],
                            corners_world_pos[2], corners_world_pos[3]])
             el = trimesh.path.entities.Line([0, 1, 2, 3, 0])
             path = trimesh.path.Path3D(entities=[el], vertices=vs)
             self.scene.add_geometry(path)
 
-            bounds_screen_pos = [[b_min_vertex0, b_min_vertex1], [b_min_vertex0, b_max_vertex1],
-                                  [b_max_vertex0, b_max_vertex1], [b_max_vertex0, b_min_vertex1]]
-            # convert detection screen pixel coordinates to world coordinates
-            b_corners_world_pos = []
+            # draw the image edges
+            bounds_screen_pos = [[image_min_vertex0, image_min_vertex1], [image_min_vertex0, image_max_vertex1],
+                                 [image_max_vertex0, image_max_vertex1], [image_max_vertex0, image_min_vertex1]]
+            image_corners_world_pos = []
             for p in bounds_screen_pos:
-                scaled_point = p
-
-                half_width = 1920.0 / 2.0
-                half_height = 1080.0 / 2.0
-
-                # Translate registration to image center;
-                scaled_point[0] -= half_width
-                scaled_point[1] -= half_height
-
-                # Scale pixel coords to percentage coords (-1 to 1)
-                scaled_point[0] = scaled_point[0] / half_width
-                scaled_point[1] = scaled_point[1] / half_height * -1.0
+                scaled_point = self.scale_pixel_coordinates(p)
 
                 focal_length_x = projection_matrix_2d[0][0]
                 focal_length_y = projection_matrix_2d[1][1]
@@ -293,7 +259,7 @@ class SpatialMapSubscriber(Node):
                 center_x = center_x / norm_factor # 0
                 center_y = center_y / norm_factor # 0
 
-                # camera space
+                # convert to camera space
                 dir_ray = np.array([(scaled_point[0] - center_x) / focal_length_x,
                                     (scaled_point[1] - center_y) / focal_length_y,
                                     1.0 / norm_factor]).reshape((1, 3))
@@ -302,10 +268,10 @@ class SpatialMapSubscriber(Node):
                 direction = self.get_world_position(world_matrix_2d, dir_ray[0]).reshape((1, 3))
                 direction[0][0] = -direction[0][0]
 
-                b_corners_world_pos.append(direction[0])
+                image_corners_world_pos.append(direction[0])
 
-            vs = np.array([b_corners_world_pos[0], b_corners_world_pos[1],
-                           b_corners_world_pos[2], b_corners_world_pos[3]])
+            vs = np.array([image_corners_world_pos[0], image_corners_world_pos[1],
+                           image_corners_world_pos[2], image_corners_world_pos[3]])
             el = trimesh.path.entities.Line([0, 1, 2, 3, 0])
             path = trimesh.path.Path3D(entities=[el], vertices=vs, colors=np.array([255, 0, 255, 255]).reshape(1, 4))
             self.scene.add_geometry(path)
@@ -382,20 +348,7 @@ class SpatialMapSubscriber(Node):
         """
         log = self.get_logger()
 
-        scaled_point = p
-
-        #half_width = 1280.0 / 2.0
-        #half_height = 720.0 / 2.0
-        half_width = 1920.0 / 2.0
-        half_height = 1080.0 / 2.0
-
-        # Translate registration to image center;
-        scaled_point[0] -= half_width
-        scaled_point[1] -= half_height
-
-        # Scale pixel coords to percentage coords (-1 to 1)
-        scaled_point[0] = scaled_point[0] / half_width
-        scaled_point[1] = scaled_point[1] / half_height * -1.0
+        scaled_point = self.scale_pixel_coordinates(p)
 
         focal_length_x = projection_matrix[0][0]
         focal_length_y = projection_matrix[1][1]
@@ -403,14 +356,14 @@ class SpatialMapSubscriber(Node):
         center_y = projection_matrix[1][2]
 
         norm_factor = projection_matrix[2][2]
-        center_x = center_x / norm_factor # 0
-        center_y = center_y / norm_factor # 0
+        center_x = center_x / norm_factor
+        center_y = center_y / norm_factor
 
-        # camera space
+        # convert coords to camera space
         dir_ray = np.array([(scaled_point[0] - center_x) / focal_length_x,
                             (scaled_point[1] - center_y) / focal_length_y,
                             1.0 / norm_factor]).reshape((1, 3))
-        #log.info(f"dir_ray {dir_ray}")
+        log.debug(f"dir_ray {dir_ray}")
 
         # project camera space onto world position
         direction = self.get_world_position(world_matrix_2d, dir_ray[0]).reshape((1, 3))
@@ -420,8 +373,8 @@ class SpatialMapSubscriber(Node):
         el = trimesh.path.entities.Line([0, 1])
         path = trimesh.path.Path3D(entities=[el], vertices=vs, colors=np.array([255, 255, 0, 255]).reshape(1, 4))
         self.scene.add_geometry(path)
-        log.info(f"direction: {direction}")
-        log.info(f"origin : {camera_origin}")
+        log.debug(f"direction: {direction}")
+        log.debug(f"origin : {camera_origin}")
 
         intersecting_points = self.cast_ray(camera_origin, direction - camera_origin)
         if intersecting_points is None:
@@ -430,7 +383,7 @@ class SpatialMapSubscriber(Node):
 
         closest_point = None
         try:
-            log.info(f"Points found {intersecting_points}")
+            log.debug(f"Points found {intersecting_points}")
 
             # if there is more than one point found, use the closest one to the camera
             min_distance = -1
@@ -439,7 +392,7 @@ class SpatialMapSubscriber(Node):
                 distance = ((camera_origin[0][0] - point[0]) ** 2 +
                             (camera_origin[0][1] - point[1]) ** 2 +
                             (camera_origin[0][2] - point[2]) ** 2) ** 0.5
-                #log.debug(f"Point {p}: distance = {distance}")
+                log.debug(f"Point {p}: distance = {distance}")
                 if min_distance == -1:
                     min_distance = distance
                     closest_point = point
@@ -447,11 +400,33 @@ class SpatialMapSubscriber(Node):
                     min_distance = distance
                     closest_point = point
 
-            #log.debug(f"Closest point = {closest_point}")
+            log.debug(f"Closest point = {closest_point}")
         except Exception as e:
             log.info(e)
 
         return closest_point
+
+
+    def scale_pixel_coordinates(self, p):
+        """
+        Adapted from https://github.com/VulcanTechnologies/HoloLensCameraStream
+        """
+        log = self.get_logger()
+
+        scaled_point = p
+
+        half_width = self.image_width / 2.0
+        half_height = self.image_height / 2.0
+
+        # translate registration to image center
+        scaled_point[0] -= half_width
+        scaled_point[1] -= half_height
+
+        # scale pixel coords to percentage coords (-1 to 1)
+        scaled_point[0] = scaled_point[0] / half_width
+        scaled_point[1] = scaled_point[1] / half_height * -1.0
+
+        return scaled_point
 
 
 def main():
