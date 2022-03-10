@@ -37,9 +37,7 @@ public class PVCameraCapture : MonoBehaviour
     MediaCapture mediaCapture = null;
     private MediaFrameReader frameReader = null;
     private byte[] frameData = null;
-
     SpatialCoordinateSystem worldOrigin;
-
 #endif
 
     // Network stuff
@@ -191,8 +189,6 @@ public class PVCameraCapture : MonoBehaviour
         for (int i = 0; i < allGroups.Count; i++)
         {
             var group = allGroups[i];
-            //this.logger().LogInfo(group.DisplayName + ", " + group.Id + " " + allGroups.Count.ToString());
-            //this.logger().LogInfo(group.DisplayName);
             if (group.DisplayName == "QC Back Camera")
             {
                 selectedGroupIndex = i;
@@ -243,14 +239,10 @@ public class PVCameraCapture : MonoBehaviour
             float framerateDiffMin = 60f;
             foreach (var f in mediaFrameSourceVideo.SupportedFormats.OrderBy(x => x.VideoFormat.Width * x.VideoFormat.Height))
             {
-                //this.logger().LogInfo("Format width: " + f.VideoFormat.Width.ToString());
-                //this.logger().LogInfo("Format height: " + f.VideoFormat.Height.ToString());
-
                 if (f.VideoFormat.Width == targetVideoWidth && f.VideoFormat.Height == targetVideoHeight)
                 {
                     if (targetResFormat == null)
                     {
-                        //this.logger().LogInfo("Found matching format");
                         targetResFormat = f;
                         framerateDiffMin = Mathf.Abs(f.FrameRate.Numerator / f.FrameRate.Denominator - targetVideoFrameRate);
                     }
@@ -311,16 +303,7 @@ public class PVCameraCapture : MonoBehaviour
                         debugString += e.ToString();
                     }
 
-                    //Matrix4x4 latestLocatableCameraToWorld = ConvertFloatArrayToMatrix4x4(cameraToWorldMatrixAsFloat);
-
-                    //debugString = "Camera pos: " + latestLocatableCameraToWorld.ToString();
-                    //debugString = "Multiply point: " + latestLocatableCameraToWorld.MultiplyPoint(new Vector3(0, 0, 0)).ToString() + "\n";
-
                     var originalSoftwareBitmap = frame.VideoMediaFrame.SoftwareBitmap;
-
-                    //debugString += "height: " + newSoftwareBitmap.PixelHeight.ToString() + "\n";
-                    //debugString += "width: " + newSoftwareBitmap.PixelWidth.ToString() + "\n";
-                    //debugString += "pixel f: " + newSoftwareBitmap.BitmapPixelFormat.ToString() + "\n";
 
                     using (var input = originalSoftwareBitmap.LockBuffer(BitmapBufferAccessMode.Read))
                     using (var inputReference = input.CreateReference())
@@ -328,11 +311,6 @@ public class PVCameraCapture : MonoBehaviour
                         byte* inputBytes;
                         uint inputCapacity;
                         ((IMemoryBufferByteAccess)inputReference).GetBuffer(out inputBytes, out inputCapacity);
-
-                        //debugString = "capacity: " + inputCapacity.ToString() + "\n";
-                        //debugString += "alpha mode: " + originalSoftwareBitmap.BitmapAlphaMode.ToString() + "\n";
-                        //debugString = "height: " + originalSoftwareBitmap.PixelHeight.ToString() + "\n";
-                        //debugString += "width: " + originalSoftwareBitmap.PixelWidth.ToString() + "\n";
 
                         // add header
                         byte[] frameHeader = { 0x1A, 0xCF, 0xFC, 0x1D,

@@ -89,7 +89,6 @@ public class SpatialMappingCapture : MonoBehaviour, IMixedRealitySpatialAwarenes
 
         Thread tSpatialMappingCapture = new Thread(SetupSpatialMappingCapture);
         tSpatialMappingCapture.Start();
-        //log.LogInfo("Waiting for spatial mapping TCP connection");
     }
 
     // Update is called once per frame
@@ -221,6 +220,9 @@ public class SpatialMappingCapture : MonoBehaviour, IMixedRealitySpatialAwarenes
                         break;
                     }
                     bufferIndex += 4;
+
+                    // NOTE: uncomment if you need access to the other fields like
+                    // the image timestamps
 
                     // get message length
                     byte[] lengthBytes = new byte[4];
@@ -397,9 +399,6 @@ public class SpatialMappingCapture : MonoBehaviour, IMixedRealitySpatialAwarenes
 
     public virtual void OnObservationRemoved(MixedRealitySpatialAwarenessEventData<SpatialAwarenessMeshObject> eventData)
     {
-
-        this.logger().LogInfo("removal! " + eventData.SpatialObject.Id.ToString());
-
         int id = eventData.SpatialObject.Id;
         Thread tSendObject = new Thread(() => SendMeshObjectRemoval(id));
         tSendObject.Start();
@@ -446,10 +445,6 @@ public class SpatialMappingCapture : MonoBehaviour, IMixedRealitySpatialAwarenes
                                 (byte)(numTriangles >> 0)
                             };
         System.Buffer.BlockCopy(frameHeader, 0, serializedMesh, 0, frameHeader.Length);
-
-        //debugString += meshObject.Filter.mesh.vertices[0].x.ToString() + " ";
-        //debugString += meshObject.Filter.mesh.vertices[0].y.ToString() + " ";
-        //debugString += meshObject.Filter.mesh.vertices[0].z.ToString() + " ";
 
         // add vertices
         for (int i = 0; i < (numVertices * 12); i += 12)
