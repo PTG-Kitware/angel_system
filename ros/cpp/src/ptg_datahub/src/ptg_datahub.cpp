@@ -417,8 +417,6 @@ class PTGDataHub : public rclcpp::Node
           time_prev = time_now;
         }
 
-        //continue;
-
         // send ROS message
         sensor_msgs::msg::Image image_message = sensor_msgs::msg::Image();
 
@@ -468,8 +466,6 @@ class PTGDataHub : public rclcpp::Node
         }
 
         publisher_->publish(image_message);
-        //std::cout << "Published!" << std::endl;
-        //std::this_thread::sleep_for(std::chrono::milliseconds(1));
       }
     }
 
@@ -548,14 +544,10 @@ class PTGDataHub : public rclcpp::Node
           time_prev = time_now;
         }
 
-        //continue;
-
         // send ROS message
         std_msgs::msg::UInt8MultiArray message = std_msgs::msg::UInt8MultiArray();
         message.data = frame_data;
         publisher_->publish(message);
-        //std::cout << "Published audio!" << std::endl;
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
       }
     }
 
@@ -728,7 +720,6 @@ class PTGDataHub : public rclcpp::Node
         }
 
         publisher_->publish(message);
-        //std::this_thread::sleep_for(std::chrono::milliseconds(1));
       }
     }
 
