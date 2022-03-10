@@ -57,8 +57,6 @@ class ObjectDetector(Node):
         self._detector = ResNetFRCNN(img_batch_size=1, use_cuda=self._use_cuda)
         log.info(f"Ready to detect using {self._detector}")
 
-        self.stop = False
-
     def listener_callback(self, image):
         log = self.get_logger()
         self._frames_recvd += 1
@@ -68,8 +66,6 @@ class ObjectDetector(Node):
             log.info(f"Frames rcvd: {self._frames_recvd}")
             self._frames_recvd = 0
             self._prev_time = time.time()
-        if self.stop:
-            return
 
         # convert NV12 image to RGB
         rgb_image = BRIDGE.imgmsg_to_cv2(image, desired_encoding="rgb8")
