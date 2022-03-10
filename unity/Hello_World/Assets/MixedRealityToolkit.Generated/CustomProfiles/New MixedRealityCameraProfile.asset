@@ -27,7 +27,7 @@ MonoBehaviour:
     componentName: XR SDK Windows Mixed Reality Camera Settings
     priority: 0
     runtimePlatform: 9
-    settingsProfile: {fileID: 11400000, guid: b8be5b71c8e0a254c83b691d62a79ff5, type: 2}
+    settingsProfile: {fileID: 11400000, guid: 08d6cd81f7104b74ba5d606109e3c6f2, type: 2}
   - componentType:
       reference: Microsoft.MixedReality.Toolkit.XRSDK.GenericXRSDKCameraSettings,
         Microsoft.MixedReality.Toolkit.Providers.XRSDK
