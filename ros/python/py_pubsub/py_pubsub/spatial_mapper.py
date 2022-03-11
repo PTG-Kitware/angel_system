@@ -137,7 +137,8 @@ class SpatialMapSubscriber(Node):
         world_matrix_1d = None
         projection_matrix_1d = None
 
-        for i in range(len(self.poses)):
+        # TODO: maybe implement a more efficient binary search here
+        for i in reversed(range(len(self.poses))):
             if detection.source_stamp == self.poses[i].header.stamp:
                 world_matrix_1d = self.poses[i].world_matrix
                 projection_matrix_1d = self.poses[i].projection_matrix
