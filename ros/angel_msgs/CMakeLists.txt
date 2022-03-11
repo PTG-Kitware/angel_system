@@ -18,11 +18,16 @@ find_package( ament_cmake REQUIRED )
 find_package( rosidl_default_generators REQUIRED )
 find_package( builtin_interfaces REQUIRED )
 find_package( std_msgs REQUIRED )
+find_package( geometry_msgs REQUIRED )
+find_package( shape_msgs REQUIRED )
 
 rosidl_generate_interfaces( ${PROJECT_NAME}
+  msg/HeadsetPoseData.msg
   msg/ObjectDetection2d.msg
   msg/ObjectDetection2dSet.msg
-  DEPENDENCIES builtin_interfaces std_msgs
+  msg/ObjectDetection3dSet.msg
+  msg/SpatialMesh.msg
+  DEPENDENCIES builtin_interfaces std_msgs geometry_msgs shape_msgs
   )
 
 if( BUILD_TESTING )

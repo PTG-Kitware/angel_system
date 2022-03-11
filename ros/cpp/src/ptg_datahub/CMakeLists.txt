@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(cpp_pubsub)
+project(ptg_datahub)
 
 # Default to C++14
 if(NOT CMAKE_CXX_STANDARD)
@@ -15,18 +15,26 @@ find_package(rclcpp REQUIRED)
 find_package(rclcpp_components REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(shape_msgs REQUIRED)
+find_package(angel_msgs REQUIRED)
+find_package(cv_bridge REQUIRED )
+find_package(OpenCV REQUIRED COMPONENTS core )
 
-add_executable(talker src/publisher_member_function.cpp)
-ament_target_dependencies(talker rclcpp std_msgs sensor_msgs)
-
-add_executable(listener src/subscriber_member_function.cpp)
-ament_target_dependencies(listener rclcpp std_msgs sensor_msgs)
-
-
+add_executable(datahub src/ptg_datahub.cpp)
+ament_target_dependencies(datahub
+  rclcpp
+  std_msgs
+  sensor_msgs
+  geometry_msgs
+  angel_msgs
+  shape_msgs
+  cv_bridge
+  OpenCV
+  )
 
 install(TARGETS
-  talker
-  listener
+  datahub
   DESTINATION lib/${PROJECT_NAME})
 
 ament_package()

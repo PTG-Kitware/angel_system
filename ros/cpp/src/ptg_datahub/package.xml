@@ -1,16 +1,19 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>cpp_pubsub</name>
-  <version>0.0.0</version>
-  <description>TODO: Package description</description>
-  <maintainer email="josh.anderson@todo.todo">josh.anderson</maintainer>
-  <license>TODO: License declaration</license>
+  <name>ptg_datahub</name>
+  <version>0.1.0</version>
+  <description>Datahub between Hololens 2 and the ROS 2 network</description>
+  <maintainer email="kitware@kitware.com">root</maintainer>
+  <license>BSD 3-Clause</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
   <depend>rclcpp</depend>
   <depend>std_msgs</depend>
   <depend>sensor_msgs</depend>
+  <depend>angel_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>shape_msgs</depend>
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
 
