@@ -164,7 +164,7 @@ public class SpatialMappingCapture : MonoBehaviour, IMixedRealitySpatialAwarenes
                 }
                 while (_tcpStream.DataAvailable);
 
-                _debugString += "Bytes read = " + bytesRead.ToString() + "\n";
+                //_debugString += "Bytes read = " + bytesRead.ToString() + "\n";
 
                 _mut.WaitOne();
 
@@ -207,8 +207,8 @@ public class SpatialMappingCapture : MonoBehaviour, IMixedRealitySpatialAwarenes
                     //     -- 32 bit float y
                     //     -- 32 bit float z
 
-                    _debugString += "Buffer index = " + bufferIndex.ToString() + "\n";
-                    _debugString += "buffer @ buffer index = " + readBuffer[bufferIndex].ToString() + "\n";
+                    //_debugString += "Buffer index = " + bufferIndex.ToString() + "\n";
+                    //_debugString += "buffer @ buffer index = " + readBuffer[bufferIndex].ToString() + "\n";
 
                     // verify sync
                     byte[] syncBytes = new byte[4];
