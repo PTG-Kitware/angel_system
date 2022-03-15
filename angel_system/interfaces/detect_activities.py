@@ -17,7 +17,7 @@ class DetectActivities (Configurable, Pluggable):
       frame_iter: Iterable[np.ndarray]
     ) -> Iterable[str]:
         """
-        Detected activities for a objects in the given set of frames.
+        Detect activities in the given set of frames.
         :param frame_iter: Iterable of input frames as numpy arrays.
         :return: Iterable of strings describing the activities detected
             in the frames.

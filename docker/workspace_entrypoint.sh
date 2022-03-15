@@ -25,4 +25,8 @@ then
   export CYCLONEDDS_URI=file://${SCRIPT_DIR}/cyclonedds_profile.xml
 fi
 
+# TODO: there is probably a better way to do this
+# Install the angel system package
+pip install .
+
 exec "$@"
