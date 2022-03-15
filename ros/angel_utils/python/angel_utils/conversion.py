@@ -71,6 +71,11 @@ def from_detect_image_objects_result(
     assert len(det_lrtb) == len(det_confidence)
     n_detections = len(det_confidence)
 
+    # If there are no detections post-filtering, empty out the label vec since
+    # there will be nothing in this message to refer to it.
+    if n_detections == 0:
+        label_list = []
+
     msg = ObjectDetection2dSet()
     msg.label_vec = label_list
     msg.num_detections = n_detections
