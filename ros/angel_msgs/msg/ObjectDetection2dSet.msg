@@ -34,6 +34,6 @@ float32[] top
 float32[] bottom
 
 # Predicted label confidences for detections.
-# This is a flattened 2D rows-major matrix with shape:
+# This is a flattened 2D row-major matrix with shape:
 #   [num_detections, len(label_vec)]
 float64[] label_confidences
