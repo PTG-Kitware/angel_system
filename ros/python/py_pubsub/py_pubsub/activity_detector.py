@@ -96,6 +96,8 @@ class ActivityDetector(Node):
             activity_msg.source_stamp_start_frame = self._source_stamp_start_frame
             activity_msg.source_stamp_end_frame = image.header.stamp
 
+            activity_msg.label_vec = activities_detected
+
             # Publish activities
             self._publisher.publish(activity_msg)
 
