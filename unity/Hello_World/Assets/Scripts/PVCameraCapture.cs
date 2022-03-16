@@ -46,9 +46,6 @@ public class PVCameraCapture : MonoBehaviour
     NetworkStream tcpStream;
 
     private Logger _logger = null;
-
-    long prev_ts;
-    uint framesRcvd;
     string debugString = "";
 
     const int projectionMatrixSize = 16 * 4;
@@ -106,8 +103,16 @@ public class PVCameraCapture : MonoBehaviour
 
         log.LogInfo("Using IPv4 addr: " + TcpServerIPAddr);
 
-        Thread tPVCapture = new Thread(SetupPVCapture);
-        tPVCapture.Start();
+        IPAddress localAddr = IPAddress.Parse(TcpServerIPAddr);
+
+        // Bind server to address and port
+        tcpServer = new TcpListener(localAddr, PVTcpPort);
+
+        // Start listening for client requests
+        tcpServer.Start();
+
+        Thread t = new Thread(AcceptTCPClient);
+        t.Start();
         log.LogInfo("Waiting for PV TCP connections");
 
 #if ENABLE_WINMD_SUPPORT
@@ -148,20 +153,11 @@ public class PVCameraCapture : MonoBehaviour
         projectionMatrix = Camera.main.projectionMatrix;
     }
 
-    void SetupPVCapture()
+    void AcceptTCPClient()
     {
         try
         {
-            IPAddress localAddr = IPAddress.Parse(TcpServerIPAddr);
-
-            // TcpListener server = new TcpListener(port);
-            tcpServer = new TcpListener(localAddr, PVTcpPort);
-
-            // Start listening for client requests.
-            tcpServer.Start();
-
-            // Perform a blocking call to accept requests.
-            // You could also use server.AcceptSocket() here.
+            // Perform a blocking call to accept requests
             tcpClient = tcpServer.AcceptTcpClient();
             tcpStream = tcpClient.GetStream();
         }
@@ -282,75 +278,79 @@ public class PVCameraCapture : MonoBehaviour
 
     unsafe private void OnFrameArrived(MediaFrameReader sender, MediaFrameArrivedEventArgs args)
     {
-        try
+        using (var frame = sender.TryAcquireLatestFrame())
         {
-            using (var frame = sender.TryAcquireLatestFrame())
+            if (frame != null)
             {
-                if (frame != null)
+                float[] projectionMatrixAsFloat = ConvertUnityMatrixToFloatArray(projectionMatrix);
+
+                float[] cameraToWorldMatrixAsFloat = null;
+                try
                 {
-                    float[] projectionMatrixAsFloat = ConvertUnityMatrixToFloatArray(projectionMatrix);
-
-                    float[] cameraToWorldMatrixAsFloat = null;
-                    try
+                    if (HL2TryGetCameraToWorldMatrix(frame, out cameraToWorldMatrixAsFloat) == false)
                     {
-                        if (HL2TryGetCameraToWorldMatrix(frame, out cameraToWorldMatrixAsFloat) == false)
-                        {
-                            debugString += "HL2TryGetCameraToWorldMatrix failed";
-                        }
+                        debugString += "HL2TryGetCameraToWorldMatrix failed";
                     }
-                    catch (Exception e)
+                }
+                catch (Exception e)
+                {
+                    debugString += e.ToString();
+                }
+
+                var originalSoftwareBitmap = frame.VideoMediaFrame.SoftwareBitmap;
+
+                using (var input = originalSoftwareBitmap.LockBuffer(BitmapBufferAccessMode.Read))
+                using (var inputReference = input.CreateReference())
+                {
+                    byte* inputBytes;
+                    uint inputCapacity;
+                    ((IMemoryBufferByteAccess)inputReference).GetBuffer(out inputBytes, out inputCapacity);
+
+                    // add header
+                    byte[] frameHeader = { 0x1A, 0xCF, 0xFC, 0x1D,
+                                    (byte)(((inputCapacity + 8 + worldMatrixSize + projectionMatrixSize) & 0xFF000000) >> 24),
+                                    (byte)(((inputCapacity + 8 + worldMatrixSize + projectionMatrixSize) & 0x00FF0000) >> 16),
+                                    (byte)(((inputCapacity + 8 + worldMatrixSize + projectionMatrixSize) & 0x0000FF00) >> 8),
+                                    (byte)(((inputCapacity + 8 + worldMatrixSize + projectionMatrixSize) & 0x000000FF) >> 0),
+                                    (byte)((originalSoftwareBitmap.PixelWidth & 0xFF000000) >> 24),
+                                    (byte)((originalSoftwareBitmap.PixelWidth & 0x00FF0000) >> 16),
+                                    (byte)((originalSoftwareBitmap.PixelWidth & 0x0000FF00) >> 8),
+                                    (byte)((originalSoftwareBitmap.PixelWidth & 0x000000FF) >> 0),
+                                    (byte)((originalSoftwareBitmap.PixelHeight & 0xFF000000) >> 24),
+                                    (byte)((originalSoftwareBitmap.PixelHeight & 0x00FF0000) >> 16),
+                                    (byte)((originalSoftwareBitmap.PixelHeight & 0x0000FF00) >> 8),
+                                    (byte)((originalSoftwareBitmap.PixelHeight & 0x000000FF) >> 0) };
+                    System.Buffer.BlockCopy(frameHeader, 0, frameData, 0, frameHeader.Length);
+
+                    // add worldMatrix
+                    System.Buffer.BlockCopy(cameraToWorldMatrixAsFloat, 0, frameData, frameHeader.Length, worldMatrixSize);
+
+                    // add projectionMatrix
+                    System.Buffer.BlockCopy(projectionMatrixAsFloat, 0, frameData, frameHeader.Length + worldMatrixSize, projectionMatrixSize);
+
+                    // add image data
+                    Marshal.Copy((IntPtr)inputBytes, frameData, frameHeader.Length + worldMatrixSize + projectionMatrixSize, (int)inputCapacity);
+
+                    // Send the data through the socket.
+                    if (tcpStream != null)
                     {
-                        debugString += e.ToString();
-                    }
-
-                    var originalSoftwareBitmap = frame.VideoMediaFrame.SoftwareBitmap;
-
-                    using (var input = originalSoftwareBitmap.LockBuffer(BitmapBufferAccessMode.Read))
-                    using (var inputReference = input.CreateReference())
-                    {
-                        byte* inputBytes;
-                        uint inputCapacity;
-                        ((IMemoryBufferByteAccess)inputReference).GetBuffer(out inputBytes, out inputCapacity);
-
-                        // add header
-                        byte[] frameHeader = { 0x1A, 0xCF, 0xFC, 0x1D,
-                                        (byte)(((inputCapacity + 8 + worldMatrixSize + projectionMatrixSize) & 0xFF000000) >> 24),
-                                        (byte)(((inputCapacity + 8 + worldMatrixSize + projectionMatrixSize) & 0x00FF0000) >> 16),
-                                        (byte)(((inputCapacity + 8 + worldMatrixSize + projectionMatrixSize) & 0x0000FF00) >> 8),
-                                        (byte)(((inputCapacity + 8 + worldMatrixSize + projectionMatrixSize) & 0x000000FF) >> 0),
-                                        (byte)((originalSoftwareBitmap.PixelWidth & 0xFF000000) >> 24),
-                                        (byte)((originalSoftwareBitmap.PixelWidth & 0x00FF0000) >> 16),
-                                        (byte)((originalSoftwareBitmap.PixelWidth & 0x0000FF00) >> 8),
-                                        (byte)((originalSoftwareBitmap.PixelWidth & 0x000000FF) >> 0),
-                                        (byte)((originalSoftwareBitmap.PixelHeight & 0xFF000000) >> 24),
-                                        (byte)((originalSoftwareBitmap.PixelHeight & 0x00FF0000) >> 16),
-                                        (byte)((originalSoftwareBitmap.PixelHeight & 0x0000FF00) >> 8),
-                                        (byte)((originalSoftwareBitmap.PixelHeight & 0x000000FF) >> 0) };
-                        System.Buffer.BlockCopy(frameHeader, 0, frameData, 0, frameHeader.Length);
-
-                        // add worldMatrix
-                        System.Buffer.BlockCopy(cameraToWorldMatrixAsFloat, 0, frameData, frameHeader.Length, worldMatrixSize);
-
-                        // add projectionMatrix
-                        System.Buffer.BlockCopy(projectionMatrixAsFloat, 0, frameData, frameHeader.Length + worldMatrixSize, projectionMatrixSize);
-
-                        // add image data
-                        Marshal.Copy((IntPtr)inputBytes, frameData, frameHeader.Length + worldMatrixSize + projectionMatrixSize, (int)inputCapacity);
-
-                        // Send the data through the socket.
-                        if (tcpStream != null)
+                        try
                         {
                             tcpStream.Write(frameData, 0, frameData.Length);
                             tcpStream.Flush();
                         }
-                        originalSoftwareBitmap?.Dispose();
+                        catch (Exception e)
+                        {
+                            // socket client may have disconnected, so attempt to reconnect
+                            debugString = "TCP write failed... attempting reconnect!";
+                            tcpStream = null;
+                            Thread t = new Thread(AcceptTCPClient);
+                            t.Start();
+                        }
                     }
+                    originalSoftwareBitmap?.Dispose();
                 }
             }
-        }
-        catch (Exception e)
-        {
-            debugString += ("Frame Arrived Exception: " + e);
         }
     }
 
