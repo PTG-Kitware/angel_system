@@ -6,23 +6,19 @@ import json
 
 import numpy as np
 
-try:
-    import torch
-    from torchvision.transforms import Compose, Lambda
-    from pytorchvideo.data.encoded_video import EncodedVideo
-    from torchvision.transforms._transforms_video import (
-        CenterCropVideo,
-        NormalizeVideo,
-    )
-    from pytorchvideo.transforms import (
-        ApplyTransformToKey,
-        ShortSideScale,
-        UniformTemporalSubsample,
-        UniformCropVideo
-    )
-except ModuleNotFoundError:
-    pass
-
+import torch
+from torchvision.transforms import Compose, Lambda
+from pytorchvideo.data.encoded_video import EncodedVideo
+from torchvision.transforms._transforms_video import (
+    CenterCropVideo,
+    NormalizeVideo,
+)
+from pytorchvideo.transforms import (
+    ApplyTransformToKey,
+    ShortSideScale,
+    UniformTemporalSubsample,
+    UniformCropVideo
+)
 
 from angel_system.interfaces.detect_activities import DetectActivities
 

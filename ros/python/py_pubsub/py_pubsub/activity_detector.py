@@ -16,6 +16,7 @@ from angel_system.impls.detect_activities.pytorchvideo_slow_fast_r50 import Pyto
 
 BRIDGE = CvBridge()
 
+
 class ActivityDetector(Node):
 
     def __init__(self):

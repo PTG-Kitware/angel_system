@@ -53,6 +53,7 @@ warn_build_spaces=(
   "${SCRIPT_DIR}/docker"
   "${SCRIPT_DIR}/pyproject.toml"
   "${SCRIPT_DIR}/poetry.lock"
+  "${SCRIPT_DIR}/angel_system"
 )
 git_status="$(git status --porcelain "${warn_build_spaces[@]}")"
 # Check if there are ignored files in the workspace that should not be there.

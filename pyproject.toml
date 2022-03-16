@@ -23,6 +23,6 @@ ipython = "^8.0.1"
 requires = ["poetry-core==1.0.7"]
 build-backend = "poetry.core.masonry.api"
 
-[tool.poetry.plugins."angel_system_plugins"]
+[tool.poetry.plugins."smqtk_plugins"]
 # Activity detector
-"angel_system.impls.pytorchvideo_slow_fast_r50" = "angel_system.impls.pytorchvideo_slow_fast_r50"
+"angel_system.impls.detect_activities.pytorchvideo_slow_fast_r50" = "angel_system.impls.detect_activities.pytorchvideo_slow_fast_r50"
