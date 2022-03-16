@@ -52,11 +52,16 @@ public class AudioCapture : MonoBehaviour
             return;
         }
 
-        Thread tAudioCapture = new Thread(SetupAudioCapture);
-        tAudioCapture.Start();
+        IPAddress localAddr = IPAddress.Parse(TcpServerIPAddr);
+        tcpServer = new TcpListener(localAddr, AudioTcpPort);
+
+        // Start listening for client requests.
+        tcpServer.Start();
+
+        Thread t = new Thread(AcceptTCPClient);
+        t.Start();
         log.LogInfo("Waiting for audio TCP connections");
 
-        log.LogInfo("Setting up audio capture");
         foreach (var device in Microphone.devices)
         {
             log.LogInfo("Name: " + device);
@@ -96,9 +101,6 @@ public class AudioCapture : MonoBehaviour
 
     void OnAudioFilterRead(float[] data, int channels)
     {
-        //debugString = "size: " + data.Length.ToString();
-        //debugString += "channels: " + channels.ToString();
-
         // Scale the sound up to increase the volume since we reduced it earlier by 0.01x
         float[] scaledData = new float[data.Length];
         for (int i = 0; i < data.Length; i++)
@@ -121,26 +123,27 @@ public class AudioCapture : MonoBehaviour
         // Send the data through the socket.
         if (tcpStream != null)
         {
-            tcpStream.Write(frameData, 0, frameData.Length);
-            tcpStream.Flush();
+            try
+            {
+                tcpStream.Write(frameData, 0, frameData.Length);
+                tcpStream.Flush();
+            }
+            catch (Exception e)
+            {
+                // socket client may have disconnected, so attempt to reconnect
+                tcpStream = null;
+                Thread t = new Thread(AcceptTCPClient);
+                t.Start();
+            }
         }
 
     }
 
-    void SetupAudioCapture()
+    void AcceptTCPClient()
     {
         try
         {
-            IPAddress localAddr = IPAddress.Parse(TcpServerIPAddr);
-
-            // TcpListener server = new TcpListener(port);
-            tcpServer = new TcpListener(localAddr, AudioTcpPort);
-
-            // Start listening for client requests.
-            tcpServer.Start();
-
-            // Perform a blocking call to accept requests.
-            // You could also use server.AcceptSocket() here.
+            // Perform a blocking call to accept requests
             tcpClient = tcpServer.AcceptTcpClient();
             tcpStream = tcpClient.GetStream();
         }
