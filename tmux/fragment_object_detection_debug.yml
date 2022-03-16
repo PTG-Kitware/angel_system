@@ -17,7 +17,7 @@ root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 # Runs on project start, always
 # on_project_start: command
 on_project_start: |
-  export ROS_NAMESPACE=${ROS_NAMESPACE:-/debug}
+  export ROS_NAMESPACE=${ROS_NAMESPACE:-/angel}
   export HL2_IP=${HL2_IP:-192.168.1.101}
 
 # Run on project start, the first time
@@ -62,13 +62,14 @@ windows:
       -p image_topic:=PVFrames
       -p det_topic:=detections
       -p use_cuda:=true
-  - debug_overlay: ros2 run py_pubsub object_detector_debug --ros-args
+  - simple_2d_overlay: ros2 run angel_debug Simple2dDetectionOverlay --ros-args
       -r __ns:=${ROS_NAMESPACE}
-      -p image_topic:=PVFrames
-      -p det_topic:=detections
-      -p out_image_topic:=image_debug/compressed
-  - rqt: rqt -s rqt_image_view/ImageView
-      --args ${ROS_NAMESPACE}/image_debug/compressed
+      -p topic_input_images:=PVFrames
+      -p topic_input_det_2d:=detections
+      -p topic_output_images:=debug/pv_image_detections_2d
+  - rqt_2d_detections: rqt -s rqt_image_view/ImageView
+      --args ${ROS_NAMESPACE}/debug/pv_image_detections_2d
+      # --ros-args -p _image_transport:=compressed
   - spatial_mapper: ros2 run py_pubsub spatial_mapper --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p spatial_map_topic:=SpatialMapData
