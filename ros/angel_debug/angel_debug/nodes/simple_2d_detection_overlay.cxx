@@ -18,8 +18,10 @@
 
 // Our stuff
 #include <angel_msgs/msg/object_detection2d_set.hpp>
+#include <angel_utils/rate_tracker.hpp>
 
 using angel_msgs::msg::ObjectDetection2dSet;
+using angel_utils::RateTracker;
 using rcl_interfaces::msg::ParameterDescriptor;
 using rcl_interfaces::msg::ParameterType;
 using std::placeholders::_1;
@@ -70,103 +72,6 @@ thickness_for_drawing( cv::Mat img_mat )
 
 } // namespace
 
-/// Keep track of the rate at which something is cycling.
-/// TODO: Move to general utils package.
-class RateTracker
-{
-public:
-  RateTracker( size_t window_size = 10 )
-    : m_window_size( window_size )
-  {}
-
-  virtual ~RateTracker() = default;
-
-  /// Perform a measurement of the time since the last tick.
-  void
-  tick()
-  {
-    auto pub_time = clock_t::now();
-    if( m_first_tick )
-    {
-      m_first_tick = false;
-    }
-    else
-    {
-      double time_since_last_tick = std::chrono::duration< double >(
-        pub_time - m_last_measure_time
-        ).count();
-      // insert time measurement appropriately into window appropriately.
-      if( m_time_vec.size() < m_window_size )
-      {
-        // add measurement
-        m_time_vec.push_back( time_since_last_tick );
-      }
-      else
-      {
-        // m_frame_time_vec is full, so now we start rotating new-measurement
-        // insertion
-        m_time_vec[ m_time_vec_i ] = time_since_last_tick;
-        m_time_vec_i = ( m_time_vec_i + 1 ) % m_time_vec.size();
-      }
-    }
-    m_last_measure_time = pub_time;
-  }
-
-  /// Get the average time delta between ticks within our window of
-  /// measurements.
-  ///
-  /// If there have been no measurements taken yet (by calling `tick()`) then
-  /// a -1 value is returned.
-  ///
-  /// \return Average time in seconds between tick measurements.
-  double
-  get_delta_avg()
-  {
-    double avg_time = -1;
-    if( not m_time_vec.empty() )
-    {
-      double window_total = std::accumulate( m_time_vec.begin(),
-                                             m_time_vec.end(), 0.0 );
-      avg_time = window_total / static_cast< double >( m_time_vec.size() );
-    }
-    return avg_time;
-  }
-
-  /// Get the average tick rate from the window of measurements.
-  ///
-  /// If there have been no measurements taken yet (by calling `tick()`) then
-  /// a -1 value is returned.
-  ///
-  /// \return Average rate in Hz between tick measurements.
-  double
-  get_rate_avg()
-  {
-    double avg_rate = -1;
-    if( not m_time_vec.empty() )
-    {
-      auto avg_time = get_delta_avg();
-      avg_rate = 1.0 / avg_time;
-    }
-    return avg_rate;
-  }
-
-private:
-  // Type of clock to use for tick rate tracking.
-  using clock_t = std::chrono::high_resolution_clock;
-
-  // The measurement window size for rate smoothing.
-  size_t m_window_size = 10;
-  // If we have not received a tick yet.
-  bool m_first_tick = true;
-  // The last a tick occurred.
-  std::chrono::time_point< clock_t > m_last_measure_time;
-  // Circular buffer of time measurements between ticks.
-  std::vector< double > m_time_vec;
-  // When the m_time_vec circular buffer is full, this is the next index to
-  // write to.
-  size_t m_time_vec_i = 0;
-};
-
 // ----------------------------------------------------------------------------
 /// Overlay input object detections onto the image that they were predicted
 /// over.
@@ -199,6 +104,11 @@ private:
   // messages to potentialy match against.
   size_t m_max_image_history;
 
+  // Measure and report receive/publish FPS - RGB Images
+  RateTracker m_img_rate_tracker;
+  // Measure and report receive/publish FPS - 2D Object Detections
+  RateTracker m_det_rate_tracker;
+
   rclcpp::Subscription< sensor_msgs::msg::Image >::SharedPtr m_sub_input_image;
   rclcpp::Subscription< ObjectDetection2dSet >::SharedPtr m_sub_input_det_2d;
   rclcpp::Publisher< sensor_msgs::msg::Image >::SharedPtr m_pub_overlay_image;
@@ -207,11 +117,6 @@ private:
   size_t m_image_count = 0;
   // Simple counter for 2D detection messages received.
   size_t m_detset_count = 0;
-
-  // Measure and report receive/publish FPS - RGB Images
-  RateTracker m_img_rate_tracker;
-  // Measure and report receive/publish FPS - 2D Object Detections
-  RateTracker m_det_rate_tracker;
 
   // Type tracking mapping nanoseconds integer key to the image message.
   using frame_map_t = std::map< size_t, sensor_msgs::msg::Image::SharedPtr >;
@@ -222,7 +127,9 @@ private:
 // ----------------------------------------------------------------------------
 Simple2dDetectionOverlay
 ::Simple2dDetectionOverlay( rclcpp::NodeOptions const& options )
-  : Node( "Simple2dDetectionOverlay", options )
+  : Node( "Simple2dDetectionOverlay", options ),
+    m_img_rate_tracker( 10 ),
+    m_det_rate_tracker( 10 )
 {
   auto log = this->get_logger();
 
@@ -250,14 +157,6 @@ Simple2dDetectionOverlay
         << m_max_image_history;
     throw std::invalid_argument( ss.str() );
   }
-
-  // Rate trackers
-  m_img_rate_tracker = RateTracker(
-    10 // this->get_parameter( PARAM_IMAGE_RATE_WINDOW ).get_value< size_t >()
-    );
-  m_det_rate_tracker = RateTracker(
-    10 // this->get_parameter( PARAM_DET2D_RATE_WINDOW ).get_value< size_t >()
-    );
 
   RCLCPP_INFO( log, "Creating subscribers and publishers" );
   // Alternative "best effort" QoS: rclcpp::SensorDataQoS().keep_last( 1 )

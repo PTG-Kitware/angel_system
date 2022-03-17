@@ -18,6 +18,7 @@ find_package( sensor_msgs REQUIRED )
 find_package( cv_bridge REQUIRED )
 find_package( OpenCV REQUIRED COMPONENTS core )
 find_package( angel_msgs REQUIRED )
+find_package( angel_utils REQUIRED )
 
 #
 # angel_debug Library
@@ -36,6 +37,7 @@ ament_target_dependencies( angel_debug
   cv_bridge
   OpenCV
   angel_msgs
+  angel_utils
   )
 install( TARGETS angel_debug
   ARCHIVE DESTINATION lib

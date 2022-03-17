@@ -20,7 +20,38 @@ find_package( angel_msgs REQUIRED )
 #
 # Cpp things
 #
-add_subdirectory( cpp )
+# See https://docs.ros.org/en/foxy/How-To-Guides/Ament-CMake-Documentation.html#building-a-library
+# for important details that made this work properly, specifically
+# `ament_export_targets` and the `EXPORT` part of `install( TARGETS ...`.
+# Note that in `install( TARGETS`, "angel_utils" is used both for the
+#
+add_library( angel_utils SHARED
+  src/rate_tracker.cpp
+  )
+target_include_directories( angel_utils PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+  )
+ament_target_dependencies( angel_utils
+  rclcpp
+  angel_msgs
+  )
+ament_export_targets( angel_utils_targets HAS_LIBRARY_TARGET )
+# Include the following if this lib introduces transitive dependencies, i.e.
+# exposes dependencies via public headers (e.,g. OpenCV if including in an hpp).
+# ament_export_dependencies( )
+
+# Install Things
+install( DIRECTORY include/
+  DESTINATION include
+  )
+install( TARGETS angel_utils
+  EXPORT angel_utils_targets
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+  INCLUDES DESTINATION include
+  )
 
 #
 # Python things

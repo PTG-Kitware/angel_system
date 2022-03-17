@@ -100,19 +100,3 @@ def to_confidence_matrix(msg: ObjectDetection2dSet) -> np.ndarray:
         np.asarray(msg.label_confidences)
           .reshape((msg.num_detections, len(msg.label_vec)))
     )
-
-
-def to_detect_image_objects_result(
-    msg: ObjectDetection2dSet
-) -> List[Tuple[AxisAlignedBoundingBox, Dict[Hashable, float]]]:
-    """
-    Convert an object detection set message into a sequence of axis-aligned
-    bounding boxes and label-2-confidence mappings, similar to the output
-    of a smqtk-detection DetectImageObject plugin.
-
-    :param msg: Message instance to convert from.
-    :return:
-    """
-    pairs_list = []
-
-    return pairs_list
