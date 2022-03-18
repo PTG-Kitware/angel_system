@@ -17,6 +17,8 @@ find_package( rclcpp_components REQUIRED )
 find_package( sensor_msgs REQUIRED )
 find_package( cv_bridge REQUIRED )
 find_package( OpenCV REQUIRED COMPONENTS core )
+find_package( angel_msgs REQUIRED )
+find_package( angel_utils REQUIRED )
 
 #
 # angel_debug Library
@@ -24,7 +26,7 @@ find_package( OpenCV REQUIRED COMPONENTS core )
 set( headers_public )
 set( sources
   # Nodes
-  angel_debug/nodes/overlay_object_detections.cxx
+  angel_debug/nodes/simple_2d_detection_overlay.cxx
   )
 add_library( angel_debug SHARED
   ${headers_public} ${sources} )
@@ -34,6 +36,8 @@ ament_target_dependencies( angel_debug
   sensor_msgs
   cv_bridge
   OpenCV
+  angel_msgs
+  angel_utils
   )
 install( TARGETS angel_debug
   ARCHIVE DESTINATION lib
@@ -43,8 +47,8 @@ install( TARGETS angel_debug
 
 # Component registration
 rclcpp_components_register_node( angel_debug
-  PLUGIN "angel_debug::OverlayImageObjectDetections"
-  EXECUTABLE overlay_detections )
+  PLUGIN "angel_debug::Simple2dDetectionOverlay"
+  EXECUTABLE Simple2dDetectionOverlay )
 
 #
 # Launch file installation

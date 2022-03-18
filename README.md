@@ -47,6 +47,7 @@ See [Unity README.md](unity/README.md) for instructions on creating an applicati
 
 - Research mode must be enabled in the HoloLens headset (see "Enabling Research Mode" section here https://docs.microsoft.com/en-us/windows/mixed-reality/develop/advanced-concepts/research-mode).  
 - The first time you start your application on the HoloLens, you may have to allow camera/microphone access to the app. Click yes on the popups and then restart the application.
+- Assuming that only one ethernet connection is active at the time of running the experimental app.
 
 
 # ROS 2 System
