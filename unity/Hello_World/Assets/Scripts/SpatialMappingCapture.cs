@@ -87,8 +87,18 @@ public class SpatialMappingCapture : MonoBehaviour, IMixedRealitySpatialAwarenes
             return;
         }
 
+        IPAddress localAddr = IPAddress.Parse(_TcpServerIPAddr);
+
+        _tcpServer = new TcpListener(localAddr, _SMTcpPort);
+
+        // Start listening for client requests
+        _tcpServer.Start();
+
         Thread tSpatialMappingCapture = new Thread(SetupSpatialMappingCapture);
         tSpatialMappingCapture.Start();
+
+        Thread t = new Thread(ListenForDetections);
+        t.Start();
     }
 
     // Update is called once per frame
@@ -133,19 +143,16 @@ public class SpatialMappingCapture : MonoBehaviour, IMixedRealitySpatialAwarenes
 
     void SetupSpatialMappingCapture()
     {
-        IPAddress localAddr = IPAddress.Parse(_TcpServerIPAddr);
-
-        _tcpServer = new TcpListener(localAddr, _SMTcpPort);
-
-        // Start listening for client requests.
-        _tcpServer.Start();
-
-        // Perform a blocking call to accept requests.
-        // You could also use server.AcceptSocket() here.
-        _tcpClient = _tcpServer.AcceptTcpClient();
-        _tcpStream = _tcpClient.GetStream();
-
-        ListenForDetections();
+        try
+        {
+            // Perform a blocking call to accept requests
+            _tcpClient = _tcpServer.AcceptTcpClient();
+            _tcpStream = _tcpClient.GetStream();
+        }
+        catch (Exception e)
+        {
+            _debugString += e.ToString();
+        }
     }
 
     private void ListenForDetections()
@@ -153,16 +160,31 @@ public class SpatialMappingCapture : MonoBehaviour, IMixedRealitySpatialAwarenes
         while (true)
         {
             // Check if there is data to read and read it if there is
-            if (_tcpStream.DataAvailable)
+            bool dataAvailable = false;
+            if (_tcpStream != null)
+            {
+                dataAvailable = _tcpStream.DataAvailable;
+            }
+
+            if (dataAvailable)
             {
                 byte[] readBuffer = new byte[1024];
                 int bytesRead = 0;
 
                 do
                 {
-                    bytesRead = _tcpStream.Read(readBuffer, 0, readBuffer.Length);
+                    try
+                    {
+                        bytesRead = _tcpStream.Read(readBuffer, 0, readBuffer.Length);
+                        dataAvailable = _tcpStream.DataAvailable;
+                    }
+                    catch (Exception e)
+                    {
+                        bytesRead = 0;
+                        break;
+                    }
                 }
-                while (_tcpStream.DataAvailable);
+                while (dataAvailable);
 
                 //_debugString += "Bytes read = " + bytesRead.ToString() + "\n";
 
@@ -458,7 +480,19 @@ public class SpatialMappingCapture : MonoBehaviour, IMixedRealitySpatialAwarenes
             System.Buffer.BlockCopy(BitConverter.GetBytes(triangles[i / 4]), 0, serializedMesh, frameHeader.Length + (numVertices * 12) + i, sizeof(float));
         }
 
-        _tcpStream.Write(serializedMesh, 0, serializedMesh.Length);
+        if (_tcpStream != null)
+        {
+            try
+            {
+                _tcpStream.Write(serializedMesh, 0, serializedMesh.Length);
+            }
+            catch (Exception e)
+            {
+                _tcpStream = null;
+                Thread t = new Thread(SetupSpatialMappingCapture);
+                t.Start();
+            }
+        }
 
     }
 
@@ -487,7 +521,19 @@ public class SpatialMappingCapture : MonoBehaviour, IMixedRealitySpatialAwarenes
                              };
         System.Buffer.BlockCopy(frameHeader, 0, serializedMesh, 0, frameHeader.Length);
 
-        _tcpStream.Write(serializedMesh, 0, serializedMesh.Length);
+        if (_tcpStream != null)
+        {
+            try
+            {
+                _tcpStream.Write(serializedMesh, 0, serializedMesh.Length);
+            }
+            catch (Exception e)
+            {
+                _tcpStream = null;
+                Thread t = new Thread(SetupSpatialMappingCapture);
+                t.Start();
+            }
+        }
     }
 
     private void DrawBox(Vector3 cornerLeft, Vector3 cornerTop,
