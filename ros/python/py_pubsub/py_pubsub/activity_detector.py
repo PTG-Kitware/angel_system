@@ -45,9 +45,6 @@ class ActivityDetector(Node):
             1
         )
 
-        self._frames_recvd = 0
-        self._prev_time = -1
-
         # Stores the frames until we have enough to send to the detector
         self._frames = []
         self._source_stamp_start_frame = -1
@@ -57,20 +54,13 @@ class ActivityDetector(Node):
 
     def listener_callback(self, image):
         """
-        Callback for when an image is received on the selected image topic. 
+        Callback for when an image is received on the selected image topic.
         The image is added to a list of images and if the list length
         exceeds the activity durations, it is passed to the activity detector.
-        Any detected activities are published to the configured activity 
+        Any detected activities are published to the configured activity
         topic as angel_msgs/ActivityDetection messages.
         """
         log = self.get_logger()
-        self._frames_recvd += 1
-        if self._prev_time == -1:
-            self._prev_time = time.time()
-        elif time.time() - self._prev_time > 1:
-            log.info(f"Frames rcvd: {self._frames_recvd}")
-            self._frames_recvd = 0
-            self._prev_time = time.time()
 
         # Convert NV12 image to RGB image with shape (HxWx3) and add it to the frame stack
         rgb_image = BRIDGE.imgmsg_to_cv2(image, desired_encoding="rgb8")

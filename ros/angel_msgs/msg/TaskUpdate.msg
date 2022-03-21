@@ -17,3 +17,4 @@ string previous_step
 
 # Current activity
 string current_activity
+string next_activity

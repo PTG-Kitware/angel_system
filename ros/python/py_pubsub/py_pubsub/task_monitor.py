@@ -16,18 +16,18 @@ class Task():
     Representation of a task defined by its steps and transistions between them.
     """
     def __init__(self):
-        self.name = "Coding!"
+        self.name = "Cook an egg!"
 
-        self.steps = ["relaxing", "taking notes", "working on pc"]
+        self.steps = ["wash hands", "cook egg", "wash dishes", "finished!"]
 
         self.transitions = [
-            { 'trigger': 'write', 'source': 'relaxing', 'dest': 'taking notes' },
-            { 'trigger': 'use_pc', 'source': 'taking notes', 'dest': 'working on pc' },
-            { 'trigger': 'clap', 'source': 'working on pc', 'dest': 'relaxing' }
+            { 'trigger': 'wash_hands', 'source': 'wash hands', 'dest': 'cook egg' },
+            { 'trigger': 'cook_egg', 'source': 'cook egg', 'dest': 'wash dishes' },
+            { 'trigger': 'wash_dishes', 'source': 'wash dishes', 'dest': 'finished!' },
         ]
 
         self.machine = Machine(model=self, states=self.steps,
-                               transitions=self.transitions, initial='relaxing')
+                               transitions=self.transitions, initial='wash hands')
 
 
 class TaskMonitor(Node):
@@ -69,11 +69,12 @@ class TaskMonitor(Node):
 
         # Represents the current action being performed
         self._current_activity = None
+        self._next_activity = None
 
         self._activity_action_dict = {
-            'writing': self._task.write,
-            'using computer': self._task.use_pc,
-            'clapping': self._task.clap
+            'washing hands': self._task.wash_hands,
+            'cooking egg': self._task.cook_egg,
+            'washing dishes': self._task.wash_dishes
         }
 
         self.publish_task_state_message()
@@ -101,7 +102,9 @@ class TaskMonitor(Node):
                 break
 
         if current_activity is None:
-            # No activity matching current task
+            # No activity matching current task... update the current activity and exit
+            self._current_activity = activity_msg.label_vec[0]
+            self.publish_task_state_message()
             return
 
         self._current_activity = current_activity
@@ -131,6 +134,7 @@ class TaskMonitor(Node):
         message.header.frame_id = "Task message"
 
         message.task_name = self._task.name
+
         message.steps = self._task.steps
         message.current_step = self._current_step
 
@@ -143,6 +147,12 @@ class TaskMonitor(Node):
             message.current_activity = "N/A"
         else:
             message.current_activity = self._current_activity
+
+        for t in self._task.transitions:
+            if t['source'] == self._task.state:
+                self._next_activity = t['trigger']
+                break
+        message.next_activity = self._next_activity
 
         self._publisher.publish(message)
 

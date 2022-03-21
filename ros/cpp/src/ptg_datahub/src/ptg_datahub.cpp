@@ -125,11 +125,19 @@ class PTGDataHub : public rclcpp::Node
     std::thread pv_t;
     std::thread audio_t;
     std::thread sm_t;
+    std::thread tu_t;
+
+    // socket for sending task updates to the Hololens
+    SOCKET task_update_socket = -1;
 
     std::vector<unsigned char> uint_to_vector(unsigned int x);
     std::vector<unsigned char> float_to_vector(float x);
+    std::vector<char> string_to_vector(std::string x);
+
     std::vector<unsigned char> serialize_detection_message(
       angel_msgs::msg::ObjectDetection3dSet::SharedPtr const detection_msg );
+    std::vector<unsigned char> serialize_task_update_message(
+      angel_msgs::msg::TaskUpdate::SharedPtr const task_update_msg );
 
     void object_detection_3d_callback( angel_msgs::msg::ObjectDetection3dSet::SharedPtr
                                        const detection_msg );
@@ -139,6 +147,7 @@ class PTGDataHub : public rclcpp::Node
     void TCPServerVideoThread(int port);
     void TCPServerAudioThread(int port);
     void TCPServerSMThread(int port);
+    void ConnectTaskUpdateSocket();
     SOCKET connectSocket(int port);
 
 };
@@ -193,10 +202,14 @@ PTGDataHub::PTGDataHub() : Node("ptg_datahub")
   // start the audio and spatial mapping threads
   audio_t = std::thread(&PTGDataHub::TCPServerAudioThread, this, AUDIO_TCP_PORT);
   sm_t = std::thread(&PTGDataHub::TCPServerSMThread, this, SM_TCP_PORT);
+
+  // attempt to connect to the task update TCP server
+  tu_t = std::thread(&PTGDataHub::ConnectTaskUpdateSocket, this);
 }
 
 PTGDataHub::~PTGDataHub()
 {
+  tu_t.join();
   lf_vlc_t.join();
   rf_vlc_t.join();
   ll_vlc_t.join();
@@ -221,6 +234,13 @@ std::vector<unsigned char> PTGDataHub::float_to_vector(float x)
 {
   std::vector<unsigned char> v(4);
   memcpy(&v[0], &x, sizeof(x));
+  return v;
+}
+
+std::vector<char> PTGDataHub::string_to_vector(std::string x)
+{
+  std::vector<char> v(x.begin(), x.end());
+  v.push_back('\0');
   return v;
 }
 
@@ -266,9 +286,7 @@ std::vector<unsigned char> PTGDataHub::serialize_detection_message( angel_msgs::
   //     -- 32 bit float z
 
   // convert the frame id to bytes
-  std::vector<char> frame_id_bytes(detection_msg->header.frame_id.begin(),
-                                   detection_msg->header.frame_id.end());
-  frame_id_bytes.push_back('\0');
+  std::vector<char> frame_id_bytes = string_to_vector(detection_msg->header.frame_id);
   ros_message_length += frame_id_bytes.size();
 
   // convert the object labels to bytes
@@ -356,6 +374,115 @@ std::vector<unsigned char> PTGDataHub::serialize_detection_message( angel_msgs::
   return byte_message;
 }
 
+std::vector<unsigned char> PTGDataHub::serialize_task_update_message( angel_msgs::msg::TaskUpdate::SharedPtr
+                                                        const task_update_msg )
+{
+  auto log = this->get_logger();
+  std::vector<unsigned char> byte_message;
+  unsigned int ros_message_length = 0;
+
+  // PTG header:
+  //   -- 32-bit sync = 4 bytes
+  //   -- 32-bit ros msg length = 4 bytes
+  // ROS2 message:
+  //  header
+  //   -- 32 bit seconds = 4 bytes
+  //   -- 32 bit nanoseconds = 4 bytes
+  //   -- frame id string
+  //  task_name
+  //   -- string
+  //  num steps
+  //   -- int
+  //  steps
+  //   -- string list
+  //  current_step
+  //   -- string
+  //  previous_step
+  //   -- string
+  //  current_activity
+  //   -- string
+  //  next_activity
+  //   -- string
+
+  // convert the frame id to bytes
+  std::vector<char> frame_id_bytes = string_to_vector(task_update_msg->header.frame_id);
+  ros_message_length += frame_id_bytes.size();
+
+  // convert task name to bytes
+  std::vector<char> task_name_bytes = string_to_vector(task_update_msg->task_name);
+  ros_message_length += task_name_bytes.size();
+
+  // convert step list to bytes
+  std::vector<char> steps_bytes;
+  for (unsigned int i = 0; i < task_update_msg->steps.size(); i++)
+  {
+    steps_bytes.insert(steps_bytes.end(),
+                       task_update_msg->steps[i].begin(),
+                       task_update_msg->steps[i].end());
+    steps_bytes.push_back('\0');
+  }
+  ros_message_length += steps_bytes.size();
+
+  // convert current step to bytes
+  std::vector<char> curr_step_bytes = string_to_vector(task_update_msg->current_step);
+  ros_message_length += curr_step_bytes.size();
+
+  // convert previous step to bytes
+  std::vector<char> prev_step_bytes = string_to_vector(task_update_msg->previous_step);
+  ros_message_length += prev_step_bytes.size();
+
+  // convert current activity to bytes
+  std::vector<char> curr_activity_bytes = string_to_vector(task_update_msg->current_activity);
+  ros_message_length += curr_activity_bytes.size();
+
+  // convert next activity to bytes
+  std::vector<char> next_activity_bytes = string_to_vector(task_update_msg->next_activity);
+  ros_message_length += next_activity_bytes.size();
+
+  ros_message_length += 12; // ROS header timestamp size + num bytes size
+
+  // add sync
+  std::vector<unsigned char> sync = uint_to_vector(0x1ACFFC1D);
+  byte_message.insert(byte_message.end(), sync.begin(), sync.end());
+
+  // add length
+  std::vector<unsigned char> length = uint_to_vector(ros_message_length);
+  byte_message.insert(byte_message.end(), length.begin(), length.end());
+
+  // add header time stamp
+  std::vector<unsigned char> seconds = uint_to_vector(task_update_msg->header.stamp.sec);
+  byte_message.insert(byte_message.end(), seconds.begin(), seconds.end());
+  std::vector<unsigned char> nanoseconds = uint_to_vector(task_update_msg->header.stamp.nanosec);
+  byte_message.insert(byte_message.end(), nanoseconds.begin(), nanoseconds.end());
+
+  // add frame id
+  byte_message.insert(byte_message.end(), frame_id_bytes.begin(), frame_id_bytes.end());
+
+  // add task_name
+  byte_message.insert(byte_message.end(), task_name_bytes.begin(), task_name_bytes.end());
+
+  // add num steps
+  std::vector<unsigned char> num_steps_bytes = uint_to_vector(task_update_msg->steps.size());
+  byte_message.insert(byte_message.end(), num_steps_bytes.begin(), num_steps_bytes.end());
+
+  // add steps
+  byte_message.insert(byte_message.end(), steps_bytes.begin(), steps_bytes.end());
+
+  // add current_step
+  byte_message.insert(byte_message.end(), curr_step_bytes.begin(), curr_step_bytes.end());
+
+  // add previous_step
+  byte_message.insert(byte_message.end(), prev_step_bytes.begin(), prev_step_bytes.end());
+
+  // add current_activity
+  byte_message.insert(byte_message.end(), curr_activity_bytes.begin(), curr_activity_bytes.end());
+
+  // add next_activity
+  byte_message.insert(byte_message.end(), next_activity_bytes.begin(), next_activity_bytes.end());
+
+  return byte_message;
+}
+
 void PTGDataHub::object_detection_3d_callback( angel_msgs::msg::ObjectDetection3dSet::SharedPtr
                                    const detection_msg )
 {
@@ -368,10 +495,27 @@ void PTGDataHub::task_update_callback( angel_msgs::msg::TaskUpdate::SharedPtr
                                    const task_update_msg )
 {
   auto log = this->get_logger();
-  // TODO
   RCLCPP_INFO( log,
-               "Got a task update message! Task name: %s, step: %s",
+               "Task update message: Task name: %s, step: %s",
                task_update_msg->task_name.c_str(), task_update_msg->current_step.c_str());
+
+  if (task_update_socket != -1)
+  {
+    // serialize the update message
+    std::vector<unsigned char> byte_message = serialize_task_update_message(task_update_msg);
+
+    // send via the TCP socket
+    unsigned int bytes_sent = send(task_update_socket, &byte_message[0], byte_message.size(), 0);
+    if (bytes_sent != byte_message.size())
+    {
+      RCLCPP_WARN(log, "Did not send full detection message");
+    }
+  }
+}
+
+void PTGDataHub::ConnectTaskUpdateSocket()
+{
+  task_update_socket = connectSocket(TASK_UPDATE_TCP_PORT);
 }
 
 void PTGDataHub::TCPServerVideoThread(int port)
