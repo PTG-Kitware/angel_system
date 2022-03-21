@@ -10,5 +10,5 @@ std_msgs/Header header
 builtin_interfaces/Time source_stamp_start_frame
 builtin_interfaces/Time source_stamp_end_frame
 
-# Prediction classification labels.
+# Prediction classification label ordered from most confident to least.
 string[] label_vec
