@@ -27,6 +27,7 @@ rosidl_generate_interfaces( ${PROJECT_NAME}
   msg/ObjectDetection2dSet.msg
   msg/ObjectDetection3dSet.msg
   msg/SpatialMesh.msg
+  msg/ActivityDetection.msg
   DEPENDENCIES builtin_interfaces std_msgs geometry_msgs shape_msgs
   )
 

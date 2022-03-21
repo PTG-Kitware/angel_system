@@ -84,6 +84,11 @@ RUN cd "${ANGEL_WORKSPACE_DIR}" \
       pip3 install --no-deps --user -r /dev/stdin \
  && pip uninstall -y setuptools-scm
 
+# Build the angel_system python package
+COPY ./angel_system "${ANGEL_WORKSPACE_DIR}"/angel_system
+RUN cd "${ANGEL_WORKSPACE_DIR}" \
+ && pip install --no-deps --user -e .
+
 # Load in any model files the workspace will require at runtime.
 # TODO
 

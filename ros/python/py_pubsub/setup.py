@@ -27,6 +27,7 @@ setup(
                 'generate_images = py_pubsub.generate_images:main',
                 'object_detector = py_pubsub.object_detector:main',
                 'spatial_mapper = py_pubsub.spatial_mapper:main',
+                'activity_detector = py_pubsub.activity_detector:main',
             ],
     },
 )

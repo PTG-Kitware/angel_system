@@ -147,6 +147,11 @@ Anatomy of the call:
 As a rosetta stone, this example configuration is symmetric to the launch file
 version located at `ros/angel_debug/launch/online_debug_demo.py`.
 
+## ANGEL System Python Package
+
+`angel_system/` contains the interfaces and implementations for the
+various components in the ANGEL system python package.
+
 ## Lessons Learned
 ### `rosdep`
 References to the lists that rosdep uses to resolve names:
