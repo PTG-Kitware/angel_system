@@ -87,7 +87,7 @@ RUN cd "${ANGEL_WORKSPACE_DIR}" \
 # Build the angel_system python package
 COPY ./angel_system "${ANGEL_WORKSPACE_DIR}"/angel_system
 RUN cd "${ANGEL_WORKSPACE_DIR}" \
- && pip install .
+ && pip install --no-deps --user -e .
 
 # Load in any model files the workspace will require at runtime.
 # TODO

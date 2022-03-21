@@ -1091,7 +1091,7 @@ numpy = "*"
 
 [[package]]
 name = "trimesh"
-version = "3.10.2"
+version = "3.10.5"
 description = "Import, export, process, analyze and view triangular meshes."
 category = "main"
 optional = false
@@ -1125,9 +1125,9 @@ xatlas = {version = "*", optional = true, markers = "extra == \"all\""}
 xxhash = {version = "*", optional = true, markers = "extra == \"all\""}
 
 [package.extras]
-all = ["meshio", "pyglet", "msgpack", "psutil", "lxml", "xatlas", "svg.path", "setuptools", "python-fcl", "chardet", "requests", "glooey", "sympy", "networkx", "jsonschema", "xxhash", "shapely", "pycollada", "colorlog", "mapbox-earcut", "scikit-image", "scipy", "triangle", "rtree", "pillow"]
-easy = ["jsonschema", "pyglet", "msgpack", "xxhash", "shapely", "pycollada", "lxml", "colorlog", "svg.path", "requests", "setuptools", "chardet", "scipy", "sympy", "rtree", "networkx", "pillow"]
-test = ["pytest", "pytest-cov", "ezdxf", "pyinstrument", "coveralls"]
+all = ["shapely", "pillow", "jsonschema", "xxhash", "triangle", "requests", "rtree", "glooey", "mapbox-earcut", "meshio", "svg.path", "psutil", "chardet", "pycollada", "scipy", "lxml", "msgpack", "xatlas", "scikit-image", "setuptools", "python-fcl", "sympy", "pyglet", "colorlog", "networkx"]
+easy = ["scipy", "lxml", "shapely", "pillow", "msgpack", "jsonschema", "xxhash", "requests", "rtree", "setuptools", "colorlog", "sympy", "svg.path", "pyglet", "chardet", "pycollada", "networkx"]
+test = ["ezdxf", "pytest", "pyinstrument", "pytest-cov", "coveralls"]
 
 [[package]]
 name = "typeguard"
@@ -2186,8 +2186,8 @@ triangle = [
     {file = "triangle-20220202-cp39-cp39-win_amd64.whl", hash = "sha256:1c5bab1851280d14f5128edd5c71a89849e78274d6f41101c5efd8ed914b8740"},
 ]
 trimesh = [
-    {file = "trimesh-3.10.2-py3-none-any.whl", hash = "sha256:9482cc1d519f3ba1809724760278d605df740c0ee379a314b8c329688b8887a7"},
-    {file = "trimesh-3.10.2.tar.gz", hash = "sha256:3dc47ce256ba6498eda63838586554932649a954fc19eeef8e4f745fa812b40a"},
+    {file = "trimesh-3.10.5-py3-none-any.whl", hash = "sha256:2760855a1af2b50cb6dc109452bfbeff42a4dc25b548c939f4e893815c8526f9"},
+    {file = "trimesh-3.10.5.tar.gz", hash = "sha256:1ad7714ad756b62a1181ffd8dbf6eba3260496a209d91c4fde8b6044ec377a92"},
 ]
 typeguard = [
     {file = "typeguard-2.13.3-py3-none-any.whl", hash = "sha256:5e3e3be01e887e7eafae5af63d1f36c849aaa94e3a0112097312aabfa16284f1"},

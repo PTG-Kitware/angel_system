@@ -20,7 +20,7 @@ pytorchvideo = "^0.1.5"
 ipython = "^8.0.1"
 
 [build-system]
-requires = ["poetry-core==1.0.7"]
+requires = ["poetry-core==1.0.8"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.plugins."smqtk_plugins"]
