@@ -20,6 +20,7 @@ using System.Runtime.InteropServices;
 using RosMessageTypes.BuiltinInterfaces;
 using RosMessageTypes.Std;
 using RosMessageTypes.Sensor;
+using RosMessageTypes.Angel;
 
 
 #if ENABLE_WINMD_SUPPORT
@@ -41,24 +42,23 @@ public class PVCameraCapture : MonoBehaviour
 #if ENABLE_WINMD_SUPPORT
     MediaCapture mediaCapture = null;
     private MediaFrameReader frameReader = null;
-    private byte[] frameData = null;
+    // private byte[] frameData = null;
     SpatialCoordinateSystem worldOrigin;
 #endif
 
     // Ros stuff
     ROSConnection ros;
-    public string topicName = "PVFrames";
+    public string imageTopicName = "PVFramesNV12";
+    public string headsetPoseTopicName = "HeadsetPoseData";
 
     private Logger _logger = null;
     string debugString = "";
 
-    const int projectionMatrixSize = 16 * 4;
-    const int worldMatrixSize = 16 * 4;
-    const int headerLength = 16;
-
-    public string TcpServerIPAddr = "";
-
     Matrix4x4 projectionMatrix;
+    float[] projectionMatrixAsFloat;
+
+    // For filling in ROS message timestamp
+    DateTime origin = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
 
     [ComImport]
     [Guid("5B0D3235-4DBA-4D44-865E-8F1D0E4FD04D")]
@@ -94,8 +94,10 @@ public class PVCameraCapture : MonoBehaviour
     {
         Logger log = logger();
 
+        // Create the image publisher and headset pose publisher
         ros = ROSConnection.GetOrCreateInstance();
-        ros.RegisterPublisher<ImageMsg>(topicName);
+        ros.RegisterPublisher<ImageMsg>(imageTopicName);
+        ros.RegisterPublisher<HeadsetPoseDataMsg>(headsetPoseTopicName);
 
 #if ENABLE_WINMD_SUPPORT
         await InitializeMediaCaptureAsyncTask();
@@ -108,6 +110,11 @@ public class PVCameraCapture : MonoBehaviour
 
         log.LogInfo("Media capture started");
 
+        // Assuming the projection matrix never changes
+        projectionMatrix = Camera.main.projectionMatrix;
+        projectionMatrixAsFloat = ConvertUnityMatrixToFloatArray(projectionMatrix);
+
+        // Set the worldOrigin coordinate system to the same system used by the spatial mapping system
         try
         {
             worldOrigin = Marshal.GetObjectForIUnknown(UnityEngine.XR.WindowsMR.WindowsMREnvironment.OriginSpatialCoordinateSystem) as SpatialCoordinateSystem;
@@ -120,7 +127,6 @@ public class PVCameraCapture : MonoBehaviour
         {
             log.LogInfo(e.ToString());
         }
-
 #endif
     }
 
@@ -132,7 +138,6 @@ public class PVCameraCapture : MonoBehaviour
             debugString = "";
         }
 
-        projectionMatrix = Camera.main.projectionMatrix;
     }
 
 #if ENABLE_WINMD_SUPPORT
@@ -229,9 +234,6 @@ public class PVCameraCapture : MonoBehaviour
             frameReader = await mediaCapture.CreateFrameReaderAsync(mediaFrameSourceVideo, targetResFormat.Subtype);
             frameReader.FrameArrived += OnFrameArrived;
 
-            //frameData = new byte[(int) (targetResFormat.VideoFormat.Width * targetResFormat.VideoFormat.Height * 3) + headerLength + worldMatrixSize + projectionMatrixSize];
-            frameData = new byte[(int) (targetResFormat.VideoFormat.Width * targetResFormat.VideoFormat.Height * 1.5)];
-
             this.logger().LogInfo("FrameReader is successfully initialized, " + targetResFormat.VideoFormat.Width + "x" + targetResFormat.VideoFormat.Height +
                 ", Framerate: " + targetResFormat.FrameRate.Numerator + "/" + targetResFormat.FrameRate.Denominator);
         }
@@ -251,8 +253,6 @@ public class PVCameraCapture : MonoBehaviour
         {
             if (frame != null)
             {
-                float[] projectionMatrixAsFloat = ConvertUnityMatrixToFloatArray(projectionMatrix);
-
                 float[] cameraToWorldMatrixAsFloat = null;
                 try
                 {
@@ -268,41 +268,6 @@ public class PVCameraCapture : MonoBehaviour
 
                 var originalSoftwareBitmap = frame.VideoMediaFrame.SoftwareBitmap;
 
-                /*
-                // Convert bitmap to RGB8
-                var rgbSoftwareBitmap = SoftwareBitmap.Convert(originalSoftwareBitmap, BitmapPixelFormat.Rgba8);
-
-                // Try and convert to jpeg??
-                // First: Use an encoder to copy from SoftwareBitmap to an in-mem stream (FlushAsync)
-                // Next:  Use ReadAsync on the in-mem stream to get byte[] array
-
-                byte[] array = null;
-                try
-                {
-                    using (var ms = new InMemoryRandomAccessStream())
-                    {
-                        BitmapEncoder encoder = await BitmapEncoder.CreateAsync(BitmapEncoder.JpegEncoderId, ms);
-                        encoder.SetSoftwareBitmap(rgbSoftwareBitmap);
-
-                        await encoder.FlushAsync();
-
-                        array = new byte[ms.Size];
-                        await ms.ReadAsync(array.AsBuffer(), (uint)ms.Size, InputStreamOptions.None);
-                    }
-                }
-                catch (Exception e)
-                {
-                    debugString += e.ToString();
-                }
-
-                debugString += array.Count().ToString();
-
-                originalSoftwareBitmap?.Dispose();
-                rgbSoftwareBitmap?.Dispose();
-
-                return;
-                */
-
                 using (var input = originalSoftwareBitmap.LockBuffer(BitmapBufferAccessMode.Read))
                 using (var inputReference = input.CreateReference())
                 {
@@ -310,55 +275,41 @@ public class PVCameraCapture : MonoBehaviour
                     uint inputCapacity;
                     ((IMemoryBufferByteAccess)inputReference).GetBuffer(out inputBytes, out inputCapacity);
 
-                    /*
-                    // add worldMatrix
-                    System.Buffer.BlockCopy(cameraToWorldMatrixAsFloat, 0, frameData, frameHeader.Length, worldMatrixSize);
+                    byte[] frameData = new byte[(int) inputCapacity];
+                    Marshal.Copy((IntPtr)inputBytes, frameData, 0, (int)inputCapacity);
 
-                    // add projectionMatrix
-                    System.Buffer.BlockCopy(projectionMatrixAsFloat, 0, frameData, frameHeader.Length + worldMatrixSize, projectionMatrixSize);
+                    uint width = Convert.ToUInt32(originalSoftwareBitmap.PixelWidth);
+                    uint height = Convert.ToUInt32(originalSoftwareBitmap.PixelHeight);
 
-                    // add image data
-                    Marshal.Copy((IntPtr)inputBytes, frameData, frameHeader.Length + worldMatrixSize + projectionMatrixSize, (int)inputCapacity);
-                    */
+                    var currTime = DateTime.Now;
+                    TimeSpan diff = currTime.ToUniversalTime() - origin;
+                    var sec = Convert.ToInt32(Math.Floor(diff.TotalSeconds));
+                    var nsec = Convert.ToUInt32((diff.TotalSeconds - sec) * 1e9f);
 
-                    try
-                    {
-                        Marshal.Copy((IntPtr)inputBytes, frameData, 0, (int)inputCapacity);
+                    HeaderMsg header = new HeaderMsg(
+                        new TimeMsg(sec, nsec),
+                        "PVFramesNV12"
+                    );
 
-                        //byte[] RGBImage = ConvertNV12ToRGB(frameData, originalSoftwareBitmap.PixelWidth, originalSoftwareBitmap.PixelHeight);
-                        //ConvertNV12ToRGB(ref frameData, originalSoftwareBitmap.PixelWidth, originalSoftwareBitmap.PixelHeight);
+                    ImageMsg image = new ImageMsg(header,
+                                                  width,
+                                                  height,
+                                                  "nv12",
+                                                  0,
+                                                  Convert.ToUInt32(width * 1.5),
+                                                  frameData);
 
-                        ImageMsg image = new ImageMsg();
+                    ros.Publish(imageTopicName, image);
 
-                        var currTime = DateTime.Now;
-                        DateTime origin = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
-                        TimeSpan diff = currTime.ToUniversalTime() - origin;
-                        var sec = Convert.ToInt32(Math.Floor(diff.TotalSeconds));
-                        var nsec = Convert.ToUInt32((diff.TotalSeconds - sec) * 1e9f);
+                    // Build and publish the headpose data message
+                    HeadsetPoseDataMsg pose = new HeadsetPoseDataMsg(header, cameraToWorldMatrixAsFloat, projectionMatrixAsFloat);
 
-                        HeaderMsg header = new HeaderMsg(
-                            new TimeMsg(sec, nsec),
-                            "PVFrames"
-                        );
+                    ros.Publish(headsetPoseTopicName, pose);
 
-                        image.header = header;
-                        image.height = (uint) originalSoftwareBitmap.PixelHeight;
-                        image.width = (uint) originalSoftwareBitmap.PixelWidth;
-                        image.encoding = "nv21";
-                        image.is_bigendian = 0;
-                        image.step = Convert.ToUInt32(image.width * 1.5);
-                        image.data = frameData;
-
-                        // Finally send the message to server_endpoint.py running in ROS
-                        ros.Publish(topicName, image);
-                    }
-                    catch (Exception e)
-                    {
-                        debugString += e.ToString();
-                    }
-
-                    originalSoftwareBitmap?.Dispose();
                 }
+
+                originalSoftwareBitmap?.Dispose();
+
             }
         }
     }
@@ -483,63 +434,5 @@ public class PVCameraCapture : MonoBehaviour
         );
     }
 #endif
-
-    // Based off of https://stackoverflow.com/questions/9325861/converting-yuv-rgbimage-processing-yuv-during-onpreviewframe-in-android
-    private void ConvertNV12ToRGB(ref byte[] NV12Image, int imageWidth, int imageHeight)
-    {
-        // The buffer we want to fill with the image
-        //abyte[] RGBImage = new byte[imageWidth * imageHeight * 3];
-
-        int numPixels = imageWidth * imageHeight;
-
-        // Holding variables for the loop calculation
-        int R = 0;
-        int G = 0;
-        int B = 0;
-
-        int RGBImageIndex = 0;
-
-        // Get each pixel, one at a time
-        for (int y = 0; y < imageHeight; y++)
-        {
-            for (int x = 0; x < imageWidth; x++)
-            {
-                // Get the Y value, stored in the first block of data
-                // The logical "AND 0xff" is needed to deal with the signed issue
-                float Y = (float)(NV12Image[y * imageWidth + x] & 0xff);
-
-                // Get U and V values, stored after Y values, one per 2x2 block
-                // of pixels, interleaved. Prepare them as floats with correct range
-                // ready for calculation later.
-                int xby2 = x / 2;
-                int yby2 = y / 2;
-
-                float V = (float)(NV12Image[numPixels + 2 * xby2 + yby2 * imageWidth] & 0xff) - 128.0f;
-                float U = (float)(NV12Image[numPixels + 2 * xby2 + 1 + yby2 * imageWidth] & 0xff) - 128.0f;
-
-                // These are the coefficients proposed by @AlexCohn
-                // for [0..255], as per the wikipedia page referenced
-                // above
-                R = (int)(Y + 1.370705f * V);
-                G = (int)(Y - 0.698001f * V - 0.337633f * U);
-                B = (int)(Y + 1.732446f * U);
-
-                // Clip rgb values to 0-255
-                R = R < 0 ? 0 : R > 255 ? 255 : R;
-                G = G < 0 ? 0 : G > 255 ? 255 : G;
-                B = B < 0 ? 0 : B > 255 ? 255 : B;
-
-                // Put that pixel in the buffer
-                //intBuffer.put(alpha * 16777216 + R * 65536 + G * 256 + B);
-
-                NV12Image[RGBImageIndex] = Convert.ToByte(B);
-                NV12Image[RGBImageIndex + 1] = Convert.ToByte(G);
-                NV12Image[RGBImageIndex + 2] = Convert.ToByte(R);
-                RGBImageIndex += 3;
-            }
-        }
-
-        //return RGBImage;
-    }
 
 }

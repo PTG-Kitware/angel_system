@@ -98,6 +98,7 @@ public class ResearchModeCapture : MonoBehaviour
     void SetupResearchMode()
     {
 #if ENABLE_WINMD_SUPPORT
+    /*
         // Configure research mode
         researchMode = new HL2ResearchMode(TcpServerIPAddr);
 
@@ -114,6 +115,7 @@ public class ResearchModeCapture : MonoBehaviour
         else if (depthSensorMode == DepthSensorMode.ShortThrow) researchMode.StartDepthSensorLoop(enablePointCloud);
 
         researchMode.StartSpatialCamerasFrontLoop();
+    */
 #endif
     }
 
