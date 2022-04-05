@@ -6,7 +6,7 @@ import numpy as np
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import Image, CompressedImage
 from smqtk_detection.impls.detect_image_objects.resnet_frcnn import ResNetFRCNN
 
 from angel_msgs.msg import ObjectDetection2dSet
@@ -37,7 +37,7 @@ class ObjectDetector(Node):
         log.info(f"Detection threshold: {self._detection_threshold}")
 
         self._subscription = self.create_subscription(
-            Image,
+            CompressedImage,
             self._image_topic,
             self.listener_callback,
             1
@@ -67,7 +67,7 @@ class ObjectDetector(Node):
             self._prev_time = time.time()
 
         # convert NV12 image to RGB
-        rgb_image = BRIDGE.imgmsg_to_cv2(image, desired_encoding="rgb8")
+        rgb_image = BRIDGE.compressed_imgmsg_to_cv2(image, desired_encoding="rgb8")
 
         # Send to Detector
         #
