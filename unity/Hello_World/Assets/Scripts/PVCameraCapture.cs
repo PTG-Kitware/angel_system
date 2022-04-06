@@ -42,7 +42,7 @@ public class PVCameraCapture : MonoBehaviour
 #if ENABLE_WINMD_SUPPORT
     MediaCapture mediaCapture = null;
     private MediaFrameReader frameReader = null;
-    // private byte[] frameData = null;
+    private byte[] frameData = null;
     SpatialCoordinateSystem worldOrigin;
 #endif
 
@@ -234,6 +234,8 @@ public class PVCameraCapture : MonoBehaviour
             frameReader = await mediaCapture.CreateFrameReaderAsync(mediaFrameSourceVideo, targetResFormat.Subtype);
             frameReader.FrameArrived += OnFrameArrived;
 
+            frameData = new byte[(int) (targetResFormat.VideoFormat.Width * targetResFormat.VideoFormat.Height * 1.5)];
+
             this.logger().LogInfo("FrameReader is successfully initialized, " + targetResFormat.VideoFormat.Width + "x" + targetResFormat.VideoFormat.Height +
                 ", Framerate: " + targetResFormat.FrameRate.Numerator + "/" + targetResFormat.FrameRate.Denominator);
         }
@@ -275,7 +277,6 @@ public class PVCameraCapture : MonoBehaviour
                     uint inputCapacity;
                     ((IMemoryBufferByteAccess)inputReference).GetBuffer(out inputBytes, out inputCapacity);
 
-                    byte[] frameData = new byte[(int) inputCapacity];
                     Marshal.Copy((IntPtr)inputBytes, frameData, 0, (int)inputCapacity);
 
                     uint width = Convert.ToUInt32(originalSoftwareBitmap.PixelWidth);
@@ -292,8 +293,8 @@ public class PVCameraCapture : MonoBehaviour
                     );
 
                     ImageMsg image = new ImageMsg(header,
-                                                  width,
                                                   height,
+                                                  width,
                                                   "nv12",
                                                   0,
                                                   Convert.ToUInt32(width * 1.5),
@@ -305,7 +306,6 @@ public class PVCameraCapture : MonoBehaviour
                     HeadsetPoseDataMsg pose = new HeadsetPoseDataMsg(header, cameraToWorldMatrixAsFloat, projectionMatrixAsFloat);
 
                     ros.Publish(headsetPoseTopicName, pose);
-
                 }
 
                 originalSoftwareBitmap?.Dispose();
