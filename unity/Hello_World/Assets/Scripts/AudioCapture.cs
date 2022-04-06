@@ -40,6 +40,9 @@ public class AudioCapture : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        // TODO: Add this back in and use ROS-TCP plugin instead when we need audio capture
+
+        /*
         Logger log = logger();
 
         try
@@ -88,6 +91,7 @@ public class AudioCapture : MonoBehaviour
         {
             log.LogInfo("Exception: " + e);
         }
+        */
     }
 
     // Update is called once per frame
