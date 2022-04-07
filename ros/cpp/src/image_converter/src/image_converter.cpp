@@ -16,10 +16,6 @@
 // Other stuff
 #include <opencv2/opencv.hpp>
 
-// Our stuff
-#include <angel_utils/rate_tracker.hpp>
-
-using angel_utils::RateTracker;
 using rcl_interfaces::msg::ParameterDescriptor;
 using rcl_interfaces::msg::ParameterType;
 using std::placeholders::_1;
@@ -61,19 +57,13 @@ private:
   rclcpp::Subscription< sensor_msgs::msg::Image >::SharedPtr m_sub_input_image;
   rclcpp::Publisher< sensor_msgs::msg::Image >::SharedPtr m_pub_output_image;
 
-  // Measure and report receive/publish FPS - RGB Images
-  RateTracker m_img_rate_tracker;
-  // Simple counter for image messages received.
-  size_t m_image_count = 0;
-
   std::string frame_id = "PVFrameRGB";
 };
 
 // ----------------------------------------------------------------------------
 ImageConverter
 ::ImageConverter( rclcpp::NodeOptions const& options )
-  : Node( "ImageConverter", options ),
-    m_img_rate_tracker( 10 )
+  : Node( "ImageConverter", options )
 {
   auto log = this->get_logger();
 
@@ -128,17 +118,6 @@ ImageConverter
 
   // Publish the RGB image
   m_pub_output_image->publish(image_message);
-
-  // Measure the publishing rate
-  m_img_rate_tracker.tick();
-
-  if (m_image_count % 150 == 0)
-  {
-    RCLCPP_INFO( log,
-                 "Collected Image #%d (hz: %f)",
-                 m_image_count, m_img_rate_tracker.get_rate_avg() );
-  }
-  ++m_image_count;
 }
 
 } // namespace image_converter
