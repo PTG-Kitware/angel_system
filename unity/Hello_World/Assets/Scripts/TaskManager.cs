@@ -59,15 +59,17 @@ public class TaskManager : MonoBehaviour
     {
         Logger log = logger();
         TaskLogger taskLog = taskLogger();
-
-
-        TaskUpdateMsg taskUpdateMessage = new TaskUpdateMsg(new HeaderMsg(),
-                                               "Waiting for task",
-                                               new string[0],
-                                               "N/A",
-                                               "N/A",
-                                               "N/A",
-                                               "N/A");
+        TaskUpdateMsg taskUpdateMessage = new TaskUpdateMsg(new HeaderMsg(), // ROS std header
+                                                           "Waiting for task", // task item
+                                                           "Task description goes here.", // task description
+                                                           new TaskItemMsg[0], // task items
+                                                           new string[0], // task steps
+                                                           "N/A", // current step
+                                                           "N/A", // previous step
+                                                           "N/A", // current activity
+                                                           "N/A", // next activity
+                                                           -1 // time remaining
+                                                           );
 
         log.LogInfo(taskUpdateMessage.task_name);
         taskLog.UpdateTaskDisplay(taskUpdateMessage);

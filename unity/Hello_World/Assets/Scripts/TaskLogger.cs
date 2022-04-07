@@ -43,6 +43,12 @@ public class TaskLogger : Singleton<Logger>
         // Display the current task
         debugAreaText.text += $"<color=\"green\"> {"Current task: "} {taskUpdateMessage.task_name}</color>\n";
 
+        // TODO: Display the task description
+
+        // TODO: Display the items required
+
+        // TODO: Display the countdown timer somewhere
+
         // Display the current activity being performed
         if (taskUpdateMessage.current_activity != taskUpdateMessage.next_activity)
         {
