@@ -29,6 +29,7 @@ rosidl_generate_interfaces( ${PROJECT_NAME}
   msg/SpatialMesh.msg
   msg/ActivityDetection.msg
   msg/TaskUpdate.msg
+  msg/TaskItem.msg
   DEPENDENCIES builtin_interfaces std_msgs geometry_msgs shape_msgs
   )
 
