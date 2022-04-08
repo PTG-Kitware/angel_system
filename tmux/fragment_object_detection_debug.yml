@@ -55,16 +55,16 @@ windows:
   - datahub: ros2 run ros_tcp_endpoint default_server_endpoint --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p ROS_IP:=${HL2_IP}
-  - image_converter: ros2 run image_converter ImageConverter --ros-args
+  - image_converter: ros2 run angel_datahub ImageConverter --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p topic_input_images:=PVFramesNV12
       -p topic_output_images:=PVFramesRGB
-  - detector: ros2 run py_pubsub object_detector --ros-args
+  - detector: ros2 run angel_system_nodes object_detector --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p image_topic:=PVFramesRGB
       -p det_topic:=detections
       -p use_cuda:=true
-  - spatial_mapper: ros2 run py_pubsub spatial_mapper --ros-args
+  - spatial_mapper: ros2 run angel_system_nodes spatial_mapper --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p spatial_map_topic:=SpatialMapData
       -p det_topic:=detections
