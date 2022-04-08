@@ -6,8 +6,8 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 
-from angel_msgs.msg import ActivityDetection, TaskUpdate
-from transitions import Machine
+from angel_msgs.msg import ActivityDetection, TaskUpdate, TaskItem
+from transitions import Machine, State
 import transitions
 
 
@@ -16,18 +16,33 @@ class Task():
     Representation of a task defined by its steps and transistions between them.
     """
     def __init__(self):
-        self.name = "Cook an egg!"
+        self.name = 'Making Tea'
 
-        self.steps = ["wash hands", "cook egg", "wash dishes", "finished!"]
+        self.items = {'water bottle': 1, 'tea bag': 1, 'cup': 1}
+
+        self.description = ('Open the water bottle and pour the water into a tea cup.' +
+                            ' Place the tea bag in the cup.' +
+                            ' Wait 20 seconds while the tea bag steeps, then drink and enjoy!')
+
+        self.steps = [{'name': 'pour_water_into_cup'},
+                      {'name': 'place_tea_bag_into_cup'},
+                      {'name': 'steep_for_20_seconds'},
+                      {'name': 'drink_tea'},
+                      {'name': 'enjoy'},
+                     ]
 
         self.transitions = [
-            { 'trigger': 'wash_hands', 'source': 'wash hands', 'dest': 'cook egg' },
-            { 'trigger': 'cook_egg', 'source': 'cook egg', 'dest': 'wash dishes' },
-            { 'trigger': 'wash_dishes', 'source': 'wash dishes', 'dest': 'finished!' },
+            { 'trigger': 'open_bottle', 'source': 'pour_water_into_cup', 'dest': 'place_tea_bag_into_cup' },
+            { 'trigger': 'make_tea', 'source': 'place_tea_bag_into_cup', 'dest': 'steep_for_20_seconds' },
+            { 'trigger': 'drink_tea', 'source': 'drink_tea', 'dest': 'enjoy!' },
         ]
 
+        self.time_remaining_until_next_step = -1
+
         self.machine = Machine(model=self, states=self.steps,
-                               transitions=self.transitions, initial='wash hands')
+                               transitions=self.transitions, initial='pour_water_into_cup')
+
+        self.machine.states['pour_water_into_cup'].timer = 20.0
 
 
 class TaskMonitor(Node):
@@ -72,11 +87,13 @@ class TaskMonitor(Node):
         self._next_activity = None
 
         self._activity_action_dict = {
-            'washing hands': self._task.wash_hands,
-            'cooking egg': self._task.cook_egg,
-            'washing dishes': self._task.wash_dishes
+            'opening bottle': self._task.open_bottle,
+            'making tea': self._task.make_tea,
+            'drinking': self._task.drink_tea,
         }
 
+        #print("dir:", dir(self._task))
+        print("task state", self._task.machine.states[self._task.state].timer)
         self.publish_task_state_message()
 
     def listener_callback(self, activity_msg):
@@ -117,10 +134,20 @@ class TaskMonitor(Node):
             # Update state tracking vars
             self._previous_step = self._current_step
             self._current_step = self._task.state
+
         except transitions.core.MachineError as e:
+            print("error!", e)
             pass
 
         self.publish_task_state_message()
+
+        # Check to see if this new state has a timer associated with it
+        # TODO
+        try:
+            print("task state", self._task.machine.states[self._task.state].timer)
+            if self._task.machine.states[self._task.state].timer:
+                # Spawn a thread to track the timer and publish state messages
+        except transitions.core.MachineError as e:
 
     def publish_task_state_message(self, activity=None):
         """
@@ -134,8 +161,21 @@ class TaskMonitor(Node):
         message.header.frame_id = "Task message"
 
         message.task_name = self._task.name
+        message.task_description = self._task.description
 
-        message.steps = self._task.steps
+        # Populate task items list
+        for i, q in self._task.items.items():
+            item = TaskItem()
+            item.item_name = i
+            item.quantity = q
+            message.task_items.append(item)
+
+        for step in self._task.steps:
+            try:
+                message.steps.append(step['name'])
+            except:
+                message.steps.append(step)
+        #message.steps = self._task.steps
         message.current_step = self._current_step
 
         if self._previous_step is None:
@@ -152,6 +192,7 @@ class TaskMonitor(Node):
             if t['source'] == self._task.state:
                 self._next_activity = t['trigger']
                 break
+
         message.next_activity = self._next_activity
 
         self._publisher.publish(message)
