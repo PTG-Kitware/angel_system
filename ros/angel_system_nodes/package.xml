@@ -1,11 +1,11 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>py_pubsub</name>
+  <name>angel_system_nodes</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
-  <maintainer email="josh.anderson@todo.todo">josh.anderson</maintainer>
-  <license>TODO: License declaration</license>
+  <description>Contains python ROS nodes implementing the various Angel system nodes</description>
+  <maintainer email="kitware@kitware.com">kitware</maintainer>
+  <license>BSD 3-Clause</license>
 
   <depend>rclpy</depend>
   <depend>std_msgs</depend>
