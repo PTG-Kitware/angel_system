@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>ptg_datahub</name>
+  <name>angel_datahub</name>
   <version>0.1.0</version>
   <description>Datahub between Hololens 2 and the ROS 2 network</description>
   <maintainer email="kitware@kitware.com">root</maintainer>

@@ -1,5 +1,5 @@
 cmake_minimum_required( VERSION 3.5 )
-project( ptg_datahub )
+project( angel_datahub )
 
 # Default to C++14
 if( NOT CMAKE_CXX_STANDARD )
@@ -23,11 +23,11 @@ set( headers_public )
 set( sources
   # Nodes
   src/image_converter.cpp
-  src/ptg_datahub.cpp
+  src/angel_datahub.cpp
   )
-add_library( ptg_datahub SHARED
+add_library( angel_datahub SHARED
   ${headers_public} ${sources} )
-ament_target_dependencies(ptg_datahub
+ament_target_dependencies(angel_datahub
   rclcpp
   rclcpp_components
   sensor_msgs
@@ -35,19 +35,19 @@ ament_target_dependencies(ptg_datahub
   OpenCV
   angel_msgs
   )
-install( TARGETS ptg_datahub
+install( TARGETS angel_datahub
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
   )
 
 # Component registration
-rclcpp_components_register_node( ptg_datahub
+rclcpp_components_register_node( angel_datahub
   PLUGIN "image_converter::ImageConverter"
   EXECUTABLE ImageConverter )
-rclcpp_components_register_node( ptg_datahub
-  PLUGIN "ptg_datahub::PTGDataHub"
-  EXECUTABLE PTGDataHub )
+rclcpp_components_register_node( angel_datahub
+  PLUGIN "angel_datahub::AngelDataHub"
+  EXECUTABLE AngelDataHub )
 
 if( BUILD_TESTING )
   find_package( ament_lint_auto REQUIRED )
