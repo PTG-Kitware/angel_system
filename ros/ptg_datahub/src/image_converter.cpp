@@ -5,7 +5,6 @@
 #include <numeric>
 
 // ROS2 things
-#include <builtin_interfaces/msg/time.hpp>
 #include <cv_bridge/cv_bridge.h>
 #include <rcl_interfaces/msg/parameter_descriptor.hpp>
 #include <rcl_interfaces/msg/parameter_type.hpp>

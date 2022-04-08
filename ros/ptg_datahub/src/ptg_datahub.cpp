@@ -11,6 +11,7 @@
 #include <thread>
 
 #include "rclcpp/rclcpp.hpp"
+#include <rclcpp_components/register_node_macro.hpp>
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/byte_multi_array.hpp"
 #include "std_msgs/msg/u_int8_multi_array.hpp"
@@ -85,6 +86,10 @@ std::map<int, std::string> PORT_TOPIC_MAP = {
 using namespace std::chrono_literals;
 using std::placeholders::_1;
 
+namespace ptg_datahub {
+
+namespace {
+
 // ----------------------------------------------------------------------------
 #define DEFINE_PARAM_NAME( var_name, param_name_str ) \
   static constexpr char const* var_name = param_name_str
@@ -97,10 +102,12 @@ DEFINE_PARAM_NAME( PARAM_TOPIC_INPUT_TASK_UPDATE, "task_update_topic" );
 
 #undef DEFINE_PARAM_NAME
 
+} // namespace
+
 class PTGDataHub : public rclcpp::Node
 {
   public:
-    PTGDataHub();
+    PTGDataHub( rclcpp::NodeOptions const& options );
     ~PTGDataHub();
 
   private:
@@ -152,7 +159,9 @@ class PTGDataHub : public rclcpp::Node
 
 };
 
-PTGDataHub::PTGDataHub() : Node("ptg_datahub")
+PTGDataHub
+::PTGDataHub( rclcpp::NodeOptions const& options )
+  : Node("PTGDataHub", options)
 {
   auto log = this->get_logger();
 
@@ -989,15 +998,6 @@ SOCKET PTGDataHub::connectSocket(int port)
   return s;
 }
 
+} // namespace ptg_datahub
 
-int main(int argc, char * argv[])
-{
-  rclcpp::init(argc, argv);
-
-  std::shared_ptr<PTGDataHub> mp = std::make_shared<PTGDataHub>();
-
-  rclcpp::spin(mp);
-
-  rclcpp::shutdown();
-  return 0;
-}
+RCLCPP_COMPONENTS_REGISTER_NODE( ptg_datahub::PTGDataHub )
