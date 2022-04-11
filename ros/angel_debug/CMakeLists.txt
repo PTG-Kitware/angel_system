@@ -50,14 +50,6 @@ rclcpp_components_register_node( angel_debug
   PLUGIN "angel_debug::Simple2dDetectionOverlay"
   EXECUTABLE Simple2dDetectionOverlay )
 
-#
-# Launch file installation
-#
-INSTALL(
-  DIRECTORY launch
-  DESTINATION share/${PROJECT_NAME}
-)
-
 if( BUILD_TESTING )
   find_package( ament_lint_auto REQUIRED )
   # the following line skips the linter which checks for copyrights
