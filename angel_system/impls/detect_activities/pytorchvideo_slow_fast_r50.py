@@ -66,7 +66,12 @@ class PytorchVideoSlowFastR50(DetectActivities):
         """
         model = self._model
         if model is None:
-            # Pick a pretrained model and load the pretrained weights
+            # Note: Line below is a workaround for an intermittent HTTP error
+            # when downloading the model from pytorch.
+            # See: https://github.com/pytorch/vision/issues/4156
+            torch.hub._validate_not_a_forked_repo=lambda a,b,c: True
+
+            # Load the pretrained model
             model = torch.hub.load("facebookresearch/pytorchvideo",
                                      model="slowfast_r50", pretrained=True)
             model = model.eval()
