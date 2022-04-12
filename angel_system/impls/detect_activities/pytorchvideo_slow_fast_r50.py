@@ -40,6 +40,7 @@ class PytorchVideoSlowFastR50(DetectActivities):
         self,
         use_cuda: bool = False,
         cuda_device: Union[int, str] = "cuda:0",
+        det_threshold: float = 0.75,
     ):
         self._use_cuda = use_cuda
         self._cuda_device = cuda_device
@@ -58,6 +59,8 @@ class PytorchVideoSlowFastR50(DetectActivities):
         self._sampling_rate = 2
         self._frames_per_second = 30
         self._alpha = 4
+
+        self._det_threshold = det_threshold
 
     def get_model(self) -> "torch.nn.Module":
         """
@@ -144,12 +147,20 @@ class PytorchVideoSlowFastR50(DetectActivities):
         # Get the predicted classes
         post_act = torch.nn.Softmax(dim=1)
         preds = post_act(preds)
-        pred_classes = preds.topk(k=5).indices
+        top_preds = preds.topk(k=5)
 
         # Map the predicted classes to the label names
+        pred_classes = top_preds.indices
         pred_class_names = [KINETICS_400_LABELS[int(i)] for i in pred_classes[0]]
 
-        return pred_class_names
+        # Filter out any detections below the threshold
+        predictions = []
+        pred_values = top_preds.values[0]
+        for idx, p in enumerate(pred_class_names):
+            if (pred_values[idx] > self._det_threshold):
+                predictions.append(p)
+
+        return predictions
 
     def get_config(self) -> dict:
         return {
