@@ -3,6 +3,19 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(realpath "${SCRIPT_DIR}/..")"
+UNCRUSTIFY_CFG_FPATH="$ROOT_DIR"/uncrustify.cfg
+
+# Regex for just the text following the final `.` before the end of the filename.
+# This set of file extensions should cover all C/C++ source files that we
+# desire to check against uncrustify under the `CPP` language mode.
+CPP_FILE_SUFFIX_RE="(h|hpp|hxx|txx|cpp|cxx|cu)"
+
+# Directories relative to the root directory to search for C++ files for
+# uncrustification. This is used when performing general file discovery (e.g.
+# not used when deducing from git status, explicit filepaths, etc.).
+CPP_SOURCE_DIRS=(
+  "ros"
+)
 
 # Exit is for when cd fails for whatever reason
 cd "$ROOT_DIR" || exit
@@ -25,7 +38,7 @@ If no explicit filepaths are provided, automatic file discovery will occur:
 The --check option may be provided to instead run uncrustify in check-mode,
 which doesn't modify files but instead exits with a non-zero code if any
 files *would* be changed. Files that would be changed are output to STDERR:
-    $ bash unix_uncrustify.sh 1>/dev/null
+    $ bash unix_uncrustify.sh --check 1>/dev/null
 
 Options:
 
@@ -68,7 +81,6 @@ do
       # Assuming a provided filepath
       echo "Adding \"$key\""
       EXPLICIT_FILES[${#EXPLICIT_FILES[@]}]="$key"
-      #EXPLICIT_FILES+=("${key}")
     ;;
   esac
 done
@@ -78,21 +90,13 @@ then
   # If there were no files specifically provided, discover files instead.
   if [[ "${GIT_MODE}" -eq 1 ]]
   then
-    mapfile -d "" CPP_FILES < <(git status -s | grep -v "^D " | grep -E "\.(h|cxx|cpp)$" | cut -c 4- | tr '\n' '\0')
+    mapfile -d "" CPP_FILES < <(git status -s | grep -v "^D " | grep -E "\.${CPP_FILE_SUFFIX_RE}$" | cut -c 4- | tr '\n' '\0')
   else
-    # Directories relative to the root directory to search for C++ files for
-    # uncrustification.
-    CPP_SOURCE_DIRS=(
-      "python"
-      "ros"
-    )
-
     # NOTE: This subtractive grep usage to filter out certain places we chose not to
     # enforce style requirements on.
     mapfile -d "" CPP_FILES \
       < <(find "${CPP_SOURCE_DIRS[@]}" \
-          -type f -regextype egrep -iregex ".*\.(h|cxx|cpp|txx)" -print0 \
-          | grep -zv "^vital/kwiversys" )
+          -type f -regextype egrep -iregex ".*\.${CPP_FILE_SUFFIX_RE}$" -print0)
   fi
 else
   CPP_FILES=("${EXPLICIT_FILES[@]}")
@@ -116,4 +120,4 @@ else
 fi
 # Use of `-lCPP` is important. Otherwise not all files are treated the same.
 # shellcheck disable=SC2086
-uncrustify -c "$ROOT_DIR"/uncrustify.cfg -lCPP ${MODE_ARGS} "${CPP_FILES[@]}"
+uncrustify -c "${UNCRUSTIFY_CFG_FPATH}" -lCPP ${MODE_ARGS} "${CPP_FILES[@]}"
