@@ -1,3 +1,4 @@
+import threading
 import time
 from typing import Dict
 
@@ -24,25 +25,33 @@ class Task():
                             ' Place the tea bag in the cup.' +
                             ' Wait 20 seconds while the tea bag steeps, then drink and enjoy!')
 
-        self.steps = [{'name': 'pour_water_into_cup'},
+        self.steps = [{'name': 'open_bottle_and_pour_water_into_cup'},
                       {'name': 'place_tea_bag_into_cup'},
                       {'name': 'steep_for_20_seconds'},
-                      {'name': 'drink_tea'},
                       {'name': 'enjoy'},
                      ]
 
         self.transitions = [
-            { 'trigger': 'open_bottle', 'source': 'pour_water_into_cup', 'dest': 'place_tea_bag_into_cup' },
+            { 'trigger': 'open_bottle', 'source': 'open_bottle_and_pour_water_into_cup', 'dest': 'place_tea_bag_into_cup' },
             { 'trigger': 'make_tea', 'source': 'place_tea_bag_into_cup', 'dest': 'steep_for_20_seconds' },
-            { 'trigger': 'drink_tea', 'source': 'drink_tea', 'dest': 'enjoy!' },
         ]
 
         self.time_remaining_until_next_step = -1
 
         self.machine = Machine(model=self, states=self.steps,
-                               transitions=self.transitions, initial='pour_water_into_cup')
+                               transitions=self.transitions, initial='open_bottle_and_pour_water_into_cup')
 
-        self.machine.states['pour_water_into_cup'].timer = 20.0
+        self.machine.states['steep_for_20_seconds'].timer_length = 20.0
+
+        # Mapping from state name to the to_state function, which provides a way to get
+        # to the state from anywhere.
+        # The to_* functions are created automatically when the Machine is initialized.
+        self.to_state_dict = {
+            'open_bottle_and_pour_water_into_cup': self.to_open_bottle_and_pour_water_into_cup,
+            'place_tea_bag_into_cup': self.to_place_tea_bag_into_cup,
+            'steep_for_20_seconds': self.to_steep_for_20_seconds,
+            'enjoy': self.to_enjoy,
+        }
 
 
 class TaskMonitor(Node):
@@ -86,14 +95,15 @@ class TaskMonitor(Node):
         self._current_activity = None
         self._next_activity = None
 
+        # Tracks whether or not a timer is currently active
+        self._timer_active = False
+
         self._activity_action_dict = {
             'opening bottle': self._task.open_bottle,
             'making tea': self._task.make_tea,
-            'drinking': self._task.drink_tea,
         }
 
-        #print("dir:", dir(self._task))
-        print("task state", self._task.machine.states[self._task.state].timer)
+
         self.publish_task_state_message()
 
     def listener_callback(self, activity_msg):
@@ -126,6 +136,11 @@ class TaskMonitor(Node):
 
         self._current_activity = current_activity
 
+        # If we are currently in a timer state, exit early since we need to wait for
+        # the timer to finish
+        if self._timer_active:
+            return
+
         # Attempt to advance to the next step
         try:
             self._activity_action_dict[current_activity]()
@@ -136,18 +151,20 @@ class TaskMonitor(Node):
             self._current_step = self._task.state
 
         except transitions.core.MachineError as e:
-            print("error!", e)
             pass
 
         self.publish_task_state_message()
 
         # Check to see if this new state has a timer associated with it
-        # TODO
         try:
-            print("task state", self._task.machine.states[self._task.state].timer)
-            if self._task.machine.states[self._task.state].timer:
+            if self._task.machine.states[self._task.state].timer_length > 0:
                 # Spawn a thread to track the timer and publish state messages
-        except transitions.core.MachineError as e:
+                t = threading.Thread(target=self.task_timer_thread)
+                t.start()
+                self._timer_active = True
+        except AttributeError as e:
+            # No timer associated with this state
+            pass
 
     def publish_task_state_message(self, activity=None):
         """
@@ -157,9 +174,11 @@ class TaskMonitor(Node):
 
         message = TaskUpdate()
 
+        # Populate message header
         message.header.stamp = self.get_clock().now().to_msg()
         message.header.frame_id = "Task message"
 
+        # Populate task name and description
         message.task_name = self._task.name
         message.task_description = self._task.description
 
@@ -170,13 +189,14 @@ class TaskMonitor(Node):
             item.quantity = q
             message.task_items.append(item)
 
+        # Populate step list
         for step in self._task.steps:
             try:
-                message.steps.append(step['name'])
+                message.steps.append(step['name'].replace('_', ' '))
             except:
-                message.steps.append(step)
-        #message.steps = self._task.steps
-        message.current_step = self._current_step
+                message.steps.append(step.replace('_', ' '))
+
+        message.current_step = self._current_step.replace('_', ' ')
 
         if self._previous_step is None:
             message.previous_step = "N/A"
@@ -195,7 +215,44 @@ class TaskMonitor(Node):
 
         message.next_activity = self._next_activity
 
+        try:
+            message.time_remaining_until_next_task = int(self._task.machine.states[self._task.state].timer_length)
+        except AttributeError as e:
+            message.time_remaining_until_next_task = -1
+
         self._publisher.publish(message)
+
+
+    def task_timer_thread(self):
+        """
+        Thread to track the time left on a current time-based task.
+        Publishes a task update message once per second with the time remaining
+        until the next task.
+        At the end of the timer, it moves the task monitor to the next task.
+        """
+        loops = self._task.machine.states[self._task.state].timer_length
+
+        # Publish a task update message once per second
+        for i in range(int(loops)):
+            self.publish_task_state_message()
+            self._task.machine.states[self._task.state].timer_length -= 1
+
+            time.sleep(1)
+
+        self._timer_active = False
+
+        # Lookup the next state
+        curr_idx = list(self._task.machine.states.keys()).index(self._task.state)
+        next_state = list(self._task.machine.states.keys())[curr_idx + 1]
+
+        # Advance to the next state
+        self._task.to_state_dict[next_state]()
+
+        # Update state tracking vars
+        self._previous_step = self._current_step
+        self._current_step = self._task.state
+
+        self.publish_task_state_message()
 
 
 def main():
