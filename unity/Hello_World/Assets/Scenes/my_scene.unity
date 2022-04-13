@@ -242,6 +242,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bed211673834a3b438de33f815f8bf23, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  spatialMapTopicName: SpatialMapData
+  detectionsTopicName: ObjectDetections3d
 --- !u!4 &688079714
 Transform:
   m_ObjectHideFlags: 0
@@ -285,8 +287,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e555917419c843047b1c560ed473073f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  topicName: PVFrames
-  TcpServerIPAddr: 
+  imageTopicName: PVFramesNV12
+  headsetPoseTopicName: HeadsetPoseData
 --- !u!4 &802567262
 Transform:
   m_ObjectHideFlags: 0
@@ -845,6 +847,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9efed085fb73ff64c9c4ea1e3b848cae, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  taskUpdatesTopic: TaskUpdates
 --- !u!4 &1676318196
 Transform:
   m_ObjectHideFlags: 0
