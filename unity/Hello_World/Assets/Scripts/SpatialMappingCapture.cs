@@ -247,14 +247,12 @@ public class SpatialMappingCapture : MonoBehaviour, IMixedRealitySpatialAwarenes
                          Vector3 cornerRight, Vector3 cornerBot,
                          string classTypeStr)
     {
-        Color color = new Color(0.3f, 0.4f, 0.6f);
-
         GameObject lineObject = new GameObject();
         LineRenderer line = lineObject.AddComponent<LineRenderer>();
+        line.material.color = Color.white;
+
         line.startWidth = 0.01f;
         line.endWidth = 0.01f;
-        line.startColor = color;
-        line.endColor = color;
         line.positionCount = 5;
 
         line.SetPosition(0, cornerLeft);
