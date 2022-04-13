@@ -54,7 +54,7 @@ tmux_options: -f <%= ENV["ANGEL_WORKSPACE_DIR"] %>/tmux/tmux.conf
 windows:
   - datahub: ros2 run ros_tcp_endpoint default_server_endpoint --ros-args
       -r __ns:=${ROS_NAMESPACE}
-      -p ROS_IP:=${HL2_IP}
+      -p ROS_IP:=0.0.0.0
   - image_converter: ros2 run angel_datahub ImageConverter --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p topic_input_images:=PVFramesNV12
