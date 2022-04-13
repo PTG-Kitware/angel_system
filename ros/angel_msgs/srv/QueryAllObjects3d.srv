@@ -1,0 +1,3 @@
+# Get all detected objects currently present in the world space.
+---
+angel_msgs/AruiObject3d[] all_objects
