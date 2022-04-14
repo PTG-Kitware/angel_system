@@ -8,14 +8,17 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Net.NetworkInformation;
-using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.XR.WindowsMR;
+using Unity.Robotics.ROSTCPConnector;
 using System.Runtime.InteropServices;
+using RosMessageTypes.BuiltinInterfaces;
+using RosMessageTypes.Std;
+using RosMessageTypes.Sensor;
+using RosMessageTypes.Angel;
 
 
 #if ENABLE_WINMD_SUPPORT
@@ -27,6 +30,7 @@ using Windows.Media.MediaProperties;
 using Windows.Media.Devices.Core;
 using Windows.Perception.Spatial;
 using Windows.Perception;
+using Windows.Storage.Streams;
 using System.Runtime.InteropServices.WindowsRuntime;
 #endif
 
@@ -40,22 +44,19 @@ public class PVCameraCapture : MonoBehaviour
     SpatialCoordinateSystem worldOrigin;
 #endif
 
-    // Network stuff
-    System.Net.Sockets.TcpClient tcpClient;
-    System.Net.Sockets.TcpListener tcpServer;
-    NetworkStream tcpStream;
+    // Ros stuff
+    ROSConnection ros;
+    public string imageTopicName = "PVFramesNV12";
+    public string headsetPoseTopicName = "HeadsetPoseData";
 
     private Logger _logger = null;
     string debugString = "";
 
-    const int projectionMatrixSize = 16 * 4;
-    const int worldMatrixSize = 16 * 4;
-    const int headerLength = 16;
-
-    public string TcpServerIPAddr = "";
-    public const int PVTcpPort = 11008;
-
     Matrix4x4 projectionMatrix;
+    float[] projectionMatrixAsFloat;
+
+    // For filling in ROS message timestamp
+    DateTime origin = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
 
     [ComImport]
     [Guid("5B0D3235-4DBA-4D44-865E-8F1D0E4FD04D")]
@@ -91,29 +92,10 @@ public class PVCameraCapture : MonoBehaviour
     {
         Logger log = logger();
 
-        try
-        {
-            TcpServerIPAddr = PTGUtilities.getIPv4AddressString();
-        }
-        catch (InvalidIPConfiguration e)
-        {
-            log.LogInfo(e.ToString());
-            return;
-        }
-
-        log.LogInfo("Using IPv4 addr: " + TcpServerIPAddr);
-
-        IPAddress localAddr = IPAddress.Parse(TcpServerIPAddr);
-
-        // Bind server to address and port
-        tcpServer = new TcpListener(localAddr, PVTcpPort);
-
-        // Start listening for client requests
-        tcpServer.Start();
-
-        Thread t = new Thread(AcceptTCPClient);
-        t.Start();
-        log.LogInfo("Waiting for PV TCP connections");
+        // Create the image publisher and headset pose publisher
+        ros = ROSConnection.GetOrCreateInstance();
+        ros.RegisterPublisher<ImageMsg>(imageTopicName);
+        ros.RegisterPublisher<HeadsetPoseDataMsg>(headsetPoseTopicName);
 
 #if ENABLE_WINMD_SUPPORT
         await InitializeMediaCaptureAsyncTask();
@@ -126,6 +108,11 @@ public class PVCameraCapture : MonoBehaviour
 
         log.LogInfo("Media capture started");
 
+        // Assuming the projection matrix never changes
+        projectionMatrix = Camera.main.projectionMatrix;
+        projectionMatrixAsFloat = ConvertUnityMatrixToFloatArray(projectionMatrix);
+
+        // Set the worldOrigin coordinate system to the same system used by the spatial mapping system
         try
         {
             worldOrigin = Marshal.GetObjectForIUnknown(UnityEngine.XR.WindowsMR.WindowsMREnvironment.OriginSpatialCoordinateSystem) as SpatialCoordinateSystem;
@@ -138,7 +125,6 @@ public class PVCameraCapture : MonoBehaviour
         {
             log.LogInfo(e.ToString());
         }
-
 #endif
     }
 
@@ -150,21 +136,6 @@ public class PVCameraCapture : MonoBehaviour
             debugString = "";
         }
 
-        projectionMatrix = Camera.main.projectionMatrix;
-    }
-
-    void AcceptTCPClient()
-    {
-        try
-        {
-            // Perform a blocking call to accept requests
-            tcpClient = tcpServer.AcceptTcpClient();
-            tcpStream = tcpClient.GetStream();
-        }
-        catch (Exception e)
-        {
-            debugString += e.ToString();
-        }
     }
 
 #if ENABLE_WINMD_SUPPORT
@@ -257,12 +228,12 @@ public class PVCameraCapture : MonoBehaviour
             }
 
             await mediaFrameSourceVideo.SetFormatAsync(targetResFormat);
-            //this.logger().LogInfo("Sub type " + targetResFormat.Subtype);
 
             frameReader = await mediaCapture.CreateFrameReaderAsync(mediaFrameSourceVideo, targetResFormat.Subtype);
             frameReader.FrameArrived += OnFrameArrived;
 
-            frameData = new byte[(int) (targetResFormat.VideoFormat.Width * targetResFormat.VideoFormat.Height * 1.5) + headerLength + worldMatrixSize + projectionMatrixSize];
+            frameData = new byte[(int) (targetResFormat.VideoFormat.Width * targetResFormat.VideoFormat.Height * 1.5)];
+
             this.logger().LogInfo("FrameReader is successfully initialized, " + targetResFormat.VideoFormat.Width + "x" + targetResFormat.VideoFormat.Height +
                 ", Framerate: " + targetResFormat.FrameRate.Numerator + "/" + targetResFormat.FrameRate.Denominator);
         }
@@ -282,8 +253,6 @@ public class PVCameraCapture : MonoBehaviour
         {
             if (frame != null)
             {
-                float[] projectionMatrixAsFloat = ConvertUnityMatrixToFloatArray(projectionMatrix);
-
                 float[] cameraToWorldMatrixAsFloat = null;
                 try
                 {
@@ -306,50 +275,39 @@ public class PVCameraCapture : MonoBehaviour
                     uint inputCapacity;
                     ((IMemoryBufferByteAccess)inputReference).GetBuffer(out inputBytes, out inputCapacity);
 
-                    // add header
-                    byte[] frameHeader = { 0x1A, 0xCF, 0xFC, 0x1D,
-                                    (byte)(((inputCapacity + 8 + worldMatrixSize + projectionMatrixSize) & 0xFF000000) >> 24),
-                                    (byte)(((inputCapacity + 8 + worldMatrixSize + projectionMatrixSize) & 0x00FF0000) >> 16),
-                                    (byte)(((inputCapacity + 8 + worldMatrixSize + projectionMatrixSize) & 0x0000FF00) >> 8),
-                                    (byte)(((inputCapacity + 8 + worldMatrixSize + projectionMatrixSize) & 0x000000FF) >> 0),
-                                    (byte)((originalSoftwareBitmap.PixelWidth & 0xFF000000) >> 24),
-                                    (byte)((originalSoftwareBitmap.PixelWidth & 0x00FF0000) >> 16),
-                                    (byte)((originalSoftwareBitmap.PixelWidth & 0x0000FF00) >> 8),
-                                    (byte)((originalSoftwareBitmap.PixelWidth & 0x000000FF) >> 0),
-                                    (byte)((originalSoftwareBitmap.PixelHeight & 0xFF000000) >> 24),
-                                    (byte)((originalSoftwareBitmap.PixelHeight & 0x00FF0000) >> 16),
-                                    (byte)((originalSoftwareBitmap.PixelHeight & 0x0000FF00) >> 8),
-                                    (byte)((originalSoftwareBitmap.PixelHeight & 0x000000FF) >> 0) };
-                    System.Buffer.BlockCopy(frameHeader, 0, frameData, 0, frameHeader.Length);
+                    Marshal.Copy((IntPtr)inputBytes, frameData, 0, (int)inputCapacity);
 
-                    // add worldMatrix
-                    System.Buffer.BlockCopy(cameraToWorldMatrixAsFloat, 0, frameData, frameHeader.Length, worldMatrixSize);
+                    uint width = Convert.ToUInt32(originalSoftwareBitmap.PixelWidth);
+                    uint height = Convert.ToUInt32(originalSoftwareBitmap.PixelHeight);
 
-                    // add projectionMatrix
-                    System.Buffer.BlockCopy(projectionMatrixAsFloat, 0, frameData, frameHeader.Length + worldMatrixSize, projectionMatrixSize);
+                    var currTime = DateTime.Now;
+                    TimeSpan diff = currTime.ToUniversalTime() - origin;
+                    var sec = Convert.ToInt32(Math.Floor(diff.TotalSeconds));
+                    var nsec = Convert.ToUInt32((diff.TotalSeconds - sec) * 1e9f);
 
-                    // add image data
-                    Marshal.Copy((IntPtr)inputBytes, frameData, frameHeader.Length + worldMatrixSize + projectionMatrixSize, (int)inputCapacity);
+                    HeaderMsg header = new HeaderMsg(
+                        new TimeMsg(sec, nsec),
+                        "PVFramesNV12"
+                    );
 
-                    // Send the data through the socket.
-                    if (tcpStream != null)
-                    {
-                        try
-                        {
-                            tcpStream.Write(frameData, 0, frameData.Length);
-                            tcpStream.Flush();
-                        }
-                        catch (Exception e)
-                        {
-                            // socket client may have disconnected, so attempt to reconnect
-                            debugString = "TCP write failed... attempting reconnect!";
-                            tcpStream = null;
-                            Thread t = new Thread(AcceptTCPClient);
-                            t.Start();
-                        }
-                    }
-                    originalSoftwareBitmap?.Dispose();
+                    ImageMsg image = new ImageMsg(header,
+                                                  height,
+                                                  width,
+                                                  "nv12",
+                                                  0,
+                                                  Convert.ToUInt32(width * 1.5),
+                                                  frameData);
+
+                    ros.Publish(imageTopicName, image);
+
+                    // Build and publish the headpose data message
+                    HeadsetPoseDataMsg pose = new HeadsetPoseDataMsg(header, cameraToWorldMatrixAsFloat, projectionMatrixAsFloat);
+
+                    ros.Publish(headsetPoseTopicName, pose);
                 }
+
+                originalSoftwareBitmap?.Dispose();
+
             }
         }
     }

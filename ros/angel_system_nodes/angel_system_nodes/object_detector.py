@@ -66,7 +66,7 @@ class ObjectDetector(Node):
             self._frames_recvd = 0
             self._prev_time = time.time()
 
-        # convert NV12 image to RGB
+        # convert ROS Image message to CV2
         rgb_image = BRIDGE.imgmsg_to_cv2(image, desired_encoding="rgb8")
 
         # Send to Detector

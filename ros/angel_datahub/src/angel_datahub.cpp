@@ -11,6 +11,7 @@
 #include <thread>
 
 #include "rclcpp/rclcpp.hpp"
+#include <rclcpp_components/register_node_macro.hpp>
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/byte_multi_array.hpp"
 #include "std_msgs/msg/u_int8_multi_array.hpp"
@@ -85,6 +86,10 @@ std::map<int, std::string> PORT_TOPIC_MAP = {
 using namespace std::chrono_literals;
 using std::placeholders::_1;
 
+namespace angel_datahub {
+
+namespace {
+
 // ----------------------------------------------------------------------------
 #define DEFINE_PARAM_NAME( var_name, param_name_str ) \
   static constexpr char const* var_name = param_name_str
@@ -97,11 +102,13 @@ DEFINE_PARAM_NAME( PARAM_TOPIC_INPUT_TASK_UPDATE, "task_update_topic" );
 
 #undef DEFINE_PARAM_NAME
 
-class PTGDataHub : public rclcpp::Node
+} // namespace
+
+class AngelDataHub : public rclcpp::Node
 {
   public:
-    PTGDataHub();
-    ~PTGDataHub();
+    AngelDataHub( rclcpp::NodeOptions const& options );
+    ~AngelDataHub();
 
   private:
     rclcpp::Subscription< angel_msgs::msg::ObjectDetection3dSet >::SharedPtr _object_3d_subscriber;
@@ -152,7 +159,9 @@ class PTGDataHub : public rclcpp::Node
 
 };
 
-PTGDataHub::PTGDataHub() : Node("ptg_datahub")
+AngelDataHub
+::AngelDataHub( rclcpp::NodeOptions const& options )
+  : Node("AngelDataHub", options)
 {
   auto log = this->get_logger();
 
@@ -180,34 +189,34 @@ PTGDataHub::PTGDataHub() : Node("ptg_datahub")
   // create ROS subscribers
   _object_3d_subscriber = this->create_subscription<angel_msgs::msg::ObjectDetection3dSet>(
     det_3d_topic, 100,
-    std::bind(&PTGDataHub::object_detection_3d_callback, this, _1 )
+    std::bind(&AngelDataHub::object_detection_3d_callback, this, _1 )
   );
 
   _task_update_subscriber = this->create_subscription<angel_msgs::msg::TaskUpdate>(
     task_update_topic, 100,
-    std::bind(&PTGDataHub::task_update_callback, this, _1 )
+    std::bind(&AngelDataHub::task_update_callback, this, _1 )
   );
 
   // start the video threads
-  lf_vlc_t = std::thread(&PTGDataHub::TCPServerVideoThread, this, LF_VLC_TCP_PORT);
-  rf_vlc_t = std::thread(&PTGDataHub::TCPServerVideoThread, this, RF_VLC_TCP_PORT);
-  ll_vlc_t = std::thread(&PTGDataHub::TCPServerVideoThread, this, LL_VLC_TCP_PORT);
-  rr_vlc_t = std::thread(&PTGDataHub::TCPServerVideoThread, this, RR_VLC_TCP_PORT);
-  depth_t = std::thread(&PTGDataHub::TCPServerVideoThread, this, DEPTH_TCP_PORT);
-  depth_ab_t = std::thread(&PTGDataHub::TCPServerVideoThread, this, DEPTH_AB_TCP_PORT);
-  long_depth_t = std::thread(&PTGDataHub::TCPServerVideoThread, this, LONG_DEPTH_TCP_PORT);
-  long_depth_ab_t = std::thread(&PTGDataHub::TCPServerVideoThread, this, LONG_DEPTH_AB_TCP_PORT);
-  pv_t = std::thread(&PTGDataHub::TCPServerVideoThread, this, PV_TCP_PORT);
+  lf_vlc_t = std::thread(&AngelDataHub::TCPServerVideoThread, this, LF_VLC_TCP_PORT);
+  rf_vlc_t = std::thread(&AngelDataHub::TCPServerVideoThread, this, RF_VLC_TCP_PORT);
+  ll_vlc_t = std::thread(&AngelDataHub::TCPServerVideoThread, this, LL_VLC_TCP_PORT);
+  rr_vlc_t = std::thread(&AngelDataHub::TCPServerVideoThread, this, RR_VLC_TCP_PORT);
+  depth_t = std::thread(&AngelDataHub::TCPServerVideoThread, this, DEPTH_TCP_PORT);
+  depth_ab_t = std::thread(&AngelDataHub::TCPServerVideoThread, this, DEPTH_AB_TCP_PORT);
+  long_depth_t = std::thread(&AngelDataHub::TCPServerVideoThread, this, LONG_DEPTH_TCP_PORT);
+  long_depth_ab_t = std::thread(&AngelDataHub::TCPServerVideoThread, this, LONG_DEPTH_AB_TCP_PORT);
+  pv_t = std::thread(&AngelDataHub::TCPServerVideoThread, this, PV_TCP_PORT);
 
   // start the audio and spatial mapping threads
-  audio_t = std::thread(&PTGDataHub::TCPServerAudioThread, this, AUDIO_TCP_PORT);
-  sm_t = std::thread(&PTGDataHub::TCPServerSMThread, this, SM_TCP_PORT);
+  audio_t = std::thread(&AngelDataHub::TCPServerAudioThread, this, AUDIO_TCP_PORT);
+  sm_t = std::thread(&AngelDataHub::TCPServerSMThread, this, SM_TCP_PORT);
 
   // attempt to connect to the task update TCP server
-  tu_t = std::thread(&PTGDataHub::ConnectTaskUpdateSocket, this);
+  tu_t = std::thread(&AngelDataHub::ConnectTaskUpdateSocket, this);
 }
 
-PTGDataHub::~PTGDataHub()
+AngelDataHub::~AngelDataHub()
 {
   tu_t.join();
   lf_vlc_t.join();
@@ -223,28 +232,28 @@ PTGDataHub::~PTGDataHub()
   sm_t.join();
 }
 
-std::vector<unsigned char> PTGDataHub::uint_to_vector(unsigned int x)
+std::vector<unsigned char> AngelDataHub::uint_to_vector(unsigned int x)
 {
   std::vector<unsigned char> v(4);
   memcpy(&v[0], &x, sizeof(x));
   return v;
 }
 
-std::vector<unsigned char> PTGDataHub::float_to_vector(float x)
+std::vector<unsigned char> AngelDataHub::float_to_vector(float x)
 {
   std::vector<unsigned char> v(4);
   memcpy(&v[0], &x, sizeof(x));
   return v;
 }
 
-std::vector<char> PTGDataHub::string_to_vector(std::string x)
+std::vector<char> AngelDataHub::string_to_vector(std::string x)
 {
   std::vector<char> v(x.begin(), x.end());
   v.push_back('\0');
   return v;
 }
 
-std::vector<unsigned char> PTGDataHub::serialize_detection_message( angel_msgs::msg::ObjectDetection3dSet::SharedPtr
+std::vector<unsigned char> AngelDataHub::serialize_detection_message( angel_msgs::msg::ObjectDetection3dSet::SharedPtr
                                                         const detection_msg )
 {
   // serialize the detection message
@@ -252,7 +261,7 @@ std::vector<unsigned char> PTGDataHub::serialize_detection_message( angel_msgs::
 
   unsigned int ros_message_length = 0;
 
-  // PTG header:
+  // Angel header:
   //   -- 32-bit sync = 4 bytes
   //   -- 32-bit ros msg length = 4 bytes
   // ROS2 message:
@@ -374,14 +383,14 @@ std::vector<unsigned char> PTGDataHub::serialize_detection_message( angel_msgs::
   return byte_message;
 }
 
-std::vector<unsigned char> PTGDataHub::serialize_task_update_message( angel_msgs::msg::TaskUpdate::SharedPtr
+std::vector<unsigned char> AngelDataHub::serialize_task_update_message( angel_msgs::msg::TaskUpdate::SharedPtr
                                                         const task_update_msg )
 {
   auto log = this->get_logger();
   std::vector<unsigned char> byte_message;
   unsigned int ros_message_length = 0;
 
-  // PTG header:
+  // Angel header:
   //   -- 32-bit sync = 4 bytes
   //   -- 32-bit ros msg length = 4 bytes
   // ROS2 message:
@@ -483,7 +492,7 @@ std::vector<unsigned char> PTGDataHub::serialize_task_update_message( angel_msgs
   return byte_message;
 }
 
-void PTGDataHub::object_detection_3d_callback( angel_msgs::msg::ObjectDetection3dSet::SharedPtr
+void AngelDataHub::object_detection_3d_callback( angel_msgs::msg::ObjectDetection3dSet::SharedPtr
                                    const detection_msg )
 {
     _detection_mutex.lock();
@@ -491,7 +500,7 @@ void PTGDataHub::object_detection_3d_callback( angel_msgs::msg::ObjectDetection3
     _detection_mutex.unlock();
 }
 
-void PTGDataHub::task_update_callback( angel_msgs::msg::TaskUpdate::SharedPtr
+void AngelDataHub::task_update_callback( angel_msgs::msg::TaskUpdate::SharedPtr
                                    const task_update_msg )
 {
   auto log = this->get_logger();
@@ -513,12 +522,12 @@ void PTGDataHub::task_update_callback( angel_msgs::msg::TaskUpdate::SharedPtr
   }
 }
 
-void PTGDataHub::ConnectTaskUpdateSocket()
+void AngelDataHub::ConnectTaskUpdateSocket()
 {
   task_update_socket = connectSocket(TASK_UPDATE_TCP_PORT);
 }
 
-void PTGDataHub::TCPServerVideoThread(int port)
+void AngelDataHub::TCPServerVideoThread(int port)
 {
   auto log = this->get_logger();
 
@@ -671,7 +680,7 @@ void PTGDataHub::TCPServerVideoThread(int port)
   }
 }
 
-void PTGDataHub::TCPServerAudioThread(int port)
+void AngelDataHub::TCPServerAudioThread(int port)
 {
   auto log = this->get_logger();
 
@@ -761,7 +770,7 @@ void PTGDataHub::TCPServerAudioThread(int port)
   }
 }
 
-void PTGDataHub::TCPServerSMThread(int port)
+void AngelDataHub::TCPServerSMThread(int port)
 {
   auto log = this->get_logger();
 
@@ -942,7 +951,7 @@ void PTGDataHub::TCPServerSMThread(int port)
 }
 
 
-SOCKET PTGDataHub::connectSocket(int port)
+SOCKET AngelDataHub::connectSocket(int port)
 {
   auto log = this->get_logger();
   SOCKET s;
@@ -989,15 +998,6 @@ SOCKET PTGDataHub::connectSocket(int port)
   return s;
 }
 
+} // namespace angel_datahub
 
-int main(int argc, char * argv[])
-{
-  rclcpp::init(argc, argv);
-
-  std::shared_ptr<PTGDataHub> mp = std::make_shared<PTGDataHub>();
-
-  rclcpp::spin(mp);
-
-  rclcpp::shutdown();
-  return 0;
-}
+RCLCPP_COMPONENTS_REGISTER_NODE( angel_datahub::AngelDataHub )

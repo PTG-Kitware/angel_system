@@ -68,6 +68,9 @@ public class ResearchModeCapture : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        // TODO: Add this back in and use ROS-TCP plugin instead when we need research mode sensors
+
+        /*
         Logger log = logger();
 
         try
@@ -83,6 +86,7 @@ public class ResearchModeCapture : MonoBehaviour
         Thread tResearchMode = new Thread(SetupResearchMode);
         tResearchMode.Start();
         log.LogInfo("Waiting for research mode TCP connections");
+        */
     }
 
     void Update()
@@ -98,6 +102,7 @@ public class ResearchModeCapture : MonoBehaviour
     void SetupResearchMode()
     {
 #if ENABLE_WINMD_SUPPORT
+    /*
         // Configure research mode
         researchMode = new HL2ResearchMode(TcpServerIPAddr);
 
@@ -114,6 +119,7 @@ public class ResearchModeCapture : MonoBehaviour
         else if (depthSensorMode == DepthSensorMode.ShortThrow) researchMode.StartDepthSensorLoop(enablePointCloud);
 
         researchMode.StartSpatialCamerasFrontLoop();
+    */
 #endif
     }
 

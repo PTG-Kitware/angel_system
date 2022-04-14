@@ -1,5 +1,5 @@
 cmake_minimum_required( VERSION 3.5 )
-project( angel_debug )
+project( angel_datahub )
 
 # Default to C++14
 if( NOT CMAKE_CXX_STANDARD )
@@ -18,37 +18,36 @@ find_package( sensor_msgs REQUIRED )
 find_package( cv_bridge REQUIRED )
 find_package( OpenCV REQUIRED COMPONENTS core )
 find_package( angel_msgs REQUIRED )
-find_package( angel_utils REQUIRED )
 
-#
-# angel_debug Library
-#
 set( headers_public )
 set( sources
   # Nodes
-  angel_debug/nodes/simple_2d_detection_overlay.cxx
+  src/image_converter.cpp
+  src/angel_datahub.cpp
   )
-add_library( angel_debug SHARED
+add_library( angel_datahub SHARED
   ${headers_public} ${sources} )
-ament_target_dependencies( angel_debug
+ament_target_dependencies(angel_datahub
   rclcpp
   rclcpp_components
   sensor_msgs
   cv_bridge
   OpenCV
   angel_msgs
-  angel_utils
   )
-install( TARGETS angel_debug
+install( TARGETS angel_datahub
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
   )
 
 # Component registration
-rclcpp_components_register_node( angel_debug
-  PLUGIN "angel_debug::Simple2dDetectionOverlay"
-  EXECUTABLE Simple2dDetectionOverlay )
+rclcpp_components_register_node( angel_datahub
+  PLUGIN "image_converter::ImageConverter"
+  EXECUTABLE ImageConverter )
+rclcpp_components_register_node( angel_datahub
+  PLUGIN "angel_datahub::AngelDataHub"
+  EXECUTABLE AngelDataHub )
 
 if( BUILD_TESTING )
   find_package( ament_lint_auto REQUIRED )
