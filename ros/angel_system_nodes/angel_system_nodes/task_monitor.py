@@ -8,7 +8,7 @@ from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 
 from angel_msgs.msg import ActivityDetection, TaskUpdate, TaskItem
-from transitions import Machine, State
+from transitions import Machine
 import transitions
 
 
@@ -35,8 +35,6 @@ class Task():
             { 'trigger': 'open_bottle', 'source': 'open_bottle_and_pour_water_into_cup', 'dest': 'place_tea_bag_into_cup' },
             { 'trigger': 'make_tea', 'source': 'place_tea_bag_into_cup', 'dest': 'steep_for_20_seconds' },
         ]
-
-        self.time_remaining_until_next_step = -1
 
         self.machine = Machine(model=self, states=self.steps,
                                transitions=self.transitions, initial='open_bottle_and_pour_water_into_cup')

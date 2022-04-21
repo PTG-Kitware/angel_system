@@ -146,12 +146,13 @@ class PytorchVideoSlowFastR50(DetectActivities):
 
         # Get the predicted classes
         post_act = torch.nn.Softmax(dim=1)
-        preds = post_act(preds)
+        preds: torch.Tensor = post_act(preds) # shape: (1, 400)
         top_preds = preds.topk(k=5)
 
         # Map the predicted classes to the label names
-        pred_classes = top_preds.indices
-        pred_class_names = [KINETICS_400_LABELS[int(i)] for i in pred_classes[0]]
+        # top_preds.indices is a 1xk tensor
+        pred_class_indices = top_preds.indices[0]
+        pred_class_names = [KINETICS_400_LABELS[int(i)] for i in pred_class_indices]
 
         # Filter out any detections below the threshold
         predictions = []

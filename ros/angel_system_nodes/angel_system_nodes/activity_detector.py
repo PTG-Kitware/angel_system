@@ -62,7 +62,7 @@ class ActivityDetector(Node):
         """
         log = self.get_logger()
 
-        # Convert NV12 image to RGB image with shape (HxWx3) and add it to the frame stack
+        # Convert ROS img msg to CV2 image and add it to the frame stack
         rgb_image = BRIDGE.imgmsg_to_cv2(image, desired_encoding="rgb8")
         rgb_image_np = np.asarray(rgb_image)
         self._frames.append(rgb_image_np)
