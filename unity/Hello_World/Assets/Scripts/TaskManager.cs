@@ -59,6 +59,9 @@ public class TaskManager : MonoBehaviour
     {
         Logger log = logger();
         TaskLogger taskLog = taskLogger();
+
+        // Create placeholder task update message to display in the UI before
+        // the first task update message is received
         TaskUpdateMsg taskUpdateMessage = new TaskUpdateMsg(new HeaderMsg(), // ROS std header
                                                            "Waiting for task", // task item
                                                            "Task description goes here.", // task description
