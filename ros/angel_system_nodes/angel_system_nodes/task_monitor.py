@@ -95,6 +95,7 @@ class TaskMonitor(Node):
 
         # Tracks whether or not a timer is currently active
         self._timer_active = False
+        self._timer_lock = threading.RLock()
 
         self._activity_action_dict = {
             'opening bottle': self._task.open_bottle,
@@ -136,8 +137,9 @@ class TaskMonitor(Node):
 
         # If we are currently in a timer state, exit early since we need to wait for
         # the timer to finish
-        if self._timer_active:
-            return
+        with self._timer_lock:
+            if self._timer_active:
+                return
 
         # Attempt to advance to the next step
         try:
@@ -157,9 +159,10 @@ class TaskMonitor(Node):
         try:
             if self._task.machine.states[self._task.state].timer_length > 0:
                 # Spawn a thread to track the timer and publish state messages
-                t = threading.Thread(target=self.task_timer_thread)
-                t.start()
-                self._timer_active = True
+                with self._timer_lock:
+                    self._timer_active = True
+                    t = threading.Thread(target=self.task_timer_thread)
+                    t.start()
         except AttributeError as e:
             # No timer associated with this state
             pass
@@ -237,7 +240,8 @@ class TaskMonitor(Node):
 
             time.sleep(1)
 
-        self._timer_active = False
+        with self._timer_lock:
+            self._timer_active = False
 
         # Lookup the next state
         curr_idx = list(self._task.machine.states.keys()).index(self._task.state)
