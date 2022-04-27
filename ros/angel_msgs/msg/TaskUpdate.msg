@@ -8,6 +8,12 @@ std_msgs/Header header
 # Task name
 string task_name
 
+# Task description
+string task_description
+
+# Items required
+TaskItem[] task_items
+
 # List of steps for this task
 string[] steps
 
@@ -18,3 +24,7 @@ string previous_step
 # Current activity
 string current_activity
 string next_activity
+
+# Time remaining to move to next task (e.g. waiting for tea to steep)
+# -1 means that this is not a time based task
+int32 time_remaining_until_next_task

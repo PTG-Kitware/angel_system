@@ -62,7 +62,7 @@ class ActivityDetector(Node):
         """
         log = self.get_logger()
 
-        # Convert NV12 image to RGB image with shape (HxWx3) and add it to the frame stack
+        # Convert ROS img msg to CV2 image and add it to the frame stack
         rgb_image = BRIDGE.imgmsg_to_cv2(image, desired_encoding="rgb8")
         rgb_image_np = np.asarray(rgb_image)
         self._frames.append(rgb_image_np)
@@ -73,23 +73,25 @@ class ActivityDetector(Node):
 
         if len(self._frames) >= self._frames_per_det:
             activities_detected = self._detector.detect_activities(self._frames)
-            log.info(f"activities: {activities_detected}")
 
-            # Create activity ROS message
-            activity_msg = ActivityDetection()
+            if len(activities_detected) > 0:
+                log.info(f"activities: {activities_detected}")
 
-            # This message time
-            activity_msg.header.stamp = self.get_clock().now().to_msg()
-            # Trace to the source
-            activity_msg.header.frame_id = image.header.frame_id
+                # Create activity ROS message
+                activity_msg = ActivityDetection()
 
-            activity_msg.source_stamp_start_frame = self._source_stamp_start_frame
-            activity_msg.source_stamp_end_frame = image.header.stamp
+                # This message time
+                activity_msg.header.stamp = self.get_clock().now().to_msg()
+                # Trace to the source
+                activity_msg.header.frame_id = image.header.frame_id
 
-            activity_msg.label_vec = activities_detected
+                activity_msg.source_stamp_start_frame = self._source_stamp_start_frame
+                activity_msg.source_stamp_end_frame = image.header.stamp
 
-            # Publish activities
-            self._publisher.publish(activity_msg)
+                activity_msg.label_vec = activities_detected
+
+                # Publish activities
+                self._publisher.publish(activity_msg)
 
             # Clear out stored frames and timestamps
             self._frames= []

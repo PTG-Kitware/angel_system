@@ -655,7 +655,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   debugAreaText: {fileID: 92505925}
   enableDebug: 1
-  maxLines: 30
+  maxLines: 60
 --- !u!4 &1082823865
 Transform:
   m_ObjectHideFlags: 0
@@ -677,9 +677,13 @@ PrefabInstance:
   m_Modification:
     m_TransformParent: {fileID: 1460581920}
     m_Modifications:
+    - target: {fileID: 1451438473268184355, guid: 0b303b05d16ccbf4b86c7e7cb8d26d75, type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2100000, guid: 68b4661a8a0b2644b886f95904c52ba3, type: 2}
     - target: {fileID: 2167203843161592031, guid: 0b303b05d16ccbf4b86c7e7cb8d26d75, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.2131645
+      value: 0.334
       objectReference: {fileID: 0}
     - target: {fileID: 2167203843369421108, guid: 0b303b05d16ccbf4b86c7e7cb8d26d75, type: 3}
       propertyPath: m_Name
@@ -741,17 +745,21 @@ PrefabInstance:
       propertyPath: m_text
       value: TASK LIST
       objectReference: {fileID: 0}
+    - target: {fileID: 4416865088570180296, guid: 0b303b05d16ccbf4b86c7e7cb8d26d75, type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2100000, guid: 68b4661a8a0b2644b886f95904c52ba3, type: 2}
     - target: {fileID: 6014013532491843453, guid: 0b303b05d16ccbf4b86c7e7cb8d26d75, type: 3}
       propertyPath: m_LocalScale.x
       value: 0.7229916
       objectReference: {fileID: 0}
     - target: {fileID: 6014013532491843453, guid: 0b303b05d16ccbf4b86c7e7cb8d26d75, type: 3}
       propertyPath: m_LocalScale.y
-      value: 0.6
+      value: 0.8
       objectReference: {fileID: 0}
     - target: {fileID: 6438007448947064786, guid: 0b303b05d16ccbf4b86c7e7cb8d26d75, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 606.7765
+      value: 800
       objectReference: {fileID: 0}
     - target: {fileID: 6979400786325660169, guid: 0b303b05d16ccbf4b86c7e7cb8d26d75, type: 3}
       propertyPath: m_AnchorMax.x

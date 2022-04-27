@@ -20,6 +20,10 @@ namespace RosMessageTypes.Angel
         public Std.HeaderMsg header;
         //  Task name
         public string task_name;
+        //  Task description
+        public string task_description;
+        //  Items required
+        public TaskItemMsg[] task_items;
         //  List of steps for this task
         public string[] steps;
         //  Current/previous steps
@@ -28,27 +32,36 @@ namespace RosMessageTypes.Angel
         //  Current activity
         public string current_activity;
         public string next_activity;
+        //  Time remaining to move to next task (e.g. waiting for tea to steep)
+        //  -1 means that this is not a time based task
+        public int time_remaining_until_next_task;
 
         public TaskUpdateMsg()
         {
             this.header = new Std.HeaderMsg();
             this.task_name = "";
+            this.task_description = "";
+            this.task_items = new TaskItemMsg[0];
             this.steps = new string[0];
             this.current_step = "";
             this.previous_step = "";
             this.current_activity = "";
             this.next_activity = "";
+            this.time_remaining_until_next_task = 0;
         }
 
-        public TaskUpdateMsg(Std.HeaderMsg header, string task_name, string[] steps, string current_step, string previous_step, string current_activity, string next_activity)
+        public TaskUpdateMsg(Std.HeaderMsg header, string task_name, string task_description, TaskItemMsg[] task_items, string[] steps, string current_step, string previous_step, string current_activity, string next_activity, int time_remaining_until_next_task)
         {
             this.header = header;
             this.task_name = task_name;
+            this.task_description = task_description;
+            this.task_items = task_items;
             this.steps = steps;
             this.current_step = current_step;
             this.previous_step = previous_step;
             this.current_activity = current_activity;
             this.next_activity = next_activity;
+            this.time_remaining_until_next_task = time_remaining_until_next_task;
         }
 
         public static TaskUpdateMsg Deserialize(MessageDeserializer deserializer) => new TaskUpdateMsg(deserializer);
@@ -57,23 +70,30 @@ namespace RosMessageTypes.Angel
         {
             this.header = Std.HeaderMsg.Deserialize(deserializer);
             deserializer.Read(out this.task_name);
+            deserializer.Read(out this.task_description);
+            deserializer.Read(out this.task_items, TaskItemMsg.Deserialize, deserializer.ReadLength());
             deserializer.Read(out this.steps, deserializer.ReadLength());
             deserializer.Read(out this.current_step);
             deserializer.Read(out this.previous_step);
             deserializer.Read(out this.current_activity);
             deserializer.Read(out this.next_activity);
+            deserializer.Read(out this.time_remaining_until_next_task);
         }
 
         public override void SerializeTo(MessageSerializer serializer)
         {
             serializer.Write(this.header);
             serializer.Write(this.task_name);
+            serializer.Write(this.task_description);
+            serializer.WriteLength(this.task_items);
+            serializer.Write(this.task_items);
             serializer.WriteLength(this.steps);
             serializer.Write(this.steps);
             serializer.Write(this.current_step);
             serializer.Write(this.previous_step);
             serializer.Write(this.current_activity);
             serializer.Write(this.next_activity);
+            serializer.Write(this.time_remaining_until_next_task);
         }
 
         public override string ToString()
@@ -81,11 +101,14 @@ namespace RosMessageTypes.Angel
             return "TaskUpdateMsg: " +
             "\nheader: " + header.ToString() +
             "\ntask_name: " + task_name.ToString() +
+            "\ntask_description: " + task_description.ToString() +
+            "\ntask_items: " + System.String.Join(", ", task_items.ToList()) +
             "\nsteps: " + System.String.Join(", ", steps.ToList()) +
             "\ncurrent_step: " + current_step.ToString() +
             "\nprevious_step: " + previous_step.ToString() +
             "\ncurrent_activity: " + current_activity.ToString() +
-            "\nnext_activity: " + next_activity.ToString();
+            "\nnext_activity: " + next_activity.ToString() +
+            "\ntime_remaining_until_next_task: " + time_remaining_until_next_task.ToString();
         }
 
 #if UNITY_EDITOR

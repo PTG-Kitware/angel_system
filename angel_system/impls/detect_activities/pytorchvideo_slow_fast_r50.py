@@ -40,6 +40,7 @@ class PytorchVideoSlowFastR50(DetectActivities):
         self,
         use_cuda: bool = False,
         cuda_device: Union[int, str] = "cuda:0",
+        det_threshold: float = 0.75,
     ):
         self._use_cuda = use_cuda
         self._cuda_device = cuda_device
@@ -59,6 +60,8 @@ class PytorchVideoSlowFastR50(DetectActivities):
         self._frames_per_second = 30
         self._alpha = 4
 
+        self._det_threshold = det_threshold
+
     def get_model(self) -> "torch.nn.Module":
         """
         Lazy load the torch model in an idempotent manner.
@@ -66,7 +69,12 @@ class PytorchVideoSlowFastR50(DetectActivities):
         """
         model = self._model
         if model is None:
-            # Pick a pretrained model and load the pretrained weights
+            # Note: Line below is a workaround for an intermittent HTTP error
+            # when downloading the model from pytorch.
+            # See: https://github.com/pytorch/vision/issues/4156
+            torch.hub._validate_not_a_forked_repo=lambda a,b,c: True
+
+            # Load the pretrained model
             model = torch.hub.load("facebookresearch/pytorchvideo",
                                      model="slowfast_r50", pretrained=True)
             model = model.eval()
@@ -138,13 +146,22 @@ class PytorchVideoSlowFastR50(DetectActivities):
 
         # Get the predicted classes
         post_act = torch.nn.Softmax(dim=1)
-        preds = post_act(preds)
-        pred_classes = preds.topk(k=5).indices
+        preds: torch.Tensor = post_act(preds) # shape: (1, 400)
+        top_preds = preds.topk(k=5)
 
         # Map the predicted classes to the label names
-        pred_class_names = [KINETICS_400_LABELS[int(i)] for i in pred_classes[0]]
+        # top_preds.indices is a 1xk tensor
+        pred_class_indices = top_preds.indices[0]
+        pred_class_names = [KINETICS_400_LABELS[int(i)] for i in pred_class_indices]
 
-        return pred_class_names
+        # Filter out any detections below the threshold
+        predictions = []
+        pred_values = top_preds.values[0]
+        for idx, p in enumerate(pred_class_names):
+            if (pred_values[idx] > self._det_threshold):
+                predictions.append(p)
+
+        return predictions
 
     def get_config(self) -> dict:
         return {
