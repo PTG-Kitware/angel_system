@@ -21,15 +21,26 @@ find_package( std_msgs REQUIRED )
 find_package( geometry_msgs REQUIRED )
 find_package( shape_msgs REQUIRED )
 
-rosidl_generate_interfaces( ${PROJECT_NAME}
+set( message_files
+  msg/ActivityDetection.msg
+  msg/AruiObject3d.msg
+  msg/AruiUpdate.msg
+  msg/AruiUserNotification.msg
   msg/HeadsetPoseData.msg
   msg/ObjectDetection2d.msg
   msg/ObjectDetection2dSet.msg
   msg/ObjectDetection3dSet.msg
   msg/SpatialMesh.msg
-  msg/ActivityDetection.msg
-  msg/TaskUpdate.msg
+  msg/TaskGraph.msg
   msg/TaskItem.msg
+  msg/TaskNode.msg
+  msg/TaskUpdate.msg
+  )
+set( service_files
+  srv/QueryAllObjects3d.srv
+  srv/QueryTaskGraph.srv
+  )
+rosidl_generate_interfaces( ${PROJECT_NAME} ${message_files} ${service_files}
   DEPENDENCIES builtin_interfaces std_msgs geometry_msgs shape_msgs
   )
 
