@@ -20,6 +20,7 @@ find_package( builtin_interfaces REQUIRED )
 find_package( std_msgs REQUIRED )
 find_package( geometry_msgs REQUIRED )
 find_package( shape_msgs REQUIRED )
+find_package( vision_msgs REQUIRED )
 
 set( message_files
   msg/ActivityDetection.msg
@@ -41,7 +42,7 @@ set( service_files
   srv/QueryTaskGraph.srv
   )
 rosidl_generate_interfaces( ${PROJECT_NAME} ${message_files} ${service_files}
-  DEPENDENCIES builtin_interfaces std_msgs geometry_msgs shape_msgs
+  DEPENDENCIES builtin_interfaces std_msgs geometry_msgs shape_msgs vision_msgs
   )
 
 if( BUILD_TESTING )
