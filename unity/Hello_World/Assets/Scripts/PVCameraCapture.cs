@@ -1,5 +1,3 @@
-using Microsoft.MixedReality.Toolkit;
-using Microsoft.MixedReality.Toolkit.SpatialAwareness;
 using System;
 using System.Collections;
 using System.Collections.Concurrent;
@@ -41,8 +39,9 @@ public class PVCameraCapture : MonoBehaviour
     MediaCapture mediaCapture = null;
     private MediaFrameReader frameReader = null;
     private byte[] frameData = null;
-    SpatialCoordinateSystem worldOrigin;
 #endif
+
+    public static Dictionary<Int64, TimeSpan> timeToQPCMap = new Dictionary<Int64, TimeSpan>();
 
     // Ros stuff
     ROSConnection ros;
@@ -53,10 +52,11 @@ public class PVCameraCapture : MonoBehaviour
     string debugString = "";
 
     Matrix4x4 projectionMatrix;
+    Matrix4x4 worldMatrix;
     float[] projectionMatrixAsFloat;
 
     // For filling in ROS message timestamp
-    DateTime origin = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
+    DateTime timeOrigin = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
 
     [ComImport]
     [Guid("5B0D3235-4DBA-4D44-865E-8F1D0E4FD04D")]
@@ -108,23 +108,9 @@ public class PVCameraCapture : MonoBehaviour
 
         log.LogInfo("Media capture started");
 
-        // Assuming the projection matrix never changes
+        // Update the projection matrix
         projectionMatrix = Camera.main.projectionMatrix;
         projectionMatrixAsFloat = ConvertUnityMatrixToFloatArray(projectionMatrix);
-
-        // Set the worldOrigin coordinate system to the same system used by the spatial mapping system
-        try
-        {
-            worldOrigin = Marshal.GetObjectForIUnknown(UnityEngine.XR.WindowsMR.WindowsMREnvironment.OriginSpatialCoordinateSystem) as SpatialCoordinateSystem;
-            if (worldOrigin == null)
-            {
-                log.LogInfo("Unable to get world origin");
-            }
-        }
-        catch (Exception e)
-        {
-            log.LogInfo(e.ToString());
-        }
 #endif
     }
 
@@ -136,6 +122,11 @@ public class PVCameraCapture : MonoBehaviour
             debugString = "";
         }
 
+#if ENABLE_WINMD_SUPPORT
+        // Update the projection matrix
+        projectionMatrix = Camera.main.projectionMatrix;
+        projectionMatrixAsFloat = ConvertUnityMatrixToFloatArray(projectionMatrix);
+#endif
     }
 
 #if ENABLE_WINMD_SUPPORT
@@ -280,13 +271,18 @@ public class PVCameraCapture : MonoBehaviour
                     uint width = Convert.ToUInt32(originalSoftwareBitmap.PixelWidth);
                     uint height = Convert.ToUInt32(originalSoftwareBitmap.PixelHeight);
 
+                    //debugString += frame.VideoMediaFrame.CameraIntrinsics.FocalLength.ToString();
+                    //debugString += frame.VideoMediaFrame.CameraIntrinsics.ImageHeight.ToString();
+                    //debugString += frame.VideoMediaFrame.CameraIntrinsics.ImageWidth.ToString();
+                    //debugString += frame.VideoMediaFrame.CameraIntrinsics.UndistortedProjectionTransform.ToString();
+
                     var currTime = DateTime.Now;
-                    TimeSpan diff = currTime.ToUniversalTime() - origin;
+                    TimeSpan diff = currTime.ToUniversalTime() - timeOrigin;
                     var sec = Convert.ToInt32(Math.Floor(diff.TotalSeconds));
-                    var nsec = Convert.ToUInt32((diff.TotalSeconds - sec) * 1e9f);
+                    var nsecRos = Convert.ToUInt32((diff.TotalSeconds - sec) * 1e9f);
 
                     HeaderMsg header = new HeaderMsg(
-                        new TimeMsg(sec, nsec),
+                        new TimeMsg(sec, nsecRos),
                         "PVFramesNV12"
                     );
 
@@ -301,7 +297,8 @@ public class PVCameraCapture : MonoBehaviour
                     ros.Publish(imageTopicName, image);
 
                     // Build and publish the headpose data message
-                    HeadsetPoseDataMsg pose = new HeadsetPoseDataMsg(header, cameraToWorldMatrixAsFloat, projectionMatrixAsFloat);
+                    HeadsetPoseDataMsg pose = new HeadsetPoseDataMsg(header, cameraToWorldMatrixAsFloat,
+                                                                     projectionMatrixAsFloat);
 
                     ros.Publish(headsetPoseTopicName, pose);
                 }
@@ -314,7 +311,7 @@ public class PVCameraCapture : MonoBehaviour
 
 	public bool HL2TryGetCameraToWorldMatrix(MediaFrameReference frameReference, out float[] outMatrix)
 	{
-        if (worldOrigin == null)
+        if (SpatialMappingCapture.unityCoordinateSystem == null)
         {
             outMatrix = GetIdentityMatrixFloatArray();
             return false;
@@ -328,23 +325,23 @@ public class PVCameraCapture : MonoBehaviour
             return false;
         }
 
-        System.Numerics.Matrix4x4? cameraCoordsToUnityCoordsMatrix = cameraCoordinateSystem.TryGetTransformTo(worldOrigin);
+        System.Numerics.Matrix4x4 cameraCoordsToSceneCoordsMatrix = (System.Numerics.Matrix4x4) cameraCoordinateSystem.TryGetTransformTo(SpatialMappingCapture.unityCoordinateSystem);
 
-        if (cameraCoordsToUnityCoordsMatrix == null)
+        if (cameraCoordsToSceneCoordsMatrix == null)
         {
             outMatrix = GetIdentityMatrixFloatArray();
             return false;
         }
 
-        System.Numerics.Matrix4x4 cameraCoordsToUnityCoords = System.Numerics.Matrix4x4.Transpose(cameraCoordsToUnityCoordsMatrix.Value);
+        cameraCoordsToSceneCoordsMatrix = System.Numerics.Matrix4x4.Transpose(cameraCoordsToSceneCoordsMatrix);
 
         // Change from right handed coordinate system to left handed UnityEngine
-		cameraCoordsToUnityCoords.M31 *= -1f;
-		cameraCoordsToUnityCoords.M32 *= -1f;
-		cameraCoordsToUnityCoords.M33 *= -1f;
-		cameraCoordsToUnityCoords.M34 *= -1f;
+		cameraCoordsToSceneCoordsMatrix.M31 *= -1f;
+		cameraCoordsToSceneCoordsMatrix.M32 *= -1f;
+		cameraCoordsToSceneCoordsMatrix.M33 *= -1f;
+		cameraCoordsToSceneCoordsMatrix.M34 *= -1f;
 
-        outMatrix = ConvertMatrixToFloatArray(cameraCoordsToUnityCoords);
+        outMatrix = ConvertMatrixToFloatArray(cameraCoordsToSceneCoordsMatrix);
 
         return true;
 	}
@@ -372,31 +369,6 @@ public class PVCameraCapture : MonoBehaviour
     static float[] GetIdentityMatrixFloatArray()
 	{
 		return new float[] { 1f, 0, 0, 0, 0, 1f, 0, 0, 0, 0, 1f, 0, 0, 0, 0, 1f };
-	}
-
-	public static UnityEngine.Matrix4x4 ConvertFloatArrayToMatrix4x4(float[] matrixAsArray)
-	{
-		//There is probably a better way to be doing this but System.Numerics.Matrix4x4 is not available
-		//in Unity and we do not include UnityEngine in the plugin.
-		UnityEngine.Matrix4x4 m = new UnityEngine.Matrix4x4();
-		m.m00 = matrixAsArray[0];
-		m.m01 = matrixAsArray[1];
-		m.m02 = -matrixAsArray[2];
-		m.m03 = matrixAsArray[3];
-		m.m10 = matrixAsArray[4];
-		m.m11 = matrixAsArray[5];
-		m.m12 = -matrixAsArray[6];
-		m.m13 = matrixAsArray[7];
-		m.m20 = matrixAsArray[8];
-		m.m21 = matrixAsArray[9];
-		m.m22 = -matrixAsArray[10];
-		m.m23 = matrixAsArray[11];
-		m.m30 = matrixAsArray[12];
-		m.m31 = matrixAsArray[13];
-		m.m32 = matrixAsArray[14];
-		m.m33 = matrixAsArray[15];
-
-		return m;
 	}
 
     private System.Numerics.Matrix4x4 ConvertByteArrayToMatrix4x4(byte[] matrixAsBytes)
