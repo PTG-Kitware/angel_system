@@ -40,10 +40,10 @@ std_msgs/Header header
 
 # Array of 3D objects that explicitly do not exist. UIDs are "reclaimed" in
 # that new objects may re-use old UIDs.
-angel_msgs/AruiUpdateObject[] object3d_remove
+angel_msgs/AruiObject3d[] object3d_remove
 
 # Existing or new objects whose state has changed in some way.
-angel_msgs/AruiUpdateObject[] object3d_update
+angel_msgs/AruiObject3d[] object3d_update
 
 
 #
