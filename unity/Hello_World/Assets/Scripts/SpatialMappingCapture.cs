@@ -290,7 +290,7 @@ public class SpatialMappingCapture : MonoBehaviour, IMixedRealitySpatialAwarenes
         MeshMsg shapeMsg = new MeshMsg(meshTriangles.ToArray(), meshPoints.ToArray());
 
         // Build and return the spatial mesh message
-        SpatialMeshMsg meshMsg = new SpatialMeshMsg(id, shapeMsg);
+        SpatialMeshMsg meshMsg = new SpatialMeshMsg(id, false, shapeMsg);
 
         return meshMsg;
     }
@@ -319,7 +319,7 @@ public class SpatialMappingCapture : MonoBehaviour, IMixedRealitySpatialAwarenes
         MeshMsg shapeMsg = new MeshMsg(meshTriangles.ToArray(), meshPoints.ToArray());
 
         // Build and publish the spatial mesh message
-        SpatialMeshMsg meshMsg = new SpatialMeshMsg(id, shapeMsg);
+        SpatialMeshMsg meshMsg = new SpatialMeshMsg(id, false, shapeMsg);
         ros.Publish(spatialMapTopicName, meshMsg);
     }
 
