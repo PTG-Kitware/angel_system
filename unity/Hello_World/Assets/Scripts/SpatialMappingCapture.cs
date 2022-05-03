@@ -261,39 +261,6 @@ public class SpatialMappingCapture : MonoBehaviour, IMixedRealitySpatialAwarenes
 #endif
     }
 
-    private SpatialMeshMsg CreateMeshMsg(Vector3[] vertices, int[] triangles, int id)
-    {
-        List<MeshTriangleMsg> meshTriangles = new List<MeshTriangleMsg>();
-        List<PointMsg> meshPoints = new List<PointMsg>();
-
-        // Add triangle vertices to the points message list
-        foreach (var p in vertices)
-        {
-            // Convert the mesh from scene space to unity world space
-            UnityEngine.Vector3 worldPoint = worldTransformMatrix.MultiplyPoint(p);
-            //meshPoints.Add(new PointMsg(Convert.ToDouble(worldPoint.x), Convert.ToDouble(worldPoint.y), Convert.ToDouble(worldPoint.z)));
-            meshPoints.Add(new PointMsg(Convert.ToDouble(worldPoint.x), Convert.ToDouble(worldPoint.y), Convert.ToDouble(worldPoint.z)));
-
-        }
-
-        // Add triangle indices to the mesh triangles list
-        for (int i = 0; i < triangles.Length; i += 3)
-        {
-            meshTriangles.Add(new MeshTriangleMsg(new uint[3] {Convert.ToUInt32(triangles[i]),
-                                                               Convert.ToUInt32(triangles[i + 1]),
-                                                               Convert.ToUInt32(triangles[i + 2])
-                                                              }
-                                                 ));
-        }
-
-        MeshMsg shapeMsg = new MeshMsg(meshTriangles.ToArray(), meshPoints.ToArray());
-
-        // Build and return the spatial mesh message
-        SpatialMeshMsg meshMsg = new SpatialMeshMsg(id, false, shapeMsg);
-
-        return meshMsg;
-    }
-
     private void SendMeshObjectAddition(Vector3[] vertices, int[] triangles, int id)
     {
         List<MeshTriangleMsg> meshTriangles = new List<MeshTriangleMsg>();
