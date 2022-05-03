@@ -10,7 +10,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
-using UnityEngine.XR.WindowsMR;
 using Unity.Robotics.ROSTCPConnector;
 using System.Runtime.InteropServices;
 using RosMessageTypes.BuiltinInterfaces;
@@ -20,6 +19,7 @@ using RosMessageTypes.Angel;
 
 
 #if ENABLE_WINMD_SUPPORT
+using Microsoft.MixedReality.Toolkit;
 using Windows.Graphics.Imaging;
 using Windows.Media;
 using Windows.Media.Capture;
@@ -41,8 +41,6 @@ public class PVCameraCapture : MonoBehaviour
     private byte[] frameData = null;
 #endif
 
-    public static Dictionary<Int64, TimeSpan> timeToQPCMap = new Dictionary<Int64, TimeSpan>();
-
     // Ros stuff
     ROSConnection ros;
     public string imageTopicName = "PVFramesNV12";
@@ -52,8 +50,9 @@ public class PVCameraCapture : MonoBehaviour
     string debugString = "";
 
     Matrix4x4 projectionMatrix;
-    Matrix4x4 worldMatrix;
     float[] projectionMatrixAsFloat;
+
+    private static Mutex projectionMatrixMut = new Mutex();
 
     // For filling in ROS message timestamp
     DateTime timeOrigin = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
@@ -124,8 +123,10 @@ public class PVCameraCapture : MonoBehaviour
 
 #if ENABLE_WINMD_SUPPORT
         // Update the projection matrix
+        projectionMatrixMut.WaitOne();
         projectionMatrix = Camera.main.projectionMatrix;
         projectionMatrixAsFloat = ConvertUnityMatrixToFloatArray(projectionMatrix);
+        projectionMatrixMut.ReleaseMutex();
 #endif
     }
 
@@ -271,11 +272,6 @@ public class PVCameraCapture : MonoBehaviour
                     uint width = Convert.ToUInt32(originalSoftwareBitmap.PixelWidth);
                     uint height = Convert.ToUInt32(originalSoftwareBitmap.PixelHeight);
 
-                    //debugString += frame.VideoMediaFrame.CameraIntrinsics.FocalLength.ToString();
-                    //debugString += frame.VideoMediaFrame.CameraIntrinsics.ImageHeight.ToString();
-                    //debugString += frame.VideoMediaFrame.CameraIntrinsics.ImageWidth.ToString();
-                    //debugString += frame.VideoMediaFrame.CameraIntrinsics.UndistortedProjectionTransform.ToString();
-
                     var currTime = DateTime.Now;
                     TimeSpan diff = currTime.ToUniversalTime() - timeOrigin;
                     var sec = Convert.ToInt32(Math.Floor(diff.TotalSeconds));
@@ -297,8 +293,10 @@ public class PVCameraCapture : MonoBehaviour
                     ros.Publish(imageTopicName, image);
 
                     // Build and publish the headpose data message
+                    projectionMatrixMut.WaitOne();
                     HeadsetPoseDataMsg pose = new HeadsetPoseDataMsg(header, cameraToWorldMatrixAsFloat,
                                                                      projectionMatrixAsFloat);
+                    projectionMatrixMut.ReleaseMutex();
 
                     ros.Publish(headsetPoseTopicName, pose);
                 }
@@ -325,23 +323,16 @@ public class PVCameraCapture : MonoBehaviour
             return false;
         }
 
-        System.Numerics.Matrix4x4 cameraCoordsToSceneCoordsMatrix = (System.Numerics.Matrix4x4) cameraCoordinateSystem.TryGetTransformTo(SpatialMappingCapture.unityCoordinateSystem);
+        System.Numerics.Matrix4x4 cameraToUnityMatrixNumericsMatrix = (System.Numerics.Matrix4x4) cameraCoordinateSystem.TryGetTransformTo(SpatialMappingCapture.unityCoordinateSystem);
 
-        if (cameraCoordsToSceneCoordsMatrix == null)
+        if (cameraToUnityMatrixNumericsMatrix == null)
         {
             outMatrix = GetIdentityMatrixFloatArray();
             return false;
         }
 
-        cameraCoordsToSceneCoordsMatrix = System.Numerics.Matrix4x4.Transpose(cameraCoordsToSceneCoordsMatrix);
-
-        // Change from right handed coordinate system to left handed UnityEngine
-		cameraCoordsToSceneCoordsMatrix.M31 *= -1f;
-		cameraCoordsToSceneCoordsMatrix.M32 *= -1f;
-		cameraCoordsToSceneCoordsMatrix.M33 *= -1f;
-		cameraCoordsToSceneCoordsMatrix.M34 *= -1f;
-
-        outMatrix = ConvertMatrixToFloatArray(cameraCoordsToSceneCoordsMatrix);
+        UnityEngine.Matrix4x4 cameraToUnityMatrixUnityMatrix = SystemNumericsExtensions.ToUnity(cameraToUnityMatrixNumericsMatrix);
+        outMatrix = ConvertUnityMatrixToFloatArray(cameraToUnityMatrixUnityMatrix);
 
         return true;
 	}

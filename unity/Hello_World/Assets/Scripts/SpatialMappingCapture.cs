@@ -1,5 +1,7 @@
+using Microsoft.MixedReality.OpenXR;
 using Microsoft.MixedReality.Toolkit;
 using Microsoft.MixedReality.Toolkit.SpatialAwareness;
+using Microsoft.MixedReality.Toolkit.XRSDK;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -8,27 +10,24 @@ using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Assertions;
 using UnityEngine.EventSystems;
+using UnityEngine.XR;
+using UnityEngine.XR.Management;
+using UnityEngine.XR.OpenXR;
 using Unity.Robotics.ROSTCPConnector;
 using RosMessageTypes.BuiltinInterfaces;
 using RosMessageTypes.Std;
 using RosMessageTypes.Shape;
 using RosMessageTypes.Geometry;
 using RosMessageTypes.Angel;
-using System.Runtime.InteropServices;
-using UnityEngine.XR;
-using UnityEngine.XR.Management;
-using UnityEngine.XR.OpenXR;
-
 
 #if ENABLE_WINMD_SUPPORT
 using Windows.Perception.Spatial;
-using Microsoft.MixedReality.OpenXR;
-using Microsoft.MixedReality.Toolkit.XRSDK;
 #endif
 
 
