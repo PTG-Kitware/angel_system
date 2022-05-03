@@ -20,6 +20,15 @@ from geometry_msgs.msg import Point
 import trimesh
 import trimesh.viewer
 
+# NOTE: These values were extracted from the projection matrix provided by the
+# Unity main camera with the Windows MR plugin (now deprecated).
+# For some unknown reason, the values provided by the Open XR plugin are
+# different and do not provide the correct results. In the future, we should
+# figure out why they are different or extract the focal length values from the
+# MediaFrameReader which provides the frames, instead of the Unity main camera.
+FOCAL_LENGTH_X = 1.6304
+FOCAL_LENGTH_Y = 2.5084
+
 
 class SpatialMapSubscriber(Node):
 
@@ -225,10 +234,11 @@ class SpatialMapSubscriber(Node):
             for p in bounds_screen_pos:
                 scaled_point = self.scale_pixel_coordinates(p)
 
-                #focal_length_x = projection_matrix[0][0]
-                focal_length_x = 1.63
-                #focal_length_y = projection_matrix[1][1]
-                focal_length_y = 2.50
+                # see note with these constants for why we are not using the
+                # focal length values from the projection matrix
+                focal_length_x = FOCAL_LENGTH_X
+                focal_length_y = FOCAL_LENGTH_Y
+
                 center_x = projection_matrix_2d[0][2]
                 center_y = projection_matrix_2d[1][2]
 
@@ -239,7 +249,7 @@ class SpatialMapSubscriber(Node):
                 # convert to camera space
                 dir_ray = np.array([(scaled_point[0] - center_x) / focal_length_x,
                                     (scaled_point[1] - center_y) / focal_length_y,
-                                    1.0 / norm_factor]).reshape((1, 3))
+                                    -1.0 / norm_factor]).reshape((1, 3))
 
                 # project camera space onto world position
                 direction = self.get_world_position(world_matrix_2d, dir_ray[0]).reshape((1, 3))
@@ -328,10 +338,11 @@ class SpatialMapSubscriber(Node):
 
         scaled_point = self.scale_pixel_coordinates(p)
 
-        #focal_length_x = projection_matrix[0][0]
-        focal_length_x = 1.63
-        #focal_length_y = projection_matrix[1][1]
-        focal_length_y = 2.50
+        # see note with these constants for why we are not using the
+        # focal length values from the projection matrix
+        focal_length_x = FOCAL_LENGTH_X
+        focal_length_y = FOCAL_LENGTH_Y
+
         center_x = projection_matrix[0][2] # 0
         center_y = projection_matrix[1][2] # 0
 
@@ -342,7 +353,7 @@ class SpatialMapSubscriber(Node):
         # convert coords to camera space
         dir_ray = np.array([(scaled_point[0] - center_x) / focal_length_x,
                             (scaled_point[1] - center_y) / focal_length_y,
-                            1.0 / norm_factor]).reshape((1, 3))
+                            -1.0 / norm_factor]).reshape((1, 3))
         log.debug(f"dir_ray {dir_ray}")
 
         # project camera space onto world position
