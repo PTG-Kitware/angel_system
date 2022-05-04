@@ -1,25 +1,34 @@
-using Microsoft.MixedReality.SceneUnderstanding;
+using Microsoft.MixedReality.OpenXR;
 using Microsoft.MixedReality.Toolkit;
 using Microsoft.MixedReality.Toolkit.SpatialAwareness;
-using Microsoft.MixedReality.Toolkit.Examples.Demos;
-using Microsoft.MixedReality.Toolkit.Experimental.SpatialAwareness;
-using Microsoft.MixedReality.Toolkit.UI;
+using Microsoft.MixedReality.Toolkit.XRSDK;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.Assertions;
+using UnityEngine.EventSystems;
+using UnityEngine.XR;
+using UnityEngine.XR.Management;
+using UnityEngine.XR.OpenXR;
 using Unity.Robotics.ROSTCPConnector;
 using RosMessageTypes.BuiltinInterfaces;
 using RosMessageTypes.Std;
 using RosMessageTypes.Shape;
 using RosMessageTypes.Geometry;
 using RosMessageTypes.Angel;
+
+#if ENABLE_WINMD_SUPPORT
+using Windows.Perception.Spatial;
+#endif
 
 
 public class DetectionSet
@@ -52,6 +61,13 @@ public class SpatialMappingCapture : MonoBehaviour, IMixedRealitySpatialAwarenes
     public string spatialMapTopicName = "SpatialMapData";
     public string detectionsTopicName = "ObjectDetections3d";
 
+#if ENABLE_WINMD_SUPPORT
+    public static SpatialCoordinateSystem unityCoordinateSystem;
+#endif
+
+    private IMixedRealitySpatialAwarenessObserver observer;
+
+    UnityEngine.Matrix4x4 worldTransformMatrix;
     private Logger _logger = null;
     private string _debugString = "";
 
@@ -77,12 +93,89 @@ public class SpatialMappingCapture : MonoBehaviour, IMixedRealitySpatialAwarenes
     // Start is called before the first frame update
     protected void Start()
     {
+        Logger log = logger();
+
         // Create the image publisher and headset pose publisher
         ros = ROSConnection.GetOrCreateInstance();
         ros.RegisterPublisher<SpatialMeshMsg>(spatialMapTopicName);
 
         // Create the object detections 3d subscriber and register the callback
         ros.Subscribe<ObjectDetection3dSetMsg>(detectionsTopicName, DetectionCallback);
+
+        // Check that Open XR is available
+        var xrSettings = XRGeneralSettings.Instance;
+        var xrManager = xrSettings.Manager;
+        var xrLoader = xrManager.activeLoader;
+        var xrInput = xrLoader.GetLoadedSubsystem<XRInputSubsystem>();
+        if (xrInput != null)
+        {
+            // Set the origin tracking mode and recenter
+            xrInput.TrySetTrackingOriginMode(TrackingOriginModeFlags.Device);
+            xrInput.TryRecenter();
+#if ENABLE_WINMD_SUPPORT
+            unityCoordinateSystem = PerceptionInterop.GetSceneCoordinateSystem(UnityEngine.Pose.identity) as SpatialCoordinateSystem;
+#endif
+            xrInput.trackingOriginUpdated += new System.Action<UnityEngine.XR.XRInputSubsystem>(OriginUpdateHandler);
+        }
+
+        observer = CoreServices.GetSpatialAwarenessSystemDataProvider<IMixedRealitySpatialAwarenessObserver>();
+        if (observer == null)
+        {
+            log.LogInfo("Couldn't access Scene Understanding Observer!");
+            return;
+        }
+
+    }
+
+    private void OriginUpdateHandler(UnityEngine.XR.XRInputSubsystem s)
+    {
+#if ENABLE_WINMD_SUPPORT
+        unityCoordinateSystem = PerceptionInterop.GetSceneCoordinateSystem(UnityEngine.Pose.identity) as SpatialCoordinateSystem;
+#endif
+    }
+
+    protected void OnEnable()
+    {
+        CoreServices.SpatialAwarenessSystem.RegisterHandler<IMixedRealitySpatialAwarenessObservationHandler<SpatialAwarenessMeshObject>>(this);
+    }
+
+    protected void OnDisable()
+    {
+        CoreServices.SpatialAwarenessSystem.UnregisterHandler<IMixedRealitySpatialAwarenessObservationHandler<SpatialAwarenessMeshObject>>(this);
+    }
+
+    protected void OnDestroy()
+    {
+        CoreServices.SpatialAwarenessSystem.UnregisterHandler<IMixedRealitySpatialAwarenessObservationHandler<SpatialAwarenessMeshObject>>(this);
+    }
+
+    public void OnObservationAdded(MixedRealitySpatialAwarenessEventData<SpatialAwarenessMeshObject> eventData)
+    {
+        // Copy over the mesh data we need because we cannot access it outside of the main thread
+        Vector3[] vertices = eventData.SpatialObject.Filter.mesh.vertices;
+        int[] triangles = eventData.SpatialObject.Filter.mesh.triangles;
+        int id = eventData.SpatialObject.Id;
+        Thread tSendObject = new Thread(() => SendMeshObjectAddition(vertices,
+                                                                     triangles,
+                                                                     id));
+        tSendObject.Start();
+    }
+
+    public void OnObservationUpdated(MixedRealitySpatialAwarenessEventData<SpatialAwarenessMeshObject> eventData)
+    {
+        // Copy over the mesh data we need because we cannot access it outside of the main thread
+        Vector3[] vertices = eventData.SpatialObject.Filter.mesh.vertices;
+        int[] triangles = eventData.SpatialObject.Filter.mesh.triangles;
+        int id = eventData.SpatialObject.Id;
+        Thread tSendObject = new Thread(() => SendMeshObjectAddition(vertices,
+                                                                     triangles,
+                                                                     id));
+        tSendObject.Start();
+    }
+
+    public void OnObservationRemoved(MixedRealitySpatialAwarenessEventData<SpatialAwarenessMeshObject> eventData)
+    {
+        // TODO: send a mesh removal message
     }
 
     // Update is called once per frame
@@ -121,6 +214,9 @@ public class SpatialMappingCapture : MonoBehaviour, IMixedRealitySpatialAwarenes
 
     private void DetectionCallback(ObjectDetection3dSetMsg msg)
     {
+        Logger log = logger();
+#if ENABLE_WINMD_SUPPORT
+
         List<string> labels = new List<string>();
         List<Vector3> leftPoints = new List<Vector3>();
         List<Vector3> topPoints = new List<Vector3>();
@@ -128,23 +224,25 @@ public class SpatialMappingCapture : MonoBehaviour, IMixedRealitySpatialAwarenes
         List<Vector3> bottomPoints = new List<Vector3>();
 
         // Convert the ROS point messages to Unity Vector3 objects
-        // Negate the x component because Unity uses a left-handed coordinate system
-        // and the point positions were created in a right-handed coordinate system
         foreach (PointMsg p in msg.left)
         {
-            leftPoints.Add(new Vector3((float)-p.x, (float)p.y, (float)p.z));
+            Vector3 point = new Vector3((float)p.x, (float)p.y, (float)p.z);
+            leftPoints.Add(point);
         }
         foreach (PointMsg p in msg.top)
         {
-            topPoints.Add(new Vector3((float)-p.x, (float)p.y, (float)p.z));
+            Vector3 point = new Vector3((float)p.x, (float)p.y, (float)p.z);
+            topPoints.Add(point);
         }
         foreach (PointMsg p in msg.right)
         {
-            rightPoints.Add(new Vector3((float)-p.x, (float)p.y, (float)p.z));
+            Vector3 point = new Vector3((float)p.x, (float)p.y, (float)p.z);
+            rightPoints.Add(point);
         }
         foreach (PointMsg p in msg.bottom)
         {
-            bottomPoints.Add(new Vector3((float)-p.x, (float)p.y, (float)p.z));
+            Vector3 point = new Vector3((float)p.x, (float)p.y, (float)p.z);
+            bottomPoints.Add(point);
         }
         foreach (string l in msg.object_labels)
         {
@@ -160,49 +258,7 @@ public class SpatialMappingCapture : MonoBehaviour, IMixedRealitySpatialAwarenes
         _latestDetections.Add(d);
 
         _mut.ReleaseMutex();
-    }
-
-    private void OnEnable()
-    {
-        // Register component to listen for Mesh Observation events, typically done in OnEnable()
-        CoreServices.SpatialAwarenessSystem.RegisterHandler<IMixedRealitySpatialAwarenessObservationHandler<SpatialAwarenessMeshObject>>(this);
-    }
-
-    private void OnDisable()
-    {
-        // Unregister component from Mesh Observation events, typically done in OnDisable()
-        CoreServices.SpatialAwarenessSystem.UnregisterHandler<IMixedRealitySpatialAwarenessObservationHandler<SpatialAwarenessMeshObject>>(this);
-    }
-
-    public virtual void OnObservationAdded(MixedRealitySpatialAwarenessEventData<SpatialAwarenessMeshObject> eventData)
-    {
-        // Copy over the mesh data we need because we cannot access it outside of the main thread
-        Vector3[] vertices = eventData.SpatialObject.Filter.mesh.vertices;
-        int[] triangles = eventData.SpatialObject.Filter.mesh.triangles;
-        int id = eventData.SpatialObject.Id;
-        Thread tSendObject = new Thread(() => SendMeshObjectAddition(vertices,
-                                                                     triangles,
-                                                                     id));
-        tSendObject.Start();
-    }
-
-    public virtual void OnObservationUpdated(MixedRealitySpatialAwarenessEventData<SpatialAwarenessMeshObject> eventData)
-    {
-        // Copy over the mesh data we need because we cannot access it outside of the main thread
-        Vector3[] vertices = eventData.SpatialObject.Filter.mesh.vertices;
-        int[] triangles = eventData.SpatialObject.Filter.mesh.triangles;
-        int id = eventData.SpatialObject.Id;
-        Thread tSendObject = new Thread(() => SendMeshObjectAddition(vertices,
-                                                                     triangles,
-                                                                     id));
-        tSendObject.Start();
-    }
-
-    public virtual void OnObservationRemoved(MixedRealitySpatialAwarenessEventData<SpatialAwarenessMeshObject> eventData)
-    {
-        int id = eventData.SpatialObject.Id;
-        Thread tSendObject = new Thread(() => SendMeshObjectRemoval(id));
-        tSendObject.Start();
+#endif
     }
 
     private void SendMeshObjectAddition(Vector3[] vertices, int[] triangles, int id)
@@ -230,16 +286,6 @@ public class SpatialMappingCapture : MonoBehaviour, IMixedRealitySpatialAwarenes
 
         // Build and publish the spatial mesh message
         SpatialMeshMsg meshMsg = new SpatialMeshMsg(id, false, shapeMsg);
-        ros.Publish(spatialMapTopicName, meshMsg);
-    }
-
-    private void SendMeshObjectRemoval(int id)
-    {
-        _debugString += "object removal thread";
-        MeshMsg shapeMsg = new MeshMsg();
-
-        SpatialMeshMsg meshMsg = new SpatialMeshMsg(id, true, shapeMsg);
-
         ros.Publish(spatialMapTopicName, meshMsg);
     }
 

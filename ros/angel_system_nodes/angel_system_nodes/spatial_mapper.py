@@ -4,8 +4,6 @@ import struct
 import sys
 import time
 import threading
-import pickle
-import copy
 
 import numpy as np
 import rclpy
@@ -21,6 +19,15 @@ from geometry_msgs.msg import Point
 
 import trimesh
 import trimesh.viewer
+
+# NOTE: These values were extracted from the projection matrix provided by the
+# Unity main camera with the Windows MR plugin (now deprecated).
+# For some unknown reason, the values provided by the Open XR plugin are
+# different and do not provide the correct results. In the future, we should
+# figure out why they are different or extract the focal length values from the
+# MediaFrameReader which provides the frames, instead of the Unity main camera.
+FOCAL_LENGTH_X = 1.6304
+FOCAL_LENGTH_Y = 2.5084
 
 
 class SpatialMapSubscriber(Node):
@@ -65,7 +72,6 @@ class SpatialMapSubscriber(Node):
             1
         )
 
-        self.frames_recvd = 0
         self.prev_time = -1
         self.meshes = {}
 
@@ -83,40 +89,20 @@ class SpatialMapSubscriber(Node):
 
     def spatial_map_callback(self, msg):
         log = self.get_logger()
-        self.frames_recvd += 1
 
         # extract the vertices into np arrays
-        # NOTE: negating the x-component because Unity uses a left-handed
-        # coordinate system and trimesh uses a right-handed coordinate system
-        vertices = np.array([])
-        for v in msg.mesh.vertices:
-            if vertices.size == 0:
-                vertices = np.array([-v.x, v.y, v.z])
-            else:
-                vertices = np.vstack([vertices, np.array([-v.x, v.y, v.z])])
+        vertices = np.array([[v.x, v.y, v.z] for v in msg.mesh.vertices])
 
         # extract the triangles into np arrays
-        triangles = np.array([])
-        for t in msg.mesh.triangles:
-            if triangles.size == 0:
-                triangles = np.array([t.vertex_indices[0],
-                                      t.vertex_indices[1],
-                                      t.vertex_indices[2]
-                                     ])
-            else:
-                triangles = np.vstack([triangles,
-                                       np.array([t.vertex_indices[0],
-                                                 t.vertex_indices[1],
-                                                 t.vertex_indices[2]
-                                                ])])
-
-        if msg.removal:
-            log.debug("Got a removal!")
-            # TODO: remove from the spatial map
+        triangles = np.array([[t.vertex_indices[0],
+                               t.vertex_indices[1],
+                               t.vertex_indices[2]] for t in msg.mesh.triangles])
 
         mesh = trimesh.Trimesh(vertices=vertices, faces=triangles)
         self.meshes[msg.mesh_id] = mesh
         self.scene.add_geometry(mesh)
+
+        #self.scene.show()
 
 
     def headset_pose_callback(self, pose):
@@ -137,6 +123,8 @@ class SpatialMapSubscriber(Node):
         world_matrix_1d = None
         projection_matrix_1d = None
 
+        #print(detection.source_stamp)
+
         # TODO: maybe implement a more efficient binary search here
         for i in reversed(range(len(self.poses))):
             if detection.source_stamp == self.poses[i].header.stamp:
@@ -151,53 +139,47 @@ class SpatialMapSubscriber(Node):
                 break
 
         if world_matrix_1d == None or projection_matrix_1d == None:
-            log.debug(f"Did not get world or projection matrix.")
+            log.info(f"Did not get world or projection matrix.")
             return
 
         # get world matrix from detection
         world_matrix_2d = self.convert_1d_4x4_to_2d_matrix(world_matrix_1d)
-        log.debug(f"world matrix {world_matrix_2d}")
+        log.info(f"world matrix {world_matrix_2d}")
 
         # get position of the camera at the time of the frame
         camera_origin = self.get_world_position(world_matrix_2d,
-                                                np.array([0.0, 0.0, 0.0]))
-        camera_origin[0][0] = -camera_origin[0][0]
-        camera_origin = camera_origin.reshape((1, 3))
+                                                np.array([0.0, 0.0, 0.0])).reshape((1, 3))
+        log.info(f"origin {camera_origin}")
 
         # compute the x, y, and z axes for this image
         x_dir = self.get_world_position(world_matrix_2d,
-                                        np.array([1.0, 0.0, 0.0]))
-        x_dir[0][0] = -x_dir[0][0]
-        x_dir = x_dir.reshape((1, 3))
+                                        np.array([1.0, 0.0, 0.0])).flatten()
 
         y_dir = self.get_world_position(world_matrix_2d,
-                                        np.array([0.0, 1.0, 0.0]))
-        y_dir[0][0] = -y_dir[0][0]
-        y_dir = y_dir.reshape((1, 3))
+                                        np.array([0.0, 1.0, 0.0])).flatten()
 
         z_dir = self.get_world_position(world_matrix_2d,
-                                        np.array([0.0, 0.0, -1.0]))
-        z_dir[0][0] = -z_dir[0][0]
-        z_dir = z_dir.reshape((1, 3))
+                                        np.array([0.0, 0.0, 1.0])).flatten()
 
         # plot the x, y, and z axes on the scene
-        vs = np.array([camera_origin[0], x_dir[0]])
+        vs = np.array([camera_origin[0], x_dir])
         el = trimesh.path.entities.Line([0, 1])
         path = trimesh.path.Path3D(entities=[el], vertices=vs,
                                    colors=np.array([255, 0, 0, 255]).reshape(1, 4))
         self.scene.add_geometry(path)
 
-        vs = np.array([camera_origin[0], y_dir[0]])
+        vs = np.array([camera_origin[0], y_dir])
         el = trimesh.path.entities.Line([0, 1])
         path = trimesh.path.Path3D(entities=[el], vertices=vs,
                                    colors=np.array([0, 255, 0, 255]).reshape(1, 4))
         self.scene.add_geometry(path)
 
-        vs = np.array([camera_origin[0], z_dir[0]])
+        vs = np.array([camera_origin[0], z_dir])
         el = trimesh.path.entities.Line([0, 1])
         path = trimesh.path.Path3D(entities=[el], vertices=vs,
                                    colors=np.array([0, 0, 255, 255]).reshape(1, 4))
         self.scene.add_geometry(path)
+        #self.scene.show()
 
         # get projection matrix from detection
         projection_matrix_2d = self.convert_1d_4x4_to_2d_matrix(projection_matrix_1d)
@@ -234,6 +216,7 @@ class SpatialMapSubscriber(Node):
                 log.info(f"point 3d: {point_3d}")
                 if point_3d is None:
                     log.info(f"No point found!")
+                    #self.scene.show()
                     return
                 corners_world_pos.append(point_3d)
 
@@ -251,8 +234,11 @@ class SpatialMapSubscriber(Node):
             for p in bounds_screen_pos:
                 scaled_point = self.scale_pixel_coordinates(p)
 
-                focal_length_x = projection_matrix_2d[0][0]
-                focal_length_y = projection_matrix_2d[1][1]
+                # see note with these constants for why we are not using the
+                # focal length values from the projection matrix
+                focal_length_x = FOCAL_LENGTH_X
+                focal_length_y = FOCAL_LENGTH_Y
+
                 center_x = projection_matrix_2d[0][2]
                 center_y = projection_matrix_2d[1][2]
 
@@ -261,13 +247,15 @@ class SpatialMapSubscriber(Node):
                 center_y = center_y / norm_factor # 0
 
                 # convert to camera space
+                # NOTE: The negative sign in the z-direction is to convert
+                # between the left-handed Unity coordinates and the right-handed
+                # trimesh scene coordinates.
                 dir_ray = np.array([(scaled_point[0] - center_x) / focal_length_x,
                                     (scaled_point[1] - center_y) / focal_length_y,
-                                    1.0 / norm_factor]).reshape((1, 3))
+                                    -1.0 / norm_factor]).reshape((1, 3))
 
                 # project camera space onto world position
                 direction = self.get_world_position(world_matrix_2d, dir_ray[0]).reshape((1, 3))
-                direction[0][0] = -direction[0][0]
 
                 image_corners_world_pos.append(direction[0])
 
@@ -284,6 +272,8 @@ class SpatialMapSubscriber(Node):
 
             for p in range(4):
                 point_3d = Point()
+
+                log.info(f"scene position {corners_world_pos[p]}")
                 point_3d.x = corners_world_pos[p][0]
                 point_3d.y = corners_world_pos[p][1]
                 point_3d.z = corners_world_pos[p][2]
@@ -301,7 +291,7 @@ class SpatialMapSubscriber(Node):
         self._object_3d_publisher.publish(det_3d_set_msg)
 
         # uncomment this to visualize the scene
-        #self.show_plot()
+        #self.scene.show()
 
 
     def show_plot(self):
@@ -351,30 +341,37 @@ class SpatialMapSubscriber(Node):
 
         scaled_point = self.scale_pixel_coordinates(p)
 
-        focal_length_x = projection_matrix[0][0]
-        focal_length_y = projection_matrix[1][1]
-        center_x = projection_matrix[0][2]
-        center_y = projection_matrix[1][2]
+        # see note with these constants for why we are not using the
+        # focal length values from the projection matrix
+        focal_length_x = FOCAL_LENGTH_X
+        focal_length_y = FOCAL_LENGTH_Y
 
-        norm_factor = projection_matrix[2][2]
+        center_x = projection_matrix[0][2] # 0
+        center_y = projection_matrix[1][2] # 0
+
+        norm_factor = projection_matrix[2][2] # -1.004
         center_x = center_x / norm_factor
         center_y = center_y / norm_factor
 
         # convert coords to camera space
+        # NOTE: The negative sign in the z-direction is to convert
+        # between the left-handed Unity coordinates and the right-handed
+        # trimesh scene coordinates.
         dir_ray = np.array([(scaled_point[0] - center_x) / focal_length_x,
                             (scaled_point[1] - center_y) / focal_length_y,
-                            1.0 / norm_factor]).reshape((1, 3))
+                            -1.0 / norm_factor]).reshape((1, 3))
         log.debug(f"dir_ray {dir_ray}")
 
         # project camera space onto world position
         direction = self.get_world_position(world_matrix_2d, dir_ray[0]).reshape((1, 3))
-        direction[0][0] = -direction[0][0]
 
         vs = np.array([camera_origin[0], direction[0]])
         el = trimesh.path.entities.Line([0, 1])
         path = trimesh.path.Path3D(entities=[el], vertices=vs, colors=np.array([255, 255, 0, 255]).reshape(1, 4))
         self.scene.add_geometry(path)
-        log.debug(f"direction: {direction}")
+
+        #self.scene.show()
+        log.info(f"direction: {direction}")
         log.debug(f"origin : {camera_origin}")
 
         intersecting_points = self.cast_ray(camera_origin, direction - camera_origin)
@@ -401,9 +398,10 @@ class SpatialMapSubscriber(Node):
                     min_distance = distance
                     closest_point = point
 
+            #closest_point[2] = -closest_point[2]
             log.debug(f"Closest point = {closest_point}")
         except Exception as e:
-            log.info(e)
+            log.info(str(e))
 
         return closest_point
 
