@@ -247,6 +247,9 @@ class SpatialMapSubscriber(Node):
                 center_y = center_y / norm_factor # 0
 
                 # convert to camera space
+                # NOTE: The negative sign in the z-direction is to convert
+                # between the left-handed Unity coordinates and the right-handed
+                # trimesh scene coordinates.
                 dir_ray = np.array([(scaled_point[0] - center_x) / focal_length_x,
                                     (scaled_point[1] - center_y) / focal_length_y,
                                     -1.0 / norm_factor]).reshape((1, 3))
@@ -351,6 +354,9 @@ class SpatialMapSubscriber(Node):
         center_y = center_y / norm_factor
 
         # convert coords to camera space
+        # NOTE: The negative sign in the z-direction is to convert
+        # between the left-handed Unity coordinates and the right-handed
+        # trimesh scene coordinates.
         dir_ray = np.array([(scaled_point[0] - center_x) / focal_length_x,
                             (scaled_point[1] - center_y) / focal_length_y,
                             -1.0 / norm_factor]).reshape((1, 3))
