@@ -149,7 +149,7 @@ Tmuxinator configurations are stored in the `./tmux/` directory.
 
 ### Example: Object detection system fragment
 ```bash
-./angel-workspace-shell.sh -r -- tmuxinator start -p tmux/fragment_object_detection_debug.yml
+./angel-workspace-shell.sh -r -- tmuxinator start fragment_object_detection_debug
 ```
 Anatomy of the call:
 1) (Re)uses `angel-workspace-shell.sh` to run a command in a docker container.
@@ -162,6 +162,22 @@ Anatomy of the call:
 
 As a rosetta stone, this example configuration is symmetric to the launch file
 version located at `ros/angel_debug/launch/online_debug_demo.py`.
+
+To stop the system after using the above command, we simply need to exit the
+tmux instance or kill the tmux session.
+This can be done by providing the tmux keyboard command `<Ctrl-B, D>`.
+Alternatively, in a new or existing pane, running `tmux kill-session` or
+`tmux kill-server`.
+When using the above example "start" command, exiting the tmux session will
+also shut down the container.
+
+If starting an `angel-workspace-shell.sh -r` first, dropping into a bash
+terminal, and _**then**_ calling `tmuxinator start fragment_object_detection_debug`,
+we have the option to exit the tmux session and stop it using another
+tmuxinator command:
+```bash
+tmuxinator stop fragment_object_detection_debug
+```
 
 ## ANGEL System Python Package
 
