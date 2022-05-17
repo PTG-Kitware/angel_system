@@ -101,22 +101,16 @@ ImageConverter
   cv::Mat rgb_image;
   cv::cvtColor(nv12_image, rgb_image, cv::COLOR_YUV2RGB_NV12);
 
-  // Create the output Image message
-  sensor_msgs::msg::Image image_message = sensor_msgs::msg::Image();
-  image_message.header.stamp = image_msg->header.stamp;
-  image_message.header.frame_id = frame_id;
-  image_message.height = image_msg->height;
-  image_message.width = image_msg->width;
-  image_message.is_bigendian = false;
+  // Convert the cv::Mat to a ROS ImageMsg
+  sensor_msgs::msg::Image::SharedPtr image_message = cv_bridge::CvImage(std_msgs::msg::Header(),
+                                                                        "rgb8",
+                                                                        rgb_image).toImageMsg();
 
-  image_message.encoding = "rgb8";
-  image_message.step = image_msg->width * 3;
-  std::vector<unsigned char> v(rgb_image.data, rgb_image.data +
-                                               image_msg->height * image_msg->width * 3);
-  image_message.data = v;
+  image_message->header.stamp = image_msg->header.stamp;
+  image_message->header.frame_id = frame_id;
 
   // Publish the RGB image
-  m_pub_output_image->publish(image_message);
+  m_pub_output_image->publish(*image_message);
 }
 
 } // namespace image_converter
