@@ -1,0 +1,85 @@
+import copy
+import threading
+import time
+
+import simpleaudio as sa
+
+import rclpy
+from rclpy.node import Node
+from angel_msgs.msg import HeadsetAudioData
+
+
+class AudioPlayer(Node):
+    def __init__(self):
+        super().__init__(self.__class__.__name__)
+
+        self.declare_parameter("audio_topic", "HeadsetAudioData")
+
+        self._audio_topic = self.get_parameter("audio_topic").get_parameter_value().string_value
+
+        self.subscription = self.create_subscription(
+            HeadsetAudioData,
+            self._audio_topic,
+            self.listener_callback,
+            1)
+
+        self.audio_stream = bytearray()
+        self.audio_player_lock = threading.RLock()
+        self.t = threading.Thread()
+
+        self.audio_stream_duration = 0.0
+        self.playback_duration = 1.0
+
+    def listener_callback(self, msg):
+        """
+        Add the audio to the cumulative audio stream and spawns a new playback
+        thread if the cumulative recording has reached more than a second and
+        there is no ongoing playback.
+        """
+        self.audio_stream.extend(msg.data)
+        self.audio_stream_duration += msg.sample_duration
+
+        if self.audio_stream_duration >= self.playback_duration and not(self.t.is_alive()):
+            # Make a copy of the current data so we can play it back
+            # while more data is accumulated
+            audio_data = copy.deepcopy(self.audio_stream)
+
+            # Remove the data that we just copied from the stream
+            self.audio_stream = bytearray()
+            self.audio_stream_duration = 0.0
+
+            # Start the audio playback thread
+            self.t = threading.Thread(target=self.audio_playback_thread,
+                                      args=(audio_data, msg.channels, msg.sample_rate,))
+            self.t.start()
+
+    def audio_playback_thread(self, audio_data, num_channels, sample_rate):
+        """
+        Thread that plays back the received audio data with SimpleAudio.
+        Waits for the audio playback to finish before exiting.
+        """
+        # Ensure only one playback is happening at a time
+        with self.audio_player_lock:
+            audio_player_object = sa.play_buffer(audio_data,
+                                                 num_channels,
+                                                 4, # bytes per sample
+                                                 sample_rate)
+
+            audio_player_object.wait_done()
+
+
+def main():
+    rclpy.init()
+
+    audio_player = AudioPlayer()
+
+    rclpy.spin(audio_player)
+
+    # Destroy the node explicitly
+    # (optional - otherwise it will be done automatically
+    # when the garbage collector destroys the node object)
+    audio_player.destroy_node()
+    rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()
