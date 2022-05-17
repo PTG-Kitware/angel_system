@@ -1,11 +1,12 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Net;
-using System.Net.Sockets;
-using System.Net.NetworkInformation;
 using System.Threading;
 using UnityEngine;
+
+using Unity.Robotics.ROSTCPConnector;
+using RosMessageTypes.Angel;
+
 
 public class AudioCapture : MonoBehaviour
 {
@@ -15,13 +16,8 @@ public class AudioCapture : MonoBehaviour
     AudioSource audioSource;
     string microphone;
     string debugString = "";
+    string audioTopicName = "HeadsetAudioData";
 
-    System.Net.Sockets.TcpClient tcpClient;
-    System.Net.Sockets.TcpListener tcpServer;
-    NetworkStream tcpStream;
-
-    public string TcpServerIPAddr = "";
-    public const int AudioTcpPort = 11009;
 
     /// <summary>
     /// Lazy acquire the logger object and return the reference to it.
@@ -40,30 +36,12 @@ public class AudioCapture : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        // TODO: Add this back in and use ROS-TCP plugin instead when we need audio capture
-
-        /*
         Logger log = logger();
 
-        try
-        {
-            TcpServerIPAddr = PTGUtilities.getIPv4AddressString();
-        }
-        catch (InvalidIPConfiguration e)
-        {
-            log.LogInfo(e.ToString());
-            return;
-        }
+        // Create the audio publisher
+        ros = ROSConnection.GetOrCreateInstance();
+        ros.RegisterPublisher<AudioMsg>(audioTopicName);
 
-        IPAddress localAddr = IPAddress.Parse(TcpServerIPAddr);
-        tcpServer = new TcpListener(localAddr, AudioTcpPort);
-
-        // Start listening for client requests.
-        tcpServer.Start();
-
-        Thread t = new Thread(AcceptTCPClient);
-        t.Start();
-        log.LogInfo("Waiting for audio TCP connections");
 
         foreach (var device in Microphone.devices)
         {
@@ -71,6 +49,7 @@ public class AudioCapture : MonoBehaviour
             microphone = device;
         }
 
+        // Setup the microphone to start recording
         try
         {
             audioObject = new GameObject();
@@ -80,6 +59,8 @@ public class AudioCapture : MonoBehaviour
 
             while ((Microphone.GetPosition(null) <= 0)) { }
             audioSource.Play();
+
+            // TODO: see if there is way to have the audio source not playback in the headset
             audioSource.volume = 0.01f; // Reduce the volume so we don't hear it in the headset
 
             AudioConfiguration ac = AudioSettings.GetConfiguration();
@@ -91,7 +72,7 @@ public class AudioCapture : MonoBehaviour
         {
             log.LogInfo("Exception: " + e);
         }
-        */
+
     }
 
     // Update is called once per frame
@@ -103,6 +84,11 @@ public class AudioCapture : MonoBehaviour
         }
     }
 
+    // OnAudioFilterRead is called every time an audio chunk is received.
+    // Audio data is an array of floats ranging from -1 to 1.
+    // Note: This function is NOT executed on the application main thread,
+    // so use of Unity functions is not permitted.
+    // More info: https://docs.unity3d.com/ScriptReference/MonoBehaviour.OnAudioFilterRead.html
     void OnAudioFilterRead(float[] data, int channels)
     {
         // Scale the sound up to increase the volume since we reduced it earlier by 0.01x
@@ -114,47 +100,9 @@ public class AudioCapture : MonoBehaviour
 
         byte[] frameData = new byte[(scaledData.Length * sizeof(float)) + 8];
 
-        // Add header
-        byte[] frameHeader = { 0x1A, 0xCF, 0xFC, 0x1D,
-                               (byte)(((data.Length * sizeof(float)) & 0xFF000000) >> 24),
-                               (byte)(((data.Length * sizeof(float)) & 0x00FF0000) >> 16),
-                               (byte)(((data.Length * sizeof(float)) & 0x0000FF00) >> 8),
-                               (byte)(((data.Length * sizeof(float)) & 0x000000FF) >> 0) };
-
         System.Buffer.BlockCopy(frameHeader, 0, frameData, 0, frameHeader.Length);
         System.Buffer.BlockCopy(scaledData, 0, frameData, 8, scaledData.Length * sizeof(float));
 
-        // Send the data through the socket.
-        if (tcpStream != null)
-        {
-            try
-            {
-                tcpStream.Write(frameData, 0, frameData.Length);
-                tcpStream.Flush();
-            }
-            catch (Exception e)
-            {
-                // socket client may have disconnected, so attempt to reconnect
-                tcpStream = null;
-                Thread t = new Thread(AcceptTCPClient);
-                t.Start();
-            }
-        }
-
-    }
-
-    void AcceptTCPClient()
-    {
-        try
-        {
-            // Perform a blocking call to accept requests
-            tcpClient = tcpServer.AcceptTcpClient();
-            tcpStream = tcpClient.GetStream();
-        }
-        catch (Exception e)
-        {
-            debugString += e.ToString();
-        }
     }
 
 }
