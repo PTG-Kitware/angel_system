@@ -5,6 +5,8 @@ using System.Threading;
 using UnityEngine;
 using Unity.Robotics.ROSTCPConnector;
 using RosMessageTypes.Angel;
+using RosMessageTypes.BuiltinInterfaces;
+using RosMessageTypes.Std;
 
 
 public class AudioCapture : MonoBehaviour
@@ -19,6 +21,11 @@ public class AudioCapture : MonoBehaviour
 
     private const int recordingDuration = 1;
     private const int sampleRate = 48000;
+
+    private bool running = false;
+
+    // For filling in ROS message timestamp
+    DateTime timeOrigin = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
 
     /// <summary>
     /// Lazy acquire the logger object and return the reference to it.
@@ -68,6 +75,8 @@ public class AudioCapture : MonoBehaviour
 
         // TODO: see if there is way to have the audio source not playback in the headset
         audioSource.volume = 0.01f; // Reduce the volume so we don't hear it in the headset
+
+        running = true;
     }
 
     // OnAudioFilterRead is called every time an audio chunk is received (every ~20ms)
@@ -78,6 +87,10 @@ public class AudioCapture : MonoBehaviour
     // More info: https://docs.unity3d.com/ScriptReference/MonoBehaviour.OnAudioFilterRead.html
     void OnAudioFilterRead(float[] data, int channels)
     {
+        // Wait for start function to finish
+        if (!running)
+            return;
+
         // Scale the sound up to increase the volume since we reduced it earlier by 0.01x
         float[] scaledData = new float[data.Length];
         for (int i = 0; i < data.Length; i++)
@@ -88,7 +101,18 @@ public class AudioCapture : MonoBehaviour
         float duration = (1.0f / (float)sampleRate) * ((float)data.Length / (float)channels);
 
         // Create the ROS audio message
-        HeadsetAudioDataMsg audioMsg = new HeadsetAudioDataMsg(Convert.ToByte(channels),
+        var currTime = DateTime.Now;
+        TimeSpan diff = currTime.ToUniversalTime() - timeOrigin;
+        var sec = Convert.ToInt32(Math.Floor(diff.TotalSeconds));
+        var nsecRos = Convert.ToUInt32((diff.TotalSeconds - sec) * 1e9f);
+
+        HeaderMsg header = new HeaderMsg(
+            new TimeMsg(sec, nsecRos),
+            "AudioData"
+        );
+
+        HeadsetAudioDataMsg audioMsg = new HeadsetAudioDataMsg(header,
+                                                               channels,
                                                                sampleRate,
                                                                duration,
                                                                scaledData);
