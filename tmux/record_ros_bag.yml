@@ -1,5 +1,7 @@
 #
 # Used to create ROS bags for all topics published from the HL2.
+# This configuration should be run by itself (e.g. not in combination with
+# another tmuxinator launch).
 #
 
 name: fragment-object-detection-debug
@@ -54,8 +56,8 @@ windows:
   - datahub: ros2 run ros_tcp_endpoint default_server_endpoint --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p ROS_IP:=0.0.0.0
-  - image_converter: ros2 run angel_datahub ImageConverter --ros-args
-      -r __ns:=${ROS_NAMESPACE}
-      -p topic_input_images:=PVFramesNV12
-      -p topic_output_images:=PVFramesRGB
-  - ros_bag_record: ros2 bag record --all
+  - ros_bag_record: ros2 bag record
+      ${ROS_NAMESPACE}/PVFramesNV12
+      ${ROS_NAMESPACE}/HeadsetPoseData
+      ${ROS_NAMESPACE}/HeadsetAudioData
+      ${ROS_NAMESPACE}/SpatialMapData
