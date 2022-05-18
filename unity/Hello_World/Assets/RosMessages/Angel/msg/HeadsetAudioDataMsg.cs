@@ -20,8 +20,10 @@ namespace RosMessageTypes.Angel
         //  ROS message packages. This message is based on the audio messages
         //  defined in https://github.com/ros-drivers/audio_common
         // 
+        //  Header with time stamp
+        public Std.HeaderMsg header;
         //  Audio meta data
-        public byte channels;
+        public int channels;
         //  Sampling rate [Hz]
         public int sample_rate;
         //  Duration of sample (s)
@@ -31,14 +33,16 @@ namespace RosMessageTypes.Angel
 
         public HeadsetAudioDataMsg()
         {
+            this.header = new Std.HeaderMsg();
             this.channels = 0;
             this.sample_rate = 0;
             this.sample_duration = 0.0f;
             this.data = new float[0];
         }
 
-        public HeadsetAudioDataMsg(byte channels, int sample_rate, float sample_duration, float[] data)
+        public HeadsetAudioDataMsg(Std.HeaderMsg header, int channels, int sample_rate, float sample_duration, float[] data)
         {
+            this.header = header;
             this.channels = channels;
             this.sample_rate = sample_rate;
             this.sample_duration = sample_duration;
@@ -49,6 +53,7 @@ namespace RosMessageTypes.Angel
 
         private HeadsetAudioDataMsg(MessageDeserializer deserializer)
         {
+            this.header = Std.HeaderMsg.Deserialize(deserializer);
             deserializer.Read(out this.channels);
             deserializer.Read(out this.sample_rate);
             deserializer.Read(out this.sample_duration);
@@ -57,6 +62,7 @@ namespace RosMessageTypes.Angel
 
         public override void SerializeTo(MessageSerializer serializer)
         {
+            serializer.Write(this.header);
             serializer.Write(this.channels);
             serializer.Write(this.sample_rate);
             serializer.Write(this.sample_duration);
@@ -67,6 +73,7 @@ namespace RosMessageTypes.Angel
         public override string ToString()
         {
             return "HeadsetAudioDataMsg: " +
+            "\nheader: " + header.ToString() +
             "\nchannels: " + channels.ToString() +
             "\nsample_rate: " + sample_rate.ToString() +
             "\nsample_duration: " + sample_duration.ToString() +

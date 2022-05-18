@@ -6,8 +6,11 @@
 # defined in https://github.com/ros-drivers/audio_common
 #
 
+# Header with time stamp
+std_msgs/Header header
+
 # Audio meta data
-uint8 channels
+int32 channels
 
 # Sampling rate [Hz]
 int32 sample_rate
