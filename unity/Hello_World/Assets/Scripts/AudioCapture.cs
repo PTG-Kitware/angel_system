@@ -67,14 +67,15 @@ public class AudioCapture : MonoBehaviour
                                             sampleRate); // Sample rate
         audioSource.loop = true;
 
-        //TODO: mute?
-
         // Wait for recording to start
         while ((Microphone.GetPosition(null) <= 0)) { }
         audioSource.Play();
 
-        // TODO: see if there is way to have the audio source not playback in the headset
-        audioSource.volume = 0.01f; // Reduce the volume so we don't hear it in the headset
+        // In order to capture microphone audio without hearing the playback in the headset,
+        // we need to scale the AudioSource volume down here, and then scale it back up when
+        // the audio is processed in OnAudioFilterRead.
+        // https://stackoverflow.com/questions/37787343/capture-audio-from-microphone-without-playing-it-back
+        audioSource.volume = 0.01f;
 
         running = true;
     }
