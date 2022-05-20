@@ -27,6 +27,8 @@ set( message_files
   msg/AruiObject3d.msg
   msg/AruiUpdate.msg
   msg/AruiUserNotification.msg
+  msg/HandJointPose.msg
+  msg/HandJointPosesUpdate.msg
   msg/HeadsetPoseData.msg
   msg/ObjectDetection2d.msg
   msg/ObjectDetection2dSet.msg
