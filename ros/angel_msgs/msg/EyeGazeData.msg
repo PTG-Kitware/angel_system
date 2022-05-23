@@ -13,3 +13,7 @@ geometry_msgs/Vector3 gaze_direction
 # Head movement info
 geometry_msgs/Vector3 head_movement_direction
 geometry_msgs/Vector3 head_velocity
+
+# Object hit info
+bool is_object_hit
+geometry_msgs/Point hit_object_position
