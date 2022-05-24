@@ -1,0 +1,63 @@
+#
+# Used to create ROS bags for all topics published from the HL2.
+# This configuration should be run by itself (e.g. not in combination with
+# another tmuxinator launch).
+#
+
+name: fragment-object-detection-debug
+root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
+
+# Optional tmux socket
+# socket_name: foo
+
+# Note that the pre and post options have been deprecated and will be replaced by
+# project hooks.
+
+# Project hooks
+
+# Runs on project start, always
+# on_project_start: command
+on_project_start: |
+  export ROS_NAMESPACE=${ROS_NAMESPACE:-/debug}
+  export HL2_IP=${HL2_IP:-192.168.1.101}
+
+# Run on project start, the first time
+# on_project_first_start: command
+
+# Run on project start, after the first time
+# on_project_restart: command
+
+# Run on project exit ( detaching from tmux session )
+# on_project_exit: command
+
+# Run on project stop
+# on_project_stop: command
+
+# Runs in each window and pane before window/pane specific commands. Useful for setting up interpreter versions.
+# pre_window: rbenv shell 2.0.0-p247
+
+# Pass command line options to tmux. Useful for specifying a different tmux.conf.
+# tmux_options: -f ~/.tmux.mac.conf
+tmux_options: -f <%= ENV["ANGEL_WORKSPACE_DIR"] %>/tmux/tmux.conf
+
+# Change the command to call tmux.  This can be used by derivatives/wrappers like byobu.
+# tmux_command: byobu
+
+# Specifies (by name or index) which window will be selected on project startup. If not set, the first window is used.
+# startup_window: editor
+
+# Specifies (by index) which pane of the specified window will be selected on project startup. If not set, the first pane is used.
+# startup_pane: 1
+
+# Controls whether the tmux session should be attached to automatically. Defaults to true.
+# attach: false
+
+windows:
+  - datahub: ros2 run ros_tcp_endpoint default_server_endpoint --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p ROS_IP:=0.0.0.0
+  - ros_bag_record: ros2 bag record
+      ${ROS_NAMESPACE}/PVFramesNV12
+      ${ROS_NAMESPACE}/HeadsetPoseData
+      ${ROS_NAMESPACE}/HeadsetAudioData
+      ${ROS_NAMESPACE}/SpatialMapData
