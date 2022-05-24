@@ -29,6 +29,7 @@ set( message_files
   msg/AruiUserNotification.msg
   msg/HandJointPose.msg
   msg/HandJointPosesUpdate.msg
+  msg/HeadsetAudioData.msg
   msg/HeadsetPoseData.msg
   msg/ObjectDetection2d.msg
   msg/ObjectDetection2dSet.msg
