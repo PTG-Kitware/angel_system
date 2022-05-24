@@ -24,6 +24,9 @@ namespace RosMessageTypes.Angel
         //  Head movement info
         public Geometry.Vector3Msg head_movement_direction;
         public Geometry.Vector3Msg head_velocity;
+        //  Object hit info
+        public bool is_object_hit;
+        public Geometry.PointMsg hit_object_position;
 
         public EyeGazeDataMsg()
         {
@@ -32,15 +35,19 @@ namespace RosMessageTypes.Angel
             this.gaze_direction = new Geometry.Vector3Msg();
             this.head_movement_direction = new Geometry.Vector3Msg();
             this.head_velocity = new Geometry.Vector3Msg();
+            this.is_object_hit = false;
+            this.hit_object_position = new Geometry.PointMsg();
         }
 
-        public EyeGazeDataMsg(Std.HeaderMsg header, Geometry.PointMsg gaze_origin, Geometry.Vector3Msg gaze_direction, Geometry.Vector3Msg head_movement_direction, Geometry.Vector3Msg head_velocity)
+        public EyeGazeDataMsg(Std.HeaderMsg header, Geometry.PointMsg gaze_origin, Geometry.Vector3Msg gaze_direction, Geometry.Vector3Msg head_movement_direction, Geometry.Vector3Msg head_velocity, bool is_object_hit, Geometry.PointMsg hit_object_position)
         {
             this.header = header;
             this.gaze_origin = gaze_origin;
             this.gaze_direction = gaze_direction;
             this.head_movement_direction = head_movement_direction;
             this.head_velocity = head_velocity;
+            this.is_object_hit = is_object_hit;
+            this.hit_object_position = hit_object_position;
         }
 
         public static EyeGazeDataMsg Deserialize(MessageDeserializer deserializer) => new EyeGazeDataMsg(deserializer);
@@ -52,6 +59,8 @@ namespace RosMessageTypes.Angel
             this.gaze_direction = Geometry.Vector3Msg.Deserialize(deserializer);
             this.head_movement_direction = Geometry.Vector3Msg.Deserialize(deserializer);
             this.head_velocity = Geometry.Vector3Msg.Deserialize(deserializer);
+            deserializer.Read(out this.is_object_hit);
+            this.hit_object_position = Geometry.PointMsg.Deserialize(deserializer);
         }
 
         public override void SerializeTo(MessageSerializer serializer)
@@ -61,6 +70,8 @@ namespace RosMessageTypes.Angel
             serializer.Write(this.gaze_direction);
             serializer.Write(this.head_movement_direction);
             serializer.Write(this.head_velocity);
+            serializer.Write(this.is_object_hit);
+            serializer.Write(this.hit_object_position);
         }
 
         public override string ToString()
@@ -70,7 +81,9 @@ namespace RosMessageTypes.Angel
             "\ngaze_origin: " + gaze_origin.ToString() +
             "\ngaze_direction: " + gaze_direction.ToString() +
             "\nhead_movement_direction: " + head_movement_direction.ToString() +
-            "\nhead_velocity: " + head_velocity.ToString();
+            "\nhead_velocity: " + head_velocity.ToString() +
+            "\nis_object_hit: " + is_object_hit.ToString() +
+            "\nhit_object_position: " + hit_object_position.ToString();
         }
 
 #if UNITY_EDITOR
