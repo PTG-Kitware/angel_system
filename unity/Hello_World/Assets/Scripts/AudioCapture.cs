@@ -1,27 +1,31 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Net;
-using System.Net.Sockets;
-using System.Net.NetworkInformation;
 using System.Threading;
 using UnityEngine;
+using Unity.Robotics.ROSTCPConnector;
+using RosMessageTypes.Angel;
+using RosMessageTypes.BuiltinInterfaces;
+using RosMessageTypes.Std;
+
 
 public class AudioCapture : MonoBehaviour
 {
     private Logger _logger = null;
     GameObject audioObject = null;
-
     AudioSource audioSource;
-    string microphone;
-    string debugString = "";
 
-    System.Net.Sockets.TcpClient tcpClient;
-    System.Net.Sockets.TcpListener tcpServer;
-    NetworkStream tcpStream;
+    // Ros stuff
+    ROSConnection ros;
+    string audioTopicName = "HeadsetAudioData";
 
-    public string TcpServerIPAddr = "";
-    public const int AudioTcpPort = 11009;
+    private const int recordingDuration = 1;
+    private const int sampleRate = 48000;
+
+    private bool running = false;
+
+    // For filling in ROS message timestamp
+    DateTime timeOrigin = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
 
     /// <summary>
     /// Lazy acquire the logger object and return the reference to it.
@@ -40,71 +44,54 @@ public class AudioCapture : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        // TODO: Add this back in and use ROS-TCP plugin instead when we need audio capture
-
-        /*
         Logger log = logger();
 
-        try
-        {
-            TcpServerIPAddr = PTGUtilities.getIPv4AddressString();
-        }
-        catch (InvalidIPConfiguration e)
-        {
-            log.LogInfo(e.ToString());
-            return;
-        }
+        // Create the audio publisher
+        ros = ROSConnection.GetOrCreateInstance();
+        ros.RegisterPublisher<HeadsetAudioDataMsg>(audioTopicName);
 
-        IPAddress localAddr = IPAddress.Parse(TcpServerIPAddr);
-        tcpServer = new TcpListener(localAddr, AudioTcpPort);
-
-        // Start listening for client requests.
-        tcpServer.Start();
-
-        Thread t = new Thread(AcceptTCPClient);
-        t.Start();
-        log.LogInfo("Waiting for audio TCP connections");
-
+        string microphoneName = "";
         foreach (var device in Microphone.devices)
         {
-            log.LogInfo("Name: " + device);
-            microphone = device;
+            log.LogInfo("Microphone name: " + device);
+            microphoneName = device;
         }
 
-        try
-        {
-            audioObject = new GameObject();
-            audioSource = audioObject.AddComponent<AudioSource>();
-            audioSource.clip = Microphone.Start(microphone, true, 1, 48000);
-            audioSource.loop = true;
+        // Setup the microphone to start recording
+        audioObject = new GameObject();
+        audioSource = audioObject.AddComponent<AudioSource>();
 
-            while ((Microphone.GetPosition(null) <= 0)) { }
-            audioSource.Play();
-            audioSource.volume = 0.01f; // Reduce the volume so we don't hear it in the headset
+        audioSource.clip = Microphone.Start(microphoneName, // Device name
+                                            true, // Loop
+                                            recordingDuration, // Length of recording (sec)
+                                            sampleRate); // Sample rate
+        audioSource.loop = true;
 
-            AudioConfiguration ac = AudioSettings.GetConfiguration();
-            //log.LogInfo("sample rate: " + AudioSettings.outputSampleRate.ToString());
-            //log.LogInfo("speakermode: " + ac.speakerMode.ToString());
-            //log.LogInfo("dsp size: " + ac.dspBufferSize.ToString());
-        }
-        catch (Exception e)
-        {
-            log.LogInfo("Exception: " + e);
-        }
-        */
+        // Wait for recording to start
+        while ((Microphone.GetPosition(null) <= 0)) { }
+        audioSource.Play();
+
+        // In order to capture microphone audio without hearing the playback in the headset,
+        // we need to scale the AudioSource volume down here, and then scale it back up when
+        // the audio is processed in OnAudioFilterRead.
+        // https://stackoverflow.com/questions/37787343/capture-audio-from-microphone-without-playing-it-back
+        audioSource.volume = 0.01f;
+
+        running = true;
     }
 
-    // Update is called once per frame
-    void Update()
-    {
-        if (debugString != "")
-        {
-            this.logger().LogInfo(debugString);
-        }
-    }
-
+    // OnAudioFilterRead is called every time an audio chunk is received (every ~20ms)
+    // from the audio clip on the audio source.
+    // Audio data is an array of floats ranging from -1 to 1.
+    // Note: This function is NOT executed on the application main thread,
+    // so use of Unity functions is not permitted.
+    // More info: https://docs.unity3d.com/ScriptReference/MonoBehaviour.OnAudioFilterRead.html
     void OnAudioFilterRead(float[] data, int channels)
     {
+        // Wait for start function to finish
+        if (!running)
+            return;
+
         // Scale the sound up to increase the volume since we reduced it earlier by 0.01x
         float[] scaledData = new float[data.Length];
         for (int i = 0; i < data.Length; i++)
@@ -112,49 +99,25 @@ public class AudioCapture : MonoBehaviour
             scaledData[i] = data[i] * 100;
         }
 
-        byte[] frameData = new byte[(scaledData.Length * sizeof(float)) + 8];
+        float duration = (1.0f / (float)sampleRate) * ((float)data.Length / (float)channels);
 
-        // Add header
-        byte[] frameHeader = { 0x1A, 0xCF, 0xFC, 0x1D,
-                               (byte)(((data.Length * sizeof(float)) & 0xFF000000) >> 24),
-                               (byte)(((data.Length * sizeof(float)) & 0x00FF0000) >> 16),
-                               (byte)(((data.Length * sizeof(float)) & 0x0000FF00) >> 8),
-                               (byte)(((data.Length * sizeof(float)) & 0x000000FF) >> 0) };
+        // Create the ROS audio message
+        var currTime = DateTime.Now;
+        TimeSpan diff = currTime.ToUniversalTime() - timeOrigin;
+        var sec = Convert.ToInt32(Math.Floor(diff.TotalSeconds));
+        var nsecRos = Convert.ToUInt32((diff.TotalSeconds - sec) * 1e9f);
 
-        System.Buffer.BlockCopy(frameHeader, 0, frameData, 0, frameHeader.Length);
-        System.Buffer.BlockCopy(scaledData, 0, frameData, 8, scaledData.Length * sizeof(float));
+        HeaderMsg header = new HeaderMsg(
+            new TimeMsg(sec, nsecRos),
+            "AudioData"
+        );
 
-        // Send the data through the socket.
-        if (tcpStream != null)
-        {
-            try
-            {
-                tcpStream.Write(frameData, 0, frameData.Length);
-                tcpStream.Flush();
-            }
-            catch (Exception e)
-            {
-                // socket client may have disconnected, so attempt to reconnect
-                tcpStream = null;
-                Thread t = new Thread(AcceptTCPClient);
-                t.Start();
-            }
-        }
-
-    }
-
-    void AcceptTCPClient()
-    {
-        try
-        {
-            // Perform a blocking call to accept requests
-            tcpClient = tcpServer.AcceptTcpClient();
-            tcpStream = tcpClient.GetStream();
-        }
-        catch (Exception e)
-        {
-            debugString += e.ToString();
-        }
+        HeadsetAudioDataMsg audioMsg = new HeadsetAudioDataMsg(header,
+                                                               channels,
+                                                               sampleRate,
+                                                               duration,
+                                                               scaledData);
+        ros.Publish(audioTopicName, audioMsg);
     }
 
 }

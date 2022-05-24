@@ -27,6 +27,7 @@ set( message_files
   msg/AruiObject3d.msg
   msg/AruiUpdate.msg
   msg/AruiUserNotification.msg
+  msg/HeadsetAudioData.msg
   msg/HeadsetPoseData.msg
   msg/ObjectDetection2d.msg
   msg/ObjectDetection2dSet.msg

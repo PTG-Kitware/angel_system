@@ -522,7 +522,7 @@ Camera:
   m_GameObject: {fileID: 868124796}
   m_Enabled: 1
   serializedVersion: 2
-  m_ClearFlags: 2
+  m_ClearFlags: 1
   m_BackGroundColor: {r: 0, g: 0, b: 0, a: 1}
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
@@ -568,7 +568,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: afacf0bbecfac4545875c487363bcad1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  TcpServerIPAddr: 
 --- !u!114 &949346326 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 7704995008421860929, guid: 0b303b05d16ccbf4b86c7e7cb8d26d75, type: 3}
