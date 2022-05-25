@@ -48,6 +48,8 @@ public class EyeGazeCapture : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        Logger log = logger();
+
         var eyeGazeProvider = CoreServices.InputSystem?.EyeGazeProvider;
         if (eyeGazeProvider != null)
         {
@@ -76,6 +78,7 @@ public class EyeGazeCapture : MonoBehaviour
                                                           eyeGazeProvider.HitInfo.point.z);
 
                 // Create the ROS std_msgs header with the EyeGazeProvider's timestamps
+                // TODO: use the common header gen function in PTGUtilities
                 var currTime = eyeGazeProvider.Timestamp;
                 TimeSpan diff = currTime.ToUniversalTime() - timeOrigin;
                 var sec = Convert.ToInt32(Math.Floor(diff.TotalSeconds));
@@ -93,6 +96,14 @@ public class EyeGazeCapture : MonoBehaviour
 
                 ros.Publish(eyeGazeTopicName, eyeGazeDataMsg);
             }
+            else
+            {
+                log.LogInfo("Warning: Eye gaze info not available. Check eye calibration and permissions.");
+            }
+        }
+        else
+        {
+            log.LogInfo("Warning: Eye gaze provider not available.");
         }
     }
 }
