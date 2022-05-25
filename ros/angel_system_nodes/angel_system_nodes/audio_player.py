@@ -1,4 +1,3 @@
-import copy
 import threading
 import time
 
@@ -24,11 +23,14 @@ class AudioPlayer(Node):
             1)
 
         self.audio_stream = bytearray()
+        self.audio_stream_lock = threading.RLock()
         self.audio_player_lock = threading.RLock()
         self.t = threading.Thread()
 
         self.audio_stream_duration = 0.0
         self.playback_duration = 1.0
+
+        self.prev_timestamp = None
 
     def listener_callback(self, msg):
         """
@@ -36,17 +38,39 @@ class AudioPlayer(Node):
         thread if the cumulative recording has reached more than a second and
         there is no ongoing playback.
         """
-        self.audio_stream.extend(msg.data)
-        self.audio_stream_duration += msg.sample_duration
+        log = self.get_logger()
+
+        # Check that this message comes temporally after the previous message
+        message_order_valid = False
+        if self.prev_timestamp is None:
+            message_order_valid = True
+        else:
+            if msg.header.stamp.sec > self.prev_timestamp.sec:
+                message_order_valid = True
+            elif msg.header.stamp.sec == self.prev_timestamp.sec:
+                # Seconds are same, so check nanoseconds
+                if msg.header.stamp.nanosec > self.prev_timestamp.nanosec:
+                    message_order_valid = True
+
+        if message_order_valid:
+            with self.audio_stream_lock:
+                self.audio_stream.extend(msg.data)
+                self.audio_stream_duration += msg.sample_duration
+        else:
+            log.info("Warning! Out of order messages.\n"
+                     + f"Prev: {self.prev_timestamp} \nCurr: {msg.header.stamp}")
+
+        self.prev_timestamp = msg.header.stamp
 
         if self.audio_stream_duration >= self.playback_duration and not(self.t.is_alive()):
             # Make a copy of the current data so we can play it back
             # while more data is accumulated
-            audio_data = copy.deepcopy(self.audio_stream)
+            audio_data = self.audio_stream
 
-            # Remove the data that we just copied from the stream
-            self.audio_stream = bytearray()
-            self.audio_stream_duration = 0.0
+            with self.audio_stream_lock:
+                # Remove the data that we just copied from the stream
+                self.audio_stream = bytearray()
+                self.audio_stream_duration = 0.0
 
             # Start the audio playback thread
             self.t = threading.Thread(target=self.audio_playback_thread,
