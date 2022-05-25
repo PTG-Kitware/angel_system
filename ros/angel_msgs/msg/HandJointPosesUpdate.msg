@@ -1,7 +1,8 @@
 #
-# Message for updating hand joint information from the HoloLens hand tracking
-# provider. There are 26 tracked joints for each hand. Position and rotation
-# are provided for each joint.
+# Message that contains a snapshot of the hand joint poses
+# that are provided by the HoloLens hand tracking provider.
+# There are 26 tracked joints for each hand.
+# Position and rotation are provided for each joint.
 #
 
 std_msgs/Header header
