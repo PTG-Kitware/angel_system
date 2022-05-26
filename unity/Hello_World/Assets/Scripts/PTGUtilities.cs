@@ -2,8 +2,31 @@
 using System.Net;
 using System.Net.NetworkInformation;
 
+using RosMessageTypes.BuiltinInterfaces;
+using RosMessageTypes.Std;
+
+
 public static class PTGUtilities
 {
+    // For filling in ROS message timestamps
+    public static DateTime timeOrigin = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
+
+    // Creates and returns a time stamped ROS std_msgs/Header
+    public static HeaderMsg getROSStdMsgsHeader(string frameId)
+    {
+        var currTime = DateTime.Now;
+        TimeSpan diff = currTime.ToUniversalTime() - timeOrigin;
+        var sec = Convert.ToInt32(Math.Floor(diff.TotalSeconds));
+        var nsecRos = Convert.ToUInt32((diff.TotalSeconds - sec) * 1e9f);
+
+        HeaderMsg header = new HeaderMsg(
+            new TimeMsg(sec, nsecRos),
+            frameId
+        );
+
+        return header;
+    }
+
     public static string getIPv4AddressString()
     {
         string ipAddr = "";
