@@ -23,6 +23,10 @@ RUN apt-get -y update \
         python3-venv \
         ros-${ROS_DISTRO}-image-transport-plugins \
         ros-${ROS_DISTRO}-rmw-cyclonedds-cpp \
+        ros-${ROS_DISTRO}-ros2bag \
+        ros-${ROS_DISTRO}-rosbag2-transport \
+        ros-${ROS_DISTRO}-test-msgs \
+        ros-${ROS_DISTRO}-pybind11-vendor \
         tmuxinator \
         # for python simpleaudio
         libasound2-dev \
@@ -107,6 +111,17 @@ COPY docker/cyclonedds_profile.xml.tmpl \
      docker/workspace_entrypoint.sh \
      docker/workspace_setenv.sh \
      "${ANGEL_WORKSPACE_DIR}"/
+
+# Build and install rosbag2 from foxy-future branch,
+# which includes rosbag2_py package
+# Unfortunately, ros-foxy-rosbag2 does not include rosbag2_py
+ARG ROSBAG_SRC_DIR
+ENV ROSBAG_SRC_DIR="${ROSBAG_SRC_DIR}"
+RUN source "/opt/ros/${ROS_DISTRO}/setup.bash" \
+    && mkdir "${ROSBAG_SRC_DIR}" \
+    && cd "${ROSBAG_SRC_DIR}" \
+    && git clone -b foxy-future https://github.com/ros2/rosbag2.git \
+    && colcon build --merge-install
 
 WORKDIR "${ANGEL_WORKSPACE_DIR}"
 ENTRYPOINT ["./workspace_entrypoint.sh"]
