@@ -57,7 +57,9 @@ windows:
       -r __ns:=${ROS_NAMESPACE}
       -p ROS_IP:=0.0.0.0
   - ros_bag_record: ros2 bag record
-      ${ROS_NAMESPACE}/PVFramesNV12
+      ${ROS_NAMESPACE}/EyeGazeData
+      ${ROS_NAMESPACE}/HandJointPoseData
       ${ROS_NAMESPACE}/HeadsetPoseData
       ${ROS_NAMESPACE}/HeadsetAudioData
+      ${ROS_NAMESPACE}/PVFramesNV12
       ${ROS_NAMESPACE}/SpatialMapData
