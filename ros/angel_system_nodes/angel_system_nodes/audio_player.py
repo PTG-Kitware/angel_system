@@ -40,42 +40,42 @@ class AudioPlayer(Node):
         """
         log = self.get_logger()
 
-        # Check that this message comes temporally after the previous message
-        message_order_valid = False
-        if self.prev_timestamp is None:
-            message_order_valid = True
-        else:
-            if msg.header.stamp.sec > self.prev_timestamp.sec:
+        with self.audio_stream_lock:
+            # Check that this message comes temporally after the previous message
+            message_order_valid = False
+            if self.prev_timestamp is None:
                 message_order_valid = True
-            elif msg.header.stamp.sec == self.prev_timestamp.sec:
-                # Seconds are same, so check nanoseconds
-                if msg.header.stamp.nanosec > self.prev_timestamp.nanosec:
+            else:
+                if msg.header.stamp.sec > self.prev_timestamp.sec:
                     message_order_valid = True
+                elif msg.header.stamp.sec == self.prev_timestamp.sec:
+                    # Seconds are same, so check nanoseconds
+                    if msg.header.stamp.nanosec > self.prev_timestamp.nanosec:
+                        message_order_valid = True
 
-        if message_order_valid:
-            with self.audio_stream_lock:
-                self.audio_stream.extend(msg.data)
-                self.audio_stream_duration += msg.sample_duration
-        else:
-            log.info("Warning! Out of order messages.\n"
-                     + f"Prev: {self.prev_timestamp} \nCurr: {msg.header.stamp}")
+            if message_order_valid:
+                with self.audio_stream_lock:
+                    self.audio_stream.extend(msg.data)
+                    self.audio_stream_duration += msg.sample_duration
+            else:
+                log.info("Warning! Out of order messages.\n"
+                         + f"Prev: {self.prev_timestamp} \nCurr: {msg.header.stamp}")
 
-        self.prev_timestamp = msg.header.stamp
+            self.prev_timestamp = msg.header.stamp
 
-        if self.audio_stream_duration >= self.playback_duration and not(self.t.is_alive()):
-            # Make a copy of the current data so we can play it back
-            # while more data is accumulated
-            audio_data = self.audio_stream
+            if self.audio_stream_duration >= self.playback_duration and not(self.t.is_alive()):
+                # Make a copy of the current data so we can play it back
+                # while more data is accumulated
+                audio_data = self.audio_stream
 
-            with self.audio_stream_lock:
                 # Remove the data that we just copied from the stream
                 self.audio_stream = bytearray()
                 self.audio_stream_duration = 0.0
 
-            # Start the audio playback thread
-            self.t = threading.Thread(target=self.audio_playback_thread,
-                                      args=(audio_data, msg.channels, msg.sample_rate,))
-            self.t.start()
+                # Start the audio playback thread
+                self.t = threading.Thread(target=self.audio_playback_thread,
+                                          args=(audio_data, msg.channels, msg.sample_rate,))
+                self.t.start()
 
     def audio_playback_thread(self, audio_data, num_channels, sample_rate):
         """
