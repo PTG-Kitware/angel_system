@@ -54,9 +54,8 @@ class AudioPlayer(Node):
                         message_order_valid = True
 
             if message_order_valid:
-                with self.audio_stream_lock:
-                    self.audio_stream.extend(msg.data)
-                    self.audio_stream_duration += msg.sample_duration
+                self.audio_stream.extend(msg.data)
+                self.audio_stream_duration += msg.sample_duration
             else:
                 log.info("Warning! Out of order messages.\n"
                          + f"Prev: {self.prev_timestamp} \nCurr: {msg.header.stamp}")
