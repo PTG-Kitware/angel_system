@@ -9,6 +9,8 @@ import os
 import sys
 from typing import Optional
 
+from cv_bridge import CvBridge
+import cv2
 import numpy as np
 import scipy.io.wavfile
 
@@ -24,6 +26,10 @@ from angel_msgs.msg import (
     SpatialMesh,
     HeadsetPoseData
 )
+from sensor_msgs.msg import Image
+
+
+BRIDGE = CvBridge()
 
 
 def get_rosbag_options(path, serialization_format='cdr'):
@@ -53,6 +59,7 @@ class BagConverter(Node):
 
         self.bag_path = self.declare_parameter("bag_path", "").get_parameter_value().string_value
         self.extract_audio = self.declare_parameter("extract_audio", True).get_parameter_value().bool_value
+        self.extract_images = self.declare_parameter("extract_images", True).get_parameter_value().bool_value
 
         if self.bag_path == "":
             self.log.info("Please provide bag file to convert")
@@ -60,9 +67,24 @@ class BagConverter(Node):
             raise ValueError("Bag file path not provided")
             return
 
-        # For tracking audio data
+        # Top level data folder
+        self.total_messages = 0
+        self.data_folder = self.bag_path + "_extracted/"
+        if not(os.path.exists(self.data_folder)):
+            os.makedirs(self.data_folder)
+            self.log.info(f"Created {self.data_folder} for data")
+
+        # For extracking audio data
         self.audio_messages = 0
         self.audio_data = []
+
+        # For extracting images data
+        self.image_messages = 0
+        self.images = []
+        self.image_folder = self.data_folder + "images/"
+        if not(os.path.exists(self.image_folder)):
+            os.makedirs(self.image_folder)
+            self.log.info(f"Created {self.image_folder} for extracted images")
 
         # Parse the bag
         self.parse_bag()
@@ -87,6 +109,10 @@ class BagConverter(Node):
             (topic, data, t) = reader.read_next()
             msg_type = get_message(type_map[topic])
             msg = deserialize_message(data, msg_type)
+            self.total_messages += 1
+
+            if (self.total_messages % 100) == 0:
+                self.log.info(f"Parsing message: {self.total_messages}")
 
             # TODO: add other message types
             if isinstance(msg, HeadsetPoseData):
@@ -97,15 +123,33 @@ class BagConverter(Node):
 
                 # Accumulate the audio data
                 self.audio_data.extend(msg.data)
+            elif isinstance(msg, Image):
+                self.image_messages += 1
+
+                # Check if we should process the images
+                if not self.extract_images:
+                    continue
+
+                # Convert NV12 image to RGB
+                yuv_image = np.frombuffer(msg.data, np.uint8).reshape(msg.height*3//2, msg.width)
+                rgb_image = cv2.cvtColor(yuv_image, cv2.COLOR_YUV2BGR_NV12)
+
+                # Save image to disk
+                cv2.imwrite(f"{self.image_folder}frame_{self.image_messages:05d}.png", rgb_image)
 
         self.print_bag_info()
+
+        # Save the audio file
+        self.create_wav_file()
 
     def print_bag_info(self) -> None:
         """
         Print stats about the bag.
         """
         self.log.info(f"Bag info for {self.bag_path}")
+        self.log.info(f"Total ROS messages: {self.total_messages}")
         self.log.info(f"Audio messages: {self.audio_messages}")
+        self.log.info(f"Image messages: {self.image_messages}")
 
     def create_wav_file(self, filename: Optional[str] = None) -> None:
         """
@@ -116,7 +160,7 @@ class BagConverter(Node):
             return
 
         if filename is None:
-            filename = self.bag_path + ".wav"
+            filename = self.data_folder + "audio.wav"
 
         # Split audio data into two channels
         # HL audio samples are interleaved like [CH1, CH2, CH1, CH2,...]
@@ -135,4 +179,3 @@ if __name__ == "__main__":
     rclpy.init()
 
     bag_converter = BagConverter()
-    bag_converter.create_wav_file()
