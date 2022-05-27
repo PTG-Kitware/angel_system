@@ -59,6 +59,7 @@ class AudioPlayer(Node):
             else:
                 log.info("Warning! Out of order messages.\n"
                          + f"Prev: {self.prev_timestamp} \nCurr: {msg.header.stamp}")
+                return
 
             self.prev_timestamp = msg.header.stamp
 
