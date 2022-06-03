@@ -11,6 +11,8 @@ services:
     build:
       context: ..  # repo root
       dockerfile: docker/workspace-base-dev/Dockerfile
+      args:
+        ROS_VERSION:  # from .env file
       cache_from:
         # In order of descending precedence
         - ${PTG_REGISTRY}/workspace-base-dev:${PTG_TAG}

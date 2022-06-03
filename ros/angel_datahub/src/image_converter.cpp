@@ -69,8 +69,8 @@ ImageConverter
   // This two-stage declare->get allows the lack of passing a parameter to
   // throw an error with the parameter name in the error so the user has a
   // clue what is going wrong.
-  declare_parameter( PARAM_TOPIC_INPUT_IMAGES );
-  declare_parameter( PARAM_TOPIC_OUTPUT_IMAGE );
+  declare_parameter<std::string>( PARAM_TOPIC_INPUT_IMAGES );
+  declare_parameter<std::string>( PARAM_TOPIC_OUTPUT_IMAGE );
 
   auto topic_input_images =
     this->get_parameter( PARAM_TOPIC_INPUT_IMAGES ).as_string();
