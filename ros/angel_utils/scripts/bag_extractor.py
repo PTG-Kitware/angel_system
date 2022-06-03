@@ -10,7 +10,6 @@ import os
 import sys
 from typing import Dict, Optional
 
-from cv_bridge import CvBridge
 import cv2
 import numpy as np
 import scipy.io.wavfile
@@ -31,8 +30,6 @@ from angel_msgs.msg import (
 )
 from sensor_msgs.msg import Image
 
-
-BRIDGE = CvBridge()
 
 
 def get_rosbag_options(path, serialization_format='cdr'):
@@ -303,10 +300,10 @@ class BagConverter(Node):
                              "position": [m.pose.position.x,
                                           m.pose.position.y,
                                           m.pose.position.z],
-                             "rotation": [m.pose.orientation.x,
-                                          m.pose.orientation.y,
-                                          m.pose.orientation.z,
-                                          m.pose.orientation.w],
+                             "rotation_xyzw": [m.pose.orientation.x,
+                                               m.pose.orientation.y,
+                                               m.pose.orientation.z,
+                                               m.pose.orientation.w],
                             } for m in msg.joints
                            ]
         }
