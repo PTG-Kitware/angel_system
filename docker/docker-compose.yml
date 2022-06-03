@@ -31,7 +31,6 @@ services:
         ANGEL_WORKSPACE_DIR:  # from .env file
         PTG_REGISTRY:  # from .env file
         PTG_TAG:  # from .env file
-        ROSBAG_SRC_DIR:  # from .env file
       cache_from:
         # In order of descending precedence
         - ${PTG_REGISTRY}/workspace-build-dev:${PTG_TAG}

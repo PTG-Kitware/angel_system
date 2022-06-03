@@ -112,17 +112,6 @@ COPY docker/cyclonedds_profile.xml.tmpl \
      docker/workspace_setenv.sh \
      "${ANGEL_WORKSPACE_DIR}"/
 
-# Build and install rosbag2 from foxy-future branch,
-# which includes rosbag2_py package
-# Unfortunately, ros-foxy-rosbag2 does not include rosbag2_py
-ARG ROSBAG_SRC_DIR
-ENV ROSBAG_SRC_DIR="${ROSBAG_SRC_DIR}"
-RUN source "/opt/ros/${ROS_DISTRO}/setup.bash" \
-    && mkdir "${ROSBAG_SRC_DIR}" \
-    && cd "${ROSBAG_SRC_DIR}" \
-    && git clone -b foxy-future https://github.com/ros2/rosbag2.git \
-    && colcon build --merge-install
-
 WORKDIR "${ANGEL_WORKSPACE_DIR}"
 ENTRYPOINT ["./workspace_entrypoint.sh"]
 CMD ["bash"]

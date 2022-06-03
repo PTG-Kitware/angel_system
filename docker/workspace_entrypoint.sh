@@ -25,6 +25,4 @@ then
   export CYCLONEDDS_URI=file://${SCRIPT_DIR}/cyclonedds_profile.xml
 fi
 
-source ${ROSBAG_SRC_DIR}/install/setup.sh
-
 exec "$@"
