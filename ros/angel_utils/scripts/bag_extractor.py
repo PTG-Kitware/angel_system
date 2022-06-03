@@ -29,6 +29,7 @@ from angel_msgs.msg import (
     SpatialMesh,
 )
 from sensor_msgs.msg import Image
+from angel_utils.conversion import convert_nv12_to_rgb
 
 
 
@@ -173,8 +174,7 @@ class BagConverter(Node):
                     continue
 
                 # Convert NV12 image to RGB
-                yuv_image = np.frombuffer(msg.data, np.uint8).reshape(msg.height*3//2, msg.width)
-                rgb_image = cv2.cvtColor(yuv_image, cv2.COLOR_YUV2BGR_NV12)
+                rgb_image = convert_nv12_to_rgb(msg.data, msg.height, msg.width)
 
                 # Save image to disk
                 cv2.imwrite(f"{self.image_folder}frame_{self.num_image_msgs:05d}.png", rgb_image)
