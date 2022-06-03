@@ -32,7 +32,6 @@ from sensor_msgs.msg import Image
 from angel_utils.conversion import convert_nv12_to_rgb
 
 
-
 def get_rosbag_options(path, serialization_format='cdr'):
     """
     Helper function taken from rosbag2_py repo:
@@ -163,7 +162,10 @@ class BagConverter(Node):
         self.print_bag_info()
 
         # Save the audio file
-        self.create_wav_file()
+        if self.extract_audio:
+            self.create_wav_file()
+        else:
+            self.log.info(f"Skipping audio extraction")
 
         # Write the json data to disk
         if self.extract_eye_gaze_data:
@@ -215,10 +217,6 @@ class BagConverter(Node):
         """
         Creates a .wav file from the bag's audio data topic messages.
         """
-        if not self.extract_audio:
-            self.log.info(f"Skipping audio extraction")
-            return
-
         if filename is None:
             filename = self.data_folder + "audio.wav"
 
