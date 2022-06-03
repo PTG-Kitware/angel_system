@@ -72,6 +72,21 @@ class BagConverter(Node):
             raise ValueError("Bag file path not provided")
             return
 
+        # Build the message type to handler function map
+        self.msg_type_to_handler_map = {}
+        if self.extract_audio:
+            self.msg_type_to_handler_map[HeadsetAudioData] = self.handle_audio_msg
+        if self.extract_images:
+            self.msg_type_to_handler_map[Image] = self.handle_image_msg
+        if self.extract_eye_gaze_data:
+            self.msg_type_to_handler_map[EyeGazeData] = self.handle_eye_gaze_msg
+        if self.extract_head_pose_data:
+            self.msg_type_to_handler_map[HeadsetPoseData] = self.handle_head_pose_msg
+        if self.extract_hand_pose_data:
+            self.msg_type_to_handler_map[HandJointPosesUpdate] = self.handle_hand_pose_msg
+        if self.extract_spatial_map_data:
+            self.msg_type_to_handler_map[SpatialMesh] = self.handle_spatial_mesh_msg
+
         # Top level data folder
         self.num_total_msgs = 0
         self.data_folder = self.bag_path + "_extracted/"
@@ -138,53 +153,11 @@ class BagConverter(Node):
             if (self.num_total_msgs % 100) == 0:
                 self.log.info(f"Parsing message: {self.num_total_msgs}")
 
-            if isinstance(msg, EyeGazeData):
-                self.num_eye_gaze_msgs += 1
-                if not self.extract_eye_gaze_data:
-                    continue
-
-                msg_dict = self.convert_eye_gaze_msg_to_dict(msg)
-                self.eye_gaze_msgs.append(msg_dict)
-            elif isinstance(msg, HandJointPosesUpdate):
-                self.num_hand_pose_msgs += 1
-                if not self.extract_hand_pose_data:
-                    continue
-
-                msg_dict = self.convert_hand_pose_msg_to_dict(msg)
-                self.hand_pose_msgs.append(msg_dict)
-            elif isinstance(msg, HeadsetPoseData):
-                self.num_head_pose_msgs += 1
-                if not self.extract_head_pose_data:
-                    continue
-
-                msg_dict = self.convert_head_pose_msg_to_dict(msg)
-                self.head_pose_msgs.append(msg_dict)
-            elif isinstance(msg, HeadsetAudioData):
-                self.num_audio_msgs += 1
-                if not self.extract_audio:
-                    continue
-
-                self.audio_sample_rate = msg.sample_rate
-
-                # Accumulate the audio data
-                self.audio_data.extend(msg.data)
-            elif isinstance(msg, Image):
-                self.num_image_msgs += 1
-                if not self.extract_images:
-                    continue
-
-                # Convert NV12 image to RGB
-                rgb_image = convert_nv12_to_rgb(msg.data, msg.height, msg.width)
-
-                # Save image to disk
-                cv2.imwrite(f"{self.image_folder}frame_{self.num_image_msgs:05d}.png", rgb_image)
-            elif isinstance(msg, SpatialMesh):
-                self.num_spatial_map_msgs += 1
-                if not self.extract_spatial_map_data:
-                    continue
-
-                msg_dict = self.convert_spatial_map_msg_to_dict(msg)
-                self.spatial_map_msgs.append(msg_dict)
+            # Attempt to call the message handler for this message type
+            try:
+                self.msg_type_to_handler_map[type(msg)](msg)
+            except KeyError as e:
+                pass
 
         # Print bag stats
         self.print_bag_info()
@@ -336,6 +309,74 @@ class BagConverter(Node):
             "vertices": [[v.x, v.y, v.z] for v in msg.mesh.vertices]
         }
         return d
+
+    def handle_audio_msg(self, msg: HeadsetAudioData) -> None:
+        """
+        Handler for the audio messages in the ROS bag.
+        Adds the audio data to the audio_data list.
+        """
+        self.num_audio_msgs += 1
+        self.audio_sample_rate = msg.sample_rate
+
+        # Accumulate the audio data
+        self.audio_data.extend(msg.data)
+
+    def handle_image_msg(self, msg: Image) -> None:
+        """
+        Handler for the image messages in the ROS bag.
+        Converts the images to RGB and saves them to the disk.
+        """
+        self.num_image_msgs += 1
+
+        # Convert NV12 image to RGB
+        rgb_image = convert_nv12_to_rgb(msg.data, msg.height, msg.width)
+
+        # Save image to disk
+        cv2.imwrite(f"{self.image_folder}frame_{self.num_image_msgs:05d}.png", rgb_image)
+
+    def handle_eye_gaze_msg(self, msg: EyeGazeData) -> None:
+        """
+        Handler for the eye gaze messages in the ROS bag.
+        Converts the eye gaze data to a dictionary and then adds it to
+        the eye gaze dictionary list.
+        """
+        self.num_eye_gaze_msgs += 1
+
+        msg_dict = self.convert_eye_gaze_msg_to_dict(msg)
+        self.eye_gaze_msgs.append(msg_dict)
+
+    def handle_head_pose_msg(self, msg: HeadsetPoseData) -> None:
+        """
+        Handler for the head pose messages in the ROS bag.
+        Converts the head pose data to a dictionary and then adds it to
+        the head pose dictionary list.
+        """
+        self.num_head_pose_msgs += 1
+
+        msg_dict = self.convert_head_pose_msg_to_dict(msg)
+        self.head_pose_msgs.append(msg_dict)
+
+    def handle_hand_pose_msg(self, msg: HandJointPosesUpdate) -> None:
+        """
+        Handler for the hand pose messages in the ROS bag.
+        Converts the hand pose data to a dictionary and then adds it to
+        the hand pose dictionary list.
+        """
+        self.num_hand_pose_msgs += 1
+
+        msg_dict = self.convert_hand_pose_msg_to_dict(msg)
+        self.hand_pose_msgs.append(msg_dict)
+
+    def handle_spatial_mesh_msg(self, msg: SpatialMesh) -> None:
+        """
+        Handler for the spatial mesh messages in the ROS bag.
+        Converts the spatial mesh data to a dictionary and then adds it to
+        the spatial mesh dictionary list.
+        """
+        self.num_spatial_map_msgs += 1
+
+        msg_dict = self.convert_spatial_map_msg_to_dict(msg)
+        self.spatial_map_msgs.append(msg_dict)
 
 
 if __name__ == "__main__":
