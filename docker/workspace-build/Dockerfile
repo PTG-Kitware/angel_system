@@ -23,6 +23,8 @@ RUN apt-get -y update \
         python3-venv \
         ros-${ROS_DISTRO}-image-transport-plugins \
         ros-${ROS_DISTRO}-rmw-cyclonedds-cpp \
+        ros-${ROS_DISTRO}-test-msgs \
+        ros-${ROS_DISTRO}-pybind11-vendor \
         tmuxinator \
         # for python simpleaudio
         libasound2-dev \

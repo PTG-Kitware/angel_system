@@ -1,12 +1,14 @@
 """
 Various conversion functions into and out of angel_msg types.
 """
+import array
 from typing import Dict
 from typing import Hashable
 from typing import Iterable
 from typing import List
 from typing import Tuple
 
+import cv2
 import numpy as np
 
 from angel_msgs.msg import ObjectDetection2dSet
@@ -100,3 +102,19 @@ def to_confidence_matrix(msg: ObjectDetection2dSet) -> np.ndarray:
         np.asarray(msg.label_confidences)
           .reshape((msg.num_detections, len(msg.label_vec)))
     )
+
+
+def convert_nv12_to_rgb(nv12_image: array.array,
+                        height: int, width: int) -> np.ndarray:
+    """
+    Converts an image in NV12 format to RGB.
+
+    :param nv12_image: Buffer containing the image data in NV12 format
+    :param height: image pixel height
+    :param width: image pixel width
+
+    :returns: RGB image
+    """
+    yuv_image = np.frombuffer(nv12_image, np.uint8).reshape(height*3//2, width)
+    rgb_image = cv2.cvtColor(yuv_image, cv2.COLOR_YUV2BGR_NV12)
+    return rgb_image
