@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: 7067b98619293db42931e860a4eb1470
+guid: 11601aa1f74a9024f9dc5413d3cb2e6a
 PluginImporter:
   externalObjects: {}
   serializedVersion: 2
@@ -28,11 +28,6 @@ PluginImporter:
       enabled: 1
       settings:
         CPU: AnyCPU
-  - first:
-      XboxOne: XboxOne
-    second:
-      enabled: 1
-      settings: {}
   userData: 
   assetBundleName: 
   assetBundleVariant: 
