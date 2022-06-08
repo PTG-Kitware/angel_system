@@ -14,9 +14,10 @@ namespace RosMessageTypes.Angel
         public override string RosMessageName => k_RosMessageName;
 
         // 
-        //  Message for updating hand joint information from the HoloLens hand tracking
-        //  provider. There are 26 tracked joints for each hand. Position and rotation
-        //  are provided for each joint.
+        //  Message that contains a snapshot of the hand joint poses
+        //  that are provided by the HoloLens hand tracking provider.
+        //  There are 26 tracked joints for each hand.
+        //  Position and rotation are provided for each joint.
         // 
         public Std.HeaderMsg header;
         //  Which hand this update is for ('left' or 'right')

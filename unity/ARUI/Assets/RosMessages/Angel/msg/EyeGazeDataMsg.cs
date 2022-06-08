@@ -15,6 +15,7 @@ namespace RosMessageTypes.Angel
 
         // 
         //  Message for transporting the current eye gaze information for the user.
+        //  The info in this message is provided by the MRTK EyeGazeProvider API.
         // 
         public Std.HeaderMsg header;
         //  Eye gaze position
@@ -22,6 +23,8 @@ namespace RosMessageTypes.Angel
         //  Eye gaze direction
         public Geometry.Vector3Msg gaze_direction;
         //  Head movement info
+        //  Head info is included along with the gaze info by the EyeGazeProvider API,
+        //  so we are passing it along here as well.
         public Geometry.Vector3Msg head_movement_direction;
         public Geometry.Vector3Msg head_velocity;
         //  Object hit info
