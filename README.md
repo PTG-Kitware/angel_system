@@ -36,11 +36,11 @@ Anaconda/Miniconda - py3.9
      - Build and Run on = USB Device  
    - Click ``Switch Platform`` after applying the new settings.  
 4) Follow the instructions in the [ROS Unity setup section](#ros-unity-setup) to generate the message files and set the endpoint IP.
-5) Create a build folder to place completed Unity builds (e.g. unity/ARUI/Builds/my_first_build).  
-6) Click ``Build`` and specify your desired build folder. After the build completes, a new file explorer windows will pop up with the location of the build.  
+5) Create a build folder to place completed Unity builds (e.g. unity/ARUI/Build).
+6) Click ``Build`` and specify your desired build folder. After the build completes, a new file explorer windows will pop up with the location of the build.
 7) Open the .sln file with Visual Studio.  
 8) In Visual Studio, switch ``Solution Configurations`` to Release and ``Solution Platforms`` to ARM64.  
-9) Open the project properties window (``Project -> ARUI Properties``) and switch to the ``Configurations -> Debugging`` tab. Enter the IP address of your HoloLens in the Machine Name field.
+9) Open the project properties window (In the ``Solution Explorer`` pane, right-click ``Angel_ARUI`` and select ``Properties``) and switch to the ``Configurations -> Debugging`` tab. Enter the IP address of your HoloLens in the Machine Name field.
 10) Modify the ``Package.appxmanifest`` per the README in HoloLens2-ResearchMode-Unity/  
 11) Deploy the app to the Hololens by clicking ``Build -> Deploy Solution``
 12) After deployment completes, open the Windows menu in the Hololens and select All Apps, and then click on the Angel_ARUI application.
