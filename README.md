@@ -26,8 +26,8 @@ Anaconda/Miniconda - py3.9
 
 ## First time build/deploy instructions
 
-1) Open the unity/Hello_World project with Unity Hub.
-2) Open the demo scene in the Unity editor (unity\Hello_World\Assets\my_scene).
+1) Open the unity/ARUI project with Unity Hub.
+2) Open the demo scene in the Unity editor (unity\ARUI\Assets\my_scene).
 3) Modify the default project build settings (``File -> Build Settings...``).  
    - Under the Universal Windows Platform tab
      - Target Device = HoloLens  
@@ -36,14 +36,14 @@ Anaconda/Miniconda - py3.9
      - Build and Run on = USB Device  
    - Click ``Switch Platform`` after applying the new settings.  
 4) Follow the instructions in the [ROS Unity setup section](#ros-unity-setup) to generate the message files and set the endpoint IP.
-5) Create a build folder to place completed Unity builds (e.g. unity/Hello_World/Builds/my_first_build).  
+5) Create a build folder to place completed Unity builds (e.g. unity/ARUI/Builds/my_first_build).  
 6) Click ``Build`` and specify your desired build folder. After the build completes, a new file explorer windows will pop up with the location of the build.  
 7) Open the .sln file with Visual Studio.  
 8) In Visual Studio, switch ``Solution Configurations`` to Release and ``Solution Platforms`` to ARM64.  
-9) Open the project properties window (``Project -> Hello_World Properties``) and switch to the ``Configurations -> Debugging`` tab. Enter the IP address of your HoloLens in the Machine Name field.  
+9) Open the project properties window (``Project -> ARUI Properties``) and switch to the ``Configurations -> Debugging`` tab. Enter the IP address of your HoloLens in the Machine Name field.
 10) Modify the ``Package.appxmanifest`` per the README in HoloLens2-ResearchMode-Unity/  
 11) Deploy the app to the Hololens by clicking ``Build -> Deploy Solution``
-12) After deployment completes, open the Windows menu in the Hololens and select All Apps, and then click on the Hello_World application.
+12) After deployment completes, open the Windows menu in the Hololens and select All Apps, and then click on the Angel_ARUI application.
 
 ## ROS Unity Setup
 ### ROS IP configuration
@@ -53,7 +53,7 @@ Anaconda/Miniconda - py3.9
 ### ROS message C# script generation
 1) In Unity, click ``Robotics -> Generate ROS Messages...`` to open the ROS Message Browser.
 2) Set the ROS message path to the directory containing the ROS2 messages for the project (../../ros/angel_msgs for this project's ANGEL message folder). The Message Browser should display the .msg files it found in the ROS message path.
-3) Click ``Build msgs`` and wait for message generation to finish. You should now see new files in the Built message path location (default location is unity/Hello_World/Assets/RosMessages).
+3) Click ``Build msgs`` and wait for message generation to finish. You should now see new files in the Built message path location (default location is unity/ARUI/Assets/RosMessages).
 4) Close the ROS Message Browser.
 
 ## Running application without a development environment
