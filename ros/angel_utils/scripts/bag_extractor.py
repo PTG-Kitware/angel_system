@@ -330,7 +330,11 @@ class BagConverter(Node):
         rgb_image = convert_nv12_to_rgb(msg.data, msg.height, msg.width)
 
         # Save image to disk
-        cv2.imwrite(f"{self.image_folder}frame_{self.num_image_msgs:05d}.png", rgb_image)
+        timestamp_str = f"{msg.header.stamp.sec:011d}_{msg.header.stamp.nanosec:09d}"
+        file_name = (
+            f"{self.image_folder}frame_{self.num_image_msgs:05d}_" + timestamp_str + ".png"
+        )
+        cv2.imwrite(file_name, rgb_image)
 
     def handle_eye_gaze_msg(self, msg: EyeGazeData) -> None:
         """
