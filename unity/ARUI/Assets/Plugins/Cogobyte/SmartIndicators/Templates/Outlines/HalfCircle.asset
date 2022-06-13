@@ -1,0 +1,230 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 34f9b7423c00a1c4ea4266f81b80c945, type: 3}
+  m_Name: HalfCircle
+  m_EditorClassIdentifier: 
+  outline:
+    edges:
+    - meshIndex: 0
+      points:
+      - position: {x: 0.5, y: -0.5}
+        normal: {x: 0, y: -1}
+        color:
+          serializedVersion: 2
+          rgba: 4294967295
+      - position: {x: -0.5, y: -0.5}
+        normal: {x: 0, y: -1}
+        color:
+          serializedVersion: 2
+          rgba: 4294967295
+      color:
+        serializedVersion: 2
+        rgba: 4294967295
+    - meshIndex: 0
+      points:
+      - position: {x: -0.5, y: -0.5}
+        normal: {x: -0.9968333, y: 0.07951962}
+        color:
+          serializedVersion: 2
+          rgba: 4294967295
+      - position: {x: -0.47199994, y: -0.14899996}
+        normal: {x: -0.98462915, y: 0.1746581}
+        color:
+          serializedVersion: 2
+          rgba: 4294967295
+      - position: {x: -0.396, y: 0.12400005}
+        normal: {x: -0.92244416, y: 0.38613042}
+        color:
+          serializedVersion: 2
+          rgba: 4294967295
+      - position: {x: -0.28399998, y: 0.31899998}
+        normal: {x: -0.7707019, y: 0.6371959}
+        color:
+          serializedVersion: 2
+          rgba: 4294967295
+      - position: {x: -0.14799999, y: 0.436}
+        normal: {x: -0.46536624, y: 0.88511825}
+        color:
+          serializedVersion: 2
+          rgba: 4294967295
+      - position: {x: 0, y: 0.47500002}
+        normal: {x: 0.000000061639376, y: 1}
+        color:
+          serializedVersion: 2
+          rgba: 4294967295
+      - position: {x: 0.14800002, y: 0.43599996}
+        normal: {x: 0.46536627, y: 0.8851182}
+        color:
+          serializedVersion: 2
+          rgba: 4294967295
+      - position: {x: 0.28399998, y: 0.31899998}
+        normal: {x: 0.7707019, y: 0.6371959}
+        color:
+          serializedVersion: 2
+          rgba: 4294967295
+      - position: {x: 0.39600003, y: 0.12399998}
+        normal: {x: 0.92244416, y: 0.38613045}
+        color:
+          serializedVersion: 2
+          rgba: 4294967295
+      - position: {x: 0.47199997, y: -0.1489999}
+        normal: {x: 0.98462915, y: 0.17465807}
+        color:
+          serializedVersion: 2
+          rgba: 4294967295
+      - position: {x: 0.5, y: -0.5}
+        normal: {x: 0.99683326, y: 0.07951952}
+        color:
+          serializedVersion: 2
+          rgba: 4294967295
+      color:
+        serializedVersion: 2
+        rgba: 4294967295
+    color:
+      serializedVersion: 2
+      rgba: 4294967295
+    backFaceMeshes:
+    - meshIndex: 0
+      mesh:
+        vertices:
+        - {x: 0.47199997, y: -0.1489999, z: 0}
+        - {x: 0.39600003, y: 0.12399998, z: 0}
+        - {x: 0.28399998, y: 0.31899998, z: 0}
+        - {x: 0.14800002, y: 0.43599996, z: 0}
+        - {x: 0, y: 0.47500002, z: 0}
+        - {x: -0.14799999, y: 0.436, z: 0}
+        - {x: -0.28399998, y: 0.31899998, z: 0}
+        - {x: -0.396, y: 0.12400005, z: 0}
+        - {x: -0.47199994, y: -0.14899996, z: 0}
+        - {x: -0.5, y: -0.5, z: 0}
+        - {x: 0.5, y: -0.5, z: 0}
+        triangles: 01000000000000000a00000002000000010000000a00000003000000020000000a00000004000000030000000a00000005000000040000000a00000006000000050000000a00000007000000060000000a00000008000000070000000a00000009000000080000000a000000
+        uvs:
+        - {x: 0.47199997, y: -0.1489999}
+        - {x: 0.39600003, y: 0.12399998}
+        - {x: 0.28399998, y: 0.31899998}
+        - {x: 0.14800002, y: 0.43599996}
+        - {x: 0, y: 0.47500002}
+        - {x: -0.14799999, y: 0.436}
+        - {x: -0.28399998, y: 0.31899998}
+        - {x: -0.396, y: 0.12400005}
+        - {x: -0.47199994, y: -0.14899996}
+        - {x: -0.5, y: -0.5}
+        - {x: 0.5, y: -0.5}
+        colors:
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        normals:
+        - {x: 0, y: 0, z: -1}
+        - {x: 0, y: 0, z: -1}
+        - {x: 0, y: 0, z: -1}
+        - {x: 0, y: 0, z: -1}
+        - {x: 0, y: 0, z: -1}
+        - {x: 0, y: 0, z: -1}
+        - {x: 0, y: 0, z: -1}
+        - {x: 0, y: 0, z: -1}
+        - {x: 0, y: 0, z: -1}
+        - {x: 0, y: 0, z: -1}
+        - {x: 0, y: 0, z: -1}
+        name: BackFaceMesh
+        lastVertSize: 0
+        mesh: {fileID: 0}
+      colorMode: 0
+      color: {r: 1, g: 1, b: 1, a: 1}
+    frontFaceMeshes:
+    - meshIndex: 0
+      mesh:
+        vertices:
+        - {x: 0.47199997, y: -0.1489999, z: 0}
+        - {x: 0.39600003, y: 0.12399998, z: 0}
+        - {x: 0.28399998, y: 0.31899998, z: 0}
+        - {x: 0.14800002, y: 0.43599996, z: 0}
+        - {x: 0, y: 0.47500002, z: 0}
+        - {x: -0.14799999, y: 0.436, z: 0}
+        - {x: -0.28399998, y: 0.31899998, z: 0}
+        - {x: -0.396, y: 0.12400005, z: 0}
+        - {x: -0.47199994, y: -0.14899996, z: 0}
+        - {x: -0.5, y: -0.5, z: 0}
+        - {x: 0.5, y: -0.5, z: 0}
+        triangles: 010000000a00000000000000020000000a00000001000000030000000a00000002000000040000000a00000003000000050000000a00000004000000060000000a00000005000000070000000a00000006000000080000000a00000007000000090000000a00000008000000
+        uvs:
+        - {x: 0.47199997, y: -0.1489999}
+        - {x: 0.39600003, y: 0.12399998}
+        - {x: 0.28399998, y: 0.31899998}
+        - {x: 0.14800002, y: 0.43599996}
+        - {x: 0, y: 0.47500002}
+        - {x: -0.14799999, y: 0.436}
+        - {x: -0.28399998, y: 0.31899998}
+        - {x: -0.396, y: 0.12400005}
+        - {x: -0.47199994, y: -0.14899996}
+        - {x: -0.5, y: -0.5}
+        - {x: 0.5, y: -0.5}
+        colors:
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        normals:
+        - {x: 0, y: 0, z: 1}
+        - {x: 0, y: 0, z: 1}
+        - {x: 0, y: 0, z: 1}
+        - {x: 0, y: 0, z: 1}
+        - {x: 0, y: 0, z: 1}
+        - {x: 0, y: 0, z: 1}
+        - {x: 0, y: 0, z: 1}
+        - {x: 0, y: 0, z: 1}
+        - {x: 0, y: 0, z: 1}
+        - {x: 0, y: 0, z: 1}
+        - {x: 0, y: 0, z: 1}
+        name: Front
+        lastVertSize: 0
+        mesh: {fileID: 0}
+      colorMode: 0
+      color: {r: 1, g: 1, b: 1, a: 1}
