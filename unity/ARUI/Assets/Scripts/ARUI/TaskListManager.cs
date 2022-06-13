@@ -42,8 +42,10 @@ public class TaskListManager : Singleton<TaskListManager>
     }
 
 
-    public void InitTasklist(string[,] tasklist)
+    public void SetAllTasks(string[,] tasklist)
     {
+        //TODO: delete all and regenerate?
+
         for (int i = 0; i < tasklist.Length/2; i++)
         {
             GameObject task;
@@ -62,7 +64,8 @@ public class TaskListManager : Singleton<TaskListManager>
 
         float windowheight = yOffset * (allTasks.Count + 1);
         bg.transform.SetYPos(windowheight / 2 * -1);
-        bg.transform.SetYScale(windowheight);   
+        bg.transform.SetYScale(windowheight);
+
     }
 
     public void SetCurrentTask(int taskID)

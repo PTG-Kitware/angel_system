@@ -32,11 +32,12 @@ public class AngelARUI : Singleton<AngelARUI>
     private string[,] tasks;
     private int currentTask = 0;
 
+    [HideInInspector]
     public Camera mainCamera;
 
     private AudioSource taskListsound;
 
-    public void Start()
+    public void Awake()
     {
         mainCamera = Camera.main;
 
@@ -49,12 +50,9 @@ public class AngelARUI : Singleton<AngelARUI>
 
         //Instantiate orb
         GameObject orb = Instantiate(Resources.Load(StringResources.orb_path)) as GameObject;
-        orb.AddComponent<Orb>();
         orb.transform.parent = transform;
-
-        //Instantiate tasklist
-        GameObject taskListPrefab = Instantiate(Resources.Load(StringResources.taskList_path)) as GameObject;
-        taskListPrefab.AddComponent<TaskListManager>();
+        orb.AddComponent<Orb>();
+        
     }
 
     public void UpdateDatabase(string id, UpdateType update, Vector3 position, string label)
@@ -69,7 +67,7 @@ public class AngelARUI : Singleton<AngelARUI>
         }
     }
 
-    public void SetExpertiseLevel(int level)
+    public void SetConfidenceLevel(int level)
     {
         //TODO
     }
@@ -77,8 +75,14 @@ public class AngelARUI : Singleton<AngelARUI>
     public void SetTasks(string[,] tasks)
     {
         this.tasks = tasks;
-        TaskListManager.Instance.InitTasklist(tasks);
+
+        if (TaskListManager.Instance == null)
+        {
+            StartCoroutine(GenerateTaskList());
+        } else
+            TaskListManager.Instance.SetAllTasks(tasks);
     }
+
 
     public void SetCurrentTaskID(int taskID)
     {
@@ -115,6 +119,19 @@ public class AngelARUI : Singleton<AngelARUI>
     public void GuideTheUserTo(string id, bool isOn, bool flat)
     {
         ((DetectedEntity)EntityManager.Instance.Get(name)).SetHaloOn(isOn, flat);
+    }
+
+
+    private IEnumerator GenerateTaskList()
+    {
+        Debug.Log("Generate Tasklist Object");
+        //Instantiate tasklist
+        GameObject taskListPrefab = Instantiate(Resources.Load(StringResources.taskList_path)) as GameObject;
+        taskListPrefab.AddComponent<TaskListManager>();
+
+        yield return new WaitForEndOfFrame();
+
+        TaskListManager.Instance.SetAllTasks(tasks);
     }
 
     private DetectedEntity AddObject(Vector3 worldPos, string text, bool showDetectedObj)

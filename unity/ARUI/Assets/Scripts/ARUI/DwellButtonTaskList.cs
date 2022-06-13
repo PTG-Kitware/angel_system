@@ -43,7 +43,7 @@ public class DwellButtonTaskList : MonoBehaviour
         }
 
         isLooking = looking;
-        Orb.Instance.SetFollow(!looking);
+        Orb.Instance.SetFollowMode(!looking);
     }
 
     // every 2 seconds perform the print()

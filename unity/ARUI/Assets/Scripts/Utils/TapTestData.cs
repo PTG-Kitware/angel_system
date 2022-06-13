@@ -63,30 +63,33 @@ public class TapTestData : MonoBehaviour, IMixedRealityInputActionHandler
 
     public void OnActionStarted(BaseInputEventData eventData) {}
 
-    public void Start()
-    {
-        AngelARUI.Instance.SetTasks(tasks);
-        AngelARUI.Instance.SetCurrentTaskID(0);
-    }
 
     public void Update()
     {
-        if (Input.GetKeyUp(KeyCode.Space))
+        if (!taskInit)
         {
-            AngelARUI.Instance.ToggleTasklist();
+            AngelARUI.Instance.SetTasks(tasks);
+            AngelARUI.Instance.SetCurrentTaskID(0);
+            taskInit = true;
         }
-        else if (Input.GetKeyUp(KeyCode.RightArrow))
+        else
         {
-            currentTask++;
-            AngelARUI.Instance.SetCurrentTaskID(currentTask);
+            if (Input.GetKeyUp(KeyCode.Space))
+            {
+                AngelARUI.Instance.ToggleTasklist();
+            }
+            else if (Input.GetKeyUp(KeyCode.RightArrow))
+            {
+                currentTask++;
+                AngelARUI.Instance.SetCurrentTaskID(currentTask);
+            }
+            else if (Input.GetKeyUp(KeyCode.LeftArrow))
+            {
+                currentTask--;
+                AngelARUI.Instance.SetCurrentTaskID(currentTask);
+            }
         }
-        else if (Input.GetKeyUp(KeyCode.LeftArrow))
-        {
-            currentTask--;
-            AngelARUI.Instance.SetCurrentTaskID(currentTask);
-        }
-
-
+       
         if (Input.GetKeyUp(KeyCode.H))
         {
             string id = "test_circular_arrow";

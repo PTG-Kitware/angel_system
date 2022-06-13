@@ -202,8 +202,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1754240210153670671}
-  - component: {fileID: 4836839444635029346}
-  - component: {fileID: 2390295720898670580}
+  - component: {fileID: 1375025147927301174}
+  - component: {fileID: 3252940077133612958}
   m_Layer: 5
   m_Name: BodyPlacement
   m_TagString: Untagged
@@ -229,7 +229,7 @@ Transform:
   m_Father: {fileID: 4768214644457876968}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &4836839444635029346
+--- !u!114 &1375025147927301174
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -248,7 +248,7 @@ MonoBehaviour:
   additionalOffset: {x: 0, y: 0, z: 0}
   additionalRotation: {x: 0, y: 0, z: 0}
   updateSolvers: 1
---- !u!114 &2390295720898670580
+--- !u!114 &3252940077133612958
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -257,27 +257,36 @@ MonoBehaviour:
   m_GameObject: {fileID: 1601065412855936870}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4684083f6dff4a1d8a790bccc354fcf4, type: 3}
+  m_Script: {fileID: 11500000, guid: 4479a0bd44d822241a4c5f4890c481c0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   updateLinkedTransform: 0
-  moveLerpTime: 0.3
+  moveLerpTime: 0.1
   rotateLerpTime: 0.1
   scaleLerpTime: 0
   maintainScaleOnInitialization: 1
   smoothing: 1
   lifetime: 0
-  referenceDirection: 1
-  minDistance: 0.5
-  maxDistance: 0.6
-  minViewDegrees: 20
-  maxViewDegrees: 40
-  aspectV: 0
+  orientationType: 1
+  faceTrackedObjectWhileClamped: 1
+  faceUserDefinedTargetTransform: 0
+  targetToFace: {fileID: 0}
+  pivotAxis: 7
+  minDistance: 0.3
+  maxDistance: 0.9
+  defaultDistance: 0.7
+  maxViewHorizontalDegrees: 30
+  maxViewVerticalDegrees: 20
+  reorientWhenOutsideParameters: 1
+  orientToControllerDeadzoneDegrees: 60
   ignoreAngleClamp: 0
   ignoreDistanceClamp: 0
-  useFixedVerticalPosition: 1
-  fixedVerticalPosition: -0.4
-  orientToReferenceDirection: 0
+  ignoreReferencePitchAndRoll: 0
+  pitchOffset: 0
+  verticalMaxDistance: 0
+  angularClampMode: 0
+  tetherAngleSteps: 6
+  boundsScaler: 1
 --- !u!1 &2774043228947322794
 GameObject:
   m_ObjectHideFlags: 0
@@ -882,8 +891,7 @@ MonoBehaviour:
       m_PersistentCalls:
         m_Calls: []
   persistentKeywords: 0
-  speechConfirmationTooltipPrefab: {fileID: 8046114618238072051, guid: 0acb1d183bfa3084a9d4fec93c072e85,
-    type: 3}
+  speechConfirmationTooltipPrefab: {fileID: 8046114618238072051, guid: 0acb1d183bfa3084a9d4fec93c072e85, type: 3}
 --- !u!1 &6361495158916281026
 GameObject:
   m_ObjectHideFlags: 0

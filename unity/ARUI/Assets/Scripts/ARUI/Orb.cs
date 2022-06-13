@@ -25,7 +25,7 @@ public class Orb : Singleton<Orb>
 
     private Dictionary<string, Sprite> allFaces;
 
-    private RadialView followSolver;
+    private Follow followSolver;
     private SpeechInputHandler speechInput;
     private bool isProcessingSpeechInput = false;
 
@@ -69,53 +69,22 @@ public class Orb : Singleton<Orb>
         eyeEvents.WhileLookingAtTarget.AddListener(delegate { CurrentlyLooking(true); });
         eyeEvents.OnLookAway.AddListener(delegate { CurrentlyLooking(false); });
 
-        eyeEvents.OnSelected.AddListener(delegate { MenuSelected(); });
-
         taskListbutton = transform.GetChild(0).GetChild(3).gameObject;
         taskListbutton.AddComponent<DwellButtonTaskList>();
+        //taskListbutton.SetActive(false);
 
-        followSolver = gameObject.GetComponentInChildren<RadialView>();
+        followSolver = gameObject.GetComponentInChildren<Follow>();
 
         speechInput = gameObject.GetComponentInChildren<SpeechInputHandler>();
-        speechInput.AddResponse("Help", delegate { HelpSelected(); });
+        //speechInput.AddResponse("Help", delegate { HelpSelected(); });
 
-        taskListbutton.SetActive(false);
-    }
-
-    public void ActivateTaskListButton(bool isActive)
-    {
-        taskListbutton.SetActive(isActive);
-    }
-
-
-    private void MenuSelected()
-    {
-        if (isProcessingSpeechInput) return;
-
-        Debug.Log("Menu Voice Select was actived");
-        isProcessingSpeechInput = true;
-        StartCoroutine(TurnOnOnffCurrentTask());
-    }
-
-    private IEnumerator TurnOnOnffCurrentTask()
-    {
-        //DemoHandler.Instance.TurnOnOffCurrentTask();
-
-        yield return new WaitForSeconds(1);
-
-        isProcessingSpeechInput = false;
-    }
-
-    private void HelpSelected()
-    {
-        Debug.Log("Help Voice Select was actived");
-        //DemoHandler.Instance.TurnOnOffHints();
+        
     }
 
     private void CurrentlyLooking(bool v)
     {
         isLooking = v;
-        SetFollow(!v);
+        SetFollowMode(!v);
 
         if (v)
             recordingIcon.SetActive(true);
@@ -143,5 +112,32 @@ public class Orb : Singleton<Orb>
 
     public void ShowTimer(bool isOn) => timerContainer.SetActive(isOn);
 
-    public void SetFollow(bool isOn) => followSolver.enabled = isOn;
+    public void SetFollowMode(bool isOn) => followSolver.enabled = isOn;
+
+
+
+    #region TESTING
+
+    //public void ActivateTaskListButton(bool isActive) =>taskListbutton.SetActive(isActive);
+
+
+    //private IEnumerator TurnOnOnffCurrentTask()
+    //{
+    //    AngelARUI.Instance.ToggleTasklist();
+
+    //    yield return new WaitForSeconds(1);
+
+    //    isProcessingSpeechInput = false;
+    //}
+
+    //private void HelpSelected()
+    //{
+    //    if (isProcessingSpeechInput) return;
+
+    //    Debug.Log("Menu Voice Select was actived");
+    //    isProcessingSpeechInput = true;
+    //    StartCoroutine(TurnOnOnffCurrentTask());
+    //}
+
+    #endregion
 }
