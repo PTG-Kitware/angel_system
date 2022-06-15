@@ -35,7 +35,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0.0017, y: -0.0074}
+  m_AnchoredPosition: {x: 0.027799996, y: 0.002999995}
   m_SizeDelta: {x: 1, y: 1}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &8850734475988812401
@@ -67,7 +67,7 @@ MonoBehaviour:
   colorMode: 0
   colorEnd: {r: 1, g: 1, b: 1, a: 1}
   start: {x: 0.04390335, y: -0.02411718, z: 0}
-  end: {x: 0.04390335, y: -0.0074781887, z: 0}
+  end: {x: 0.04390335, y: -0.017976493, z: 0}
   thickness: 0.002
   thicknessSpace: 0
   endCaps: 0
@@ -158,7 +158,7 @@ RectTransform:
   m_GameObject: {fileID: 2317271576880545263}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0.76586, y: 0.76586, z: 0.76586}
+  m_LocalScale: {x: 0.48960665, y: 0.48960665, z: 0.48960665}
   m_Children:
   - {fileID: 8208177910298103008}
   m_Father: {fileID: 1816824264713412727}
@@ -166,7 +166,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 0.045, y: -0.043299995}
+  m_AnchoredPosition: {x: 0.0711, y: -0.0284}
   m_SizeDelta: {x: 1, y: 1}
   m_Pivot: {x: 0, y: 0}
 --- !u!114 &6617911077339211634
@@ -446,7 +446,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0.068, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 0}
 --- !u!1 &7376608616388229501
@@ -483,7 +483,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 0.087, y: -0.0653}
+  m_AnchoredPosition: {x: 0.11309999, y: -0.050400004}
   m_SizeDelta: {x: 1, y: 1}
   m_Pivot: {x: 0, y: 0}
 --- !u!23 &5705516725668936415
@@ -547,8 +547,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 'Subtask 1 - This is a placeholder text to test long tas messages.  This
-    is a placeholder text to test long tas messages. '
+  m_text: 'Subtask 1 - This is a placeholder text to test long tas messages. '
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -575,11 +574,11 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 0.13
+  m_fontSize: 0.1
   m_fontSizeBase: 16
   m_fontWeight: 400
   m_enableAutoSizing: 1
-  m_fontSizeMin: 0.13
+  m_fontSizeMin: 0.1
   m_fontSizeMax: 0.18
   m_fontStyle: 0
   m_HorizontalAlignment: 1
@@ -611,7 +610,7 @@ MonoBehaviour:
   m_VertexBufferAutoSizeReduction: 0
   m_useMaxVisibleDescender: 1
   m_pageToDisplay: 1
-  m_margin: {x: -0.013006955, y: 0.99253833, z: 0.47303474, w: 0.035482243}
+  m_margin: {x: -0.013006955, y: 0.99253833, z: 0.7272718, w: 0.035482243}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
   m_hasFontAssetChanged: 0

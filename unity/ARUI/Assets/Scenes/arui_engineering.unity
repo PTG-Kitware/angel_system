@@ -355,10 +355,6 @@ PrefabInstance:
     m_TransformParent: {fileID: 0}
     m_Modifications:
     - target: {fileID: 676094571621763008, guid: 1536741d94dedac47bd9697f4eb22a45, type: 3}
-      propertyPath: maxLines
-      value: 36
-      objectReference: {fileID: 0}
-    - target: {fileID: 676094571621763008, guid: 1536741d94dedac47bd9697f4eb22a45, type: 3}
       propertyPath: debugAreaText
       value: 
       objectReference: {fileID: 949346326}

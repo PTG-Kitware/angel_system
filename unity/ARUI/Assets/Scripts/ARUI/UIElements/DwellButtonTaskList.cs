@@ -7,11 +7,12 @@ public class DwellButtonTaskList : MonoBehaviour
 {
     private Shapes.Disc loadingDisc;
 
-    private float start;
     private EyeTrackingTarget eyeEvents;
 
     private float startingAngle;
     private bool isLooking = false;
+
+    private bool taskListActive = false;
 
     public void Awake()
     {
@@ -36,30 +37,30 @@ public class DwellButtonTaskList : MonoBehaviour
             StartCoroutine(Dwelling());
         }  
 
-        if (!looking&&isLooking)
+        if (!looking)
         {
+            isLooking = false;
             StopCoroutine(Dwelling());
-            ResetDwelling();
         }
 
         isLooking = looking;
-        Orb.Instance.SetFollow(!looking);
+        Orb.Instance.SetFollowActive(!looking);
     }
 
-    // every 2 seconds perform the print()
     private IEnumerator Dwelling()
     {
+        AudioManager.Instance.PlaySound(transform.position, SoundType.confirmation);
+
         bool success = false;
-        float duration = 6.24f/5f; //full circle in radians
+        float duration = 6.24f/4f; //full circle in radians
 
         float elapsed = 0f;
         while (isLooking && elapsed < duration)
         {
             elapsed += Time.deltaTime;
-            loadingDisc.AngRadiansEnd = elapsed*5f;
-            loadingDisc.UpdateMesh(true);
+            loadingDisc.AngRadiansEnd = elapsed*4f;
 
-            if (elapsed>duration)
+            if (elapsed>duration && isLooking)
                 success = true;
 
             yield return null;
@@ -67,20 +68,11 @@ public class DwellButtonTaskList : MonoBehaviour
 
         if (success)
         {
-            Debug.Log("Dwelling success!");
             AngelARUI.Instance.ToggleTasklist();
-        } else
-            ResetDwelling();
+        }
 
-
-    }
-
-    private void ResetDwelling()
-    {
-        Debug.Log("Dwelling failed!");
         loadingDisc.AngRadiansEnd = startingAngle;
-        loadingDisc.meshOutOfDate = true;
 
-        isLooking = false;
     }
+
 }

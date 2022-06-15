@@ -8,34 +8,39 @@ using UnityEngine;
 
 public class Orb : Singleton<Orb>
 {
+    //The white sphere represents the 'face' of the assistant
     private GameObject face;
     private SpriteRenderer faceSprite;
+    private GameObject recordingIcon;
+    private Dictionary<string, Sprite> allFaces;
     
+    //Text feedback 
     private GameObject messageContainer;
     private TMPro.TextMeshPro message;
+    private bool isMessageActive = false;
 
     private GameObject timerContainer;
     private TMPro.TextMeshPro timer;
 
-    private GameObject recordingIcon;
-
+    //Input events 
     private EyeTrackingTarget eyeEvents;
-
-    private bool isLooking = false;
-
-    private Dictionary<string, Sprite> allFaces;
-
-    private RadialView followSolver;
     private SpeechInputHandler speechInput;
     private bool isProcessingSpeechInput = false;
 
-    private GameObject taskListbutton;
+    //Placement behaviors
+    private Orbital followSolver;
+    
+    //temporary button that takes users eye gaze as input
+    private DwellButtonTaskList taskListbutton;
 
-    // Start is called before the first frame update
-    void Start()
+    /// <summary>
+    /// Instantiate and Initialise all objects related to the orb.
+    /// </summary>
+    void Awake()
     {
         gameObject.name = "Orb";
 
+        //Load and Initialize faces of orb 
         faceSprite = GetComponentInChildren<SpriteRenderer>(true);
         face = faceSprite.transform.parent.parent.gameObject;
 
@@ -48,8 +53,8 @@ public class Orb : Singleton<Orb>
         texture = Resources.Load(StringResources.listening_orb_path) as Texture2D;
         sprite = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), Vector2.zero);
         allFaces.Add("mic", sprite);
-        //innerface.sprite = allFaces["idle"];
 
+        //Get gameobject references of orb prefab
         messageContainer = transform.GetChild(0).GetChild(1).gameObject;
         message = messageContainer.GetComponentInChildren<TMPro.TextMeshPro>();
         message.text = "";
@@ -65,83 +70,85 @@ public class Orb : Singleton<Orb>
         recordingIcon = face.transform.GetChild(1).gameObject;
         recordingIcon.SetActive(false);
 
+        //Init input events
         eyeEvents = face.transform.GetComponent<EyeTrackingTarget>();
-        eyeEvents.WhileLookingAtTarget.AddListener(delegate { CurrentlyLooking(true); });
+        eyeEvents.OnLookAtStart.AddListener(delegate { CurrentlyLooking(true); });
         eyeEvents.OnLookAway.AddListener(delegate { CurrentlyLooking(false); });
+        eyeEvents.OnSelected.AddListener(delegate { HelpSelected(); });
 
-        eyeEvents.OnSelected.AddListener(delegate { MenuSelected(); });
-
-        taskListbutton = transform.GetChild(0).GetChild(3).gameObject;
-        taskListbutton.AddComponent<DwellButtonTaskList>();
-
-        followSolver = gameObject.GetComponentInChildren<RadialView>();
-
+        followSolver = gameObject.GetComponentInChildren<Orbital>();
         speechInput = gameObject.GetComponentInChildren<SpeechInputHandler>();
-        speechInput.AddResponse("Help", delegate { HelpSelected(); });
 
-        taskListbutton.SetActive(false);
+        //Init tasklist button
+        GameObject taskListbtn = transform.GetChild(0).GetChild(3).gameObject;
+        taskListbutton = taskListbtn.AddComponent<DwellButtonTaskList>();
+        taskListbutton.gameObject.SetActive(true);
     }
 
-    public void ActivateTaskListButton(bool isActive)
+    public void SetMessage(string message)
     {
-        taskListbutton.SetActive(isActive);
+        if (isMessageActive && !messageContainer.activeSelf)
+            messageContainer.SetActive(true);
+
+        if (message.Length < 1 && isMessageActive && messageContainer.activeSelf)
+            messageContainer.SetActive(false);
+
+        this.message.text = message;
     }
 
+    private void SetMessageActive(bool isActive)
+    {
+        isMessageActive = isActive;
 
-    private void MenuSelected()
+        if (isMessageActive && message.text.Length>0)
+        {
+            messageContainer.SetActive(true);
+
+        } else if (!isMessageActive)
+            messageContainer.SetActive(false);
+    }
+
+    public void SetTime(string time) => timer.text = time;
+
+    public void SetTimerActive(bool isActive) => timerContainer.SetActive(isActive);
+
+    public void SetFollowActive(bool isActive) => followSolver.enabled = isActive;
+
+    public void SetTaskListButtonActive(bool isActive) => taskListbutton.gameObject.SetActive(isActive);
+
+    #region callbacks input events
+
+    private void HelpSelected()
     {
         if (isProcessingSpeechInput) return;
 
-        Debug.Log("Menu Voice Select was actived");
+        Debug.Log("Help Voice Select was actived");
         isProcessingSpeechInput = true;
-        StartCoroutine(TurnOnOnffCurrentTask());
+
+        StartCoroutine(ToggleCurrentTaskActive());
     }
 
-    private IEnumerator TurnOnOnffCurrentTask()
+    private IEnumerator ToggleCurrentTaskActive()
     {
-        //DemoHandler.Instance.TurnOnOffCurrentTask();
+        SetMessageActive(!isMessageActive);
 
         yield return new WaitForSeconds(1);
 
         isProcessingSpeechInput = false;
     }
 
-    private void HelpSelected()
+    private void CurrentlyLooking(bool looking)
     {
-        Debug.Log("Help Voice Select was actived");
-        //DemoHandler.Instance.TurnOnOffHints();
-    }
+        SetFollowActive(!looking);
 
-    private void CurrentlyLooking(bool v)
-    {
-        isLooking = v;
-        SetFollow(!v);
-
-        if (v)
+        if (looking && !recordingIcon.activeSelf)
+        {
             recordingIcon.SetActive(true);
-        else
+            AudioManager.Instance.PlaySound(transform.position, SoundType.confirmation);
+        }
+        else if (!looking)
             recordingIcon.SetActive(false);
     }
 
-    public void SetMessage(string message, bool show)
-    {
-        this.message.text = message;
-
-        if (show)
-            ToggleMessage(true);
-    }
-
-    public void ToggleMessage(bool isOn)
-    {
-        if (!isOn)
-            message.text = "";
-
-        messageContainer.SetActive(isOn);
-    }
-
-    public void SetTime(string time) => timer.text = time;
-
-    public void ShowTimer(bool isOn) => timerContainer.SetActive(isOn);
-
-    public void SetFollow(bool isOn) => followSolver.enabled = isOn;
+    #endregion
 }

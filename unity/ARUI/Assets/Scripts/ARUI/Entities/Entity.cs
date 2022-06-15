@@ -10,7 +10,7 @@ public enum Type
 }
 
 /// <summary>
-// Every object in view must be an entity
+// Every virtual object must be an entity
 /// </summary>
 public class Entity : MonoBehaviour
 {

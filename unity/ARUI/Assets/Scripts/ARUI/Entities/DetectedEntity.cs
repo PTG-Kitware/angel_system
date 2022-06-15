@@ -42,7 +42,7 @@ public class DetectedEntity : Entity
     public void InitEntity(string id, Vector3 position, string text, bool showDetectedObj)
     {
         entityType = Type.Actual;
-        id = text; //TODO: set actual id
+        this.id = id; 
 
         SetText(text);
         SetTextLabelOn(showDetectedObj);

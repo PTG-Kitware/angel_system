@@ -8,7 +8,7 @@ public class TaskListElement : MonoBehaviour
     private string id;
     private bool isDone = false;
 
-    private Color32 inactiveColor = Color.gray;
+    private Color32 inactiveColor = new Color(0.7f, 0.7f, 0.7f, 1f);
     private Color32 activeColor = Color.white;
     private Color32 doneColor = Color.grey;
 

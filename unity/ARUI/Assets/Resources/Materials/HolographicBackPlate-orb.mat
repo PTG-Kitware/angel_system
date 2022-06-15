@@ -85,7 +85,7 @@ Material:
     - _BorderLightReplacesAlbedo: 1
     - _BorderLightUsesHoverColor: 0
     - _BorderMinValue: 0.489
-    - _BorderWidth: 0.039
+    - _BorderWidth: 0.084
     - _BorderWidthHorizontal: 0.1
     - _BorderWidthVertical: 0.1
     - _BumpScale: 1

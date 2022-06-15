@@ -50,7 +50,7 @@ public class Timer : MonoBehaviour
         UpdateTime();
 
         labelTimer.gameObject.SetActive(true);
-        Orb.Instance.ShowTimer(true);
+        Orb.Instance.SetTimerActive(true);
     }
 
     public void StopAndResetTimer(bool playSound)
@@ -64,6 +64,6 @@ public class Timer : MonoBehaviour
         if (playSound) 
             timerAudio.Play();
 
-        Orb.Instance.ShowTimer(false);
+        Orb.Instance.SetTimerActive(false);
     }
 }

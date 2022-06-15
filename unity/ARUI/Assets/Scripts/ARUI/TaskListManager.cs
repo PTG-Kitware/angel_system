@@ -4,25 +4,27 @@ using System.Collections.Generic;
 using UnityEngine;
 using Microsoft.MixedReality.Toolkit.Utilities.Solvers;
 using System;
+using HoloToolkit.Unity;
+using Microsoft.MixedReality.Toolkit;
 
 public class TaskListManager : Singleton<TaskListManager>
 {
+    //Reference to background panel, list container and taskprefabs
     private GameObject list;
+    private GameObject taskContainer;
     private GameObject bg;
-
     private GameObject taskPrefab;
     private GameObject subtaskPrefab;
 
-    private float yOffset = 0.04f;
-    private GameObject taskContainer;
+    //Height of single task entries in the list, based on the height of the prefabs
+    private float yOffset = 0.025f;
+    
+    //List of all current taskelements
     private List<TaskListElement> allTasks;
 
-    private Follow followSolver;
+    private bool isProcessing = false;
 
-    private bool isOpening = false;
-
-    // Start is called before the first frame update
-    void Start()
+    private void Awake()
     {
         list = transform.GetChild(0).gameObject;
         bg = list.transform.GetChild(0).gameObject;
@@ -34,16 +36,20 @@ public class TaskListManager : Singleton<TaskListManager>
 
         list.SetActive(false);
 
-        followSolver = gameObject.GetComponent<Follow>();
-        followSolver.MinDistance = 1.3f;
-        followSolver.enabled = false;
-
         allTasks = new List<TaskListElement>();
+
+        gameObject.AddComponent<Billboard>();
     }
 
-
+    /// <summary>
+    /// Instantiate and initialize the task list and it's content
+    /// </summary>
+    /// <param name="tasklist"></param>
     public void InitTasklist(string[,] tasklist)
     {
+        if (allTasks.Count > 0)
+            FlushTaskList();
+
         for (int i = 0; i < tasklist.Length/2; i++)
         {
             GameObject task;
@@ -60,18 +66,38 @@ public class TaskListManager : Singleton<TaskListManager>
             allTasks.Add(t);
         }
 
-        float windowheight = yOffset * (allTasks.Count + 1);
-        bg.transform.SetYPos(windowheight / 2 * -1);
+        float windowheight = yOffset * ((tasklist.Length+2)/2);
+        taskContainer.transform.position = new Vector3(
+            taskContainer.transform.position.x,
+            bg.transform.position.y - (windowheight / 2f) * -1,
+            taskContainer.transform.position.z);
+
         bg.transform.SetYScale(windowheight);   
     }
 
+    private void FlushTaskList()
+    {
+        for (int i = 0; i < taskContainer.transform.childCount; i++)
+            Destroy(taskContainer.transform.GetChild(i).gameObject);
+
+        allTasks = new List<TaskListElement>();
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="taskID"></param>
     public void SetCurrentTask(int taskID)
     {
-        Debug.Log("id was: " + taskID + " and list count: " + allTasks.Count);
-        if (taskID <= 0)
+        if (taskID < 0)
         {
-            taskID = 0;
+            for (int i = 0; i < taskID; i++)
+                allTasks[i].SetAsCurrent();
+
+        } else if (taskID == 0)
+        {
             allTasks[taskID].SetAsCurrent();
+
         } else if (taskID >= allTasks.Count)
         {
             allTasks[allTasks.Count-1].SetIsDone(true);
@@ -84,35 +110,51 @@ public class TaskListManager : Singleton<TaskListManager>
             allTasks[taskID].SetAsCurrent();
         }
 
-        for (int i = taskID + 1; i < allTasks.Count; i++)
-            allTasks[i].SetIsDone(false);
+        if (taskID >= 0)
+        {
+            for (int i = taskID + 1; i < allTasks.Count; i++)
+                allTasks[i].SetIsDone(false);
+        }
+
     }
 
-    public void ToggleTaskList()
-    {
-        if (isOpening) return;
-        Debug.Log("Show Task list: " + !list.activeSelf);
+    public void ToggleTasklist() => SetTaskListActive(!list.activeInHierarchy);
 
-        if (!list.activeSelf)
+    public void SetTaskListActive(bool isActive)
+    {
+        if (isProcessing) return;
+        Debug.Log("Show Task list: " + isActive);
+
+        if (isActive)
         {
-            isOpening = true;
+            isProcessing = true;
             StartCoroutine(ShowTaskList());
         } else
         {
-            followSolver.enabled = false;
             list.SetActive(false);
+            AudioManager.Instance.PlaySound(transform.position, SoundType.notification);
         }
     }
 
     private IEnumerator ShowTaskList()
     {
-        followSolver.enabled = true;
+        Vector3 direction = AngelARUI.Instance.mainCamera.transform.forward;
+        var eyeGazeProvider = CoreServices.InputSystem?.EyeGazeProvider;
+        if (eyeGazeProvider != null && eyeGazeProvider.IsEyeTrackingEnabledAndValid && eyeGazeProvider.IsEyeCalibrationValid.Value)
+        {
+            direction = eyeGazeProvider.GazeDirection;
+        }
+                
+        transform.position = AngelARUI.Instance.mainCamera.transform.position + Vector3.Scale(
+            direction,
+            new Vector3(1.1f, 1.1f, 1.1f));
+        transform.SetYPos(AngelARUI.Instance.mainCamera.transform.position.y);
+
+        yield return new WaitForEndOfFrame();
+
         list.SetActive(true);
-    
-        yield return new WaitForSeconds(0.5f);
+        AudioManager.Instance.PlaySound(transform.position, SoundType.notification);
 
-        followSolver.enabled = false;
-        isOpening = false;
+        isProcessing = false;
     }
-
 }
