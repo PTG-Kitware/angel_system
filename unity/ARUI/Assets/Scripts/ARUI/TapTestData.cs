@@ -42,28 +42,19 @@ public class TapTestData : MonoBehaviour, IMixedRealityInputActionHandler
     /// </summary>
     public void Update()
     {
-        if (!taskInit)
+        if (Input.GetKeyUp(KeyCode.Space))
         {
-            AngelARUI.Instance.SetTasks(tasks);
-            AngelARUI.Instance.SetCurrentTaskID(0);
-            taskInit = true;
+            AngelARUI.Instance.ToggleTasklist();
         }
-        else
+        else if (Input.GetKeyUp(KeyCode.RightArrow))
         {
-            if (Input.GetKeyUp(KeyCode.Space))
-            {
-                AngelARUI.Instance.ToggleTasklist();
-            }
-            else if (Input.GetKeyUp(KeyCode.RightArrow))
-            {
-                currentTask++;
-                AngelARUI.Instance.SetCurrentTaskID(currentTask);
-            }
-            else if (Input.GetKeyUp(KeyCode.LeftArrow))
-            {
-                currentTask--;
-                AngelARUI.Instance.SetCurrentTaskID(currentTask);
-            }
+            currentTask++;
+            AngelARUI.Instance.SetCurrentTaskID(currentTask);
+        }
+        else if (Input.GetKeyUp(KeyCode.LeftArrow))
+        {
+            currentTask--;
+            AngelARUI.Instance.SetCurrentTaskID(currentTask);
         }
 
         if (Input.GetKeyUp(KeyCode.J))

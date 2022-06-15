@@ -25,11 +25,6 @@ public class Logger : Singleton<Logger>
 
     void OnEnable()
     {
-        if (debugAreaText == null)
-        {
-            debugAreaText = GetComponent<TextMeshProUGUI>();
-        }
-
         debugAreaText.enabled = enableDebug;
         enabled = enableDebug;
 

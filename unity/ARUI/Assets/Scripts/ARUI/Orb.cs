@@ -72,7 +72,7 @@ public class Orb : Singleton<Orb>
 
         //Init input events
         eyeEvents = face.transform.GetComponent<EyeTrackingTarget>();
-        eyeEvents.OnLookAtStart.AddListener(delegate { CurrentlyLooking(true); });
+        eyeEvents.WhileLookingAtTarget.AddListener(delegate { CurrentlyLooking(true); });
         eyeEvents.OnLookAway.AddListener(delegate { CurrentlyLooking(false); });
         eyeEvents.OnSelected.AddListener(delegate { HelpSelected(); });
 
@@ -96,14 +96,13 @@ public class Orb : Singleton<Orb>
         this.message.text = message;
     }
 
-    private void SetMessageActive(bool isActive)
+    public void SetMessageActive(bool isActive)
     {
         isMessageActive = isActive;
 
         if (isMessageActive && message.text.Length>0)
         {
             messageContainer.SetActive(true);
-
         } else if (!isMessageActive)
             messageContainer.SetActive(false);
     }
@@ -137,16 +136,16 @@ public class Orb : Singleton<Orb>
         isProcessingSpeechInput = false;
     }
 
-    private void CurrentlyLooking(bool looking)
+    private void CurrentlyLooking(bool v)
     {
-        SetFollowActive(!looking);
+        SetFollowActive(!v);
 
-        if (looking && !recordingIcon.activeSelf)
+        if (v)
         {
             recordingIcon.SetActive(true);
-            AudioManager.Instance.PlaySound(transform.position, SoundType.confirmation);
+
         }
-        else if (!looking)
+        else
             recordingIcon.SetActive(false);
     }
 
