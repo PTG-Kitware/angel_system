@@ -47,7 +47,6 @@ public class AngelARUI : Singleton<AngelARUI>
 
         //Instantiate orb
         GameObject orb = Instantiate(Resources.Load(StringResources.orb_path)) as GameObject;
-        orb.AddComponent<Orb>();
         orb.transform.parent = transform;
 
         //Instantiate empty tasklist

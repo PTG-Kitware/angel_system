@@ -229,7 +229,7 @@ Transform:
   m_Father: {fileID: 4768214644457876968}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &4836839444635029346
+--- !u!114 &1375025147927301174
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -261,7 +261,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   updateLinkedTransform: 0
-  moveLerpTime: 0.3
+  moveLerpTime: 0.1
   rotateLerpTime: 0.1
   scaleLerpTime: 0
   maintainScaleOnInitialization: 1
