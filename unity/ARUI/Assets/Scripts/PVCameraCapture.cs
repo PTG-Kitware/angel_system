@@ -46,6 +46,12 @@ public class PVCameraCapture : MonoBehaviour
     public string imageTopicName = "PVFramesNV12";
     public string headsetPoseTopicName = "HeadsetPoseData";
 
+    // Default frame size / frame rate - available resolutions:
+    // https://docs.microsoft.com/en-us/windows/mixed-reality/develop/advanced-concepts/locatable-camera-overview
+    public int targetVideoHeight = 720;
+    public int targetVideoWidth = 1280;
+    public float targetVideoFrameRate = 30.0f;
+
     private Logger _logger = null;
     string debugString = "";
 
@@ -135,14 +141,6 @@ public class PVCameraCapture : MonoBehaviour
     // https://github.com/qian256/HoloLensARToolKit/blob/master/HoloLensARToolKit/Assets/ARToolKitUWP/Scripts/ARUWPVideo.cs
     public async Task<bool> InitializeMediaCaptureAsyncTask()
     {
-        int targetVideoWidth, targetVideoHeight;
-        float targetVideoFrameRate;
-        //targetVideoWidth = 1280;
-        //targetVideoHeight = 720;
-        targetVideoWidth = 1920;
-        targetVideoHeight = 1080;
-        targetVideoFrameRate = 30.0f;
-
         var allGroups = await MediaFrameSourceGroup.FindAllAsync();
         int selectedGroupIndex = -1;
         for (int i = 0; i < allGroups.Count; i++)
