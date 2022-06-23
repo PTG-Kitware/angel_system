@@ -1,3 +1,4 @@
+import json
 import time
 
 from cv_bridge import CvBridge
@@ -7,7 +8,8 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import Image
-from smqtk_detection.impls.detect_image_objects.resnet_frcnn import ResNetFRCNN
+from smqtk_core.configuration import from_config_dict
+from smqtk_detection.interfaces.detect_image_objects import DetectImageObjects
 
 from angel_msgs.msg import ObjectDetection2dSet
 from angel_utils.conversion import from_detect_image_objects_result
@@ -21,20 +23,17 @@ class ObjectDetector(Node):
     def __init__(self):
         super().__init__(self.__class__.__name__)
 
-        self.declare_parameter("image_topic", "PVFrames")
-        self.declare_parameter("det_topic", "ObjectDetections")
-        self.declare_parameter("use_cuda", False)
-        self.declare_parameter("detection_threshold", 0.8)
-
-        self._image_topic = self.get_parameter("image_topic").get_parameter_value().string_value
-        self._det_topic = self.get_parameter("det_topic").get_parameter_value().string_value
-        self._use_cuda = self.get_parameter("use_cuda").get_parameter_value().bool_value
-        self._detection_threshold = self.get_parameter("detection_threshold").get_parameter_value().double_value
+        self._image_topic = self.declare_parameter("image_topic", "PVFrames").get_parameter_value().string_value
+        self._det_topic = self.declare_parameter("det_topic", "ObjectDetections").get_parameter_value().string_value
+        self._use_cuda = self.declare_parameter("use_cuda", False).get_parameter_value().bool_value
+        self._detection_threshold = self.declare_parameter("detection_threshold", 0.8).get_parameter_value().double_value
+        self._detector_config = self.declare_parameter("detector_config", "default_object_det_config.json").get_parameter_value().string_value
 
         log = self.get_logger()
         log.info(f"Image topic: {self._image_topic}")
         log.info(f"Use cuda? {self._use_cuda}")
         log.info(f"Detection threshold: {self._detection_threshold}")
+        log.info(f"Detector config: {self._detector_config}")
 
         self._subscription = self.create_subscription(
             Image,
@@ -52,8 +51,12 @@ class ObjectDetector(Node):
         self._frames_recvd = 0
         self._prev_time = -1
 
-        # instantiate detector
-        self._detector = ResNetFRCNN(img_batch_size=1, use_cuda=self._use_cuda)
+        # instantiate detector from the given config
+        with open(self._detector_config, "r") as f:
+            config = json.load(f)
+
+        self._detector: DetectImageObjects = from_config_dict(config,
+                                                              DetectImageObjects.get_impls())
         log.info(f"Ready to detect using {self._detector}")
 
     def listener_callback(self, image):

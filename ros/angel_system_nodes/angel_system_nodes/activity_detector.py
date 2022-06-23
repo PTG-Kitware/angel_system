@@ -28,7 +28,7 @@ class ActivityDetector(Node):
         self._use_cuda = self.declare_parameter("use_cuda", True).get_parameter_value().bool_value
         self._det_topic = self.declare_parameter("det_topic", "ActivityDetections").get_parameter_value().string_value
         self._frames_per_det = self.declare_parameter("frames_per_det", 32.0).get_parameter_value().double_value
-        self._detector_config = self.declare_parameter("detector_config", "default_config.json").get_parameter_value().string_value
+        self._detector_config = self.declare_parameter("detector_config", "default_activity_det_config.json").get_parameter_value().string_value
 
         log = self.get_logger()
         log.info(f"Image topic: {self._image_topic}")
