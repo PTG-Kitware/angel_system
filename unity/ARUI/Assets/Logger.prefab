@@ -45,4 +45,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   debugAreaText: {fileID: 0}
   enableDebug: 1
-  maxLines: 12
+  maxLines: 36

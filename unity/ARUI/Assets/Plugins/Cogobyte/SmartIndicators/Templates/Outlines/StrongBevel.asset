@@ -1,0 +1,425 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 34f9b7423c00a1c4ea4266f81b80c945, type: 3}
+  m_Name: StrongBevel
+  m_EditorClassIdentifier: 
+  outline:
+    edges:
+    - meshIndex: 0
+      points:
+      - position: {x: -0.1, y: 0.5}
+        normal: {x: -0.09801714, y: 0.9951847}
+        color:
+          serializedVersion: 2
+          rgba: 4294967295
+      - position: {x: 0.1, y: 0.5}
+        normal: {x: 0.09801722, y: 0.9951847}
+        color:
+          serializedVersion: 2
+          rgba: 4294967295
+      color:
+        serializedVersion: 2
+        rgba: 4294967295
+    - meshIndex: 0
+      points:
+      - position: {x: 0.10000001, y: 0.5}
+        normal: {x: 0.09801722, y: 0.9951847}
+        color:
+          serializedVersion: 2
+          rgba: 4294967295
+      - position: {x: 0.25307345, y: 0.46955177}
+        normal: {x: 0.38268352, y: 0.9238795}
+        color:
+          serializedVersion: 2
+          rgba: 4294967295
+      - position: {x: 0.38284266, y: 0.38284275}
+        normal: {x: 0.7071067, y: 0.7071068}
+        color:
+          serializedVersion: 2
+          rgba: 4294967295
+      - position: {x: 0.46955183, y: 0.25307336}
+        normal: {x: 0.9238795, y: 0.38268343}
+        color:
+          serializedVersion: 2
+          rgba: 4294967295
+      - position: {x: 0.5, y: 0.099999934}
+        normal: {x: 0.9951847, y: 0.098017044}
+        color:
+          serializedVersion: 2
+          rgba: 4294967295
+      color:
+        serializedVersion: 2
+        rgba: 4294967295
+    - meshIndex: 0
+      points:
+      - position: {x: 0.5, y: 0.1}
+        normal: {x: 0.9951847, y: 0.098017044}
+        color:
+          serializedVersion: 2
+          rgba: 4294967295
+      - position: {x: 0.5, y: -0.1}
+        normal: {x: 0.9951847, y: -0.098017156}
+        color:
+          serializedVersion: 2
+          rgba: 4294967295
+      color:
+        serializedVersion: 2
+        rgba: 4294967295
+    - meshIndex: 0
+      points:
+      - position: {x: 0.5, y: -0.1}
+        normal: {x: 0.9951847, y: -0.098017156}
+        color:
+          serializedVersion: 2
+          rgba: 4294967295
+      - position: {x: 0.4695518, y: -0.2530734}
+        normal: {x: 0.9238795, y: -0.38268346}
+        color:
+          serializedVersion: 2
+          rgba: 4294967295
+      - position: {x: 0.38284272, y: -0.38284272}
+        normal: {x: 0.70710677, y: -0.7071068}
+        color:
+          serializedVersion: 2
+          rgba: 4294967295
+      - position: {x: 0.25307336, y: -0.4695518}
+        normal: {x: 0.38268343, y: -0.9238795}
+        color:
+          serializedVersion: 2
+          rgba: 4294967295
+      - position: {x: 0.09999999, y: -0.5}
+        normal: {x: 0.09801718, y: -0.9951847}
+        color:
+          serializedVersion: 2
+          rgba: 4294967295
+      color:
+        serializedVersion: 2
+        rgba: 4294967295
+    - meshIndex: 0
+      points:
+      - position: {x: 0.1, y: -0.5}
+        normal: {x: 0.09801718, y: -0.9951847}
+        color:
+          serializedVersion: 2
+          rgba: 4294967295
+      - position: {x: -0.1, y: -0.5}
+        normal: {x: -0.0980171, y: -0.9951847}
+        color:
+          serializedVersion: 2
+          rgba: 4294967295
+      color:
+        serializedVersion: 2
+        rgba: 4294967295
+    - meshIndex: 0
+      points:
+      - position: {x: -0.10000002, y: -0.5}
+        normal: {x: -0.0980171, y: -0.9951847}
+        color:
+          serializedVersion: 2
+          rgba: 4294967295
+      - position: {x: -0.25307336, y: -0.46955183}
+        normal: {x: -0.3826834, y: -0.92387956}
+        color:
+          serializedVersion: 2
+          rgba: 4294967295
+      - position: {x: -0.38284272, y: -0.38284272}
+        normal: {x: -0.70710677, y: -0.70710677}
+        color:
+          serializedVersion: 2
+          rgba: 4294967295
+      - position: {x: -0.4695518, y: -0.2530734}
+        normal: {x: -0.9238795, y: -0.38268343}
+        color:
+          serializedVersion: 2
+          rgba: 4294967295
+      - position: {x: -0.5, y: -0.099999964}
+        normal: {x: -0.9951847, y: -0.09801714}
+        color:
+          serializedVersion: 2
+          rgba: 4294967295
+      color:
+        serializedVersion: 2
+        rgba: 4294967295
+    - meshIndex: 0
+      points:
+      - position: {x: -0.5, y: -0.1}
+        normal: {x: -0.9951847, y: -0.09801714}
+        color:
+          serializedVersion: 2
+          rgba: 4294967295
+      - position: {x: -0.5, y: 0.1}
+        normal: {x: -0.9951847, y: 0.0980172}
+        color:
+          serializedVersion: 2
+          rgba: 4294967295
+      color:
+        serializedVersion: 2
+        rgba: 4294967295
+    - meshIndex: 0
+      points:
+      - position: {x: -0.5, y: 0.10000004}
+        normal: {x: -0.9951847, y: 0.0980172}
+        color:
+          serializedVersion: 2
+          rgba: 4294967295
+      - position: {x: -0.4695518, y: 0.25307336}
+        normal: {x: -0.9238795, y: 0.3826835}
+        color:
+          serializedVersion: 2
+          rgba: 4294967295
+      - position: {x: -0.38284272, y: 0.3828427}
+        normal: {x: -0.7071069, y: 0.70710665}
+        color:
+          serializedVersion: 2
+          rgba: 4294967295
+      - position: {x: -0.25307342, y: 0.4695518}
+        normal: {x: -0.38268358, y: 0.9238795}
+        color:
+          serializedVersion: 2
+          rgba: 4294967295
+      - position: {x: -0.099999994, y: 0.5}
+        normal: {x: -0.09801714, y: 0.9951847}
+        color:
+          serializedVersion: 2
+          rgba: 4294967295
+      color:
+        serializedVersion: 2
+        rgba: 4294967295
+    color:
+      serializedVersion: 2
+      rgba: 4294967295
+    backFaceMeshes:
+    - meshIndex: 0
+      mesh:
+        vertices:
+        - {x: -0.25307342, y: 0.4695518, z: 0}
+        - {x: -0.38284272, y: 0.3828427, z: 0}
+        - {x: -0.4695518, y: 0.25307336, z: 0}
+        - {x: -0.5, y: 0.1, z: 0}
+        - {x: -0.5, y: -0.099999964, z: 0}
+        - {x: -0.4695518, y: -0.2530734, z: 0}
+        - {x: -0.38284272, y: -0.38284272, z: 0}
+        - {x: -0.25307336, y: -0.46955183, z: 0}
+        - {x: -0.1, y: -0.5, z: 0}
+        - {x: 0.09999999, y: -0.5, z: 0}
+        - {x: 0.25307336, y: -0.4695518, z: 0}
+        - {x: 0.38284272, y: -0.38284272, z: 0}
+        - {x: 0.4695518, y: -0.2530734, z: 0}
+        - {x: 0.5, y: -0.1, z: 0}
+        - {x: 0.5, y: 0.099999934, z: 0}
+        - {x: 0.46955183, y: 0.25307336, z: 0}
+        - {x: 0.38284266, y: 0.38284275, z: 0}
+        - {x: 0.25307345, y: 0.46955177, z: 0}
+        - {x: 0.1, y: 0.5, z: 0}
+        - {x: -0.1, y: 0.5, z: 0}
+        triangles: 0100000000000000130000000200000001000000130000000300000002000000130000000400000003000000130000000500000004000000130000000600000005000000130000000700000006000000130000000800000007000000130000000900000008000000130000000a00000009000000130000000b0000000a000000130000000c0000000b000000130000000d0000000c000000130000000e0000000d000000130000000f0000000e00000013000000100000000f00000013000000110000001000000013000000120000001100000013000000
+        uvs:
+        - {x: -0.25307342, y: 0.4695518}
+        - {x: -0.38284272, y: 0.3828427}
+        - {x: -0.4695518, y: 0.25307336}
+        - {x: -0.5, y: 0.1}
+        - {x: -0.5, y: -0.099999964}
+        - {x: -0.4695518, y: -0.2530734}
+        - {x: -0.38284272, y: -0.38284272}
+        - {x: -0.25307336, y: -0.46955183}
+        - {x: -0.1, y: -0.5}
+        - {x: 0.09999999, y: -0.5}
+        - {x: 0.25307336, y: -0.4695518}
+        - {x: 0.38284272, y: -0.38284272}
+        - {x: 0.4695518, y: -0.2530734}
+        - {x: 0.5, y: -0.1}
+        - {x: 0.5, y: 0.099999934}
+        - {x: 0.46955183, y: 0.25307336}
+        - {x: 0.38284266, y: 0.38284275}
+        - {x: 0.25307345, y: 0.46955177}
+        - {x: 0.1, y: 0.5}
+        - {x: -0.1, y: 0.5}
+        colors:
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        normals:
+        - {x: 0, y: 0, z: -1}
+        - {x: 0, y: 0, z: -1}
+        - {x: 0, y: 0, z: -1}
+        - {x: 0, y: 0, z: -1}
+        - {x: 0, y: 0, z: -1}
+        - {x: 0, y: 0, z: -1}
+        - {x: 0, y: 0, z: -1}
+        - {x: 0, y: 0, z: -1}
+        - {x: 0, y: 0, z: -1}
+        - {x: 0, y: 0, z: -1}
+        - {x: 0, y: 0, z: -1}
+        - {x: 0, y: 0, z: -1}
+        - {x: 0, y: 0, z: -1}
+        - {x: 0, y: 0, z: -1}
+        - {x: 0, y: 0, z: -1}
+        - {x: 0, y: 0, z: -1}
+        - {x: 0, y: 0, z: -1}
+        - {x: 0, y: 0, z: -1}
+        - {x: 0, y: 0, z: -1}
+        - {x: 0, y: 0, z: -1}
+        name: BackFaceMesh
+        lastVertSize: 0
+        mesh: {fileID: 0}
+      colorMode: 0
+      color: {r: 1, g: 1, b: 1, a: 1}
+    frontFaceMeshes:
+    - meshIndex: 0
+      mesh:
+        vertices:
+        - {x: -0.25307342, y: 0.4695518, z: 0}
+        - {x: -0.38284272, y: 0.3828427, z: 0}
+        - {x: -0.4695518, y: 0.25307336, z: 0}
+        - {x: -0.5, y: 0.1, z: 0}
+        - {x: -0.5, y: -0.099999964, z: 0}
+        - {x: -0.4695518, y: -0.2530734, z: 0}
+        - {x: -0.38284272, y: -0.38284272, z: 0}
+        - {x: -0.25307336, y: -0.46955183, z: 0}
+        - {x: -0.1, y: -0.5, z: 0}
+        - {x: 0.09999999, y: -0.5, z: 0}
+        - {x: 0.25307336, y: -0.4695518, z: 0}
+        - {x: 0.38284272, y: -0.38284272, z: 0}
+        - {x: 0.4695518, y: -0.2530734, z: 0}
+        - {x: 0.5, y: -0.1, z: 0}
+        - {x: 0.5, y: 0.099999934, z: 0}
+        - {x: 0.46955183, y: 0.25307336, z: 0}
+        - {x: 0.38284266, y: 0.38284275, z: 0}
+        - {x: 0.25307345, y: 0.46955177, z: 0}
+        - {x: 0.1, y: 0.5, z: 0}
+        - {x: -0.1, y: 0.5, z: 0}
+        triangles: 0100000013000000000000000200000013000000010000000300000013000000020000000400000013000000030000000500000013000000040000000600000013000000050000000700000013000000060000000800000013000000070000000900000013000000080000000a00000013000000090000000b000000130000000a0000000c000000130000000b0000000d000000130000000c0000000e000000130000000d0000000f000000130000000e00000010000000130000000f000000110000001300000010000000120000001300000011000000
+        uvs:
+        - {x: -0.25307342, y: 0.4695518}
+        - {x: -0.38284272, y: 0.3828427}
+        - {x: -0.4695518, y: 0.25307336}
+        - {x: -0.5, y: 0.1}
+        - {x: -0.5, y: -0.099999964}
+        - {x: -0.4695518, y: -0.2530734}
+        - {x: -0.38284272, y: -0.38284272}
+        - {x: -0.25307336, y: -0.46955183}
+        - {x: -0.1, y: -0.5}
+        - {x: 0.09999999, y: -0.5}
+        - {x: 0.25307336, y: -0.4695518}
+        - {x: 0.38284272, y: -0.38284272}
+        - {x: 0.4695518, y: -0.2530734}
+        - {x: 0.5, y: -0.1}
+        - {x: 0.5, y: 0.099999934}
+        - {x: 0.46955183, y: 0.25307336}
+        - {x: 0.38284266, y: 0.38284275}
+        - {x: 0.25307345, y: 0.46955177}
+        - {x: 0.1, y: 0.5}
+        - {x: -0.1, y: 0.5}
+        colors:
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        - serializedVersion: 2
+          rgba: 4294967295
+        normals:
+        - {x: 0, y: 0, z: 1}
+        - {x: 0, y: 0, z: 1}
+        - {x: 0, y: 0, z: 1}
+        - {x: 0, y: 0, z: 1}
+        - {x: 0, y: 0, z: 1}
+        - {x: 0, y: 0, z: 1}
+        - {x: 0, y: 0, z: 1}
+        - {x: 0, y: 0, z: 1}
+        - {x: 0, y: 0, z: 1}
+        - {x: 0, y: 0, z: 1}
+        - {x: 0, y: 0, z: 1}
+        - {x: 0, y: 0, z: 1}
+        - {x: 0, y: 0, z: 1}
+        - {x: 0, y: 0, z: 1}
+        - {x: 0, y: 0, z: 1}
+        - {x: 0, y: 0, z: 1}
+        - {x: 0, y: 0, z: 1}
+        - {x: 0, y: 0, z: 1}
+        - {x: 0, y: 0, z: 1}
+        - {x: 0, y: 0, z: 1}
+        name: Front
+        lastVertSize: 0
+        mesh: {fileID: 0}
+      colorMode: 0
+      color: {r: 1, g: 1, b: 1, a: 1}
