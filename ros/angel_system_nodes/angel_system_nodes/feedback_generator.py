@@ -1,5 +1,7 @@
 import time
 
+import uuid
+
 import rclpy
 from rclpy.node import Node
 from vision_msgs.msg import BoundingBox3D
@@ -12,6 +14,7 @@ from angel_msgs.msg import (
     AruiUpdate,
     AruiObject3d
 )
+
 
 class FeedbackGenerator(Node):
     def __init__(self):
@@ -67,9 +70,12 @@ class FeedbackGenerator(Node):
         # message
         self.arui_update_message = AruiUpdate()
 
+        # detection uuids
+        self.uuids = dict()
+
     def publish_update(self):
         self.arui_update_message.header.stamp = self.get_clock().now().to_msg()
-        self.log.info(f"Publishing AruiUpdate: {self.arui_update_message}")
+        self.log.info(f"Publishing AruiUpdate: {self.arui_update_message}\n")
         self.arui_update_publisher.publish(self.arui_update_message)
 
     def activity_callback(self, activity):
@@ -79,15 +85,24 @@ class FeedbackGenerator(Node):
 
     def object_callback(self, object_msg):
         self.arui_update_message.object3d_remove = self.arui_update_message.object3d_update
-        self.log.info(f"object message type: {type(object_msg)}")
+
         # convert ObjectDetection3dSet to AruiObject3d
         detections = []
         for i in range(object_msg.num_objects):
             detection = AruiObject3d()
-            #detection.uid =
-            detection.stamp = object_msg.source_stamp
+            
             detection.label = object_msg.object_labels[i]
+            
+            # TODO: Update this to real tracking
+            # For now, assumes only one type of object will be in the scene at a time
+            if detection.label in self.uuids.keys():
+                detection.uid = self.uuids[detection.label] 
+            else:
+                detection.uid = str(uuid.uuid4())
+                self.uuids[detection.label] = detection.uid
 
+            detection.stamp = object_msg.source_stamp
+            
             detection.bbox = BoundingBox3D()
 
             # min = sorted[0], max = sorted[-1]
@@ -95,19 +110,14 @@ class FeedbackGenerator(Node):
             ys = sorted([object_msg.right[i].y,  object_msg.left[i].y,  object_msg.top[i].y, object_msg.bottom[i].y])
             zs = sorted([object_msg.right[i].z,  object_msg.left[i].z,  object_msg.top[i].z, object_msg.bottom[i].z])
 
-            w = xs[-1] - xs[0]
-            h = ys[-1] - ys[0]
-            d = zs[-1] - zs[0]
+            detection.bbox.size.x = xs[-1] - xs[0] # width
+            detection.bbox.size.y = ys[-1] - ys[0] # height
+            detection.bbox.size.z = zs[-1] - zs[0] # depth
 
-            detection.bbox.size.x = w
-            detection.bbox.size.y = h
-            detection.bbox.size.z = d
+            detection.bbox.center.position.x = xs[0] + (0.5 * detection.bbox.size.x)
+            detection.bbox.center.position.y = ys[0] + (0.5 * detection.bbox.size.y)
+            detection.bbox.center.position.z = zs[0] + (0.5 * detection.bbox.size.z)
 
-            detection.bbox.center.position.x = xs[0] + (0.5 * w)
-            detection.bbox.center.position.y = ys[0] + (0.5 * h)
-            detection.bbox.center.position.z = zs[0] + (0.5 * d)
-
-            self.log.info(f"detection: {detection}")
             detections.append(detection)
 
         self.arui_update_message.object3d_update = detections

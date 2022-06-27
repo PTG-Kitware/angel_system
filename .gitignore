@@ -80,3 +80,5 @@
 # Temporary auto-generated Android Assets
 /unity/ARUI/[Aa]ssets/[Ss]treamingAssets/aa.meta
 /unity/ARUI/[Aa]ssets/[Ss]treamingAssets/aa/*
+
+__pycache__
