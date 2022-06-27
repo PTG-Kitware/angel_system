@@ -124,25 +124,23 @@ class SwinBTransformer(DetectActivities):
         print(frames[0].shape)
 
         fps, target_fps = 30, 30
-        clip_size = self._sampling_rate * self._num_frames / target_fps * fps
-        print(clip_size)
+        clip_size = self._sampling_rate * (self._num_frames) / target_fps * fps
         start_end_idx = [
             get_start_end_idx(len(x), clip_size, clip_idx=clip_idx, num_clips=1)
             for x in frames
         ]
-        print(start_end_idx)
 
         # This subsamples every n (sample rate) frames
         frames = [
             temporal_sampling(x, s, e, self._num_frames)
             for x, (s, e) in zip(frames, start_end_idx)
         ]
-        print(frames[0].shape)
-        frames = [x.permute(1, 0, 2, 3) for x in frames]
 
         # Crop and random short side scale jitter
+        frames = [x.permute(1, 0, 2, 3) for x in frames]
         frames = [spatial_sampling(x, spatial_idx=spatial_idx) for x in frames]
         frames = torch.stack(frames)
+        print(frames.shape)
 
         # Predict!
         with torch.no_grad():
@@ -156,13 +154,21 @@ class SwinBTransformer(DetectActivities):
         print(preds)
         print(top_preds)
 
+        LABELS = ["pour water into measuring cup",
+                  "pour water from cup into kettle",
+                  "turn on scale",
+                  "place bowl on scale",
+                  "zero scale",
+                  "measure 25 grams of coffee beans"]
+
         # Map the predicted classes to the label names
         # top_preds.indices is a 1xk tensor
         pred_class_indices = top_preds.indices[0]
 
         # TODO: This will not work for models trained on data other than Kinetics400.
         # This is also copied from the pytorchvideo slow fast implementation.
-        pred_class_names = [KINETICS_400_LABELS[int(i)] for i in pred_class_indices]
+        #pred_class_names = [KINETICS_400_LABELS[int(i)] for i in pred_class_indices]
+        pred_class_names = [LABELS[int(i)] for i in pred_class_indices]
         print(pred_class_names)
 
         # Filter out any detections below the threshold
