@@ -1,3 +1,4 @@
+import json
 import time
 from typing import Dict
 
@@ -7,11 +8,12 @@ import numpy as np
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
+from smqtk_core.configuration import from_config_dict
 
 from sensor_msgs.msg import Image
 from angel_msgs.msg import ActivityDetection
 
-from angel_system.impls.detect_activities.pytorchvideo_slow_fast_r50 import PytorchVideoSlowFastR50
+from angel_system.interfaces.detect_activities import DetectActivities
 
 
 BRIDGE = CvBridge()
@@ -26,11 +28,13 @@ class ActivityDetector(Node):
         self._use_cuda = self.declare_parameter("use_cuda", True).get_parameter_value().bool_value
         self._det_topic = self.declare_parameter("det_topic", "ActivityDetections").get_parameter_value().string_value
         self._frames_per_det = self.declare_parameter("frames_per_det", 32.0).get_parameter_value().double_value
+        self._detector_config = self.declare_parameter("detector_config", "default_activity_det_config.json").get_parameter_value().string_value
 
         log = self.get_logger()
         log.info(f"Image topic: {self._image_topic}")
         log.info(f"Use cuda? {self._use_cuda}")
         log.info(f"Frames per detection: {self._frames_per_det}")
+        log.info(f"Detector config: {self._detector_config}")
 
         self._subscription = self.create_subscription(
             Image,
@@ -50,7 +54,11 @@ class ActivityDetector(Node):
         self._source_stamp_start_frame = -1
         self._source_stamp_end_frame = -1
 
-        self._detector = PytorchVideoSlowFastR50()
+        with open(self._detector_config, "r") as f:
+            config = json.load(f)
+
+        self._detector: DetectActivities = from_config_dict(config,
+                                                            DetectActivities.get_impls())
 
     def listener_callback(self, image):
         """

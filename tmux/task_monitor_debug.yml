@@ -19,6 +19,7 @@ root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 on_project_start: |
   export ROS_NAMESPACE=${ROS_NAMESPACE:-/debug}
   export HL2_IP=${HL2_IP:-192.168.1.101}
+  export CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/src/angel_system_nodes/configs
 
 # Run on project start, the first time
 # on_project_first_start: command
@@ -65,6 +66,7 @@ windows:
       -p det_topic:=ActivityDetections
       -p use_cuda:=True
       -p frames_per_det:=16.0
+      -p detector_config:=${CONFIG_DIR}/default_activity_det_config.json
   - task_monitor: ros2 run angel_system_nodes task_monitor --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p det_topic:=ActivityDetections
@@ -74,6 +76,7 @@ windows:
       -p image_topic:=PVFramesRGB
       -p det_topic:=Detections
       -p use_cuda:=true
+      -p detector_config:=${CONFIG_DIR}/default_object_det_config.json
   - spatial_mapper: ros2 run angel_system_nodes spatial_mapper --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p spatial_map_topic:=SpatialMapData

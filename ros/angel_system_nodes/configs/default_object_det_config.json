@@ -1,0 +1,10 @@
+{
+    "type": "smqtk_detection.impls.detect_image_objects.resnet_frcnn.ResNetFRCNN",
+    "smqtk_detection.impls.detect_image_objects.resnet_frcnn.ResNetFRCNN" : {
+        "box_thresh": 0.05,
+        "num_dets": 100,
+        "img_batch_size": 1,
+        "use_cuda": true,
+        "cuda_device": "cuda:0"
+    }
+}

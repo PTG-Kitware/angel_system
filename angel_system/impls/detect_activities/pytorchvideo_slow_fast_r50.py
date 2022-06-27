@@ -167,6 +167,7 @@ class PytorchVideoSlowFastR50(DetectActivities):
         return {
             "use_cuda": self._use_cuda,
             "cuda_device": self._cuda_device,
+            "det_threshold": self._det_threshold,
         }
 
     @classmethod
