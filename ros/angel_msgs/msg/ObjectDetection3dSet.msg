@@ -22,15 +22,6 @@ int64 num_objects
 # Vector of detection axis aligned bounding box bounds point coordinates.
 # Each vector here should be of congruent length, where value `i` corresponds
 # to the 3D coordinate for detection `i`.
-#
-#   top *---------------* right
-#       |               |
-#       |               |
-#       |               |
-#       |               |
-#       |               |
-#  left *---------------* bottom
-#
 geometry_msgs/Point[] left
 geometry_msgs/Point[] right
 geometry_msgs/Point[] top
