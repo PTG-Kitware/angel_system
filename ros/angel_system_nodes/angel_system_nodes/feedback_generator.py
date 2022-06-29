@@ -1,11 +1,8 @@
-import time
-
 import uuid
 
 import rclpy
 from rclpy.node import Node
 from vision_msgs.msg import BoundingBox3D
-from geometry_msgs.msg import Pose, Point
 
 from angel_msgs.msg import (
     ActivityDetection,
@@ -17,19 +14,22 @@ from angel_msgs.msg import (
 
 
 class FeedbackGenerator(Node):
+    """
+    ROS node responsible for sending activity, detection, and task information to the ARUI when the information has updated. 
+
+    Takes in information from the `angel_msgs/ActivityDetection`, `angel_msgs/ObjectDetection3dSet`, and `angel_msgs/TaskUpdate` messages. 
+
+    Publishes `angel_msgs/AruiUpdate` representing the current activity, detections, and task.
+    """
+
     def __init__(self):
         super().__init__(self.__class__.__name__)
 
-        self.declare_parameter("activity_detector_topic", "ActivityDetections")
-        self.declare_parameter("object_detection_topic", "ObjectDetections3d")
+        self.declare_parameter("activity_detector_topic", "ActivityDetections").get_parameter_value().string_value
+        self.declare_parameter("object_detection_topic", "ObjectDetections3d").get_parameter_value().string_value
         # TODO: task needs to be updated to emit TaskNode
-        self.declare_parameter("task_monitor_topic", "TaskUpdates")
-        self.declare_parameter("arui_update_topic", "AruiUpdates")
-
-        self._activity_detector_topic = self.get_parameter("activity_detector_topic").get_parameter_value().string_value
-        self._object_detection_topic = self.get_parameter("object_detection_topic").get_parameter_value().string_value
-        self._task_monitor_topic = self.get_parameter("task_monitor_topic").get_parameter_value().string_value
-        self._arui_update_topic = self.get_parameter("arui_update_topic").get_parameter_value().string_value
+        self.declare_parameter("task_monitor_topic", "TaskUpdates").get_parameter_value().string_value
+        self.declare_parameter("arui_update_topic", "AruiUpdates").get_parameter_value().string_value
 
         # logger
         self.log = self.get_logger()
@@ -69,6 +69,7 @@ class FeedbackGenerator(Node):
 
         # message
         self.arui_update_message = AruiUpdate()
+        self.arui_update_message.header.frame_id = "ARUI Update"
 
         # detection uuids
         self.uuids = dict()
@@ -80,12 +81,9 @@ class FeedbackGenerator(Node):
 
     def activity_callback(self, activity):
         self.arui_update_message.latest_activity = activity
-        self.arui_update_message.header.frame_id = activity.header.frame_id
         self.publish_update()
 
     def object_callback(self, object_msg):
-        self.arui_update_message.object3d_remove = self.arui_update_message.object3d_update
-
         # convert ObjectDetection3dSet to AruiObject3d
         detections = []
         for i in range(object_msg.num_objects):
@@ -121,13 +119,11 @@ class FeedbackGenerator(Node):
             detections.append(detection)
 
         self.arui_update_message.object3d_update = detections
-        self.arui_update_message.header.frame_id = object_msg.header.frame_id
         self.publish_update()
 
     def task_callback(self, task):
         # TODO: Update this to TaskNode type
         self.arui_update_message.current_task_uid = task.task_name
-        self.arui_update_message.header.frame_id = task.header.frame_id
         self.publish_update()
 
 
