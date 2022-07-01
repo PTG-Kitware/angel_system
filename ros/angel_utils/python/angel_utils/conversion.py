@@ -47,7 +47,7 @@ def from_detect_image_objects_result(
 
     # List of (left, top, right, bottom) quadruples per detection.
     # Should end up with shape [n_detections x 4] after threshold filtering.
-    det_lrtb = []
+    det_ltrb = []
 
     # Matrix of detection confidences
     # Should end up with shape [n_detections x n_labels] after threshold
@@ -68,9 +68,9 @@ def from_detect_image_objects_result(
             continue
 
         det_confidence.append(confidence_vec)
-        det_lrtb.append((*det_bbox.min_vertex, *det_bbox.max_vertex))
+        det_ltrb.append((*det_bbox.min_vertex, *det_bbox.max_vertex))
 
-    assert len(det_lrtb) == len(det_confidence)
+    assert len(det_ltrb) == len(det_confidence)
     n_detections = len(det_confidence)
 
     # If there are no detections post-filtering, empty out the label vec since
@@ -82,7 +82,7 @@ def from_detect_image_objects_result(
     msg.label_vec = label_list
     msg.num_detections = n_detections
     if n_detections > 0:
-        bounds_mat = np.asarray(det_lrtb, dtype=np.float32).T
+        bounds_mat = np.asarray(det_ltrb, dtype=np.float32).T
         msg.left = bounds_mat[0].tolist()
         msg.top = bounds_mat[1].tolist()
         msg.right = bounds_mat[2].tolist()
