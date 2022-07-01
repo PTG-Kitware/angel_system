@@ -160,9 +160,6 @@ Anatomy of the call:
 5) `tmuxinator` command creates a new server session defined by the given
    config.
 
-As a rosetta stone, this example configuration is symmetric to the launch file
-version located at `ros/angel_debug/launch/online_debug_demo.py`.
-
 To stop the system after using the above command, we simply need to exit the
 tmux instance or kill the tmux session.
 This can be done by providing the tmux keyboard command `<Ctrl-B, D>`.
@@ -178,6 +175,18 @@ tmuxinator command:
 ```bash
 tmuxinator stop fragment_object_detection_debug
 ```
+
+## Configuring ROS nodes that utilize SMQTK-Core
+Some ROS nodes utilize the smqtk-core plugin system so specification of what
+algorithm is utilized is determined based on a configuration file.
+
+Configuration files are currently located in: `ros/angel_system_nodes/configs/`
+* `default_object_det_config.json`
+  * Determines the image object detection plugin used in the
+    `angel_system_nodes object_detector.py` node.
+* `default_activity_det_config.json`
+  * Determines the activity detection plugin used in the
+    `angel_system_nodes activity_detector.py` node.
 
 ## ANGEL System Python Package
 
