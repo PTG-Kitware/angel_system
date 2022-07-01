@@ -1,3 +1,7 @@
+"""
+NOTE: THIS FILE WAS COPIED FROM THE LEARN repository
+      video_classification_2021 branch
+"""
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 
 """Learning rate policy."""

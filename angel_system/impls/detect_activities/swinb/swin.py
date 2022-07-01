@@ -1,3 +1,7 @@
+"""
+NOTE: THIS FILE WAS COPIED FROM THE LEARN repository
+      video_classification_2021 branch
+"""
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -941,8 +945,6 @@ class swin_b(nn.Module):
         else:
             state_dict = checkpoint
         state_dict = {k[7:]: v for k, v in state_dict.items()}
-
-        print(state_dict.keys())
 
         with torch.no_grad():
             self.head.weight.copy_(state_dict["head.weight"])

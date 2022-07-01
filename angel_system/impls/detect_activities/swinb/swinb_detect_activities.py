@@ -119,7 +119,6 @@ class SwinBTransformer(DetectActivities):
 
         frames = [self.transform(f) for f in frame_iter]
         frames = [torch.stack(frames)]
-        print(frames[0].shape)
 
         fps, target_fps = 30, 30
         clip_size = self._sampling_rate * (self._num_frames) / target_fps * fps
@@ -138,7 +137,6 @@ class SwinBTransformer(DetectActivities):
         frames = [x.permute(1, 0, 2, 3) for x in frames]
         frames = [spatial_sampling(x, spatial_idx=spatial_idx, min_scale=224, max_scale=224, crop_size=224) for x in frames]
         frames = torch.stack(frames)
-        print(frames.shape)
 
         # Predict!
         with torch.no_grad():
@@ -148,9 +146,6 @@ class SwinBTransformer(DetectActivities):
         post_act = torch.nn.Softmax(dim=1)
         preds: torch.Tensor = post_act(preds) # shape: (1, num_classes)
         top_preds = preds.topk(k=5)
-
-        print(preds)
-        print(top_preds)
 
         LABELS = ["pour water into measuring cup",
                   "pour water from cup into kettle",
@@ -163,13 +158,10 @@ class SwinBTransformer(DetectActivities):
         # Map the predicted classes to the label names
         # top_preds.indices is a 1xk tensor
         pred_class_indices = top_preds.indices[0]
-        print(pred_class_indices)
 
         # TODO: This will not work for models trained on data other than Kinetics400.
         # This is also copied from the pytorchvideo slow fast implementation.
-        #pred_class_names = [KINETICS_400_LABELS[int(i)] for i in pred_class_indices]
         pred_class_names = [LABELS[int(i)] for i in pred_class_indices]
-        print(pred_class_names)
 
         # Filter out any detections below the threshold
         predictions = []
