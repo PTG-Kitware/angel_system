@@ -27,22 +27,10 @@ public class EntityManager : Singleton<EntityManager>
         return registry[id] as ArrowEntity;
     }
 
-    public void AddEntity(Entity e)
-    {
-        if (registry.ContainsKey(e.id))
-        {
-            registry[e.id] = e;
-        }
-        else
-        {
-            registry.Add(e.id, e);
-        }
-    }
-
-    public DetectedEntity AddDetectedEntity(string text)
+    public DetectedEntity AddDetectedEntity(string id, string text)
     {
         DetectedEntity detectedEntity = new GameObject(text).AddComponent<DetectedEntity>();
-        registry.Add(detectedEntity.id, detectedEntity);
+        registry.Add(id, detectedEntity);
         return detectedEntity;
     }
 

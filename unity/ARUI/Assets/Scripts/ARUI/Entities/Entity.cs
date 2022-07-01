@@ -12,7 +12,7 @@ public enum Type
 /// <summary>
 // Every virtual object must be an entity
 /// </summary>
-public class Entity : MonoBehaviour
+public abstract class Entity : MonoBehaviour
 {
     public string id; // The ID/name of the entity
     public Type entityType; // The type of the entity
@@ -20,4 +20,6 @@ public class Entity : MonoBehaviour
 
     public string label;
     public List<Vector3> boundingBox;
+
+    public abstract void SetGuideActive(bool isOn, bool flat);
 }

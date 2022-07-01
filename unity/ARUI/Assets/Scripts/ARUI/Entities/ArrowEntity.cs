@@ -196,4 +196,6 @@ public class ArrowEntity : Entity
         if (isAnimated) animationUpdate();
         arrow.updateArrowMesh();
     }
+
+    public override void SetGuideActive(bool isOn, bool flat) {}
 }

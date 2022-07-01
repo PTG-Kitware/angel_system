@@ -6,128 +6,324 @@ using Microsoft.MixedReality.Toolkit.Utilities.Solvers;
 using System;
 using HoloToolkit.Unity;
 using Microsoft.MixedReality.Toolkit;
+using Microsoft.MixedReality.Toolkit.Input;
+using UnityEngine.UI;
 
 public class TaskListManager : Singleton<TaskListManager>
 {
+    private string[,] tasks;
+    private Dictionary<int, int> taskToParent;
+    private Dictionary<int, TaskListElement> taskToElement;
+    private bool taskListGenerated = false;
+    private List<TaskListElement> currentTaskIDOnList;
+    private Dictionary<int, List<TaskListElement>> mainToSubTasks;
+
+    private bool isProcessingOpening = false;
+
     //Reference to background panel, list container and taskprefabs
     private GameObject list;
-    private GameObject taskContainer;
-    private GameObject bg;
+    private RectTransform taskContainer;
     private GameObject taskPrefab;
-    private GameObject subtaskPrefab;
 
-    //Height of single task entries in the list, based on the height of the prefabs
-    private float yOffset = 0.025f;
-    
-    //List of all current taskelements
-    private List<TaskListElement> allTasks;
+    /// Must be >=1 and an odd number
+    private int numTasks = 7;
 
-    private bool isProcessing = false;
+    private Shapes.Line progressLine;
+    private GameObject topPointsParent;
+    private GameObject bottomPointsParent;
+
+    // Eye-gaze based updates
+    private bool isCurrentlyLooking = false;
+    private bool isVisible = false;
+    private bool isFading = false;
+    private Material bgMat;
+    private EyeTrackingTarget listEyeTarget;
+    private Color activeColor = new Color(0.06f, 0.06f, 0.06f, 0.5f);
+    private float step = 0.005f;
 
     private void Awake()
     {
         list = transform.GetChild(0).gameObject;
-        bg = list.transform.GetChild(0).gameObject;
 
+        taskContainer = GameObject.Find("TaskContainer").GetComponent<RectTransform>();
+        bgMat = taskContainer.GetComponent<Image>().material;
         taskPrefab = Resources.Load(StringResources.taskprefab_path) as GameObject;
-        subtaskPrefab = Resources.Load(StringResources.subtaskprefab_path) as GameObject;
 
-        taskContainer = GameObject.Find("TaskContainer");
+        listEyeTarget = GetComponentInChildren<EyeTrackingTarget>();
+        listEyeTarget.OnLookAtStart.AddListener(delegate { IsLookingAt(true); });
+        listEyeTarget.OnLookAway.AddListener(delegate { IsLookingAt(false); });
+
+        progressLine = GetComponentInChildren<Shapes.Line>();
+        bottomPointsParent = GameObject.Find("BottomPoints");
+        bottomPointsParent.transform.parent = progressLine.transform;
+        topPointsParent = GameObject.Find("TopPoints");
+        topPointsParent.transform.parent = progressLine.transform;
+        bottomPointsParent.SetActive(false);
+        topPointsParent.SetActive(false);
 
         list.SetActive(false);
 
-        allTasks = new List<TaskListElement>();
-
         gameObject.AddComponent<Billboard>();
+    }
+
+    public bool IsTaskListActive() => list.activeInHierarchy;
+
+    private void Update()
+    {
+        if (!taskListGenerated) return;
+        
+        if (isCurrentlyLooking && !isVisible && !isFading)
+        {
+            bgMat.color = activeColor;
+            for (int i = 0; i < currentTaskIDOnList.Count; i++)
+                currentTaskIDOnList[i].SetAlpha(1f);
+            isVisible = true;
+        }
+        else if (isCurrentlyLooking && isVisible && isFading)
+        {
+            StopCoroutine(FadeOut());
+
+            isFading = false;
+            bgMat.color = activeColor;
+            for (int i = 0; i < currentTaskIDOnList.Count; i++)
+                currentTaskIDOnList[i].SetAlpha(1f);
+        }
+        else if (!isCurrentlyLooking && isVisible && !isFading)
+        {
+            StartCoroutine(FadeOut());
+        }
+    }
+
+    private IEnumerator FadeOut()
+    {
+        isFading = true;
+
+        yield return new WaitForSeconds(1.0f);
+
+        float shade = activeColor.r;
+        float alpha = 1f;
+
+        while (isFading && shade > 0)
+        {
+            alpha -= (step * 20);
+            shade -= step;
+
+            bgMat.color = new Color(shade, shade, shade);
+
+            if (alpha >= 0)
+            {
+                for (int i = 0; i < currentTaskIDOnList.Count; i++)
+                    currentTaskIDOnList[i].SetAlpha(Mathf.Max(0, alpha));
+            }
+
+            yield return new WaitForEndOfFrame();
+        }
+
+        isFading = false;
+        isVisible = false;
     }
 
     /// <summary>
     /// Instantiate and initialize the task list and it's content
     /// </summary>
-    /// <param name="tasklist"></param>
-    public void InitTasklist(string[,] tasklist)
+    public void SetCurrentTask(int currentTaskID)
     {
-        if (allTasks.Count > 0)
-            FlushTaskList();
+        if (tasks == null) return;
 
-        for (int i = 0; i < tasklist.Length/2; i++)
+        if (currentTaskID < 0 || currentTaskID >= tasks.GetLength(0))
         {
-            GameObject task;
-            if (tasklist[i, 0].Equals("0"))
-                task = Instantiate(taskPrefab, taskContainer.transform);
-            else
-                task = Instantiate(subtaskPrefab, taskContainer.transform);
-
-            task.transform.position = new Vector3(task.transform.position.x,
-                    task.transform.position.y + (i * yOffset *-1), task.transform.position.z);
-
-            TaskListElement t = task.gameObject.AddComponent<TaskListElement>();
-            t.InitElement(tasklist[i, 1]);
-            allTasks.Add(t);
+            AngelARUI.Instance.PringDebugMessage("TaskID was invalid: id " + currentTaskID + ", task list length: " + tasks.GetLength(0), false);
+            Orb.Instance.SetMessage("");
+            return;
         }
 
-        float windowheight = yOffset * ((tasklist.Length+2)/2);
-        taskContainer.transform.position = new Vector3(
-            taskContainer.transform.position.x,
-            bg.transform.position.y - (windowheight / 2f) * -1,
-            taskContainer.transform.position.z);
-
-        bg.transform.SetYScale(windowheight);   
+        StartCoroutine(SetCurrentTaskAsync(currentTaskID));
     }
 
-    private void FlushTaskList()
+    private IEnumerator SetCurrentTaskAsync(int currentTaskID)
     {
-        for (int i = 0; i < taskContainer.transform.childCount; i++)
-            Destroy(taskContainer.transform.GetChild(i).gameObject);
+        while (!taskListGenerated)
+            yield return new WaitForEndOfFrame();
 
-        allTasks = new List<TaskListElement>();
-    }
+        AngelARUI.Instance.PringDebugMessage("TaskID was valid: " + currentTaskID + ", task list length: " + tasks.GetLength(0), false);
 
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <param name="taskID"></param>
-    public void SetCurrentTask(int taskID)
-    {
-        if (taskID < 0)
-        {
-            for (int i = 0; i < taskID; i++)
-                allTasks[i].SetAsCurrent();
+        bool isSubTask = false;
+        if (tasks[currentTaskID, 0].Equals("1"))
+            isSubTask = true;
 
-        } else if (taskID == 0)
-        {
-            allTasks[taskID].SetAsCurrent();
-
-        } else if (taskID >= allTasks.Count)
-        {
-            allTasks[allTasks.Count-1].SetIsDone(true);
+        bool isMainTaskAndHasChildren = false;
+        if (tasks[currentTaskID, 0].Equals("0") && currentTaskID + 1 < tasks.GetLength(0) && tasks[currentTaskID + 1, 0].Equals("1")) {
+            currentTaskID += 1;
+            isMainTaskAndHasChildren = true;
         }
+
+        //Deactivate previous task list elements
+        for (int i = 0; i < currentTaskIDOnList.Count; i++)
+        {
+            taskToElement[i].gameObject.SetActive(false);
+            currentTaskIDOnList.Remove(taskToElement[i]);
+        }
+
+        //Adapt begin and end list index in the UI based on main/subtask relationship
+        int startIndex = currentTaskID - (numTasks + 1) / 2;
+        if (startIndex < 0)
+            startIndex = 0;
+
+        if (startIndex > 0)
+            topPointsParent.SetActive(true);
         else
-        {
-            for (int i = 0; i < taskID; i++)
-                allTasks[i].SetIsDone(true);
+            topPointsParent.SetActive(false);
 
-            allTasks[taskID].SetAsCurrent();
+        int endIndex = startIndex + numTasks;
+        if (endIndex > tasks.GetLength(0))
+            endIndex = tasks.GetLength(0);
+
+        if (currentTaskID >= tasks.GetLength(0))
+            bottomPointsParent.SetActive(false);
+        else
+            bottomPointsParent.SetActive(true);
+
+        for (int i = startIndex; i < endIndex; i++)
+        {
+            TaskListElement current = taskToElement[i];
+            if ((isSubTask || isMainTaskAndHasChildren) && i == (currentTaskID - 1))
+            {
+                current = taskToElement[taskToParent[currentTaskID]];
+                int subTasksDone = currentTaskID - current.id - 1;
+                current.SetAsCurrent(subTasksDone + "/" + mainToSubTasks[taskToParent[currentTaskID]].Count);
+
+            } else
+            {
+                if (i < currentTaskID)
+                    current.SetIsDone(true);
+
+                else if (i == currentTaskID)
+                    current.SetAsCurrent("");
+                else
+                    current.SetIsDone(false);
+            }
+
+            current.gameObject.SetActive(true);
+            currentTaskIDOnList.Add(current);
         }
 
-        if (taskID >= 0)
+        Orb.Instance.SetMessage(tasks[currentTaskID, 1]);
+    }
+
+    public void SetTasklist(string[,] tasks)
+    {
+        if (tasks != null)
         {
-            for (int i = taskID + 1; i < allTasks.Count; i++)
-                allTasks[i].SetIsDone(false);
+            this.tasks = tasks;
+            taskListGenerated = false;
+
+            taskToParent = new Dictionary<int, int>();
+
+            int lastParent = 0;
+            int lastGrandparent = 0;
+            for (int i = 0; i < tasks.GetLength(0); i++)
+            {
+                if (tasks[i, 0].Equals("0"))
+                {
+                    lastGrandparent = i;
+                }
+
+                else if (tasks[i, 0].Equals("1"))
+                {
+                    taskToParent.Add(i, lastGrandparent);
+                    lastParent = i;
+                }
+
+                else if (tasks[i, 0].Equals("2"))
+                    taskToParent.Add(i, lastParent);
+            }
+
+            StartCoroutine(GenerateTaskListElementsAsync(tasks));
+
+            if (tasks.GetLength(0) > numTasks)
+                bottomPointsParent.SetActive(true);
+            else
+                bottomPointsParent.SetActive(false);
+
         }
+    }
+
+    private IEnumerator GenerateTaskListElementsAsync(string[,] tasks)
+    {
+        AngelARUI.Instance.PringDebugMessage("Generate template for task list.", false);
+
+        SetTaskListActive(false);
+
+        list.SetActive(false);
+
+        if (taskToElement != null)
+        {
+            for (int i = 0; i < taskToElement.Count; i++)
+                Destroy(taskToElement[i].gameObject);
+
+            taskToElement = null;
+        }
+
+        taskToElement = new Dictionary<int, TaskListElement>();
+        currentTaskIDOnList = new List<TaskListElement>();
+        mainToSubTasks = new Dictionary<int, List<TaskListElement>>();
+
+        int lastMainIndex = 0;
+        for (int i = 0; i < tasks.GetLength(0); i++)
+        {
+            GameObject task = Instantiate(taskPrefab, taskContainer.transform);
+            TaskListElement t = task.gameObject.AddComponent<TaskListElement>();
+            t.SetText(i, tasks[i, 1], Int32.Parse(tasks[i, 0]));
+            t.SetIsDone(false);
+            t.gameObject.SetActive(false);
+
+            taskToElement.Add(i, t);
+
+            if (tasks[i, 0].Equals("0"))
+                lastMainIndex = i;
+            else if (tasks[i, 0].Equals("1"))
+            {
+                if (!mainToSubTasks.ContainsKey(lastMainIndex))
+                    mainToSubTasks.Add(lastMainIndex, new List<TaskListElement>());
+                mainToSubTasks[lastMainIndex].Add(t);
+            }
+
+            if (i % 10 == 0)
+                yield return new WaitForEndOfFrame();
+        }
+
+        yield return new WaitForEndOfFrame();
+
+        taskListGenerated = true;
+
+        Orb.Instance.SetTaskListButtonActive(true);
+        AngelARUI.Instance.PringDebugMessage("Finished generating task list", false);
+    }
+
+
+
+    private void LateUpdate()
+    {
+        progressLine.Start = new Vector3(0, ((taskContainer.rect.y)) * -1, 0);
+        progressLine.End = new Vector3(0, ((taskContainer.rect.y)), 0);
+
+        topPointsParent.transform.position = progressLine.transform.TransformPoint(progressLine.Start);
+        bottomPointsParent.transform.position = progressLine.transform.TransformPoint(progressLine.End);
 
     }
+
+    private void IsLookingAt(bool isLooking) => isCurrentlyLooking = isLooking;
 
     public void ToggleTasklist() => SetTaskListActive(!list.activeInHierarchy);
 
     public void SetTaskListActive(bool isActive)
     {
-        if (isProcessing) return;
-        Debug.Log("Show Task list: " + isActive);
+        if (isProcessingOpening || !taskListGenerated) return;
+        AngelARUI.Instance.PringDebugMessage("Show Task list: " + isActive, false);
 
         if (isActive)
         {
-            isProcessing = true;
+            isProcessingOpening = true;
             StartCoroutine(ShowTaskList());
         } else
         {
@@ -155,6 +351,7 @@ public class TaskListManager : Singleton<TaskListManager>
         list.SetActive(true);
         AudioManager.Instance.PlaySound(transform.position, SoundType.notification);
 
-        isProcessing = false;
+        isProcessingOpening = false;
     }
+
 }

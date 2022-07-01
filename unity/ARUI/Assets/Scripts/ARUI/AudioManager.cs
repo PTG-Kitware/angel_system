@@ -15,8 +15,7 @@ public class AudioManager : Singleton<AudioManager>
 {
     private Dictionary<SoundType, AudioSource> typeToSound;
 
-    // Start is called before the first frame update
-    void Start()
+    private void InitIfNeeded()
     {
         typeToSound = new Dictionary<SoundType, AudioSource>();
 
@@ -35,8 +34,6 @@ public class AudioManager : Singleton<AudioManager>
         bellSound.clip = Resources.Load(StringResources.bellsound_path) as AudioClip;
         bellSound.transform.parent = transform;
         typeToSound.Add(SoundType.bell, bellSound);
-
-
     }
 
     public void PlaySound(Vector3 pos, SoundType type) => StartCoroutine(Play(pos, type));
@@ -45,6 +42,8 @@ public class AudioManager : Singleton<AudioManager>
 
     private IEnumerator Play(Vector3 pos, SoundType type)
     {
+        if (typeToSound == null) InitIfNeeded();
+        
         typeToSound[type].transform.position = pos;
 
         yield return new WaitForEndOfFrame();
@@ -61,6 +60,8 @@ public class AudioManager : Singleton<AudioManager>
 
     private IEnumerator Play(Vector3 pos, AudioClip clip)
     {
+        if (typeToSound == null) InitIfNeeded();
+        
         GameObject temp_audio = new GameObject("temp_audio");
         temp_audio.transform.position = pos;
 

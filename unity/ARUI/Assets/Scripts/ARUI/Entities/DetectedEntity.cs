@@ -78,11 +78,10 @@ public class DetectedEntity : Entity
             labelMesh.text = "";
     }
 
-    public void SetHaloOn(bool on, bool isFlat)
+    public override void SetGuideActive(bool on, bool isFlat)
     {
         halo.SetFlat(isFlat);
         halo.gameObject.SetActive(on);
 
     }
-
 }

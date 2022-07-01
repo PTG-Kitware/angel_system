@@ -1,4 +1,5 @@
 using DilmerGames.Core.Singletons;
+using Microsoft.MixedReality.Toolkit.Examples.Demos.EyeTracking;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -28,11 +29,12 @@ public enum msgContext
 
 
 public class AngelARUI : Singleton<AngelARUI>
-{
-    private string[,] tasks;
-
+{    
     [HideInInspector]
     public Camera mainCamera;
+    
+    // If true, ARUI debug messages are shown in the unity console and scene Logger (if available)
+    public bool showARUIDebugMessages = true;
 
     private void Awake()
     {
@@ -76,44 +78,23 @@ public class AngelARUI : Singleton<AngelARUI>
     }
 
     /// <summary>
-    /// Set the task list and set the current task id to the given value
+    /// Set the task list and set the current task id to 0 (the first task)
     /// </summary>
     /// <param name="tasks">2D array off tasks</param>
-    /// <param name="id">id of current task id</param>
-    public void SetTasks(string[,] tasks, int id)
+    public void SetTasks(string[,] tasks)
     {
-        this.tasks = tasks;
-        TaskListManager.Instance.InitTasklist(tasks);
-        SetCurrentTaskID(id);
+        TaskListManager.Instance.SetTasklist(tasks);
+        TaskListManager.Instance.SetCurrentTask(0);
+
+        Orb.Instance.SetMessageActive(true);
     }
 
     /// <summary>
     /// Set the current task the user has to do.
-    /// If taskID is < than 0, the entire task list is shown and every task is set as NOT done.
     /// If taskID is >= 0 and < the number of tasks, then the task with the given taskID is highlighted. 
-    /// If taskID is > than the number of tasks, the entire task list is set as DONE.
     /// </summary>
     /// <param name="taskID">index of the current task, in the task</param>
-    public void SetCurrentTaskID(int taskID)
-    {
-        if (tasks == null)
-        {
-            Debug.Log("Trying to set 'currentTaskID' : " + taskID + " failed. Tasklist was: " + tasks);
-            return;
-        }
-
-        TaskListManager.Instance.SetCurrentTask(taskID);
-
-        if (taskID < tasks.GetLength(0) && taskID >= 0)
-        {
-            Orb.Instance.SetMessage(tasks[taskID, 1]);
-            Debug.Log("Set current task ID to: " + taskID);
-        } else
-        {
-            Orb.Instance.SetMessage("");
-            Debug.Log("Set current task ID to end.");
-        }
-    }
+    public void SetCurrentTaskID(int taskID) => TaskListManager.Instance.SetCurrentTask(taskID);
 
     /// <summary>
     /// Turn the task list on or off.
@@ -134,12 +115,21 @@ public class AngelARUI : Singleton<AngelARUI>
     /// <returns>The reference to the created entity</returns>
     private DetectedEntity AddObject(string id, Vector3 worldPos, string text)
     {
-        DetectedEntity DetectedObj = EntityManager.Instance.AddDetectedEntity(text);
+        DetectedEntity DetectedObj = EntityManager.Instance.AddDetectedEntity(id,text);
         DetectedObj.transform.SetParent(EntityManager.Instance.transform);
         DetectedObj.InitEntity(id, worldPos, text, true);
 
-        Logger.Instance.LogInfo("Placed " + text + " at " + worldPos);
         return DetectedObj;
+    }
+
+    public void PringDebugMessage(string message, bool showInLogger)
+    {
+        if (showARUIDebugMessages)
+        {
+            if (showInLogger && FindObjectOfType<Logger>()!=null)
+                Logger.Instance.LogInfo("***ARUI: "+ message);
+            Debug.Log(message);
+        }
     }
 
 }
