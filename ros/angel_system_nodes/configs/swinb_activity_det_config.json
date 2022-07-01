@@ -2,6 +2,7 @@
     "type": "angel_system.impls.detect_activities.swinb.swinb_detect_activities.SwinBTransformer",
     "angel_system.impls.detect_activities.swinb.swinb_detect_activities.SwinBTransformer": {
         "checkpoint_path": "angel_system/model_checkpoints/swinb_coffee_tasks.pth",
+        "labels_file": "angel_system/labels/swinb_coffee_task_labels.txt",
         "num_classes": 7,
         "num_frames": 32,
         "sampling_rate": 2,

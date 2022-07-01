@@ -7,7 +7,6 @@ import torch
 import torchvision
 
 from angel_system.interfaces.detect_activities import DetectActivities
-from angel_system.impls.detect_activities.pytorchvideo_slow_fast_r50 import KINETICS_400_LABELS
 from angel_system.impls.detect_activities.swinb.swin import swin_b
 from angel_system.impls.detect_activities.swinb.utils import (
     get_start_end_idx, spatial_sampling, temporal_sampling
@@ -25,6 +24,9 @@ class SwinBTransformer(DetectActivities):
     :param checkpoint_path: Path to a saved checkpoint file containing
         weights for the model.
     :param num_classes: Number of classes the model was trained on.
+    :param labels_file: Path to the labels file for the given checkpoint.
+        The labels file is a text file with the class labels, one class
+        per line.
     :param num_frames: Number of frames passed to the model for inference.
     :param sampling_rate: Sampling rate for the frame input. For example,
         if this is set to 2 and num_frames is set to 32, the activity
@@ -43,6 +45,7 @@ class SwinBTransformer(DetectActivities):
         self,
         checkpoint_path: str,
         num_classes: int,
+        labels_file: str,
         num_frames: int = 32,
         sampling_rate: int = 2,
         use_cuda: bool = False,
@@ -56,6 +59,7 @@ class SwinBTransformer(DetectActivities):
         self._det_threshold = det_threshold
         self._num_frames = num_frames
         self._sampling_rate = sampling_rate
+        self._labels_file = labels_file
 
         # Set to None for lazy loading later.
         self._model: torch.nn.Module = None  # type: ignore
@@ -76,6 +80,12 @@ class SwinBTransformer(DetectActivities):
                 )
             ]
         )
+
+        # Set up the labels from the given labels file
+        self._labels = []
+        with open(self._labels_file, "r") as f:
+            for line in f:
+                self._labels.append(line.rstrip())
 
     def get_model(self) -> "torch.nn.Module":
         """
@@ -160,21 +170,11 @@ class SwinBTransformer(DetectActivities):
         preds: torch.Tensor = post_act(preds) # shape: (1, num_classes)
         top_preds = preds.topk(k=5)
 
-        LABELS = ["pour water into measuring cup",
-                  "pour water from cup into kettle",
-                  "turn on scale",
-                  "place bowl on scale",
-                  "zero scale",
-                  "measure 25 grams of coffee beans",
-                  "misc"]
-
         # Map the predicted classes to the label names
         # top_preds.indices is a 1xk tensor
         pred_class_indices = top_preds.indices[0]
 
-        # TODO: This will not work for models trained on data other than Kinetics400.
-        # This is also copied from the pytorchvideo slow fast implementation.
-        pred_class_names = [LABELS[int(i)] for i in pred_class_indices]
+        pred_class_names = [self._labels[int(i)] for i in pred_class_indices]
 
         # Filter out any detections below the threshold
         predictions = []
@@ -194,6 +194,7 @@ class SwinBTransformer(DetectActivities):
             "checkpoint_path": self._checkpoint_path,
             "num_frames": self._num_frames,
             "sampling_rate": self._sampling_rate,
+            "labels_file": self._labels_file,
         }
 
     @classmethod
