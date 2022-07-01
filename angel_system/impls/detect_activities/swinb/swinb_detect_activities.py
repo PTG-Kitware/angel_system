@@ -25,6 +25,11 @@ class SwinBTransformer(DetectActivities):
     :param checkpoint_path: Path to a saved checkpoint file containing
         weights for the model.
     :param num_classes: Number of classes the model was trained on.
+    :param num_frames: Number of frames passed to the model for inference.
+    :param sampling_rate: Sampling rate for the frame input. For example,
+        if this is set to 2 and num_frames is set to 32, the activity
+        detector should pass 64 frames as input to the detect activities
+        function.
     :param use_cuda: Attempt to use a cuda device for inferences. If no
         device is found, CPU is used.
     :param cuda_device: When using CUDA use the device by the given ID. By
@@ -38,6 +43,8 @@ class SwinBTransformer(DetectActivities):
         self,
         checkpoint_path: str,
         num_classes: int,
+        num_frames: int = 32,
+        sampling_rate: int = 2,
         use_cuda: bool = False,
         cuda_device: Union[int, str] = "cuda:0",
         det_threshold: float = 0.75,
@@ -47,6 +54,8 @@ class SwinBTransformer(DetectActivities):
         self._use_cuda = use_cuda
         self._cuda_device = cuda_device
         self._det_threshold = det_threshold
+        self._num_frames = num_frames
+        self._sampling_rate = sampling_rate
 
         # Set to None for lazy loading later.
         self._model: torch.nn.Module = None  # type: ignore
@@ -56,8 +65,6 @@ class SwinBTransformer(DetectActivities):
         self._mean = [0.45, 0.45, 0.45]
         self._std = [0.225, 0.225, 0.225]
         self._crop_size = 224
-        self._num_frames = 32
-        self._sampling_rate = 2
         self._frames_per_second = 30
 
         # Transfrom from learn/TimeSformer/video_classification.py
@@ -91,7 +98,7 @@ class SwinBTransformer(DetectActivities):
             model_device = torch.device('cpu')
             if self._use_cuda:
                 if torch.cuda.is_available():
-                    model_device = torch.device(device=self.cuda_device)
+                    model_device = torch.device(device=self._cuda_device)
                     model = model.to(device=model_device)
                 else:
                     raise RuntimeError(
@@ -110,6 +117,8 @@ class SwinBTransformer(DetectActivities):
         Formats the given iterable of frames into the required input format
         for the swin model and then inputs them to the model for inferencing.
         """
+        # Check that we got the right number of frames
+        assert len(frame_iter) == (self._sampling_rate * self._num_frames)
         model = self.get_model()
 
         # Form the frames into the required format for the video model
@@ -137,6 +146,10 @@ class SwinBTransformer(DetectActivities):
         frames = [x.permute(1, 0, 2, 3) for x in frames]
         frames = [spatial_sampling(x, spatial_idx=spatial_idx, min_scale=224, max_scale=224, crop_size=224) for x in frames]
         frames = torch.stack(frames)
+
+        # Move the inputs to the GPU if necessary
+        if self._model.cuda:
+            frames = frames.cuda()
 
         # Predict!
         with torch.no_grad():
@@ -176,6 +189,11 @@ class SwinBTransformer(DetectActivities):
         return {
             "use_cuda": self._use_cuda,
             "cuda_device": self._cuda_device,
+            "num_classes": self._num_classes,
+            "det_threshold": self._det_threshold,
+            "checkpoint_path": self._checkpoint_path,
+            "num_frames": self._num_frames,
+            "sampling_rate": self._sampling_rate,
         }
 
     @classmethod
