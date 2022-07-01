@@ -2,18 +2,16 @@ import importlib.util
 import logging
 from typing import Iterable, Dict, Hashable, List, Union, Any
 
-# TODO: need to decide if we want to include learn as a submodule or maybe
-# just copy these files in here so we don't have the learn dependency.
-from learn.algorithms.TimeSformer.models.swin import swin_b
-from learn.algorithms.TimeSformer.models.utils import (
-    get_start_end_idx, spatial_sampling, temporal_sampling
-)
 import numpy as np
 import torch
 import torchvision
 
 from angel_system.interfaces.detect_activities import DetectActivities
 from angel_system.impls.detect_activities.pytorchvideo_slow_fast_r50 import KINETICS_400_LABELS
+from angel_system.impls.detect_activities.swinb.swin import swin_b
+from angel_system.impls.detect_activities.swinb.utils import (
+    get_start_end_idx, spatial_sampling, temporal_sampling
+)
 
 
 LOG = logging.getLogger(__name__)
