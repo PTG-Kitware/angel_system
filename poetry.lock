@@ -910,12 +910,11 @@ smqtk-image-io = ">=0.16.2,<0.17.0"
 
 [[package]]
 name = "smqtk-detection"
-version = "0.18.1"
+version = "0.19.0"
 description = "Algorithms, data structures and utilities around performing detection of inputs"
 category = "main"
 optional = false
-python-versions = "^3.6.2,<3.10"
-develop = false
+python-versions = ">=3.6.2,<3.10"
 
 [package.dependencies]
 smqtk-classifier = ">=0.19.0"
@@ -926,12 +925,6 @@ smqtk-image-io = ">=0.16.2"
 [package.extras]
 torch = ["torch (>=1.10.0,<2.0.0)", "torchvision (>=0.11.1,<0.12.0)"]
 centernet = ["torch (>=1.10.0,<2.0.0)", "opencv-python (>=4.5.2.0,<4.6.0.0)", "numba (>=0.53.0,<0.54.0)"]
-
-[package.source]
-type = "git"
-url = "https://github.com/Kitware/SMQTK-Detection"
-reference = "master"
-resolved_reference = "7a5ccb6e3d772d589a39b02cbeaf01124c600b78"
 
 [[package]]
 name = "smqtk-image-io"
@@ -1108,7 +1101,7 @@ numpy = "*"
 
 [[package]]
 name = "trimesh"
-version = "3.10.5"
+version = "3.12.6"
 description = "Import, export, process, analyze and view triangular meshes."
 category = "main"
 optional = false
@@ -1142,9 +1135,9 @@ xatlas = {version = "*", optional = true, markers = "extra == \"all\""}
 xxhash = {version = "*", optional = true, markers = "extra == \"all\""}
 
 [package.extras]
-all = ["shapely", "pillow", "jsonschema", "xxhash", "triangle", "requests", "rtree", "glooey", "mapbox-earcut", "meshio", "svg.path", "psutil", "chardet", "pycollada", "scipy", "lxml", "msgpack", "xatlas", "scikit-image", "setuptools", "python-fcl", "sympy", "pyglet", "colorlog", "networkx"]
-easy = ["scipy", "lxml", "shapely", "pillow", "msgpack", "jsonschema", "xxhash", "requests", "rtree", "setuptools", "colorlog", "sympy", "svg.path", "pyglet", "chardet", "pycollada", "networkx"]
-test = ["ezdxf", "pytest", "pyinstrument", "pytest-cov", "coveralls"]
+all = ["xatlas", "pyglet", "networkx", "svg.path", "scipy", "rtree", "pycollada", "lxml", "triangle", "meshio", "shapely", "sympy", "jsonschema", "python-fcl", "scikit-image", "chardet", "psutil", "pillow", "glooey", "msgpack", "xxhash", "requests", "setuptools", "colorlog", "mapbox-earcut"]
+easy = ["shapely", "pyglet", "sympy", "jsonschema", "networkx", "svg.path", "scipy", "rtree", "pillow", "pycollada", "chardet", "lxml", "msgpack", "xxhash", "requests", "setuptools", "colorlog"]
+test = ["pyinstrument", "coveralls", "pytest-cov", "pytest", "ezdxf"]
 
 [[package]]
 name = "typeguard"
@@ -1244,7 +1237,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8,<3.10"
-content-hash = "0bf5389160861db3cd94ba640e1eafcbc5e79eda740a14b2469691cbc6532495"
+content-hash = "f9ee32d20cf785963913af5a15da565327bbc950a90e8eb0f3721487291dba70"
 
 [metadata.files]
 appnope = [
@@ -1652,7 +1645,6 @@ numpy = [
     {file = "numpy-1.22.3-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:8251ed96f38b47b4295b1ae51631de7ffa8260b5b087808ef09a39a9d66c97ab"},
     {file = "numpy-1.22.3-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:48a3aecd3b997bf452a2dedb11f4e79bc5bfd21a1d4cc760e703c31d57c84b3e"},
     {file = "numpy-1.22.3-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:a3bae1a2ed00e90b3ba5f7bd0a7c7999b55d609e0c54ceb2b076a25e345fa9f4"},
-    {file = "numpy-1.22.3-cp310-cp310-win32.whl", hash = "sha256:f950f8845b480cffe522913d35567e29dd381b0dc7e4ce6a4a9f9156417d2430"},
     {file = "numpy-1.22.3-cp310-cp310-win_amd64.whl", hash = "sha256:08d9b008d0156c70dc392bb3ab3abb6e7a711383c3247b410b39962263576cd4"},
     {file = "numpy-1.22.3-cp38-cp38-macosx_10_14_x86_64.whl", hash = "sha256:201b4d0552831f7250a08d3b38de0d989d6f6e4658b709a02a73c524ccc6ffce"},
     {file = "numpy-1.22.3-cp38-cp38-macosx_11_0_arm64.whl", hash = "sha256:f8c1f39caad2c896bc0018f699882b345b2a63708008be29b1f355ebf6f933fe"},
@@ -2077,7 +2069,10 @@ smqtk-descriptors = [
     {file = "smqtk_descriptors-0.18.1-py3-none-any.whl", hash = "sha256:c1163109ed24907005f0681c0e9d54b6a6ed3a7b8d9c1f23b69aa85ca25a7b8e"},
     {file = "smqtk_descriptors-0.18.1.tar.gz", hash = "sha256:1392a9ecd415c445c629378e378a02fc4aec476da0ab67e80f5cb6f3e8bd94f1"},
 ]
-smqtk-detection = []
+smqtk-detection = [
+    {file = "smqtk-detection-0.19.0.tar.gz", hash = "sha256:9cad9826df0838500e2d15aedb32628087585baaed6a7975bfc4b3b9a38b549c"},
+    {file = "smqtk_detection-0.19.0-py3-none-any.whl", hash = "sha256:842d0604890b75f4f378a6f7d38b369248e2d75f22657a70d637effa99baf16d"},
+]
 smqtk-image-io = [
     {file = "smqtk_image_io-0.16.3-py3-none-any.whl", hash = "sha256:21cb5f7d7b6fa77a0c616a7dcdb28473ceb769007edf69cad937e64b4cda42b7"},
     {file = "smqtk_image_io-0.16.3.tar.gz", hash = "sha256:9eabf9a6d60a835a7d5938dd0ce073d97cc243fc811141a3f147e270e20ccbd3"},
@@ -2199,8 +2194,8 @@ triangle = [
     {file = "triangle-20220202-cp39-cp39-win_amd64.whl", hash = "sha256:1c5bab1851280d14f5128edd5c71a89849e78274d6f41101c5efd8ed914b8740"},
 ]
 trimesh = [
-    {file = "trimesh-3.10.5-py3-none-any.whl", hash = "sha256:2760855a1af2b50cb6dc109452bfbeff42a4dc25b548c939f4e893815c8526f9"},
-    {file = "trimesh-3.10.5.tar.gz", hash = "sha256:1ad7714ad756b62a1181ffd8dbf6eba3260496a209d91c4fde8b6044ec377a92"},
+    {file = "trimesh-3.12.6-py3-none-any.whl", hash = "sha256:1e2d0bd79f01e6bccacb7fa7952c277ec527f0ba92ab09425434d5d494b41cb4"},
+    {file = "trimesh-3.12.6.tar.gz", hash = "sha256:a7b604d6a5618e2cd536e24b5d9174970dbc59bcef9cec1f82ebccaf46fc89f7"},
 ]
 typeguard = [
     {file = "typeguard-2.13.3-py3-none-any.whl", hash = "sha256:5e3e3be01e887e7eafae5af63d1f36c849aaa94e3a0112097312aabfa16284f1"},
