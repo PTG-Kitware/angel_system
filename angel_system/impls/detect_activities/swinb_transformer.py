@@ -138,7 +138,7 @@ class SwinBTransformer(DetectActivities):
 
         # Crop and random short side scale jitter
         frames = [x.permute(1, 0, 2, 3) for x in frames]
-        frames = [spatial_sampling(x, spatial_idx=spatial_idx) for x in frames]
+        frames = [spatial_sampling(x, spatial_idx=spatial_idx, min_scale=224, max_scale=224, crop_size=224) for x in frames]
         frames = torch.stack(frames)
         print(frames.shape)
 
@@ -159,11 +159,13 @@ class SwinBTransformer(DetectActivities):
                   "turn on scale",
                   "place bowl on scale",
                   "zero scale",
-                  "measure 25 grams of coffee beans"]
+                  "measure 25 grams of coffee beans",
+                  "misc"]
 
         # Map the predicted classes to the label names
         # top_preds.indices is a 1xk tensor
         pred_class_indices = top_preds.indices[0]
+        print(pred_class_indices)
 
         # TODO: This will not work for models trained on data other than Kinetics400.
         # This is also copied from the pytorchvideo slow fast implementation.
