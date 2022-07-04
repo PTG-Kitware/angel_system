@@ -1,4 +1,5 @@
 import uuid
+from threading import Lock
 
 import rclpy
 from rclpy.node import Node
@@ -25,11 +26,11 @@ class FeedbackGenerator(Node):
     def __init__(self):
         super().__init__(self.__class__.__name__)
 
-        self.declare_parameter("activity_detector_topic", "ActivityDetections").get_parameter_value().string_value
-        self.declare_parameter("object_detection_topic", "ObjectDetections3d").get_parameter_value().string_value
+        self._activity_detector_topic = self.declare_parameter("activity_detector_topic", "ActivityDetections").get_parameter_value().string_value
+        self._object_detection_topic = self.declare_parameter("object_detection_topic", "ObjectDetections3d").get_parameter_value().string_value
         # TODO: task needs to be updated to emit TaskNode
-        self.declare_parameter("task_monitor_topic", "TaskUpdates").get_parameter_value().string_value
-        self.declare_parameter("arui_update_topic", "AruiUpdates").get_parameter_value().string_value
+        self._task_monitor_topic = self.declare_parameter("task_monitor_topic", "TaskUpdates").get_parameter_value().string_value
+        self._arui_update_topic = self.declare_parameter("arui_update_topic", "AruiUpdates").get_parameter_value().string_value
 
         # logger
         self.log = self.get_logger()
@@ -71,16 +72,26 @@ class FeedbackGenerator(Node):
         self.arui_update_message = AruiUpdate()
         self.arui_update_message.header.frame_id = "ARUI Update"
 
+        # lock
+        self.lock = Lock()
+
         # detection uuids
         self.uuids = dict()
 
     def publish_update(self):
+        self.lock.acquire()
+
         self.arui_update_message.header.stamp = self.get_clock().now().to_msg()
         self.log.info(f"Publishing AruiUpdate: {self.arui_update_message}\n")
         self.arui_update_publisher.publish(self.arui_update_message)
 
+        self.lock.release()
+
     def activity_callback(self, activity):
+        self.lock.acquire()
         self.arui_update_message.latest_activity = activity
+        self.lock.release()
+
         self.publish_update()
 
     def object_callback(self, object_msg):
@@ -88,19 +99,19 @@ class FeedbackGenerator(Node):
         detections = []
         for i in range(object_msg.num_objects):
             detection = AruiObject3d()
-            
+
             detection.label = object_msg.object_labels[i]
-            
+
             # TODO: Update this to real tracking
             # For now, assumes only one type of object will be in the scene at a time
             if detection.label in self.uuids.keys():
-                detection.uid = self.uuids[detection.label] 
+                detection.uid = self.uuids[detection.label]
             else:
                 detection.uid = str(uuid.uuid4())
                 self.uuids[detection.label] = detection.uid
 
             detection.stamp = object_msg.source_stamp
-            
+
             detection.bbox = BoundingBox3D()
 
             # min = sorted[0], max = sorted[-1]
@@ -118,12 +129,18 @@ class FeedbackGenerator(Node):
 
             detections.append(detection)
 
+        self.lock.acquire()
         self.arui_update_message.object3d_update = detections
+        self.lock.release()
+
         self.publish_update()
 
     def task_callback(self, task):
         # TODO: Update this to TaskNode type
+        self.lock.acquire()
         self.arui_update_message.current_task_uid = task.task_name
+        self.lock.release()
+
         self.publish_update()
 
 

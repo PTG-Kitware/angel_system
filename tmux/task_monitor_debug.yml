@@ -3,7 +3,7 @@
 # debug visualization of the detections in the image space.
 #
 
-name: fragment-object-detection-debug
+name: task_monitor-debug
 root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 
 # Optional tmux socket
