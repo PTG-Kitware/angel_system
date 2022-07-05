@@ -1,0 +1,4 @@
+# Query the current image dimensions
+---
+int16 image_width
+int16 image_height
