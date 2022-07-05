@@ -79,18 +79,14 @@ class FeedbackGenerator(Node):
         self.uuids = dict()
 
     def publish_update(self):
-        self.lock.acquire()
-
-        self.arui_update_message.header.stamp = self.get_clock().now().to_msg()
-        self.log.info(f"Publishing AruiUpdate: {self.arui_update_message}\n")
-        self.arui_update_publisher.publish(self.arui_update_message)
-
-        self.lock.release()
+        with self.lock:
+            self.arui_update_message.header.stamp = self.get_clock().now().to_msg()
+            self.log.info(f"Publishing AruiUpdate")
+            self.arui_update_publisher.publish(self.arui_update_message)
 
     def activity_callback(self, activity):
-        self.lock.acquire()
-        self.arui_update_message.latest_activity = activity
-        self.lock.release()
+        with self.lock:
+            self.arui_update_message.latest_activity = activity
 
         self.publish_update()
 
@@ -129,17 +125,15 @@ class FeedbackGenerator(Node):
 
             detections.append(detection)
 
-        self.lock.acquire()
-        self.arui_update_message.object3d_update = detections
-        self.lock.release()
+        with self.lock:
+            self.arui_update_message.object3d_update = detections
 
         self.publish_update()
 
     def task_callback(self, task):
         # TODO: Update this to TaskNode type
-        self.lock.acquire()
-        self.arui_update_message.current_task_uid = task.task_name
-        self.lock.release()
+        with self.lock:
+            self.arui_update_message.current_task_uid = task.task_name
 
         self.publish_update()
 
