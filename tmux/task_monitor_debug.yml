@@ -3,7 +3,7 @@
 # debug visualization of the detections in the image space.
 #
 
-name: fragment-object-detection-debug
+name: task_monitor-debug
 root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 
 # Optional tmux socket
@@ -83,3 +83,9 @@ windows:
       -p det_topic:=Detections
       -p det_3d_topic:=ObjectDetections3d
       -p headset_pose_topic:=HeadsetPoseData
+  - feedback_generator: ros2 run angel_system_nodes feedback_generator --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p activity_detector_topic:=ActivityDetections
+      -p object_detection_topic:=ObjectDetections3d
+      -p task_monitor_topic:=TaskUpdates
+      -p arui_update_topic:=AruiUpdates
