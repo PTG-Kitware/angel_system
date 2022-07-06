@@ -58,6 +58,9 @@ class CoffeeDemoTask():
     Representation of the coffee demo recipe defined
     by its steps and transitions between them.
 
+    For details on using the pytransitions package, see:
+    https://github.com/pytransitions/transitions#quickstart
+
     NOTE: This currently only represents first 13 steps of the coffee demo.
     Steps are listed under v1.2 here:
     https://docs.google.com/document/d/1MfbZdRS6tOGzqNSN-_22Xwmq-huk5_WdKeDSEulFOL0/edit#heading=h.l369fku95vnn
@@ -106,6 +109,8 @@ class CoffeeDemoTask():
         # Mapping from state name to the to_state function, which provides a way to get
         # to the state from anywhere.
         # The to_* functions are created automatically when the Machine is initialized.
+        # For more info, see:
+        # https://github.com/pytransitions/transitions#automatic-transitions-for-all-states
         self.to_state_dict = {
             'Pour_12oz_of_water_into_a_liquid_measuring_cup':
                 self.to_Pour_12oz_of_water_into_a_liquid_measuring_cup,
@@ -181,6 +186,9 @@ class TaskMonitor(Node):
         self._timer_active = False
         self._timer_lock = threading.RLock()
 
+        # Define the mapping from activity detector output to task transition
+        # function. The keys of this dictionary must match the activity
+        # detector's output.
         self._activity_action_dict = {
             'Pour 12oz of water into a liquid measuring cup':
                 self._task.Pour_12oz_of_water_into_a_liquid_measuring_cup,
