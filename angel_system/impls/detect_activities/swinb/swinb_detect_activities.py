@@ -128,7 +128,8 @@ class SwinBTransformer(DetectActivities):
         for the swin model and then inputs them to the model for inferencing.
         """
         # Check that we got the right number of frames
-        assert len(list(frame_iter)) == (self._sampling_rate * self._num_frames)
+        frame_iter = list(frame_iter)
+        assert len(frame_iter) == (self._sampling_rate * self._num_frames)
         model = self.get_model()
 
         # Form the frames into the required format for the video model
