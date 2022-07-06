@@ -16,6 +16,8 @@ torchvision = "^0.11.3"
 trimesh = {extras = ["all"], version = "^3.10.2"}
 pytorchvideo = "^0.1.5"
 transitions = "^0.8.11"
+timm = "^0.5.4"
+einops = "^0.4.1"
 
 [tool.poetry.dev-dependencies]
 ipython = "^8.0.1"
@@ -27,3 +29,4 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry.plugins."smqtk_plugins"]
 # Activity detector
 "angel_system.impls.detect_activities.pytorchvideo_slow_fast_r50" = "angel_system.impls.detect_activities.pytorchvideo_slow_fast_r50"
+"angel_system.impls.detect_activities.swinb.swinb_detect_activities" = "angel_system.impls.detect_activities.swinb.swinb_detect_activities"

@@ -150,6 +150,14 @@ optional = false
 python-versions = ">=3.5"
 
 [[package]]
+name = "einops"
+version = "0.4.1"
+description = "A new flavour of deep learning operations"
+category = "main"
+optional = false
+python-versions = "*"
+
+[[package]]
 name = "executing"
 version = "0.8.3"
 description = "Get the currently executing AST node of a frame, and other information"
@@ -1012,6 +1020,18 @@ numpy = ">=1.19.2"
 all = ["imagecodecs (>=2021.11.20)", "matplotlib (>=3.3)", "lxml"]
 
 [[package]]
+name = "timm"
+version = "0.5.4"
+description = "(Unofficial) PyTorch Image Models"
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[package.dependencies]
+torch = ">=1.4"
+torchvision = "*"
+
+[[package]]
 name = "tomli"
 version = "2.0.1"
 description = "A lil' TOML parser"
@@ -1237,7 +1257,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8,<3.10"
-content-hash = "f9ee32d20cf785963913af5a15da565327bbc950a90e8eb0f3721487291dba70"
+content-hash = "8b15f4f1f69c309bdfcf440a7659adcf80d7a47662b5308abc9b8806778bd5e8"
 
 [metadata.files]
 appnope = [
@@ -1364,6 +1384,10 @@ cython = [
 decorator = [
     {file = "decorator-5.1.1-py3-none-any.whl", hash = "sha256:b8c3f85900b9dc423225913c5aace94729fe1fa9763b38939a95226f02d37186"},
     {file = "decorator-5.1.1.tar.gz", hash = "sha256:637996211036b6385ef91435e4fae22989472f9d571faba8927ba8253acbc330"},
+]
+einops = [
+    {file = "einops-0.4.1-py3-none-any.whl", hash = "sha256:932b12bb3176caef629cc513fc8a442338fdbfe1e560794a6e7306dcee65a8af"},
+    {file = "einops-0.4.1.tar.gz", hash = "sha256:65ede824fa54ce99ba969c61152f9948eb8cad08d5f0ca97c95e3804bafcce48"},
 ]
 executing = [
     {file = "executing-0.8.3-py2.py3-none-any.whl", hash = "sha256:d1eef132db1b83649a3905ca6dd8897f71ac6f8cac79a7e58a1a09cf137546c9"},
@@ -2099,6 +2123,10 @@ termcolor = [
 tifffile = [
     {file = "tifffile-2022.3.16-py3-none-any.whl", hash = "sha256:68f4f3aece7daafbe3dd58751622be0412510ee5921625ca611e47b618f906e6"},
     {file = "tifffile-2022.3.16.tar.gz", hash = "sha256:fe2c79190a1d625076e68a2f0e49ca72a907315fe8ebf488f5eecf70b257fe3c"},
+]
+timm = [
+    {file = "timm-0.5.4-py3-none-any.whl", hash = "sha256:0592c8fd2d46d0769c0b7e954b3dacea93769eee40dabb4bd7f2acb85243b588"},
+    {file = "timm-0.5.4.tar.gz", hash = "sha256:5d7b92e66a76c432009aba90d515ea7a882aae573415a7c5269e3617df901c1f"},
 ]
 tomli = [
     {file = "tomli-2.0.1-py3-none-any.whl", hash = "sha256:939de3e7a6161af0c887ef91b7d41a53e7c5a1ca976325f429cb46ea9bc30ecc"},
