@@ -28,13 +28,13 @@ where 'tasks' could look like this:
 The first column indicates if the row is a maintask (0) or subtask (1) of the last main task.
 The second column provides the text of the task.
 
-To set the current task the use has to do, call:
-AngelARUI.Instance.SetCurrentTaskID(index);
+To set the current task the user has to do, call:
+    AngelARUI.Instance.SetCurrentTaskID(index);
 
-the integer value 'index' presents the row index in the 'tasks' array. (eg. index 4 would be {"1", "Text example Subtask 2 of MainTask 1"})
-if the index does not match with the given task graph, the function call is ignored.
+The integer value 'index' presents the row index in the 'tasks' array. (eg. index 4 would be {"1", "Text example Subtask 2 of MainTask 1"})
+If the index does not match with the given task graph, the function call is ignored.
 
-Examples can be found in "TapTestData.cs"
+Examples can be found in "TapTestData.cs".
 
 **** MRTK settings
 For eye-tracking to work, the user has to give permission to the eye-tracking. Also, eye-tracking has to be enabled in the MRTK toolkit.
