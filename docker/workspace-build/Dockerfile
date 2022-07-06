@@ -61,7 +61,11 @@ ENV ANGEL_WORKSPACE_DIR="${ANGEL_WORKSPACE_DIR}"
 #
 FROM base AS tmp_package_files
 COPY ./ros "${ANGEL_WORKSPACE_DIR}"/src
-RUN find "${ANGEL_WORKSPACE_DIR}"/src -type f \! -name "package.xml" -print | xargs rm
+RUN mkdir "${ANGEL_WORKSPACE_DIR}"/tmp \
+ && (find "${ANGEL_WORKSPACE_DIR}"/src -type f -name 'package.xml' -print | xargs -n1 -I{} cp --parents {} "${ANGEL_WORKSPACE_DIR}"/tmp) \
+ && rm -r "${ANGEL_WORKSPACE_DIR}"/src \
+ && mv "${ANGEL_WORKSPACE_DIR}"/tmp/"${ANGEL_WORKSPACE_DIR}"/src "${ANGEL_WORKSPACE_DIR}"/ \
+ && rm -r "${ANGEL_WORKSPACE_DIR}"/tmp
 
 #
 # Build our workspace
