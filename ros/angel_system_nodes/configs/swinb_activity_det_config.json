@@ -6,8 +6,7 @@
         "num_classes": 7,
         "num_frames": 32,
         "sampling_rate": 2,
-        "use_cuda": true,
-        "cuda_device": "cuda:0",
+        "torch_device": "cuda:0",
         "det_threshold": 0.75
     }
 }

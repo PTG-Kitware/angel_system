@@ -19,24 +19,25 @@ LOG = logging.getLogger(__name__)
 class SwinBTransformer(DetectActivities):
     """
     ``DetectActivities`` implementation using the Shifted window (Swin)
-    transformer from Learn.
+    transformer from LEARN. The LEARN implementation can be found here:
+    https://gitlab.kitware.com/darpa_learn/learn/-/blob/master/learn/algorithms/TimeSformer/models/swin.py
 
     :param checkpoint_path: Path to a saved checkpoint file containing
         weights for the model.
-    :param num_classes: Number of classes the model was trained on.
+    :param num_classes: Number of classes the model was trained on. This
+        should match the number of classes the model checkpoint was trained
+        on.
     :param labels_file: Path to the labels file for the given checkpoint.
         The labels file is a text file with the class labels, one class
-        per line.
+        per line. This should match the class labels the model checkpoint
+        was trained on.
     :param num_frames: Number of frames passed to the model for inference.
     :param sampling_rate: Sampling rate for the frame input. For example,
         if this is set to 2 and num_frames is set to 32, the activity
         detector should pass 64 frames as input to the detect activities
         function.
-    :param use_cuda: Attempt to use a cuda device for inferences. If no
-        device is found, CPU is used.
-    :param cuda_device: When using CUDA use the device by the given ID. By
-        default, this refers to GPU ID 0. This parameter is not used if
-        `use_cuda` is false.
+    :param torch_device: When using CUDA, use the device by the given ID. By
+        default, this is set to `cpu`.
     :param det_threshold: Threshold for which predictions must exceed to
         create an activity detection.
     """
@@ -48,14 +49,12 @@ class SwinBTransformer(DetectActivities):
         labels_file: str,
         num_frames: int = 32,
         sampling_rate: int = 2,
-        use_cuda: bool = False,
-        cuda_device: Union[int, str] = "cuda:0",
+        torch_device: str = "cpu",
         det_threshold: float = 0.75,
     ):
         self._checkpoint_path = checkpoint_path
         self._num_classes = num_classes
-        self._use_cuda = use_cuda
-        self._cuda_device = cuda_device
+        self._torch_device = torch_device
         self._det_threshold = det_threshold
         self._num_frames = num_frames
         self._sampling_rate = sampling_rate
@@ -87,7 +86,7 @@ class SwinBTransformer(DetectActivities):
             for line in f:
                 self._labels.append(line.rstrip())
 
-    def get_model(self) -> "torch.nn.Module":
+    def get_model(self) -> torch.nn.Module:
         """
         Lazy load the torch model in an idempotent manner.
         :raises RuntimeError: Use of CUDA was requested but is not available.
@@ -96,24 +95,20 @@ class SwinBTransformer(DetectActivities):
         if model is None:
             # Load the model with the checkpoint
             model = swin_b(self._checkpoint_path, self._num_classes)
-
-            # Unfreeze head
-            for n, p in model.named_parameters():
-                if n.startswith("head"):
-                    p.requires_grad = True
-                else:
-                    p.requires_grad = False
-
             model = model.eval()
-            model_device = torch.device('cpu')
-            if self._use_cuda:
+
+            # Transfer the model to the requested device
+            if self._torch_device != 'cpu':
                 if torch.cuda.is_available():
-                    model_device = torch.device(device=self._cuda_device)
+                    model_device = torch.device(device=self._torch_device)
                     model = model.to(device=model_device)
                 else:
                     raise RuntimeError(
                         "Use of CUDA requested but not available."
                     )
+            else:
+                model_device = torch.device(self._torch_device)
+
             self._model = model
             self._model_device = model_device
 
@@ -139,8 +134,8 @@ class SwinBTransformer(DetectActivities):
         frames = [self.transform(f) for f in frame_iter]
         frames = [torch.stack(frames)]
 
-        fps, target_fps = 30, 30
-        clip_size = self._sampling_rate * (self._num_frames) / target_fps * fps
+        clip_size = (((self._sampling_rate * self._num_frames) / self._frames_per_second)
+                     * self._frames_per_second)
         start_end_idx = [
             get_start_end_idx(len(x), clip_size, clip_idx=clip_idx, num_clips=1)
             for x in frames
@@ -153,8 +148,15 @@ class SwinBTransformer(DetectActivities):
         ]
 
         # Crop and random short side scale jitter
+        # NOTE: We are passing the same value for min scale, max scale,
+        # and crop size meaning that the random short side scale
+        # transform is deterministic.
         frames = [x.permute(1, 0, 2, 3) for x in frames]
-        frames = [spatial_sampling(x, spatial_idx=spatial_idx, min_scale=224, max_scale=224, crop_size=224) for x in frames]
+        frames = [spatial_sampling(x,
+                                   spatial_idx=spatial_idx,
+                                   min_scale=self._crop_size,
+                                   max_scale=self._crop_size,
+                                   crop_size=self._crop_size) for x in frames]
         frames = torch.stack(frames)
 
         # Move the inputs to the GPU if necessary
@@ -187,7 +189,6 @@ class SwinBTransformer(DetectActivities):
 
     def get_config(self) -> dict:
         return {
-            "use_cuda": self._use_cuda,
             "cuda_device": self._cuda_device,
             "num_classes": self._num_classes,
             "det_threshold": self._det_threshold,
@@ -199,13 +200,5 @@ class SwinBTransformer(DetectActivities):
 
     @classmethod
     def is_usable(cls) -> bool:
-        # check for optional dependencies
-        torch_spec = importlib.util.find_spec('torch')
-        torchvision_spec = importlib.util.find_spec('torchvision')
-        if (
-            torch_spec is not None and
-            torchvision_spec is not None
-        ):
-            return True
-        else:
-            return False
+        # Only torch/torchvision required
+        return True
