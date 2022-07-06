@@ -22,6 +22,13 @@ class SwinBTransformer(DetectActivities):
     transformer from LEARN. The LEARN implementation can be found here:
     https://gitlab.kitware.com/darpa_learn/learn/-/blob/master/learn/algorithms/TimeSformer/models/swin.py
 
+    The `detect_activities` method in this class checks that the correct
+    number of frames are provided by checking that the length of `frame_iter`
+    is equal to `self._num_frames` x `self._sampling_rate`. For example,
+    if `self._sampling_rate` is 2 and `self._num_frames` is 32,
+    the activity detector should pass 64 frames as input to
+    `detect_activities`.
+
     :param checkpoint_path: Path to a saved checkpoint file containing
         weights for the model.
     :param num_classes: Number of classes the model was trained on. This
@@ -32,10 +39,8 @@ class SwinBTransformer(DetectActivities):
         per line. This should match the class labels the model checkpoint
         was trained on.
     :param num_frames: Number of frames passed to the model for inference.
-    :param sampling_rate: Sampling rate for the frame input. For example,
-        if this is set to 2 and num_frames is set to 32, the activity
-        detector should pass 64 frames as input to the detect activities
-        function.
+    :param sampling_rate: Sampling rate for the frame input. This subsamples
+        the input frames by this amount.
     :param torch_device: When using CUDA, use the device by the given ID. By
         default, this is set to `cpu`.
     :param det_threshold: Threshold for which predictions must exceed to
@@ -123,7 +128,7 @@ class SwinBTransformer(DetectActivities):
         for the swin model and then inputs them to the model for inferencing.
         """
         # Check that we got the right number of frames
-        assert len(frame_iter) == (self._sampling_rate * self._num_frames)
+        assert len(list(frame_iter)) == (self._sampling_rate * self._num_frames)
         model = self.get_model()
 
         # Form the frames into the required format for the video model
