@@ -9,8 +9,8 @@ Material:
   m_PrefabAsset: {fileID: 0}
   m_Name: HolographicBackPlate-orb
   m_Shader: {fileID: 4800000, guid: 5bdea20278144b11916d77503ba1467a, type: 3}
-  m_ShaderKeywords: _BORDER_LIGHT _BORDER_LIGHT_REPLACES_ALBEDO _DISABLE_ALBEDO_MAP
-    _METALLIC_TEXTURE_ALBEDO_CHANNEL_A _ROUND_CORNERS
+  m_ShaderKeywords: _BORDER_LIGHT_REPLACES_ALBEDO _DISABLE_ALBEDO_MAP _INNER_GLOW
+    _METALLIC_TEXTURE_ALBEDO_CHANNEL_A _PROXIMITY_LIGHT
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 0
@@ -79,13 +79,13 @@ Material:
     - _AlbedoAssignedAtRuntime: 0
     - _BlendOp: 0
     - _BlendedClippingWidth: 1
-    - _BorderLight: 1
+    - _BorderLight: 0
     - _BorderLightOpaque: 0
     - _BorderLightOpaqueAlpha: 1
     - _BorderLightReplacesAlbedo: 1
     - _BorderLightUsesHoverColor: 0
-    - _BorderMinValue: 0.489
-    - _BorderWidth: 0.084
+    - _BorderMinValue: 0.13
+    - _BorderWidth: 0.025
     - _BorderWidthHorizontal: 0.1
     - _BorderWidthVertical: 0.1
     - _BumpScale: 1
@@ -103,7 +103,7 @@ Material:
     - _DetailNormalMapScale: 1
     - _DirectionalLight: 0
     - _DstBlend: 0
-    - _EdgeSmoothingValue: 0.0002
+    - _EdgeSmoothingValue: 0
     - _EnableChannelMap: 0
     - _EnableEmission: 0
     - _EnableHoverColorOpaqueOverride: 0
@@ -128,7 +128,7 @@ Material:
     - _HoverLightOpaque: 0
     - _IgnoreZScale: 0
     - _IndependentCorners: 0
-    - _InnerGlow: 0
+    - _InnerGlow: 1
     - _InnerGlowPower: 4
     - _InstancedColor: 0
     - _Iridescence: 0
@@ -143,7 +143,7 @@ Material:
     - _NormalMapScale: 1
     - _OcclusionStrength: 1
     - _Parallax: 0.02
-    - _ProximityLight: 0
+    - _ProximityLight: 1
     - _ProximityLightSubtractive: 0
     - _ProximityLightTwoSided: 0
     - _Reflections: 0
@@ -153,8 +153,8 @@ Material:
     - _RimLight: 0
     - _RimPower: 5.83
     - _RoundCornerMargin: 0
-    - _RoundCornerRadius: 0.068
-    - _RoundCorners: 1
+    - _RoundCornerRadius: 0.041
+    - _RoundCorners: 0
     - _Smoothness: 0.5
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 0
@@ -178,7 +178,7 @@ Material:
     - _ClipPlane: {r: 0, g: 1, b: 0, a: 0}
     - _ClippingBorderColor: {r: 1, g: 0.2, b: 0, a: 1}
     - _ClippingPlaneBorderColor: {r: 1, g: 0.2, b: 0, a: 1}
-    - _Color: {r: 0.0627451, g: 0.0627451, b: 0.0627451, a: 0.5019608}
+    - _Color: {r: -0.0049999924, g: -0.0049999924, b: -0.0049999924, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _EmissiveColor: {r: 0, g: 0, b: 0, a: 1}
     - _EnvironmentColorX: {r: 1, g: 0, b: 0, a: 1}
@@ -187,7 +187,7 @@ Material:
     - _HoverColor: {r: 1, g: 0, b: 0, a: 1}
     - _HoverColorOpaqueOverride: {r: 1, g: 1, b: 1, a: 1}
     - _HoverColorOverride: {r: 1, g: 1, b: 1, a: 0.566}
-    - _InnerGlowColor: {r: 1, g: 1, b: 1, a: 0.522}
+    - _InnerGlowColor: {r: 0.6320754, g: 0.6320754, b: 0.6320754, a: 0.522}
     - _ProximityLightCenterColorOverride: {r: 1, g: 0, b: 0, a: 0}
     - _ProximityLightMiddleColorOverride: {r: 0, g: 1, b: 0, a: 0.5}
     - _ProximityLightOuterColorOverride: {r: 0, g: 0, b: 1, a: 1}

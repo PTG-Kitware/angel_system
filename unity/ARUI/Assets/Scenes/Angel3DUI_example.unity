@@ -168,7 +168,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 386400011}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 01bb8ae708808324fa3647de704095f7, type: 3}
+  m_Script: {fileID: 11500000, guid: 3d674ff7b4a94e04d9a5dad6a0718a37, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!1 &450324605
@@ -335,6 +335,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   mainCamera: {fileID: 0}
+  showARUIDebugMessages: 1
 --- !u!1 &1384488799
 GameObject:
   m_ObjectHideFlags: 0
@@ -442,6 +443,10 @@ PrefabInstance:
     - target: {fileID: 676094571621763009, guid: 1536741d94dedac47bd9697f4eb22a45, type: 3}
       propertyPath: m_Name
       value: Logger
+      objectReference: {fileID: 0}
+    - target: {fileID: 676094571621763009, guid: 1536741d94dedac47bd9697f4eb22a45, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 676094571621763023, guid: 1536741d94dedac47bd9697f4eb22a45, type: 3}
       propertyPath: m_RootOrder

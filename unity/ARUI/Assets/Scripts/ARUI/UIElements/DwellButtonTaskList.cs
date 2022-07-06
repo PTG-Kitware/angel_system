@@ -1,4 +1,5 @@
 ﻿using Microsoft.MixedReality.Toolkit.Input;
+using Microsoft.MixedReality.Toolkit.UI;
 using System;
 using System.Collections;
 using UnityEngine;
@@ -6,20 +7,17 @@ using UnityEngine;
 public class DwellButtonTaskList : MonoBehaviour
 {
     private Shapes.Disc loadingDisc;
-
     private EyeTrackingTarget eyeEvents;
 
     private float startingAngle;
     private bool isLooking = false;
 
-    private bool taskListActive = false;
-
     public void Awake()
     {
-        Shapes.Disc[] discs = GetComponentsInChildren<Shapes.Disc>(true);
-        loadingDisc = discs[1];
-        startingAngle = loadingDisc.AngRadiansStart;
+        Shapes.Disc disc = GetComponentInChildren<Shapes.Disc>(true);
+        loadingDisc = disc;
 
+        startingAngle = loadingDisc.AngRadiansStart;
         eyeEvents = gameObject.GetComponentInChildren<EyeTrackingTarget>();
     }
 
@@ -28,6 +26,7 @@ public class DwellButtonTaskList : MonoBehaviour
         eyeEvents.OnLookAtStart.AddListener(delegate { CurrentlyLooking(true); });
         eyeEvents.OnLookAway.AddListener(delegate { CurrentlyLooking(false); });
     }
+
 
     private void CurrentlyLooking(bool looking)
     {
@@ -44,7 +43,18 @@ public class DwellButtonTaskList : MonoBehaviour
         }
 
         isLooking = looking;
-        Orb.Instance.SetFollowActive(!looking);
+
+        if (isLooking)
+            StartCoroutine(StartSmoothFollow());
+        else
+            Orb.Instance.SetFollowActive(false);
+    }
+
+    private IEnumerator StartSmoothFollow()
+    {
+        yield return new WaitForSeconds(1f);
+
+        Orb.Instance.SetFollowActive(true);
     }
 
     private IEnumerator Dwelling()
@@ -59,6 +69,7 @@ public class DwellButtonTaskList : MonoBehaviour
         {
             elapsed += Time.deltaTime;
             loadingDisc.AngRadiansEnd = elapsed*4f;
+            loadingDisc.Color = Color.white;
 
             if (elapsed>duration && isLooking)
                 success = true;
@@ -67,12 +78,25 @@ public class DwellButtonTaskList : MonoBehaviour
         }
 
         if (success)
-        {
             AngelARUI.Instance.ToggleTasklist();
-        }
+
 
         loadingDisc.AngRadiansEnd = startingAngle;
 
+    }
+
+    public void Update()
+    {
+        if (!isLooking && TaskListManager.Instance.IsTaskListActive())
+        {
+            loadingDisc.AngRadiansEnd = 6.24f;
+            loadingDisc.Color = new Color(0.8f,0.8f,0.8f);
+        }
+        else if (!isLooking && !TaskListManager.Instance.IsTaskListActive())
+        {
+            loadingDisc.AngRadiansEnd =startingAngle;
+            loadingDisc.Color = Color.white;
+        }
     }
 
 }

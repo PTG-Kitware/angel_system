@@ -9,7 +9,7 @@ public class Timer : MonoBehaviour
     public bool isRunning = false;
     public float timeLeft = 0f;
 
-    private TextMeshPro labelTimer;
+    private TextMeshProUGUI labelTimer;
     private float targetTime = 5f;
 
     private AudioSource timerAudio;
@@ -18,7 +18,7 @@ public class Timer : MonoBehaviour
     void Start()
     {
         GameObject labelTextObj = new GameObject();
-        labelTimer = labelTextObj.AddComponent<TextMeshPro>();
+        labelTimer = labelTextObj.AddComponent<TextMeshProUGUI>();
         labelTimer.rectTransform.sizeDelta = new Vector2(1f, 0.2f);
         labelTimer.fontSize = 0.3f;
         labelTimer.alignment = TextAlignmentOptions.Center;

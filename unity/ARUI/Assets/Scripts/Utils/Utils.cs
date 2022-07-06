@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -401,4 +402,13 @@ public static class Utils
 {299,"extract:vanilla"}
 
         };
+
+    public static bool InFOV(Camera cam, Vector3 obj)
+    {
+        Vector3 viewPos = cam.WorldToViewportPoint(obj);
+        if (viewPos.x >= 0 && viewPos.x <= 1 && viewPos.y >= 0 && viewPos.y <= 1 && viewPos.z > 0)
+            return true;
+
+        return false;
+    }
 }

@@ -14,7 +14,6 @@ public static class StringResources
     public static string POIHalo_path = "Prefabs/Halo3D";
     public static string orb_path = "Prefabs/orb";
     public static string taskList_path = "Prefabs/Tasklist";
-    public static string subtaskprefab_path = "Prefabs/SubTask";
     public static string taskprefab_path = "Prefabs/Task";
 
     //icons
