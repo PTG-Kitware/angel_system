@@ -12,9 +12,10 @@ from transitions import Machine
 import transitions
 
 
-class Task():
+class TeaTask():
     """
-    Representation of a task defined by its steps and transistions between them.
+    Representation of the simple weak tea task defined
+    by its steps and transitions between them.
     """
     def __init__(self):
         self.name = 'Making Tea'
@@ -52,6 +53,94 @@ class Task():
         }
 
 
+class CoffeeDemoTask():
+    """
+    Representation of the coffee demo recipe defined
+    by its steps and transitions between them.
+
+    For details on using the pytransitions package, see:
+    https://github.com/pytransitions/transitions#quickstart
+
+    NOTE: This currently only represents first 13 steps of the coffee demo.
+    Steps are listed under v1.2 here:
+    https://docs.google.com/document/d/1MfbZdRS6tOGzqNSN-_22Xwmq-huk5_WdKeDSEulFOL0/edit#heading=h.l369fku95vnn
+    """
+    def __init__(self):
+        self.name = 'Pour-over coffee'
+
+        self.items = {'scale': 1, '25g coffee beans': 1, 'mug': 1, '12 oz water': 1,
+                      'kettle': 1, 'grinder': 1, 'measuring cup': 1, 'bowl': 1}
+
+        self.description = ('Boil water, grind coffee beans, and' +
+                            ' place the coffee filter into the dripper,'
+                            ' and then place the dripper on top of the mug')
+
+        # TODO: make a labels.txt file for these steps
+        self.steps = [
+            {'name': 'Pour_12oz_of_water_into_a_liquid_measuring_cup'},
+            {'name': 'Pour_water_from_the_liquid_measuring_cup_into_the_electric_kettle'},
+            {'name': 'Turn_on_the_kettle'},
+            {'name': 'Turn_on_kitchen_scale'},
+            {'name': 'Place_bowl_on_scale'},
+            {'name': 'Zero_scale'},
+            {'name': 'Add_coffee_beans_until_scale_reads_25_grams'},
+            {'name': 'Pour_coffee_beans_into_coffee_grinder'},
+            {'name': 'Take_the_coffee_filter_and_fold_it_in_half_to_create_a_semi_circle'},
+            {'name': 'Fold_the_filter_in_half_again_to_create_a_quarter_circle'},
+            {'name': 'Place_the_folded_filter_into_the_dripper_such_that_the_point' +
+                     '_of_the_quarter_circle_rests_in_the_center_of_the_dripper'},
+            {'name': 'Spread_the_filter_open_to_create_a_cone_inside_the_dripper'},
+            {'name': 'Place_the_dripper_on_top_of_the_mug'},
+            {'name': 'Done'}
+        ]
+
+        # Create the transitions between steps, assuming linear steps
+        self.transitions = []
+        for idx, step in enumerate(self.steps):
+            # No transition needed for the last step
+            if idx < (len(self.steps) - 1):
+                self.transitions.append({'trigger': step['name'],
+                                         'source': step['name'],
+                                         'dest': self.steps[idx + 1]['name']})
+
+        self.machine = Machine(model=self, states=self.steps,
+                               transitions=self.transitions, initial=self.steps[0]['name'])
+
+        # Mapping from state name to the to_state function, which provides a way to get
+        # to the state from anywhere.
+        # The to_* functions are created automatically when the Machine is initialized.
+        # For more info, see:
+        # https://github.com/pytransitions/transitions#automatic-transitions-for-all-states
+        self.to_state_dict = {
+            'Pour_12oz_of_water_into_a_liquid_measuring_cup':
+                self.to_Pour_12oz_of_water_into_a_liquid_measuring_cup,
+            'Pour_water_from_the_liquid_measuring_cup_into_the_electric_kettle':
+                self.to_Pour_water_from_the_liquid_measuring_cup_into_the_electric_kettle,
+            'Turn_on_the_kettle':
+                self.to_Turn_on_the_kettle,
+            'Turn_on_kitchen_scale':
+                self.to_Turn_on_kitchen_scale,
+            'Place_bowl_on_scale':
+                self.to_Place_bowl_on_scale,
+            'Zero_scale':
+                self.to_Zero_scale,
+            'Add_coffee_beans_until_scale_reads_25_grams':
+                self.to_Add_coffee_beans_until_scale_reads_25_grams,
+            'Pour_coffee_beans_into_coffee_grinder':
+                self.to_Pour_coffee_beans_into_coffee_grinder,
+            'Take_the_coffee_filter_and_fold_it_in_half_to_create_a_semi_circle':
+                self.to_Take_the_coffee_filter_and_fold_it_in_half_to_create_a_semi_circle,
+            'Fold_the_filter_in_half_again_to_create_a_quarter_circle':
+                self.to_Fold_the_filter_in_half_again_to_create_a_quarter_circle,
+            'Place_the_folded_filter_into_the_dripper_such_that_the_point_of_the_quarter_circle_rests_in_the_center_of_the_dripper':
+                self.to_Place_the_folded_filter_into_the_dripper_such_that_the_point_of_the_quarter_circle_rests_in_the_center_of_the_dripper,
+            'Spread_the_filter_open_to_create_a_cone_inside_the_dripper':
+                self.to_Spread_the_filter_open_to_create_a_cone_inside_the_dripper,
+            'Place_the_dripper_on_top_of_the_mug':
+                self.to_Place_the_dripper_on_top_of_the_mug,
+        }
+
+
 class TaskMonitor(Node):
     """
     ROS node responsible for keeping track of the current task being performed.
@@ -83,7 +172,7 @@ class TaskMonitor(Node):
             1
         )
 
-        self._task = Task()
+        self._task = CoffeeDemoTask()
 
         # Represents the current state of the task
         self._current_step = self._task.state
@@ -97,11 +186,37 @@ class TaskMonitor(Node):
         self._timer_active = False
         self._timer_lock = threading.RLock()
 
+        # Define the mapping from activity detector output to task transition
+        # function. The keys of this dictionary must match the activity
+        # detector's output.
         self._activity_action_dict = {
-            'opening bottle': self._task.open_bottle,
-            'making tea': self._task.make_tea,
+            'Pour 12oz of water into a liquid measuring cup':
+                self._task.Pour_12oz_of_water_into_a_liquid_measuring_cup,
+            'Pour water from the liquid measuring cup into the electric kettle':
+                self._task.Pour_water_from_the_liquid_measuring_cup_into_the_electric_kettle,
+            'Turn on the kettle':
+                self._task.Turn_on_the_kettle,
+            'Turn on kitchen scale':
+                self._task.Turn_on_kitchen_scale,
+            'Place bowl on scale':
+                self._task.Place_bowl_on_scale,
+            'Zero scale':
+                self._task.Zero_scale,
+            'Add coffee beans until scale reads 25 grams':
+                self._task.Add_coffee_beans_until_scale_reads_25_grams,
+            'Pour coffee beans into coffee grinder':
+                self._task.Pour_coffee_beans_into_coffee_grinder,
+            'Take the coffee filter and fold it in half to create a semi circle':
+                self._task.Take_the_coffee_filter_and_fold_it_in_half_to_create_a_semi_circle,
+            'Fold the filter in half again to create a quarter circle':
+                self._task.Fold_the_filter_in_half_again_to_create_a_quarter_circle,
+            'Place the folded filter into the dripper such that the point of the quarter circle rests in the center of the dripper':
+                self._task.Place_the_folded_filter_into_the_dripper_such_that_the_point_of_the_quarter_circle_rests_in_the_center_of_the_dripper,
+            'Spread the filter open to create a cone inside the dripper':
+                self._task.Spread_the_filter_open_to_create_a_cone_inside_the_dripper,
+            'Place the dripper on top of the mug':
+                self._task.Place_the_dripper_on_top_of_the_mug
         }
-
 
         self.publish_task_state_message()
 
