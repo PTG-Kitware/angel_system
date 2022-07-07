@@ -11,6 +11,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp_components/register_node_macro.hpp>
 #include <sensor_msgs/msg/image.hpp>
+#include <angel_msgs/srv/query_image_size.hpp>
 
 // Other stuff
 #include <opencv2/opencv.hpp>
@@ -18,6 +19,7 @@
 using rcl_interfaces::msg::ParameterDescriptor;
 using rcl_interfaces::msg::ParameterType;
 using std::placeholders::_1;
+using std::placeholders::_2;
 
 namespace image_converter {
 
@@ -52,11 +54,19 @@ public:
   /// version to our output topic.
   void convert_images( sensor_msgs::msg::Image::SharedPtr const image_msg );
 
+  /// Populate the image size query with the current image dimensions.
+  void query_image_size_cb(const std::shared_ptr<angel_msgs::srv::QueryImageSize::Request> request,
+                           std::shared_ptr<angel_msgs::srv::QueryImageSize::Response> response);
+
 private:
   rclcpp::Subscription< sensor_msgs::msg::Image >::SharedPtr m_sub_input_image;
   rclcpp::Publisher< sensor_msgs::msg::Image >::SharedPtr m_pub_output_image;
+  rclcpp::Service< angel_msgs::srv::QueryImageSize>::SharedPtr m_image_size_service;
 
   std::string frame_id = "PVFrameRGB";
+
+  int m_image_width = -1;
+  int m_image_height = -1;
 };
 
 // ----------------------------------------------------------------------------
@@ -86,6 +96,13 @@ ImageConverter
   m_pub_output_image = this->create_publisher< sensor_msgs::msg::Image >(
     topic_output_image, 1
     );
+
+  // Create the image size service
+  RCLCPP_INFO( log, "Creating image size query service" );
+  m_image_size_service = this->create_service< angel_msgs::srv::QueryImageSize >(
+    "query_image_size",
+    std::bind( &ImageConverter::query_image_size_cb, this, _1, _2 )
+    );
 }
 
 // ----------------------------------------------------------------------------
@@ -94,6 +111,10 @@ ImageConverter
 ::convert_images( sensor_msgs::msg::Image::SharedPtr const image_msg )
 {
   auto log = this->get_logger();
+
+  // Store the current image dimensions
+  m_image_width = image_msg->width;
+  m_image_height = image_msg->height;
 
   // Convert from NV12 image data to RGB8
   cv::Mat nv12_image = cv::Mat(image_msg->height * 3/2, image_msg->width,
@@ -111,6 +132,17 @@ ImageConverter
 
   // Publish the RGB image
   m_pub_output_image->publish(*image_message);
+}
+
+// ----------------------------------------------------------------------------
+void
+ImageConverter
+::query_image_size_cb(const std::shared_ptr<angel_msgs::srv::QueryImageSize::Request> request,
+                      std::shared_ptr<angel_msgs::srv::QueryImageSize::Response> response)
+{
+  (void) request; // silence unused variable warning
+  response->image_width = m_image_width;
+  response->image_height= m_image_height;
 }
 
 } // namespace image_converter

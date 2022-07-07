@@ -12,7 +12,6 @@ from smqtk_core.configuration import from_config_dict
 from smqtk_detection.interfaces.detect_image_objects import DetectImageObjects
 
 from angel_msgs.msg import ObjectDetection2dSet
-from angel_msgs.srv import QueryImageSize
 from angel_utils.conversion import from_detect_image_objects_result
 
 
@@ -49,17 +48,8 @@ class ObjectDetector(Node):
             1
         )
 
-        # Start a service to allow other nodes to get the current image size
-        self._image_size_service = self.create_service(QueryImageSize,
-                                                       "query_image_size",
-                                                       self.query_image_size_callback)
-
         self._frames_recvd = 0
         self._prev_time = -1
-
-        # These are populated from the image message and used for the image size service
-        self._image_width = -1
-        self._image_height = -1
 
         # instantiate detector from the given config
         with open(self._detector_config, "r") as f:
@@ -78,9 +68,6 @@ class ObjectDetector(Node):
             log.info(f"Frames rcvd: {self._frames_recvd}")
             self._frames_recvd = 0
             self._prev_time = time.time()
-
-        self._image_width = image.width
-        self._image_height = image.height
 
         # convert ROS Image message to CV2
         rgb_image = BRIDGE.imgmsg_to_cv2(image, desired_encoding="rgb8")
@@ -110,14 +97,6 @@ class ObjectDetector(Node):
 
         self._publisher.publish(det_set_msg)
 
-    def query_image_size_callback(self, request, response):
-        """
-        Populate the `QueryImageSize` response with current image dimensions
-        and return it.
-        """
-        response.image_width = self._image_width
-        response.image_height = self._image_height
-        return response
 
 def main():
     rclpy.init()
