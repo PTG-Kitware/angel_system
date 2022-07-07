@@ -1,4 +1,6 @@
 # Query the current image dimensions
+# Note that image_width and image_height may be -1 if an image has not been
+# received by the image_converter node yet
 ---
 int16 image_width
 int16 image_height
