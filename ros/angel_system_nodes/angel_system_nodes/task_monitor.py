@@ -78,7 +78,7 @@ class CoffeeDemoTask():
         # TODO: make a labels.txt file for these steps
         self.steps = [
             {'name': 'Pour_12_ounces_of_water_into_liquid_measuring_cup'},
-            {'name': 'Pour_water_from_the_liquid_measuring_cup_into_the_electric_kettle'},
+            {'name': 'Pour_the_water_from_the_liquid_measuring_cup_into_the_electric_kettle'},
             {'name': 'Turn_on_the_kettle'},
             # BOIL WATER STEP - Skipping for now
             {'name': 'Place_the_dripper_on_top_of_the_mug'},
@@ -115,8 +115,8 @@ class CoffeeDemoTask():
         self.to_state_dict = {
             'Pour_12_ounces_of_water_into_liquid_measuring_cup':
                 self.to_Pour_12_ounces_of_water_into_liquid_measuring_cup,
-            'Pour_water_from_the_liquid_measuring_cup_into_the_electric_kettle':
-                self.to_Pour_water_from_the_liquid_measuring_cup_into_the_electric_kettle,
+            'Pour_the_water_from_the_liquid_measuring_cup_into_the_electric_kettle':
+                self.to_Pour_the_water_from_the_liquid_measuring_cup_into_the_electric_kettle,
             'Turn_on_the_kettle':
                 self.to_Turn_on_the_kettle,
             'Turn_on_kitchen_scale':
@@ -193,8 +193,8 @@ class TaskMonitor(Node):
         self._activity_action_dict = {
             'Pour 12 ounces of water into liquid measuring cup':
                 self._task.Pour_12_ounces_of_water_into_liquid_measuring_cup,
-            'Pour water from the liquid measuring cup into the electric kettle':
-                self._task.Pour_water_from_the_liquid_measuring_cup_into_the_electric_kettle,
+            'Pour the water from the liquid measuring cup into the electric kettle':
+                self._task.Pour_the_water_from_the_liquid_measuring_cup_into_the_electric_kettle,
             'Turn on the kettle':
                 self._task.Turn_on_the_kettle,
             'Turn on kitchen scale':
