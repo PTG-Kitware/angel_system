@@ -65,8 +65,16 @@ class CoffeeDemoTask():
     NOTE: This currently only represents first 13 steps of the coffee demo.
     Steps are listed under v1.2 here:
     https://docs.google.com/document/d/1MfbZdRS6tOGzqNSN-_22Xwmq-huk5_WdKeDSEulFOL0/edit#heading=h.l369fku95vnn
+
+    :param task_steps_file: Path to the file that contains the steps to use
+        for this task. This file should be a json file containing a dictionary
+        mapping activity names to step indices. The activity names should match
+        the output of the activity detector node.
     """
-    def __init__(self, task_steps_file):
+    def __init__(
+        self,
+        task_steps_file: str
+    ):
         self.name = 'Pour-over coffee'
 
         self.items = {'scale': 1, '25g coffee beans': 1, 'mug': 1, '12 oz water': 1,
@@ -89,7 +97,8 @@ class CoffeeDemoTask():
         self.steps.append({'name': 'Done'})
 
         # Create the transitions between steps, assuming linear steps
-        # TODO: use the step index to decide the destination step
+        # TODO: use the step index in the task steps file to decide
+        # the destination step
         self.transitions = []
         for idx, step in enumerate(self.steps):
             # No transition needed for the last step
