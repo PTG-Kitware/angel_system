@@ -92,8 +92,8 @@ class SpatialMapSubscriber(Node):
             log.warn("Invalid image dimensions."
                      + " Make sure the image converter node is running and receiving frames")
 
-            r = self.send_image_size_request()
             time.sleep(1)
+            r = self.send_image_size_request()
 
         log.info(f"Received valid image dimensions. Current size: {r.image_width}x{r.image_height}")
         self.image_height = r.image_height
