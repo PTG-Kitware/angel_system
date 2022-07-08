@@ -260,7 +260,7 @@ class TaskMonitor(Node):
             task_g.node_edges.append([i for i, x in enumerate(task_g.task_nodes) if x.name == tr['source']][0])
             task_g.node_edges.append([i for i, x in enumerate(task_g.task_nodes) if x.name == tr['dest']][0])
         log.info(f"Edges: {task_g.node_edges}")
-            
+
         response.task_graph = task_g
         return response
 
