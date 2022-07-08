@@ -1,6 +1,7 @@
 import json
 import threading
 import time
+import uuid
 from typing import Dict
 
 import numpy as np
@@ -8,9 +9,11 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 
-from angel_msgs.msg import ActivityDetection, TaskUpdate, TaskItem
+from angel_msgs.msg import ActivityDetection, TaskUpdate, TaskItem, TaskGraph, TaskNode
 from transitions import Machine
 import transitions
+
+from angel_msgs.srv import QueryTaskGraph
 
 
 class TeaTask():
@@ -145,6 +148,14 @@ class TaskMonitor(Node):
 
         self._task = CoffeeDemoTask(self._task_steps)
 
+        self._task_graph_service = self.create_service(
+            QueryTaskGraph,
+            "query_task_graph",
+            self.query_task_graph_callback
+        )
+
+        self._task = CoffeeDemoTask()
+
         # Represents the current state of the task
         self._current_step = self._task.state
         self._previous_step = None
@@ -222,6 +233,34 @@ class TaskMonitor(Node):
         except AttributeError as e:
             # No timer associated with this state
             pass
+
+    def query_task_graph_callback(self, request, response):
+        """
+        Populate the `QueryTaskGraph` response with the task list
+        and return it.
+        """
+        log = self.get_logger()
+        task_g = TaskGraph()
+
+        task_g.task_nodes = []
+        for t in self._task.steps:
+            t_node = TaskNode()
+
+            t_node.uid = str(uuid.uuid4())
+            t_node.name = t['name']
+            # TODO: Add other parameters
+
+            task_g.task_nodes.append(t_node)
+        log.info(f"Tasks: {task_g.task_nodes}")
+
+        task_g.node_edges = []
+        for tr in self._task.transitions:
+            task_g.node_edges.append([i for i, x in enumerate(task_g.task_nodes) if x.name == tr['source']][0])
+            task_g.node_edges.append([i for i, x in enumerate(task_g.task_nodes) if x.name == tr['dest']][0])
+        log.info(f"Edges: {task_g.node_edges}")
+            
+        response.task_graph = task_g
+        return response
 
     def publish_task_state_message(self, activity=None):
         """
