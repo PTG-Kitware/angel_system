@@ -1,0 +1,159 @@
+# Role for provisioning files from external sources.
+---
+
+# We need to get the local repository root because relative paths when used on
+# their own are interpreted relative to the directory the playbook is within.
+# Most tasks here instead desire to work relative to the repository root.
+- name: Finding local repository filesystem root
+  command: "git rev-parse --show-toplevel"
+  register: git_revparse
+  changed_when: false  # prevent this command as showing as a "change"
+
+- name: Extracting path from git rev-parse result
+  set_fact:
+    git_root: "{{ git_revparse.stdout }}"
+
+- name: Ensuring staging directories
+  loop: "{{ stage_dirs | dict2items }}"
+  file:
+    path: "{{ git_root }}/{{ item.value }}"
+    state: directory
+    mode: '0700'
+
+#
+# Basic File Downloads
+#
+- name: Downloading web files
+  loop: "{{ basic_downloads }}"
+  get_url:
+    url: "{{ item.url }}"
+    dest: "{{ git_root }}/{{ item.dest }}"
+    checksum: "sha256:{{ item.sha256 }}"
+    mode: "0600"
+
+#
+# Girder Authentication-required Downloads
+# - The below will fail if there is no GIRDER_API_KEY defined in the
+#   environment.
+#
+- name: "Checking if there is anything to download from girder"
+  set_fact:
+    has_girder_downloads: "{{ (girder_file_downloads.by_file_id != None) and
+                              (girder_file_downloads.by_file_id|length > 0) }}"
+- name: Assert GIRDER_API_KEY environment variable presence
+  when: has_girder_downloads and (ansible_env.GIRDER_API_KEY is not defined)
+  fail:
+    msg: No GIRDER_API_KEY exported to the current environment. Cannot
+         authenticate with the Girder server.
+- name: Acquire Girder Auth Token
+  when: has_girder_downloads
+  uri:
+    url: "https://data.kitware.com/api/v1/api_key/token?\
+      key={{ ansible_env.GIRDER_API_KEY }}&duration=1"
+    method: "POST"
+    headers:
+      Content-length: 0
+  register: token_response
+- name: Downloading Girder Files
+  # If value is None (no downloads), default to an empty list.
+  loop: "{{ girder_file_downloads.by_file_id or []}}"
+  loop_control: {loop_var: i}
+  get_url:
+    url: "{{ girder_file_downloads.api_url }}/file/{{ i.file_id }}/download"
+    headers:
+      Girder-Token: "{{ token_response.json.authToken.token }}"
+    checksum: "sha512:{{ i.sha512 }}"
+    dest: "{{ git_root }}/{{ i.dest }}"
+    mode: "0600"
+
+#
+# Git Repository Staging
+# TODO: Separate out into separate task YAML for include statement.
+#       Included YAML should use ``git_repositories`` var, not looped (slow)
+#
+- name: Git - Pre-checking local archive checksums
+  loop: "{{ git_repositories }}"
+  stat:
+    path: "{{ git_root }}/{{  item.dest }}"
+    checksum_algorithm: sha256
+  register: git_precheck
+
+- name: Remove previous mis-matching repo archives
+  loop: "{{ git_precheck.results }}"
+  loop_control: {loop_var: s}
+  when: not s.stat.exists or s.stat.checksum != s.item.checksum
+  file:
+    path: "{{ git_root }}/{{ s.item.dest }}"
+    state: absent
+
+- name: Git - checking out repository and archiving
+  loop: "{{ git_precheck.results }}"
+  loop_control: {loop_var: s}
+  when: not s.stat.exists or s.stat.checksum != s.item.checksum
+  git:
+    repo: "{{ s.item.repo }}"
+    recursive: yes
+    dest: "{{ git_root }}/{{ s.item.dest | dirname }}/{{ s.item.name }}"
+    version: "{{ s.item.ref }}"
+
+- name: Git - Archive with concatenated sub-modules
+  loop: "{{ git_precheck.results }}"
+  loop_control: {loop_var: s}
+  when: not s.stat.exists or s.stat.checksum != s.item.checksum
+  shell: |
+    # Repo Root
+    rr="$(pwd)"
+    # Intermediate TAR archive for concatenation
+    tar_cc="${rr}/archive.tar"
+    tar_tmp="${rr}/archive-tmp.tar"
+    # Create archive for main repository
+    git archive -o "$tar_cc" HEAD
+    # Create archives for each sub-module
+    git submodule --quiet foreach pwd | while read sm_path; do
+      # skip empty paths
+      [ -z "${sm_path}" ] && continue
+      # make relative to repo root
+      sm_path="$(realpath --relative-to="$rr" "$sm_path")"
+      # Create archive of submodule, concatenating onto CC target TAR file.
+      (cd "${sm_path}" \
+       && git archive --prefix="${sm_path}/" HEAD >"$tar_tmp" \
+       && tar --concatenate --file="$tar_cc" "$tar_tmp" \
+       && rm "$tar_tmp")
+    done
+    # GZip into final location
+    gzip -nc "$tar_cc" >"{{ git_root }}/{{ s.item.dest }}"
+  args:
+    chdir: "{{ git_root }}/{{ s.item.dest | dirname }}/{{ s.item.name }}"
+    executable: /bin/bash
+
+- name: Git - Cleaning checked out repository directories
+  loop: "{{ git_precheck.results }}"
+  loop_control: {loop_var: status}
+  when: not status.stat.exists or status.stat.checksum != status.item.checksum
+  file:
+    path: "{{ git_root }}/{{ status.item.dest | dirname }}/{{ status.item.name }}"
+    state: absent
+
+- name: Git - setting archive permissions to 0600
+  loop: "{{ git_precheck.results }}"
+  loop_control: {loop_var: status}
+  when: not status.stat.exists or status.stat.checksum != status.item.checksum
+  file:
+    path: "{{ git_root }}/{{ status.item.dest }}"
+    mode: "0600"
+
+- name: Git - Post-check of local archive checksums
+  loop: "{{ git_repositories }}"
+  stat:
+    path: "{{ git_root }}/{{ item.dest }}"
+    checksum_algorithm: sha256
+  register: git_postcheck
+
+- name: Git - Asserting archive real checksum matches expected
+  loop: "{{ git_postcheck.results }}"
+  loop_control: {loop_var: status}
+  when: status.stat.checksum != status.item.checksum
+  fail:
+    msg: |
+      SHA256 checksum for {{ status.item.dest }} mismatched. Was expecting
+      {{ status.item.checksum }} but found {{ status.stat.checksum }}.
