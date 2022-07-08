@@ -154,8 +154,6 @@ class TaskMonitor(Node):
             self.query_task_graph_callback
         )
 
-        self._task = CoffeeDemoTask()
-
         # Represents the current state of the task
         self._current_step = self._task.state
         self._previous_step = None
