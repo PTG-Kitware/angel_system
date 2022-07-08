@@ -71,7 +71,7 @@ windows:
       -r __ns:=${ROS_NAMESPACE}
       -p det_topic:=ActivityDetections
       -p task_update_topic:=TaskUpdates
-      -p task_steps:=${CONFIG_DIR}/default_task_steps.json
+      -p task_steps:=${CONFIG_DIR}/mit_ll_eval_one_coffee_recipe_steps.json
   - detector: ros2 run angel_system_nodes object_detector --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p image_topic:=PVFramesRGB
