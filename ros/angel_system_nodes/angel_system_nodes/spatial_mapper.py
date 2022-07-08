@@ -14,6 +14,7 @@ from angel_msgs.msg import (
     SpatialMesh,
     HeadsetPoseData
 )
+from angel_msgs.srv import QueryImageSize
 from angel_utils.conversion import to_confidence_matrix
 from geometry_msgs.msg import Point
 
@@ -79,12 +80,35 @@ class SpatialMapSubscriber(Node):
 
         self.poses = []
 
-        # TODO: get this from a ROS message?
-        self.image_height = 1080
-        self.image_width = 1920
+        # setup the image size query client and make sure the service is running
+        self.image_size_client = self.create_client(QueryImageSize, 'query_image_size')
+        while not self.image_size_client.wait_for_service(timeout_sec=1.0):
+            log.info("Waiting for image size service...")
 
-        log = self.get_logger()
-        #log.set_level(10)
+        # send image size queries unti we get a valid response
+        r = self.send_image_size_request()
+        log.info(f"Image size response {r}")
+        while (r.image_width <= 0 or r.image_height <= 0):
+            log.warn("Invalid image dimensions."
+                     + " Make sure the image converter node is running and receiving frames")
+
+            time.sleep(1)
+            r = self.send_image_size_request()
+
+        log.info(f"Received valid image dimensions. Current size: {r.image_width}x{r.image_height}")
+        self.image_height = r.image_height
+        self.image_width = r.image_width
+
+
+    def send_image_size_request(self):
+        """
+        Sends a `QueryImageSize` request message to the QueryImageSize
+        service running in the object detector node.
+        """
+        req = QueryImageSize.Request()
+        future = self.image_size_client.call_async(req)
+        rclpy.spin_until_future_complete(self, future)
+        return future.result()
 
 
     def spatial_map_callback(self, msg):

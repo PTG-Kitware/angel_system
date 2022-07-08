@@ -44,6 +44,7 @@ set( message_files
 set( service_files
   srv/QueryAllObjects3d.srv
   srv/QueryTaskGraph.srv
+  srv/QueryImageSize.srv
   )
 rosidl_generate_interfaces( ${PROJECT_NAME} ${message_files} ${service_files}
   DEPENDENCIES builtin_interfaces std_msgs geometry_msgs shape_msgs vision_msgs
