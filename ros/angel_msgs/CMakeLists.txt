@@ -40,6 +40,7 @@ set( message_files
   msg/TaskItem.msg
   msg/TaskNode.msg
   msg/TaskUpdate.msg
+  msg/VisionBoundingBox3d.msg
   )
 set( service_files
   srv/QueryAllObjects3d.srv
