@@ -22,4 +22,4 @@ string label
 # 3D location of this object as a series of bounding-box coordinates.
 # Following REP-103, the bbox "size" vector axis follow the right-hand rule.
 # See "Axis Orientation" here: https://www.ros.org/reps/rep-0103.html#id21
-vision_msgs/BoundingBox3D bbox
+angel_msgs/VisionBoundingBox3d bbox
