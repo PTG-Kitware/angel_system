@@ -1,3 +1,4 @@
+import json
 import threading
 import time
 from typing import Dict
@@ -64,8 +65,16 @@ class CoffeeDemoTask():
     NOTE: This currently only represents first 13 steps of the coffee demo.
     Steps are listed under v1.2 here:
     https://docs.google.com/document/d/1MfbZdRS6tOGzqNSN-_22Xwmq-huk5_WdKeDSEulFOL0/edit#heading=h.l369fku95vnn
+
+    :param task_steps_file: Path to the file that contains the steps to use
+        for this task. This file should be a json file containing a dictionary
+        mapping activity names to step indices. The activity names should match
+        the output of the activity detector node.
     """
-    def __init__(self):
+    def __init__(
+        self,
+        task_steps_file: str
+    ):
         self.name = 'Pour-over coffee'
 
         self.items = {'scale': 1, '25g coffee beans': 1, 'mug': 1, '12 oz water': 1,
@@ -75,26 +84,21 @@ class CoffeeDemoTask():
                             ' place the coffee filter into the dripper,'
                             ' and then place the dripper on top of the mug')
 
-        # TODO: make a labels.txt file for these steps
-        self.steps = [
-            {'name': 'Pour_12oz_of_water_into_a_liquid_measuring_cup'},
-            {'name': 'Pour_water_from_the_liquid_measuring_cup_into_the_electric_kettle'},
-            {'name': 'Turn_on_the_kettle'},
-            {'name': 'Turn_on_kitchen_scale'},
-            {'name': 'Place_bowl_on_scale'},
-            {'name': 'Zero_scale'},
-            {'name': 'Add_coffee_beans_until_scale_reads_25_grams'},
-            {'name': 'Pour_coffee_beans_into_coffee_grinder'},
-            {'name': 'Take_the_coffee_filter_and_fold_it_in_half_to_create_a_semi_circle'},
-            {'name': 'Fold_the_filter_in_half_again_to_create_a_quarter_circle'},
-            {'name': 'Place_the_folded_filter_into_the_dripper_such_that_the_point' +
-                     '_of_the_quarter_circle_rests_in_the_center_of_the_dripper'},
-            {'name': 'Spread_the_filter_open_to_create_a_cone_inside_the_dripper'},
-            {'name': 'Place_the_dripper_on_top_of_the_mug'},
-            {'name': 'Done'}
-        ]
+        # Load the task steps from the provided steps file
+        with open(task_steps_file, "r") as f:
+            self._task_steps= json.load(f)
+
+        # Create the list of steps
+        self.steps = []
+        for key, value in self._task_steps.items():
+            self.steps.append({'name': key.replace(' ', '_')})
+
+        # Manually add the finish step
+        self.steps.append({'name': 'Done'})
 
         # Create the transitions between steps, assuming linear steps
+        # TODO: use the step index in the task steps file to decide
+        # the destination step
         self.transitions = []
         for idx, step in enumerate(self.steps):
             # No transition needed for the last step
@@ -105,40 +109,6 @@ class CoffeeDemoTask():
 
         self.machine = Machine(model=self, states=self.steps,
                                transitions=self.transitions, initial=self.steps[0]['name'])
-
-        # Mapping from state name to the to_state function, which provides a way to get
-        # to the state from anywhere.
-        # The to_* functions are created automatically when the Machine is initialized.
-        # For more info, see:
-        # https://github.com/pytransitions/transitions#automatic-transitions-for-all-states
-        self.to_state_dict = {
-            'Pour_12oz_of_water_into_a_liquid_measuring_cup':
-                self.to_Pour_12oz_of_water_into_a_liquid_measuring_cup,
-            'Pour_water_from_the_liquid_measuring_cup_into_the_electric_kettle':
-                self.to_Pour_water_from_the_liquid_measuring_cup_into_the_electric_kettle,
-            'Turn_on_the_kettle':
-                self.to_Turn_on_the_kettle,
-            'Turn_on_kitchen_scale':
-                self.to_Turn_on_kitchen_scale,
-            'Place_bowl_on_scale':
-                self.to_Place_bowl_on_scale,
-            'Zero_scale':
-                self.to_Zero_scale,
-            'Add_coffee_beans_until_scale_reads_25_grams':
-                self.to_Add_coffee_beans_until_scale_reads_25_grams,
-            'Pour_coffee_beans_into_coffee_grinder':
-                self.to_Pour_coffee_beans_into_coffee_grinder,
-            'Take_the_coffee_filter_and_fold_it_in_half_to_create_a_semi_circle':
-                self.to_Take_the_coffee_filter_and_fold_it_in_half_to_create_a_semi_circle,
-            'Fold_the_filter_in_half_again_to_create_a_quarter_circle':
-                self.to_Fold_the_filter_in_half_again_to_create_a_quarter_circle,
-            'Place_the_folded_filter_into_the_dripper_such_that_the_point_of_the_quarter_circle_rests_in_the_center_of_the_dripper':
-                self.to_Place_the_folded_filter_into_the_dripper_such_that_the_point_of_the_quarter_circle_rests_in_the_center_of_the_dripper,
-            'Spread_the_filter_open_to_create_a_cone_inside_the_dripper':
-                self.to_Spread_the_filter_open_to_create_a_cone_inside_the_dripper,
-            'Place_the_dripper_on_top_of_the_mug':
-                self.to_Place_the_dripper_on_top_of_the_mug,
-        }
 
 
 class TaskMonitor(Node):
@@ -156,6 +126,7 @@ class TaskMonitor(Node):
 
         self._det_topic = self.declare_parameter("det_topic", "ActivityDetections").get_parameter_value().string_value
         self._task_state_topic = self.declare_parameter("task_state_topic", "TaskUpdates").get_parameter_value().string_value
+        self._task_steps = self.declare_parameter("task_steps", "default_task_label_config.json").get_parameter_value().string_value
 
         log = self.get_logger()
 
@@ -172,7 +143,7 @@ class TaskMonitor(Node):
             1
         )
 
-        self._task = CoffeeDemoTask()
+        self._task = CoffeeDemoTask(self._task_steps)
 
         # Represents the current state of the task
         self._current_step = self._task.state
@@ -186,39 +157,8 @@ class TaskMonitor(Node):
         self._timer_active = False
         self._timer_lock = threading.RLock()
 
-        # Define the mapping from activity detector output to task transition
-        # function. The keys of this dictionary must match the activity
-        # detector's output.
-        self._activity_action_dict = {
-            'Pour 12oz of water into a liquid measuring cup':
-                self._task.Pour_12oz_of_water_into_a_liquid_measuring_cup,
-            'Pour water from the liquid measuring cup into the electric kettle':
-                self._task.Pour_water_from_the_liquid_measuring_cup_into_the_electric_kettle,
-            'Turn on the kettle':
-                self._task.Turn_on_the_kettle,
-            'Turn on kitchen scale':
-                self._task.Turn_on_kitchen_scale,
-            'Place bowl on scale':
-                self._task.Place_bowl_on_scale,
-            'Zero scale':
-                self._task.Zero_scale,
-            'Add coffee beans until scale reads 25 grams':
-                self._task.Add_coffee_beans_until_scale_reads_25_grams,
-            'Pour coffee beans into coffee grinder':
-                self._task.Pour_coffee_beans_into_coffee_grinder,
-            'Take the coffee filter and fold it in half to create a semi circle':
-                self._task.Take_the_coffee_filter_and_fold_it_in_half_to_create_a_semi_circle,
-            'Fold the filter in half again to create a quarter circle':
-                self._task.Fold_the_filter_in_half_again_to_create_a_quarter_circle,
-            'Place the folded filter into the dripper such that the point of the quarter circle rests in the center of the dripper':
-                self._task.Place_the_folded_filter_into_the_dripper_such_that_the_point_of_the_quarter_circle_rests_in_the_center_of_the_dripper,
-            'Spread the filter open to create a cone inside the dripper':
-                self._task.Spread_the_filter_open_to_create_a_cone_inside_the_dripper,
-            'Place the dripper on top of the mug':
-                self._task.Place_the_dripper_on_top_of_the_mug
-        }
-
         self.publish_task_state_message()
+
 
     def listener_callback(self, activity_msg):
         """
@@ -236,7 +176,7 @@ class TaskMonitor(Node):
         # defined activities
         current_activity = None
         for a in activity_msg.label_vec:
-            if a in self._activity_action_dict.keys():
+            if a in self._task._task_steps.keys():
                 # Label vector is sorted by probability so the first activity we find
                 # that pertains to the current task is the most likely
                 current_activity = a
@@ -258,7 +198,8 @@ class TaskMonitor(Node):
 
         # Attempt to advance to the next step
         try:
-            self._activity_action_dict[current_activity]()
+            # Attempt to advance to the next state
+            self._task.trigger(current_activity.replace(' ', '_'))
             log.info(f"Proceeding to next step. Current step: {self._task.state}")
 
             # Update state tracking vars
@@ -346,6 +287,7 @@ class TaskMonitor(Node):
         until the next task.
         At the end of the timer, it moves the task monitor to the next task.
         """
+        log = self.get_logger()
         loops = self._task.machine.states[self._task.state].timer_length
 
         # Publish a task update message once per second
@@ -358,12 +300,8 @@ class TaskMonitor(Node):
         with self._timer_lock:
             self._timer_active = False
 
-        # Lookup the next state
-        curr_idx = list(self._task.machine.states.keys()).index(self._task.state)
-        next_state = list(self._task.machine.states.keys())[curr_idx + 1]
-
         # Advance to the next state
-        self._task.to_state_dict[next_state]()
+        self._task.trigger(self._task.state)
 
         # Update state tracking vars
         self._previous_step = self._current_step
