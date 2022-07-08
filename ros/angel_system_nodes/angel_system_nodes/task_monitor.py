@@ -93,11 +93,15 @@ class CoffeeDemoTask():
 
         # Create the list of steps
         self.steps = []
+        self.uids = {}
         for key, value in self._task_steps.items():
-            self.steps.append({'name': key.replace(' ', '_')})
+            task_name = key.replace(' ', '_')
+            self.steps.append({'name': task_name})
+            self.uids[task_name] = str(uuid.uuid4())
 
         # Manually add the finish step
         self.steps.append({'name': 'Done'})
+        self.uids['Done'] = str(uuid.uuid4())
 
         # Create the transitions between steps, assuming linear steps
         # TODO: use the step index in the task steps file to decide
@@ -244,8 +248,8 @@ class TaskMonitor(Node):
         for t in self._task.steps:
             t_node = TaskNode()
 
-            t_node.uid = str(uuid.uuid4())
             t_node.name = t['name']
+            t_node.uid = self._task.uids[t_node.name]
             # TODO: Add other parameters
 
             task_g.task_nodes.append(t_node)
