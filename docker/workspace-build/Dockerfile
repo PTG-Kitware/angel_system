@@ -82,11 +82,9 @@ RUN apt-get -y update \
 # Install tracked python dependencies
 COPY poetry.lock pyproject.toml "${ANGEL_WORKSPACE_DIR}"/
 RUN cd "${ANGEL_WORKSPACE_DIR}" \
-    # TODO: Re-enable use of hashes once editable/git deps are removed. \
-    #       - Remove `--without-hashes` option. \
     # * Poetry extraneously finds matplotlib requiring setuptools-scm.
     #   theoretically being "fixed" in matplotlib 3.6
- && poetry export --without-hashes --dev -f requirements.txt | \
+ && poetry export --dev -f requirements.txt | \
       pip3 install --no-deps --user -r /dev/stdin \
  && pip uninstall -y setuptools-scm
 

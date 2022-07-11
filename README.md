@@ -73,8 +73,30 @@ report-back to the HoloLens2 platform.
 Workspace root: `./ros/`
 
 System requirements
+* ansible
 * docker
 * docker-compose
+
+Some files required from the `https://data.kitware.com` Girder service require
+authentication due to their protected nature.
+The environment variable `GIRDER_API_KEY` must be defined with a valid API key,
+otherwise an authentication token cannot be retrieved.
+
+## Provision Files
+External large files should be provisioned by running the ansible tool:
+
+    ansible-playbook -i ansible/hosts.yml ansible/provision_files.yml
+
+This may include large files for running the system, like ML model files, or
+other files required for building docker images.
+
+This provisioning may require additional configuration and variables set in
+your environment in order to satisfy some permissions:
+* `GIRDER_API_KEY` will need to be set in order to acquire protected files from
+  `data.kitware.com`.
+
+The configuration that controls what is staged and where is located
+in the `ansible/roles/provision-files/vars/main.yml` file.
 
 ## Docker-based Workflow
 **Intention**: Use containerization to standardize development and runtime
@@ -84,9 +106,9 @@ environment and practice.
   configurations.
 
 Docker functionality is located under the `./docker/` directory.
-* `ros2-base` provides a base environment that supports building and running
-  our workspace.
-* `ros2-workspace-build` provides a build of our workspace.
+* `workspace-base-dev` provides a base environment that supports building and
+  running our workspace.
+* `workspace-build` provides a build of our workspace.
 
 ### Building Docker Images
 Run `./angel-docker-build.sh`.
@@ -103,7 +125,7 @@ The definition of this service is found in the `docker/docker-compose.yml`
 configuration.
 
 This will mount the `./ros/` subtree on the host system into the
-`/angel_workspace/src` directory in the run container.
+`/angel_workspace/src/` directory in the run container.
 
 This "workspace" context additionally mounts build, install and log output
 directories to a spot on the host in order to:
@@ -114,6 +136,9 @@ Due to this, there will not be a build available upon first shell start-up.
 The script `/angel_workspace/workspace_build.sh` is available to run.
 This script is used during the image build process, so using this script
 ensures that the same build method is performed.
+
+Other directories and files are mounted into the container environment for
+development purposes and external file sharing.
 
 This shell will **_NOT_** have the local installation sourced in order to
 facilitate further safe build actions.
