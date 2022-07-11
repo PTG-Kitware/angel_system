@@ -16,9 +16,9 @@ from angel_msgs.msg import (
 
 class FeedbackGenerator(Node):
     """
-    ROS node responsible for sending activity, detection, and task information to the ARUI when the information has updated. 
+    ROS node responsible for sending activity, detection, and task information to the ARUI when the information has updated.
 
-    Takes in information from the `angel_msgs/ActivityDetection`, `angel_msgs/ObjectDetection3dSet`, and `angel_msgs/TaskUpdate` messages. 
+    Takes in information from the `angel_msgs/ActivityDetection`, `angel_msgs/ObjectDetection3dSet`, and `angel_msgs/TaskUpdate` messages.
 
     Publishes `angel_msgs/AruiUpdate` representing the current activity, detections, and task.
     """
@@ -133,7 +133,7 @@ class FeedbackGenerator(Node):
     def task_callback(self, task):
         # TODO: Update this to TaskNode type
         with self.lock:
-            self.arui_update_message.current_task_uid = task.task_name
+            self.arui_update_message.task_update = task
 
         self.publish_update()
 

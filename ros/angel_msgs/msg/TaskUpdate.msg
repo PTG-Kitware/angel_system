@@ -17,6 +17,9 @@ TaskItem[] task_items
 # List of steps for this task
 string[] steps
 
+# Current step index
+uint8 current_step_id
+
 # Current/previous steps
 string current_step
 string previous_step
