@@ -288,11 +288,15 @@ class TaskMonitor(Node):
             message.task_items.append(item)
 
         # Populate step list
-        for step in self._task.steps:
+        for idx, step in enumerate(self._task.steps):
             try:
                 message.steps.append(step['name'].replace('_', ' '))
             except:
                 message.steps.append(step.replace('_', ' '))
+
+            # Set the current step index
+            if self._current_step == step['name']:
+                message.current_step_id = idx
 
         message.current_step = self._current_step.replace('_', ' ')
 
