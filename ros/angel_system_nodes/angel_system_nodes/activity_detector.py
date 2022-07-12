@@ -83,8 +83,6 @@ class ActivityDetector(Node):
             activities_detected = self._detector.detect_activities(self._frames)
 
             if len(activities_detected) > 0:
-                log.info(f"activities: {activities_detected}")
-
                 # Create activity ROS message
                 activity_msg = ActivityDetection()
 
@@ -96,13 +94,14 @@ class ActivityDetector(Node):
                 activity_msg.source_stamp_start_frame = self._source_stamp_start_frame
                 activity_msg.source_stamp_end_frame = image.header.stamp
 
-                activity_msg.label_vec = activities_detected
+                activity_msg.label_vec = list(activities_detected.keys())
+                activity_msg.conf_vec = list(activities_detected.values())
 
                 # Publish activities
                 self._publisher.publish(activity_msg)
 
             # Clear out stored frames and timestamps
-            self._frames= []
+            self._frames = []
             self._source_stamp_start_frame = -1
 
 
