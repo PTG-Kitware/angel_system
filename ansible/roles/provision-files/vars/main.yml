@@ -1,0 +1,45 @@
+---
+# Output staging directory options.
+# These directory paths are interpreted relative to the repository root.
+stage_dirs:
+  # Example
+  #example: some/directory
+  model_files: "model_files"
+
+basic_downloads:
+  # Example
+  #- dest: "{{ stage_dirs.example_target }}/filename.txt
+  #  url: "https://kitware.com"
+  #  sha256: 0000000000000000000000000000000000000000000000000000000000000000
+  []  # REMOVE WHEN ADDING LIST CONTENT
+
+# List of files from
+girder_file_downloads:
+  api_url: "https://data.kitware.com/api/v1"
+  by_file_id:
+    # Example
+    #- file_id: "111111111111111111111111"
+    #  sha512: "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    #  dest: "{{ stage_dirs.build_itt_base }}/some_file.txt"
+
+    # SwinB label list text file.
+    - file_id: 62cc5fa7bddec9d0c4faa19f
+      sha512: 3fbf340b9cb87a71dd3df81880b38ee414c47b43fbfb78c37220020fbdb8d0d0ff93d76b079aecd94c10317ad6764590fd2a98849338f7fb46f943825820aaf6
+      dest: "{{ stage_dirs.model_files }}/swinb_coffee_task_labels.txt"
+    # SwinB model weights checkpoint
+    - file_id: 62cc5fbebddec9d0c4faa1b5
+      sha512: cf991079ea52fdab602d46052925a06a40f60176271e7a098ee34bb9262af72be5f1925014f30faf27a59c1b9b46f4f1d8401add4b6e669b982ca3f5e9f1026b
+      dest: "{{ stage_dirs.model_files }}/swinb_model_stage_base_ckpt_6.pth"
+
+# List of git repositories to check out at a specific ref and then archive.
+# Destination files will be written as GZipped TAR files, so please suffix
+# appropriately.
+# - checksums should be SHA256
+git_repositories:
+  # Example
+  #- name: unique_repo_name
+  #  repo: git@github.com:some_org/some_repo.git
+  #  ref: branch_name_or_tag_or_hash
+  #  dest: "{{ stage_dirs.example }}/safe_file_name.tar.gz"
+  #  checksum: 0000000000000000000000000000000000000000000000000000000000000000
+  []  # REMOVE WHEN ADDING LIST CONTENT
