@@ -15,18 +15,18 @@ class DetectActivities (Configurable, Pluggable):
     def detect_activities(
       self,
       frame_iter: Iterable[np.ndarray]
-    ) -> Iterable[str]:
+    ) -> Dict[str, float]:
         """
         Detect activities in the given set of frames.
         :param frame_iter: Iterable of input frames as numpy arrays.
-        :return: Iterable of strings describing the activities detected
-            in the frames.
+        :return: Dictionary mapping class labels to their prediction
+            confidences for the given set of frames.
         """
 
     def __call__(
       self,
       frame_iter: Iterable[np.ndarray]
-    ) -> Iterable[str]:
+    ) -> Dict[str, float]:
         """
         Calls `detect_activities() with the given iterable set of frames.`
         """
