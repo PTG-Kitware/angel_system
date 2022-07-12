@@ -81,7 +81,7 @@ class PytorchVideoSlowFastR50(DetectActivities):
             model_device = torch.device('cpu')
             if self._use_cuda:
                 if torch.cuda.is_available():
-                    model_device = torch.device(device=self.cuda_device)
+                    model_device = torch.device(device=self._cuda_device)
                     model = model.to(device=model_device)
                 else:
                     raise RuntimeError(
@@ -95,7 +95,7 @@ class PytorchVideoSlowFastR50(DetectActivities):
     def detect_activities(
         self,
         frame_iter: Iterable[np.ndarray]
-    ) -> Iterable[str]:
+    ) -> Dict[str, float]:
         """
         Formats the given iterable of frames into the required input format
         for the SlowFastR50 model and then inputs them to the model for inferencing.
@@ -146,22 +146,14 @@ class PytorchVideoSlowFastR50(DetectActivities):
 
         # Get the predicted classes
         post_act = torch.nn.Softmax(dim=1)
-        preds: torch.Tensor = post_act(preds) # shape: (1, 400)
-        top_preds = preds.topk(k=5)
+        preds: torch.Tensor = post_act(preds)[0] # shape: (1, 400)
 
-        # Map the predicted classes to the label names
-        # top_preds.indices is a 1xk tensor
-        pred_class_indices = top_preds.indices[0]
-        pred_class_names = [KINETICS_400_LABELS[int(i)] for i in pred_class_indices]
+        # Create the label to prediction confidence map
+        prediction_map = {}
+        for idx, pred in enumerate(preds):
+            prediction_map[KINETICS_400_LABELS[idx]] = pred.item()
 
-        # Filter out any detections below the threshold
-        predictions = []
-        pred_values = top_preds.values[0]
-        for idx, p in enumerate(pred_class_names):
-            if (pred_values[idx] > self._det_threshold):
-                predictions.append(p)
-
-        return predictions
+        return prediction_map
 
     def get_config(self) -> dict:
         return {

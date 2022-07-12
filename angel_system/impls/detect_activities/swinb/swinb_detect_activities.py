@@ -122,7 +122,7 @@ class SwinBTransformer(DetectActivities):
     def detect_activities(
         self,
         frame_iter: Iterable[np.ndarray]
-    ) -> Iterable[str]:
+    ) -> Dict[str, float]:
         """
         Formats the given iterable of frames into the required input format
         for the swin model and then inputs them to the model for inferencing.
@@ -175,23 +175,14 @@ class SwinBTransformer(DetectActivities):
 
         # Get the top predicted classes
         post_act = torch.nn.Softmax(dim=1)
-        preds: torch.Tensor = post_act(preds) # shape: (1, num_classes)
-        top_preds = preds.topk(k=5)
+        preds: torch.Tensor = post_act(preds)[0] # shape: (1, num_classes)
 
-        # Map the predicted classes to the label names
-        # top_preds.indices is a 1xk tensor
-        pred_class_indices = top_preds.indices[0]
+        # Create the label to prediction confidence map
+        prediction_map = {}
+        for idx, pred in enumerate(preds):
+            prediction_map[self._labels[idx]] = pred.item()
 
-        pred_class_names = [self._labels[int(i)] for i in pred_class_indices]
-
-        # Filter out any detections below the threshold
-        predictions = []
-        pred_values = top_preds.values[0]
-        for idx, p in enumerate(pred_class_names):
-            if (pred_values[idx] > self._det_threshold):
-                predictions.append(p)
-
-        return predictions
+        return prediction_map
 
     def get_config(self) -> dict:
         return {
