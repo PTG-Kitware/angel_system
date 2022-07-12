@@ -14,26 +14,12 @@ public class AngelARUIBridge : MonoBehaviour
     // Ros stuff
     ROSConnection ros;
     public string aruiUpdateTopicName = "AruiUpdates";
+    public string querytaskgraphTopicName = "query_task_graph";
 
     private Logger _logger = null;
 
-    // TODO: this should be replaced with the results of the QueryTaskGraph call
-    private string[,] tasks =
-    {
-        {"0", "Pour 12 ounces of water into liquid measuring cup"},
-        {"0", "Pour the water from the liquid measuring cup into the electric kettle"},
-        {"0", "Turn on the kettle"},
-        {"0", "Place the dripper on top of the mug"},
-        {"0", "Take the coffee filter and fold it in half to create a semi circle"},
-        {"0", "Fold the filter in half again to create a quarter circle"},
-        {"0", "Place the folded filter into the dripper such that the point of the quarter circle rests in the center of the dripper"},
-        {"0", "Spread the filter open to create a cone inside the dripper"},
-        {"0", "Turn on kitchen scale"},
-        {"0", "Place bowl on scale"},
-        {"0", "Zero scale"},
-        {"0", "Add coffee beans until scale reads 25 grams"},
-        {"0", "Pour coffee beans into coffee grinder"}
-    };
+    private bool taskGraphInitialized = false;
+    private int loopIdx = 0;
 
     /// <summary>
     /// Lazy acquire the logger object and return the reference to it.
@@ -51,17 +37,26 @@ public class AngelARUIBridge : MonoBehaviour
 
     void Start()
     {
-        // TODO: get the list of tasks from the QueryTaskGraph call
-        AngelARUI.Instance.SetTasks(tasks);
-
         // Create the AruiUpdate subscriber
         ros = ROSConnection.GetOrCreateInstance();
         ros.Subscribe<AruiUpdateMsg>(aruiUpdateTopicName, AruiUpdateCallback);
+
+        // Register the QueryTaskGraph service
+        ros.RegisterRosService<QueryTaskGraphRequest, QueryTaskGraphResponse>(querytaskgraphTopicName);
     }
 
     void Update()
     {
+        // Check for a task graph every 5 seconds
+        // TODO: probably a better way to do this
+        if (taskGraphInitialized == false && (loopIdx % 300 == 0))
+        {
+            // Send message to ROS
+            QueryTaskGraphRequest queryTaskGraphRequest = new QueryTaskGraphRequest();
+            ros.SendServiceMessage<QueryTaskGraphResponse>(querytaskgraphTopicName, queryTaskGraphRequest, QueryTaskGraphCallback);
+        }
 
+        loopIdx++;
     }
 
     /// <summary>
@@ -71,8 +66,64 @@ public class AngelARUIBridge : MonoBehaviour
     /// <param name="msg"></param>
     private void AruiUpdateCallback(AruiUpdateMsg msg)
     {
+        AngelARUI.Instance.SetCurrentTaskID(msg.task_update.current_step_id);
+    }
+
+    /// <summary>
+    /// Callback function for the QueryTaskGraph service.
+    /// Sets the ARUI task list with the task graph.
+    /// </summary>
+    /// <param name="msg"></param>
+    void QueryTaskGraphCallback(QueryTaskGraphResponse msg)
+    {
         Logger log = logger();
 
-        AngelARUI.Instance.SetCurrentTaskID(msg.task_update.current_step_id);
+        List<uint> edges = new List<uint>();
+        edges.AddRange(msg.task_graph.node_edges);
+        List<List<string>> tasks = new List<List<string>>();
+
+        int taskIdx = 0;
+        uint curTask = edges[taskIdx];
+
+        List<string> elem = new List<string> { "0", msg.task_graph.task_nodes[curTask].name };
+        tasks.Add(elem);
+
+        uint nextTask = edges[taskIdx + 1];
+
+        // remove pair form list
+        edges.RemoveAt(taskIdx + 1);
+        edges.RemoveAt(taskIdx);
+
+        int num_pairs = edges.Count / 2;
+        for (int i = 0; i < num_pairs; i++)
+        {
+            curTask = nextTask;
+            taskIdx = edges.IndexOf(curTask);
+
+            elem = new List<string> { "0", msg.task_graph.task_nodes[curTask].name };
+            tasks.Add(elem);
+
+            nextTask = edges[taskIdx + 1];
+
+            // remove pair form list
+            edges.RemoveAt(taskIdx + 1);
+            edges.RemoveAt(taskIdx);
+        }
+
+        // Add the last task
+        elem = new List<string> { "0", msg.task_graph.task_nodes[nextTask].name };
+        tasks.Add(elem);
+
+        // Send tasks to ARUI
+        string[,] final_tasks = new string[tasks.Count, 2];
+        for (int i = 0; i < tasks.Count; i++)
+        {
+            final_tasks[i, 0] = tasks[i][0];
+            final_tasks[i, 1] = tasks[i][1];
+        }
+
+        AngelARUI.Instance.SetTasks(final_tasks);
+
+        taskGraphInitialized = true;
     }
 }
