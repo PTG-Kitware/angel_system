@@ -3,14 +3,14 @@ from threading import Lock
 
 import rclpy
 from rclpy.node import Node
-from vision_msgs.msg import BoundingBox3D
 
 from angel_msgs.msg import (
     ActivityDetection,
     ObjectDetection3dSet,
     TaskUpdate,
     AruiUpdate,
-    AruiObject3d
+    AruiObject3d,
+    VisionBoundingBox3d
 )
 
 
@@ -108,7 +108,7 @@ class FeedbackGenerator(Node):
 
             detection.stamp = object_msg.source_stamp
 
-            detection.bbox = BoundingBox3D()
+            detection.bbox = VisionBoundingBox3d()
 
             # min = sorted[0], max = sorted[-1]
             xs = sorted([object_msg.right[i].x,  object_msg.left[i].x,  object_msg.top[i].x, object_msg.bottom[i].x])
