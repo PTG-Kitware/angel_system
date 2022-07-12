@@ -18,6 +18,7 @@ pytorchvideo = "^0.1.5"
 transitions = "^0.8.11"
 timm = "^0.5.4"
 einops = "^0.4.1"
+psycopg2 = "^2.9.3"
 
 [tool.poetry.dev-dependencies]
 ipython = "^8.0.1"

@@ -81,7 +81,7 @@ class PytorchVideoSlowFastR50(DetectActivities):
             model_device = torch.device('cpu')
             if self._use_cuda:
                 if torch.cuda.is_available():
-                    model_device = torch.device(device=self.cuda_device)
+                    model_device = torch.device(device=self._cuda_device)
                     model = model.to(device=model_device)
                 else:
                     raise RuntimeError(
