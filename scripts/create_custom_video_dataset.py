@@ -5,15 +5,14 @@ import pandas as pd
 import shutil
 from PIL import Image
 
-label_dict = {"Pour 12 ounces of water into the liquid measuring cup":0, "Pour the water from the liquid measuing cup into the electric kettle": 1, "Turn on the kettle and Boil the water": 2, "background":13}
-
 def main(args):
+    label_dict = dict()
+    label_counter = 0
     for i in range(len(os.listdir(args.label_folder))):
         label_name = os.listdir(args.label_folder)[i]
         labels = ""
         if not args.from_video:
             df = pd.read_csv(args.label_folder + os.listdir(args.label_folder)[i])
-            label_counter = 0
             for label in range(0, (len(pd.unique(df["# 1: Detection or Track-id"]))-1)):
                 temp_df = df[df["# 1: Detection or Track-id"] == str(label)]
                 if temp_df.iloc[0]["10-11+: Repeated Species"] not in label_dict.keys():
