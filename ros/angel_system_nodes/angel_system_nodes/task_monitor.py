@@ -95,7 +95,7 @@ class CoffeeDemoTask():
         self.steps = []
         self.uids = {}
         for key, value in self._task_steps.items():
-            task_name = key.replace(' ', '_')
+            task_name = key
             self.steps.append({'name': task_name})
             self.uids[task_name] = str(uuid.uuid4())
 
@@ -215,7 +215,7 @@ class TaskMonitor(Node):
         # We are expecting a "next" step activity. We observe that this
         # activity has been performed if the confidence of that activity has
         # met or exceeded the associated confidence threshold.
-        lbl = self._task.state.replace('_', ' ')
+        lbl = self._task.state
         try:
             # Index of the current state label in the activity detection output
             lbl_idx = activity_msg.label_vec.index(lbl)
@@ -241,7 +241,7 @@ class TaskMonitor(Node):
         try:
             with self._task_lock:
                 # Attempt to advance to the next state
-                self._task.trigger(current_activity.replace(' ', '_'))
+                self._task.trigger(current_activity)
             log.info(f"Proceeding to next step. Current step: {self._task.state}")
 
             # Update state tracking vars
@@ -319,15 +319,15 @@ class TaskMonitor(Node):
         # Populate step list
         for idx, step in enumerate(self._task.steps):
             try:
-                message.steps.append(step['name'].replace('_', ' '))
+                message.steps.append(step['name'])
             except:
-                message.steps.append(step.replace('_', ' '))
+                message.steps.append(step)
 
             # Set the current step index
             if self._current_step == step['name']:
                 message.current_step_id = idx
 
-        message.current_step = self._current_step.replace('_', ' ')
+        message.current_step = self._current_step
 
         if self._previous_step is None:
             message.previous_step = "N/A"
