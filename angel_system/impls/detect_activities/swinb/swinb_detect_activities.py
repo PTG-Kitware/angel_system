@@ -175,7 +175,7 @@ class SwinBTransformer(DetectActivities):
 
         # Get the top predicted classes
         post_act = torch.nn.Softmax(dim=1)
-        preds: torch.Tensor = post_act(preds)[0] # shape: (1, num_classes)
+        preds: torch.Tensor = post_act(preds)[0] # shape: (num_classes)
 
         # Create the label to prediction confidence map
         prediction_map = {}
