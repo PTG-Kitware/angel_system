@@ -5,14 +5,14 @@ import uuid
 from typing import Optional
 
 import numpy as np
+from pynput import keyboard
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
-
-from angel_msgs.msg import ActivityDetection, TaskUpdate, TaskItem, TaskGraph, TaskNode
 from transitions import Machine
 import transitions
 
+from angel_msgs.msg import ActivityDetection, TaskUpdate, TaskItem, TaskGraph, TaskNode
 from angel_msgs.srv import QueryTaskGraph
 
 
@@ -169,6 +169,9 @@ class TaskMonitor(Node):
         self._timer_active = False
         self._timer_lock = threading.RLock()
 
+        # Control thread access to advancing the task step
+        self._task_lock = threading.RLock()
+
         # Initialize ROS hooks
         self._subscription = self.create_subscription(
             ActivityDetection,
@@ -202,6 +205,13 @@ class TaskMonitor(Node):
         """
         log = self.get_logger()
 
+        # If we are currently in a timer state, exit early since we need to wait for
+        # the timer to finish
+        with self._timer_lock:
+            if self._timer_active:
+                log.info(f"Waiting for timer to finish for {self._task.state}")
+                return
+
         # We are expecting a "next" step activity. We observe that this
         # activity has been performed if the confidence of that activity has
         # met or exceeded the associated confidence threshold.
@@ -227,16 +237,11 @@ class TaskMonitor(Node):
             # No activity matching current task.
             return
 
-        # If we are currently in a timer state, exit early since we need to wait for
-        # the timer to finish
-        with self._timer_lock:
-            if self._timer_active:
-                return
-
         # Attempt to advance to the next step
         try:
-            # Attempt to advance to the next state
-            self._task.trigger(current_activity.replace(' ', '_'))
+            with self._task_lock:
+                # Attempt to advance to the next state
+                self._task.trigger(current_activity.replace(' ', '_'))
             log.info(f"Proceeding to next step. Current step: {self._task.state}")
 
             # Update state tracking vars
@@ -358,18 +363,33 @@ class TaskMonitor(Node):
         log = self.get_logger()
         loops = self._task.machine.states[self._task.state].timer_length
 
+        # Record the current state
+        curr_state = self._task.state
+
         # Publish a task update message once per second
         for i in range(int(loops)):
             self.publish_task_state_message()
-            self._task.machine.states[self._task.state].timer_length -= 1
+
+            try:
+                self._task.machine.states[curr_state].timer_length -= 1
+            except AttributeError:
+                # The current state was probably changed elsewhere
+                break
 
             time.sleep(1)
 
         with self._timer_lock:
             self._timer_active = False
 
+        # Make sure that the state has not changed during the timer delay
+        if curr_state != self._task.state:
+            log.warn("State change detecting during timer loop."
+                     + " Next state will NOT be triggered via timer.")
+            return
+
         # Advance to the next state
-        self._task.trigger(self._task.state)
+        with self._task_lock:
+            self._task.trigger(self._task.state)
 
         # Update state tracking vars
         self._previous_step = self._current_step
@@ -377,11 +397,40 @@ class TaskMonitor(Node):
 
         self.publish_task_state_message()
 
+    def monitor_keypress(self):
+        log = self.get_logger()
+        log.info(f"Starting keyboard monitor. Press the right arrow key to"
+                 + " proceed to the next step.")
+        # Collect events until released
+        with keyboard.Listener(on_press=self.on_press) as listener:
+            listener.join()
+
+    def on_press(self, key):
+        """
+        Callback function for keypress events. If the right arrow is pressed,
+        the task monitor advances to the next step.
+        """
+        log = self.get_logger()
+        if key == keyboard.Key.right:
+            with self._task_lock:
+                self._task.trigger(self._task.state)
+                log.info(f"Proceeding to next step. Current step: {self._task.state}")
+
+                # Update state tracking vars
+                self._previous_step = self._current_step
+                self._current_step = self._task.state
+
+                self.publish_task_state_message()
+
 
 def main():
     rclpy.init()
 
     task_monitor = TaskMonitor()
+
+    keyboard_t = threading.Thread(target=task_monitor.monitor_keypress)
+    keyboard_t.daemon = True
+    keyboard_t.start()
 
     rclpy.spin(task_monitor)
 
