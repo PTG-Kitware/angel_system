@@ -26,6 +26,8 @@ namespace RosMessageTypes.Angel
         public TaskItemMsg[] task_items;
         //  List of steps for this task
         public string[] steps;
+        //  Current step index
+        public byte current_step_id;
         //  Current/previous steps
         public string current_step;
         public string previous_step;
@@ -43,6 +45,7 @@ namespace RosMessageTypes.Angel
             this.task_description = "";
             this.task_items = new TaskItemMsg[0];
             this.steps = new string[0];
+            this.current_step_id = 0;
             this.current_step = "";
             this.previous_step = "";
             this.current_activity = "";
@@ -50,13 +53,14 @@ namespace RosMessageTypes.Angel
             this.time_remaining_until_next_task = 0;
         }
 
-        public TaskUpdateMsg(Std.HeaderMsg header, string task_name, string task_description, TaskItemMsg[] task_items, string[] steps, string current_step, string previous_step, string current_activity, string next_activity, int time_remaining_until_next_task)
+        public TaskUpdateMsg(Std.HeaderMsg header, string task_name, string task_description, TaskItemMsg[] task_items, string[] steps, byte current_step_id, string current_step, string previous_step, string current_activity, string next_activity, int time_remaining_until_next_task)
         {
             this.header = header;
             this.task_name = task_name;
             this.task_description = task_description;
             this.task_items = task_items;
             this.steps = steps;
+            this.current_step_id = current_step_id;
             this.current_step = current_step;
             this.previous_step = previous_step;
             this.current_activity = current_activity;
@@ -73,6 +77,7 @@ namespace RosMessageTypes.Angel
             deserializer.Read(out this.task_description);
             deserializer.Read(out this.task_items, TaskItemMsg.Deserialize, deserializer.ReadLength());
             deserializer.Read(out this.steps, deserializer.ReadLength());
+            deserializer.Read(out this.current_step_id);
             deserializer.Read(out this.current_step);
             deserializer.Read(out this.previous_step);
             deserializer.Read(out this.current_activity);
@@ -89,6 +94,7 @@ namespace RosMessageTypes.Angel
             serializer.Write(this.task_items);
             serializer.WriteLength(this.steps);
             serializer.Write(this.steps);
+            serializer.Write(this.current_step_id);
             serializer.Write(this.current_step);
             serializer.Write(this.previous_step);
             serializer.Write(this.current_activity);
@@ -104,6 +110,7 @@ namespace RosMessageTypes.Angel
             "\ntask_description: " + task_description.ToString() +
             "\ntask_items: " + System.String.Join(", ", task_items.ToList()) +
             "\nsteps: " + System.String.Join(", ", steps.ToList()) +
+            "\ncurrent_step_id: " + current_step_id.ToString() +
             "\ncurrent_step: " + current_step.ToString() +
             "\nprevious_step: " + previous_step.ToString() +
             "\ncurrent_activity: " + current_activity.ToString() +

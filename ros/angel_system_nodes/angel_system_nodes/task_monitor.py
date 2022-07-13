@@ -2,7 +2,7 @@ import json
 import threading
 import time
 import uuid
-from typing import Dict
+from typing import Optional
 
 import numpy as np
 import rclpy
@@ -89,7 +89,7 @@ class CoffeeDemoTask():
 
         # Load the task steps from the provided steps file
         with open(task_steps_file, "r") as f:
-            self._task_steps= json.load(f)
+            self._task_steps = json.load(f)
 
         # Create the list of steps
         self.steps = []
@@ -127,6 +127,15 @@ class TaskMonitor(Node):
     Uses `angel_msgs/ActivityDetections` to determine the current activity and then
     publishes `angel_msgs/TaskUpdate` messages representing the current state of the
     task.
+
+    The `task_trigger_thresholds` wants to be given the path to file that is of
+    JSON format and defines a mapping of activity names to a confidence
+    threshold. If we observe a detected activity whose confidence is above this
+    threshold we consider that activity to have occurred. The keys of this
+    mapping must match the labels output by the activity detector that is
+    feeding this node, otherwise input activities that do not match an entry in
+    this mapping will be ignored. Thresholds are triggered if values meet or
+    exceed the values provided.
     """
     def __init__(self):
         super().__init__(self.__class__.__name__)
@@ -134,29 +143,19 @@ class TaskMonitor(Node):
         self._det_topic = self.declare_parameter("det_topic", "ActivityDetections").get_parameter_value().string_value
         self._task_state_topic = self.declare_parameter("task_state_topic", "TaskUpdates").get_parameter_value().string_value
         self._task_steps = self.declare_parameter("task_steps", "default_task_label_config.json").get_parameter_value().string_value
+        # Path to the JSON file that maps steps
+        self._task_trigger_thresholds_fp = self.declare_parameter(
+            "task_trigger_thresholds",
+            "default_task_trigger_thresholds.json"
+        ).get_parameter_value().string_value
 
         log = self.get_logger()
 
-        self._subscription = self.create_subscription(
-            ActivityDetection,
-            self._det_topic,
-            self.listener_callback,
-            1
-        )
-
-        self._publisher = self.create_publisher(
-            TaskUpdate,
-            self._task_state_topic,
-            1
-        )
+        # Load step thresholds structure
+        with open(self._task_trigger_thresholds_fp, 'r') as infile:
+            self._task_trigger_thresholds = json.load(infile)
 
         self._task = CoffeeDemoTask(self._task_steps)
-
-        self._task_graph_service = self.create_service(
-            QueryTaskGraph,
-            "query_task_graph",
-            self.query_task_graph_callback
-        )
 
         # Represents the current state of the task
         self._current_step = self._task.state
@@ -166,14 +165,32 @@ class TaskMonitor(Node):
         self._current_activity = None
         self._next_activity = None
 
-        # Tracks whether or not a timer is currently active
+        # Tracks whether a timer is currently active
         self._timer_active = False
         self._timer_lock = threading.RLock()
 
+        # Initialize ROS hooks
+        self._subscription = self.create_subscription(
+            ActivityDetection,
+            self._det_topic,
+            self.listener_callback,
+            1
+        )
+        self._publisher = self.create_publisher(
+            TaskUpdate,
+            self._task_state_topic,
+            1
+        )
+        self._task_graph_service = self.create_service(
+            QueryTaskGraph,
+            "query_task_graph",
+            self.query_task_graph_callback
+        )
+
+        # TODO: Why do we publish a message right away?
         self.publish_task_state_message()
 
-
-    def listener_callback(self, activity_msg):
+    def listener_callback(self, activity_msg: ActivityDetection):
         """
         Callback function for the activity detection subscriber topic.
 
@@ -185,23 +202,30 @@ class TaskMonitor(Node):
         """
         log = self.get_logger()
 
-        # See if any of the predicted activities are in the current task's
-        # defined activities
-        current_activity = None
-        for a in activity_msg.label_vec:
-            if a in self._task._task_steps.keys():
-                # Label vector is sorted by probability so the first activity we find
-                # that pertains to the current task is the most likely
-                current_activity = a
-                break
-
-        if current_activity is None:
-            # No activity matching current task... update the current activity and exit
-            self._current_activity = activity_msg.label_vec[0]
-            self.publish_task_state_message()
+        # We are expecting a "next" step activity. We observe that this
+        # activity has been performed if the confidence of that activity has
+        # met or exceeded the associated confidence threshold.
+        lbl = self._task.state.replace('_', ' ')
+        try:
+            # Index of the current state label in the activity detection output
+            lbl_idx = activity_msg.label_vec.index(lbl)
+        except ValueError:
+            log.warn(f"Current state ({lbl}) not represented in activity "
+                     f"detection results. Received: {activity_msg.label_vec}")
             return
 
+        conf = activity_msg.conf_vec[lbl_idx]
+        current_activity: Optional[str] = None
+        log.info(f"Awaiting sufficiently high confidence for activity '{lbl}'. "
+                 f"Currently: {conf}. Need {self._task_trigger_thresholds[lbl]}.")
+        if conf >= self._task_trigger_thresholds[lbl]:
+            log.info("Threshold exceeded, setting as current activity.")
+            current_activity = lbl
         self._current_activity = current_activity
+
+        if current_activity is None:
+            # No activity matching current task.
+            return
 
         # If we are currently in a timer state, exit early since we need to wait for
         # the timer to finish
@@ -288,11 +312,15 @@ class TaskMonitor(Node):
             message.task_items.append(item)
 
         # Populate step list
-        for step in self._task.steps:
+        for idx, step in enumerate(self._task.steps):
             try:
                 message.steps.append(step['name'].replace('_', ' '))
             except:
                 message.steps.append(step.replace('_', ' '))
+
+            # Set the current step index
+            if self._current_step == step['name']:
+                message.current_step_id = idx
 
         message.current_step = self._current_step.replace('_', ' ')
 
@@ -319,7 +347,6 @@ class TaskMonitor(Node):
             message.time_remaining_until_next_task = -1
 
         self._publisher.publish(message)
-
 
     def task_timer_thread(self):
         """
@@ -368,4 +395,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

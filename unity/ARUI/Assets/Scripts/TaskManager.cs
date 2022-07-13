@@ -67,6 +67,7 @@ public class TaskManager : MonoBehaviour
                                                            "Task description goes here.", // task description
                                                            new TaskItemMsg[0], // task items
                                                            new string[0], // task steps
+                                                           0, // current step index
                                                            "N/A", // current step
                                                            "N/A", // previous step
                                                            "N/A", // current activity

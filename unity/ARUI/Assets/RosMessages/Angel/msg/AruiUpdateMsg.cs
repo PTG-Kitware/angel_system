@@ -70,7 +70,7 @@ namespace RosMessageTypes.Angel
         // 
         //  NOTE: The task graph may be queried by using the `QueryTaskGraph` service.
         // 
-        public string current_task_uid;
+        public TaskUpdateMsg task_update;
         // 
         //  User Communications
         // 
@@ -92,20 +92,20 @@ namespace RosMessageTypes.Angel
             this.object3d_update = new AruiObject3dMsg[0];
             this.latest_activity = new ActivityDetectionMsg();
             this.expertise_level = 0;
-            this.current_task_uid = "";
+            this.task_update = new TaskUpdateMsg();
             this.notifications = new AruiUserNotificationMsg[0];
             this.dialogue_text = new string[0];
             this.dialogue_audio = new string[0];
         }
 
-        public AruiUpdateMsg(Std.HeaderMsg header, AruiObject3dMsg[] object3d_remove, AruiObject3dMsg[] object3d_update, ActivityDetectionMsg latest_activity, byte expertise_level, string current_task_uid, AruiUserNotificationMsg[] notifications, string[] dialogue_text, string[] dialogue_audio)
+        public AruiUpdateMsg(Std.HeaderMsg header, AruiObject3dMsg[] object3d_remove, AruiObject3dMsg[] object3d_update, ActivityDetectionMsg latest_activity, byte expertise_level, TaskUpdateMsg task_update, AruiUserNotificationMsg[] notifications, string[] dialogue_text, string[] dialogue_audio)
         {
             this.header = header;
             this.object3d_remove = object3d_remove;
             this.object3d_update = object3d_update;
             this.latest_activity = latest_activity;
             this.expertise_level = expertise_level;
-            this.current_task_uid = current_task_uid;
+            this.task_update = task_update;
             this.notifications = notifications;
             this.dialogue_text = dialogue_text;
             this.dialogue_audio = dialogue_audio;
@@ -120,7 +120,7 @@ namespace RosMessageTypes.Angel
             deserializer.Read(out this.object3d_update, AruiObject3dMsg.Deserialize, deserializer.ReadLength());
             this.latest_activity = ActivityDetectionMsg.Deserialize(deserializer);
             deserializer.Read(out this.expertise_level);
-            deserializer.Read(out this.current_task_uid);
+            this.task_update = TaskUpdateMsg.Deserialize(deserializer);
             deserializer.Read(out this.notifications, AruiUserNotificationMsg.Deserialize, deserializer.ReadLength());
             deserializer.Read(out this.dialogue_text, deserializer.ReadLength());
             deserializer.Read(out this.dialogue_audio, deserializer.ReadLength());
@@ -135,7 +135,7 @@ namespace RosMessageTypes.Angel
             serializer.Write(this.object3d_update);
             serializer.Write(this.latest_activity);
             serializer.Write(this.expertise_level);
-            serializer.Write(this.current_task_uid);
+            serializer.Write(this.task_update);
             serializer.WriteLength(this.notifications);
             serializer.Write(this.notifications);
             serializer.WriteLength(this.dialogue_text);
@@ -152,7 +152,7 @@ namespace RosMessageTypes.Angel
             "\nobject3d_update: " + System.String.Join(", ", object3d_update.ToList()) +
             "\nlatest_activity: " + latest_activity.ToString() +
             "\nexpertise_level: " + expertise_level.ToString() +
-            "\ncurrent_task_uid: " + current_task_uid.ToString() +
+            "\ntask_update: " + task_update.ToString() +
             "\nnotifications: " + System.String.Join(", ", notifications.ToList()) +
             "\ndialogue_text: " + System.String.Join(", ", dialogue_text.ToList()) +
             "\ndialogue_audio: " + System.String.Join(", ", dialogue_audio.ToList());

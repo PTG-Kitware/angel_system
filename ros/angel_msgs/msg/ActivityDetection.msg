@@ -10,5 +10,8 @@ std_msgs/Header header
 builtin_interfaces/Time source_stamp_start_frame
 builtin_interfaces/Time source_stamp_end_frame
 
-# Prediction classification label ordered from most confident to least.
+# Class labels and prediction confidences.
+# conf_vec[i] corresponds to the prediction confidence for the class at
+# label_vec[i].
 string[] label_vec
+float32[] conf_vec

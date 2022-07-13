@@ -3,22 +3,22 @@ from threading import Lock
 
 import rclpy
 from rclpy.node import Node
-from vision_msgs.msg import BoundingBox3D
 
 from angel_msgs.msg import (
     ActivityDetection,
     ObjectDetection3dSet,
     TaskUpdate,
     AruiUpdate,
-    AruiObject3d
+    AruiObject3d,
+    VisionBoundingBox3d
 )
 
 
 class FeedbackGenerator(Node):
     """
-    ROS node responsible for sending activity, detection, and task information to the ARUI when the information has updated. 
+    ROS node responsible for sending activity, detection, and task information to the ARUI when the information has updated.
 
-    Takes in information from the `angel_msgs/ActivityDetection`, `angel_msgs/ObjectDetection3dSet`, and `angel_msgs/TaskUpdate` messages. 
+    Takes in information from the `angel_msgs/ActivityDetection`, `angel_msgs/ObjectDetection3dSet`, and `angel_msgs/TaskUpdate` messages.
 
     Publishes `angel_msgs/AruiUpdate` representing the current activity, detections, and task.
     """
@@ -108,7 +108,7 @@ class FeedbackGenerator(Node):
 
             detection.stamp = object_msg.source_stamp
 
-            detection.bbox = BoundingBox3D()
+            detection.bbox = VisionBoundingBox3d()
 
             # min = sorted[0], max = sorted[-1]
             xs = sorted([object_msg.right[i].x,  object_msg.left[i].x,  object_msg.top[i].x, object_msg.bottom[i].x])
@@ -133,7 +133,7 @@ class FeedbackGenerator(Node):
     def task_callback(self, task):
         # TODO: Update this to TaskNode type
         with self.lock:
-            self.arui_update_message.current_task_uid = task.task_name
+            self.arui_update_message.task_update = task
 
         self.publish_update()
 
