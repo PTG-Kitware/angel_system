@@ -1,0 +1,12 @@
+{
+    "type": "angel_system.impls.detect_activities.two_stage.two_stage_detect_activities.TwoStageDetector",
+    "angel_system.impls.detect_activities.two_stage.two_stage_detect_activities.TwoStageDetector": {
+        "checkpoint_path": "angel_system/model_checkpoints/swinb_coffee_tasks.pth",
+        "num_classes": 14,
+        "labels_file": "angel_system/labels/swinb_coffee_task_labels.txt",
+        "num_frames": 32,
+        "sampling_rate": 2,
+        "torch_device": "cuda:0",
+        "det_threshold": 0.75
+    }
+}
