@@ -371,7 +371,7 @@ class TaskMonitor(Node):
             self.publish_task_state_message()
 
             try:
-                self._task.machine.states[self._task.state].timer_length -= 1
+                self._task.machine.states[curr_state].timer_length -= 1
             except AttributeError:
                 # The current state was probably changed elsewhere
                 break
