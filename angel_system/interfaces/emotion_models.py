@@ -5,7 +5,7 @@ import numpy as np
 from smqtk_core import Configurable, Pluggable
 
 
-class EmotionModel (Configurable, Pluggable):
+class SpeechEmotionModel (Configurable, Pluggable):
     """
     Model to detect emotions from a set of input
     2D ``numpy.ndarray`` type arrays.
@@ -19,8 +19,9 @@ class EmotionModel (Configurable, Pluggable):
     @abc.abstractmethod
     def classify(
       self,
-      X: Iterable[np.ndarray]
-    ) -> Iterable[str]:
+      X: Iterable[np.ndarray],
+      sampling_rate: int
+    ) -> int:
         """
         Classify in the given modality representation.
         :param X: Iterable of some input modality as numpy arrays.
@@ -29,9 +30,10 @@ class EmotionModel (Configurable, Pluggable):
 
     def __call__(
       self,
-      X: Iterable[np.ndarray]
-    ) -> Iterable[str]:
+      X: Iterable[np.ndarray],
+      sampling_rate: int
+    ) -> int:
         """
         Calls `classify_emotion() with the given iterable modality representation.`
         """
-        return self.classify(X)
+        return self.classify(X, sampling_rate)
