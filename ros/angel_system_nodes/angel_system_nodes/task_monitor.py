@@ -16,6 +16,7 @@ from angel_msgs.msg import ActivityDetection, TaskUpdate, TaskItem, TaskGraph, T
 from angel_msgs.srv import QueryTaskGraph
 
 
+
 class TeaTask():
     """
     Representation of the simple weak tea task defined
@@ -239,6 +240,7 @@ class TaskMonitor(Node):
 
         # Attempt to advance to the next step
         try:
+            self._task.trigger(current_activity.replace(' ', '_'))
             log.info(f"Proceeding to next step. Current step: {self._task.state}")
 
             # Update state tracking vars
@@ -315,9 +317,12 @@ class TaskMonitor(Node):
 
         # Populate step list
         for idx, step in enumerate(self._task.steps):
+            message.steps.append(step['name'])
             # Set the current step index
             if self._current_step == step['name']:
                 message.current_step_id = idx
+ 
+        message.current_step = self._current_step
 
         if self._previous_step is None:
             message.previous_step = "N/A"
@@ -394,6 +399,30 @@ class TaskMonitor(Node):
         # Collect events until released
         with keyboard.Listener(on_press=self.on_press) as listener:
             listener.join()
+
+    def on_press(self, key):
+        """
+        Callback function for keypress events. If the right arrow is pressed,
+        the task monitor advances to the next step.
+        """
+        log = self.get_logger()
+        if key == keyboard.Key.right:
+            with self._task_lock:
+                self._task.trigger(self._task.state)
+                log.info(f"Proceeding to next step. Current step: {self._task.state}")
+
+                # Update state tracking vars
+                self._previous_step = self._current_step
+                self._current_step = self._task.state
+
+                self.publish_task_state_message()
+
+
+    def monitor_keypress(self):
+        # Collect events until released
+        with keyboard.Listener(on_press=self.on_press) as listener:
+            listener.join()
+
 
     def on_press(self, key):
         """
