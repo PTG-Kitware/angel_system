@@ -2,7 +2,7 @@ import json
 import threading
 import time
 import uuid
-from typing import Dict
+from typing import Optional
 
 import numpy as np
 import rclpy
@@ -134,7 +134,8 @@ class TaskMonitor(Node):
     threshold we consider that activity to have occurred. The keys of this
     mapping must match the labels output by the activity detector that is
     feeding this node, otherwise input activities that do not match an entry in
-    this mapping will be ignored.
+    this mapping will be ignored. Thresholds are triggered if values meet or
+    exceed the values provided.
     """
     def __init__(self):
         super().__init__(self.__class__.__name__)
@@ -201,23 +202,30 @@ class TaskMonitor(Node):
         """
         log = self.get_logger()
 
-        # See if any of the predicted activities are in the current task's
-        # defined activities
-        current_activity = None
-        for a in activity_msg.label_vec:
-            if a in self._task._task_steps.keys():
-                # Label vector is sorted by probability so the first activity we find
-                # that pertains to the current task is the most likely
-                current_activity = a
-                break
-
-        if current_activity is None:
-            # No activity matching current task... update the current activity and exit
-            self._current_activity = activity_msg.label_vec[0]
-            self.publish_task_state_message()
+        # We are expecting a "next" step activity. We observe that this
+        # activity has been performed if the confidence of that activity has
+        # met or exceeded the associated confidence threshold.
+        lbl = self._task.state.replace('_', ' ')
+        try:
+            # Index of the current state label in the activity detection output
+            lbl_idx = activity_msg.label_vec.index(lbl)
+        except ValueError:
+            log.warn(f"Current state ({lbl}) not represented in activity "
+                     f"detection results. Received: {activity_msg.label_vec}")
             return
 
+        conf = activity_msg.conf_vec[lbl_idx]
+        current_activity: Optional[str] = None
+        log.info(f"Awaiting sufficiently high confidence for activity '{lbl}'. "
+                 f"Currently: {conf}. Need {self._task_trigger_thresholds[lbl]}.")
+        if conf >= self._task_trigger_thresholds[lbl]:
+            log.info("Threshold exceeded, setting as current activity.")
+            current_activity = lbl
         self._current_activity = current_activity
+
+        if current_activity is None:
+            # No activity matching current task.
+            return
 
         # If we are currently in a timer state, exit early since we need to wait for
         # the timer to finish
