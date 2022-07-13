@@ -382,12 +382,10 @@ class TaskMonitor(Node):
 
         self.publish_task_state_message()
 
-
     def monitor_keypress(self):
         # Collect events until released
         with keyboard.Listener(on_press=self.on_press) as listener:
             listener.join()
-
 
     def on_press(self, key):
         """
