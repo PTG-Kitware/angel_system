@@ -383,6 +383,9 @@ class TaskMonitor(Node):
         self.publish_task_state_message()
 
     def monitor_keypress(self):
+        log = self.get_logger()
+        log.info(f"Starting keyboard monitor. Press the right arrow key to"
+                 + " proceed to the next step.")
         # Collect events until released
         with keyboard.Listener(on_press=self.on_press) as listener:
             listener.join()
