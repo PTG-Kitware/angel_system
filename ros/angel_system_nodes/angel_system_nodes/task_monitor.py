@@ -95,7 +95,7 @@ class CoffeeDemoTask():
         self.steps = []
         self.uids = {}
         for key, value in self._task_steps.items():
-            task_name = key.replace(' ', '_')
+            task_name = key
             self.steps.append({'name': task_name})
             self.uids[task_name] = str(uuid.uuid4())
 
@@ -239,9 +239,6 @@ class TaskMonitor(Node):
 
         # Attempt to advance to the next step
         try:
-            with self._task_lock:
-                # Attempt to advance to the next state
-                self._task.trigger(current_activity.replace(' ', '_'))
             log.info(f"Proceeding to next step. Current step: {self._task.state}")
 
             # Update state tracking vars
@@ -318,16 +315,9 @@ class TaskMonitor(Node):
 
         # Populate step list
         for idx, step in enumerate(self._task.steps):
-            try:
-                message.steps.append(step['name'].replace('_', ' '))
-            except:
-                message.steps.append(step.replace('_', ' '))
-
             # Set the current step index
             if self._current_step == step['name']:
                 message.current_step_id = idx
-
-        message.current_step = self._current_step.replace('_', ' ')
 
         if self._previous_step is None:
             message.previous_step = "N/A"
