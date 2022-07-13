@@ -62,9 +62,8 @@ class SpatialFCNModule(nn.Module):
 
         return net
 
-    def forward(self, data: Dict):
+    def forward(self, x: torch.Tensor):
         # pdb.set_trace()
-        x = data["frm"]
         bsize = x.shape[0]
         out = self.net(x)
         x = self.selected_out["avgpool"].reshape(bsize, -1)

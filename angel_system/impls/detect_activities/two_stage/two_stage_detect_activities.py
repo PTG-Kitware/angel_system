@@ -1,6 +1,7 @@
 import importlib.util
 import logging
 from typing import Iterable, Dict, Hashable, List, Union, Any
+import pdb
 
 import numpy as np
 import torch
@@ -11,7 +12,7 @@ from angel_system.impls.detect_activities.two_stage.two_stage import TwoStageMod
 
 
 LOG = logging.getLogger(__name__)
-
+H2O_CLASSES = ["background", "grab book", "grab espresso", "grab lotion", "grab spray", "grab milk", "grab cocoa", "grab chips", "grab cappuccino", "place book", "place espresso", "place lotion", "place spray", "place milk", "place cocoa", "place chips", "place cappuccino", "open lotion", "open milk", "open chips", "close lotion", "close milk", "close chips", "pour milk", "take out espresso", "take out cocoa", "take out chips", "take out cappuccino", "put in espresso", "put in cocoa", "put in cappuccino", "apply lotion", "apply spray", "read book", "read espresso", "spray spray", "squeeze lotion"]
 
 class TwoStageDetector(DetectActivities):
     """
@@ -81,11 +82,11 @@ class TwoStageDetector(DetectActivities):
             ]
         )
 
-        # Set up the labels from the given labels file
-        self._labels = []
-        with open(self._labels_file, "r") as f:
-            for line in f:
-                self._labels.append(line.rstrip())
+        # TODO: Set up the labels from the given labels file
+        self._labels = H2O_CLASSES
+        # with open(self._labels_file, "r") as f:
+        #     for line in f:
+        #         self._labels.append(line.rstrip())
 
     def get_model(self) -> torch.nn.Module:
         """
@@ -95,7 +96,7 @@ class TwoStageDetector(DetectActivities):
         model = self._model
         if model is None:
             # Load the model with the checkpoint
-            model = two_stage(self._checkpoint_path, self._num_classes)
+            model = TwoStageModule(self._checkpoint_path, self._num_classes)
             model = model.eval()
 
             # Transfer the model to the requested device
@@ -119,76 +120,47 @@ class TwoStageDetector(DetectActivities):
         self,
         frame_iter: Iterable[np.ndarray]
     ) -> Iterable[str]:
-        # """
-        # Formats the given iterable of frames into the required input format
-        # for the swin model and then inputs them to the model for inferencing.
-        # """
-        # # Check that we got the right number of frames
-        # frame_iter = list(frame_iter)
+        """
+        Formats the given iterable of frames into the required input format
+        for the swin model and then inputs them to the model for inferencing.
+        """
+        # Check that we got the right number of frames
+        frame_iter = list(frame_iter)
         # assert len(frame_iter) == (self._sampling_rate * self._num_frames)
-        # model = self.get_model()
+        model = self.get_model()
 
-        # # Form the frames into the required format for the video model
-        # # Based off of the Learn swin CollateFn
-        # spatial_idx = 1 # only perform uniform crop and short size jitter
-        # clip_idx = -1
+        # Apply data pre-processing
+        frames = [self.transform(f) for f in frame_iter]
+        frames = torch.stack(frames)
 
-        # frames = [self.transform(f) for f in frame_iter]
-        # frames = [torch.stack(frames)]
+        # Move the inputs to the GPU if necessary
+        if self._model.cuda:
+            frames = frames.cuda()
 
-        # clip_size = (((self._sampling_rate * self._num_frames) / self._frames_per_second)
-        #              * self._frames_per_second)
-        # start_end_idx = [
-        #     get_start_end_idx(len(x), clip_size, clip_idx=clip_idx, num_clips=1)
-        #     for x in frames
-        # ]
+        # Predict!
+        with torch.no_grad():
+            preds = self._model(frames)
 
-        # # This subsamples every n (sample rate) frames
-        # frames = [
-        #     temporal_sampling(x, s, e, self._num_frames)
-        #     for x, (s, e) in zip(frames, start_end_idx)
-        # ]
+        # pdb.set_trace()
+        # Get the top predicted classes
+        post_act = torch.nn.Softmax(dim=1)
+        preds: torch.Tensor = post_act(preds) # shape: (1, num_classes)
+        top_preds = preds.topk(k=5)
 
-        # # Crop and random short side scale jitter
-        # # NOTE: We are passing the same value for min scale, max scale,
-        # # and crop size meaning that the random short side scale
-        # # transform is deterministic.
-        # frames = [x.permute(1, 0, 2, 3) for x in frames]
-        # frames = [spatial_sampling(x,
-        #                            spatial_idx=spatial_idx,
-        #                            min_scale=self._crop_size,
-        #                            max_scale=self._crop_size,
-        #                            crop_size=self._crop_size) for x in frames]
-        # frames = torch.stack(frames)
+        # Map the predicted classes to the label names
+        # top_preds.indices is a 1xk tensor
+        pred_class_indices = top_preds.indices[0]
 
-        # # Move the inputs to the GPU if necessary
-        # if self._model.cuda:
-        #     frames = frames.cuda()
+        pred_class_names = [self._labels[int(i)] for i in pred_class_indices]
 
-        # # Predict!
-        # with torch.no_grad():
-        #     preds = self._model(frames)
+        # Filter out any detections below the threshold
+        predictions = []
+        pred_values = top_preds.values[0]
+        for idx, p in enumerate(pred_class_names):
+            if (pred_values[idx] > self._det_threshold):
+                predictions.append(p)
 
-        # # Get the top predicted classes
-        # post_act = torch.nn.Softmax(dim=1)
-        # preds: torch.Tensor = post_act(preds) # shape: (1, num_classes)
-        # top_preds = preds.topk(k=5)
-
-        # # Map the predicted classes to the label names
-        # # top_preds.indices is a 1xk tensor
-        # pred_class_indices = top_preds.indices[0]
-
-        # pred_class_names = [self._labels[int(i)] for i in pred_class_indices]
-
-        # # Filter out any detections below the threshold
-        # predictions = []
-        # pred_values = top_preds.values[0]
-        # for idx, p in enumerate(pred_class_names):
-        #     if (pred_values[idx] > self._det_threshold):
-        #         predictions.append(p)
-
-        # return predictions
-        return []
+        return predictions
 
     def get_config(self) -> dict:
         return {

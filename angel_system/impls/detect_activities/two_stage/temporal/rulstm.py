@@ -61,23 +61,20 @@ class RULSTM(nn.Module):
         self.unrolling_lstm = nn.LSTM(2*hidden, hidden, num_layers=depth, dropout=dropout if depth>1 else 0)
         self.classifier = nn.Sequential(nn.Dropout(dropout), nn.Linear(hidden, act_classes))
         self.sequence_completion = sequence_completion
-        self.return_context = return_context
 
         # Loss functions
         self.loss = nn.CrossEntropyLoss()
 
     def forward(self, inputs):
         # permute the inputs for compatibility with the LSTM
-        # inputs=inputs.permute(1,0,2)
-        x = inputs[0]["feats"]
-        batch_size = x.shape[1]
-        lh, rh = inputs[0]["labels"]["l_hand"], inputs[0]["labels"]["r_hand"]
-        h = self.fc_h(torch.cat([lh, rh], axis=-1).float())
+        x = inputs
+ 
+        # Enable for passing hand pose information
+        # lh, rh = inputs[0]["labels"]["l_hand"], inputs[0]["labels"]["r_hand"]
+        # h = self.fc_h(torch.cat([lh, rh], axis=-1).float())
         x = self.fc1(x)
-        x = torch.cat([x, h], axis=-1)
-        # packed_input = pack_padded_sequence(
-        #     x, inputs[1].tolist(), batch_first=False, enforce_sorted=False
-        # )
+        x = torch.cat([x, x], axis=-1)  # Placeholder for hand pose modality
+        # x = torch.cat([x, h], axis=-1)  # Concatenate with h for hand pose modality
 
         # pass the frames through the rolling LSTM
         # and get the hidden (x) and cell (c) states at each time-step
@@ -115,14 +112,6 @@ class RULSTM(nn.Module):
         # apply the classifier to each output feature vector (independently)
         y = self.classifier(x.view(-1,x.size(2))).view(x.size(0), x.size(1), -1)
         # pdb.set_trace()
-
         out = y[:, -1, :]
-        pred = torch.argmax(out, dim=1)
-        loss = self.loss(out, inputs[0]["act"].long())
 
-        if self.return_context:
-            # return y and the concatenation of hidden and cell states 
-            c=c.squeeze().permute(1,0,2)
-            return out, pred, loss, torch.cat([x, c],2)
-        else:
-            return out, pred, loss
+        return out
