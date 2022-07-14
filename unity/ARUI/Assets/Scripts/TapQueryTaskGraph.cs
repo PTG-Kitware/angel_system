@@ -158,7 +158,7 @@ public class TapQueryTaskGraph : MonoBehaviour, IMixedRealityInputActionHandler
     private void OnEnable()
     {
         CoreServices.InputSystem?.RegisterHandler<IMixedRealityInputActionHandler>(this);
-        AngelARUI.Instance.PringDebugMessage("Generate Test Data using Tap gesture", true);
+        AngelARUI.Instance.PrintDebugMessage("Generate Test Data using Tap gesture", true);
     }
 
 
