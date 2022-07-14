@@ -9,14 +9,14 @@ Material:
   m_PrefabAsset: {fileID: 0}
   m_Name: HolographicBackPlate-tasklist
   m_Shader: {fileID: 4800000, guid: 5bdea20278144b11916d77503ba1467a, type: 3}
-  m_ShaderKeywords: _BORDER_LIGHT _BORDER_LIGHT_REPLACES_ALBEDO _DISABLE_ALBEDO_MAP
-    _METALLIC_TEXTURE_ALBEDO_CHANNEL_A _ROUND_CORNERS
+  m_ShaderKeywords: _ALPHABLEND_ON _BORDER_LIGHT _BORDER_LIGHT_REPLACES_ALBEDO _DISABLE_ALBEDO_MAP
+    _METALLIC_TEXTURE_ALBEDO_CHANNEL_A
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 0
-  m_CustomRenderQueue: 2000
+  m_CustomRenderQueue: 3000
   stringTagMap:
-    RenderType: Opaque
+    RenderType: Fade
   disabledShaderPasses: []
   m_SavedProperties:
     serializedVersion: 3
@@ -84,7 +84,7 @@ Material:
     - _BorderLightOpaqueAlpha: 1
     - _BorderLightReplacesAlbedo: 1
     - _BorderLightUsesHoverColor: 0
-    - _BorderMinValue: 0.202
+    - _BorderMinValue: 0.086
     - _BorderWidth: 0.018
     - _BorderWidthHorizontal: 0.1
     - _BorderWidthVertical: 0.1
@@ -98,11 +98,11 @@ Material:
     - _ClippingSphere: 0
     - _ColorWriteMask: 15
     - _CullMode: 0
-    - _CustomMode: 0
+    - _CustomMode: 2
     - _Cutoff: 0.5
     - _DetailNormalMapScale: 1
     - _DirectionalLight: 0
-    - _DstBlend: 0
+    - _DstBlend: 10
     - _EdgeSmoothingValue: 0.0002
     - _EnableChannelMap: 0
     - _EnableEmission: 0
@@ -137,7 +137,7 @@ Material:
     - _IridescenceThreshold: 0.05
     - _Metallic: 0
     - _MipmapBias: -2
-    - _Mode: 0
+    - _Mode: 3
     - _NearLightFade: 0
     - _NearPlaneFade: 0
     - _NormalMapScale: 1
@@ -154,7 +154,7 @@ Material:
     - _RimPower: 5.83
     - _RoundCornerMargin: 0
     - _RoundCornerRadius: 0.025
-    - _RoundCorners: 1
+    - _RoundCorners: 0
     - _Smoothness: 0.5
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 0
@@ -173,12 +173,12 @@ Material:
     - _ZOffsetFactor: 0
     - _ZOffsetUnits: 0
     - _ZTest: 4
-    - _ZWrite: 1
+    - _ZWrite: 0
     m_Colors:
     - _ClipPlane: {r: 0, g: 1, b: 0, a: 0}
     - _ClippingBorderColor: {r: 1, g: 0.2, b: 0, a: 1}
     - _ClippingPlaneBorderColor: {r: 1, g: 0.2, b: 0, a: 1}
-    - _Color: {r: -0.0049999924, g: -0.0049999924, b: -0.0049999924, a: 1}
+    - _Color: {r: -0.00000001071021, g: -0.00000001071021, b: -0.00000001071021, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _EmissiveColor: {r: 0, g: 0, b: 0, a: 1}
     - _EnvironmentColorX: {r: 1, g: 0, b: 0, a: 1}

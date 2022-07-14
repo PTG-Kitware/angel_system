@@ -114,7 +114,7 @@ public class TapTestData : MonoBehaviour, IMixedRealityInputActionHandler
     private void OnEnable()
     {
         CoreServices.InputSystem?.RegisterHandler<IMixedRealityInputActionHandler>(this);
-        AngelARUI.Instance.PringDebugMessage("Generate Test Data using Tap gesture", true);
+        AngelARUI.Instance.PrintDebugMessage("Generate Test Data using Tap gesture", true);
     }
 
 
@@ -128,7 +128,7 @@ public class TapTestData : MonoBehaviour, IMixedRealityInputActionHandler
         if (eventData != null && eventData.InputSource.SourceType.Equals(InputSourceType.Hand) && !actionInProgress)
         {
             actionInProgress = true;
-            StartCoroutine(AddIfHit(eventData));
+            //StartCoroutine(AddIfHit(eventData));
         }
     }
 
