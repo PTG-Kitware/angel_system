@@ -95,6 +95,7 @@ class CoffeeDemoTask():
         self.steps = []
         self.uids = {}
         for key, value in self._task_steps.items():
+            print(f"{key}: {value}")
             task_name = key
             self.steps.append({'name': task_name})
             self.uids[task_name] = str(uuid.uuid4())
