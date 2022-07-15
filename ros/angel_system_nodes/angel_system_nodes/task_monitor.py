@@ -91,12 +91,26 @@ class CoffeeDemoTask():
         with open(task_steps_file, "r") as f:
             self._task_steps = json.load(f)
 
-        # Create the list of steps for the state machine
-        # NOTE: Only extracting the sub steps for now
+        # Task graph information
+        self.task_graph_steps = []
+        self.task_graph_step_levels = []
+
+        # State machine steps
         self.steps = []
         self.uids = {}
+
+        # Create the list of steps for the state machine and fill out
+        # the task graph information
         for name, step in self._task_steps.items():
+            self.task_graph_steps.append(name)
+            self.task_graph_step_levels.append(step['level'])
+
+            # NOTE: Only extracting the sub steps for use in the state machine
+            # for now
             for sub_step_name, sub_step in step['sub-steps'].items():
+                self.task_graph_steps.append(sub_step_name)
+                self.task_graph_step_levels.append(sub_step['level'])
+
                 task_name = sub_step['activity']
                 self.steps.append({'name': task_name})
                 self.uids[task_name] = str(uuid.uuid4())
@@ -188,7 +202,7 @@ class TaskMonitor(Node):
             self.query_task_graph_callback
         )
 
-        # TODO: Why do we publish a message right away?
+        # Publish task update to indicate the initial state
         self.publish_task_state_message()
 
     def listener_callback(self, activity_msg: ActivityDetection):
@@ -271,41 +285,10 @@ class TaskMonitor(Node):
         log = self.get_logger()
         task_g = TaskGraph()
 
-        task_steps = []
-        task_levels = []
-        for name, step in self._task._task_steps.items():
-            task_steps.append(name)
-            task_levels.append(step['level'])
-            for sub_step_name, sub_step in step['sub-steps'].items():
-                task_steps.append(sub_step_name)
-                task_levels.append(sub_step['level'])
+        task_g.task_steps = self._task.task_graph_steps
+        task_g.task_levels = self._task.task_graph_step_levels
 
-        task_g.task_steps = task_steps
-        task_g.task_levels = task_levels
-
-        log.info(f"{task_steps}")
-        log.info(f"{task_levels}")
         response.task_graph = task_g
-        '''
-        task_g.task_nodes = []
-        self._task._task_steps
-        for t in self._task.steps:
-            t_node = TaskNode()
-
-            t_node.name = t['name']
-            t_node.uid = self._task.uids[t_node.name]
-            # TODO: Add other parameters
-
-            task_g.task_nodes.append(t_node)
-        log.info(f"Tasks: {task_g.task_nodes}")
-
-        task_g.node_edges = []
-        for tr in self._task.transitions:
-            task_g.node_edges.append([i for i, x in enumerate(task_g.task_nodes) if x.name == tr['source']][0])
-            task_g.node_edges.append([i for i, x in enumerate(task_g.task_nodes) if x.name == tr['dest']][0])
-        log.info(f"Edges: {task_g.node_edges}")
-
-        '''
         return response
 
     def publish_task_state_message(self, activity=None):
@@ -332,14 +315,13 @@ class TaskMonitor(Node):
             message.task_items.append(item)
 
         # Populate step list
-        for idx, step in enumerate(self._task.steps):
-            try:
-                message.steps.append(step['name'])
-            except:
-                message.steps.append(step)
+        for idx, step in enumerate(self._task.task_graph_steps):
+            # TODO: This field is not needed anymore with the
+            # now implemented query_task_graph service
+            message.steps.append(step)
 
             # Set the current step index
-            if self._current_step == step['name']:
+            if self._current_step == step:
                 message.current_step_id = idx
 
         message.current_step = self._current_step
