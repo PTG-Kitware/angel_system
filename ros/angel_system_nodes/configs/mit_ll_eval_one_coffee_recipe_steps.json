@@ -45,17 +45,17 @@
       "Fold the filter in half again to create a quarter circle": {
         "level": 1,
         "index": 1,
-        "activity": "Take the coffee filter and fold it in half to create a semi circle"
+        "activity": "Fold the filter in half again to create a quarter circle"
       },
       "Place the folded filter into the dripper such that the point of the quarter circle rests in the center of the dripper": {
         "level": 1,
         "index": 2,
-        "activity": "Take the coffee filter and fold it in half to create a semi circle"
+        "activity": "Place the folded filter into the dripper such that the point of the quarter circle rests in the center of the dripper"
       },
       "Spread the filter open to create a cone inside the dripper": {
         "level": 1,
         "index": 3,
-        "activity": "Take the coffee filter and fold it in half to create a semi circle"
+        "activity": "Spread the filter open to create a cone inside the dripper"
       }
     }
   },

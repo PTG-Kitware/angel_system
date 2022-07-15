@@ -91,18 +91,15 @@ class CoffeeDemoTask():
         with open(task_steps_file, "r") as f:
             self._task_steps = json.load(f)
 
-        # Create the list of steps
+        # Create the list of steps for the state machine
+        # NOTE: Only extracting the sub steps for now
         self.steps = []
         self.uids = {}
-        for key, value in self._task_steps.items():
-            print(f"{key}: {value}")
-            task_name = key
-            self.steps.append({'name': task_name})
-            self.uids[task_name] = str(uuid.uuid4())
-
-        # Manually add the finish step
-        self.steps.append({'name': 'Done'})
-        self.uids['Done'] = str(uuid.uuid4())
+        for name, step in self._task_steps.items():
+            for sub_step_name, sub_step in step['sub-steps'].items():
+                task_name = sub_step['activity']
+                self.steps.append({'name': task_name})
+                self.uids[task_name] = str(uuid.uuid4())
 
         # Create the transitions between steps, assuming linear steps
         # TODO: use the step index in the task steps file to decide
@@ -274,7 +271,24 @@ class TaskMonitor(Node):
         log = self.get_logger()
         task_g = TaskGraph()
 
+        task_steps = []
+        task_levels = []
+        for name, step in self._task._task_steps.items():
+            task_steps.append(name)
+            task_levels.append(step['level'])
+            for sub_step_name, sub_step in step['sub-steps'].items():
+                task_steps.append(sub_step_name)
+                task_levels.append(sub_step['level'])
+
+        task_g.task_steps = task_steps
+        task_g.task_levels = task_levels
+
+        log.info(f"{task_steps}")
+        log.info(f"{task_levels}")
+        response.task_graph = task_g
+        '''
         task_g.task_nodes = []
+        self._task._task_steps
         for t in self._task.steps:
             t_node = TaskNode()
 
@@ -291,7 +305,7 @@ class TaskMonitor(Node):
             task_g.node_edges.append([i for i, x in enumerate(task_g.task_nodes) if x.name == tr['dest']][0])
         log.info(f"Edges: {task_g.node_edges}")
 
-        response.task_graph = task_g
+        '''
         return response
 
     def publish_task_state_message(self, activity=None):
