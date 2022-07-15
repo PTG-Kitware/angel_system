@@ -2,7 +2,6 @@
     "type": "angel_system.impls.detect_activities.pytorchvideo_slow_fast_r50.PytorchVideoSlowFastR50",
     "angel_system.impls.detect_activities.pytorchvideo_slow_fast_r50.PytorchVideoSlowFastR50": {
         "use_cuda": true,
-        "cuda_device": "cuda:0",
-        "det_threshold": 0.75
+        "cuda_device": "cuda:0"
     }
 }

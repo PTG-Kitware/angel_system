@@ -40,7 +40,6 @@ class PytorchVideoSlowFastR50(DetectActivities):
         self,
         use_cuda: bool = False,
         cuda_device: Union[int, str] = "cuda:0",
-        det_threshold: float = 0.75,
     ):
         self._use_cuda = use_cuda
         self._cuda_device = cuda_device
@@ -59,8 +58,6 @@ class PytorchVideoSlowFastR50(DetectActivities):
         self._sampling_rate = 2
         self._frames_per_second = 30
         self._alpha = 4
-
-        self._det_threshold = det_threshold
 
     def get_model(self) -> "torch.nn.Module":
         """
@@ -159,7 +156,6 @@ class PytorchVideoSlowFastR50(DetectActivities):
         return {
             "use_cuda": self._use_cuda,
             "cuda_device": self._cuda_device,
-            "det_threshold": self._det_threshold,
         }
 
     @classmethod
