@@ -61,9 +61,17 @@ windows:
       -p ROS_IP:=0.0.0.0
       -p topic_input_images:=PVFramesNV12
       -p topic_output_images:=PVFramesRGB
-  - activity_detector: ros2 run angel_system_nodes activity_detector --ros-args
+  # - activity_detector: ros2 run angel_system_nodes activity_detector --ros-args
+  #     -r __ns:=${ROS_NAMESPACE}
+  #     -p image_topic:=PVFramesRGB
+  #     -p det_topic:=ActivityDetections
+  #     -p use_cuda:=True
+  #     -p frames_per_det:=16.0
+  #     -p detector_config:=${CONFIG_DIR}/two_stage_activity_det_config.json
+  - mm_activity_detector: ros2 run angel_system_nodes mm_activity_detector --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p image_topic:=PVFramesRGB
+      -p hand_topic:=HandJointPoseData
       -p det_topic:=ActivityDetections
       -p use_cuda:=True
       -p frames_per_det:=16.0
@@ -85,9 +93,9 @@ windows:
   #     -p det_topic:=Detections
   #     -p det_3d_topic:=ObjectDetections3d
   #     -p headset_pose_topic:=HeadsetPoseData
-  # - feedback_generator: ros2 run angel_system_nodes feedback_generator --ros-args
-  #     -r __ns:=${ROS_NAMESPACE}
-  #     -p activity_detector_topic:=ActivityDetections
-  #     -p object_detection_topic:=ObjectDetections3d
-  #     -p task_monitor_topic:=TaskUpdates
-  #     -p arui_update_topic:=AruiUpdates
+  - feedback_generator: ros2 run angel_system_nodes feedback_generator --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p activity_detector_topic:=ActivityDetections
+      -p object_detection_topic:=ObjectDetections3d
+      -p task_monitor_topic:=TaskUpdates
+      -p arui_update_topic:=AruiUpdates
