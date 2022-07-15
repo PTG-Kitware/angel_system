@@ -43,8 +43,6 @@ class SwinBTransformer(DetectActivities):
         the input frames by this amount.
     :param torch_device: When using CUDA, use the device by the given ID. By
         default, this is set to `cpu`.
-    :param det_threshold: Threshold for which predictions must exceed to
-        create an activity detection.
     """
 
     def __init__(
@@ -55,12 +53,10 @@ class SwinBTransformer(DetectActivities):
         num_frames: int = 32,
         sampling_rate: int = 2,
         torch_device: str = "cpu",
-        det_threshold: float = 0.75,
     ):
         self._checkpoint_path = checkpoint_path
         self._num_classes = num_classes
         self._torch_device = torch_device
-        self._det_threshold = det_threshold
         self._num_frames = num_frames
         self._sampling_rate = sampling_rate
         self._labels_file = labels_file
@@ -186,9 +182,8 @@ class SwinBTransformer(DetectActivities):
 
     def get_config(self) -> dict:
         return {
-            "cuda_device": self._cuda_device,
+            "torch_device": self._torch_device,
             "num_classes": self._num_classes,
-            "det_threshold": self._det_threshold,
             "checkpoint_path": self._checkpoint_path,
             "num_frames": self._num_frames,
             "sampling_rate": self._sampling_rate,
