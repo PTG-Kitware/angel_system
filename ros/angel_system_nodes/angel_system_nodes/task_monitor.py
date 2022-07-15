@@ -400,7 +400,8 @@ class TaskMonitor(Node):
     def monitor_keypress(self):
         log = self.get_logger()
         log.info(f"Starting keyboard monitor. Press the right arrow key to"
-                 + " proceed to the next step.")
+                 + " proceed to the next step. Press the left arrow key to"
+                 + " go back to the previous step.")
         # Collect events until released
         with keyboard.Listener(on_press=self.on_press) as listener:
             listener.join()
@@ -413,12 +414,44 @@ class TaskMonitor(Node):
         log = self.get_logger()
         if key == keyboard.Key.right:
             with self._task_lock:
-                self._task.trigger(self._task.state)
+                try:
+                    self._task.trigger(self._task.state)
+                except AttributeError:
+                    log.warn(f"Tried to trigger on invalid state: {self._task.state}")
+                    return
+
                 log.info(f"Proceeding to next step. Current step: {self._task.state}")
 
                 # Update state tracking vars
                 self._previous_step = self._current_step
                 self._current_step = self._task.state
+
+                self.publish_task_state_message()
+        elif key == keyboard.Key.left:
+            with self._task_lock:
+                log.info(f"Proceeding to previous step")
+                try:
+                    self._task.machine.set_state(self._previous_step)
+                except ValueError:
+                    log.warn(f"Tried to set machine to invalid state: {self._previous_step}")
+                    return
+
+                # Update current step
+                self._current_step = self._task.state
+
+                # Find the index of the current step
+                curr_step_index = self._task.steps.index({'name': self._current_step,
+                                                          'ignore_invalid_triggers': None})
+
+                # Lookup the new previous step
+                prev_step_index = curr_step_index - 1
+                if prev_step_index >= 0:
+                    self._previous_step = self._task.steps[prev_step_index]['name']
+                else:
+                    self._previous_step = None
+
+                log.info(f"Current step is now: {self._task.state}")
+                log.info(f"Previous step is now: {self._previous_step}")
 
                 self.publish_task_state_message()
 
