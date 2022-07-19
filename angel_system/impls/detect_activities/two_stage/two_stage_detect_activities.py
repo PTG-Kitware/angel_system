@@ -7,16 +7,16 @@ import numpy as np
 import torch
 import torchvision
 
-from angel_system.interfaces.detect_activities import DetectActivities
+from angel_system.interfaces.detect_activities import MMDetectActivities
 from angel_system.impls.detect_activities.two_stage.two_stage import TwoStageModule
 
 
 LOG = logging.getLogger(__name__)
 H2O_CLASSES = ["background", "grab book", "grab espresso", "grab lotion", "grab spray", "grab milk", "grab cocoa", "grab chips", "grab cappuccino", "place book", "place espresso", "place lotion", "place spray", "place milk", "place cocoa", "place chips", "place cappuccino", "open lotion", "open milk", "open chips", "close lotion", "close milk", "close chips", "pour milk", "take out espresso", "take out cocoa", "take out chips", "take out cappuccino", "put in espresso", "put in cocoa", "put in cappuccino", "apply lotion", "apply spray", "read book", "read espresso", "spray spray", "squeeze lotion"]
 
-class TwoStageDetector(DetectActivities):
+class TwoStageDetector(MMDetectActivities):
     """
-    ``DetectActivities`` implementation using the explicit spatio temporal 
+    ``MMDetectActivities`` implementation using the explicit spatio temporal 
     two-stage training models.
 
     The `detect_activities` method in this class checks that the correct
@@ -118,7 +118,8 @@ class TwoStageDetector(DetectActivities):
 
     def detect_activities(
         self,
-        frame_iter: Iterable[np.ndarray]
+        frame_iter: Iterable[np.ndarray],
+        aux_data_iter: Iterable[Dict]
     ) -> Iterable[str]:
         """
         Formats the given iterable of frames into the required input format
@@ -126,20 +127,24 @@ class TwoStageDetector(DetectActivities):
         """
         # Check that we got the right number of frames
         frame_iter = list(frame_iter)
-        # assert len(frame_iter) == (self._sampling_rate * self._num_frames)
+        aux_data = list(aux_data_iter)
+        assert len(frame_iter) == len(aux_data)
+        assert len(frame_iter) == (self._sampling_rate * self._num_frames)
         model = self.get_model()
 
         # Apply data pre-processing
-        frames = [self.transform(f) for f in frame_iter[:2]]
+        frames = [self.transform(f) for f in frame_iter]
         frames = torch.stack(frames)
 
         # Move the inputs to the GPU if necessary
         if self._model.cuda:
             frames = frames.cuda()
+            for k in aux_data:
+                aux_data[k] = aux_data[k].cuda()
 
         # Predict!
         with torch.no_grad():
-            preds = self._model(frames)
+            preds = self._model(frames, aux_data)
 
         # pdb.set_trace()
         # Get the top predicted classes

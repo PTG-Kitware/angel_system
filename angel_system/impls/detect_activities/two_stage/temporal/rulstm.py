@@ -65,16 +65,16 @@ class RULSTM(nn.Module):
         # Loss functions
         self.loss = nn.CrossEntropyLoss()
 
-    def forward(self, inputs):
+    def forward(self, inputs, aux):
         # permute the inputs for compatibility with the LSTM
         x = inputs
  
         # Enable for passing hand pose information
-        # lh, rh = inputs[0]["labels"]["l_hand"], inputs[0]["labels"]["r_hand"]
-        # h = self.fc_h(torch.cat([lh, rh], axis=-1).float())
+        lh, rh = aux["lhand"], aux["rhand"]
+        h = self.fc_h(torch.cat([lh, rh], axis=-1).float())
         x = self.fc1(x)
-        x = torch.cat([x, x], axis=-1)  # Placeholder for hand pose modality
-        # x = torch.cat([x, h], axis=-1)  # Concatenate with h for hand pose modality
+        # x = torch.cat([x, x], axis=-1)  # Placeholder for hand pose modality
+        x = torch.cat([x, h], axis=-1)  # Concatenate with h for hand pose modality
 
         # pass the frames through the rolling LSTM
         # and get the hidden (x) and cell (c) states at each time-step

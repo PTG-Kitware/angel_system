@@ -11,11 +11,12 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 from smqtk_core.configuration import from_config_dict
+import message_filters as mf
 
 from sensor_msgs.msg import Image
 from angel_msgs.msg import ActivityDetection, HandJointPosesUpdate
 
-from angel_system.interfaces.detect_activities import DetectActivities
+from angel_system.interfaces.mm_detect_activities import MMDetectActivities
 
 
 BRIDGE = CvBridge()
@@ -40,19 +41,17 @@ class MMActivityDetector(Node):
         log.info(f"Frames per detection: {self._frames_per_det}")
         log.info(f"Detector config: {self._detector_config}")
 
-        self.image_subscription = self.create_subscription(
-            Image,
-            self._image_topic,
-            self.image_listener_callback,
-            1
+        self.subscription_list = []
+        # Image subscription
+        self.subscription_list.append(mf.Subscriber(self, Image, self._image_topic))
+        # Hand pose subscription
+        self.subscription_list.append(mf.Subscriber(self, HandJointPosesUpdate, self._hand_topic))
+        self.time_sync = mf.TimeSynchronizer(
+            self.subscription_list,
+            self._frames_per_det
         )
 
-        self.hand_subscription = self.create_subscription(
-            HandJointPosesUpdate,
-            self._hand_topic,
-            self.hand_listener_callback,
-            1
-        )
+        self.time_sync.registerCallback(self.multimodal_listener_callback)
 
         self._publisher = self.create_publisher(
             ActivityDetection,
@@ -62,7 +61,7 @@ class MMActivityDetector(Node):
 
         # Stores the frames until we have enough to send to the detector
         self._frames = []
-        self._hand_poses = []
+        self._aux_data = []
         self._source_stamp_start_frame = -1
         self._source_stamp_end_frame = -1
 
@@ -71,32 +70,31 @@ class MMActivityDetector(Node):
         with open(self._detector_config, "r") as f:
             config = json.load(f)
 
-        self._detector: DetectActivities = from_config_dict(config,
-                                                            DetectActivities.get_impls())
+        self._detector: MMDetectActivities = from_config_dict(config,
+                                                            MMDetectActivities.get_impls())
 
-    def image_listener_callback(self, image):
-        """
-        Callback for when an image is received on the selected image topic.
-        The image is added to a list of images and if the list length
-        exceeds the activity durations, it is passed to the activity detector.
-        Any detected activities are published to the configured activity
-        topic as angel_msgs/ActivityDetection messages.
-        """
+    def multimodal_listener_callback(self, image, hand_pose):
         log = self.get_logger()
-        # log.info("Got image!")
+        log.info("Got image and hand!")
 
         # Convert ROS img msg to CV2 image and add it to the frame stack
         rgb_image = BRIDGE.imgmsg_to_cv2(image, desired_encoding="rgb8")
         rgb_image_np = np.asarray(rgb_image)
 
         self._frames.append(rgb_image_np)
+        mm_data = dict(
+            lhand= hand_pose, 
+            rhand=hand_pose
+        )   #TBD: assign correct hands. Get hand code from Alex
+        self._aux_data.append(mm_data)
 
         # Store the image timestamp
         if self._source_stamp_start_frame == -1:
             self._source_stamp_start_frame = image.header.stamp
 
         if len(self._frames) >= self._frames_per_det:
-            activities_detected = self._detector.detect_activities(self._frames)
+            pdb.set_trace()
+            activities_detected = self._detector.detect_activities(self._frames, self._aux_data)
 
             if len(activities_detected) > 0:
                 # Create activity ROS message
@@ -120,15 +118,6 @@ class MMActivityDetector(Node):
             # Clear out stored frames and timestamps
             self._frames = []
             self._source_stamp_start_frame = -1
-
-
-    def hand_listener_callback(self, hand):
-        log = self.get_logger()
-        log.info("Got hand!")
-
-        pdb.set_trace()
-        self._hand_poses.append(hand)
-
 
 
 def main():

@@ -30,10 +30,10 @@ class TwoStageModule(nn.Module):
         self.fcn = SpatialFCNModule('resnext')
         self.temporal = RULSTM(num_classes, hidden=128, dropout=0, depth=3)
 
-    def forward(self, data):
+    def forward(self, data, aux):
         frame_feats = self.fcn(data)
         # pdb.set_trace()
-        out = self.temporal(frame_feats.unsqueeze(1))
+        out = self.temporal(frame_feats.unsqueeze(1), aux)
 
         return out
 
