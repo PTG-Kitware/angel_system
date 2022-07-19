@@ -130,7 +130,7 @@ class TwoStageDetector(DetectActivities):
         model = self.get_model()
 
         # Apply data pre-processing
-        frames = [self.transform(f) for f in frame_iter]
+        frames = [self.transform(f) for f in frame_iter[:2]]
         frames = torch.stack(frames)
 
         # Move the inputs to the GPU if necessary

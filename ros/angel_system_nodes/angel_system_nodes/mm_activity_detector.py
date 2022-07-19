@@ -1,5 +1,6 @@
 import json
 import time
+from threading import Lock
 from typing import Dict
 import pdb
 
@@ -25,8 +26,8 @@ class MMActivityDetector(Node):
     def __init__(self):
         super().__init__(self.__class__.__name__)
 
-        self._image_topic = self.declare_parameter("image_topic", "debug/PVFrames").get_parameter_value().string_value
-        self._hand_topic = self.declare_parameter("hand_pose_topic", "debug/HandJointPoseData").get_parameter_value().string_value
+        self._image_topic = self.declare_parameter("image_topic", "/debug/PVFrames").get_parameter_value().string_value
+        self._hand_topic = self.declare_parameter("hand_pose_topic", "/debug/HandJointPoseData").get_parameter_value().string_value
         self._use_cuda = self.declare_parameter("use_cuda", True).get_parameter_value().bool_value
         self._det_topic = self.declare_parameter("det_topic", "ActivityDetections").get_parameter_value().string_value
         self._frames_per_det = self.declare_parameter("frames_per_det", 32.0).get_parameter_value().double_value
@@ -42,14 +43,14 @@ class MMActivityDetector(Node):
         self.image_subscription = self.create_subscription(
             Image,
             self._image_topic,
-            self.listener_callback,
+            self.image_listener_callback,
             1
         )
 
         self.hand_subscription = self.create_subscription(
             HandJointPosesUpdate,
             self._hand_topic,
-            self.listener_callback,
+            self.hand_listener_callback,
             1
         )
 
@@ -65,13 +66,15 @@ class MMActivityDetector(Node):
         self._source_stamp_start_frame = -1
         self._source_stamp_end_frame = -1
 
+        self.lock = Lock()
+
         with open(self._detector_config, "r") as f:
             config = json.load(f)
 
         self._detector: DetectActivities = from_config_dict(config,
                                                             DetectActivities.get_impls())
 
-    def listener_callback(self, image, hand_pose):
+    def image_listener_callback(self, image):
         """
         Callback for when an image is received on the selected image topic.
         The image is added to a list of images and if the list length
@@ -80,12 +83,11 @@ class MMActivityDetector(Node):
         topic as angel_msgs/ActivityDetection messages.
         """
         log = self.get_logger()
+        # log.info("Got image!")
 
         # Convert ROS img msg to CV2 image and add it to the frame stack
         rgb_image = BRIDGE.imgmsg_to_cv2(image, desired_encoding="rgb8")
         rgb_image_np = np.asarray(rgb_image)
-        pdb.set_trace()
-        # hpose = 
 
         self._frames.append(rgb_image_np)
 
@@ -112,11 +114,21 @@ class MMActivityDetector(Node):
                 activity_msg.conf_vec = list(activities_detected.values())
 
                 # Publish activities
+                # with self.lock():
                 self._publisher.publish(activity_msg)
 
             # Clear out stored frames and timestamps
             self._frames = []
             self._source_stamp_start_frame = -1
+
+
+    def hand_listener_callback(self, hand):
+        log = self.get_logger()
+        log.info("Got hand!")
+
+        pdb.set_trace()
+        self._hand_poses.append(hand)
+
 
 
 def main():
