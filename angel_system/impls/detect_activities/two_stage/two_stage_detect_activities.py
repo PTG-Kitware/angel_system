@@ -133,10 +133,10 @@ class TwoStageDetector(MMDetectActivities):
         model = self.get_model()
 
         # Apply data pre-processing
-        frames = [self.transform(f) for f in frame_iter[:2]]
+        frames = [self.transform(f) for f in frame_iter]
         frames = torch.stack(frames)
         for k in aux_data:
-            aux_data[k] = torch.Tensor(aux_data[k][:2])
+            aux_data[k] = torch.Tensor(aux_data[k])
 
         # Move the inputs to the GPU if necessary
         if self._model.cuda:
