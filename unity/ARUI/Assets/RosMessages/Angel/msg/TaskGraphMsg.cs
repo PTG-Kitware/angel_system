@@ -20,46 +20,42 @@ namespace RosMessageTypes.Angel
         //        there are parallel threads looking into PDDL loading / representation,
         //        etc.
         // 
-        public TaskNodeMsg[] task_nodes;
-        //  Pairs of integers mapping parent-child node relationships in the directed
-        //  graph.
-        //  Integer values are indices into the above `task_nodes` array.
-        //  This array should always have an even number of elements.
-        public uint[] node_edges;
+        public string[] task_steps;
+        public uint[] task_levels;
 
         public TaskGraphMsg()
         {
-            this.task_nodes = new TaskNodeMsg[0];
-            this.node_edges = new uint[0];
+            this.task_steps = new string[0];
+            this.task_levels = new uint[0];
         }
 
-        public TaskGraphMsg(TaskNodeMsg[] task_nodes, uint[] node_edges)
+        public TaskGraphMsg(string[] task_steps, uint[] task_levels)
         {
-            this.task_nodes = task_nodes;
-            this.node_edges = node_edges;
+            this.task_steps = task_steps;
+            this.task_levels = task_levels;
         }
 
         public static TaskGraphMsg Deserialize(MessageDeserializer deserializer) => new TaskGraphMsg(deserializer);
 
         private TaskGraphMsg(MessageDeserializer deserializer)
         {
-            deserializer.Read(out this.task_nodes, TaskNodeMsg.Deserialize, deserializer.ReadLength());
-            deserializer.Read(out this.node_edges, sizeof(uint), deserializer.ReadLength());
+            deserializer.Read(out this.task_steps, deserializer.ReadLength());
+            deserializer.Read(out this.task_levels, sizeof(uint), deserializer.ReadLength());
         }
 
         public override void SerializeTo(MessageSerializer serializer)
         {
-            serializer.WriteLength(this.task_nodes);
-            serializer.Write(this.task_nodes);
-            serializer.WriteLength(this.node_edges);
-            serializer.Write(this.node_edges);
+            serializer.WriteLength(this.task_steps);
+            serializer.Write(this.task_steps);
+            serializer.WriteLength(this.task_levels);
+            serializer.Write(this.task_levels);
         }
 
         public override string ToString()
         {
             return "TaskGraphMsg: " +
-            "\ntask_nodes: " + System.String.Join(", ", task_nodes.ToList()) +
-            "\nnode_edges: " + System.String.Join(", ", node_edges.ToList());
+            "\ntask_steps: " + System.String.Join(", ", task_steps.ToList()) +
+            "\ntask_levels: " + System.String.Join(", ", task_levels.ToList());
         }
 
 #if UNITY_EDITOR

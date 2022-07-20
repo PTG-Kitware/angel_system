@@ -1,5 +1,6 @@
 using DilmerGames.Core.Singletons;
 using Microsoft.MixedReality.Toolkit.Examples.Demos.EyeTracking;
+using Microsoft.MixedReality.Toolkit.Input;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -55,6 +56,12 @@ public class AngelARUI : Singleton<AngelARUI>
         //Instantiate empty tasklist
         GameObject taskListPrefab = Instantiate(Resources.Load(StringResources.taskList_path)) as GameObject;
         taskListPrefab.AddComponent<TaskListManager>();
+    }
+
+    private void Start()
+    {
+        if (Logger.Instance==null)
+            PointerUtils.SetHandRayPointerBehavior(PointerBehavior.AlwaysOff);
     }
 
     /// <summary>
@@ -122,13 +129,13 @@ public class AngelARUI : Singleton<AngelARUI>
         return DetectedObj;
     }
 
-    public void PringDebugMessage(string message, bool showInLogger)
+    public void PrintDebugMessage(string message, bool showInLogger)
     {
         if (showARUIDebugMessages)
         {
             if (showInLogger && FindObjectOfType<Logger>()!=null)
                 Logger.Instance.LogInfo("***ARUI: "+ message);
-            Debug.Log(message);
+            Debug.Log("***ARUI: " + message);
         }
     }
 

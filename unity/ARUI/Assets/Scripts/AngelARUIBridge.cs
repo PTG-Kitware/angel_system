@@ -78,48 +78,12 @@ public class AngelARUIBridge : MonoBehaviour
     {
         Logger log = logger();
 
-        List<uint> edges = new List<uint>();
-        edges.AddRange(msg.task_graph.node_edges);
-        List<List<string>> tasks = new List<List<string>>();
+        string[,] final_tasks = new string[msg.task_graph.task_steps.Length, 2];
 
-        int taskIdx = 0;
-        uint curTask = edges[taskIdx];
-
-        List<string> elem = new List<string> { "0", msg.task_graph.task_nodes[curTask].name };
-        tasks.Add(elem);
-
-        uint nextTask = edges[taskIdx + 1];
-
-        // remove pair form list
-        edges.RemoveAt(taskIdx + 1);
-        edges.RemoveAt(taskIdx);
-
-        int num_pairs = edges.Count / 2;
-        for (int i = 0; i < num_pairs; i++)
+        for (int i = 0; i < msg.task_graph.task_steps.Length; i++)
         {
-            curTask = nextTask;
-            taskIdx = edges.IndexOf(curTask);
-
-            elem = new List<string> { "0", msg.task_graph.task_nodes[curTask].name };
-            tasks.Add(elem);
-
-            nextTask = edges[taskIdx + 1];
-
-            // remove pair form list
-            edges.RemoveAt(taskIdx + 1);
-            edges.RemoveAt(taskIdx);
-        }
-
-        // Add the last task
-        elem = new List<string> { "0", msg.task_graph.task_nodes[nextTask].name };
-        tasks.Add(elem);
-
-        // Send tasks to ARUI
-        string[,] final_tasks = new string[tasks.Count, 2];
-        for (int i = 0; i < tasks.Count; i++)
-        {
-            final_tasks[i, 0] = tasks[i][0];
-            final_tasks[i, 1] = tasks[i][1];
+            final_tasks[i, 0] = msg.task_graph.task_levels[i].ToString();
+            final_tasks[i, 1] = msg.task_graph.task_steps[i];
         }
 
         AngelARUI.Instance.SetTasks(final_tasks);

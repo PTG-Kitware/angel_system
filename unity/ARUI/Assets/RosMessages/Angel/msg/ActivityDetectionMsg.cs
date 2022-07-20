@@ -22,8 +22,11 @@ namespace RosMessageTypes.Angel
         //  Timestamps of the first image and the last image these predictions pertain to.
         public BuiltinInterfaces.TimeMsg source_stamp_start_frame;
         public BuiltinInterfaces.TimeMsg source_stamp_end_frame;
-        //  Prediction classification label ordered from most confident to least.
+        //  Class labels and prediction confidences.
+        //  conf_vec[i] corresponds to the prediction confidence for the class at
+        //  label_vec[i].
         public string[] label_vec;
+        public float[] conf_vec;
 
         public ActivityDetectionMsg()
         {
@@ -31,14 +34,16 @@ namespace RosMessageTypes.Angel
             this.source_stamp_start_frame = new BuiltinInterfaces.TimeMsg();
             this.source_stamp_end_frame = new BuiltinInterfaces.TimeMsg();
             this.label_vec = new string[0];
+            this.conf_vec = new float[0];
         }
 
-        public ActivityDetectionMsg(Std.HeaderMsg header, BuiltinInterfaces.TimeMsg source_stamp_start_frame, BuiltinInterfaces.TimeMsg source_stamp_end_frame, string[] label_vec)
+        public ActivityDetectionMsg(Std.HeaderMsg header, BuiltinInterfaces.TimeMsg source_stamp_start_frame, BuiltinInterfaces.TimeMsg source_stamp_end_frame, string[] label_vec, float[] conf_vec)
         {
             this.header = header;
             this.source_stamp_start_frame = source_stamp_start_frame;
             this.source_stamp_end_frame = source_stamp_end_frame;
             this.label_vec = label_vec;
+            this.conf_vec = conf_vec;
         }
 
         public static ActivityDetectionMsg Deserialize(MessageDeserializer deserializer) => new ActivityDetectionMsg(deserializer);
@@ -49,6 +54,7 @@ namespace RosMessageTypes.Angel
             this.source_stamp_start_frame = BuiltinInterfaces.TimeMsg.Deserialize(deserializer);
             this.source_stamp_end_frame = BuiltinInterfaces.TimeMsg.Deserialize(deserializer);
             deserializer.Read(out this.label_vec, deserializer.ReadLength());
+            deserializer.Read(out this.conf_vec, sizeof(float), deserializer.ReadLength());
         }
 
         public override void SerializeTo(MessageSerializer serializer)
@@ -58,6 +64,8 @@ namespace RosMessageTypes.Angel
             serializer.Write(this.source_stamp_end_frame);
             serializer.WriteLength(this.label_vec);
             serializer.Write(this.label_vec);
+            serializer.WriteLength(this.conf_vec);
+            serializer.Write(this.conf_vec);
         }
 
         public override string ToString()
@@ -66,7 +74,8 @@ namespace RosMessageTypes.Angel
             "\nheader: " + header.ToString() +
             "\nsource_stamp_start_frame: " + source_stamp_start_frame.ToString() +
             "\nsource_stamp_end_frame: " + source_stamp_end_frame.ToString() +
-            "\nlabel_vec: " + System.String.Join(", ", label_vec.ToList());
+            "\nlabel_vec: " + System.String.Join(", ", label_vec.ToList()) +
+            "\nconf_vec: " + System.String.Join(", ", conf_vec.ToList());
         }
 
 #if UNITY_EDITOR

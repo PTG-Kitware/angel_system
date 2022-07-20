@@ -36,17 +36,25 @@ If the index does not match with the given task graph, the function call is igno
 
 Examples can be found in "TapTestData.cs".
 
+The tasklist can be toggled using AngelARUI.Instance.ToggleTasklist();
+
 **** MRTK settings
 For eye-tracking to work, the user has to give permission to the eye-tracking. Also, eye-tracking has to be enabled in the MRTK toolkit.
 If eye tracking does not work through the spatial map created by Hololens:
-Goto: Local InputSystemProfile -> Pointers -> Pointing Raycast Layer Masks -> Disable every option, except the layer "UI"
+Goto: 
+
+Local InputSystemProfile -> Pointers -> Pointing Raycast Layer Masks -> Disable every option, except the layer "UI"
+In the AngelMRTK profiles, the pointers (hand, eye, rays) collide with all objects marked as layer "UI"
 
 **** UI Functions
-The UI uses eye-gaze as input. The user can enable and disable the task list by looking at the button next to the white orb.
+The UI uses eye gaze as input. The user can enable and disable the task list by looking at the button next to the white orb.
+The position of the orb can be locally adjusted using the tap gesture.
 
 **** Debugging
 If an instance of the Logger is in the scene, the ARUI prints debug message to the Unity console and the logger window.
 One can disable the ARUI debug messages in the unity hierarchy by setting the "ShowARUIDebugMessages" to false.
 
 **** Limitations
-The eye tracking might not be reliable if the user wears glasses.
+- The eye tracking might not be reliable if the user wears glasses.
+- At start-up, it might take few seconds until the eye gaze rays is reliable
+
