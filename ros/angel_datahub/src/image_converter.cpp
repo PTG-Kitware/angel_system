@@ -1,6 +1,7 @@
 #include <chrono>
 #include <cmath>
 #include <exception>
+#include <iomanip>
 #include <memory>
 #include <numeric>
 
@@ -38,6 +39,13 @@ DEFINE_PARAM_NAME( PARAM_TOPIC_OUTPUT_IMAGE, "topic_output_images" );
 
 
 } // namespace
+
+// ----------------------------------------------------------------------------
+/// Simple conversion to decimal seconds from a ROS time structure.
+inline double time_to_decimal(rclcpp::Time t)
+{
+  return (double)t.seconds() + (((double)t.nanoseconds()) / 1e9);
+}
 
 // ----------------------------------------------------------------------------
 /// Converts NV12 images published from the headset to RGB8 images suitable for
@@ -112,6 +120,9 @@ ImageConverter
 {
   auto log = this->get_logger();
 
+  rclcpp::Time nv12_image_time = image_msg->header.stamp;
+  rclcpp::Time nv12_receive_time = this->now();
+
   // Store the current image dimensions
   m_image_width = image_msg->width;
   m_image_height = image_msg->height;
@@ -131,7 +142,27 @@ ImageConverter
   image_message->header.frame_id = frame_id;
 
   // Publish the RGB image
+  rclcpp::Time rgb_publish_time = this->now();
   m_pub_output_image->publish(*image_message);
+
+  // Log latencies
+  {
+    double time_nv12_image = time_to_decimal(nv12_image_time),
+           time_nv12_receive = time_to_decimal(nv12_receive_time),
+           time_rgb_publish = time_to_decimal(rgb_publish_time);
+    double delta_image_receive = time_nv12_receive - time_nv12_image,
+           delta_receive_publish = time_rgb_publish - time_nv12_receive,
+           delta_image_publish = time_rgb_publish - time_nv12_image;
+    auto ss = std::stringstream();
+    ss << std::endl << std::setprecision(16)
+       << "Received frame with header time @ " << time_nv12_image << std::endl
+       << "Callback triggered @ " << time_to_decimal(nv12_receive_time) << std::endl
+       << "Sending converted image time @ " << time_to_decimal(rgb_publish_time) << std::endl
+       << "Capture --> Receive Latency: " << delta_image_receive << std::endl
+       << "Receive --> Publish Latency: " << delta_receive_publish << std::endl
+       << "Capture --> Publish Latency: " << delta_image_publish << std::endl;
+    RCLCPP_INFO( log, ss.str() );
+  }
 }
 
 // ----------------------------------------------------------------------------

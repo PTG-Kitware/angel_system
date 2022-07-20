@@ -17,13 +17,6 @@ MonoBehaviour:
   recognitionConfidenceLevel: 1
   speechCommands:
   - localizationKey: 
-    keyword: Menu
-    keyCode: 0
-    action:
-      id: 2
-      description: Menu
-      axisConstraint: 2
-  - localizationKey: 
     keyword: Select
     keyCode: 0
     action:
@@ -31,23 +24,23 @@ MonoBehaviour:
       description: Select
       axisConstraint: 2
   - localizationKey: 
-    keyword: Rotate
-    keyCode: 0
+    keyword: Toggle Diagnostics
+    keyCode: 48
     action:
       id: 14
-      description: Rotate
-      axisConstraint: 2
+      description: Toggle Diagnostics
+      axisConstraint: 0
   - localizationKey: 
-    keyword: Show
-    keyCode: 0
+    keyword: Toggle Profiler
+    keyCode: 57
     action:
       id: 15
-      description: Show Task List
-      axisConstraint: 2
+      description: Toggle Profiler
+      axisConstraint: 0
   - localizationKey: 
-    keyword: Help
+    keyword: Show Tasks
     keyCode: 0
     action:
       id: 16
-      description: Help
-      axisConstraint: 7
+      description: Show Tasks
+      axisConstraint: 2

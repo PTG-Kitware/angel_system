@@ -5,14 +5,14 @@ import uuid
 from typing import Optional
 
 import numpy as np
+from pynput import keyboard
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
-
-from angel_msgs.msg import ActivityDetection, TaskUpdate, TaskItem, TaskGraph, TaskNode
 from transitions import Machine
 import transitions
 
+from angel_msgs.msg import ActivityDetection, TaskUpdate, TaskItem, TaskGraph, TaskNode
 from angel_msgs.srv import QueryTaskGraph
 
 
@@ -91,15 +91,33 @@ class CoffeeDemoTask():
         with open(task_steps_file, "r") as f:
             self._task_steps = json.load(f)
 
-        # Create the list of steps
+        # Task graph information
+        self.task_graph_steps = []
+        self.task_graph_step_levels = []
+
+        # State machine steps
         self.steps = []
         self.uids = {}
-        for key, value in self._task_steps.items():
-            task_name = key.replace(' ', '_')
-            self.steps.append({'name': task_name})
-            self.uids[task_name] = str(uuid.uuid4())
+
+        # Create the list of steps for the state machine and fill out
+        # the task graph information
+        for name, step in self._task_steps.items():
+            self.task_graph_steps.append(name)
+            self.task_graph_step_levels.append(step['level'])
+
+            # NOTE: Only extracting the sub steps for use in the state machine
+            # for now
+            for sub_step_name, sub_step in step['sub-steps'].items():
+                self.task_graph_steps.append(sub_step_name)
+                self.task_graph_step_levels.append(sub_step['level'])
+
+                task_name = sub_step['activity']
+                self.steps.append({'name': task_name})
+                self.uids[task_name] = str(uuid.uuid4())
 
         # Manually add the finish step
+        self.task_graph_steps.append("Done")
+        self.task_graph_step_levels.append(0)
         self.steps.append({'name': 'Done'})
         self.uids['Done'] = str(uuid.uuid4())
 
@@ -169,6 +187,9 @@ class TaskMonitor(Node):
         self._timer_active = False
         self._timer_lock = threading.RLock()
 
+        # Control thread access to advancing the task step
+        self._task_lock = threading.RLock()
+
         # Initialize ROS hooks
         self._subscription = self.create_subscription(
             ActivityDetection,
@@ -187,7 +208,7 @@ class TaskMonitor(Node):
             self.query_task_graph_callback
         )
 
-        # TODO: Why do we publish a message right away?
+        # Publish task update to indicate the initial state
         self.publish_task_state_message()
 
     def listener_callback(self, activity_msg: ActivityDetection):
@@ -202,10 +223,17 @@ class TaskMonitor(Node):
         """
         log = self.get_logger()
 
+        # If we are currently in a timer state, exit early since we need to wait for
+        # the timer to finish
+        with self._timer_lock:
+            if self._timer_active:
+                log.info(f"Waiting for timer to finish for {self._task.state}")
+                return
+
         # We are expecting a "next" step activity. We observe that this
         # activity has been performed if the confidence of that activity has
         # met or exceeded the associated confidence threshold.
-        lbl = self._task.state.replace('_', ' ')
+        lbl = self._task.state
         try:
             # Index of the current state label in the activity detection output
             lbl_idx = activity_msg.label_vec.index(lbl)
@@ -227,16 +255,11 @@ class TaskMonitor(Node):
             # No activity matching current task.
             return
 
-        # If we are currently in a timer state, exit early since we need to wait for
-        # the timer to finish
-        with self._timer_lock:
-            if self._timer_active:
-                return
-
         # Attempt to advance to the next step
         try:
-            # Attempt to advance to the next state
-            self._task.trigger(current_activity.replace(' ', '_'))
+            with self._task_lock:
+                # Attempt to advance to the next state
+                self._task.trigger(current_activity)
             log.info(f"Proceeding to next step. Current step: {self._task.state}")
 
             # Update state tracking vars
@@ -268,22 +291,8 @@ class TaskMonitor(Node):
         log = self.get_logger()
         task_g = TaskGraph()
 
-        task_g.task_nodes = []
-        for t in self._task.steps:
-            t_node = TaskNode()
-
-            t_node.name = t['name']
-            t_node.uid = self._task.uids[t_node.name]
-            # TODO: Add other parameters
-
-            task_g.task_nodes.append(t_node)
-        log.info(f"Tasks: {task_g.task_nodes}")
-
-        task_g.node_edges = []
-        for tr in self._task.transitions:
-            task_g.node_edges.append([i for i, x in enumerate(task_g.task_nodes) if x.name == tr['source']][0])
-            task_g.node_edges.append([i for i, x in enumerate(task_g.task_nodes) if x.name == tr['dest']][0])
-        log.info(f"Edges: {task_g.node_edges}")
+        task_g.task_steps = self._task.task_graph_steps
+        task_g.task_levels = self._task.task_graph_step_levels
 
         response.task_graph = task_g
         return response
@@ -312,17 +321,16 @@ class TaskMonitor(Node):
             message.task_items.append(item)
 
         # Populate step list
-        for idx, step in enumerate(self._task.steps):
-            try:
-                message.steps.append(step['name'].replace('_', ' '))
-            except:
-                message.steps.append(step.replace('_', ' '))
+        for idx, step in enumerate(self._task.task_graph_steps):
+            # TODO: This field is not needed anymore with the
+            # now implemented query_task_graph service
+            message.steps.append(step)
 
             # Set the current step index
-            if self._current_step == step['name']:
+            if self._current_step == step:
                 message.current_step_id = idx
 
-        message.current_step = self._current_step.replace('_', ' ')
+        message.current_step = self._current_step
 
         if self._previous_step is None:
             message.previous_step = "N/A"
@@ -358,18 +366,33 @@ class TaskMonitor(Node):
         log = self.get_logger()
         loops = self._task.machine.states[self._task.state].timer_length
 
+        # Record the current state
+        curr_state = self._task.state
+
         # Publish a task update message once per second
         for i in range(int(loops)):
             self.publish_task_state_message()
-            self._task.machine.states[self._task.state].timer_length -= 1
+
+            try:
+                self._task.machine.states[curr_state].timer_length -= 1
+            except AttributeError:
+                # The current state was probably changed elsewhere
+                break
 
             time.sleep(1)
 
         with self._timer_lock:
             self._timer_active = False
 
+        # Make sure that the state has not changed during the timer delay
+        if curr_state != self._task.state:
+            log.warn("State change detecting during timer loop."
+                     + " Next state will NOT be triggered via timer.")
+            return
+
         # Advance to the next state
-        self._task.trigger(self._task.state)
+        with self._task_lock:
+            self._task.trigger(self._task.state)
 
         # Update state tracking vars
         self._previous_step = self._current_step
@@ -377,11 +400,73 @@ class TaskMonitor(Node):
 
         self.publish_task_state_message()
 
+    def monitor_keypress(self):
+        log = self.get_logger()
+        log.info(f"Starting keyboard monitor. Press the right arrow key to"
+                 + " proceed to the next step. Press the left arrow key to"
+                 + " go back to the previous step.")
+        # Collect events until released
+        with keyboard.Listener(on_press=self.on_press) as listener:
+            listener.join()
+
+    def on_press(self, key):
+        """
+        Callback function for keypress events. If the right arrow is pressed,
+        the task monitor advances to the next step.
+        """
+        log = self.get_logger()
+        if key == keyboard.Key.right:
+            with self._task_lock:
+                try:
+                    self._task.trigger(self._task.state)
+                except AttributeError:
+                    log.warn(f"Tried to trigger on invalid state: {self._task.state}")
+                    return
+
+                log.info(f"Proceeding to next step. Current step: {self._task.state}")
+
+                # Update state tracking vars
+                self._previous_step = self._current_step
+                self._current_step = self._task.state
+
+                self.publish_task_state_message()
+        elif key == keyboard.Key.left:
+            with self._task_lock:
+                log.info(f"Proceeding to previous step")
+                try:
+                    self._task.machine.set_state(self._previous_step)
+                except ValueError:
+                    log.warn(f"Tried to set machine to invalid state: {self._previous_step}")
+                    return
+
+                # Update current step
+                self._current_step = self._task.state
+
+                # Find the index of the current step
+                curr_step_index = self._task.steps.index({'name': self._current_step,
+                                                          'ignore_invalid_triggers': None})
+
+                # Lookup the new previous step
+                prev_step_index = curr_step_index - 1
+                if prev_step_index >= 0:
+                    self._previous_step = self._task.steps[prev_step_index]['name']
+                else:
+                    self._previous_step = None
+
+                log.info(f"Current step is now: {self._task.state}")
+                log.info(f"Previous step is now: {self._previous_step}")
+
+                self.publish_task_state_message()
+
 
 def main():
     rclpy.init()
 
     task_monitor = TaskMonitor()
+
+    keyboard_t = threading.Thread(target=task_monitor.monitor_keypress)
+    keyboard_t.daemon = True
+    keyboard_t.start()
 
     rclpy.spin(task_monitor)
 
