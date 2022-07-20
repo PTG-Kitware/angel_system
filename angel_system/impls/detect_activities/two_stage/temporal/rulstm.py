@@ -72,8 +72,13 @@ class RULSTM(nn.Module):
         # Enable for passing hand pose information
         lh, rh = aux["lhand"], aux["rhand"]
         h = self.fc_h(torch.cat([lh, rh], axis=-1).float())
+        if x.shape[1] == 1:
+            h = h.unsqueeze(1)
         x = self.fc1(x)
         # x = torch.cat([x, x], axis=-1)  # Placeholder for hand pose modality
+        # pdb.set_trace()
+
+        # Feature fusion
         x = torch.cat([x, h], axis=-1)  # Concatenate with h for hand pose modality
 
         # pass the frames through the rolling LSTM
@@ -111,7 +116,6 @@ class RULSTM(nn.Module):
 
         # apply the classifier to each output feature vector (independently)
         y = self.classifier(x.view(-1,x.size(2))).view(x.size(0), x.size(1), -1)
-        # pdb.set_trace()
         out = y[:, -1, :]
 
         return out

@@ -30,4 +30,4 @@ class DetectActivities (Configurable, Pluggable):
         """
         Calls `detect_activities() with the given iterable set of frames.`
         """
-        return self.detect_objects(frame_iter)
+        return self.detect_activities(frame_iter)

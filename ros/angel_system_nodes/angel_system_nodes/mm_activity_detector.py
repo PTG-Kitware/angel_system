@@ -20,7 +20,7 @@ from angel_system.interfaces.mm_detect_activities import MMDetectActivities
 
 
 BRIDGE = CvBridge()
-
+    
 
 class MMActivityDetector(Node):
 
@@ -61,7 +61,10 @@ class MMActivityDetector(Node):
 
         # Stores the frames until we have enough to send to the detector
         self._frames = []
-        self._aux_data = []
+        self._aux_data = dict(
+            lhand=[], 
+            rhand=[],
+        )
         self._source_stamp_start_frame = -1
         self._source_stamp_end_frame = -1
 
@@ -82,18 +85,16 @@ class MMActivityDetector(Node):
         rgb_image_np = np.asarray(rgb_image)
 
         self._frames.append(rgb_image_np)
-        mm_data = dict(
-            lhand= hand_pose, 
-            rhand=hand_pose
-        )   #TBD: assign correct hands. Get hand code from Alex
-        self._aux_data.append(mm_data)
+        lhand, rhand = self.get_hand_pose_from_msg(hand_pose)
+        self._aux_data['lhand'].append(lhand)
+        self._aux_data['rhand'].append(rhand)
 
         # Store the image timestamp
         if self._source_stamp_start_frame == -1:
             self._source_stamp_start_frame = image.header.stamp
 
         if len(self._frames) >= self._frames_per_det:
-            pdb.set_trace()
+            # pdb.set_trace()
             activities_detected = self._detector.detect_activities(self._frames, self._aux_data)
 
             if len(activities_detected) > 0:
@@ -118,6 +119,37 @@ class MMActivityDetector(Node):
             # Clear out stored frames and timestamps
             self._frames = []
             self._source_stamp_start_frame = -1
+
+    def get_hand_pose_from_msg(self, msg):
+        hand_joints = [{"joint": m.joint,
+                        "position": [ m.pose.position.x,
+                                      m.pose.position.y,
+                                      m.pose.position.z]} 
+                      for m in msg.joints]
+
+        # Rejecting joints not in OpenPose hand skeleton format
+        reject_joint_list = ['ThumbMetacarpalJoint', 
+                            'IndexMetacarpal', 
+                            'MiddleMetacarpal', 
+                            'RingMetacarpal', 
+                            'PinkyMetacarpal']
+        joint_pos = []
+        for j in hand_joints:
+            if j["joint"] not in reject_joint_list:
+                joint_pos.append(j["position"])
+        joint_pos = np.array(joint_pos).flatten()
+
+        if msg.hand == 'Right':
+            rhand = joint_pos
+            lhand = np.zeros_like(joint_pos)
+        elif msg.hand == 'Left':
+            lhand = joint_pos
+            rhand = np.zeros_like(joint_pos)
+        else:
+            lhand = np.zeros_like(joint_pos)
+            rhand = np.zeros_like(joint_pos)
+
+        return lhand, rhand
 
 
 def main():

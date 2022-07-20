@@ -7,7 +7,7 @@ import numpy as np
 import torch
 import torchvision
 
-from angel_system.interfaces.detect_activities import MMDetectActivities
+from angel_system.interfaces.mm_detect_activities import MMDetectActivities
 from angel_system.impls.detect_activities.two_stage.two_stage import TwoStageModule
 
 
@@ -127,14 +127,16 @@ class TwoStageDetector(MMDetectActivities):
         """
         # Check that we got the right number of frames
         frame_iter = list(frame_iter)
-        aux_data = list(aux_data_iter)
-        assert len(frame_iter) == len(aux_data)
-        assert len(frame_iter) == (self._sampling_rate * self._num_frames)
+        aux_data = dict(aux_data_iter)
+        assert all([len(frame_iter) == len(aux_data[i]) for i in aux_data])
+        # assert len(frame_iter) == (self._sampling_rate * self._num_frames)
         model = self.get_model()
 
         # Apply data pre-processing
-        frames = [self.transform(f) for f in frame_iter]
+        frames = [self.transform(f) for f in frame_iter[:2]]
         frames = torch.stack(frames)
+        for k in aux_data:
+            aux_data[k] = torch.Tensor(aux_data[k][:2])
 
         # Move the inputs to the GPU if necessary
         if self._model.cuda:
@@ -146,7 +148,6 @@ class TwoStageDetector(MMDetectActivities):
         with torch.no_grad():
             preds = self._model(frames, aux_data)
 
-        # pdb.set_trace()
         # Get the top predicted classes
         post_act = torch.nn.Softmax(dim=1)
         preds: torch.Tensor = post_act(preds) # shape: (1, num_classes)
@@ -165,6 +166,7 @@ class TwoStageDetector(MMDetectActivities):
             if (pred_values[idx] > self._det_threshold):
                 predictions.append(p)
 
+        # pdb.set_trace()
         return predictions
 
     def get_config(self) -> dict:
