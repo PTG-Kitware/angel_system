@@ -31,3 +31,4 @@ build-backend = "poetry.core.masonry.api"
 # Activity detector
 "angel_system.impls.detect_activities.pytorchvideo_slow_fast_r50" = "angel_system.impls.detect_activities.pytorchvideo_slow_fast_r50"
 "angel_system.impls.detect_activities.swinb.swinb_detect_activities" = "angel_system.impls.detect_activities.swinb.swinb_detect_activities"
+"angel_system.impls.detect_activities.two_stage.two_stage_detect_activities" = "angel_system.impls.detect_activities.two_stage.two_stage_detect_activities"

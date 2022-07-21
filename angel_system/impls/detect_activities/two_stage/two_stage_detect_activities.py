@@ -1,26 +1,24 @@
 import importlib.util
 import logging
 from typing import Iterable, Dict, Hashable, List, Union, Any
+import pdb
 
 import numpy as np
 import torch
+import torch.nn.functional as F
 import torchvision
 
-from angel_system.interfaces.detect_activities import DetectActivities
-from angel_system.impls.detect_activities.swinb.swin import swin_b
-from angel_system.impls.detect_activities.swinb.utils import (
-    get_start_end_idx, spatial_sampling, temporal_sampling
-)
+from angel_system.interfaces.mm_detect_activities import MMDetectActivities
+from angel_system.impls.detect_activities.two_stage.two_stage import TwoStageModule
 
 
 LOG = logging.getLogger(__name__)
+H2O_CLASSES = ["background", "grab book", "grab espresso", "grab lotion", "grab spray", "grab milk", "grab cocoa", "grab chips", "grab cappuccino", "place book", "place espresso", "place lotion", "place spray", "place milk", "place cocoa", "place chips", "place cappuccino", "open lotion", "open milk", "open chips", "close lotion", "close milk", "close chips", "pour milk", "take out espresso", "take out cocoa", "take out chips", "take out cappuccino", "put in espresso", "put in cocoa", "put in cappuccino", "apply lotion", "apply spray", "read book", "read espresso", "spray spray", "squeeze lotion"]
 
-
-class SwinBTransformer(DetectActivities):
+class TwoStageDetector(MMDetectActivities):
     """
-    ``DetectActivities`` implementation using the Shifted window (Swin)
-    transformer from LEARN. The LEARN implementation can be found here:
-    https://gitlab.kitware.com/darpa_learn/learn/-/blob/master/learn/algorithms/TimeSformer/models/swin.py
+    ``MMDetectActivities`` implementation using the explicit spatio temporal 
+    two-stage training models.
 
     The `detect_activities` method in this class checks that the correct
     number of frames are provided by checking that the length of `frame_iter`
@@ -43,6 +41,8 @@ class SwinBTransformer(DetectActivities):
         the input frames by this amount.
     :param torch_device: When using CUDA, use the device by the given ID. By
         default, this is set to `cpu`.
+    :param det_threshold: Threshold for which predictions must exceed to
+        create an activity detection.
     """
 
     def __init__(
@@ -53,10 +53,12 @@ class SwinBTransformer(DetectActivities):
         num_frames: int = 32,
         sampling_rate: int = 2,
         torch_device: str = "cpu",
+        det_threshold: float = 0.75,
     ):
         self._checkpoint_path = checkpoint_path
         self._num_classes = num_classes
         self._torch_device = torch_device
+        self._det_threshold = det_threshold
         self._num_frames = num_frames
         self._sampling_rate = sampling_rate
         self._labels_file = labels_file
@@ -65,13 +67,13 @@ class SwinBTransformer(DetectActivities):
         self._model: torch.nn.Module = None  # type: ignore
         self._model_device: torch.device = None  # type: ignore
 
-        # Default configs from learn SwinVideo config
-        self._mean = [0.45, 0.45, 0.45]
-        self._std = [0.225, 0.225, 0.225]
+        # Pytorch default configs for imagenet pre-trained models
+        self._mean = [0.485, 0.456, 0.406]
+        self._std = [0.229, 0.224, 0.225]
         self._crop_size = 224
         self._frames_per_second = 30
 
-        # Transfrom from learn/TimeSformer/video_classification.py
+        # Pytorch default transfroms for imagenet pre-trained models
         self.transform = torchvision.transforms.Compose(
             [
                 torchvision.transforms.ToTensor(),
@@ -81,21 +83,20 @@ class SwinBTransformer(DetectActivities):
             ]
         )
 
-        # Set up the labels from the given labels file
-        self._labels = []
-        with open(self._labels_file, "r") as f:
-            for line in f:
-                self._labels.append(line.rstrip())
+        # TODO: Set up the labels from the given labels file
+        self._labels = H2O_CLASSES
+        # with open(self._labels_file, "r") as f:
+        #     for line in f:
+        #         self._labels.append(line.rstrip())
 
     def get_model(self) -> torch.nn.Module:
         """
         Lazy load the torch model in an idempotent manner.
-        :raises RuntimeError: Use of CUDA was requested but is not available.
         """
         model = self._model
         if model is None:
             # Load the model with the checkpoint
-            model = swin_b(self._checkpoint_path, self._num_classes)
+            model = TwoStageModule(self._checkpoint_path, self._num_classes)
             model = model.eval()
 
             # Transfer the model to the requested device
@@ -109,80 +110,60 @@ class SwinBTransformer(DetectActivities):
 
     def detect_activities(
         self,
-        frame_iter: Iterable[np.ndarray]
-    ) -> Dict[str, float]:
+        frame_iter: Iterable[np.ndarray],
+        aux_data_iter: Iterable[Dict]
+    ) -> Iterable[Dict]:
         """
         Formats the given iterable of frames into the required input format
         for the swin model and then inputs them to the model for inferencing.
         """
         # Check that we got the right number of frames
         frame_iter = list(frame_iter)
-        assert len(frame_iter) == (self._sampling_rate * self._num_frames)
+        aux_data = dict(aux_data_iter)
+        assert all([len(frame_iter) == len(aux_data[i]) for i in aux_data])
+        # assert len(frame_iter) == (self._sampling_rate * self._num_frames)
         model = self.get_model()
+        # pdb.set_trace()
 
-        # Form the frames into the required format for the video model
-        # Based off of the Learn swin CollateFn
-        spatial_idx = 1 # only perform uniform crop and short size jitter
-        clip_idx = -1
-
+        # Apply data pre-processing
         frames = [self.transform(f) for f in frame_iter]
-        frames = [torch.stack(frames)]
-
-        clip_size = (((self._sampling_rate * self._num_frames) / self._frames_per_second)
-                     * self._frames_per_second)
-        start_end_idx = [
-            get_start_end_idx(len(x), clip_size, clip_idx=clip_idx, num_clips=1)
-            for x in frames
-        ]
-
-        # This subsamples every n (sample rate) frames
-        frames = [
-            temporal_sampling(x, s, e, self._num_frames)
-            for x, (s, e) in zip(frames, start_end_idx)
-        ]
-
-        # Crop and random short side scale jitter
-        # NOTE: We are passing the same value for min scale, max scale,
-        # and crop size meaning that the random short side scale
-        # transform is deterministic.
-        frames = [x.permute(1, 0, 2, 3) for x in frames]
-        frames = [spatial_sampling(x,
-                                   spatial_idx=spatial_idx,
-                                   min_scale=self._crop_size,
-                                   max_scale=self._crop_size,
-                                   crop_size=self._crop_size) for x in frames]
         frames = torch.stack(frames)
+        for k in aux_data:
+            aux_data[k] = torch.Tensor(aux_data[k])
 
         # Move the inputs to the GPU if necessary
         device = torch.device(self._torch_device)
         frames = frames.to(device=device)
+        for k in aux_data:
+            aux_data[k] = aux_data[k].to(device=device)
 
         # Predict!
         with torch.no_grad():
-            preds = self._model(frames)
+            preds = self._model(frames, aux_data)
 
         # Get the top predicted classes
-        post_act = torch.nn.Softmax(dim=1)
-        preds: torch.Tensor = post_act(preds)[0] # shape: (num_classes)
+        preds: torch.Tensor = F.softmax(preds, dim=1) # shape: (1, num_classes)
+        top_preds = preds.topk(k=5)
 
-        # Create the label to prediction confidence map
-        prediction_map = {}
-        for idx, pred in enumerate(preds):
-            prediction_map[self._labels[idx]] = pred.item()
+        # Map the predicted classes to the label names
+        # top_preds.indices is a 1xk tensor
+        pred_class_indices = top_preds.indices[0]
 
-        return prediction_map
+        pred_class_names = [self._labels[int(i)] for i in pred_class_indices]
+
+        # Map class names to confidence scores
+        pred_values = top_preds.values[0].tolist()
+        predictions = dict(zip(pred_class_names, pred_values))
+
+        return predictions
 
     def get_config(self) -> dict:
         return {
-            "torch_device": self._torch_device,
+            "cuda_device": self._cuda_device,
             "num_classes": self._num_classes,
+            "det_threshold": self._det_threshold,
             "checkpoint_path": self._checkpoint_path,
             "num_frames": self._num_frames,
             "sampling_rate": self._sampling_rate,
             "labels_file": self._labels_file,
         }
-
-    @classmethod
-    def is_usable(cls) -> bool:
-        # Only torch/torchvision required
-        return True
