@@ -593,14 +593,6 @@ python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 test = ["ipaddress", "mock", "unittest2", "enum34", "pywin32", "wmi"]
 
 [[package]]
-name = "psycopg2"
-version = "2.9.3"
-description = "psycopg2 - Python-PostgreSQL Database Adapter"
-category = "main"
-optional = false
-python-versions = ">=3.6"
-
-[[package]]
 name = "ptyprocess"
 version = "0.7.0"
 description = "Run a subprocess in a pseudo terminal"
@@ -1207,7 +1199,7 @@ numpy = "*"
 
 [[package]]
 name = "trimesh"
-version = "3.12.7"
+version = "3.12.6"
 description = "Import, export, process, analyze and view triangular meshes."
 category = "main"
 optional = false
@@ -1241,9 +1233,9 @@ xatlas = {version = "*", optional = true, markers = "extra == \"all\""}
 xxhash = {version = "*", optional = true, markers = "extra == \"all\""}
 
 [package.extras]
-all = ["lxml", "glooey", "setuptools", "scipy", "meshio", "triangle", "colorlog", "scikit-image", "xatlas", "xxhash", "msgpack", "mapbox-earcut", "rtree", "jsonschema", "pycollada", "python-fcl", "pyglet", "networkx", "chardet", "pillow", "psutil", "svg.path", "requests", "sympy", "shapely"]
-easy = ["lxml", "rtree", "xxhash", "setuptools", "msgpack", "jsonschema", "scipy", "pycollada", "pyglet", "networkx", "chardet", "pillow", "colorlog", "svg.path", "requests", "sympy", "shapely"]
-test = ["pyinstrument", "ezdxf", "coveralls", "pytest-cov", "pytest"]
+all = ["xatlas", "pyglet", "networkx", "svg.path", "scipy", "rtree", "pycollada", "lxml", "triangle", "meshio", "shapely", "sympy", "jsonschema", "python-fcl", "scikit-image", "chardet", "psutil", "pillow", "glooey", "msgpack", "xxhash", "requests", "setuptools", "colorlog", "mapbox-earcut"]
+easy = ["shapely", "pyglet", "sympy", "jsonschema", "networkx", "svg.path", "scipy", "rtree", "pillow", "pycollada", "chardet", "lxml", "msgpack", "xxhash", "requests", "setuptools", "colorlog"]
+test = ["pyinstrument", "coveralls", "pytest-cov", "pytest", "ezdxf"]
 
 [[package]]
 name = "typeguard"

@@ -5,6 +5,7 @@ import pdb
 
 import numpy as np
 import torch
+import torch.nn.functional as F
 import torchvision
 
 from angel_system.interfaces.mm_detect_activities import MMDetectActivities
@@ -91,7 +92,6 @@ class TwoStageDetector(MMDetectActivities):
     def get_model(self) -> torch.nn.Module:
         """
         Lazy load the torch model in an idempotent manner.
-        :raises RuntimeError: Use of CUDA was requested but is not available.
         """
         model = self._model
         if model is None:
@@ -100,16 +100,8 @@ class TwoStageDetector(MMDetectActivities):
             model = model.eval()
 
             # Transfer the model to the requested device
-            if self._torch_device != 'cpu':
-                if torch.cuda.is_available():
-                    model_device = torch.device(device=self._torch_device)
-                    model = model.to(device=model_device)
-                else:
-                    raise RuntimeError(
-                        "Use of CUDA requested but not available."
-                    )
-            else:
-                model_device = torch.device(self._torch_device)
+            model_device = torch.device(self._torch_device)
+            model = model.to(device=model_device)
 
             self._model = model
             self._model_device = model_device
@@ -120,7 +112,7 @@ class TwoStageDetector(MMDetectActivities):
         self,
         frame_iter: Iterable[np.ndarray],
         aux_data_iter: Iterable[Dict]
-    ) -> Iterable[str]:
+    ) -> Iterable[Dict]:
         """
         Formats the given iterable of frames into the required input format
         for the swin model and then inputs them to the model for inferencing.
@@ -131,6 +123,7 @@ class TwoStageDetector(MMDetectActivities):
         assert all([len(frame_iter) == len(aux_data[i]) for i in aux_data])
         # assert len(frame_iter) == (self._sampling_rate * self._num_frames)
         model = self.get_model()
+        # pdb.set_trace()
 
         # Apply data pre-processing
         frames = [self.transform(f) for f in frame_iter]
@@ -139,18 +132,17 @@ class TwoStageDetector(MMDetectActivities):
             aux_data[k] = torch.Tensor(aux_data[k])
 
         # Move the inputs to the GPU if necessary
-        if self._model.cuda:
-            frames = frames.cuda()
-            for k in aux_data:
-                aux_data[k] = aux_data[k].cuda()
+        device = torch.device(self._torch_device)
+        frames = frames.to(device=device)
+        for k in aux_data:
+            aux_data[k] = aux_data[k].to(device=device)
 
         # Predict!
         with torch.no_grad():
             preds = self._model(frames, aux_data)
 
         # Get the top predicted classes
-        post_act = torch.nn.Softmax(dim=1)
-        preds: torch.Tensor = post_act(preds) # shape: (1, num_classes)
+        preds: torch.Tensor = F.softmax(preds, dim=1) # shape: (1, num_classes)
         top_preds = preds.topk(k=5)
 
         # Map the predicted classes to the label names
@@ -159,14 +151,10 @@ class TwoStageDetector(MMDetectActivities):
 
         pred_class_names = [self._labels[int(i)] for i in pred_class_indices]
 
-        # Filter out any detections below the threshold
-        predictions = []
-        pred_values = top_preds.values[0]
-        for idx, p in enumerate(pred_class_names):
-            if (pred_values[idx] > self._det_threshold):
-                predictions.append(p)
+        # Map class names to confidence scores
+        pred_values = top_preds.values[0].tolist()
+        predictions = dict(zip(pred_class_names, pred_values))
 
-        # pdb.set_trace()
         return predictions
 
     def get_config(self) -> dict:
@@ -179,8 +167,3 @@ class TwoStageDetector(MMDetectActivities):
             "sampling_rate": self._sampling_rate,
             "labels_file": self._labels_file,
         }
-
-    @classmethod
-    def is_usable(cls) -> bool:
-        # Only torch/torchvision required
-        return True
