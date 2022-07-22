@@ -4,7 +4,7 @@
 # another tmuxinator launch).
 #
 
-name: fragment-object-detection-debug
+name: record-ros-bag
 root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 
 # Optional tmux socket
@@ -63,3 +63,7 @@ windows:
       ${ROS_NAMESPACE}/HeadsetAudioData
       ${ROS_NAMESPACE}/PVFramesNV12
       ${ROS_NAMESPACE}/SpatialMapData
+      ${ROS_NAMESPACE}/AnnotationEvents
+  - event_monitor: ros2 run angel_system_nodes annotation_event_monitor --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p annotation_event_topic:=AnnotationEvents
