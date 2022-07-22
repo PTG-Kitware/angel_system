@@ -5,4 +5,4 @@
 std_msgs/Header header
 
 # Event description
-string description 
+string description
