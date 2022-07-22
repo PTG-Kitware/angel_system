@@ -22,6 +22,7 @@ from rosidl_runtime_py.utilities import get_message
 import rosbag2_py
 
 from angel_msgs.msg import (
+    AnnotationEvent,
     EyeGazeData,
     HandJointPosesUpdate,
     HeadsetAudioData,
@@ -32,16 +33,17 @@ from sensor_msgs.msg import Image
 from angel_utils.conversion import convert_nv12_to_rgb
 
 
-def get_rosbag_options(path, serialization_format='cdr'):
+def get_rosbag_options(path, serialization_format="cdr"):
     """
     Helper function taken from rosbag2_py repo:
     https://github.com/ros2/rosbag2/blob/master/rosbag2_py/test/common.py
     """
-    storage_options = rosbag2_py.StorageOptions(uri=path, storage_id='sqlite3')
+    storage_options = rosbag2_py.StorageOptions(uri=path, storage_id="sqlite3")
 
     converter_options = rosbag2_py.ConverterOptions(
         input_serialization_format=serialization_format,
-        output_serialization_format=serialization_format)
+        output_serialization_format=serialization_format,
+    )
 
     return storage_options, converter_options
 
@@ -50,6 +52,7 @@ class BagConverter(Node):
     """
     Manages the exploding of ROS2 bags.
     """
+
     def __init__(self):
         """
         Performs basic initialization and then parses the bag.
@@ -57,17 +60,50 @@ class BagConverter(Node):
         super().__init__(self.__class__.__name__)
         self.log = self.get_logger()
 
-        self.bag_path = self.declare_parameter("bag_path", "").get_parameter_value().string_value
-        self.extract_audio = self.declare_parameter("extract_audio", True).get_parameter_value().bool_value
-        self.extract_images = self.declare_parameter("extract_images", True).get_parameter_value().bool_value
-        self.extract_eye_gaze_data = self.declare_parameter("extract_eye_gaze_data", True).get_parameter_value().bool_value
-        self.extract_head_pose_data = self.declare_parameter("extract_head_pose_data", True).get_parameter_value().bool_value
-        self.extract_hand_pose_data = self.declare_parameter("extract_hand_pose_data", True).get_parameter_value().bool_value
-        self.extract_spatial_map_data = self.declare_parameter("extract_spatial_map_data", True).get_parameter_value().bool_value
+        self.bag_path = (
+            self.declare_parameter("bag_path", "").get_parameter_value().string_value
+        )
+        self.extract_audio = (
+            self.declare_parameter("extract_audio", True)
+            .get_parameter_value()
+            .bool_value
+        )
+        self.extract_images = (
+            self.declare_parameter("extract_images", True)
+            .get_parameter_value()
+            .bool_value
+        )
+        self.extract_eye_gaze_data = (
+            self.declare_parameter("extract_eye_gaze_data", True)
+            .get_parameter_value()
+            .bool_value
+        )
+        self.extract_head_pose_data = (
+            self.declare_parameter("extract_head_pose_data", True)
+            .get_parameter_value()
+            .bool_value
+        )
+        self.extract_hand_pose_data = (
+            self.declare_parameter("extract_hand_pose_data", True)
+            .get_parameter_value()
+            .bool_value
+        )
+        self.extract_spatial_map_data = (
+            self.declare_parameter("extract_spatial_map_data", True)
+            .get_parameter_value()
+            .bool_value
+        )
+        self.extract_annotation_event_data = (
+            self.declare_parameter("extract_annotation_events", True)
+            .get_parameter_value()
+            .bool_value
+        )
 
         if self.bag_path == "":
             self.log.info("Please provide bag file to convert")
-            self.log.info("Usage: ros2 run angel_utils bag_extractor.py --ros-args -p bag_path:=`bag_name`")
+            self.log.info(
+                "Usage: ros2 run angel_utils bag_extractor.py --ros-args -p bag_path:=`bag_name`"
+            )
             raise ValueError("Bag file path not provided")
             return
 
@@ -82,14 +118,20 @@ class BagConverter(Node):
         if self.extract_head_pose_data:
             self.msg_type_to_handler_map[HeadsetPoseData] = self.handle_head_pose_msg
         if self.extract_hand_pose_data:
-            self.msg_type_to_handler_map[HandJointPosesUpdate] = self.handle_hand_pose_msg
+            self.msg_type_to_handler_map[
+                HandJointPosesUpdate
+            ] = self.handle_hand_pose_msg
         if self.extract_spatial_map_data:
             self.msg_type_to_handler_map[SpatialMesh] = self.handle_spatial_mesh_msg
+        if self.extract_annotation_event_data:
+            self.msg_type_to_handler_map[
+                AnnotationEvent
+            ] = self.handle_annotation_event_msg
 
         # Top level data folder
         self.num_total_msgs = 0
         self.data_folder = self.bag_path + "_extracted/"
-        if not(os.path.exists(self.data_folder)):
+        if not (os.path.exists(self.data_folder)):
             os.makedirs(self.data_folder)
             self.log.info(f"Created {self.data_folder} for data")
 
@@ -101,7 +143,7 @@ class BagConverter(Node):
         self.num_image_msgs = 0
         self.images = []
         self.image_folder = self.data_folder + "images/"
-        if not(os.path.exists(self.image_folder)):
+        if not (os.path.exists(self.image_folder)):
             os.makedirs(self.image_folder)
             self.log.info(f"Created {self.image_folder} for extracted images")
 
@@ -120,6 +162,10 @@ class BagConverter(Node):
         # For extracting spatial map data
         self.spatial_map_msgs = []
         self.num_spatial_map_msgs = 0
+
+        # For extracting spatial map data
+        self.annotation_event_msgs = []
+        self.num_annotation_event_msgs = 0
 
         # Parse the bag
         self.parse_bag()
@@ -140,7 +186,9 @@ class BagConverter(Node):
         topic_types = reader.get_all_topics_and_types()
 
         # Create a map for quicker lookup
-        type_map = {topic_types[i].name: topic_types[i].type for i in range(len(topic_types))}
+        type_map = {
+            topic_types[i].name: topic_types[i].type for i in range(len(topic_types))
+        }
 
         # Loop through the bag until there are no more messages
         while reader.has_next():
@@ -170,7 +218,7 @@ class BagConverter(Node):
         # Write the json data to disk
         if self.extract_eye_gaze_data:
             eye_gaze_file = self.data_folder + "eye_gaze_data.txt"
-            with open(eye_gaze_file, mode="w", encoding='utf-8') as f:
+            with open(eye_gaze_file, mode="w", encoding="utf-8") as f:
                 json.dump(self.eye_gaze_msgs, f)
             self.log.info(f"Created eye gaze file: {eye_gaze_file}")
         else:
@@ -178,7 +226,7 @@ class BagConverter(Node):
 
         if self.extract_hand_pose_data:
             hand_pose_file = self.data_folder + "hand_pose_data.txt"
-            with open(hand_pose_file, mode="w", encoding='utf-8') as f:
+            with open(hand_pose_file, mode="w", encoding="utf-8") as f:
                 json.dump(self.hand_pose_msgs, f)
             self.log.info(f"Created hand pose file: {hand_pose_file}")
         else:
@@ -186,7 +234,7 @@ class BagConverter(Node):
 
         if self.extract_head_pose_data:
             head_pose_file = self.data_folder + "head_pose_data.txt"
-            with open(head_pose_file, mode="w", encoding='utf-8') as f:
+            with open(head_pose_file, mode="w", encoding="utf-8") as f:
                 json.dump(self.head_pose_msgs, f)
             self.log.info(f"Created head pose file: {head_pose_file}")
         else:
@@ -194,11 +242,19 @@ class BagConverter(Node):
 
         if self.extract_spatial_map_data:
             spatial_map_file = self.data_folder + "spatial_map_data.txt"
-            with open(spatial_map_file, mode="w", encoding='utf-8') as f:
+            with open(spatial_map_file, mode="w", encoding="utf-8") as f:
                 json.dump(self.spatial_map_msgs, f)
             self.log.info(f"Created spatial map file: {spatial_map_file}")
         else:
             self.log.info(f"Skipping spatial map file creation")
+
+        if self.extract_annotation_event_data:
+            annotation_event_file = self.data_folder + "annotation_event_data.txt"
+            with open(annotation_event_file, mode="w", encoding="utf-8") as f:
+                json.dump(self.annotation_event_msgs, f)
+            self.log.info(f"Created annotation event file: {annotation_event_file}")
+        else:
+            self.log.info(f"Skipping annotation event file creation")
 
     def print_bag_info(self) -> None:
         """
@@ -212,6 +268,7 @@ class BagConverter(Node):
         self.log.info(f"Head pose messages: {self.num_head_pose_msgs}")
         self.log.info(f"Image messages: {self.num_image_msgs}")
         self.log.info(f"Spatial map messages: {self.num_spatial_map_msgs}")
+        self.log.info(f"Annotation event messages: {self.num_annotation_event_msgs}")
 
     def create_wav_file(self, filename: Optional[str] = None) -> None:
         """
@@ -220,15 +277,17 @@ class BagConverter(Node):
         if filename is None:
             filename = self.data_folder + "audio.wav"
 
+        if len(self.audio_data) == 0:
+            self.log.info("No audio data found in bag")
+            return
+
         # Split audio data into two channels
         # HL audio samples are interleaved like [CH1, CH2, CH1, CH2,...]
         audio_ch1 = np.array(self.audio_data)[::2]
         audio_ch2 = np.array(self.audio_data)[1::2]
 
         audio_both_channels = np.stack((audio_ch1, audio_ch2), axis=1)
-        scipy.io.wavfile.write(filename,
-                               self.audio_sample_rate,
-                               audio_both_channels)
+        scipy.io.wavfile.write(filename, self.audio_sample_rate, audio_both_channels)
 
         self.log.info(f"Created audio file: {filename}")
 
@@ -239,22 +298,28 @@ class BagConverter(Node):
         d = {
             "time_sec": msg.header.stamp.sec,
             "time_nanosec": msg.header.stamp.nanosec,
-            "gaze_origin": [msg.gaze_origin.x,
-                            msg.gaze_origin.y,
-                            msg.gaze_origin.z],
-            "gaze_direction": [msg.gaze_direction.x,
-                               msg.gaze_direction.y,
-                               msg.gaze_direction.z],
-            "head_movement_direction": [msg.head_movement_direction.x,
-                                        msg.head_movement_direction.y,
-                                        msg.head_movement_direction.z],
-            "head_velocity": [msg.head_velocity.x,
-                              msg.head_velocity.y,
-                              msg.head_velocity.z],
+            "gaze_origin": [msg.gaze_origin.x, msg.gaze_origin.y, msg.gaze_origin.z],
+            "gaze_direction": [
+                msg.gaze_direction.x,
+                msg.gaze_direction.y,
+                msg.gaze_direction.z,
+            ],
+            "head_movement_direction": [
+                msg.head_movement_direction.x,
+                msg.head_movement_direction.y,
+                msg.head_movement_direction.z,
+            ],
+            "head_velocity": [
+                msg.head_velocity.x,
+                msg.head_velocity.y,
+                msg.head_velocity.z,
+            ],
             "is_object_hit": msg.is_object_hit,
-            "hit_object_position": [msg.hit_object_position.x,
-                                    msg.hit_object_position.y,
-                                    msg.hit_object_position.z]
+            "hit_object_position": [
+                msg.hit_object_position.x,
+                msg.hit_object_position.y,
+                msg.hit_object_position.z,
+            ],
         }
 
         return d
@@ -267,16 +332,23 @@ class BagConverter(Node):
             "time_sec": msg.header.stamp.sec,
             "time_nanosec": msg.header.stamp.nanosec,
             "hand": msg.hand,
-            "joint_poses": [{"joint": m.joint,
-                             "position": [m.pose.position.x,
-                                          m.pose.position.y,
-                                          m.pose.position.z],
-                             "rotation_xyzw": [m.pose.orientation.x,
-                                               m.pose.orientation.y,
-                                               m.pose.orientation.z,
-                                               m.pose.orientation.w],
-                            } for m in msg.joints
-                           ]
+            "joint_poses": [
+                {
+                    "joint": m.joint,
+                    "position": [
+                        m.pose.position.x,
+                        m.pose.position.y,
+                        m.pose.position.z,
+                    ],
+                    "rotation_xyzw": [
+                        m.pose.orientation.x,
+                        m.pose.orientation.y,
+                        m.pose.orientation.z,
+                        m.pose.orientation.w,
+                    ],
+                }
+                for m in msg.joints
+            ],
         }
         return d
 
@@ -288,7 +360,7 @@ class BagConverter(Node):
             "time_sec": msg.header.stamp.sec,
             "time_nanosec": msg.header.stamp.nanosec,
             "world_matrix": list(msg.world_matrix),
-            "projection_matrix": list(msg.projection_matrix)
+            "projection_matrix": list(msg.projection_matrix),
         }
         return d
 
@@ -301,10 +373,26 @@ class BagConverter(Node):
         d = {
             "mesh_id": msg.mesh_id,
             "removal": msg.removal,
-            "triangles": [[int(t.vertex_indices[0]),
-                           int(t.vertex_indices[1]),
-                           int(t.vertex_indices[2])] for t in msg.mesh.triangles],
-            "vertices": [[v.x, v.y, v.z] for v in msg.mesh.vertices]
+            "triangles": [
+                [
+                    int(t.vertex_indices[0]),
+                    int(t.vertex_indices[1]),
+                    int(t.vertex_indices[2]),
+                ]
+                for t in msg.mesh.triangles
+            ],
+            "vertices": [[v.x, v.y, v.z] for v in msg.mesh.vertices],
+        }
+        return d
+
+    def convert_annotation_event_msg_to_dict(self, msg) -> Dict:
+        """
+        Converts a AnnotationEvent ROS message object to a dictionary.
+        """
+        d = {
+            "time_sec": msg.header.stamp.sec,
+            "time_nanosec": msg.header.stamp.nanosec,
+            "description": msg.description,
         }
         return d
 
@@ -332,7 +420,9 @@ class BagConverter(Node):
         # Save image to disk
         timestamp_str = f"{msg.header.stamp.sec:011d}_{msg.header.stamp.nanosec:09d}"
         file_name = (
-            f"{self.image_folder}frame_{self.num_image_msgs:05d}_" + timestamp_str + ".png"
+            f"{self.image_folder}frame_{self.num_image_msgs:05d}_"
+            + timestamp_str
+            + ".png"
         )
         cv2.imwrite(file_name, rgb_image)
 
@@ -379,6 +469,17 @@ class BagConverter(Node):
 
         msg_dict = self.convert_spatial_map_msg_to_dict(msg)
         self.spatial_map_msgs.append(msg_dict)
+
+    def handle_annotation_event_msg(self, msg: AnnotationEvent) -> None:
+        """
+        Handler for the AnnotationEvent messages in the ROS bag.
+        Converts the AnnotationEvent data to a dictionary and then adds it to
+        the AnnotationEvent dictionary list.
+        """
+        self.num_annotation_event_msgs += 1
+
+        msg_dict = self.convert_annotation_event_msg_to_dict(msg)
+        self.annotation_event_msgs.append(msg_dict)
 
 
 if __name__ == "__main__":
