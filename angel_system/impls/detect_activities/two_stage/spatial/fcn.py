@@ -1,11 +1,3 @@
-"""
-
-TODO:
-* Update documentation
-
-"""
-
-import pdb
 from collections import OrderedDict
 from typing import Dict
 
@@ -13,14 +5,13 @@ import torch
 from torch import nn
 from torchvision.models import resnext50_32x4d  # ,convnext_tiny
 
-# from torchvision.models.feature_extraction import create_feature_extractor
-
 
 class SpatialFCNModule(nn.Module):
     """Class implements fully convolutional network for extracting spatial
     features from the video frames.
 
-    Args: TBD
+    :param net: String for selecting the feature extraction network
+        (currently only supports "resnext")
     """
 
     def __init__(self, net: str):
@@ -53,6 +44,11 @@ class SpatialFCNModule(nn.Module):
         return hook
 
     def _select_network(self, net_opt: str) -> nn.Module:
+        """Function to select the network given an option as string
+
+        : param net_opt: Network option (currently only 
+            supports "resnext")
+        """
         net: nn.Module = None
         if net_opt == "resnext":
             net = resnext50_32x4d(pretrained=True)
@@ -63,7 +59,6 @@ class SpatialFCNModule(nn.Module):
         return net
 
     def forward(self, x: torch.Tensor):
-        # pdb.set_trace()
         bsize = x.shape[0]
         out = self.net(x)
         x = self.selected_out["avgpool"].reshape(bsize, -1)

@@ -1,7 +1,6 @@
 import json
 import time
 from typing import Dict
-import pdb
 
 from cv_bridge import CvBridge
 import cv2
@@ -89,7 +88,6 @@ class MMActivityDetector(Node):
             self._source_stamp_start_frame = image.header.stamp
 
         if len(self._frames) >= self._frames_per_det:
-            # pdb.set_trace()
             activities_detected = self._detector.detect_activities(self._frames, self._aux_data)
 
             if len(activities_detected) > 0:

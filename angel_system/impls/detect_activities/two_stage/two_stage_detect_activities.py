@@ -9,17 +9,14 @@ import torch
 import torch.nn.functional as F
 import torchvision
 
-# from angel_system.interfaces.mm_detect_activities import MMDetectActivities
 from angel_system.impls.detect_activities.two_stage.two_stage import TwoStageModule
 
 
 LOG = logging.getLogger(__name__)
-# H2O_CLASSES = ["background", "grab book", "grab espresso", "grab lotion", "grab spray", "grab milk", "grab cocoa", "grab chips", "grab cappuccino", "place book", "place espresso", "place lotion", "place spray", "place milk", "place cocoa", "place chips", "place cappuccino", "open lotion", "open milk", "open chips", "close lotion", "close milk", "close chips", "pour milk", "take out espresso", "take out cocoa", "take out chips", "take out cappuccino", "put in espresso", "put in cocoa", "put in cappuccino", "apply lotion", "apply spray", "read book", "read espresso", "spray spray", "squeeze lotion"]
 
 class TwoStageDetector(Configurable):
     """
-    ``MMDetectActivities`` implementation using the explicit spatio temporal 
-    two-stage training models.
+    Implementation of the explicit spatio temporal two-stage training models.
 
     The `detect_activities` method in this class checks that the correct
     number of frames are provided by checking that the length of `frame_iter`
@@ -84,8 +81,6 @@ class TwoStageDetector(Configurable):
             ]
         )
 
-        # TODO: Set up the labels from the given labels file
-        # self._labels = H2O_CLASSES
         self._labels = []
         with open(self._labels_file, "r") as f:
             for line in f:
@@ -116,8 +111,9 @@ class TwoStageDetector(Configurable):
         aux_data_iter: Dict[str, Iterable[np.ndarray]]
     ) -> Dict[str, float]:
         """
-        Formats the given iterable of frames into the required input format
-        for the swin model and then inputs them to the model for inferencing.
+        Formats the given iterable of frames and multi-modal auxiliary 
+        data into the required input format for the two-stage model and
+        then inputs them to the model for inferencing.
         """
         # Check that we got the right number of frames
         frame_iter = list(frame_iter)
@@ -125,9 +121,8 @@ class TwoStageDetector(Configurable):
         assert all([len(frame_iter) == len(aux_data[i]) for i in aux_data])
         # assert len(frame_iter) == (self._sampling_rate * self._num_frames)
         model = self.get_model()
-        # pdb.set_trace()
 
-        # Apply data pre-processing
+        # Apply data pre-processing to frames and other modalities
         frames = [self.transform(f) for f in frame_iter]
         frames = torch.stack(frames)
         for k in aux_data:

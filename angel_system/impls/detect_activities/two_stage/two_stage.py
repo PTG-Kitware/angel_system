@@ -1,10 +1,3 @@
-"""
-
-TODO:
-* Update documentation
-
-"""
-
 import pdb
 
 import torch
@@ -21,7 +14,8 @@ class TwoStageModule(nn.Module):
     representation of multi-modal inputs in the scene. This model also
     performs the activity recognition for the given frame sequence.
 
-    Args: TBD
+    :params checkpoint: Path to the checkpoint file to be loaded
+    :params num_classes: Number of activity classes in the data
     """
 
     def __init__(self, checkpoint: str, num_classes: int):
