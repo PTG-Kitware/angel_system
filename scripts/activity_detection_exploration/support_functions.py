@@ -113,7 +113,7 @@ def plot_activity_confidence(label, gt_ranges, custom_range=None, custom_range_c
     fig = plt.figure(figsize=(14, 6))
     ax = fig.add_subplot(111)
     ax.set_title(f"Window Confidence over time for \"{label}\"")
-    ax.set_xlabel("Time")
+    ax.set_xlabel("Time (seconds)")
     ax.set_ylabel("Confidence")
     ax.set_ylim(0, 1.05)
     ax.set_xlim(GlobalValues.slice_time_ranges[0][0]-1,
