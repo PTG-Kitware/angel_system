@@ -92,10 +92,13 @@ class SelectedSlice:
         return GlobalValues.slice_preds[self.index]
 
 
-def plot_activity_confidence(label, gt_ranges, custom_range=None, custom_range_color=None):
+def plot_activity_confidence(label, gt_ranges, custom_range=None, custom_range_color="red"):
     """
     Plot activity confidences, with hover-over showing the sequence-middle frame.
-    Clicks modify the object output to be used for
+
+    Clicks modify attributes in the object that is output with respect to what was just clicked.
+    This information may be used, for example, to animate the specific window frame sequence for
+    the result point that was clicked.
 
     :param label: String label of the activity class predictions to render.
     :param gt_ranges: A sequence of tuples indicating the starting and ending time of ground-truth
@@ -129,7 +132,7 @@ def plot_activity_confidence(label, gt_ranges, custom_range=None, custom_range_c
         ys_height = [1.025] #[0.1]
         bar_widths2 = [custom_range[1]-custom_range[0]]
         ys_bottom = [0] #[1.01]
-        color = custom_range_color if custom_range_color is not None else "red"
+        color = custom_range_color
         # TODO: Make this something that is added be clicking?
         ax.bar(xs_bars2, ys_height,
                width=bar_widths2, bottom=ys_bottom, align="edge",
