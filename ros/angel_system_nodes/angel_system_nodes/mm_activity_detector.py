@@ -14,8 +14,7 @@ import message_filters as mf
 
 from sensor_msgs.msg import Image
 from angel_msgs.msg import ActivityDetection, HandJointPosesUpdate
-
-from angel_system.interfaces.mm_detect_activities import MMDetectActivities
+from angel_system.impls.detect_activities.two_stage.two_stage_detect_activities import TwoStageDetector
 
 
 BRIDGE = CvBridge()
@@ -70,8 +69,7 @@ class MMActivityDetector(Node):
         with open(self._detector_config, "r") as f:
             config = json.load(f)
 
-        self._detector: MMDetectActivities = from_config_dict(config,
-                                                            MMDetectActivities.get_impls())
+        self._detector: TwoStageDetector = TwoStageDetector.from_config(config)
 
     def multimodal_listener_callback(self, image, hand_pose):
         log = self.get_logger()
@@ -111,9 +109,6 @@ class MMActivityDetector(Node):
 
                 # Publish activities
                 self._publisher.publish(activity_msg)
-
-                log.info(f'Activity Detected: {list(activities_detected.keys())[0]}')
-
 
             # Clear out stored frames, aux_data, and timestamps
             self._frames = []
@@ -168,6 +163,7 @@ def main():
     mm_activity_detector.destroy_node()
 
     rclpy.shutdown()
+    cv2.destroyAllWindows()
 
 
 if __name__ == '__main__':

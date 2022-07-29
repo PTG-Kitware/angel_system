@@ -99,3 +99,6 @@ windows:
       -p object_detection_topic:=ObjectDetections3d
       -p task_monitor_topic:=TaskUpdates
       -p arui_update_topic:=AruiUpdates
+  - rqt_2d_detections: rqt -s rqt_image_view/ImageView
+      --args ${ROS_NAMESPACE}/PVFramesRGB
+      --ros-args -p _image_transport:=raw

@@ -1,6 +1,7 @@
 import importlib.util
 import logging
 from typing import Iterable, Dict, Hashable, List, Union, Any
+from smqtk_core import Configurable
 import pdb
 
 import numpy as np
@@ -8,14 +9,14 @@ import torch
 import torch.nn.functional as F
 import torchvision
 
-from angel_system.interfaces.mm_detect_activities import MMDetectActivities
+# from angel_system.interfaces.mm_detect_activities import MMDetectActivities
 from angel_system.impls.detect_activities.two_stage.two_stage import TwoStageModule
 
 
 LOG = logging.getLogger(__name__)
 # H2O_CLASSES = ["background", "grab book", "grab espresso", "grab lotion", "grab spray", "grab milk", "grab cocoa", "grab chips", "grab cappuccino", "place book", "place espresso", "place lotion", "place spray", "place milk", "place cocoa", "place chips", "place cappuccino", "open lotion", "open milk", "open chips", "close lotion", "close milk", "close chips", "pour milk", "take out espresso", "take out cocoa", "take out chips", "take out cappuccino", "put in espresso", "put in cocoa", "put in cappuccino", "apply lotion", "apply spray", "read book", "read espresso", "spray spray", "squeeze lotion"]
 
-class TwoStageDetector(MMDetectActivities):
+class TwoStageDetector(Configurable):
     """
     ``MMDetectActivities`` implementation using the explicit spatio temporal 
     two-stage training models.
