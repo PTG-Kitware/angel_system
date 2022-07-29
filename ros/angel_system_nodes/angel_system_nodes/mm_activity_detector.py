@@ -75,7 +75,7 @@ class MMActivityDetector(Node):
 
     def multimodal_listener_callback(self, image, hand_pose):
         log = self.get_logger()
-        log.info("Got image and hand!")
+        # log.info("Got image and hand!")
 
         # Convert ROS img msg to CV2 image and add it to the frame stack
         rgb_image = BRIDGE.imgmsg_to_cv2(image, desired_encoding="rgb8")
@@ -110,11 +110,17 @@ class MMActivityDetector(Node):
                 activity_msg.conf_vec = list(activities_detected.values())
 
                 # Publish activities
-                # with self.lock():
                 self._publisher.publish(activity_msg)
 
-            # Clear out stored frames and timestamps
+                log.info(f'Activity Detected: {list(activities_detected.keys())[0]}')
+
+
+            # Clear out stored frames, aux_data, and timestamps
             self._frames = []
+            self._aux_data = dict(
+                lhand=[], 
+                rhand=[],
+            )
             self._source_stamp_start_frame = -1
 
     def get_hand_pose_from_msg(self, msg):

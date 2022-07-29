@@ -74,7 +74,7 @@ windows:
       -p hand_topic:=HandJointPoseData
       -p det_topic:=ActivityDetections
       -p use_cuda:=True
-      -p frames_per_det:=16.0
+      -p frames_per_det:=8.0
       -p detector_config:=${CONFIG_DIR}/two_stage_activity_det_config.json
   # - task_monitor: ros2 run angel_system_nodes task_monitor --ros-args
   #     -r __ns:=${ROS_NAMESPACE}

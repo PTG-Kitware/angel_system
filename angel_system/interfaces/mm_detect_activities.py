@@ -15,7 +15,7 @@ class MMDetectActivities (Configurable, Pluggable):
     def detect_activities(
       self,
       frame_iter: Iterable[np.ndarray],
-      aux_data_iter: Iterable[Dict]
+      aux_data_iter: Dict[str, Iterable[np.ndarray]]
     ) -> Dict[str, float]:
         """
         Detect activities in the given set of frames. And also takes
@@ -29,7 +29,7 @@ class MMDetectActivities (Configurable, Pluggable):
     def __call__(
       self,
       frame_iter: Iterable[np.ndarray],
-      aux_data_iter: Iterable[Dict]
+      aux_data_iter: Dict[str, Iterable[np.ndarray]]
     ) -> Dict[str, float]:
         """
         Calls `detect_activities() with the given iterable set of frames.`

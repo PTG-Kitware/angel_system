@@ -13,7 +13,7 @@ from angel_system.impls.detect_activities.two_stage.two_stage import TwoStageMod
 
 
 LOG = logging.getLogger(__name__)
-H2O_CLASSES = ["background", "grab book", "grab espresso", "grab lotion", "grab spray", "grab milk", "grab cocoa", "grab chips", "grab cappuccino", "place book", "place espresso", "place lotion", "place spray", "place milk", "place cocoa", "place chips", "place cappuccino", "open lotion", "open milk", "open chips", "close lotion", "close milk", "close chips", "pour milk", "take out espresso", "take out cocoa", "take out chips", "take out cappuccino", "put in espresso", "put in cocoa", "put in cappuccino", "apply lotion", "apply spray", "read book", "read espresso", "spray spray", "squeeze lotion"]
+# H2O_CLASSES = ["background", "grab book", "grab espresso", "grab lotion", "grab spray", "grab milk", "grab cocoa", "grab chips", "grab cappuccino", "place book", "place espresso", "place lotion", "place spray", "place milk", "place cocoa", "place chips", "place cappuccino", "open lotion", "open milk", "open chips", "close lotion", "close milk", "close chips", "pour milk", "take out espresso", "take out cocoa", "take out chips", "take out cappuccino", "put in espresso", "put in cocoa", "put in cappuccino", "apply lotion", "apply spray", "read book", "read espresso", "spray spray", "squeeze lotion"]
 
 class TwoStageDetector(MMDetectActivities):
     """
@@ -84,10 +84,11 @@ class TwoStageDetector(MMDetectActivities):
         )
 
         # TODO: Set up the labels from the given labels file
-        self._labels = H2O_CLASSES
-        # with open(self._labels_file, "r") as f:
-        #     for line in f:
-        #         self._labels.append(line.rstrip())
+        # self._labels = H2O_CLASSES
+        self._labels = []
+        with open(self._labels_file, "r") as f:
+            for line in f:
+                self._labels.append(line.rstrip())
 
     def get_model(self) -> torch.nn.Module:
         """
@@ -111,8 +112,8 @@ class TwoStageDetector(MMDetectActivities):
     def detect_activities(
         self,
         frame_iter: Iterable[np.ndarray],
-        aux_data_iter: Iterable[Dict]
-    ) -> Iterable[Dict]:
+        aux_data_iter: Dict[str, Iterable[np.ndarray]]
+    ) -> Dict[str, float]:
         """
         Formats the given iterable of frames into the required input format
         for the swin model and then inputs them to the model for inferencing.
@@ -129,7 +130,7 @@ class TwoStageDetector(MMDetectActivities):
         frames = [self.transform(f) for f in frame_iter]
         frames = torch.stack(frames)
         for k in aux_data:
-            aux_data[k] = torch.Tensor(aux_data[k])
+            aux_data[k] = torch.Tensor(np.array(aux_data[k]))
 
         # Move the inputs to the GPU if necessary
         device = torch.device(self._torch_device)
