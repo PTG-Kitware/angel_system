@@ -12,8 +12,8 @@ class AnnotationEventMonitor(Node):
     """
     ROS node that monitors the keyboard to generate AnnotationEvent
     messages. Event messages for annotation start and stop are generated
-    when the right arrow key is pressed. Event messages for error start
-    and stop are are generated when the left arrow key is pressed.
+    when the up arrow key is pressed. Event messages for error start
+    and stop are are generated when the down arrow key is pressed.
     """
 
     def __init__(self):
@@ -41,8 +41,8 @@ class AnnotationEventMonitor(Node):
     def monitor_keypress(self):
         log = self.get_logger()
         log.info("Starting keyboard monitor")
-        log.info("Press the right arrow key to toggle annotation recording")
-        log.info("Press the left arrow key to toggle error recording")
+        log.info("Press the up arrow key to toggle annotation recording")
+        log.info("Press the down arrow key to toggle error recording")
 
         # Collect events until released
         with keyboard.Listener(on_press=self.on_press) as listener:
@@ -50,13 +50,14 @@ class AnnotationEventMonitor(Node):
 
     def on_press(self, key):
         """
-        Callback function for keypress events. The right key controls annotation
-        events (start/stop). The left key controls error events (start/stop).
+        Callback function for keypress events. The up arrow key controls
+        annotation events (start/stop). The down arrow key controls error
+        events (start/stop).
         """
         log = self.get_logger()
 
         with self._keyboard_lock:
-            if key == keyboard.Key.right:
+            if key == keyboard.Key.up:
                 msg = AnnotationEvent()
                 msg.header.frame_id = "Annotation Event"
                 msg.header.stamp = self.get_clock().now().to_msg()
@@ -72,7 +73,7 @@ class AnnotationEventMonitor(Node):
 
                 self._publisher.publish(msg)
 
-            elif key == keyboard.Key.left:
+            elif key == keyboard.Key.down:
                 msg = AnnotationEvent()
                 msg.header.frame_id = "Annotation Event"
                 msg.header.stamp = self.get_clock().now().to_msg()
