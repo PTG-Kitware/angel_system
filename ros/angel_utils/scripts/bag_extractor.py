@@ -131,7 +131,7 @@ class BagConverter(Node):
         # Top level data folder
         self.num_total_msgs = 0
         self.data_folder = self.bag_path + "_extracted/"
-        if not (os.path.exists(self.data_folder)):
+        if not os.path.exists(self.data_folder):
             os.makedirs(self.data_folder)
             self.log.info(f"Created {self.data_folder} for data")
 
@@ -143,7 +143,7 @@ class BagConverter(Node):
         self.num_image_msgs = 0
         self.images = []
         self.image_folder = self.data_folder + "images/"
-        if not (os.path.exists(self.image_folder)):
+        if not os.path.exists(self.image_folder):
             os.makedirs(self.image_folder)
             self.log.info(f"Created {self.image_folder} for extracted images")
 
@@ -420,9 +420,7 @@ class BagConverter(Node):
         # Save image to disk
         timestamp_str = f"{msg.header.stamp.sec:011d}_{msg.header.stamp.nanosec:09d}"
         file_name = (
-            f"{self.image_folder}frame_{self.num_image_msgs:05d}_"
-            + timestamp_str
-            + ".png"
+            f"{self.image_folder}frame_{self.num_image_msgs:05d}_{timestamp_str}.png"
         )
         cv2.imwrite(file_name, rgb_image)
 
