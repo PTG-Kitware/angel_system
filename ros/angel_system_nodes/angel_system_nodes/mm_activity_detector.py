@@ -107,6 +107,8 @@ class MMActivityDetector(Node):
 
                 # Publish activities
                 self._publisher.publish(activity_msg)
+                log.info(max(activities_detected, key=activities_detected.get) + '\n')
+                # log.info(str(activities_detected))
 
             # Clear out stored frames, aux_data, and timestamps
             self._frames = []

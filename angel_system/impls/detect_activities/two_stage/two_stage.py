@@ -24,6 +24,11 @@ class TwoStageModule(nn.Module):
         self.fcn = SpatialFCNModule('resnext')
         self.temporal = RULSTM(num_classes, hidden=128, dropout=0, depth=3)
 
+        self.fcn.eval()
+        # Load checkpoint
+        self.temporal.load_state_dict(torch.load(checkpoint))
+        self.temporal.eval()
+
     def forward(self, data, aux):
         frame_feats = self.fcn(data)
         # pdb.set_trace()

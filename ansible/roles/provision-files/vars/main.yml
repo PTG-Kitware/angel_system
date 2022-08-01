@@ -32,17 +32,17 @@ girder_file_downloads:
       sha512: df772b15614bf3f09b023adcd9450ebf33092e1749354387dfc43b01c8c570a6148d3ba110ab523b8ede1b016dc6755abeb9a764abd6b5533000841382e6c7d3
       dest: "{{ stage_dirs.model_files }}/coffee_label_list.txt"
     # Two Stage (RULSTM) model weights checkpoint
-    - file_id: 62e1b1b4bddec9d0c41fcfc8
-      sha512: 0e85423274771e51eaa9977d72165dc4b367c684c9841027e56e6c204c41191239ef12744affe4408286e504b99b250873392c67df7b3f986a49f2e0c81a7b04
+    - file_id: 62e80c63bddec9d0c45ef2bf
+      sha512: 9d50f3bd122815388108479755226f6770dcdb9f8af3b8dc99d94b1e89ea4aa5e08436437fe096ccf951cf282aa667824d7163ba4dfdc526c74bd8cf928d3905
       dest: "{{ stage_dirs.model_files }}/two_stage_ros.ckpt"
-    # SwinB label list text file.
-    - file_id: 62cc5fa7bddec9d0c4faa19f
-      sha512: 3fbf340b9cb87a71dd3df81880b38ee414c47b43fbfb78c37220020fbdb8d0d0ff93d76b079aecd94c10317ad6764590fd2a98849338f7fb46f943825820aaf6
-      dest: "{{ stage_dirs.model_files }}/swinb_coffee_task_labels.txt"
-    # SwinB model weights checkpoint
-    - file_id: 62cc5fbebddec9d0c4faa1b5
-      sha512: cf991079ea52fdab602d46052925a06a40f60176271e7a098ee34bb9262af72be5f1925014f30faf27a59c1b9b46f4f1d8401add4b6e669b982ca3f5e9f1026b
-      dest: "{{ stage_dirs.model_files }}/swinb_model_stage_base_ckpt_6.pth"
+    # # SwinB label list text file.
+    # - file_id: 62cc5fa7bddec9d0c4faa19f
+    #   sha512: 3fbf340b9cb87a71dd3df81880b38ee414c47b43fbfb78c37220020fbdb8d0d0ff93d76b079aecd94c10317ad6764590fd2a98849338f7fb46f943825820aaf6
+    #   dest: "{{ stage_dirs.model_files }}/swinb_coffee_task_labels.txt"
+    # # SwinB model weights checkpoint
+    # - file_id: 62cc5fbebddec9d0c4faa1b5
+    #   sha512: cf991079ea52fdab602d46052925a06a40f60176271e7a098ee34bb9262af72be5f1925014f30faf27a59c1b9b46f4f1d8401add4b6e669b982ca3f5e9f1026b
+    #   dest: "{{ stage_dirs.model_files }}/swinb_model_stage_base_ckpt_6.pth"
 
 # List of git repositories to check out at a specific ref and then archive.
 # Destination files will be written as GZipped TAR files, so please suffix
