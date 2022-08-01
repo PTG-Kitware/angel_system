@@ -32,7 +32,7 @@ class ResNetDescriptors(FasterRCNN):
     of the torch `FasterRCNN` class.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
         """
         Creates a model with a `resnet_fpn_backbone`.
 
@@ -50,6 +50,7 @@ class ResNetDescriptors(FasterRCNN):
             trainable_layers=trainable_backbone_layers
         )
 
+        # COCO 2017 has 91 classes
         super().__init__(backbone=backbone, num_classes=91)
 
         state_dict = load_state_dict_from_url(model_urls['fasterrcnn_resnet50_fpn_coco'],
@@ -62,16 +63,14 @@ class ResNetDescriptors(FasterRCNN):
         Overrides the FasterRCNN forward call to return the output of the
         model backbone.
 
-        Modified version of thetorchvision `GeneralizedRCNN` forward call().
+        Modified version of the torchvision `GeneralizedRCNN` forward call().
         """
-        original_image_sizes: List[Tuple[int, int]] = []
         for img in images:
             val = img.shape[-2:]
             torch._assert(
                 len(val) == 2,
                 f"expecting the last two dimensions of the Tensor to be H and W instead got {img.shape[-2:]}",
             )
-            original_image_sizes.append((val[0], val[1]))
 
         images, targets = self.transform(images, targets)
 
@@ -120,11 +119,9 @@ class DescriptorGenerator(Node):
             1
         )
 
-        self.transforms = transforms.Compose([
-            transforms.ToTensor(),
-        ])
+        self.transforms = transforms.ToTensor()
 
-    def get_model(self) -> "torch.nn.Module":
+    def get_model(self) -> torch.nn.Module:
         """
         Lazy load the torch model in an idempotent manner.
         :raises RuntimeError: Use of CUDA was requested but is not available.
