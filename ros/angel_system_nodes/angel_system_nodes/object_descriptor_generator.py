@@ -171,7 +171,8 @@ class DescriptorGenerator(Node):
         image_tensor = image_tensor.unsqueeze(0)
 
         # Send to model
-        output = model(image_tensor)
+        with torch.no_grad():
+            output = model(image_tensor)
 
         if self._feature_layer == "head":
             # Use the object scores as the features
