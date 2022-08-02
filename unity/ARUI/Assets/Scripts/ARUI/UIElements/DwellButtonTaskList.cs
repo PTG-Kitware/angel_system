@@ -10,8 +10,11 @@ public class DwellButtonTaskList : MonoBehaviour
     private EyeTrackingTarget eyeEvents;
 
     private float startingAngle;
-    private bool isLooking = false;
+    public bool isLooking = false;
 
+    private Material btnBGMat;
+    private Color baseColor;
+    
     public void Awake()
     {
         Shapes.Disc disc = GetComponentInChildren<Shapes.Disc>(true);
@@ -19,6 +22,9 @@ public class DwellButtonTaskList : MonoBehaviour
 
         startingAngle = loadingDisc.AngRadiansStart;
         eyeEvents = gameObject.GetComponentInChildren<EyeTrackingTarget>();
+
+        btnBGMat = GetComponentInChildren<MeshRenderer>().material;
+        baseColor = btnBGMat.color;
     }
 
     public void Start()
@@ -40,27 +46,18 @@ public class DwellButtonTaskList : MonoBehaviour
         {
             isLooking = false;
             StopCoroutine(Dwelling());
+            btnBGMat.color = baseColor;
         }
 
         isLooking = looking;
-
-        if (isLooking)
-            StartCoroutine(StartSmoothFollow());
-        else
-            Orb.Instance.SetFollowActive(false);
     }
-
-    private IEnumerator StartSmoothFollow()
-    {
-        yield return new WaitForSeconds(1f);
-
-        Orb.Instance.SetFollowActive(true);
-    }
-
+    
     private IEnumerator Dwelling()
     {
         AudioManager.Instance.PlaySound(transform.position, SoundType.confirmation);
 
+        btnBGMat.color = baseColor - new Color(0.2f, 0.2f, 0.2f, 1);
+            
         bool success = false;
         float duration = 6.24f/4f; //full circle in radians
 
@@ -82,7 +79,7 @@ public class DwellButtonTaskList : MonoBehaviour
 
 
         loadingDisc.AngRadiansEnd = startingAngle;
-
+        btnBGMat.color = baseColor;
     }
 
     public void Update()

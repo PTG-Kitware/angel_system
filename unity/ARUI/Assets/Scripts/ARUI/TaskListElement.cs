@@ -17,7 +17,7 @@ public class TaskListElement : MonoBehaviour
 
     private Color inactiveColor = Color.gray;
     private Color activeColor = Color.white;
-    private Color doneColor = new Color(0.1f, 0.2f, 0.1f);
+    private Color doneColor = new Color(0.30f, 0.60f, 0.30f);
 
     private TMPro.TextMeshProUGUI textCanvas;
     private Shapes.Rectangle checkBox;

@@ -9,31 +9,37 @@ public enum SoundType
     notification = 0,
     confirmation = 1,
     bell = 2,
+    taskDone=3,
+    moveStart=4,
+    moveEnd=5,
 }
 
 public class AudioManager : Singleton<AudioManager>
 {
     private Dictionary<SoundType, AudioSource> typeToSound;
 
+    private List<string> soundTypeToPathMapping = new List<string>()
+    {
+        StringResources.notificationSound_path,
+        StringResources.confirmationSound_path,
+        StringResources.bellsound_path,
+        StringResources.nextTaskSound_path,
+        StringResources.moveStart_path,
+        StringResources.moveEnd_path,
+    };
+    
     private void InitIfNeeded()
     {
         typeToSound = new Dictionary<SoundType, AudioSource>();
 
         //Load sound resources
-        AudioSource notificationsound = new GameObject("notification_sound").AddComponent<AudioSource>();
-        notificationsound.clip = Resources.Load(StringResources.notificationSound_path) as AudioClip;
-        notificationsound.transform.parent = transform;
-        typeToSound.Add(SoundType.notification, notificationsound);
-
-        AudioSource confirmationSound = new GameObject("confirmation_sound").AddComponent<AudioSource>();
-        confirmationSound.clip = Resources.Load(StringResources.confirmationSound_path) as AudioClip;
-        confirmationSound.transform.parent = transform;
-        typeToSound.Add(SoundType.confirmation, confirmationSound);
-
-        AudioSource bellSound = new GameObject("bell_sound").AddComponent<AudioSource>();
-        bellSound.clip = Resources.Load(StringResources.bellsound_path) as AudioClip;
-        bellSound.transform.parent = transform;
-        typeToSound.Add(SoundType.bell, bellSound);
+        for (int i = 0; i < soundTypeToPathMapping.Count; i++)
+        {
+            AudioSource sound = new GameObject(soundTypeToPathMapping[i]).AddComponent<AudioSource>();
+            sound.clip = Resources.Load(soundTypeToPathMapping[i]) as AudioClip;
+            sound.transform.parent = transform;
+            typeToSound.Add((SoundType)i, sound);
+        }
     }
 
     public void PlaySound(Vector3 pos, SoundType type) => StartCoroutine(Play(pos, type));

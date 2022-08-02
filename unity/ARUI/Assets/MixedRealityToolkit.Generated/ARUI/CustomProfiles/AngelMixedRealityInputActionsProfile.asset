@@ -54,11 +54,8 @@ MonoBehaviour:
     description: Index Finger Pose
     axisConstraint: 7
   - id: 14
-    description: Rotate
-    axisConstraint: 2
+    description: Toggle Diagnostics
+    axisConstraint: 0
   - id: 15
-    description: Show Task List
-    axisConstraint: 2
-  - id: 16
-    description: Help
-    axisConstraint: 7
+    description: Toggle Profiler
+    axisConstraint: 0

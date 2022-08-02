@@ -39,7 +39,7 @@ public class TaskListManager : Singleton<TaskListManager>
     private Material bgMat;
     private EyeTrackingTarget listEyeTarget;
     private Color activeColor = new Color(0.06f, 0.06f, 0.06f, 0.5f);
-    private float step = 0.005f;
+    private float step = 0.002f;
 
     private void Awake()
     {
@@ -70,8 +70,16 @@ public class TaskListManager : Singleton<TaskListManager>
 
     private void Update()
     {
-        if (!taskListGenerated) return;
-        
+        if (!taskListGenerated ) return;
+
+        if (!IsTaskListActive()) return;
+
+        if (CoreServices.InputSystem.EyeGazeProvider.GazeTarget == null)
+            isCurrentlyLooking = false;
+
+        if (isCurrentlyLooking && !CoreServices.InputSystem.EyeGazeProvider.GazeTarget.name.Contains("Tasklist"))
+            isCurrentlyLooking = false;
+
         if (isCurrentlyLooking && !isVisible && !isFading)
         {
             bgMat.color = activeColor;
@@ -91,6 +99,18 @@ public class TaskListManager : Singleton<TaskListManager>
         else if (!isCurrentlyLooking && isVisible && !isFading)
         {
             StartCoroutine(FadeOut());
+        } 
+
+        if (!isCurrentlyLooking && !isProcessingOpening)
+            UpdatePosition();
+    }
+
+    private void UpdatePosition()
+    {
+        if (Vector3.Distance(AngelARUI.Instance.mainCamera.transform.position,transform.position)>1.5f
+            || Vector3.Angle(transform.position-AngelARUI.Instance.mainCamera.transform.position, AngelARUI.Instance.mainCamera.transform.forward) > 90f)
+        {
+            StartCoroutine(ShowTaskList(true));
         }
     }
 
@@ -132,7 +152,7 @@ public class TaskListManager : Singleton<TaskListManager>
 
         if (currentTaskID < 0 || currentTaskID >= tasks.GetLength(0))
         {
-            AngelARUI.Instance.PringDebugMessage("TaskID was invalid: id " + currentTaskID + ", task list length: " + tasks.GetLength(0), false);
+            AngelARUI.Instance.PrintDebugMessage("TaskID was invalid: id " + currentTaskID + ", task list length: " + tasks.GetLength(0), false);
             Orb.Instance.SetMessage("");
             return;
         }
@@ -145,7 +165,7 @@ public class TaskListManager : Singleton<TaskListManager>
         while (!taskListGenerated)
             yield return new WaitForEndOfFrame();
 
-        AngelARUI.Instance.PringDebugMessage("TaskID was valid: " + currentTaskID + ", task list length: " + tasks.GetLength(0), false);
+        AngelARUI.Instance.PrintDebugMessage("TaskID was valid: " + currentTaskID + ", task list length: " + tasks.GetLength(0), true);
 
         bool isSubTask = false;
         if (tasks[currentTaskID, 0].Equals("1"))
@@ -207,6 +227,7 @@ public class TaskListManager : Singleton<TaskListManager>
             currentTaskIDOnList.Add(current);
         }
 
+        AudioManager.Instance.PlaySound(Orb.Instance.transform.position, SoundType.taskDone);
         Orb.Instance.SetMessage(tasks[currentTaskID, 1]);
     }
 
@@ -250,7 +271,7 @@ public class TaskListManager : Singleton<TaskListManager>
 
     private IEnumerator GenerateTaskListElementsAsync(string[,] tasks)
     {
-        AngelARUI.Instance.PringDebugMessage("Generate template for task list.", false);
+        AngelARUI.Instance.PrintDebugMessage("Generate template for task list.", false);
 
         SetTaskListActive(false);
 
@@ -297,7 +318,7 @@ public class TaskListManager : Singleton<TaskListManager>
         taskListGenerated = true;
 
         Orb.Instance.SetTaskListButtonActive(true);
-        AngelARUI.Instance.PringDebugMessage("Finished generating task list", false);
+        AngelARUI.Instance.PrintDebugMessage("Finished generating task list", false);
     }
 
 
@@ -314,17 +335,20 @@ public class TaskListManager : Singleton<TaskListManager>
 
     private void IsLookingAt(bool isLooking) => isCurrentlyLooking = isLooking;
 
-    public void ToggleTasklist() => SetTaskListActive(!list.activeInHierarchy);
+    public void ToggleTasklist()
+    {
+        if (list!=null)
+            SetTaskListActive(!list.activeInHierarchy);
+    }
 
     public void SetTaskListActive(bool isActive)
     {
         if (isProcessingOpening || !taskListGenerated) return;
-        AngelARUI.Instance.PringDebugMessage("Show Task list: " + isActive, false);
+        AngelARUI.Instance.PrintDebugMessage("Show Task list: " + isActive, false);
 
         if (isActive)
         {
-            isProcessingOpening = true;
-            StartCoroutine(ShowTaskList());
+            StartCoroutine(ShowTaskList(false));
         } else
         {
             list.SetActive(false);
@@ -332,26 +356,46 @@ public class TaskListManager : Singleton<TaskListManager>
         }
     }
 
-    private IEnumerator ShowTaskList()
+    private IEnumerator ShowTaskList(bool reposition)
     {
-        Vector3 direction = AngelARUI.Instance.mainCamera.transform.forward;
-        var eyeGazeProvider = CoreServices.InputSystem?.EyeGazeProvider;
-        if (eyeGazeProvider != null && eyeGazeProvider.IsEyeTrackingEnabledAndValid && eyeGazeProvider.IsEyeCalibrationValid.Value)
+        isProcessingOpening = true;
+
+        bool routineValid = true;
+        if (reposition)
         {
-            direction = eyeGazeProvider.GazeDirection;
+            yield return new WaitForSeconds(2f);
+
+            if (!(
+                Vector3.Distance(AngelARUI.Instance.mainCamera.transform.position, transform.position) > 1.5f
+                || Vector3.Angle(transform.position - AngelARUI.Instance.mainCamera.transform.position, AngelARUI.Instance.mainCamera.transform.forward) > 90f)
+                ) {
+                routineValid = false;
+            }
         }
-                
-        transform.position = AngelARUI.Instance.mainCamera.transform.position + Vector3.Scale(
-            direction,
-            new Vector3(1.1f, 1.1f, 1.1f));
-        transform.SetYPos(AngelARUI.Instance.mainCamera.transform.position.y);
 
-        yield return new WaitForEndOfFrame();
+        if (routineValid) {
+            
+            Vector3 direction = AngelARUI.Instance.mainCamera.transform.forward;
+            var eyeGazeProvider = CoreServices.InputSystem?.EyeGazeProvider;
+            if (eyeGazeProvider != null && eyeGazeProvider.IsEyeTrackingEnabledAndValid && eyeGazeProvider.IsEyeCalibrationValid.Value)
+            {
+                direction = eyeGazeProvider.GazeDirection;
+            }
 
-        list.SetActive(true);
-        AudioManager.Instance.PlaySound(transform.position, SoundType.notification);
+            transform.position = AngelARUI.Instance.mainCamera.transform.position + Vector3.Scale(
+                direction,
+                new Vector3(1.1f, 1.1f, 1.1f));
+            transform.SetYPos(AngelARUI.Instance.mainCamera.transform.position.y);
 
+            yield return new WaitForEndOfFrame();
+
+            if (!reposition)
+            {
+                list.SetActive(true);
+                AudioManager.Instance.PlaySound(transform.position, SoundType.notification);
+            }
+        }
+        
         isProcessingOpening = false;
     }
-
 }

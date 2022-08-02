@@ -9,6 +9,9 @@ public static class StringResources
     public static string confirmationSound_path = "Sounds/MRTK_ButtonPress";
     public static string notificationSound_path = "Sounds/MRTK_Notification";
     public static string bellsound_path = "Sounds/ding";
+    public static string nextTaskSound_path = "Sounds/MRTK_Voice_Confirmation";
+    public static string moveStart_path = "Sounds/MRTK_Move_Start";
+    public static string moveEnd_path = "Sounds/MRTK_Move_End";
 
     //Prefabs
     public static string POIHalo_path = "Prefabs/Halo3D";
