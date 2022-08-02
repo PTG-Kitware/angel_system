@@ -24,6 +24,7 @@ find_package( vision_msgs REQUIRED )
 
 set( message_files
   msg/ActivityDetection.msg
+  msg/AnnotationEvent.msg
   msg/AruiObject3d.msg
   msg/AruiUpdate.msg
   msg/AruiUserNotification.msg
