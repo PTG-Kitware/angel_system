@@ -1,0 +1,79 @@
+import dataclasses
+from matplotlib import animation
+import matplotlib.pyplot as plt
+from matplotlib.offsetbox import OffsetImage, AnnotationBbox, TextArea, AnchoredText
+import numpy as np
+import PIL
+
+from support_functions import GlobalValues, SelectedSlice, conf_for_range
+
+
+def plot_activity_confidence(label, gt_ranges, det_ranges, custom_range=None, custom_range_color="red"):
+    """
+    Plot activity confidences, with hover-over showing the sequence-middle frame.
+    Clicks modify attributes in the object that is output with respect to what was just clicked.
+    This information may be used, for example, to animate the specific window frame sequence for
+    the result point that was clicked.
+    :param label: String label of the activity class predictions to render.
+    :param gt_ranges: A sequence of tuples indicating the starting and ending time of ground-truth
+                      time ranges the label activity occurred in the image sequence.
+    :param custom_range: Optional tuple indicating the starting and ending times of an additional
+                         range to highlight in addition to the `gt_ranges`.
+    :param custom_range_color: The color of the additional range to be drawn. If not set, we will
+                               use "red".
+    Learned from: http://www.andrewjanowczyk.com/image-popups-on-mouse-over-in-jupyter-notebooks/
+    """
+    all_start_times = [p["time"][0] for p in gt_ranges]
+    all_start_times.extend([p["time"][0] for p in det_ranges[label]])
+    all_end_times = [p["time"][1] for p in gt_ranges]
+    all_end_times.extend([p["time"][1] for p in det_ranges[label]])
+    min_start_time = min(all_start_times) - 1
+    max_end_time = max(all_end_times) + 1
+
+    fig = plt.figure(figsize=(14, 6))
+    ax = fig.add_subplot(111)
+    ax.set_title(f"Window Confidence over time for \"{label}\"")
+    ax.set_xlabel("Time (seconds)")
+    ax.set_ylabel("Confidence")
+    ax.set_ylim(0, 1.05)
+    ax.set_xlim(min_start_time, max_end_time)
+    # plt.yscale("log")
+
+    # Bar plt to show bars where the "true" time ranges are for the activity.
+    xs_bars = [p["time"][0] for p in gt_ranges]
+    ys_gt_regions = [1 for _ in gt_ranges]
+    bar_widths = [(p["time"][1]-p["time"][0]) for p in gt_ranges]
+    ax.bar(xs_bars, ys_gt_regions, width=bar_widths, align="edge", color="lightgreen", label="Ground truth")
+
+    if custom_range:
+        assert len(custom_range) == 2, "Assuming only two float values for custom range"
+        xs_bars2 = [custom_range[0]]
+        ys_height = [1.025] #[0.1]
+        bar_widths2 = [custom_range[1]-custom_range[0]]
+        ys_bottom = [0] #[1.01]
+        # TODO: Make this something that is added be clicking?
+        ax.bar(xs_bars2, ys_height,
+               width=bar_widths2, bottom=ys_bottom, align="edge",
+               color=custom_range_color, alpha=0.5)
+
+    det_ranges = det_ranges[label]
+
+    xs2_bars = [p["time"][0] for p in det_ranges]
+    ys2_det_regions = [p["conf"] for p in det_ranges]
+    bar_widths2 = [(p["time"][1] - p["time"][0]) for p in det_ranges]
+    ax.bar(xs2_bars, ys2_det_regions, width=bar_widths2, align="edge", edgecolor="blue", fill=False, label="Detections")
+
+    ax.legend()
+    ax.plot
+
+    # Create an offset image and copy an example image into it to initialize memory.
+    oi = OffsetImage(np.empty_like(GlobalValues.sample_image), .25)
+    ta = TextArea("")
+    ab_xybox = (200.,100.)
+    ab = AnnotationBbox(oi, (0,0), xybox=ab_xybox, xycoords='data',
+                        boxcoords="offset points",  pad=0.3,  arrowprops=dict(arrowstyle="->"))
+    # add it to the axes and make it invisible
+    ax.add_artist(ab)
+    ab.set_visible(False)
+
+    plt.show()
