@@ -27,6 +27,7 @@ setup(
                 'object_detector = angel_system_nodes.object_detector:main',
                 'spatial_mapper = angel_system_nodes.spatial_mapper:main',
                 'activity_detector = angel_system_nodes.activity_detector:main',
+                'mm_activity_detector = angel_system_nodes.mm_activity_detector:main',
                 'task_monitor = angel_system_nodes.task_monitor:main',
                 'feedback_generator = angel_system_nodes.feedback_generator:main',
                 'annotation_event_monitor = angel_system_nodes.annotation_event_monitor:main'
