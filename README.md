@@ -213,6 +213,19 @@ Configuration files are currently located in: `ros/angel_system_nodes/configs/`
   * Determines the activity detection plugin used in the
     `angel_system_nodes activity_detector.py` node.
 
+## Setting up the foot pedal for annotations
+The `annotation_event_monitor` ROS node uses the up and down arrow keys to
+generate `AnnotationEvent` messages. These messages can be used to determine
+when the beginning and end of an activity or error occur during a recording.
+
+To help with this process, a foot pedal can be used to map foot pedal presses
+to keyboard presses. For this system, we are using the [Infinity 3 USB foot pedal].
+
+To configure your Linux system to recognize foot pedal presses as keyboard
+presses, see this [guide].
+
+In the .hwdb file, make sure to map the keyboard presses to the up and down arrow keys.
+
 ## ANGEL System Python Package
 
 `angel_system/` contains the interfaces and implementations for the
@@ -222,3 +235,7 @@ various components in the ANGEL system python package.
 ### `rosdep`
 References to the lists that rosdep uses to resolve names:
 /etc/ros/rosdep/sources.list.d/20-default.list
+
+
+[Infinity 3 USB foot pedal]: https://www.amazon.com/Infinity-Digital-Control-Computer-USB2/dp/B002MY6I7G?th=1
+[guide]: https://catswhisker.xyz/log/2018/8/27/use_vecinfinity_usb_foot_pedal_as_a_keyboard_under_linux/
