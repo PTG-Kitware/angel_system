@@ -56,7 +56,7 @@ class EyeGazeEncoderModel(Configurable, Pluggable):
       self,
       X: np.ndarray,
       sampling_rate: int
-    ) -> int:
+    ) -> np.ndarray:
         """
         Encode the given eye gaze data into a feature vector
         :param X: Iterable of some input modality as numpy arrays.
@@ -68,7 +68,7 @@ class EyeGazeEncoderModel(Configurable, Pluggable):
       self,
       X: Iterable[np.ndarray],
       sampling_rate: int
-    ) -> int:
+    ) -> np.ndarray:
         """
         Calls `encode()` with the given eye gaze input
         """
