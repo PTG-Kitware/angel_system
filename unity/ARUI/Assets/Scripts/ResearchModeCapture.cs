@@ -1,48 +1,39 @@
 using Microsoft.MixedReality.Toolkit;
-using Microsoft.MixedReality.Toolkit.SpatialAwareness;
 using System;
 using System.Collections;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Net;
-using System.Net.Sockets;
-using System.Net.NetworkInformation;
-using System.Text;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
-using System.Runtime.InteropServices;
+using Unity.Robotics.ROSTCPConnector;
+using RosMessageTypes.BuiltinInterfaces;
+using RosMessageTypes.Sensor;
+using RosMessageTypes.Std;
 
 #if ENABLE_WINMD_SUPPORT
-using Windows.Graphics.Imaging;
-using Windows.Media;
-using Windows.Media.Capture;
-using Windows.Media.Capture.Frames;
-using Windows.Media.MediaProperties;
-using HL2UnityPlugin;
-using System.Runtime.InteropServices.WindowsRuntime;
+using HoloLens2ResearchMode;
 #endif
 
 public class ResearchModeCapture : MonoBehaviour
 {
 #if ENABLE_WINMD_SUPPORT
-    HL2ResearchMode researchMode;
-    enum DepthSensorMode
-    {
-        ShortThrow,
-        LongThrow,
-        None
-    };
-    DepthSensorMode depthSensorMode = DepthSensorMode.LongThrow;
-    bool enablePointCloud = false;
-
-    Windows.Perception.Spatial.SpatialCoordinateSystem unityWorldOrigin;
+    private ResearchModeCameraSensor cameraSensor;
+    private ResearchModeSensorDevice sensorDevice;
+    private Task<ResearchModeSensorConsent> requestCameraAccessTask;
+    private const ushort InvalidAhatValue = 4090;
 #endif
 
+    // Ros stuff
+    ROSConnection ros;
+    public string depthMapShortTopicName = "ShortThrowDepthMapImages";
+
+    // For filling in ROS message timestamp
+    DateTime timeOrigin = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
+
     private Logger _logger = null;
-    public string TcpServerIPAddr = "";
+    private string debugString = "";
 
     /// <summary>
     /// Lazy acquire the logger object and return the reference to it.
@@ -58,69 +49,102 @@ public class ResearchModeCapture : MonoBehaviour
         return ref this._logger;
     }
 
-    private void Awake()
+    void Awake()
     {
+        Logger log = logger();
+
 #if ENABLE_WINMD_SUPPORT
-        unityWorldOrigin = Windows.Perception.Spatial.SpatialLocator.GetDefault().CreateStationaryFrameOfReferenceAtCurrentLocation().CoordinateSystem;
+        this.sensorDevice = new ResearchModeSensorDevice();
+        this.requestCameraAccessTask = this.sensorDevice.RequestCameraAccessAsync().AsTask();
+        this.cameraSensor = (ResearchModeCameraSensor)this.sensorDevice.GetSensor(ResearchModeSensorType.DepthAhat);
 #endif
     }
 
     // Start is called before the first frame update
     void Start()
     {
-        // TODO: Add this back in and use ROS-TCP plugin instead when we need research mode sensors
-
-        /*
         Logger log = logger();
 
-        try
-        {
-            TcpServerIPAddr = PTGUtilities.getIPv4AddressString();
-        }
-        catch (InvalidIPConfiguration e)
-        {
-            log.LogInfo(e.ToString());
-            return;
-        }
+#if ENABLE_WINMD_SUPPORT
+        var consent = this.requestCameraAccessTask.Result;
+        log.LogInfo("access reqeust " + (consent == ResearchModeSensorConsent.Allowed).ToString());
+#endif
 
-        Thread tResearchMode = new Thread(SetupResearchMode);
-        tResearchMode.Start();
-        log.LogInfo("Waiting for research mode TCP connections");
-        */
+        // Create the image publisher and headset pose publisher
+        ros = ROSConnection.GetOrCreateInstance();
+        ros.RegisterPublisher<ImageMsg>(depthMapShortTopicName);
+
+        // Start the depth camera publisher thread
+        Thread tDepthCameraPublisher = new Thread(DepthCameraThread);
+        tDepthCameraPublisher.Start();
     }
 
     void Update()
     {
-#if ENABLE_WINMD_SUPPORT
-        //if (researchMode.PrintDebugString() != "")
-        //{
-        //    this.logger().LogInfo(researchMode.PrintDebugString());
-        //}
-#endif
+        if (debugString != "")
+        {
+            this.logger().LogInfo(debugString);
+            debugString = "";
+        }
     }
 
-    void SetupResearchMode()
+    private void DepthCameraThread()
     {
 #if ENABLE_WINMD_SUPPORT
-    /*
-        // Configure research mode
-        researchMode = new HL2ResearchMode(TcpServerIPAddr);
+        // Open the depth camera stream
+        this.cameraSensor.OpenStream();
 
-        // Depth sensor should be initialized in only one mode
-        if (depthSensorMode == DepthSensorMode.LongThrow) researchMode.InitializeLongDepthSensor();
-        else if (depthSensorMode == DepthSensorMode.ShortThrow) researchMode.InitializeDepthSensor();
+        while (true)
+        {
+            // Block until next frame is available
+            var sensorFrame = this.cameraSensor.GetNextBuffer();
 
-        researchMode.InitializeSpatialCamerasFront();
-        researchMode.SetReferenceCoordinateSystem(unityWorldOrigin);
-        researchMode.SetPointCloudDepthOffset(0);
+            // Extract frame metadata
+            var frameTicks = sensorFrame.GetTimeStamp().HostTicks;
+            var resolution = sensorFrame.GetResolution();
+            int imageWidth = (int)resolution.Width;
+            int imageHeight = (int)resolution.Height;
 
-        // Depth sensor should be initialized in only one mode
-        if (depthSensorMode == DepthSensorMode.LongThrow) researchMode.StartLongDepthSensorLoop(enablePointCloud);
-        else if (depthSensorMode == DepthSensorMode.ShortThrow) researchMode.StartDepthSensorLoop(enablePointCloud);
+            var depthFrame = sensorFrame as ResearchModeSensorDepthFrame;
+            UInt16[] depthBuffer = depthFrame.GetBuffer();
+            byte[] depthBufferByteArray = new byte[depthBuffer.Length];
 
-        researchMode.StartSpatialCamerasFrontLoop();
-    */
+            // Check for invalid values
+            for (var i = 0; i < depthBuffer.Length; i++)
+            {
+                if (depthBuffer[i] > InvalidAhatValue)
+                {
+                    depthBufferByteArray[i] = 0;
+                }
+                else
+                {
+                    depthBufferByteArray[i] = (byte)((float)depthBuffer[i] / 1000 * 255);
+                }
+            }
+
+            var currTime = DateTime.Now;
+            TimeSpan diff = currTime.ToUniversalTime() - timeOrigin;
+            var sec = Convert.ToInt32(Math.Floor(diff.TotalSeconds));
+            var nsecRos = Convert.ToUInt32((diff.TotalSeconds - sec) * 1e9f);
+
+            HeaderMsg header = new HeaderMsg(
+                new TimeMsg(sec, nsecRos),
+                "ShortThrowDepthMap"
+            );
+            ImageMsg depthImage = new ImageMsg(
+                                        header,
+                                        Convert.ToUInt32(imageHeight), // height
+                                        Convert.ToUInt32(imageWidth), // width
+                                        "mono8", // encoding
+                                        0, // is_bigendian
+                                        512, // step size (bytes)
+                                        depthBufferByteArray
+                                    );
+
+            ros.Publish(depthMapShortTopicName, depthImage);
+        } // end while loop
 #endif
-    }
+    } // end method
+
 
 }
