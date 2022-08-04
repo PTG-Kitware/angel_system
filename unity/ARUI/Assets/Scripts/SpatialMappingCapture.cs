@@ -90,6 +90,16 @@ public class SpatialMappingCapture : MonoBehaviour, IMixedRealitySpatialAwarenes
         return ref this._logger;
     }
 
+    void Awake()
+    {
+#if ENABLE_WINMD_SUPPORT
+        // Set the unity coordinate system.
+        // This needs to happen here (in Awake()) so that the coordinate system
+        // is initialized before the other scripts attempt to access it.
+        unityCoordinateSystem = PerceptionInterop.GetSceneCoordinateSystem(UnityEngine.Pose.identity) as SpatialCoordinateSystem;
+#endif
+    }
+
     // Start is called before the first frame update
     protected void Start()
     {
@@ -112,9 +122,6 @@ public class SpatialMappingCapture : MonoBehaviour, IMixedRealitySpatialAwarenes
             // Set the origin tracking mode and recenter
             xrInput.TrySetTrackingOriginMode(TrackingOriginModeFlags.Device);
             xrInput.TryRecenter();
-#if ENABLE_WINMD_SUPPORT
-            unityCoordinateSystem = PerceptionInterop.GetSceneCoordinateSystem(UnityEngine.Pose.identity) as SpatialCoordinateSystem;
-#endif
             xrInput.trackingOriginUpdated += new System.Action<UnityEngine.XR.XRInputSubsystem>(OriginUpdateHandler);
         }
 
