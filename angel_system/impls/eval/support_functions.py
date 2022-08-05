@@ -6,6 +6,10 @@ import re
 from typing import Dict
 from typing import List
 from typing import Tuple
+import PIL
+import ubelt as ub
+from concurrent.futures import ThreadPoolExecutor
+import tqdm
 
 
 RE_FILENAME_TIME = re.compile(r"frame_\d+_(\d+_\d+).\w+")
@@ -16,7 +20,6 @@ def time_from_name(fname):
     Extract the float timestamp from the filename.
     """
     return float(RE_FILENAME_TIME.match(fname).groups()[0].replace("_", "."))
-
 
 def frames_for_range(start, end):
     """
@@ -34,20 +37,6 @@ def frames_for_range(start, end):
     fp_in_range.sort(key=lambda e: e['time'])
     return [e['path'] for e in fp_in_range]
 
-def conf_for_range(start, end, data, label):
-    confs = []
-    print("start:", start)
-    print("end:", end)
-    print("data:", data[label])
-    for values in data[label]:
-        time = values["time"]
-        if time[0] >= start and time[0] <= end:
-            confs.append((time[0], values["conf"]))
-    return confs
-
-def run_swinb_model():
-    # TODO
-    print("hello")
 
 @dataclasses.dataclass
 class SliceResult:
@@ -61,8 +50,6 @@ class GlobalValues:
     Container of global prediction result attributes.
     Effectively a singleton with the class-level attributes and functionality.
     """
-    sample_image = None
-
     # Sequence of file paths in temporal order of our data-set.
     all_image_files: List[Path] = []
 
@@ -104,3 +91,24 @@ class SelectedSlice:
     @property
     def activity_predictions(self):
         return GlobalValues.slice_preds[self.index]
+
+def populate_global_values(images_dir):
+    # Sort lexicographically to get into temporal order.
+    GlobalValues.all_image_files = sorted(Path(images_dir).iterdir())
+    GlobalValues.all_image_mats = []
+
+    #with ThreadPoolExecutor() as pool:
+    #    for r in tqdm.tqdm(pool.map(lambda p:np.asarray(PIL.Image.open(p)), GlobalValues.all_image_files),
+    #                       total=len(GlobalValues.all_image_files), ncols=100):
+    for p in ub.ProgIter(GlobalValues.all_image_files, desc='loading images'):
+        r = np.asarray(PIL.Image.open(p))
+        GlobalValues.all_image_mats.append(r)
+    print("Done!")
+
+    GlobalValues.all_image_mats = np.asarray(GlobalValues.all_image_mats)
+
+    GlobalValues.all_image_times = np.asarray([
+        time_from_name(p.name) for p in GlobalValues.all_image_files
+    ])
+
+    assert len(GlobalValues.all_image_files) == len(GlobalValues.all_image_mats) == len(GlobalValues.all_image_times)

@@ -1,13 +1,12 @@
 def iou_per_activity_label(labels, gt, dets):
     """
-    Calculate the iou per label
+    Calculate the iou per activity label
 
-    :param labels: List
-    :param gt: Dict
-    :param dets: Dict
+    :param labels: List of String labels of the activity classes
+    :param gt: Dict of activity start and end time ground truth values, organized by label keys
+    :param dets: Dict of activity start and end time detections with confidence values, organized by label keys
     """
     iou_per_label = {}
-
     for label in labels:
         ious = []
         iou_counts = 0
@@ -70,4 +69,6 @@ def iou_per_activity_label(labels, gt, dets):
     print(f"IoU: {overall_iou}")
     print(f"IoU Per Label:")
     for k, v in iou_per_label.items():
-        print(f"\t{k}:{v}")
+        print(f"\t{k}: {v}")
+
+    return overall_iou, iou_per_label
