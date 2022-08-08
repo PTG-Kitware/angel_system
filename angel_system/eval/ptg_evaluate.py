@@ -6,26 +6,25 @@ from pathlib import Path
 import csv
 import numpy as np
 import PIL.Image
-import glob
 import os
 import tqdm
 import pickle
+import pandas as pd
 
 from angel_system.impls.detect_activities.swinb.swinb_detect_activities import SwinBTransformer
-from angel_system.impls.eval.support_functions import time_from_name, GlobalValues, populate_global_values, SliceResult
-from angel_system.impls.eval.visualization import plot_activity_confidence
-from angel_system.impls.eval.compute_scores import iou_per_activity_label
+from angel_system.eval.support_functions import time_from_name, GlobalValues, SliceResult
+from angel_system.eval.visualization import plot_activity_confidence
+from angel_system.eval.compute_scores import iou_per_activity_label
 
 
 class EvalConfig(scfg.Config):
     default = {
-        "images_dir_path": "/home/local/KHQ/hannah.defazio/projects/PTG/angel_system/data/ros_bags/Annotated_folding_filter_rosbag-20220726T164959Z-002/filter_folding_rosbag/rosbag2_2022_07_21-20_22_19/_extracted/images",
-        "conf_threshold": 0.8,
-        "activity_model": "/home/local/KHQ/hannah.defazio/projects/PTG/angel_system/model_files/swinb_model_stage_base_ckpt_6.pth",
-        "activity_labels": "/home/local/KHQ/hannah.defazio/projects/PTG/angel_system/model_files/swinb_coffee_task_labels.txt",
-        "activity_truth_csv": "/home/local/KHQ/hannah.defazio/projects/PTG/angel_system/data/ros_bags/Annotated_folding_filter_rosbag-20220726T164959Z-002/filter_folding_rosbag_annotation.csv",
-        "extracted_activity_detection_ros_bag": "/home/local/KHQ/hannah.defazio/projects/PTG/angel_system/data/ros_bags/Annotated_folding_filter_rosbag-20220726T164959Z-002/filter_folding_rosbag/rosbag2_2022_07_28-16_00_06/_extracted/activity_detection_data.txt",
-        "output_dir": "/home/local/KHQ/hannah.defazio/projects/PTG/angel_system/eval"
+        "images_dir_path": "data/ros_bags/Annotated_folding_filter/rosbag2_2022_07_21-20_22_19/_extracted/images",
+        "activity_model": "model_files/swinb_model_stage_base_ckpt_6.pth",
+        "activity_labels": "model_files/swinb_coffee_task_labels.txt",
+        "activity_gt": "data/ros_bags/Annotated_folding_filter/labels_test.feather",
+        "extracted_activity_detections": "data/ros_bags/Annotated_folding_filter/rosbag2_2022_08_08-18_56_31/_extracted/activity_detection_data.txt",
+        "output_dir": "eval"
     }
 
 def main(cmdline=True, **kw):
@@ -43,30 +42,22 @@ def main(cmdline=True, **kw):
     GlobalValues.all_image_times = np.asarray([
         time_from_name(p.name) for p in GlobalValues.all_image_files
     ])
-    #populate_global_values(config["images_dir_path"])
     
     # ============================
     # Load truth annotations
     # ============================
     gt_label_to_ts_ranges = defaultdict(list)
-    with open(config["activity_truth_csv"], 'r') as f:
-        # IDs that have a starting event
-        label_start_ts = dict()
-        for row in csv.reader(f):
-            if row[0].strip().startswith("#"):
-                continue
-            aid = row[0]
-            label = row[9]
-            if label not in label_start_ts:
-                # "start" entry
-                label_start_ts[label] = time_from_name(row[1])
-            else:
+    gt = pd.read_feather(config["activity_gt"])
+    # Keys: class, start_frame,  end_frame, exploded_ros_bag_path
 
-                # "end" entry
-                end_ts = time_from_name(row[1])
-                gt_label_to_ts_ranges[label].append({"time": (label_start_ts[label], end_ts), "conf": 1})
-                del label_start_ts[label]
-    print(f"Loaded ground turth from {config['activity_truth_csv']}\n")
+    for i, row in gt.iterrows():
+        label = row["class"]
+        # "start" entry
+        start_ts = time_from_name(row["start_frame"])
+        end_ts = time_from_name(row["end_frame"])
+        gt_label_to_ts_ranges[label].append({"time": (start_ts, end_ts), "conf": 1})
+
+    print(f"Loaded ground truth from {config['activity_truth_csv']}\n")
 
     # ============================
     # Create detections from model

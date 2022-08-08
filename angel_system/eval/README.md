@@ -15,8 +15,12 @@ Once the bag has finished running, run CTL+C in the "ros_bag_record" tab
 
 Move the new activity only ros bag to a location accessible outside the Docker workspace
 
-# Extract the ROS bag
+# Extract the ROS bags
+## Extract images from the annotated ros bag
+`$ ros2 run angel_utils bag_extractor.py --ros-args -p bag_path:="<annotated_ros_bag>" -p extract_audio:="False" -p extract_eye_gaze_data:="False" -p extract_head_pose_data:="False" -p extract_hand_pose_data:="False" -p extract_spatial_map_data:="False"`
+
+## Extract activity detections from the new ros bag
 `$ ros2 run angel_utils bag_extractor.py --ros-args -p bag_path:="<activity_only_ros_bag>" -p extract_images:="False" -p extract_audio:="False" -p extract_eye_gaze_data:="False" -p extract_head_pose_data:="False" -p extract_hand_pose_data:="False" -p extract_spatial_map_data:="False"`
 
 # Run eval
-`$ python evaluate.py <optional flags>`
+`$ poetry run ptg_eval <optional flags>`

@@ -5,7 +5,7 @@ import PIL
 from pathlib import Path
 import os
 
-from angel_system.impls.eval.support_functions import GlobalValues
+from angel_system.eval.support_functions import GlobalValues
 
 
 def plot_activity_confidence(label, gt_ranges, det_ranges, output_dir, custom_range=None, custom_range_color="red"):
