@@ -6,17 +6,16 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
 using Unity.Robotics.ROSTCPConnector;
-using System.Runtime.InteropServices;
 using RosMessageTypes.BuiltinInterfaces;
 using RosMessageTypes.Std;
 using RosMessageTypes.Sensor;
 using RosMessageTypes.Angel;
-
 
 #if ENABLE_WINMD_SUPPORT
 using Microsoft.MixedReality.Toolkit;
@@ -34,7 +33,6 @@ using System.Runtime.InteropServices.WindowsRuntime;
 
 public class PVCameraCapture : MonoBehaviour
 {
-
 #if ENABLE_WINMD_SUPPORT
     MediaCapture mediaCapture = null;
     private MediaFrameReader frameReader = null;
@@ -59,9 +57,7 @@ public class PVCameraCapture : MonoBehaviour
     float[] projectionMatrixAsFloat;
 
     private static Mutex projectionMatrixMut = new Mutex();
-
-    // For filling in ROS message timestamp
-    DateTime timeOrigin = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
+    private readonly Task initMediaCaptureTask;
 
     [ComImport]
     [Guid("5B0D3235-4DBA-4D44-865E-8F1D0E4FD04D")]
@@ -97,25 +93,45 @@ public class PVCameraCapture : MonoBehaviour
     {
         Logger log = logger();
 
+        // Wait for media capture initialization to finish
+        await this.initMediaCaptureTask;
+
         // Create the image publisher and headset pose publisher
         ros = ROSConnection.GetOrCreateInstance();
         ros.RegisterPublisher<ImageMsg>(imageTopicName);
         ros.RegisterPublisher<HeadsetPoseDataMsg>(headsetPoseTopicName);
 
 #if ENABLE_WINMD_SUPPORT
-        await InitializeMediaCaptureAsyncTask();
-
-        MediaFrameReaderStartStatus mediaFrameReaderStartStatus = await frameReader.StartAsync();
-        if (!(mediaFrameReaderStartStatus == MediaFrameReaderStartStatus.Success))
-        {
-            log.LogInfo("StartFrameReaderAsyncTask() is not successful, status = " + mediaFrameReaderStartStatus);
-        }
-
-        log.LogInfo("Media capture started");
-
         // Update the projection matrix
         projectionMatrix = Camera.main.projectionMatrix;
-        projectionMatrixAsFloat = ConvertUnityMatrixToFloatArray(projectionMatrix);
+        projectionMatrixAsFloat = PTGUtilities.ConvertUnityMatrixToFloatArray(projectionMatrix);
+
+        if (this.frameReader != null)
+        {
+            var status = await this.frameReader.StartAsync();
+            if (!(status == MediaFrameReaderStartStatus.Success))
+            {
+                log.LogInfo("StartFrameReaderAsyncTask() is not successful, status = " + status);
+            }
+            else
+            {
+                log.LogInfo("StartFrameReaderAsyncTask() is successful");
+                this.frameReader.FrameArrived += OnFrameArrived;
+                log.LogInfo("Media capture started");
+            }
+        }
+#endif
+    }
+
+    public PVCameraCapture()
+    {
+        // Call this here (rather than in the Start() method, which is executed on the thread pool) to
+        // ensure that MediaCapture.InitializeAsync() is called from an STA thread (this constructor must
+        // itself be called from an STA thread in order for this to be true). Calls from an MTA thread may
+        // result in undefined behavior, per the following documentation:
+        // https://docs.microsoft.com/en-us/uwp/api/windows.media.capture.mediacapture.initializeasync
+#if ENABLE_WINMD_SUPPORT
+        this.initMediaCaptureTask = this.InitializeMediaCaptureAsyncTask();
 #endif
     }
 
@@ -131,7 +147,7 @@ public class PVCameraCapture : MonoBehaviour
         // Update the projection matrix
         projectionMatrixMut.WaitOne();
         projectionMatrix = Camera.main.projectionMatrix;
-        projectionMatrixAsFloat = ConvertUnityMatrixToFloatArray(projectionMatrix);
+        projectionMatrixAsFloat = PTGUtilities.ConvertUnityMatrixToFloatArray(projectionMatrix);
         projectionMatrixMut.ReleaseMutex();
 #endif
     }
@@ -149,14 +165,12 @@ public class PVCameraCapture : MonoBehaviour
             if (group.DisplayName == "QC Back Camera")
             {
                 selectedGroupIndex = i;
-                this.logger().LogInfo("Selected group " + i + " on HoloLens 2");
                 break;
             }
         }
 
         if (selectedGroupIndex == -1)
         {
-            this.logger().LogInfo("InitializeMediaCaptureAsyncTask() fails because there is no suitable source group");
             return false;
         }
 
@@ -217,20 +231,14 @@ public class PVCameraCapture : MonoBehaviour
                 targetResFormat = mediaFrameSourceVideo.SupportedFormats.OrderBy(x => x.VideoFormat.Width * x.VideoFormat.Height).FirstOrDefault();
             }
 
-            await mediaFrameSourceVideo.SetFormatAsync(targetResFormat);
-
-            frameReader = await mediaCapture.CreateFrameReaderAsync(mediaFrameSourceVideo, targetResFormat.Subtype);
-            frameReader.FrameArrived += OnFrameArrived;
-
             frameData = new byte[(int) (targetResFormat.VideoFormat.Width * targetResFormat.VideoFormat.Height * 1.5)];
 
-            this.logger().LogInfo("FrameReader is successfully initialized, " + targetResFormat.VideoFormat.Width + "x" + targetResFormat.VideoFormat.Height +
-                ", Framerate: " + targetResFormat.FrameRate.Numerator + "/" + targetResFormat.FrameRate.Denominator);
+            await mediaFrameSourceVideo.SetFormatAsync(targetResFormat);
+
+            this.frameReader = await mediaCapture.CreateFrameReaderAsync(mediaFrameSourceVideo, targetResFormat.Subtype);
         }
         catch (Exception e)
         {
-            this.logger().LogInfo("FrameReader is not initialized");
-            this.logger().LogInfo("Exception: " + e);
             return false;
         }
 
@@ -270,15 +278,7 @@ public class PVCameraCapture : MonoBehaviour
                     uint width = Convert.ToUInt32(originalSoftwareBitmap.PixelWidth);
                     uint height = Convert.ToUInt32(originalSoftwareBitmap.PixelHeight);
 
-                    var currTime = DateTime.Now;
-                    TimeSpan diff = currTime.ToUniversalTime() - timeOrigin;
-                    var sec = Convert.ToInt32(Math.Floor(diff.TotalSeconds));
-                    var nsecRos = Convert.ToUInt32((diff.TotalSeconds - sec) * 1e9f);
-
-                    HeaderMsg header = new HeaderMsg(
-                        new TimeMsg(sec, nsecRos),
-                        "PVFramesNV12"
-                    );
+                    HeaderMsg header = PTGUtilities.getROSStdMsgsHeader("PVFramesNV12");
 
                     ImageMsg image = new ImageMsg(header,
                                                   height,
@@ -309,7 +309,7 @@ public class PVCameraCapture : MonoBehaviour
 	{
         if (SpatialMappingCapture.unityCoordinateSystem == null)
         {
-            outMatrix = GetIdentityMatrixFloatArray();
+            outMatrix = PTGUtilities.GetIdentityMatrixFloatArray();
             return false;
         }
 
@@ -317,7 +317,7 @@ public class PVCameraCapture : MonoBehaviour
 
         if (cameraCoordinateSystem == null)
         {
-            outMatrix = GetIdentityMatrixFloatArray();
+            outMatrix = PTGUtilities.GetIdentityMatrixFloatArray();
             return false;
         }
 
@@ -325,73 +325,15 @@ public class PVCameraCapture : MonoBehaviour
 
         if (cameraToUnityMatrixNumericsMatrix == null)
         {
-            outMatrix = GetIdentityMatrixFloatArray();
+            outMatrix = PTGUtilities.GetIdentityMatrixFloatArray();
             return false;
         }
 
         UnityEngine.Matrix4x4 cameraToUnityMatrixUnityMatrix = SystemNumericsExtensions.ToUnity(cameraToUnityMatrixNumericsMatrix);
-        outMatrix = ConvertUnityMatrixToFloatArray(cameraToUnityMatrixUnityMatrix);
+        outMatrix = PTGUtilities.ConvertUnityMatrixToFloatArray(cameraToUnityMatrixUnityMatrix);
 
         return true;
 	}
-
-    private float[] ConvertMatrixToFloatArray(System.Numerics.Matrix4x4 matrix)
-    {
-        return new float[16] {
-            matrix.M11, matrix.M12, matrix.M13, matrix.M14,
-            matrix.M21, matrix.M22, matrix.M23, matrix.M24,
-            matrix.M31, matrix.M32, matrix.M33, matrix.M34,
-            matrix.M41, matrix.M42, matrix.M43, matrix.M44
-        };
-    }
-
-    private float[] ConvertUnityMatrixToFloatArray(Matrix4x4 matrix)
-    {
-        return new float[16] {
-            matrix[0, 0], matrix[0, 1], matrix[0, 2], matrix[0, 3],
-            matrix[1, 0], matrix[1, 1], matrix[1, 2], matrix[1, 3],
-            matrix[2, 0], matrix[2, 1], matrix[2, 2], matrix[2, 3],
-            matrix[3, 0], matrix[3, 1], matrix[3, 2], matrix[3, 3]
-        };
-    }
-
-    static float[] GetIdentityMatrixFloatArray()
-	{
-		return new float[] { 1f, 0, 0, 0, 0, 1f, 0, 0, 0, 0, 1f, 0, 0, 0, 0, 1f };
-	}
-
-    private System.Numerics.Matrix4x4 ConvertByteArrayToMatrix4x4(byte[] matrixAsBytes)
-    {
-        if (matrixAsBytes == null)
-        {
-            throw new ArgumentNullException("matrixAsBytes");
-        }
-
-        if (matrixAsBytes.Length != 64)
-        {
-            throw new Exception("Cannot convert byte[] to Matrix4x4. Size of array should be 64, but it is " + matrixAsBytes.Length);
-        }
-
-        var m = matrixAsBytes;
-        return new System.Numerics.Matrix4x4(
-            BitConverter.ToSingle(m, 0),
-            BitConverter.ToSingle(m, 4),
-            BitConverter.ToSingle(m, 8),
-            BitConverter.ToSingle(m, 12),
-            BitConverter.ToSingle(m, 16),
-            BitConverter.ToSingle(m, 20),
-            BitConverter.ToSingle(m, 24),
-            BitConverter.ToSingle(m, 28),
-            BitConverter.ToSingle(m, 32),
-            BitConverter.ToSingle(m, 36),
-            BitConverter.ToSingle(m, 40),
-            BitConverter.ToSingle(m, 44),
-            BitConverter.ToSingle(m, 48),
-            BitConverter.ToSingle(m, 52),
-            BitConverter.ToSingle(m, 56),
-            BitConverter.ToSingle(m, 60)
-        );
-    }
 #endif
 
 }
