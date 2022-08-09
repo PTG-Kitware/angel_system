@@ -11,9 +11,13 @@ using Unity.Robotics.ROSTCPConnector;
 using RosMessageTypes.BuiltinInterfaces;
 using RosMessageTypes.Sensor;
 using RosMessageTypes.Std;
+using RosMessageTypes.Angel;
 
 #if ENABLE_WINMD_SUPPORT
 using HoloLens2ResearchMode;
+using Windows.Perception;
+using Windows.Perception.Spatial;
+using Windows.Perception.Spatial.Preview;
 #endif
 
 public class ResearchModeCapture : MonoBehaviour
@@ -23,14 +27,25 @@ public class ResearchModeCapture : MonoBehaviour
     private ResearchModeSensorDevice sensorDevice;
     private Task<ResearchModeSensorConsent> requestCameraAccessTask;
     private const ushort InvalidAhatValue = 4090;
+    private SpatialLocator rigNodeLocator;
+
+    private System.Numerics.Matrix4x4? invertedCameraExtrinsics = null;
+
+    // Camera basis (x - right, y - down, z - forward) relative
+    // to the HoloLens basis (x - right, y - up, z - back)
+    private static readonly System.Numerics.Matrix4x4 CameraBasis = new System.Numerics.Matrix4x4(
+        1,  0,  0,  0,
+        0, -1,  0,  0,
+        0,  0, -1,  0,
+        0,  0,  0,  1
+    );
+
 #endif
 
     // Ros stuff
     ROSConnection ros;
     public string depthMapShortTopicName = "ShortThrowDepthMapImages";
-
-    // For filling in ROS message timestamp
-    DateTime timeOrigin = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
+    public string headsetDepthPoseTopicName = "HeadsetDepthPoseData";
 
     private Logger _logger = null;
     private string debugString = "";
@@ -49,6 +64,9 @@ public class ResearchModeCapture : MonoBehaviour
         return ref this._logger;
     }
 
+    /// <summary>
+    /// Initializes the depth camera sensor.
+    /// </summary>
     void Awake()
     {
         Logger log = logger();
@@ -57,22 +75,29 @@ public class ResearchModeCapture : MonoBehaviour
         this.sensorDevice = new ResearchModeSensorDevice();
         this.requestCameraAccessTask = this.sensorDevice.RequestCameraAccessAsync().AsTask();
         this.cameraSensor = (ResearchModeCameraSensor)this.sensorDevice.GetSensor(ResearchModeSensorType.DepthAhat);
+
+        Guid rigNodeGuid = this.sensorDevice.GetRigNodeId();
+        this.rigNodeLocator = SpatialGraphInteropPreview.CreateLocatorForNode(rigNodeGuid);
 #endif
     }
 
-    // Start is called before the first frame update
+    /// <summary>
+    /// Checks that the depth camera was initialized properly,
+    /// creates the ROS publisher for the depth camera,
+    /// and starts the camera capturing thread.
+    /// </summary>
     void Start()
     {
         Logger log = logger();
 
 #if ENABLE_WINMD_SUPPORT
         var consent = this.requestCameraAccessTask.Result;
-        log.LogInfo("access reqeust " + (consent == ResearchModeSensorConsent.Allowed).ToString());
 #endif
 
         // Create the image publisher and headset pose publisher
         ros = ROSConnection.GetOrCreateInstance();
         ros.RegisterPublisher<ImageMsg>(depthMapShortTopicName);
+        ros.RegisterPublisher<HeadsetPoseDataMsg>(headsetDepthPoseTopicName);
 
         // Start the depth camera publisher thread
         Thread tDepthCameraPublisher = new Thread(DepthCameraThread);
@@ -88,6 +113,10 @@ public class ResearchModeCapture : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Thread that continously extracts depth camera frames and publishes them
+    /// as a ROS Image message.
+    /// </summary>
     private void DepthCameraThread()
     {
 #if ENABLE_WINMD_SUPPORT
@@ -109,7 +138,7 @@ public class ResearchModeCapture : MonoBehaviour
             UInt16[] depthBuffer = depthFrame.GetBuffer();
             byte[] depthBufferByteArray = new byte[depthBuffer.Length];
 
-            // Check for invalid values
+            // Check for invalid values and convert to byte values
             for (var i = 0; i < depthBuffer.Length; i++)
             {
                 if (depthBuffer[i] > InvalidAhatValue)
@@ -122,29 +151,72 @@ public class ResearchModeCapture : MonoBehaviour
                 }
             }
 
-            var currTime = DateTime.Now;
-            TimeSpan diff = currTime.ToUniversalTime() - timeOrigin;
-            var sec = Convert.ToInt32(Math.Floor(diff.TotalSeconds));
-            var nsecRos = Convert.ToUInt32((diff.TotalSeconds - sec) * 1e9f);
+            // Get the camera pose info
+            var timestamp = PerceptionTimestampHelper.FromSystemRelativeTargetTime(TimeSpan.FromTicks((long)frameTicks));
+            var rigNodeLocation = this.rigNodeLocator.TryLocateAtTimestamp(timestamp, SpatialMappingCapture.unityCoordinateSystem);
 
-            HeaderMsg header = new HeaderMsg(
-                new TimeMsg(sec, nsecRos),
-                "ShortThrowDepthMap"
-            );
+            // The rig node may not always be locatable, so we need a null check
+            float[] cameraPose = null;
+            if (rigNodeLocation != null)
+            {
+                // Compute the camera pose from the rig node location
+                cameraPose = this.ToCameraPose(rigNodeLocation);
+            }
+            else
+            {
+                debugString += "rig location is null";
+            }
+
+            HeaderMsg header = PTGUtilities.getROSStdMsgsHeader("shortThrowDepthMap");
             ImageMsg depthImage = new ImageMsg(
-                                        header,
-                                        Convert.ToUInt32(imageHeight), // height
-                                        Convert.ToUInt32(imageWidth), // width
-                                        "mono8", // encoding
-                                        0, // is_bigendian
-                                        512, // step size (bytes)
-                                        depthBufferByteArray
-                                    );
+                                      header,
+                                      Convert.ToUInt32(imageHeight), // height
+                                      Convert.ToUInt32(imageWidth), // width
+                                      "mono8", // encoding
+                                      0, // is_bigendian
+                                      512, // step size (bytes)
+                                      depthBufferByteArray
+                                  );
 
             ros.Publish(depthMapShortTopicName, depthImage);
+
+            // Build and publish the headpose data message
+            // TODO: If we need the camera projection matrix, we'll have to fill that in here
+            HeadsetPoseDataMsg pose = new HeadsetPoseDataMsg(header, cameraPose, new float[0]);
+            ros.Publish(headsetDepthPoseTopicName, pose);
         } // end while loop
 #endif
-    } // end method
+    }
 
+#if ENABLE_WINMD_SUPPORT
+    /// <summary>
+    /// Converts the rig node location to the camera pose.
+    /// Based on the Microsoft/psi repository:
+    /// https://github.com/microsoft/psi/blob/master/Sources/MixedReality/Microsoft.Psi.MixedReality.UniversalWindows/ResearchModeCamera.cs
+    /// </summary>
+    /// <param name="rigNodeLocation">The rig node location.</param>
+    /// <returns>The 4x4 matrix representing the camera pose as a float array.</returns>
+    private float[] ToCameraPose(SpatialLocation rigNodeLocation)
+    {
+        var q = rigNodeLocation.Orientation;
+        var m = System.Numerics.Matrix4x4.CreateFromQuaternion(q);
+        var p = rigNodeLocation.Position;
+        m.Translation = p;
 
+        // Extrinsics of the camera relative to the rig node
+        if (!this.invertedCameraExtrinsics.HasValue)
+        {
+            System.Numerics.Matrix4x4.Invert(this.cameraSensor.GetCameraExtrinsicsMatrix(), out var invertedMatrix);
+            this.invertedCameraExtrinsics = invertedMatrix;
+        }
+
+        // Transform the rig node location to camera pose in world coordinates
+        System.Numerics.Matrix4x4 cameraPose = CameraBasis * this.invertedCameraExtrinsics.Value * m;
+
+        UnityEngine.Matrix4x4 mUnity = SystemNumericsExtensions.ToUnity(cameraPose);
+        float[] mArray = PTGUtilities.ConvertUnityMatrixToFloatArray(mUnity);
+
+        return mArray;
+    }
+#endif
 }
