@@ -1,9 +1,8 @@
-import scriptconfig as scfg
 from ast import literal_eval
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-import csv
+import argparse
 import numpy as np
 import PIL.Image
 import os
@@ -17,37 +16,16 @@ from angel_system.eval.visualization import plot_activity_confidence
 from angel_system.eval.compute_scores import iou_per_activity_label
 
 
-class EvalConfig(scfg.Config):
-    default = {
-        "images_dir_path": "data/ros_bags/Annotated_folding_filter/rosbag2_2022_07_21-20_22_19/_extracted/images",
-        "activity_model": "model_files/swinb_model_stage_base_ckpt_6.pth",
-        "activity_labels": "model_files/swinb_coffee_task_labels.txt",
-        "activity_gt": "data/ros_bags/Annotated_folding_filter/labels_test.feather",
-        "extracted_activity_detections": "data/ros_bags/Annotated_folding_filter/rosbag2_2022_08_08-18_56_31/_extracted/activity_detection_data.txt",
-        "output_dir": "eval"
-    }
-
-def main(cmdline=True, **kw):
-    config = EvalConfig()
-    config.update_defaults(kw)
-
-    model_name = Path(config["activity_model"]).stem
-    output_dir = Path(os.path.join(config["output_dir"], model_name))
+def run_eval(args):
+    model_name = Path(args.activity_model).stem
+    output_dir = Path(os.path.join(args.output_dir, model_name))
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # ============================
-    # Load images
-    # ============================
-    GlobalValues.all_image_files = sorted(Path(config["images_dir_path"]).iterdir())
-    GlobalValues.all_image_times = np.asarray([
-        time_from_name(p.name) for p in GlobalValues.all_image_files
-    ])
-    
     # ============================
     # Load truth annotations
     # ============================
     gt_label_to_ts_ranges = defaultdict(list)
-    gt = pd.read_feather(config["activity_gt"])
+    gt = pd.read_feather(args.activity_gt)
     # Keys: class, start_frame,  end_frame, exploded_ros_bag_path
 
     for i, row in gt.iterrows():
@@ -57,7 +35,18 @@ def main(cmdline=True, **kw):
         end_ts = time_from_name(row["end_frame"])
         gt_label_to_ts_ranges[label].append({"time": (start_ts, end_ts), "conf": 1})
 
-    print(f"Loaded ground truth from {config['activity_truth_csv']}\n")
+    print(f"Loaded ground truth from {args.activity_gt}\n")
+
+    # ============================
+    # Load images
+    # ============================
+    ros_bag_root_dir = Path(args.activity_gt).parent
+    images_dir = os.path.join(ros_bag_root_dir, gt.iloc[0]["exploded_ros_bag_path"])
+    GlobalValues.all_image_files = sorted(Path(images_dir).iterdir())
+    GlobalValues.all_image_times = np.asarray([
+        time_from_name(p.name) for p in GlobalValues.all_image_files
+    ])
+    print(f"Using images from {images_dir}\n")
 
     # ============================
     # Create detections from model
@@ -65,15 +54,14 @@ def main(cmdline=True, **kw):
     # This model has a specific input frame quantity requirement.
     frame_input_size = 32 * 2  # 64
     window_stride = 1  # All possible frame-windows within the frame-range.
-    HYST_HISTORY_SIZE = 75
 
     save_file = Path(f"{output_dir}/slice_prediction_results_swinb-all_windows.pkl")
 
-    with open(config["activity_labels"], 'r') as l:
+    with open(args.activity_labels, 'r') as l:
         detector = SwinBTransformer(
-            checkpoint_path=config["activity_model"],
+            checkpoint_path=args.activity_model,
             num_classes=len(l.readlines()),
-            labels_file=config["activity_labels"],
+            labels_file=args.activity_labels,
             num_frames=32,
             sampling_rate=2,
             torch_device="cuda:0",
@@ -145,7 +133,7 @@ def main(cmdline=True, **kw):
     # extracted ros bag
     # ============================
     dets_label_to_ts_ranges = defaultdict(list)
-    detections = [det for det in (literal_eval(s) for s in open(config["extracted_activity_detection_ros_bag"]))][0]
+    detections = [det for det in (literal_eval(s) for s in open(args.extracted_activity_detections))][0]
 
     for dets in detections:
         good_dets = {}
@@ -159,7 +147,6 @@ def main(cmdline=True, **kw):
     # ============================
     # Plot
     # ============================
-    label_to_slice_handle = dict()
     for label, ts_range_pairs in gt_label_to_ts_ranges.items():
         if label in dets_label_to_ts_ranges:
             plot_activity_confidence(label=label, gt_ranges=ts_range_pairs, det_ranges=dets_label_to_ts_ranges, output_dir=output_dir)
@@ -169,7 +156,25 @@ def main(cmdline=True, **kw):
     # ============================
     # Metrics
     # ============================
-    mIOU, iou_pre_label = iou_per_activity_label(gt_label_to_ts_ranges.keys(), gt_label_to_ts_ranges, dets_label_to_ts_ranges)
+    mIOU, iou_per_label = iou_per_activity_label(gt_label_to_ts_ranges.keys(), gt_label_to_ts_ranges, dets_label_to_ts_ranges)
+
+    # Save to file
+    with open(f"{output_dir}/metrics.txt", "w") as f:
+        f.write(f"IoU: {mIOU}\n")
+        f.write(f"IoU Per Label:\n")
+        for k, v in iou_per_label.items():
+            f.write(f"\t{k}: {v}\n")
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--activity_model", type=str, default="model_files/swinb_model_stage_base_ckpt_6.pth", help="The model checkpoint file")
+    parser.add_argument("--activity_labels", type=str, default="model_files/swinb_coffee_task_labels.txt", help="File containing the activity labels separated by newlines")
+    parser.add_argument("--activity_gt", type=str, default="data/ros_bags/Annotated_folding_filter/labels_test.feather", help="The feather file containing the ground truth annotations in the PTG-LEARN format")
+    parser.add_argument("--extracted_activity_detections", type=str, default="data/ros_bags/Annotated_folding_filter/rosbag2_2022_08_08-18_56_31/_extracted/activity_detection_data.txt", help="Text file containing the activity detections from an extracted ROS2 bag")
+    parser.add_argument("--output_dir", type=str, default="eval", help="Folder to output results to. This will be populated as {output_dir}/{model_name}")
+
+    args = parser.parse_args()
+    run_eval(args)
 
 if __name__ == '__main__':
     main()

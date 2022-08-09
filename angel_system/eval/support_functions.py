@@ -7,7 +7,6 @@ from typing import Dict
 from typing import List
 from typing import Tuple
 import PIL
-import ubelt as ub
 from concurrent.futures import ThreadPoolExecutor
 import tqdm
 
@@ -91,24 +90,3 @@ class SelectedSlice:
     @property
     def activity_predictions(self):
         return GlobalValues.slice_preds[self.index]
-
-def populate_global_values(images_dir):
-    # Sort lexicographically to get into temporal order.
-    GlobalValues.all_image_files = sorted(Path(images_dir).iterdir())
-    GlobalValues.all_image_mats = []
-
-    #with ThreadPoolExecutor() as pool:
-    #    for r in tqdm.tqdm(pool.map(lambda p:np.asarray(PIL.Image.open(p)), GlobalValues.all_image_files),
-    #                       total=len(GlobalValues.all_image_files), ncols=100):
-    for p in ub.ProgIter(GlobalValues.all_image_files, desc='loading images'):
-        r = np.asarray(PIL.Image.open(p))
-        GlobalValues.all_image_mats.append(r)
-    print("Done!")
-
-    GlobalValues.all_image_mats = np.asarray(GlobalValues.all_image_mats)
-
-    GlobalValues.all_image_times = np.asarray([
-        time_from_name(p.name) for p in GlobalValues.all_image_files
-    ])
-
-    assert len(GlobalValues.all_image_files) == len(GlobalValues.all_image_mats) == len(GlobalValues.all_image_times)

@@ -19,7 +19,6 @@ transitions = "^0.8.11"
 timm = "^0.5.4"
 einops = "^0.4.1"
 pynput = "^1.7.6"
-scriptconfig = "^0.6.4"
 pandas = "^1.4.3"
 pyarrow = "^9.0.0"
 

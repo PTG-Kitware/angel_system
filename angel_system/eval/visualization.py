@@ -89,6 +89,9 @@ def plot_activity_confidence(label, gt_ranges, det_ranges, output_dir, custom_ra
     ax1.legend(loc="upper right")
     ax1.plot
 
+    # ============================
+    # Save
+    # ============================
     #plt.show()
     Path(os.path.join(output_dir, "plots/activities")).mkdir(parents=True, exist_ok=True)
     fig.savefig(f"{output_dir}/plots/activities/{label.replace(' ', '_')}.png")
