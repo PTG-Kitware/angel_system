@@ -162,7 +162,7 @@ public class PVCameraCapture : MonoBehaviour
         for (int i = 0; i < allGroups.Count; i++)
         {
             var group = allGroups[i];
-            if (group.DisplayName == "QC Back Camera")
+            if (group.DisplayName == "QC Back Camera") // HoloLens RGB camera
             {
                 selectedGroupIndex = i;
                 break;

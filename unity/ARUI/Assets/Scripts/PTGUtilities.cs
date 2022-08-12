@@ -12,7 +12,10 @@ public static class PTGUtilities
     // For filling in ROS message timestamps
     public static DateTime timeOrigin = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
 
-    // Creates and returns a time stamped ROS std_msgs/Header
+
+    /// <summary>
+    /// Creates and returns a time stamped ROS std_msgs/Header.
+    /// </summary>
     public static HeaderMsg getROSStdMsgsHeader(string frameId)
     {
         var currTime = DateTime.Now;
@@ -28,6 +31,10 @@ public static class PTGUtilities
         return header;
     }
 
+    /// <summary>
+    /// Looks up the IPv4 address of the ethernet interfaces that is connected
+    /// on the HoloLens and returns it as a string (e.g. "192.168.1.100").
+    /// </summary>
     public static string getIPv4AddressString()
     {
         string ipAddr = "";
@@ -57,6 +64,9 @@ public static class PTGUtilities
         return ipAddr;
     }
 
+    /// <summary>
+    /// Converts a 4x4 System.Numerics matrix to a 1D float array.
+    /// </summary>
     public static float[] ConvertMatrixToFloatArray(System.Numerics.Matrix4x4 matrix)
     {
         return new float[16] {
@@ -67,6 +77,9 @@ public static class PTGUtilities
         };
     }
 
+    /// <summary>
+    /// Converts a 4x4 Unity matrix to a 1D float array.
+    /// </summary>
     public static float[] ConvertUnityMatrixToFloatArray(Matrix4x4 matrix)
     {
         return new float[16] {
@@ -77,11 +90,18 @@ public static class PTGUtilities
         };
     }
 
+    /// <summary>
+    /// Returns a 1D float array representing a 4x4 identity matrix.
+    /// </summary>
     public static float[] GetIdentityMatrixFloatArray()
     {
         return new float[] { 1f, 0, 0, 0, 0, 1f, 0, 0, 0, 0, 1f, 0, 0, 0, 0, 1f };
     }
 
+    /// <summary>
+    /// Converts a byte array of length 64 to a 4x4 System.Numerics matrix.
+    /// Each element in the returned array is a 32 bit float.
+    /// </summary>
     public static System.Numerics.Matrix4x4 ConvertByteArrayToMatrix4x4(byte[] matrixAsBytes)
     {
         if (matrixAsBytes == null)

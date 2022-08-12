@@ -92,6 +92,11 @@ public class ResearchModeCapture : MonoBehaviour
 
 #if ENABLE_WINMD_SUPPORT
         var consent = this.requestCameraAccessTask.Result;
+        if (consent != ResearchModeSensorConsent.Allowed)
+        {
+            log.LogInfo("Unable to access depth camera");
+            return;
+        }
 #endif
 
         // Create the image publisher and headset pose publisher
@@ -164,7 +169,8 @@ public class ResearchModeCapture : MonoBehaviour
             }
             else
             {
-                debugString += "rig location is null";
+                debugString += "Depth camera is location is null";
+                continue;
             }
 
             HeaderMsg header = PTGUtilities.getROSStdMsgsHeader("shortThrowDepthMap");
@@ -174,7 +180,7 @@ public class ResearchModeCapture : MonoBehaviour
                                       Convert.ToUInt32(imageWidth), // width
                                       "mono8", // encoding
                                       0, // is_bigendian
-                                      512, // step size (bytes)
+                                      Convert.ToUInt32(imageWidth), // step size (bytes)
                                       depthBufferByteArray
                                   );
 
