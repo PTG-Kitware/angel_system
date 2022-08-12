@@ -1,3 +1,6 @@
+import logging
+
+
 def iou_per_activity_label(labels, gt, dets):
     """
     Calculate the iou per activity label
@@ -5,6 +8,9 @@ def iou_per_activity_label(labels, gt, dets):
     :param labels: List of String labels of the activity classes
     :param gt: Dict of activity start and end time ground truth values, organized by label keys
     :param dets: Dict of activity start and end time detections with confidence values, organized by label keys
+
+    :return: Dictionary mapping class labels to their average IoU scores
+    :return: Average IoU across all classes
     """
     iou_per_label = {}
     for label in labels:
@@ -18,16 +24,16 @@ def iou_per_activity_label(labels, gt, dets):
             # find overlapping gt if there is one
             gt_overlap = [(gt_range["time"][0], gt_range["time"][1])
                           for gt_range in gt_ranges
-                          if set(range(int(det_range["time"][0]), int(det_range["time"][1]))).intersection(range(int(gt_range["time"][0]), int(gt_range["time"][1])))
-                          ]
+                          if ((gt_range["time"][1] <= det_range["time"][0]) and (det_range["time"][1] >= gt_range["time"][1]))]
 
             if not gt_overlap:
-                # didn't find any gt to calculate with
+                # Insertion, didn't find any gt to calculate with
                 iou = 0
                 ious.append(iou)
                 iou_counts += 1
                 continue
 
+            assert(len(gt_overlap) == 1, "Found more than one overlapping ground truth")
             gt_overlap = gt_overlap[0] # assuming only one gt in range
 
             det_area = (det_range["time"][1] - det_range["time"][0]) * det_range["conf"]
@@ -47,9 +53,9 @@ def iou_per_activity_label(labels, gt, dets):
                 # detection ends before gt, ignore part of gt that happens after the detection range
                 intersection_end = det_range["time"][1]
 
-            gt_area = (intersection_end - intersection_start) * 1
+            gt_area = (intersection_end - intersection_start)
 
-            intersection_area = (intersection_end - intersection_start) * det_range["conf"]
+            intersection_area = (intersection_end - intersection_start)
             union_area = gt_area + det_area - intersection_area
             iou = intersection_area / union_area
 
@@ -65,10 +71,10 @@ def iou_per_activity_label(labels, gt, dets):
 
     overall_iou = sum(iou_per_label.values()) / len(iou_per_label.values())
 
-    print("*" * 10, " IoU ", "*" * 10)
-    print(f"IoU: {overall_iou}")
-    print(f"IoU Per Label:")
+    logging.info("*" * 10, " IoU ", "*" * 10)
+    logging.info(f"IoU: {overall_iou}")
+    logging.info(f"IoU Per Label:")
     for k, v in iou_per_label.items():
-        print(f"\t{k}: {v}")
+        logging.info(f"\t{k}: {v}")
 
     return overall_iou, iou_per_label

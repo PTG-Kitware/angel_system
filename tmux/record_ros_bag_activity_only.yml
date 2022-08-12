@@ -69,4 +69,3 @@ windows:
       ${ROS_NAMESPACE}/ActivityDetections
       ${ROS_NAMESPACE}/PVFramesRGB
   - play_ros_bag: ls data/ros_bags
-  - debug: echo "hello"

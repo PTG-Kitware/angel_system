@@ -17,10 +17,12 @@ Move the new activity only ros bag to a location accessible outside the Docker w
 
 # Extract the ROS bags
 ## Extract images from the annotated ros bag
-`$ ros2 run angel_utils bag_extractor.py --ros-args -p bag_path:="<annotated_ros_bag>" -p extract_audio:="False" -p extract_eye_gaze_data:="False" -p extract_head_pose_data:="False" -p extract_hand_pose_data:="False" -p extract_spatial_map_data:="False"`
+Turning off all flags is optional, but they are not needed for eval. 
+`$ ros2 run angel_utils bag_extractor.py --ros-args -p bag_path:="<annotated_ros_bag>" -p extract_audio:="False" -p extract_eye_gaze_data:="False" -p extract_head_pose_data:="False" -p extract_hand_pose_data:="False" -p extract_spatial_map_data:="False" -p extract_annotation_event_data:="False"`
 
 ## Extract activity detections from the new ros bag
-`$ ros2 run angel_utils bag_extractor.py --ros-args -p bag_path:="<activity_only_ros_bag>" -p extract_images:="False" -p extract_audio:="False" -p extract_eye_gaze_data:="False" -p extract_head_pose_data:="False" -p extract_hand_pose_data:="False" -p extract_spatial_map_data:="False"`
+`$ ros2 run angel_utils bag_extractor.py --ros-args -p bag_path:="<activity_only_ros_bag>" -p extract_images:="False" -p extract_audio:="False" -p extract_eye_gaze_data:="False" -p extract_head_pose_data:="False" -p extract_hand_pose_data:="False" -p extract_spatial_map_data:="False" -p extract_annotation_event_data:="False"`
 
 # Run eval
 `$ poetry run ptg_eval <optional flags>`
+

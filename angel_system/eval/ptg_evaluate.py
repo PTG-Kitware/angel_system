@@ -17,8 +17,7 @@ from angel_system.eval.compute_scores import iou_per_activity_label
 
 
 def run_eval(args):
-    model_name = Path(args.activity_model).stem
-    output_dir = Path(os.path.join(args.output_dir, model_name))
+    output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # ============================
@@ -49,86 +48,6 @@ def run_eval(args):
     print(f"Using images from {images_dir}\n")
 
     # ============================
-    # Create detections from model
-    # ============================
-    # This model has a specific input frame quantity requirement.
-    frame_input_size = 32 * 2  # 64
-    window_stride = 1  # All possible frame-windows within the frame-range.
-
-    save_file = Path(f"{output_dir}/slice_prediction_results_swinb-all_windows.pkl")
-
-    with open(args.activity_labels, 'r') as l:
-        detector = SwinBTransformer(
-            checkpoint_path=args.activity_model,
-            num_classes=len(l.readlines()),
-            labels_file=args.activity_labels,
-            num_frames=32,
-            sampling_rate=2,
-            torch_device="cuda:0",
-        )
-
-    # Detector for every 64-frame chunk, collecting slice prediction results per class.
-    GlobalValues.clear_slice_values()
-
-    def gen_results(i):
-        """ Generate results for one slice of frames. """
-        j = i + frame_input_size
-        image_mats = np.asarray([np.asarray(PIL.Image.open(p)) for p in GlobalValues.all_image_files[i:j]])
-        return SliceResult(
-            (i, j),
-            (time_from_name(GlobalValues.all_image_files[i].name),
-             time_from_name(GlobalValues.all_image_files[j].name)),
-            detector.detect_activities(image_mats)
-        )
-
-    if not save_file.is_file():
-        print(f"Creating detection results from {model_name}")
-        inputs = list(range(0, len(GlobalValues.all_image_files) - frame_input_size, window_stride))
-        # # -- Serial version --
-        # for slice_result in tqdm.tqdm(map(gen_results, inputs),
-        #                    total=len(inputs),
-        #                    ncols=120):
-        #         GlobalValues.slice_index_ranges.append(slice_result.index_range)
-        #         GlobalValues.slice_time_ranges.append(slice_result.time_range)
-        #         GlobalValues.slice_preds.append(slice_result.preds)
-
-        # -- Threaded version --
-        with ThreadPoolExecutor(max_workers=3) as pool:
-            # Starting indices across the whole frame range.
-            for slice_result in tqdm.tqdm(
-                pool.map(gen_results, inputs),
-                total=len(inputs),
-                ncols=120
-            ):
-                GlobalValues.slice_index_ranges.append(slice_result.index_range)
-                GlobalValues.slice_time_ranges.append(slice_result.time_range)
-                GlobalValues.slice_preds.append(slice_result.preds)
-
-        # Save results to disk, this took a while! (~1.5 hours)
-        print(f"Saving results to file: {save_file}")
-        with open(save_file, 'wb') as ofile:
-            pickle.dump({
-                "slice_index_ranges":GlobalValues.slice_index_ranges,
-                "slice_time_ranges":GlobalValues.slice_time_ranges,
-                "slice_preds":GlobalValues.slice_preds,
-            }, ofile, protocol=-1)
-    else:
-        # We have a results file.
-        # Load computed results
-        print(f"Loading results from file: {save_file}")
-        with open(save_file, 'rb') as f:
-            results_dict = pickle.load(f)
-
-        # The [start, end) frame index ranges per slice
-        GlobalValues.slice_index_ranges = results_dict['slice_index_ranges']  # List[Tuple[int, int]]
-
-        # The [start, end) frame time pairs
-        GlobalValues.slice_time_ranges = results_dict['slice_time_ranges']  # List[Tuple[float, float]]
-
-        # Prediction results per slice
-        GlobalValues.slice_preds = results_dict['slice_preds']  # List[Dict[str, float]]
-
-    # ============================
     # Load detections from
     # extracted ros bag
     # ============================
@@ -153,6 +72,8 @@ def run_eval(args):
         else:
             print(f"No detections found for \"{label}\"")
 
+    print(f"Saved plots to {output_dir}/plots/")
+
     # ============================
     # Metrics
     # ============================
@@ -165,12 +86,12 @@ def run_eval(args):
         for k, v in iou_per_label.items():
             f.write(f"\t{k}: {v}\n")
 
+    print(f"Saved metrics to {output_dir}/metrics.txt")
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--activity_model", type=str, default="model_files/swinb_model_stage_base_ckpt_6.pth", help="The model checkpoint file")
-    parser.add_argument("--activity_labels", type=str, default="model_files/swinb_coffee_task_labels.txt", help="File containing the activity labels separated by newlines")
     parser.add_argument("--activity_gt", type=str, default="data/ros_bags/Annotated_folding_filter/labels_test.feather", help="The feather file containing the ground truth annotations in the PTG-LEARN format")
-    parser.add_argument("--extracted_activity_detections", type=str, default="data/ros_bags/Annotated_folding_filter/rosbag2_2022_08_08-18_56_31/_extracted/activity_detection_data.txt", help="Text file containing the activity detections from an extracted ROS2 bag")
+    parser.add_argument("--extracted_activity_detections", type=str, default="data/ros_bags/Annotated_folding_filter/rosbag2_2022_08_08-18_56_31/_extracted/activity_detection_data.json", help="Text file containing the activity detections from an extracted ROS2 bag")
     parser.add_argument("--output_dir", type=str, default="eval", help="Folder to output results to. This will be populated as {output_dir}/{model_name}")
 
     args = parser.parse_args()
