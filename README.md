@@ -21,7 +21,7 @@ Unity Hub - 3.0.0 - https://unity.com/unity-hub
 Unity - 2020.3.25f1 - https://unity3d.com/get-unity/download/archive  
 Visual Studio 2019 - 16.11.8 - https://visualstudio.microsoft.com/vs/older-downloads/  
 Mixed Reality Feature Tool - 1.02111-Preview - https://www.microsoft.com/en-us/download/details.aspx?id=102778  
-HoloLens 2 headset
+HoloLens 2 headset - OS version 20438.1432  
 Anaconda/Miniconda - py3.9
 
 ## First time build/deploy instructions
@@ -63,8 +63,7 @@ See [Unity README.md](unity/README.md) for instructions on creating an applicati
 
 - Research mode must be enabled in the HoloLens headset (see "Enabling Research Mode" section here https://docs.microsoft.com/en-us/windows/mixed-reality/develop/advanced-concepts/research-mode).  
 - The first time you start your application on the HoloLens, you may have to allow camera/microphone access to the app. Click yes on the popups and then restart the application.
-- Assuming that only one ethernet connection is active at the time of running the experimental app.
-
+- Due to issues accessing the depth and PV camera simultaneously, the HoloLens OS version should be less than 20348.1501. Version 20348.1432 has been tested with the app and confirmed to work. See this [issue](https://github.com/microsoft/HoloLens2ForCV/issues/133) for more information. To install an older OS version on the HoloLens, follow the instructions [here](https://docs.microsoft.com/en-us/hololens/hololens-recovery#clean-reflash-the-device).
 
 # ROS 2 System
 ROS 2 Foxy is utilized to support our system of streaming analytics and
