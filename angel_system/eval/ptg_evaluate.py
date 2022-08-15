@@ -9,11 +9,16 @@ import os
 import tqdm
 import pickle
 import pandas as pd
+import logging
 
 from angel_system.impls.detect_activities.swinb.swinb_detect_activities import SwinBTransformer
 from angel_system.eval.support_functions import time_from_name, GlobalValues, SliceResult
 from angel_system.eval.visualization import plot_activity_confidence
 from angel_system.eval.compute_scores import iou_per_activity_label
+
+
+logging.basicConfig(level = logging.INFO)
+log = logging.getLogger("ptg_eval")
 
 
 def run_eval(args):
@@ -34,7 +39,7 @@ def run_eval(args):
         end_ts = time_from_name(row["end_frame"])
         gt_label_to_ts_ranges[label].append({"time": (start_ts, end_ts), "conf": 1})
 
-    print(f"Loaded ground truth from {args.activity_gt}\n")
+    log.info(f"Loaded ground truth from {args.activity_gt}")
 
     # ============================
     # Load images
@@ -45,7 +50,7 @@ def run_eval(args):
     GlobalValues.all_image_times = np.asarray([
         time_from_name(p.name) for p in GlobalValues.all_image_files
     ])
-    print(f"Using images from {images_dir}\n")
+    log.info(f"Using images from {images_dir}")
 
     # ============================
     # Load detections from
@@ -64,17 +69,6 @@ def run_eval(args):
                 {"time": (dets["source_stamp_start_frame"], dets["source_stamp_end_frame"]), "conf": good_dets[l]})
 
     # ============================
-    # Plot
-    # ============================
-    for label, ts_range_pairs in gt_label_to_ts_ranges.items():
-        if label in dets_label_to_ts_ranges:
-            plot_activity_confidence(label=label, gt_ranges=ts_range_pairs, det_ranges=dets_label_to_ts_ranges, output_dir=output_dir)
-        else:
-            print(f"No detections found for \"{label}\"")
-
-    print(f"Saved plots to {output_dir}/plots/")
-
-    # ============================
     # Metrics
     # ============================
     mIOU, iou_per_label = iou_per_activity_label(gt_label_to_ts_ranges.keys(), gt_label_to_ts_ranges, dets_label_to_ts_ranges)
@@ -86,7 +80,18 @@ def run_eval(args):
         for k, v in iou_per_label.items():
             f.write(f"\t{k}: {v}\n")
 
-    print(f"Saved metrics to {output_dir}/metrics.txt")
+    log.info(f"Saved metrics to {output_dir}/metrics.txt")
+
+    # ============================
+    # Plot
+    # ============================
+    for label, ts_range_pairs in gt_label_to_ts_ranges.items():
+        if label in dets_label_to_ts_ranges:
+            plot_activity_confidence(label=label, gt_ranges=ts_range_pairs, det_ranges=dets_label_to_ts_ranges, output_dir=output_dir)
+        else:
+            log.warning(f"No detections found for \"{label}\"")
+
+    log.info(f"Saved plots to {output_dir}/plots/")
 
 def main():
     parser = argparse.ArgumentParser()

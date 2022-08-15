@@ -1,6 +1,9 @@
 import logging
 
 
+log = logging.getLogger("ptg_eval")
+
+
 def iou_per_activity_label(labels, gt, dets):
     """
     Calculate the iou per activity label
@@ -24,7 +27,7 @@ def iou_per_activity_label(labels, gt, dets):
             # find overlapping gt if there is one
             gt_overlap = [(gt_range["time"][0], gt_range["time"][1])
                           for gt_range in gt_ranges
-                          if ((gt_range["time"][1] <= det_range["time"][0]) and (det_range["time"][1] >= gt_range["time"][1]))]
+                          if ((gt_range["time"][1] >= det_range["time"][0]) and (det_range["time"][1] >= gt_range["time"][1]))]
 
             if not gt_overlap:
                 # Insertion, didn't find any gt to calculate with
@@ -33,10 +36,11 @@ def iou_per_activity_label(labels, gt, dets):
                 iou_counts += 1
                 continue
 
-            assert(len(gt_overlap) == 1, "Found more than one overlapping ground truth")
+            if len(gt_overlap) > 1:
+                logging.warning("Found more than one overlapping ground truth")
             gt_overlap = gt_overlap[0] # assuming only one gt in range
 
-            det_area = (det_range["time"][1] - det_range["time"][0]) * det_range["conf"]
+            det_area = (det_range["time"][1] - det_range["time"][0])
 
             # find intersection area
             if det_range["time"][0] <= gt_overlap[0] <= det_range["time"][1]:
@@ -71,10 +75,9 @@ def iou_per_activity_label(labels, gt, dets):
 
     overall_iou = sum(iou_per_label.values()) / len(iou_per_label.values())
 
-    logging.info("*" * 10, " IoU ", "*" * 10)
-    logging.info(f"IoU: {overall_iou}")
-    logging.info(f"IoU Per Label:")
+    log.info(f"IoU: {overall_iou}")
+    log.info(f"IoU Per Label:")
     for k, v in iou_per_label.items():
-        logging.info(f"\t{k}: {v}")
+        log.info(f"\t{k}: {v}")
 
     return overall_iou, iou_per_label

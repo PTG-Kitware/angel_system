@@ -18,13 +18,13 @@ def time_from_name(fname):
     """
     Extract the float timestamp from the filename.
     """
-    return float(RE_FILENAME_TIME.match(fname).groups()[0].replace("_", "."))
+    time = RE_FILENAME_TIME.match(fname).groups()[0].split('_')
+    return float(time[0]) + (float(time[1]) * 1e-9)
 
 def frames_for_range(start, end):
     """
     Return frame files that occur in the [start, end) range.
     """
-    print(f"Range: {start} - {end}")
     fp_in_range = []
     for img_fp in IMAGES_DIR_PATH.iterdir():
         fp_t = time_from_name(img_fp.name)
