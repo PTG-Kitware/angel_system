@@ -99,8 +99,16 @@ class SwinBTransformer(DetectActivities):
             model = model.eval()
 
             # Transfer the model to the requested device
-            model_device = torch.device(self._torch_device)
-            model = model.to(device=model_device)
+            if self._torch_device != 'cpu':
+                if torch.cuda.is_available():
+                    model_device = torch.device(device=self._torch_device)
+                    model = model.to(device=model_device)
+                else:
+                    raise RuntimeError(
+                        "Use of CUDA requested but not available."
+                    )
+            else:
+                model_device = torch.device(self._torch_device)
 
             self._model = model
             self._model_device = model_device
