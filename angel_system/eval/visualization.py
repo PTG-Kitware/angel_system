@@ -5,8 +5,6 @@ import PIL
 from pathlib import Path
 import os
 
-from angel_system.eval.support_functions import GlobalValues
-
 
 def plot_activity_confidence(label, gt_ranges, det_ranges, output_dir, custom_range=None, custom_range_color="red"):
     """
@@ -19,20 +17,24 @@ def plot_activity_confidence(label, gt_ranges, det_ranges, output_dir, custom_ra
     :param custom_range_color: The color of the additional range to be drawn. If not set, we will
                                use "red".
     """
+    # Determine time range to plot
     all_start_times = [p["time"][0] for p in gt_ranges]
     all_start_times.extend([p["time"][0] for p in det_ranges[label]])
     all_end_times = [p["time"][1] for p in gt_ranges]
     all_end_times.extend([p["time"][1] for p in det_ranges[label]])
-    min_start_time = min(all_start_times) - 1
-    max_end_time = max(all_end_times) + 1
+    min_start_time = min(all_start_times)
+    max_end_time = max(all_end_times)
+    total_time_delta = max_end_time - min_start_time
+    pad = 0.05 * total_time_delta
 
+    # Setup figure
     fig = plt.figure(figsize=(14, 6))
     ax = fig.add_subplot(111)
     ax.set_title(f"Window Confidence over time for \"{label}\"")
     ax.set_xlabel("Time (seconds)")
     ax.set_ylabel("Confidence")
     ax.set_ylim(0, 1.05)
-    ax.set_xlim(min_start_time, max_end_time)
+    ax.set_xlim(min_start_time - pad, max_end_time + pad)
 
     # ============================
     # Ground truth
@@ -73,4 +75,3 @@ def plot_activity_confidence(label, gt_ranges, det_ranges, output_dir, custom_ra
     #plt.show()
     Path(os.path.join(output_dir, "plots/activities")).mkdir(parents=True, exist_ok=True)
     fig.savefig(f"{output_dir}/plots/activities/{label.replace(' ', '_')}.png")
-

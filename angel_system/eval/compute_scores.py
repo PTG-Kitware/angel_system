@@ -12,8 +12,7 @@ def iou_per_activity_label(labels, gt, dets):
     :param gt: Dict of activity start and end time ground truth values, organized by label keys
     :param dets: Dict of activity start and end time detections with confidence values, organized by label keys
 
-    :return: Dictionary mapping class labels to their average IoU scores
-    :return: Average IoU across all classes
+    :return: Tuple(Average IoU across all classes, Dictionary mapping class labels to their average IoU scores)
     """
     iou_per_label = {}
     for label in labels:

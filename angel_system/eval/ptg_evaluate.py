@@ -12,7 +12,7 @@ import pandas as pd
 import logging
 
 from angel_system.impls.detect_activities.swinb.swinb_detect_activities import SwinBTransformer
-from angel_system.eval.support_functions import time_from_name, GlobalValues, SliceResult
+from angel_system.eval.support_functions import time_from_name
 from angel_system.eval.visualization import plot_activity_confidence
 from angel_system.eval.compute_scores import iou_per_activity_label
 
@@ -40,17 +40,6 @@ def run_eval(args):
         gt_label_to_ts_ranges[label].append({"time": (start_ts, end_ts), "conf": 1})
 
     log.info(f"Loaded ground truth from {args.activity_gt}")
-
-    # ============================
-    # Load images
-    # ============================
-    ros_bag_root_dir = Path(args.activity_gt).parent
-    images_dir = os.path.join(ros_bag_root_dir, gt.iloc[0]["exploded_ros_bag_path"])
-    GlobalValues.all_image_files = sorted(Path(images_dir).iterdir())
-    GlobalValues.all_image_times = np.asarray([
-        time_from_name(p.name) for p in GlobalValues.all_image_files
-    ])
-    log.info(f"Using images from {images_dir}")
 
     # ============================
     # Load detections from
