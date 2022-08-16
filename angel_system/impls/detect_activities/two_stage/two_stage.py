@@ -34,7 +34,10 @@ class TwoStageModule(nn.Module):
         
         # Load checkpoint
         temp_check = dict()
+
         for key in check['state_dict'].keys():
+            #extract just the temporal weights from the checkpoint
+            #fcn doesn't change, so no need to load in weights for it
             if 'temporal' in key:
                 new_key = key.split('temporal.')[1]
                 temp_check[new_key] = check['state_dict'][key]
