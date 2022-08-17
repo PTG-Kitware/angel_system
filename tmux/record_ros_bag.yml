@@ -64,6 +64,8 @@ windows:
       ${ROS_NAMESPACE}/PVFramesNV12
       ${ROS_NAMESPACE}/SpatialMapData
       ${ROS_NAMESPACE}/AnnotationEvents
+      ${ROS_NAMESPACE}/HeadsetDepthPoseData
+      ${ROS_NAMESPACE}/ShortThrowDepthMapImages
   - event_monitor: ros2 run angel_system_nodes annotation_event_monitor --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p annotation_event_topic:=AnnotationEvents
