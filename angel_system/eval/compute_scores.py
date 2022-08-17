@@ -24,8 +24,7 @@ def iou_per_activity_label(labels, gt, dets):
 
         for det_range in det_ranges:
             # find overlapping gt if there is one
-            gt_overlap = [(gt_range["time"][0], gt_range["time"][1])
-                          for gt_range in gt_ranges
+            gt_overlap = [gt_range for gt_range in gt_ranges
                           if ((gt_range["time"][1] >= det_range["time"][0]) and (det_range["time"][1] >= gt_range["time"][1]))]
 
             if not gt_overlap:
@@ -36,29 +35,17 @@ def iou_per_activity_label(labels, gt, dets):
                 continue
 
             if len(gt_overlap) > 1:
-                logging.warning("Found more than one overlapping ground truth")
+                log.warning("Found more than one overlapping ground truth")
             gt_overlap = gt_overlap[0] # assuming only one gt in range
 
+            gt_area = (gt_overlap["time"][1] - gt_overlap["time"][0])
             det_area = (det_range["time"][1] - det_range["time"][0])
+            
+            # coordinates of the intersection interval
+            i_left = max(det_range['time'][0], gt_overlap['time'][0])  # "right"-most left boundary
+            i_right = min(det_range['time'][1], gt_overlap['time'][1])  # "left"-most right boundary
+            intersection_area = i_right - i_left
 
-            # find intersection area
-            if det_range["time"][0] <= gt_overlap[0] <= det_range["time"][1]:
-                # gt starts after det
-                intersection_start = gt_overlap[0]
-            else:
-                # gt starts before detection, ignore part of gt that happens before our detection range
-                intersection_start = det_range["time"][0]
-
-            if det_range["time"][0] <= gt_overlap[1] <= det_range["time"][1]:
-                # gt ends before detection
-                intersection_end = gt_overlap[1]
-            else:
-                # detection ends before gt, ignore part of gt that happens after the detection range
-                intersection_end = det_range["time"][1]
-
-            gt_area = (intersection_end - intersection_start)
-
-            intersection_area = (intersection_end - intersection_start)
             union_area = gt_area + det_area - intersection_area
             iou = intersection_area / union_area
 
