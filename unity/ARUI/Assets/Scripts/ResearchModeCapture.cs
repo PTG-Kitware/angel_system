@@ -26,6 +26,9 @@ public class ResearchModeCapture : MonoBehaviour
     private ResearchModeCameraSensor cameraSensor;
     private ResearchModeSensorDevice sensorDevice;
     private Task<ResearchModeSensorConsent> requestCameraAccessTask;
+
+    // From the research mode API docs, values above 4090 are reserved for
+    // sensor error conditions.
     private const ushort InvalidAhatValue = 4090;
     private SpatialLocator rigNodeLocator;
 

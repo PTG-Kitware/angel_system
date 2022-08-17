@@ -64,6 +64,7 @@ See [Unity README.md](unity/README.md) for instructions on creating an applicati
 - Research mode must be enabled in the HoloLens headset (see "Enabling Research Mode" section here https://docs.microsoft.com/en-us/windows/mixed-reality/develop/advanced-concepts/research-mode).  
 - The first time you start your application on the HoloLens, you may have to allow camera/microphone access to the app. Click yes on the popups and then restart the application.
 - Due to issues accessing the depth and PV camera simultaneously, the HoloLens OS version should be less than 20348.1501. Version 20348.1432 has been tested with the app and confirmed to work. See this [issue](https://github.com/microsoft/HoloLens2ForCV/issues/133) for more information. To install an older OS version on the HoloLens, follow the instructions [here](https://docs.microsoft.com/en-us/hololens/hololens-recovery#clean-reflash-the-device).
+- Although the short throw depth camera data provided by research mode is provided as UINT16 data, the max valid value is 4090 (values above 4090 signify an invalid reading from the camera). So, the true range of the short throw depth camera is [0, 4090].
 
 # ROS 2 System
 ROS 2 Foxy is utilized to support our system of streaming analytics and
