@@ -28,6 +28,7 @@ from angel_msgs.msg import (
     HeadsetAudioData,
     HeadsetPoseData,
     SpatialMesh,
+    ActivityDetection
 )
 from sensor_msgs.msg import Image
 from angel_utils.conversion import convert_nv12_to_rgb
@@ -98,6 +99,11 @@ class BagConverter(Node):
             .get_parameter_value()
             .bool_value
         )
+        self.extract_activity_detection_data = (
+            self.declare_parameter("extract_activity_detection_data", True)
+            .get_parameter_value()
+            .bool_value
+        )
 
         if self.bag_path == "":
             self.log.info("Please provide bag file to convert")
@@ -127,6 +133,8 @@ class BagConverter(Node):
             self.msg_type_to_handler_map[
                 AnnotationEvent
             ] = self.handle_annotation_event_msg
+        if self.extract_activity_detection_data:
+            self.msg_type_to_handler_map[ActivityDetection] = self.handle_activity_detection_msg
 
         # Top level data folder
         self.num_total_msgs = 0
@@ -166,6 +174,10 @@ class BagConverter(Node):
         # For extracting spatial map data
         self.annotation_event_msgs = []
         self.num_annotation_event_msgs = 0
+
+        # For activity detection data
+        self.activity_detection_msgs = []
+        self.num_activity_detection_msgs = 0
 
         # Parse the bag
         self.parse_bag()
@@ -217,7 +229,7 @@ class BagConverter(Node):
 
         # Write the json data to disk
         if self.extract_eye_gaze_data:
-            eye_gaze_file = self.data_folder + "eye_gaze_data.txt"
+            eye_gaze_file = self.data_folder + "eye_gaze_data.json"
             with open(eye_gaze_file, mode="w", encoding="utf-8") as f:
                 json.dump(self.eye_gaze_msgs, f)
             self.log.info(f"Created eye gaze file: {eye_gaze_file}")
@@ -225,7 +237,7 @@ class BagConverter(Node):
             self.log.info(f"Skipping eye gaze file creation")
 
         if self.extract_hand_pose_data:
-            hand_pose_file = self.data_folder + "hand_pose_data.txt"
+            hand_pose_file = self.data_folder + "hand_pose_data.json"
             with open(hand_pose_file, mode="w", encoding="utf-8") as f:
                 json.dump(self.hand_pose_msgs, f)
             self.log.info(f"Created hand pose file: {hand_pose_file}")
@@ -233,7 +245,7 @@ class BagConverter(Node):
             self.log.info(f"Skipping hand pose file creation")
 
         if self.extract_head_pose_data:
-            head_pose_file = self.data_folder + "head_pose_data.txt"
+            head_pose_file = self.data_folder + "head_pose_data.json"
             with open(head_pose_file, mode="w", encoding="utf-8") as f:
                 json.dump(self.head_pose_msgs, f)
             self.log.info(f"Created head pose file: {head_pose_file}")
@@ -241,7 +253,7 @@ class BagConverter(Node):
             self.log.info(f"Skipping head pose file creation")
 
         if self.extract_spatial_map_data:
-            spatial_map_file = self.data_folder + "spatial_map_data.txt"
+            spatial_map_file = self.data_folder + "spatial_map_data.json"
             with open(spatial_map_file, mode="w", encoding="utf-8") as f:
                 json.dump(self.spatial_map_msgs, f)
             self.log.info(f"Created spatial map file: {spatial_map_file}")
@@ -249,12 +261,20 @@ class BagConverter(Node):
             self.log.info(f"Skipping spatial map file creation")
 
         if self.extract_annotation_event_data:
-            annotation_event_file = self.data_folder + "annotation_event_data.txt"
+            annotation_event_file = self.data_folder + "annotation_event_data.json"
             with open(annotation_event_file, mode="w", encoding="utf-8") as f:
                 json.dump(self.annotation_event_msgs, f)
             self.log.info(f"Created annotation event file: {annotation_event_file}")
         else:
             self.log.info(f"Skipping annotation event file creation")
+
+        if self.extract_activity_detection_data:
+            activity_detection_file = self.data_folder + "activity_detection_data.json"
+            with open(activity_detection_file, mode="w", encoding='utf-8') as f:
+                json.dump(self.activity_detection_msgs, f)
+            self.log.info(f"Created activity detection file: {activity_detection_file}")
+        else:
+            self.log.info(f"Skipping activity detection file creation")
 
     def print_bag_info(self) -> None:
         """
@@ -269,6 +289,7 @@ class BagConverter(Node):
         self.log.info(f"Image messages: {self.num_image_msgs}")
         self.log.info(f"Spatial map messages: {self.num_spatial_map_msgs}")
         self.log.info(f"Annotation event messages: {self.num_annotation_event_msgs}")
+        self.log.info(f"Activity detection messages: {self.num_activity_detection_msgs}")
 
     def create_wav_file(self, filename: Optional[str] = None) -> None:
         """
@@ -396,6 +417,21 @@ class BagConverter(Node):
         }
         return d
 
+    def convert_activity_detection_msg_to_dict(self, msg) -> Dict:
+        """
+        Converts a ActivityDetection ROS message object to a dictionary.
+        """
+        d = {
+             "header": {"time_sec": msg.header.stamp.sec,
+                        "time_nanosec": msg.header.stamp.nanosec,
+                        "frame_id": msg.header.frame_id},
+            "source_stamp_start_frame": msg.source_stamp_start_frame.sec + (msg.source_stamp_start_frame.nanosec * 1e-9),
+            "source_stamp_end_frame": msg.source_stamp_end_frame.sec + (msg.source_stamp_end_frame.nanosec * 1e-9),
+            "label_vec": list(msg.label_vec),
+            "conf_vec": list(msg.conf_vec),
+        }
+        return d
+
     def handle_audio_msg(self, msg: HeadsetAudioData) -> None:
         """
         Handler for the audio messages in the ROS bag.
@@ -478,6 +514,17 @@ class BagConverter(Node):
 
         msg_dict = self.convert_annotation_event_msg_to_dict(msg)
         self.annotation_event_msgs.append(msg_dict)
+
+    def handle_activity_detection_msg(self, msg: SpatialMesh) -> None:
+        """
+        Handler for the activity detection messages in the ROS bag.
+        Converts the spatial mesh data to a dictionary and then adds it to
+        the spatial mesh dictionary list.
+        """
+        self.num_activity_detection_msgs += 1
+
+        msg_dict = self.convert_activity_detection_msg_to_dict(msg)
+        self.activity_detection_msgs.append(msg_dict)
 
 
 if __name__ == "__main__":

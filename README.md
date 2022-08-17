@@ -230,6 +230,9 @@ In the .hwdb file, make sure to map the keyboard presses to the up and down arro
 `angel_system/` contains the interfaces and implementations for the
 various components in the ANGEL system python package.
 
+### Running PTG evaluation
+See `angel_system/eval/READMe.md` for details. 
+
 ## Lessons Learned
 ### `rosdep`
 References to the lists that rosdep uses to resolve names:
