@@ -141,20 +141,19 @@ public class ResearchModeCapture : MonoBehaviour
 
             var depthFrame = sensorFrame as ResearchModeSensorDepthFrame;
             UInt16[] depthBuffer = depthFrame.GetBuffer();
-            byte[] depthBufferByteArray = new byte[depthBuffer.Length];
+            byte[] depthBufferByteArray = new byte[depthBuffer.Length * sizeof(UInt16)];
 
-            // Check for invalid values and convert to byte values
+            // Check for invalid values
             for (var i = 0; i < depthBuffer.Length; i++)
             {
                 if (depthBuffer[i] > InvalidAhatValue)
                 {
                     depthBufferByteArray[i] = 0;
                 }
-                else
-                {
-                    depthBufferByteArray[i] = (byte)((float)depthBuffer[i] / 1000 * 255);
-                }
             }
+
+            // Copy depth buffer to byte array
+            System.Buffer.BlockCopy(depthBuffer, 0, depthBufferByteArray, 0, depthBufferByteArray.Length);
 
             // Get the camera pose info
             var timestamp = PerceptionTimestampHelper.FromSystemRelativeTargetTime(TimeSpan.FromTicks((long)frameTicks));
@@ -178,9 +177,9 @@ public class ResearchModeCapture : MonoBehaviour
                                       header,
                                       Convert.ToUInt32(imageHeight), // height
                                       Convert.ToUInt32(imageWidth), // width
-                                      "mono8", // encoding
+                                      "mono16", // encoding
                                       0, // is_bigendian
-                                      Convert.ToUInt32(imageWidth), // step size (bytes)
+                                      Convert.ToUInt32(imageWidth) * sizeof(UInt16), // step size (bytes)
                                       depthBufferByteArray
                                   );
 
