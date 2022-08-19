@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-import ast
 import csv
 import json
 import os
 import pandas as pd
-
+import argparse
 
 def main(args):
     """
@@ -14,24 +13,27 @@ def main(args):
     :param args.image_path: Absolute path to the 'images' folder as is output by the exploded ros bag script
     :param args.ann_path: Absolute path to the annotation_event_data.txt file as is output by the exploded ros bag
                           script
-    :param args.rosbag_name: A string containing the name of the rosbag that is being processed
+    :param args.rosbag_name: A string containing the name of the rosbag that is being processed. This is used to 
+                             create a relative filepath to the exploded rosbag image folder for evaluation.
     :param args.activity: Only used when parsing directly to the PTG labels, this is for when a recording only contains
-                     a single activity being performed repeatedly. the parameter is a string of the name of the activity
-    :param args.ptg_out_file: The absolute path of the feather file containing the PTG formatted data will be output to
+                     a single activity being performed repeatedly. The parameter is a string of the name of the activity
+    :param args.ptg_out_file: The absolute path of the feather file will will output that will contain the PTG data format.
     :param args.dive_out_file: The absolute path of the DIVE annotation JSON file that will be output.
-    :param args.ptg_labels: A boolean that is true when a .feather file in the PTG format should be out and is false
+    :param args.ptg_labels: A boolean that is true when a .feather file in the PTG format should be output and is false
                             when a DIVE annotation JSON file should be output. 
     """
 
-    imgs = sorted(os.listdir(image_path))
-    event_data = []
-    with open(ann_path, "r") as inFile:
-        event_data = ast.literal_eval(inFile.read())
-
+    #create the events dictionary and initialize the number of error and annotations seen
     events = {}
     num_anns = 0
     num_errors = 0
-    #Extract the combined timestamp from the annotation_event_data.txt file
+
+    imgs = sorted(os.listdir(args.image_path))
+    event_data = []
+    with open(args.ann_path, "r") as inFile:
+        event_data = json.loads(inFile.read())
+
+    #Extract the combined timestamp from the annotation_event_data.txt file and count number of annoataions and errors
     for ann in event_data:
         if ann['description'] == 'Start annotation':
             events['event_{}'.format(num_anns)] = {'start_time': int(ann['time_sec']) + (int(ann['time_nanosec'])*1e-9)}
@@ -56,7 +58,7 @@ def main(args):
                 ann['end_frame'] = imgs[i-1]
                 break
 
-    if ptg_labels:
+    if args.ptg_labels:
         #format the start and end frames into the PTG format
         classes = []
         start_frames = []
@@ -64,13 +66,13 @@ def main(args):
         exploded_ros_bag_paths = []
         for key in sorted(events.keys()):
             if "event" in key:
-                classes.append(activity)
+                classes.append(args.activity)
                 start_frames.append(events[key]['start_frame'])
                 end_frames.append(events[key]['end_frame'])
-                exploded_ros_bag_paths.append(rosbag_name)
+                exploded_ros_bag_paths.append(args.rosbag_name + "/_extracted/images/")
         ptg_anns = {'class': classes, 'start_frame': start_frames, 'end_frame': end_frames, 'exploded_ros_bag_path': exploded_ros_bag_paths}
         eval_df = pd.DataFrame(ptg_anns)
-        eval_df.to_feather(ptg_out_file)
+        eval_df.to_feather(args.ptg_out_file)
 
                 
     else:
@@ -101,8 +103,8 @@ def main(args):
 
                 track_json['tracks'][detection] = track_dict
         json_obj = json.dumps(track_json)
-        with open(dive_out_file, "w") as outfile:
-            outfile.write(json_obj)
+        with open(args.dive_out_file, "w") as outfile:
+            json.dump(track_json, outfile)
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
