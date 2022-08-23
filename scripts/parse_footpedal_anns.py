@@ -17,13 +17,13 @@ def main(args):
                              create a relative filepath to the exploded rosbag image folder for evaluation.
     :param args.activity: Only used when parsing directly to the PTG labels, this is for when a recording only contains
                      a single activity being performed repeatedly. The parameter is a string of the name of the activity
-    :param args.ptg_out_file: The absolute path of the feather file will will output that will contain the PTG data format.
+    :param args.ptg_out_file: The absolute path of the feather file we will output that will contain the PTG data format.
     :param args.dive_out_file: The absolute path of the DIVE annotation JSON file that will be output.
     :param args.ptg_labels: A boolean that is true when a .feather file in the PTG format should be output and is false
                             when a DIVE annotation JSON file should be output. 
     """
 
-    #create the events dictionary and initialize the number of error and annotations seen
+    # Create the events dictionary and initialize the number of error and annotations seen
     events = {}
     num_anns = 0
     num_errors = 0
@@ -33,7 +33,10 @@ def main(args):
     with open(args.ann_path, "r") as inFile:
         event_data = json.loads(inFile.read())
 
-    #Extract the combined timestamp from the annotation_event_data.txt file and count number of annoataions and errors
+    # Extract the combined timestamp from the annotation_event_data.txt file and count number of annoataions and errors
+    # Within the event_data file, each event is generally classified as an annotation or error depending on the button
+    # that was pressed to trigger the event. Additionally each event marks either the begin or end of the annotation/error.
+    # It is guaranteed to have a stop event for each start event. 
     for ann in event_data:
         if ann['description'] == 'Start annotation':
             events['event_{}'.format(num_anns)] = {'start_time': int(ann['time_sec']) + (int(ann['time_nanosec'])*1e-9)}
@@ -46,7 +49,7 @@ def main(args):
             events['error_{}'.format(num_errors)]['end_time'] = int(ann['time_sec']) + (int(ann['time_nanosec'])*1e-9)
             num_errors += 1
 
-    #find the first frame after the start time and the last frame before the end time of each event
+    # Find the first frame after the start time and the last frame before the end time of each event
     for ann_key in events.keys():
         ann = events[ann_key]
         for i in range(len(imgs)):
@@ -59,7 +62,7 @@ def main(args):
                 break
 
     if args.ptg_labels:
-        #format the start and end frames into the PTG format
+        # Format the start and end frames into the PTG format
         classes = []
         start_frames = []
         end_frames = []
@@ -76,7 +79,7 @@ def main(args):
 
                 
     else:
-        #format the start and end frames into tracks into tracks for DIVE to process
+        # Format the start and end frames into tracks into tracks for DIVE to process
         track_json = {'version': 2, 'tracks': {}, 'groups': {}}
         for key in sorted(events.keys()):
             if "event" in key:
@@ -102,7 +105,7 @@ def main(args):
                 track_dict['end'] = int(end_frame_id)
 
                 track_json['tracks'][detection] = track_dict
-        json_obj = json.dumps(track_json)
+        
         with open(args.dive_out_file, "w") as outfile:
             json.dump(track_json, outfile)
 
