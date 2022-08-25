@@ -4,7 +4,7 @@ import logging
 log = logging.getLogger("ptg_eval")
 
 
-def iou_per_activity_label(labels, gt, dets, iou_thr=0.5):
+def iou_per_activity_label(labels, gt, dets):
     """
     Calculate the iou per activity label
 
@@ -16,8 +16,8 @@ def iou_per_activity_label(labels, gt, dets, iou_thr=0.5):
     """
     iou_per_label = {}
     for i, row in labels.iterrows():
-        id = row['ID']
-        label = row['Class']
+        label = row['class']
+
         ious = []
         iou_counts = 0
 
@@ -36,7 +36,7 @@ def iou_per_activity_label(labels, gt, dets, iou_thr=0.5):
                 iou_counts += 1
 
                 # Update dets
-                dets[label][i]['IoU'] = iou
+                dets[label][i]['iou'] = iou
 
                 continue
 
@@ -60,7 +60,7 @@ def iou_per_activity_label(labels, gt, dets, iou_thr=0.5):
             iou_counts += 1
 
             # Update dets
-            dets[label][i]['IoU'] = iou
+            dets[label][i]['iou'] = iou
 
         if not ious:
             # there are no detections for this label

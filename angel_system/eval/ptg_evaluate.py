@@ -58,10 +58,6 @@ def run_eval(args):
             dets_label_to_ts_ranges[l.lower()].append(
                 {"time": (dets["source_stamp_start_frame"], dets["source_stamp_end_frame"]), "conf": good_dets[l]})
 
-    # grab all labels present in data
-    labels = list(set([l for l in gt_label_to_ts_ranges.keys()] + [l for l in dets_label_to_ts_ranges.keys()]))
-    
-
     # ============================
     # Load labels
     # ============================
@@ -70,14 +66,15 @@ def run_eval(args):
     label_ver = label_re.match(os.path.basename(args.activity_gt)).group('version')
 
     vlabels = pd.read_excel(args.labels, sheet_name=label_ver)
-    vlabels['Class'] = vlabels['Class'].str.lower()
+    vlabels['class'] = vlabels['class'].str.lower()
+    
     # grab all labels present in data
     dlabels = list(set([l.lower() for l in gt_label_to_ts_ranges.keys()] + [l.lower() for l in dets_label_to_ts_ranges.keys()]))
 
     # Remove any labels that we don't actually have
     missing_labels = []
     for i, row in vlabels.iterrows():
-        if row['Class'] not in dlabels:
+        if row['class'] not in dlabels:
             missing_labels.append(i)
     labels = vlabels.drop(missing_labels)
 

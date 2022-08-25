@@ -5,7 +5,6 @@ import PIL
 from pathlib import Path
 import os
 from sklearn.metrics import precision_recall_curve, average_precision_score, PrecisionRecallDisplay
-import textwrap
 
 
 class EvalVisualization:
@@ -34,8 +33,7 @@ class EvalVisualization:
                                 use "red".
         """
         for i, row in self.labels.iterrows():
-            id = row['ID']
-            label = row['Class']
+            label = row['class']
             if label in self.dets.keys() and label in self.gt.keys():
                 gt_ranges = self.gt[label]
                 det_ranges = self.dets[label]
@@ -136,10 +134,10 @@ class EvalVisualization:
         thresholds = dict()
         average_precision = dict()
         for i, row in self.labels.iterrows():
-            id = row['ID']
-            label = row['Class']
+            id = row['id']
+            label = row['class']
 
-            truth = [1 if det['IoU'] > iou_thr else 0 for det in self.dets[label]]
+            truth = [1 if det['iou'] > iou_thr else 0 for det in self.dets[label]]
             pred = [det['conf'] for det in self.dets[label]]
 
             precision[i], recall[i], thresholds[i] = precision_recall_curve(truth, pred)
