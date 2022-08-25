@@ -103,6 +103,8 @@ class EvalVisualization:
 
     def plot_pr_curve(self, iou_thr=0.0):
         """
+        Plot the PR curve for each label
+        
         :param iou_thr: IoU threshold
         """
         # ============================

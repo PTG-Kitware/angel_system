@@ -8,7 +8,7 @@ def iou_per_activity_label(labels, gt, dets):
     """
     Calculate the iou per activity label
 
-    :param labels: List of String labels of the activity classes
+    :param labels: Pandas df with columns id (int) and class (str)
     :param gt: Dict of activity start and end time ground truth values, organized by label keys
     :param dets: Dict of activity start and end time detections with confidence values, organized by label keys
 
