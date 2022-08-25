@@ -158,6 +158,14 @@ optional = false
 python-versions = "*"
 
 [[package]]
+name = "et-xmlfile"
+version = "1.1.0"
+description = "An implementation of lxml.xmlfile for the standard library"
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[[package]]
 name = "evdev"
 version = "1.5.0"
 description = "Bindings to the Linux input handling subsystem"
@@ -330,129 +338,6 @@ test = ["pytest", "pytest-asyncio", "testpath"]
 test_extra = ["curio", "matplotlib (!=3.2.0)", "nbformat", "numpy (>=1.19)", "pandas", "pytest", "testpath", "trio"]
 
 [[package]]
-name = "jaraco.classes"
-version = "3.2.2"
-description = "Utility functions for Python class constructs"
-category = "main"
-optional = false
-python-versions = ">=3.7"
-
-[package.dependencies]
-more-itertools = "*"
-
-[package.extras]
-docs = ["sphinx", "jaraco.packaging (>=9)", "rst.linker (>=1.9)", "jaraco.tidelift (>=1.4)"]
-testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-cov", "pytest-enabler (>=1.3)", "pytest-black (>=0.3.7)", "pytest-mypy (>=0.9.1)"]
-
-[[package]]
-name = "jaraco.collections"
-version = "3.5.2"
-description = "Collection objects similar to those in stdlib by jaraco"
-category = "main"
-optional = false
-python-versions = ">=3.7"
-
-[package.dependencies]
-"jaraco.classes" = "*"
-"jaraco.text" = "*"
-
-[package.extras]
-docs = ["sphinx", "jaraco.packaging (>=9)", "rst.linker (>=1.9)", "jaraco.tidelift (>=1.4)"]
-testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-cov", "pytest-enabler (>=1.3)", "pytest-black (>=0.3.7)", "pytest-mypy (>=0.9.1)"]
-
-[[package]]
-name = "jaraco.context"
-version = "4.1.2"
-description = "Context managers by jaraco"
-category = "main"
-optional = false
-python-versions = ">=3.7"
-
-[package.extras]
-docs = ["sphinx", "jaraco.packaging (>=9)", "rst.linker (>=1.9)", "jaraco.tidelift (>=1.4)"]
-testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-cov", "pytest-enabler (>=1.3)", "pytest-black (>=0.3.7)", "pytest-mypy (>=0.9.1)"]
-
-[[package]]
-name = "jaraco.functools"
-version = "3.5.1"
-description = "Functools like those found in stdlib"
-category = "main"
-optional = false
-python-versions = ">=3.7"
-
-[package.dependencies]
-more-itertools = "*"
-
-[package.extras]
-docs = ["sphinx", "jaraco.packaging (>=9)", "rst.linker (>=1.9)", "jaraco.tidelift (>=1.4)"]
-testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-cov", "pytest-enabler (>=1.3)", "jaraco.classes", "pytest-black (>=0.3.7)", "pytest-mypy (>=0.9.1)"]
-
-[[package]]
-name = "jaraco.structures"
-version = "2.1.0"
-description = "Data structures by jaraco"
-category = "main"
-optional = false
-python-versions = ">=3.6"
-
-[package.extras]
-testing = ["pytest-mypy", "pytest-black (>=0.3.7)", "pytest-enabler", "pytest-cov", "pytest-flake8", "pytest-checkdocs (>=1.2.3)", "pytest (>=3.5,!=3.7.3)"]
-docs = ["rst.linker (>=1.9)", "jaraco.packaging (>=8.2)", "sphinx"]
-
-[[package]]
-name = "jaraco.text"
-version = "3.8.1"
-description = "Module for text manipulation"
-category = "main"
-optional = false
-python-versions = ">=3.7"
-
-[package.dependencies]
-importlib-resources = {version = "*", markers = "python_version < \"3.9\""}
-"jaraco.context" = ">=4.1"
-"jaraco.functools" = "*"
-
-[package.extras]
-docs = ["sphinx", "jaraco.packaging (>=9)", "rst.linker (>=1.9)", "jaraco.tidelift (>=1.4)"]
-testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-cov", "pytest-enabler (>=1.3)", "pytest-black (>=0.3.7)", "pytest-mypy (>=0.9.1)"]
-
-[[package]]
-name = "jaraco.ui"
-version = "2.3.0"
-description = "User-Interface tools (mainly command-line)"
-category = "main"
-optional = false
-python-versions = ">=3.6"
-
-[package.dependencies]
-"jaraco.classes" = "*"
-"jaraco.text" = "*"
-
-[package.extras]
-testing = ["pytest-mypy", "pytest-black (>=0.3.7)", "pytest-enabler", "pytest-cov", "pytest-flake8", "pytest-checkdocs (>=1.2.3)", "pytest (>=3.5,!=3.7.3)"]
-docs = ["rst.linker (>=1.9)", "jaraco.packaging (>=8.2)", "sphinx"]
-
-[[package]]
-name = "jaraco.windows"
-version = "5.7.0"
-description = "Windows Routines by Jason R. Coombs"
-category = "main"
-optional = false
-python-versions = ">=3.6"
-
-[package.dependencies]
-"jaraco.collections" = "*"
-"jaraco.structures" = ">=1.1.1"
-"jaraco.text" = "*"
-"jaraco.ui" = "*"
-more-itertools = "*"
-path = "*"
-
-[package.extras]
-docs = ["sphinx", "jaraco.packaging (>=8.2)", "rst.linker (>=1.9)"]
-testing = ["pytest (>=4.6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-cov", "pytest-enabler (>=1.0.1)", "pytest-black (>=0.3.7)", "pytest-mypy"]
-
-[[package]]
 name = "jedi"
 version = "0.18.1"
 description = "An autocompletion tool for Python that can be used for text editors."
@@ -466,6 +351,14 @@ parso = ">=0.8.0,<0.9.0"
 [package.extras]
 qa = ["flake8 (==3.8.3)", "mypy (==0.782)"]
 testing = ["Django (<3.1)", "colorama", "docopt", "pytest (<7.0.0)"]
+
+[[package]]
+name = "joblib"
+version = "1.1.0"
+description = "Lightweight pipelining with Python functions"
+category = "main"
+optional = false
+python-versions = ">=3.6"
 
 [[package]]
 name = "jsonschema"
@@ -617,6 +510,17 @@ optional = false
 python-versions = ">=3.8"
 
 [[package]]
+name = "openpyxl"
+version = "3.0.10"
+description = "A Python library to read/write Excel 2010 xlsx/xlsm files"
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[package.dependencies]
+et-xmlfile = "*"
+
+[[package]]
 name = "packaging"
 version = "21.3"
 description = "Core utilities for Python packages"
@@ -669,18 +573,6 @@ python-versions = ">=3.6"
 [package.extras]
 qa = ["flake8 (==3.8.3)", "mypy (==0.782)"]
 testing = ["docopt", "pytest (<6.0.0)"]
-
-[[package]]
-name = "path"
-version = "16.4.0"
-description = "A module wrapper for os.path"
-category = "main"
-optional = false
-python-versions = ">=3.7"
-
-[package.extras]
-docs = ["sphinx", "jaraco.packaging (>=9)", "rst.linker (>=1.9)", "jaraco.tidelift (>=1.4)"]
-testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-cov", "pytest-enabler (>=1.0.1)", "appdirs", "packaging", "pygments", "pytest-black (>=0.3.7)", "pytest-mypy (>=0.9.1)", "pywin32"]
 
 [[package]]
 name = "pexpect"
@@ -1041,6 +933,26 @@ optional = ["simpleitk", "astropy (>=3.1.2)", "cloudpickle (>=0.2.1)", "dask[arr
 test = ["asv", "codecov", "flake8", "matplotlib (>=3.0.3)", "pooch (>=1.3.0)", "pytest (>=5.2.0)", "pytest-cov (>=2.7.0)", "pytest-localserver", "pytest-faulthandler"]
 
 [[package]]
+name = "scikit-learn"
+version = "1.1.2"
+description = "A set of python modules for machine learning and data mining"
+category = "main"
+optional = false
+python-versions = ">=3.8"
+
+[package.dependencies]
+joblib = ">=1.0.0"
+numpy = ">=1.17.3"
+scipy = ">=1.3.2"
+threadpoolctl = ">=2.0.0"
+
+[package.extras]
+tests = ["numpydoc (>=1.2.0)", "pyamg (>=4.0.0)", "mypy (>=0.961)", "black (>=22.3.0)", "flake8 (>=3.8.2)", "pytest-cov (>=2.9.0)", "pytest (>=5.0.1)", "pandas (>=1.0.5)", "scikit-image (>=0.16.2)", "matplotlib (>=3.1.2)"]
+examples = ["seaborn (>=0.9.0)", "pandas (>=1.0.5)", "scikit-image (>=0.16.2)", "matplotlib (>=3.1.2)"]
+docs = ["sphinxext-opengraph (>=0.4.2)", "sphinx-prompt (>=1.3.0)", "Pillow (>=7.1.2)", "numpydoc (>=1.2.0)", "sphinx-gallery (>=0.7.0)", "sphinx (>=4.0.1)", "memory-profiler (>=0.57.0)", "seaborn (>=0.9.0)", "pandas (>=1.0.5)", "scikit-image (>=0.16.2)", "matplotlib (>=3.1.2)"]
+benchmark = ["memory-profiler (>=0.57.0)", "pandas (>=1.0.5)", "matplotlib (>=3.1.2)"]
+
+[[package]]
 name = "scipy"
 version = "1.8.0"
 description = "SciPy: Scientific Library for Python"
@@ -1050,24 +962,6 @@ python-versions = ">=3.8,<3.11"
 
 [package.dependencies]
 numpy = ">=1.17.3,<1.25.0"
-
-[[package]]
-name = "scriptconfig"
-version = "0.6.4"
-description = "Easy dict-based script configuration with CLI support"
-category = "main"
-optional = false
-python-versions = ">=3.6"
-
-[package.dependencies]
-pyyaml = "*"
-six = "*"
-ubelt = "*"
-
-[package.extras]
-all = ["six", "pyyaml", "ubelt", "xdoctest", "coverage", "pytest", "pytest-cov", "numpy", "coverage", "pytest", "numpy", "coverage", "numpy", "coverage", "pytest", "pytest-cov", "numpy", "coverage", "pytest", "pytest-cov", "numpy", "coverage", "pytest", "numpy", "coverage", "numpy", "coverage", "numpy", "coverage", "pytest", "omegaconf", "pytest-cov"]
-optional = ["numpy", "numpy", "numpy", "numpy", "numpy", "numpy", "numpy", "numpy", "omegaconf"]
-tests = ["xdoctest", "coverage", "pytest", "pytest-cov", "coverage", "pytest", "coverage", "coverage", "pytest", "pytest-cov", "coverage", "pytest", "pytest-cov", "coverage", "pytest", "coverage", "coverage", "coverage", "pytest", "pytest-cov"]
 
 [[package]]
 name = "setuptools-scm"
@@ -1128,6 +1022,17 @@ description = "Python 2 and 3 compatibility utilities"
 category = "main"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*"
+
+[[package]]
+name = "sklearn"
+version = "0.0"
+description = "A set of python modules for machine learning and data mining"
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+scikit-learn = "*"
 
 [[package]]
 name = "smqtk-classifier"
@@ -1276,6 +1181,14 @@ optional = false
 python-versions = "*"
 
 [[package]]
+name = "threadpoolctl"
+version = "3.1.0"
+description = "threadpoolctl"
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[[package]]
 name = "tifffile"
 version = "2022.3.16"
 description = "Read and write TIFF files"
@@ -1391,7 +1304,7 @@ numpy = "*"
 
 [[package]]
 name = "trimesh"
-version = "3.13.0"
+version = "3.14.0"
 description = "Import, export, process, analyze and view triangular meshes."
 category = "main"
 optional = false
@@ -1425,9 +1338,9 @@ xatlas = {version = "*", optional = true, markers = "extra == \"all\""}
 xxhash = {version = "*", optional = true, markers = "extra == \"all\""}
 
 [package.extras]
-all = ["chardet", "shapely", "lxml", "pyglet", "xatlas", "glooey", "sympy", "scikit-image", "mapbox-earcut", "svg.path", "python-fcl", "meshio", "msgpack", "pycollada", "setuptools", "jsonschema", "psutil", "networkx", "pillow", "triangle", "rtree", "requests", "colorlog", "scipy", "xxhash"]
-easy = ["setuptools", "pycollada", "shapely", "chardet", "lxml", "jsonschema", "pyglet", "sympy", "svg.path", "networkx", "pillow", "rtree", "requests", "msgpack", "colorlog", "scipy", "xxhash"]
-test = ["pyinstrument", "pytest-cov", "pytest", "ezdxf", "coveralls"]
+all = ["requests", "pillow", "setuptools", "colorlog", "mapbox-earcut", "msgpack", "meshio", "pyglet", "xatlas", "xxhash", "jsonschema", "scipy", "svg.path", "psutil", "python-fcl", "scikit-image", "sympy", "pycollada", "shapely", "lxml", "rtree", "glooey", "networkx", "chardet", "triangle"]
+easy = ["pillow", "setuptools", "requests", "colorlog", "msgpack", "pyglet", "chardet", "sympy", "pycollada", "shapely", "lxml", "rtree", "networkx", "xxhash", "scipy", "jsonschema", "svg.path"]
+test = ["ezdxf", "pytest-cov", "coveralls", "pytest", "pyinstrument"]
 
 [[package]]
 name = "typeguard"
@@ -1448,28 +1361,6 @@ description = "Backported and Experimental Type Hints for Python 3.6+"
 category = "main"
 optional = false
 python-versions = ">=3.6"
-
-[[package]]
-name = "ubelt"
-version = "1.2.1"
-description = "A Python utility belt containing simple tools, a stdlib like feel, and extra batteries."
-category = "main"
-optional = false
-python-versions = ">=3.6"
-
-[package.dependencies]
-"jaraco.windows" = {version = "*", markers = "platform_system == \"Windows\""}
-
-[package.extras]
-tests = ["pytest-cov", "pytest", "coverage", "coverage", "coverage", "pytest", "coverage", "pytest-cov", "pytest", "coverage", "pytest-cov", "pytest", "coverage", "coverage", "pytest", "coverage", "pytest-cov", "pytest", "coverage", "xdoctest", "requests", "pytest-timeout", "codecov"]
-tests-strict = ["pytest-cov (==3.0.0)", "pytest (==6.2.5)", "coverage (==6.1.1)", "coverage (==6.1.1)", "coverage (==6.1.1)", "pytest (==4.6.0)", "coverage (==6.1.1)", "pytest (==4.6.0)", "pytest-cov (==2.9.0)", "coverage (==5.3.1)", "pytest (==4.6.0)", "pytest-cov (==2.8.1)", "coverage (==4.3.4)", "coverage (==5.3.1)", "pytest (==4.6.0)", "coverage (==5.3.1)", "pytest (==4.6.0)", "pytest-cov (==2.8.1)", "coverage (==4.5)", "xdoctest (==0.14.0)", "requests (==2.25.1)", "pytest-timeout (==1.4.2)", "codecov (==2.0.15)"]
-runtime-strict = ["jaraco.windows (==3.9.1)"]
-optional = ["xxhash", "numpy", "xxhash", "numpy", "xxhash", "numpy", "xxhash", "numpy", "numpy", "numpy", "numpy", "xxhash", "numpy", "colorama", "python-dateutil", "pygments"]
-optional-strict = ["xxhash (==3.0.0)", "numpy (==1.21.6)", "xxhash (==1.4.3)", "numpy (==1.19.2)", "xxhash (==1.3.0)", "numpy (==1.14.5)", "xxhash (==1.3.0)", "numpy (==1.12.0)", "numpy (==1.11.1)", "numpy (==1.11.1)", "numpy (==1.11.1)", "xxhash (==2.0.2)", "numpy (==1.19.3)", "colorama (==0.4.3)", "python-dateutil (==2.8.1)", "Pygments (==2.2.0)"]
-docs-strict = ["sphinxcontrib-napoleon (==0.7)", "sphinx-rtd-theme (==1.0.0)", "sphinx (==4.3.2)", "sphinx-reredirects (==0.0.1)", "sphinx-autobuild (==2021.3.14)", "sphinx-autoapi (==1.8.4)", "myst-parser (==0.16.1)", "Pygments (==2.9.0)"]
-docs = ["sphinxcontrib-napoleon", "sphinx-rtd-theme", "sphinx-reredirects", "sphinx-autobuild", "sphinx-autoapi", "sphinx", "myst-parser", "pygments"]
-all = ["pytest-cov", "pytest", "xxhash", "numpy", "coverage", "xxhash", "numpy", "coverage", "xxhash", "numpy", "coverage", "pytest", "xxhash", "numpy", "coverage", "pytest-cov", "pytest", "numpy", "coverage", "pytest-cov", "pytest", "numpy", "coverage", "numpy", "coverage", "pytest", "xxhash", "numpy", "coverage", "pytest-cov", "pytest", "coverage", "jaraco.windows", "colorama", "xdoctest", "requests", "python-dateutil", "pytest-timeout", "codecov", "pygments"]
-all-strict = ["pytest-cov (==3.0.0)", "pytest (==6.2.5)", "xxhash (==3.0.0)", "numpy (==1.21.6)", "coverage (==6.1.1)", "xxhash (==1.4.3)", "numpy (==1.19.2)", "coverage (==6.1.1)", "xxhash (==1.3.0)", "numpy (==1.14.5)", "coverage (==6.1.1)", "pytest (==4.6.0)", "xxhash (==1.3.0)", "numpy (==1.12.0)", "coverage (==6.1.1)", "pytest (==4.6.0)", "pytest-cov (==2.9.0)", "numpy (==1.11.1)", "coverage (==5.3.1)", "pytest (==4.6.0)", "pytest-cov (==2.8.1)", "numpy (==1.11.1)", "coverage (==4.3.4)", "numpy (==1.11.1)", "coverage (==5.3.1)", "pytest (==4.6.0)", "xxhash (==2.0.2)", "numpy (==1.19.3)", "coverage (==5.3.1)", "pytest (==4.6.0)", "pytest-cov (==2.8.1)", "coverage (==4.5)", "jaraco.windows (==3.9.1)", "colorama (==0.4.3)", "xdoctest (==0.14.0)", "requests (==2.25.1)", "python-dateutil (==2.8.1)", "pytest-timeout (==1.4.2)", "codecov (==2.0.15)", "Pygments (==2.2.0)"]
 
 [[package]]
 name = "urllib3"
@@ -1549,7 +1440,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8,<3.10"
-content-hash = "f7dc449536b18260d1a9bf33f37e5cd4daa531be8db3b96ddd5f93755d777a85"
+content-hash = "56b1a09a9fb4d9b59a3dc7e7ca785993be577903f6a371e0a381113087d9a76a"
 
 [metadata.files]
 appnope = [
@@ -1681,6 +1572,10 @@ einops = [
     {file = "einops-0.4.1-py3-none-any.whl", hash = "sha256:932b12bb3176caef629cc513fc8a442338fdbfe1e560794a6e7306dcee65a8af"},
     {file = "einops-0.4.1.tar.gz", hash = "sha256:65ede824fa54ce99ba969c61152f9948eb8cad08d5f0ca97c95e3804bafcce48"},
 ]
+et-xmlfile = [
+    {file = "et_xmlfile-1.1.0-py3-none-any.whl", hash = "sha256:a2ba85d1d6a74ef63837eed693bcb89c3f752169b0e3e7ae5b16ca5e1b3deada"},
+    {file = "et_xmlfile-1.1.0.tar.gz", hash = "sha256:8eb9e2bc2f8c97e37a2dc85a09ecdcdec9d8a396530a6d5a33b30b9a92da0c5c"},
+]
 evdev = [
     {file = "evdev-1.5.0.tar.gz", hash = "sha256:5b33b174f7c84576e7dd6071e438bf5ad227da95efd4356a39fe4c8355412fe6"},
 ]
@@ -1718,41 +1613,13 @@ ipython = [
     {file = "ipython-8.1.1-py3-none-any.whl", hash = "sha256:6f56bfaeaa3247aa3b9cd3b8cbab3a9c0abf7428392f97b21902d12b2f42a381"},
     {file = "ipython-8.1.1.tar.gz", hash = "sha256:8138762243c9b3a3ffcf70b37151a2a35c23d3a29f9743878c33624f4207be3d"},
 ]
-"jaraco.classes" = [
-    {file = "jaraco.classes-3.2.2-py3-none-any.whl", hash = "sha256:e6ef6fd3fcf4579a7a019d87d1e56a883f4e4c35cfe925f86731abc58804e647"},
-    {file = "jaraco.classes-3.2.2.tar.gz", hash = "sha256:6745f113b0b588239ceb49532aa09c3ebb947433ce311ef2f8e3ad64ebb74594"},
-]
-"jaraco.collections" = [
-    {file = "jaraco.collections-3.5.2-py3-none-any.whl", hash = "sha256:1ca12fa4b7067dfc8d7f791c1a8660d970a2bf2f80536ba0aa5cbb71fe1261f1"},
-    {file = "jaraco.collections-3.5.2.tar.gz", hash = "sha256:072b93eb35f9e48508485755534e66a34ef1cc84af291fd27f39b44d4c0dd2c3"},
-]
-"jaraco.context" = [
-    {file = "jaraco.context-4.1.2-py3-none-any.whl", hash = "sha256:9327d3e6901923e5a7097aa2df4b9c2bc13f845c7672692e3827ebd1b3d67606"},
-    {file = "jaraco.context-4.1.2.tar.gz", hash = "sha256:a58e94dd67871639abc091b57d32842449b230777570ef2bcec3dc16b912613e"},
-]
-"jaraco.functools" = [
-    {file = "jaraco.functools-3.5.1-py3-none-any.whl", hash = "sha256:c8774f73323de42250a659934215da1d899b02c66a6133f1cb79f02a5aff4f38"},
-    {file = "jaraco.functools-3.5.1.tar.gz", hash = "sha256:d0adcf91710a0853efe9f23a78fad586bf67df572f0d6d8e0fa36d289ae1c1d9"},
-]
-"jaraco.structures" = [
-    {file = "jaraco.structures-2.1.0-py3-none-any.whl", hash = "sha256:468b5a2bfa777c50830c611ebc4f816cbb0e72ad4d018cbddc33bf580bfadb9d"},
-    {file = "jaraco.structures-2.1.0.tar.gz", hash = "sha256:8365f405724a3a385586ead33994365432e75e58f378f9cd08cfe5b55bb57558"},
-]
-"jaraco.text" = [
-    {file = "jaraco.text-3.8.1-py3-none-any.whl", hash = "sha256:e4418d632425d741b8f9128cdf8fd9c0c878dc1450a7430dbd4bf6296eeac915"},
-    {file = "jaraco.text-3.8.1.tar.gz", hash = "sha256:450957c3f8fb9a553d9d3e60738733ab1c5cc27b36a463342adb937e9a70ab3e"},
-]
-"jaraco.ui" = [
-    {file = "jaraco.ui-2.3.0-py3-none-any.whl", hash = "sha256:9d609ea57a4bd3a85e0b8603526bb0a9016667d956a52cd236b0f4e090864fd7"},
-    {file = "jaraco.ui-2.3.0.tar.gz", hash = "sha256:afaced6efda5c9715c17be9750687c283ff9ace5fb42d9a1997bedb46f6a8a1a"},
-]
-"jaraco.windows" = [
-    {file = "jaraco.windows-5.7.0-py3-none-any.whl", hash = "sha256:cc6242c5d17903e96f8e03bb47be1f40f0c0d3f4c09a8e74834d2f999990c53a"},
-    {file = "jaraco.windows-5.7.0.tar.gz", hash = "sha256:849fea9db1a6556ed3ee002f22f6623bc480780dbff44146398c3f1bf3b4decf"},
-]
 jedi = [
     {file = "jedi-0.18.1-py2.py3-none-any.whl", hash = "sha256:637c9635fcf47945ceb91cd7f320234a7be540ded6f3e99a50cb6febdfd1ba8d"},
     {file = "jedi-0.18.1.tar.gz", hash = "sha256:74137626a64a99c8eb6ae5832d99b3bdd7d29a3850fe2aa80a4126b2a7d949ab"},
+]
+joblib = [
+    {file = "joblib-1.1.0-py2.py3-none-any.whl", hash = "sha256:f21f109b3c7ff9d95f8387f752d0d9c34a02aa2f7060c2135f465da0e5160ff6"},
+    {file = "joblib-1.1.0.tar.gz", hash = "sha256:4158fcecd13733f8be669be0683b96ebdbbd38d23559f54dca7205aea1bf1e35"},
 ]
 jsonschema = [
     {file = "jsonschema-4.4.0-py3-none-any.whl", hash = "sha256:77281a1f71684953ee8b3d488371b162419767973789272434bbc3f29d9c8823"},
@@ -2013,6 +1880,10 @@ numpy = [
     {file = "numpy-1.22.3-pp38-pypy38_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:c34ea7e9d13a70bf2ab64a2532fe149a9aced424cd05a2c4ba662fd989e3e45f"},
     {file = "numpy-1.22.3.zip", hash = "sha256:dbc7601a3b7472d559dc7b933b18b4b66f9aa7452c120e87dfb33d02008c8a18"},
 ]
+openpyxl = [
+    {file = "openpyxl-3.0.10-py2.py3-none-any.whl", hash = "sha256:0ab6d25d01799f97a9464630abacbb34aafecdcaa0ef3cba6d6b3499867d0355"},
+    {file = "openpyxl-3.0.10.tar.gz", hash = "sha256:e47805627aebcf860edb4edf7987b1309c1b3632f3750538ed962bbcc3bd7449"},
+]
 packaging = [
     {file = "packaging-21.3-py3-none-any.whl", hash = "sha256:ef103e05f519cdc783ae24ea4e2e0f508a9c99b2d4969652eed6a2e1ea5bd522"},
     {file = "packaging-21.3.tar.gz", hash = "sha256:dd47c42927d89ab911e606518907cc2d3a1f38bbd026385970643f9c5b8ecfeb"},
@@ -2047,10 +1918,6 @@ parameterized = [
 parso = [
     {file = "parso-0.8.3-py2.py3-none-any.whl", hash = "sha256:c001d4636cd3aecdaf33cbb40aebb59b094be2a74c556778ef5576c175e19e75"},
     {file = "parso-0.8.3.tar.gz", hash = "sha256:8c07be290bb59f03588915921e29e8a50002acaf2cdc5fa0e0114f91709fafa0"},
-]
-path = [
-    {file = "path-16.4.0-py3-none-any.whl", hash = "sha256:3e539cfeebd8eaddbeed7e42d0beedba00f15a931675dd49d35ee9863bcc166a"},
-    {file = "path-16.4.0.tar.gz", hash = "sha256:baf2e757c4b19be8208f9e67e48fb475b4a577d5613590ce46693bdbdf082f52"},
 ]
 pexpect = [
     {file = "pexpect-4.8.0-py2.py3-none-any.whl", hash = "sha256:0b48a55dcb3c05f3329815901ea4fc1537514d6ba867a152b581d69ae3710937"},
@@ -2435,6 +2302,26 @@ scikit-image = [
     {file = "scikit_image-0.19.2-cp39-cp39-win32.whl", hash = "sha256:99696479cf6fd19bb06ea43269c0728bb75c2ce9cd3710829ac0f1590eecf0dc"},
     {file = "scikit_image-0.19.2-cp39-cp39-win_amd64.whl", hash = "sha256:9d3fd65ec424de83e6fee22480db5431a9b91d280a34ab3e6bf83528e4289f5c"},
 ]
+scikit-learn = [
+    {file = "scikit-learn-1.1.2.tar.gz", hash = "sha256:7c22d1305b16f08d57751a4ea36071e2215efb4c09cb79183faa4e8e82a3dbf8"},
+    {file = "scikit_learn-1.1.2-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:6c840f662b5d3377c4ccb8be1fc21bb52cb5d8b8790f8d6bf021739f84e543cf"},
+    {file = "scikit_learn-1.1.2-cp310-cp310-macosx_12_0_arm64.whl", hash = "sha256:2b8db962360c93554cab7bb3c096c4a24695da394dd4b3c3f13409f409b425bc"},
+    {file = "scikit_learn-1.1.2-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:3e7d1fc817867a350133f937aaebcafbc06192517cbdf0cf7e5774ad4d1adb9f"},
+    {file = "scikit_learn-1.1.2-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:5ec3ea40d467966821843210c02117d82b097b54276fdcfb50f4dfb5c60dbe39"},
+    {file = "scikit_learn-1.1.2-cp310-cp310-win_amd64.whl", hash = "sha256:bbef6ea1c012ff9f3e6f6e9ca006b8772d8383e177b898091e68fbd9b3f840f9"},
+    {file = "scikit_learn-1.1.2-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:a90ca42fe8242fd6ff56cda2fecc5fca586a88a24ab602d275d2d0dcc0b928fb"},
+    {file = "scikit_learn-1.1.2-cp38-cp38-macosx_12_0_arm64.whl", hash = "sha256:a682ec0f82b6f30fb07486daed1c8001b6683cc66b51877644dfc532bece6a18"},
+    {file = "scikit_learn-1.1.2-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:c33e16e9a165af6012f5be530ccfbb672e2bc5f9b840238a05eb7f6694304e3f"},
+    {file = "scikit_learn-1.1.2-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:f94c0146bad51daef919c402a3da8c1c6162619653e1c00c92baa168fda292f2"},
+    {file = "scikit_learn-1.1.2-cp38-cp38-win32.whl", hash = "sha256:2f46c6e3ff1054a5ec701646dcfd61d43b8ecac4d416014daed8843cf4c33d4d"},
+    {file = "scikit_learn-1.1.2-cp38-cp38-win_amd64.whl", hash = "sha256:b1e706deca9b2ad87ae27dafd5ac4e8eff01b6db492ed5c12cef4735ec5f21ea"},
+    {file = "scikit_learn-1.1.2-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:567417dbbe6a6278399c3e6daf1654414a5a1a4d818d28f251fa7fc28730a1bf"},
+    {file = "scikit_learn-1.1.2-cp39-cp39-macosx_12_0_arm64.whl", hash = "sha256:d6f232779023c3b060b80b5c82e5823723bc424dcac1d1a148aa2492c54d245d"},
+    {file = "scikit_learn-1.1.2-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:589d46f28460469f444b898223b13d99db9463e1038dc581ba698111f612264b"},
+    {file = "scikit_learn-1.1.2-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:76800652fb6d6bf527bce36ecc2cc25738b28fe1a17bd294a218fff8e8bd6d50"},
+    {file = "scikit_learn-1.1.2-cp39-cp39-win32.whl", hash = "sha256:1c8fecb7c9984d9ec2ea48898229f98aad681a0873e0935f2b7f724fbce4a047"},
+    {file = "scikit_learn-1.1.2-cp39-cp39-win_amd64.whl", hash = "sha256:407e9a1cb9e6ba458a539986a9bd25546a757088095b3aab91d465b79a760d37"},
+]
 scipy = [
     {file = "scipy-1.8.0-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:87b01c7d5761e8a266a0fbdb9d88dcba0910d63c1c671bdb4d99d29f469e9e03"},
     {file = "scipy-1.8.0-cp310-cp310-macosx_12_0_arm64.whl", hash = "sha256:ae3e327da323d82e918e593460e23babdce40d7ab21490ddf9fc06dec6b91a18"},
@@ -2459,10 +2346,6 @@ scipy = [
     {file = "scipy-1.8.0-cp39-cp39-win32.whl", hash = "sha256:3d573228c10a3a8c32b9037be982e6440e411b443a6267b067cac72f690b8d56"},
     {file = "scipy-1.8.0-cp39-cp39-win_amd64.whl", hash = "sha256:bb7088e89cd751acf66195d2f00cf009a1ea113f3019664032d9075b1e727b6c"},
     {file = "scipy-1.8.0.tar.gz", hash = "sha256:31d4f2d6b724bc9a98e527b5849b8a7e589bf1ea630c33aa563eda912c9ff0bd"},
-]
-scriptconfig = [
-    {file = "scriptconfig-0.6.4-py3-none-any.whl", hash = "sha256:943c632b04eadd679f61b195eede3ca5945cc6a84dba737ccf3fd3fc932503de"},
-    {file = "scriptconfig-0.6.4.tar.gz", hash = "sha256:a35eaa3a1ad6f460b44109a6c4f85157c01489e05e05e07429f74594ec895d79"},
 ]
 setuptools-scm = [
     {file = "setuptools_scm-6.4.2-py3-none-any.whl", hash = "sha256:acea13255093849de7ccb11af9e1fb8bde7067783450cee9ef7a93139bddf6d4"},
@@ -2513,6 +2396,9 @@ six = [
     {file = "six-1.16.0-py2.py3-none-any.whl", hash = "sha256:8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254"},
     {file = "six-1.16.0.tar.gz", hash = "sha256:1e61c37477a1626458e36f7b1d82aa5c9b094fa4802892072e49de9c60c4c926"},
 ]
+sklearn = [
+    {file = "sklearn-0.0.tar.gz", hash = "sha256:e23001573aa194b834122d2b9562459bf5ae494a2d59ca6b8aa22c85a44c0e31"},
+]
 smqtk-classifier = [
     {file = "smqtk_classifier-0.19.0-py3-none-any.whl", hash = "sha256:69a94e115ff42ccf0aa0dd79dadd087313a80daa072f917594a5e06ac0f24a52"},
     {file = "smqtk_classifier-0.19.0.tar.gz", hash = "sha256:f09750dc32d0c66e1ac8cfb5fb180dc7185fe48749bb71ca00426acb4e1ea2e1"},
@@ -2555,6 +2441,10 @@ tabulate = [
 ]
 termcolor = [
     {file = "termcolor-1.1.0.tar.gz", hash = "sha256:1d6d69ce66211143803fbc56652b41d73b4a400a2891d7bf7a1cdf4c02de613b"},
+]
+threadpoolctl = [
+    {file = "threadpoolctl-3.1.0-py3-none-any.whl", hash = "sha256:8b99adda265feb6773280df41eece7b2e6561b772d21ffd52e372f999024907b"},
+    {file = "threadpoolctl-3.1.0.tar.gz", hash = "sha256:a335baacfaa4400ae1f0d8e3a58d6674d2f8828e3716bb2802c44955ad391380"},
 ]
 tifffile = [
     {file = "tifffile-2022.3.16-py3-none-any.whl", hash = "sha256:68f4f3aece7daafbe3dd58751622be0412510ee5921625ca611e47b618f906e6"},
@@ -2658,8 +2548,8 @@ triangle = [
     {file = "triangle-20220202-cp39-cp39-win_amd64.whl", hash = "sha256:1c5bab1851280d14f5128edd5c71a89849e78274d6f41101c5efd8ed914b8740"},
 ]
 trimesh = [
-    {file = "trimesh-3.13.0-py3-none-any.whl", hash = "sha256:df556f0fda5bd887eb546bb1a2c135f6048ee3a0aaacbd8819df32ecc977915b"},
-    {file = "trimesh-3.13.0.tar.gz", hash = "sha256:8667e3b323b21495f0fc1d3c83f66474def8eaf2b966098d42aa3cd600d4400d"},
+    {file = "trimesh-3.14.0-py3-none-any.whl", hash = "sha256:22a4c59761e30ebbfbf278998520b36e35e775c45fd496e8961eb464f0871eab"},
+    {file = "trimesh-3.14.0.tar.gz", hash = "sha256:f6781d6bce697384eebddc38d22fe12a5d39933b036b449267fb54a1f5837962"},
 ]
 typeguard = [
     {file = "typeguard-2.13.3-py3-none-any.whl", hash = "sha256:5e3e3be01e887e7eafae5af63d1f36c849aaa94e3a0112097312aabfa16284f1"},
@@ -2668,10 +2558,6 @@ typeguard = [
 typing-extensions = [
     {file = "typing_extensions-4.1.1-py3-none-any.whl", hash = "sha256:21c85e0fe4b9a155d0799430b0ad741cdce7e359660ccbd8b530613e8df88ce2"},
     {file = "typing_extensions-4.1.1.tar.gz", hash = "sha256:1a9462dcc3347a79b1f1c0271fbe79e844580bb598bafa1ed208b94da3cdcd42"},
-]
-ubelt = [
-    {file = "ubelt-1.2.1-py3-none-any.whl", hash = "sha256:60467fdbdb31941b1536766999b52af5be60e46e4a228c959dd9bc38e4756ee4"},
-    {file = "ubelt-1.2.1.tar.gz", hash = "sha256:ef3de7284760982371218145648846ec01f5f8d52208718727987ec3fab2fb44"},
 ]
 urllib3 = [
     {file = "urllib3-1.26.9-py2.py3-none-any.whl", hash = "sha256:44ece4d53fb1706f667c9bd1c648f5469a2ec925fcf3a776667042d645472c14"},

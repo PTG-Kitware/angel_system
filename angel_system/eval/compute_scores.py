@@ -4,7 +4,7 @@ import logging
 log = logging.getLogger("ptg_eval")
 
 
-def iou_per_activity_label(labels, gt, dets):
+def iou_per_activity_label(labels, gt, dets, iou_thr=0.5):
     """
     Calculate the iou per activity label
 
@@ -12,17 +12,19 @@ def iou_per_activity_label(labels, gt, dets):
     :param gt: Dict of activity start and end time ground truth values, organized by label keys
     :param dets: Dict of activity start and end time detections with confidence values, organized by label keys
 
-    :return: Tuple(Average IoU across all classes, Dictionary mapping class labels to their average IoU scores)
+    :return: Tuple(Average IoU across all classes, Dictionary mapping class labels to their average IoU scores, dets)
     """
     iou_per_label = {}
-    for label in labels:
+    for i, row in labels.iterrows():
+        id = row['ID']
+        label = row['Class']
         ious = []
         iou_counts = 0
 
         gt_ranges = gt[label]
         det_ranges = dets[label]
 
-        for det_range in det_ranges:
+        for i, det_range in enumerate(det_ranges):
             # find overlapping gt if there is one
             gt_overlap = [gt_range for gt_range in gt_ranges
                           if ((gt_range["time"][1] >= det_range["time"][0]) and (det_range["time"][1] >= gt_range["time"][1]))]
@@ -32,13 +34,16 @@ def iou_per_activity_label(labels, gt, dets):
                 iou = 0
                 ious.append(iou)
                 iou_counts += 1
+
+                # Update dets
+                dets[label][i]['IoU'] = iou
+
                 continue
 
             if len(gt_overlap) > 1:
                 log.warning("Found more than one overlapping ground truth")
             gt_overlap = gt_overlap[0] # assuming only one gt in range
 
-            gt_area = (gt_overlap["time"][1] - gt_overlap["time"][0])
             det_area = (det_range["time"][1] - det_range["time"][0])
             
             # coordinates of the intersection interval
@@ -46,11 +51,16 @@ def iou_per_activity_label(labels, gt, dets):
             i_right = min(det_range['time'][1], gt_overlap['time'][1])  # "left"-most right boundary
             intersection_area = i_right - i_left
 
+            gt_area = intersection_area
+
             union_area = gt_area + det_area - intersection_area
             iou = intersection_area / union_area
 
             ious.append(iou)
             iou_counts += 1
+
+            # Update dets
+            dets[label][i]['IoU'] = iou
 
         if not ious:
             # there are no detections for this label
@@ -66,4 +76,4 @@ def iou_per_activity_label(labels, gt, dets):
     for k, v in iou_per_label.items():
         log.info(f"\t{k}: {v}")
 
-    return overall_iou, iou_per_label
+    return overall_iou, iou_per_label, dets
