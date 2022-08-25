@@ -10,10 +10,10 @@ from sklearn.metrics import precision_recall_curve, average_precision_score, Pre
 class EvalVisualization:
     def __init__(self, labels, gt, dets,  output_dir):
         """
-        :param labels:
-        :param gt:
-        :param dets:
-        :param output_dir:
+        :param labels: Pandas df with columns id (int) and class (str)
+        :param gt: Dict of activity start and end time ground truth values, organized by label keys
+        :param dets: Dict of activity start and end time detections with confidence values, organized by label keys
+        :param output_dir: Directory to write the plots to
         """
         self.output_dir = Path(os.path.join(output_dir, "plots/"))
         self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -28,9 +28,9 @@ class EvalVisualization:
         Plot activity confidences over time
        
         :param custom_range: Optional tuple indicating the starting and ending times of an additional
-                            range to highlight in addition to the `gt_ranges`.
+                             range to highlight in addition to the `gt_ranges`.
         :param custom_range_color: The color of the additional range to be drawn. If not set, we will
-                                use "red".
+                                   use "red".
         """
         for i, row in self.labels.iterrows():
             label = row['class']
@@ -103,7 +103,7 @@ class EvalVisualization:
 
     def plot_pr_curve(self, iou_thr=0.0):
         """
-        :param iou_thr:
+        :param iou_thr: IoU threshold
         """
         # ============================
         # Setup figure
