@@ -97,11 +97,11 @@ class EvalVisualization:
             else:
                 log.warning(f"No detections/gt found for \"{label}\"")
 
-    def plot_pr_curve(self, iou_thr=0.1):
+    def plot_pr_curve(self, detect_intersection_thr=0.1):
         """
         Plot the PR curve for each label
 
-        :param iou_thr: IoU threshold
+        :param detect_intersection_thr: detect_intersection threshold
         """
         # ============================
         # Setup figure
@@ -137,7 +137,7 @@ class EvalVisualization:
 
             det_ranges = self.dets.loc[self.dets['class'] == label]
 
-            truth = [1 if det['iou'] > iou_thr else 0 for i, det in det_ranges.iterrows()]
+            truth = [1 if det['detect_intersection'] > detect_intersection_thr else 0 for i, det in det_ranges.iterrows()]
             pred = [det['conf'] for i, det in det_ranges.iterrows()]
 
             precision[i], recall[i], thresholds[i] = precision_recall_curve(truth, pred)
@@ -161,13 +161,3 @@ class EvalVisualization:
         ax.legend(handles=handles, labels=labels, loc="best")
 
         fig.savefig(f"{self.output_dir}/PR.png")
-
-    #def plot_confusion_mat(self, iou_thr=0.1):
-    #    y_true = []
-    #    y_pred = []
-    #    for i, row in self.labels.iterrows():
-    #        id = row['id']
-    #        label = row['class']
-
-    #        for gt in self.gt[label]:
-

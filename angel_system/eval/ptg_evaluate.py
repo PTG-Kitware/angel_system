@@ -64,7 +64,7 @@ def run_eval(args):
                 'start': dets["source_stamp_start_frame"], 
                 'end': dets["source_stamp_end_frame"],
                 'conf': good_dets[l],
-                'iou': np.nan
+                'detect_intersection': np.nan
             }
             detections.append(d)
     detections = pd.DataFrame(detections)
@@ -95,7 +95,7 @@ def run_eval(args):
     # Metrics
     # ============================
     metrics =  EvalMetrics(labels=labels, gt=gt, dets=detections, output_fn=f"{output_dir}/metrics.txt")
-    dets_label_to_ts_ranges = metrics.iou_per_activity_label()
+    dets_label_to_ts_ranges = metrics.detect_intersection_per_activity_label()
 
     log.info(f"Saved metrics to {output_dir}/metrics.txt")
     
