@@ -14,13 +14,13 @@ class EvalMetrics():
 
     def detect_intersection_per_activity_label(self):
         """
-        Calculate the detect_intersection per activity label
+        Calculate the detection intersection per activity label
 
         :param labels: Pandas df with columns id (int) and class (str)
         :param gt: Dict of activity start and end time ground truth values, organized by label keys
         :param dets: Dict of activity start and end time detections with confidence values, organized by label keys
 
-        :return: Tuple(Average detect_intersection across all classes, Dictionary mapping class labels to their average detect_intersection scores, dets)
+        :return: Tuple(Average detection intersection across all classes, Dictionary mapping class labels to their average detection intersection scores, dets)
         """
         detect_intersection_per_label = {}
         for i, row in self.labels.iterrows():
@@ -83,8 +83,8 @@ class EvalMetrics():
         # ============================
         # Save to file
         with open(self.output_fn, "w") as f:
-            f.write(f"detect_intersection: {overall_detect_intersection}\n")
-            f.write(f"detect_intersection Per Label:\n")
+            f.write(f"detection intersection: {overall_detect_intersection}\n")
+            f.write(f"detection intersection Per Label:\n")
             for k, v in detect_intersection_per_label.items():
                 f.write(f"\t{k}: {v}\n")
 

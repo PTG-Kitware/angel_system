@@ -101,7 +101,7 @@ class EvalVisualization:
         """
         Plot the PR curve for each label
 
-        :param detect_intersection_thr: detect_intersection threshold
+        :param detect_intersection_thr: detection intersection threshold
         """
         # ============================
         # Setup figure
