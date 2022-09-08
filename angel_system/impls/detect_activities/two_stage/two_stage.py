@@ -27,6 +27,7 @@ class TwoStageModule(nn.Module):
         self.fcn.eval()
         
         # Load checkpoint
+        # Expecting a state dict including only the temporal layer weights
         self.temporal.load_state_dict(torch.load(checkpoint))
         self.temporal.eval()
 
