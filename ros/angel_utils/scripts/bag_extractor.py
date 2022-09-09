@@ -113,6 +113,10 @@ class BagConverter(Node):
             .get_parameter_value()
             .bool_value
         )
+        # These frame ID parameters are used to distinguish between PV camera
+        # and depth camera HeadsetPoseData messages, since they both use the
+        # same message type. The default parameter values are the current
+        # frame IDs assigned by the HoloLens app.
         self.depth_image_frame_id = (
             self.declare_parameter("depth_image_frame_id", "shortThrowDepthMap")
             .get_parameter_value()
