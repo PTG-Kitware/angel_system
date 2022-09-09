@@ -131,10 +131,6 @@ class EvalVisualization:
         # ============================
         # Get PR plot per class 
         # ============================
-        precision = dict()
-        recall = dict()
-        thresholds = dict()
-        average_precision = dict()
         for i, row in self.labels.iterrows():
             id = row['id']
             label = row['class']
@@ -142,21 +138,18 @@ class EvalVisualization:
             truth = [1 if det['iou'] > iou_thr else 0 for det in self.dets[label]]
             pred = [det['conf'] for det in self.dets[label]]
 
-            #precision[i], recall[i], thresholds[i] = precision_recall_curve(truth, pred)
-            #average_precision[i] = average_precision_score(truth, pred)
-
-            display = PrecisionRecallDisplay.from_predictions(
-                truth, pred
-            )
-            display.plot(ax=ax, name=f"class {id}", color=colors[i])
+            PrecisionRecallDisplay.from_predictions(truth, pred).plot(ax=ax, name=f"class {id}", color=colors[i])
 
         # ============================
         # Save
         # ============================
         # Add legend and f1 curves to plot
-        handles, labels = display.ax_.get_legend_handles_labels()
+        handles, labels = ax.get_legend_handles_labels()
         handles.extend([l])
         labels.extend(["iso-f1 curves"])
         ax.legend(handles=handles, labels=labels, loc="best")
+
+        ax.set_xlabel("Recall")
+        ax.set_ylabel("Precision")
 
         fig.savefig(f"{self.output_dir}/PR.png")
