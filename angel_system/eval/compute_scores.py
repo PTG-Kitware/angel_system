@@ -10,7 +10,8 @@ def iou_per_activity_label(labels, gt, dets):
 
     :param labels: Pandas df with columns id (int) and class (str)
     :param gt: Dict of activity start and end time ground truth values, organized by label keys
-    :param dets: Dict of activity start and end time detections with confidence values, organized by label keys
+    :param dets: Dict of activity start and end time detections with confidence values, organized by label keys.
+        This will be modified in place to add a "detection intersection" key to each detection
 
     :return: Tuple(Average IoU across all classes, Dictionary mapping class labels to their average IoU scores, dets)
     """
@@ -51,10 +52,7 @@ def iou_per_activity_label(labels, gt, dets):
             i_right = min(det_range['time'][1], gt_overlap['time'][1])  # "left"-most right boundary
             intersection_area = i_right - i_left
 
-            gt_area = intersection_area
-
-            union_area = gt_area + det_area - intersection_area
-            iou = intersection_area / union_area
+            iou = intersection_area / det_area
 
             ious.append(iou)
             iou_counts += 1

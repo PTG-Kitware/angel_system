@@ -1024,17 +1024,6 @@ optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*"
 
 [[package]]
-name = "sklearn"
-version = "0.0"
-description = "A set of python modules for machine learning and data mining"
-category = "main"
-optional = false
-python-versions = "*"
-
-[package.dependencies]
-scikit-learn = "*"
-
-[[package]]
 name = "smqtk-classifier"
 version = "0.19.0"
 description = "Algorithms, data structures and utilities around performing classificationof inputs."
@@ -1304,7 +1293,7 @@ numpy = "*"
 
 [[package]]
 name = "trimesh"
-version = "3.14.0"
+version = "3.14.1"
 description = "Import, export, process, analyze and view triangular meshes."
 category = "main"
 optional = false
@@ -1338,9 +1327,9 @@ xatlas = {version = "*", optional = true, markers = "extra == \"all\""}
 xxhash = {version = "*", optional = true, markers = "extra == \"all\""}
 
 [package.extras]
-all = ["requests", "pillow", "setuptools", "colorlog", "mapbox-earcut", "msgpack", "meshio", "pyglet", "xatlas", "xxhash", "jsonschema", "scipy", "svg.path", "psutil", "python-fcl", "scikit-image", "sympy", "pycollada", "shapely", "lxml", "rtree", "glooey", "networkx", "chardet", "triangle"]
-easy = ["pillow", "setuptools", "requests", "colorlog", "msgpack", "pyglet", "chardet", "sympy", "pycollada", "shapely", "lxml", "rtree", "networkx", "xxhash", "scipy", "jsonschema", "svg.path"]
-test = ["ezdxf", "pytest-cov", "coveralls", "pytest", "pyinstrument"]
+all = ["xxhash", "jsonschema", "psutil", "glooey", "pycollada", "requests", "colorlog", "scipy", "shapely", "rtree", "svg.path", "chardet", "sympy", "pillow", "networkx", "meshio", "mapbox-earcut", "xatlas", "scikit-image", "msgpack", "python-fcl", "triangle", "lxml", "setuptools", "pyglet"]
+easy = ["chardet", "sympy", "pillow", "jsonschema", "networkx", "setuptools", "pycollada", "msgpack", "requests", "colorlog", "scipy", "lxml", "shapely", "xxhash", "rtree", "pyglet", "svg.path"]
+test = ["pyinstrument", "pytest-cov", "pytest", "coveralls", "ezdxf"]
 
 [[package]]
 name = "typeguard"
@@ -1440,7 +1429,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8,<3.10"
-content-hash = "56b1a09a9fb4d9b59a3dc7e7ca785993be577903f6a371e0a381113087d9a76a"
+content-hash = "6f7cc474c8e429a4e9f0544402d4de47d42333d8f9c83731641b529bd8358e9e"
 
 [metadata.files]
 appnope = [
@@ -2396,9 +2385,6 @@ six = [
     {file = "six-1.16.0-py2.py3-none-any.whl", hash = "sha256:8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254"},
     {file = "six-1.16.0.tar.gz", hash = "sha256:1e61c37477a1626458e36f7b1d82aa5c9b094fa4802892072e49de9c60c4c926"},
 ]
-sklearn = [
-    {file = "sklearn-0.0.tar.gz", hash = "sha256:e23001573aa194b834122d2b9562459bf5ae494a2d59ca6b8aa22c85a44c0e31"},
-]
 smqtk-classifier = [
     {file = "smqtk_classifier-0.19.0-py3-none-any.whl", hash = "sha256:69a94e115ff42ccf0aa0dd79dadd087313a80daa072f917594a5e06ac0f24a52"},
     {file = "smqtk_classifier-0.19.0.tar.gz", hash = "sha256:f09750dc32d0c66e1ac8cfb5fb180dc7185fe48749bb71ca00426acb4e1ea2e1"},
@@ -2548,8 +2534,8 @@ triangle = [
     {file = "triangle-20220202-cp39-cp39-win_amd64.whl", hash = "sha256:1c5bab1851280d14f5128edd5c71a89849e78274d6f41101c5efd8ed914b8740"},
 ]
 trimesh = [
-    {file = "trimesh-3.14.0-py3-none-any.whl", hash = "sha256:22a4c59761e30ebbfbf278998520b36e35e775c45fd496e8961eb464f0871eab"},
-    {file = "trimesh-3.14.0.tar.gz", hash = "sha256:f6781d6bce697384eebddc38d22fe12a5d39933b036b449267fb54a1f5837962"},
+    {file = "trimesh-3.14.1-py3-none-any.whl", hash = "sha256:6ec2eca32dc65d973ba7b23cb773fcf05479fa48d2f54dd1ebb5e772b92f7319"},
+    {file = "trimesh-3.14.1.tar.gz", hash = "sha256:4fea637f62a61da6dbbbca6857a77102f6aee42ea1f3d169dae600b8efb7e3f6"},
 ]
 typeguard = [
     {file = "typeguard-2.13.3-py3-none-any.whl", hash = "sha256:5e3e3be01e887e7eafae5af63d1f36c849aaa94e3a0112097312aabfa16284f1"},

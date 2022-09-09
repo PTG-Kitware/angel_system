@@ -8,7 +8,7 @@ from sklearn.metrics import precision_recall_curve, average_precision_score, Pre
 
 
 class EvalVisualization:
-    def __init__(self, labels, gt, dets,  output_dir):
+    def __init__(self, labels, gt, dets, output_dir):
         """
         :param labels: Pandas df with columns id (int) and class (str)
         :param gt: Dict of activity start and end time ground truth values, organized by label keys
@@ -101,7 +101,7 @@ class EvalVisualization:
             else:
                 log.warning(f"No detections/gt found for \"{label}\"")
 
-    def plot_pr_curve(self, iou_thr=0.0):
+    def plot_pr_curve(self, iou_thr=0.1):
         """
         Plot the PR curve for each label
         
@@ -142,13 +142,11 @@ class EvalVisualization:
             truth = [1 if det['iou'] > iou_thr else 0 for det in self.dets[label]]
             pred = [det['conf'] for det in self.dets[label]]
 
-            precision[i], recall[i], thresholds[i] = precision_recall_curve(truth, pred)
-            average_precision[i] = average_precision_score(truth, pred)
+            #precision[i], recall[i], thresholds[i] = precision_recall_curve(truth, pred)
+            #average_precision[i] = average_precision_score(truth, pred)
 
-            display = PrecisionRecallDisplay(
-                recall=recall[i],
-                precision=precision[i],
-                average_precision=average_precision[i],
+            display = PrecisionRecallDisplay.from_predictions(
+                truth, pred
             )
             display.plot(ax=ax, name=f"class {id}", color=colors[i])
 
