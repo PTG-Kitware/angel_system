@@ -4,7 +4,11 @@ import numpy as np
 import PIL
 from pathlib import Path
 import os
-from sklearn.metrics import precision_recall_curve, average_precision_score, PrecisionRecallDisplay
+from sklearn.metrics import precision_recall_curve, average_precision_score, PrecisionRecallDisplay, roc_curve, auc
+import logging
+
+
+log = logging.getLogger("ptg_eval")
 
 
 class EvalVisualization:
@@ -151,3 +155,75 @@ class EvalVisualization:
         ax.set_ylabel("Precision")
 
         fig.savefig(f"{self.output_dir}/PR.png")
+
+    def plot_roc_curve(self, detect_intersection_thr=0.1):
+        # ============================
+        # Setup figure
+        # ============================
+        fig, ax = plt.subplots(figsize=(7, 8))
+
+        ax.set_xlim([0.0, 1.0])
+        ax.set_ylim([0.0, 1.05])
+        ax.set_title("Receiver Operating Characteristic (ROC)")
+        ax.set_xlabel("False Positive Rate")
+        ax.set_ylabel("True Positive Rate")
+
+        colors = plt.cm.rainbow(np.linspace(0, 1, len(self.labels)))
+
+        # ============================
+        # Get ROC and AUC per class 
+        # ============================
+        fpr = dict()
+        tpr = dict()
+        roc_auc = dict()
+        for i, row in self.labels.iterrows():
+            id = row['id']
+            label = row['class']
+
+            det_ranges = self.dets.loc[self.dets['class'] == label]
+
+            truth = [1 if det['detect_intersection'] > detect_intersection_thr else 0 for i, det in det_ranges.iterrows()]
+            pred = [det['conf'] for i, det in det_ranges.iterrows()]
+
+            fpr[i], tpr[i], _ = roc_curve(truth, pred)
+            roc_auc[i] = auc(fpr[i], tpr[i])
+
+            ax.plot(
+                fpr[i],
+                tpr[i],
+                color=colors[i],
+                lw=2,
+                label="ROC curve of class {0} (area = {1:0.2f})".format(i, roc_auc[i]),
+            )
+
+        # ============================
+        # Plot average values
+        # ============================
+        n_classes = self.labels.shape[0]
+
+        # First aggregate all false positive rates
+        all_fpr = np.unique(np.concatenate([fpr[i] for i in range(n_classes)]))
+
+        # Then interpolate all ROC curves at this points
+        mean_tpr = np.zeros_like(all_fpr)
+        for i in range(n_classes):
+            mean_tpr += np.interp(all_fpr, fpr[i], tpr[i])
+
+        # Finally average it and compute AUC
+        mean_tpr /= n_classes
+
+        fpr["macro"] = all_fpr
+        tpr["macro"] = mean_tpr
+        roc_auc["macro"] = auc(fpr["macro"], tpr["macro"])
+
+        ax.plot(
+            fpr["macro"],
+            tpr["macro"],
+            label="macro-average ROC curve (area = {0:0.2f})".format(roc_auc["macro"]),
+            color="navy",
+            linestyle=":",
+            linewidth=4,
+        )
+
+        plt.legend(loc="best")
+        fig.savefig(f"{self.output_dir}/ROC.png")
