@@ -110,10 +110,30 @@ def run_eval(args):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--labels", type=str, default="model_files/activity_detector_annotation_labels.xlsx")
-    parser.add_argument("--activity_gt", type=str, default="data/ros_bags/Annotated_folding_filter/labels_test_v1.2.feather", help="The feather file containing the ground truth annotations in the PTG-LEARN format")
-    parser.add_argument("--extracted_activity_detections", type=str, default="data/ros_bags/Annotated_folding_filter/rosbag2_2022_08_08-18_56_31/_extracted/activity_detection_data.json", help="Text file containing the activity detections from an extracted ROS2 bag")
-    parser.add_argument("--output_dir", type=str, default="eval", help="Folder to output results to. This will be populated as {output_dir}/{model_name}")
+    parser.add_argument(
+        "--labels",
+        type=str,
+        default="model_files/activity_detector_annotation_labels.xlsx",
+        help="Multi-sheet Excel file of class ids and labels where each sheet is titled after the label version. The sheet used for evaluation is specified by the version numebr in the ground truth filename"
+    )
+    parser.add_argument(
+        "--activity_gt",
+        type=str,
+        default="data/ros_bags/Annotated_folding_filter/labels_test_v1.2.feather",
+        help="Feather file containing the ground truth annotations in the PTG-LEARN format. The expected filename format is \'labels_test_v<label version>.feather\'"
+    )
+    parser.add_argument(
+        "--extracted_activity_detections",
+        type=str,
+        default="data/ros_bags/Annotated_folding_filter/rosbag2_2022_08_08-18_56_31/_extracted/activity_detection_data.json",
+        help="Text file containing the activity detections from an extracted ROS2 bag"
+    )
+    parser.add_argument(
+        "--output_dir",
+        type=str,
+        default="eval",
+        help="Folder to save results and plots to"
+    )
 
     args = parser.parse_args()
     run_eval(args)

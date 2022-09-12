@@ -15,12 +15,10 @@ class EvalMetrics():
     def detect_intersection_per_activity_label(self):
         """
         Calculate the detection intersection per activity label
-
         :param labels: Pandas df with columns id (int) and class (str)
         :param gt: Dict of activity start and end time ground truth values, organized by label keys
-        :param dets: Dict of activity start and end time detections with confidence values, organized by label keys
-
-        :return: Tuple(Average detection intersection across all classes, Dictionary mapping class labels to their average detection intersection scores, dets)
+        :param dets: Dict of activity start and end time detections with confidence values, organized by label keys.
+        This will be modified in place to add a "detection intersection" key to each detection
         """
         detect_intersection_per_label = {}
         for i, row in self.labels.iterrows():
@@ -58,10 +56,7 @@ class EvalMetrics():
                 i_right = min(det_range['end'], gt_overlap['end'])  # "left"-most right boundary
                 intersection_area = i_right - i_left
 
-                gt_area = intersection_area
-
-                union_area = gt_area + det_area - intersection_area
-                detect_intersection = intersection_area / union_area
+                detect_intersection = intersection_area / det_area
 
                 detect_intersections.append(detect_intersection)
                 detect_intersection_counts += 1

@@ -8,7 +8,7 @@ from sklearn.metrics import precision_recall_curve, average_precision_score, Pre
 
 
 class EvalVisualization:
-    def __init__(self, labels, gt, dets,  output_dir):
+    def __init__(self, labels, gt, dets, output_dir):
         """
         :param labels: Pandas df with columns id (int) and class (str)
         :param gt: Dict of activity start and end time ground truth values, organized by label keys
@@ -96,7 +96,7 @@ class EvalVisualization:
                 fig.savefig(f"{str(activity_plot_dir)}/{label.replace(' ', '_')}.png")
             else:
                 log.warning(f"No detections/gt found for \"{label}\"")
-
+                
     def plot_pr_curve(self, detect_intersection_thr=0.1):
         """
         Plot the PR curve for each label
@@ -127,10 +127,6 @@ class EvalVisualization:
         # ============================
         # Get PR plot per class 
         # ============================
-        precision = dict()
-        recall = dict()
-        thresholds = dict()
-        average_precision = dict()
         for i, row in self.labels.iterrows():
             id = row['id']
             label = row['class']
@@ -140,24 +136,18 @@ class EvalVisualization:
             truth = [1 if det['detect_intersection'] > detect_intersection_thr else 0 for i, det in det_ranges.iterrows()]
             pred = [det['conf'] for i, det in det_ranges.iterrows()]
 
-            precision[i], recall[i], thresholds[i] = precision_recall_curve(truth, pred)
-            average_precision[i] = average_precision_score(truth, pred)
-
-            display = PrecisionRecallDisplay(
-                recall=recall[i],
-                precision=precision[i],
-                average_precision=average_precision[i],
-            )
-            display.plot(ax=ax, name=f"class {id}", color=colors[i])
-
+            PrecisionRecallDisplay.from_predictions(truth, pred).plot(ax=ax, name=f"class {id}", color=colors[i])
 
         # ============================
         # Save
         # ============================
         # Add legend and f1 curves to plot
-        handles, labels = display.ax_.get_legend_handles_labels()
+        handles, labels = ax.get_legend_handles_labels()
         handles.extend([l])
         labels.extend(["iso-f1 curves"])
         ax.legend(handles=handles, labels=labels, loc="best")
+
+        ax.set_xlabel("Recall")
+        ax.set_ylabel("Precision")
 
         fig.savefig(f"{self.output_dir}/PR.png")
