@@ -7,11 +7,11 @@ import argparse
 
 def main(args):
     """
-    This script is for parsing annotation_event_data.txt files.The data from the files can be formatted in either
+    This script is for parsing annotation_event_data.json files.The data from the files can be formatted in either
     the PTG format or the DIVE annotation JSON format for further refinement in the DIVE annotation tool.
 
     :param args.image_path: Absolute path to the 'images' folder as is output by the exploded ros bag script
-    :param args.ann_path: Absolute path to the annotation_event_data.txt file as is output by the exploded ros bag
+    :param args.ann_path: Absolute path to the annotation_event_data.json file as is output by the exploded ros bag
                           script
     :param args.rosbag_name: A string containing the name of the rosbag that is being processed. This is used to 
                              create a relative filepath to the exploded rosbag image folder for evaluation.
@@ -33,7 +33,7 @@ def main(args):
     with open(args.ann_path, "r") as inFile:
         event_data = json.loads(inFile.read())
 
-    # Extract the combined timestamp from the annotation_event_data.txt file and count number of annoataions and errors
+    # Extract the combined timestamp from the annotation_event_data.json file and count number of annoataions and errors
     # Within the event_data file, each event is generally classified as an annotation or error depending on the button
     # that was pressed to trigger the event. Additionally each event marks either the begin or end of the annotation/error.
     # It is guaranteed to have a stop event for each start event. 
