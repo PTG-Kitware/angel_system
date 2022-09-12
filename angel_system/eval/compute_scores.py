@@ -18,7 +18,7 @@ class EvalMetrics():
         :param labels: Pandas df with columns id (int) and class (str)
         :param gt: Dict of activity start and end time ground truth values, organized by label keys
         :param dets: Dict of activity start and end time detections with confidence values, organized by label keys.
-        This will be modified in place to add a "detection intersection" key to each detection
+                     This will be modified in place to add a "detection intersection" key to each detection
         """
         detect_intersection_per_label = {}
         for i, row in self.labels.iterrows():
@@ -82,5 +82,3 @@ class EvalMetrics():
             f.write(f"detection intersection Per Label:\n")
             for k, v in detect_intersection_per_label.items():
                 f.write(f"\t{k}: {v}\n")
-
-        return self.dets

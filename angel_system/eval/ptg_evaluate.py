@@ -95,7 +95,7 @@ def run_eval(args):
     # Metrics
     # ============================
     metrics =  EvalMetrics(labels=labels, gt=gt, dets=detections, output_fn=f"{output_dir}/metrics.txt")
-    dets_label_to_ts_ranges = metrics.detect_intersection_per_activity_label()
+    metrics.detect_intersection_per_activity_label()
 
     log.info(f"Saved metrics to {output_dir}/metrics.txt")
     
@@ -114,18 +114,20 @@ def main():
         "--labels",
         type=str,
         default="model_files/activity_detector_annotation_labels.xlsx",
-        help="Multi-sheet Excel file of class ids and labels where each sheet is titled after the label version. The sheet used for evaluation is specified by the version numebr in the ground truth filename"
+        help="Multi-sheet Excel file of class ids and labels where each sheet is titled after the label version. \
+            The sheet used for evaluation is specified by the version number in the ground truth filename"
     )
     parser.add_argument(
         "--activity_gt",
         type=str,
-        default="data/ros_bags/Annotated_folding_filter/labels_test_v1.2.feather",
-        help="Feather file containing the ground truth annotations in the PTG-LEARN format. The expected filename format is \'labels_test_v<label version>.feather\'"
+        default="data/ros_bags/labels_test_v1.2.feather",
+        help="Feather file containing the ground truth annotations in the PTG-LEARN format. \
+            The expected filename format is \'labels_test_v<label version>.feather\'"
     )
     parser.add_argument(
         "--extracted_activity_detections",
         type=str,
-        default="data/ros_bags/Annotated_folding_filter/rosbag2_2022_08_08-18_56_31/_extracted/activity_detection_data.json",
+        default="data/ros_bags/_extracted/activity_detection_data.json",
         help="Text file containing the activity detections from an extracted ROS2 bag"
     )
     parser.add_argument(
