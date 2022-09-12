@@ -57,7 +57,6 @@ def run_eval(args):
         for l, conf in zip(dets["label_vec"], dets["conf_vec"]):
             good_dets[l] = conf
 
-        
         for l in dets["label_vec"]:
             d = {
                 'class': l.lower(), 
