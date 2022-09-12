@@ -34,39 +34,35 @@ class EvalVisualization:
         """
         for i, row in self.labels.iterrows():
             label = row['class']
-            if label in self.dets.keys() and label in self.gt.keys():
-                gt_ranges = self.gt[label]
-                det_ranges = self.dets[label]
 
+            gt_ranges = self.gt.loc[self.gt['class'] == label]
+            det_ranges = self.dets.loc[self.dets['class'] == label]
+            if not gt_ranges.empty and not det_ranges.empty:
                 # ============================
                 # Setup figure
                 # ============================
                 # Determine time range to plot
-                all_start_times = [p["time"][0] for p in gt_ranges]
-                all_start_times.extend([p["time"][0] for p in det_ranges])
-                all_end_times = [p["time"][1] for p in gt_ranges]
-                all_end_times.extend([p["time"][1] for p in det_ranges])
-                min_start_time = min(all_start_times)
-                max_end_time = max(all_end_times)
+                min_start_time = min(gt_ranges['start'].min(), det_ranges['start'].min())
+                max_end_time = max(gt_ranges['end'].max(), det_ranges['end'].max())
                 total_time_delta = max_end_time - min_start_time
                 pad = 0.05 * total_time_delta
 
                 # Setup figure
                 fig = plt.figure(figsize=(14, 6))
                 ax = fig.add_subplot(111)
-                ax.set_title(f"Window Confidence over time for \"{label}\"")
+                ax.set_title(f"Window Confidence over time for \"{label}\"\n in time range {min_start_time}:{max_end_time}")
                 ax.set_xlabel("Time (seconds)")
                 ax.set_ylabel("Confidence")
                 ax.set_ylim(0, 1.05)
-                ax.set_xlim(min_start_time - pad, max_end_time + pad)
+                ax.set_xlim(0-pad, (max_end_time - min_start_time + pad))
 
                 # ============================
                 # Ground truth
                 # ============================
                 # Bar plt to show bars where the "true" time ranges are for the activity.
-                xs_bars = [p["time"][0] for p in gt_ranges]
-                ys_gt_regions = [1 for _ in gt_ranges]
-                bar_widths = [(p["time"][1]-p["time"][0]) for p in gt_ranges]
+                xs_bars = [p - min_start_time for p in gt_ranges['start'].tolist()]
+                ys_gt_regions = [1] * gt_ranges.shape[0]
+                bar_widths = [p for p in gt_ranges['end']-gt_ranges['start']]
                 ax.bar(xs_bars, ys_gt_regions, width=bar_widths, align="edge", color="lightgreen", label="Ground truth")
 
                 if custom_range:
@@ -83,9 +79,9 @@ class EvalVisualization:
                 # ============================
                 # Detections
                 # ============================
-                xs2_bars = [p["time"][0] for p in det_ranges]
-                ys2_det_regions = [p["conf"] for p in det_ranges]
-                bar_widths2 = [(p["time"][1] - p["time"][0]) for p in det_ranges]
+                xs2_bars = [p - min_start_time for p in det_ranges['start'].tolist()]
+                ys2_det_regions = [p for p in det_ranges['conf']]
+                bar_widths2 = [p for p in det_ranges['end']-det_ranges['start']]
                 ax.bar(xs2_bars, ys2_det_regions, width=bar_widths2, align="edge", edgecolor="blue", fill=False, label="Detections")
 
                 ax.legend(loc="upper right")
@@ -100,12 +96,12 @@ class EvalVisualization:
                 fig.savefig(f"{str(activity_plot_dir)}/{label.replace(' ', '_')}.png")
             else:
                 log.warning(f"No detections/gt found for \"{label}\"")
-
-    def plot_pr_curve(self, iou_thr=0.1):
+                
+    def plot_pr_curve(self, detect_intersection_thr=0.1):
         """
         Plot the PR curve for each label
-        
-        :param iou_thr: IoU threshold
+
+        :param detect_intersection_thr: detection intersection threshold
         """
         # ============================
         # Setup figure
@@ -135,8 +131,10 @@ class EvalVisualization:
             id = row['id']
             label = row['class']
 
-            truth = [1 if det['iou'] > iou_thr else 0 for det in self.dets[label]]
-            pred = [det['conf'] for det in self.dets[label]]
+            det_ranges = self.dets.loc[self.dets['class'] == label]
+
+            truth = [1 if det['detect_intersection'] > detect_intersection_thr else 0 for i, det in det_ranges.iterrows()]
+            pred = [det['conf'] for i, det in det_ranges.iterrows()]
 
             PrecisionRecallDisplay.from_predictions(truth, pred).plot(ax=ax, name=f"class {id}", color=colors[i])
 
