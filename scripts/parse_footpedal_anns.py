@@ -5,6 +5,7 @@ import os
 import pandas as pd
 import argparse
 
+
 def main(args):
     """
     This script is for parsing annotation_event_data.json files.The data from the files can be formatted in either
@@ -77,7 +78,6 @@ def main(args):
         eval_df = pd.DataFrame(ptg_anns)
         eval_df.to_feather(args.ptg_out_file)
 
-                
     else:
         # Format the start and end frames into tracks into tracks for DIVE to process
         track_json = {'version': 2, 'tracks': {}, 'groups': {}}
@@ -108,6 +108,7 @@ def main(args):
         
         with open(args.dive_out_file, "w") as outfile:
             json.dump(track_json, outfile)
+
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
