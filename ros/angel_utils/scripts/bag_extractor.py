@@ -7,7 +7,6 @@ rosbag2_py.
 """
 import json
 import os
-import sys
 from typing import Dict, Optional
 
 import cv2
@@ -28,7 +27,7 @@ from angel_msgs.msg import (
     HeadsetAudioData,
     HeadsetPoseData,
     SpatialMesh,
-    ActivityDetection
+    ActivityDetection,
 )
 from sensor_msgs.msg import Image
 from angel_utils.conversion import convert_nv12_to_rgb
@@ -104,6 +103,30 @@ class BagConverter(Node):
             .get_parameter_value()
             .bool_value
         )
+        self.extract_depth_images = (
+            self.declare_parameter("extract_depth_images", True)
+            .get_parameter_value()
+            .bool_value
+        )
+        self.extract_depth_head_pose_data = (
+            self.declare_parameter("extract_depth_head_pose_data", True)
+            .get_parameter_value()
+            .bool_value
+        )
+        # These frame ID parameters are used to distinguish between PV camera
+        # and depth camera HeadsetPoseData messages, since they both use the
+        # same message type. The default parameter values are the current
+        # frame IDs assigned by the HoloLens app.
+        self.depth_image_frame_id = (
+            self.declare_parameter("depth_image_frame_id", "shortThrowDepthMap")
+            .get_parameter_value()
+            .string_value
+        )
+        self.pv_image_frame_id = (
+            self.declare_parameter("pv_image_frame_id", "PVFramesNV12")
+            .get_parameter_value()
+            .string_value
+        )
 
         if self.bag_path == "":
             self.log.info("Please provide bag file to convert")
@@ -111,17 +134,16 @@ class BagConverter(Node):
                 "Usage: ros2 run angel_utils bag_extractor.py --ros-args -p bag_path:=`bag_name`"
             )
             raise ValueError("Bag file path not provided")
-            return
 
         # Build the message type to handler function map
         self.msg_type_to_handler_map = {}
         if self.extract_audio:
             self.msg_type_to_handler_map[HeadsetAudioData] = self.handle_audio_msg
-        if self.extract_images:
+        if self.extract_images or self.extract_depth_images:
             self.msg_type_to_handler_map[Image] = self.handle_image_msg
         if self.extract_eye_gaze_data:
             self.msg_type_to_handler_map[EyeGazeData] = self.handle_eye_gaze_msg
-        if self.extract_head_pose_data:
+        if self.extract_head_pose_data or self.extract_depth_head_pose_data:
             self.msg_type_to_handler_map[HeadsetPoseData] = self.handle_head_pose_msg
         if self.extract_hand_pose_data:
             self.msg_type_to_handler_map[
@@ -134,7 +156,9 @@ class BagConverter(Node):
                 AnnotationEvent
             ] = self.handle_annotation_event_msg
         if self.extract_activity_detection_data:
-            self.msg_type_to_handler_map[ActivityDetection] = self.handle_activity_detection_msg
+            self.msg_type_to_handler_map[
+                ActivityDetection
+            ] = self.handle_activity_detection_msg
 
         # Top level data folder
         self.num_total_msgs = 0
@@ -147,9 +171,8 @@ class BagConverter(Node):
         self.num_audio_msgs = 0
         self.audio_data = []
 
-        # For extracting images data
+        # For extracting images
         self.num_image_msgs = 0
-        self.images = []
         self.image_folder = self.data_folder + "images/"
         if not os.path.exists(self.image_folder):
             os.makedirs(self.image_folder)
@@ -179,6 +202,17 @@ class BagConverter(Node):
         self.activity_detection_msgs = []
         self.num_activity_detection_msgs = 0
 
+        # For extracting depth images
+        self.num_depth_image_msgs = 0
+        self.depth_image_folder = self.data_folder + "depth_images/"
+        if not os.path.exists(self.depth_image_folder):
+            os.makedirs(self.depth_image_folder)
+            self.log.info(f"Created {self.depth_image_folder} for extracted images")
+
+        # For extracting depth head pose data
+        self.depth_head_pose_msgs = []
+        self.num_depth_head_pose_msgs = 0
+
         # Parse the bag
         self.parse_bag()
 
@@ -204,7 +238,7 @@ class BagConverter(Node):
 
         # Loop through the bag until there are no more messages
         while reader.has_next():
-            (topic, data, t) = reader.read_next()
+            (topic, data, _) = reader.read_next()
             msg_type = get_message(type_map[topic])
             msg = deserialize_message(data, msg_type)
             self.num_total_msgs += 1
@@ -270,11 +304,19 @@ class BagConverter(Node):
 
         if self.extract_activity_detection_data:
             activity_detection_file = self.data_folder + "activity_detection_data.json"
-            with open(activity_detection_file, mode="w", encoding='utf-8') as f:
+            with open(activity_detection_file, mode="w", encoding="utf-8") as f:
                 json.dump(self.activity_detection_msgs, f)
             self.log.info(f"Created activity detection file: {activity_detection_file}")
         else:
             self.log.info(f"Skipping activity detection file creation")
+
+        if self.extract_depth_head_pose_data:
+            depth_head_pose_file = self.data_folder + "depth_head_pose_data.json"
+            with open(depth_head_pose_file, mode="w", encoding="utf-8") as f:
+                json.dump(self.depth_head_pose_msgs, f)
+            self.log.info(f"Created depth head pose file: {depth_head_pose_file}")
+        else:
+            self.log.info(f"Skipping depth head pose file creation")
 
     def print_bag_info(self) -> None:
         """
@@ -289,7 +331,11 @@ class BagConverter(Node):
         self.log.info(f"Image messages: {self.num_image_msgs}")
         self.log.info(f"Spatial map messages: {self.num_spatial_map_msgs}")
         self.log.info(f"Annotation event messages: {self.num_annotation_event_msgs}")
-        self.log.info(f"Activity detection messages: {self.num_activity_detection_msgs}")
+        self.log.info(
+            f"Activity detection messages: {self.num_activity_detection_msgs}"
+        )
+        self.log.info(f"Depth image messages: {self.num_depth_image_msgs}")
+        self.log.info(f"Depth head pose messages: {self.num_depth_head_pose_msgs}")
 
     def create_wav_file(self, filename: Optional[str] = None) -> None:
         """
@@ -422,11 +468,15 @@ class BagConverter(Node):
         Converts a ActivityDetection ROS message object to a dictionary.
         """
         d = {
-             "header": {"time_sec": msg.header.stamp.sec,
-                        "time_nanosec": msg.header.stamp.nanosec,
-                        "frame_id": msg.header.frame_id},
-            "source_stamp_start_frame": msg.source_stamp_start_frame.sec + (msg.source_stamp_start_frame.nanosec * 1e-9),
-            "source_stamp_end_frame": msg.source_stamp_end_frame.sec + (msg.source_stamp_end_frame.nanosec * 1e-9),
+            "header": {
+                "time_sec": msg.header.stamp.sec,
+                "time_nanosec": msg.header.stamp.nanosec,
+                "frame_id": msg.header.frame_id,
+            },
+            "source_stamp_start_frame": msg.source_stamp_start_frame.sec
+            + (msg.source_stamp_start_frame.nanosec * 1e-9),
+            "source_stamp_end_frame": msg.source_stamp_end_frame.sec
+            + (msg.source_stamp_end_frame.nanosec * 1e-9),
             "label_vec": list(msg.label_vec),
             "conf_vec": list(msg.conf_vec),
         }
@@ -446,19 +496,36 @@ class BagConverter(Node):
     def handle_image_msg(self, msg: Image) -> None:
         """
         Handler for the image messages in the ROS bag.
-        Converts the images to RGB and saves them to the disk.
+        Converts the PV images to RGB and saves them to disk.
+        Converts the depth images to 16-bit grayscale and saves them to disk.
         """
-        self.num_image_msgs += 1
+        if msg.encoding == "nv12" and self.extract_images:
+            self.num_image_msgs += 1
 
-        # Convert NV12 image to RGB
-        rgb_image = convert_nv12_to_rgb(msg.data, msg.height, msg.width)
+            # Convert NV12 image to RGB
+            rgb_image = convert_nv12_to_rgb(msg.data, msg.height, msg.width)
 
-        # Save image to disk
-        timestamp_str = f"{msg.header.stamp.sec:011d}_{msg.header.stamp.nanosec:09d}"
-        file_name = (
-            f"{self.image_folder}frame_{self.num_image_msgs:05d}_{timestamp_str}.png"
-        )
-        cv2.imwrite(file_name, rgb_image)
+            # Save image to disk
+            timestamp_str = (
+                f"{msg.header.stamp.sec:011d}_{msg.header.stamp.nanosec:09d}"
+            )
+            file_name = f"{self.image_folder}frame_{self.num_image_msgs:05d}_{timestamp_str}.png"
+            cv2.imwrite(file_name, rgb_image)
+        elif msg.encoding == "mono16" and self.extract_depth_images:
+            self.num_depth_image_msgs += 1
+
+            # Convert to 1D uint16 array
+            data_uint16 = np.array(msg.data).view(np.uint16)
+
+            # Convert to grayscale image
+            depth_image = np.reshape(data_uint16, (msg.width, msg.height, 1))
+
+            # Save image to disk
+            timestamp_str = (
+                f"{msg.header.stamp.sec:011d}_{msg.header.stamp.nanosec:09d}"
+            )
+            file_name = f"{self.depth_image_folder}depth_frame_{self.num_depth_image_msgs:05d}_{timestamp_str}.png"
+            cv2.imwrite(file_name, depth_image)
 
     def handle_eye_gaze_msg(self, msg: EyeGazeData) -> None:
         """
@@ -475,12 +542,23 @@ class BagConverter(Node):
         """
         Handler for the head pose messages in the ROS bag.
         Converts the head pose data to a dictionary and then adds it to
-        the head pose dictionary list.
+        the head pose dictionary list for the corresponding frame type.
         """
-        self.num_head_pose_msgs += 1
-
         msg_dict = self.convert_head_pose_msg_to_dict(msg)
-        self.head_pose_msgs.append(msg_dict)
+
+        # Check message header to see which frame this head pose is for
+        if (
+            msg.header.frame_id == self.pv_image_frame_id
+            and self.extract_head_pose_data
+        ):
+            self.head_pose_msgs.append(msg_dict)
+            self.num_head_pose_msgs += 1
+        elif (
+            msg.header.frame_id == self.depth_image_frame_id
+            and self.extract_depth_head_pose_data
+        ):
+            self.depth_head_pose_msgs.append(msg_dict)
+            self.num_depth_head_pose_msgs += 1
 
     def handle_hand_pose_msg(self, msg: HandJointPosesUpdate) -> None:
         """
