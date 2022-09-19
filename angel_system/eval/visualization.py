@@ -4,11 +4,23 @@ import numpy as np
 import PIL
 from pathlib import Path
 import os
+<<<<<<< HEAD
 from sklearn.metrics import precision_recall_curve, average_precision_score, PrecisionRecallDisplay
 
 
 class EvalVisualization:
     def __init__(self, labels, gt, dets, output_dir):
+=======
+from sklearn.metrics import average_precision_score, precision_recall_curve, PrecisionRecallDisplay, roc_curve, auc, confusion_matrix, ConfusionMatrixDisplay
+import logging
+
+
+log = logging.getLogger("ptg_eval")
+
+
+class EvalVisualization:
+    def __init__(self, labels, gt, dets, detect_intersection_thr=0.1, output_dir=''):
+>>>>>>> 2dbae0e (Add confusion matrix)
         """
         :param labels: Pandas df with columns id (int) and class (str)
         :param gt: Dict of activity start and end time ground truth values, organized by label keys
@@ -22,6 +34,8 @@ class EvalVisualization:
         self.labels = labels
         self.gt = gt
         self.dets = dets
+
+        self.detect_intersection_thr = detect_intersection_thr
 
     def plot_activities_confidence(self, custom_range=None, custom_range_color="red"):
         """
@@ -96,8 +110,13 @@ class EvalVisualization:
                 fig.savefig(f"{str(activity_plot_dir)}/{label.replace(' ', '_')}.png")
             else:
                 log.warning(f"No detections/gt found for \"{label}\"")
+<<<<<<< HEAD
                 
     def plot_pr_curve(self, detect_intersection_thr=0.1):
+=======
+
+    def plot_pr_curve(self):
+>>>>>>> 2dbae0e (Add confusion matrix)
         """
         Plot the PR curve for each label
 
@@ -133,7 +152,7 @@ class EvalVisualization:
 
             det_ranges = self.dets.loc[self.dets['class'] == label]
 
-            truth = [1 if det['detect_intersection'] > detect_intersection_thr else 0 for i, det in det_ranges.iterrows()]
+            truth = [1 if det['detect_intersection'] > self.detect_intersection_thr else 0 for i, det in det_ranges.iterrows()]
             pred = [det['conf'] for i, det in det_ranges.iterrows()]
 
             PrecisionRecallDisplay.from_predictions(truth, pred).plot(ax=ax, name=f"class {id}", color=colors[i])
@@ -151,3 +170,37 @@ class EvalVisualization:
         ax.set_ylabel("Precision")
 
         fig.savefig(f"{self.output_dir}/PR.png")
+
+    def plot_confusion_matrix(self):
+        # ============================
+        # Setup figure
+        # ============================
+        fig = plt.figure(figsize=(8, 6))
+        ax = fig.add_subplot(111)
+
+        y_true = []
+        y_pred = []
+
+        # calulcating metrics based on detector frequency
+        time_ranges = self.dets[['start', 'end']].drop_duplicates()
+        
+        for i, time in time_ranges.iterrows():
+            det_overlap = self.dets[(self.dets['start'] == time['start']) & (self.dets['end'] == time['end'])]
+            best_det = det_overlap.loc[det_overlap['conf'].idxmax()]
+
+            if best_det['detect_intersection'] > self.detect_intersection_thr:
+                gt_overlap = self.gt[(self.gt['end'] >= time['start']) & (time['end'] >= self.gt['end'])].iloc[0]
+
+                y_true.append(self.labels.loc[self.labels['class'] == gt_overlap['class']].iloc[0]['id'])
+                y_pred.append(self.labels.loc[self.labels['class'] == best_det['class']].iloc[0]['id'])
+
+        labels = [row['id'] for i, row in self.labels.iterrows()]
+
+        cm = confusion_matrix(y_true, y_pred, labels=labels)
+        cm_display = ConfusionMatrixDisplay(cm, display_labels=labels)
+        cm_display.plot(ax=ax)
+
+        # ============================
+        # Save
+        # ============================
+        fig.savefig(f"{self.output_dir}/confusion.png")
