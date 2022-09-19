@@ -4,13 +4,6 @@ import numpy as np
 import PIL
 from pathlib import Path
 import os
-<<<<<<< HEAD
-from sklearn.metrics import precision_recall_curve, average_precision_score, PrecisionRecallDisplay
-
-
-class EvalVisualization:
-    def __init__(self, labels, gt, dets, output_dir):
-=======
 from sklearn.metrics import average_precision_score, precision_recall_curve, PrecisionRecallDisplay, roc_curve, auc, confusion_matrix, ConfusionMatrixDisplay
 import logging
 
@@ -20,7 +13,6 @@ log = logging.getLogger("ptg_eval")
 
 class EvalVisualization:
     def __init__(self, labels, gt, dets, detect_intersection_thr=0.1, output_dir=''):
->>>>>>> 2dbae0e (Add confusion matrix)
         """
         :param labels: Pandas df with columns id (int) and class (str)
         :param gt: Dict of activity start and end time ground truth values, organized by label keys
@@ -110,13 +102,8 @@ class EvalVisualization:
                 fig.savefig(f"{str(activity_plot_dir)}/{label.replace(' ', '_')}.png")
             else:
                 log.warning(f"No detections/gt found for \"{label}\"")
-<<<<<<< HEAD
-                
-    def plot_pr_curve(self, detect_intersection_thr=0.1):
-=======
 
     def plot_pr_curve(self):
->>>>>>> 2dbae0e (Add confusion matrix)
         """
         Plot the PR curve for each label
 
