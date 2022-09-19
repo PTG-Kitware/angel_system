@@ -4,7 +4,7 @@ import numpy as np
 import PIL
 from pathlib import Path
 import os
-from sklearn.metrics import precision_recall_curve, average_precision_score, PrecisionRecallDisplay, roc_curve, auc
+from sklearn.metrics import PrecisionRecallDisplay, roc_curve, auc
 import logging
 
 
@@ -225,5 +225,8 @@ class EvalVisualization:
             linewidth=4,
         )
 
+        # ============================
+        # Save
+        # ============================
         plt.legend(loc="best")
         fig.savefig(f"{self.output_dir}/ROC.png")
