@@ -20,6 +20,9 @@ timm = "^0.5.4"
 einops = "^0.4.1"
 pynput = "^1.7.6"
 pandas = "^1.4.3"
+pyarrow = "^9.0.0"
+openpyxl = "^3.0.10"
+scikit-learn = "^1.1.2"
 
 [tool.poetry.dev-dependencies]
 ipython = "^8.0.1"
