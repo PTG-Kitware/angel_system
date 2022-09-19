@@ -113,10 +113,6 @@ class BagConverter(Node):
             .get_parameter_value()
             .bool_value
         )
-        # These frame ID parameters are used to distinguish between PV camera
-        # and depth camera HeadsetPoseData messages, since they both use the
-        # same message type. The default parameter values are the current
-        # frame IDs assigned by the HoloLens app.
         self.depth_image_frame_id = (
             self.declare_parameter("depth_image_frame_id", "shortThrowDepthMap")
             .get_parameter_value()
@@ -170,6 +166,8 @@ class BagConverter(Node):
         # For extracking audio data
         self.num_audio_msgs = 0
         self.audio_data = []
+        self.min_audio_stamp = None
+        self.max_audio_stamp = None
 
         # For extracting images
         self.num_image_msgs = 0
@@ -258,6 +256,11 @@ class BagConverter(Node):
         # Save the audio file
         if self.extract_audio:
             self.create_wav_file()
+            audio_stamp_file = self.data_folder + "audio_time_data.json"
+            stamps = {"start_time": self.min_audio_stamp, "end_time": self.max_audio_stamp}
+            with open(audio_stamp_file, mode="w", encoding="utf-8") as f:
+                json.dump(stamps, f)
+            self.log.info(f"Created audio timestamp file: {audio_stamp_file}")
         else:
             self.log.info(f"Skipping audio extraction")
 
@@ -487,6 +490,13 @@ class BagConverter(Node):
         Handler for the audio messages in the ROS bag.
         Adds the audio data to the audio_data list.
         """
+        time = msg.header.stamp.sec + msg.header.stamp.nanosec * 10e-9,
+        if self.num_audio_msgs == 0:
+            self.min_audio_stamp = time
+            self.max_audio_stamp = time
+        else:
+            self.max_audio_stamp = max(time, self.max_audio_stamp)
+
         self.num_audio_msgs += 1
         self.audio_sample_rate = msg.sample_rate
 
