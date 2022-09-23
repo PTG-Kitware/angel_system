@@ -4,122 +4,73 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 import torch
+from torch.autograd import Variable
 import torchvision
-from torch.hub import load_state_dict_from_url
-from torchvision.models.detection.faster_rcnn import (
-    FasterRCNN,
-    fasterrcnn_resnet50_fpn,
-    model_urls
-)
-from torchvision.models.detection._utils import (
-    overwrite_eps
-)
-from torchvision.models.detection.backbone_utils import (
-    _validate_trainable_layers,
-    resnet_fpn_backbone
-)
 from torchvision import transforms
+from torchvision.ops import nms
 
-from angel_msgs.msg import ObjectDescriptors
+from angel_msgs.msg import ObjectDetection2dSet
+from angel_system.fasterrcnn.faster_rcnn.resnet import resnet
+from angel_system.fasterrcnn.processing_utils import _get_image_blob
 
 
 BRIDGE = CvBridge()
 
 
-class ResNetDescriptors(FasterRCNN):
-    """
-    Custom ResNet class to override the forward method call
-    of the torch `FasterRCNN` class.
-    """
-
-    def __init__(self):
-        """
-        Creates a model with a `resnet_fpn_backbone`.
-
-        Copied from the torchvision.models.detection.faster_rcnn
-        faster_rcnn_resnet50_fpn function.
-        """
-        pretrained = True
-        trainable_backbone_layers = _validate_trainable_layers(
-            pretrained, None, 5, 3
-        )
-
-        backbone = resnet_fpn_backbone(
-            'resnet50',
-            False,
-            trainable_layers=trainable_backbone_layers
-        )
-
-        # COCO 2017 has 91 classes
-        super().__init__(backbone=backbone, num_classes=91)
-
-        state_dict = load_state_dict_from_url(model_urls['fasterrcnn_resnet50_fpn_coco'],
-                                              progress=True)
-        self.load_state_dict(state_dict)
-        overwrite_eps(self, 0.0)
-
-    def forward(self, images, targets=None):
-        """
-        Overrides the FasterRCNN forward call to return the output of the
-        model backbone.
-
-        Modified version of the torchvision `GeneralizedRCNN` forward call().
-        """
-        for img in images:
-            val = img.shape[-2:]
-            torch._assert(
-                len(val) == 2,
-                f"expecting the last two dimensions of the Tensor to be H and W instead got {img.shape[-2:]}",
-            )
-
-        images, targets = self.transform(images, targets)
-
-        features = self.backbone(images.tensors)
-        return features
-
-
 class DescriptorGenerator(Node):
     """
-    ROS node that subscribes to `Image` messages and publishes descriptors
-    for those images in the form of `ObjectDescriptors` messages.
+    ROS node that subscribes to `Image` messages and publishes detections and
+    descriptors for those images in the form of `ObjectDetectionSet2d` messages.
     """
 
     def __init__(self):
-        torch_device: str = "cpu",
         super().__init__(self.__class__.__name__)
 
-        self._image_topic = self.declare_parameter("image_topic", "PVFrames").get_parameter_value().string_value
-        self._desc_topic = self.declare_parameter("descriptor_topic", "ObjectDescriptors").get_parameter_value().string_value
-        self._torch_device = self.declare_parameter("torch_device", "cpu").get_parameter_value().string_value
-        self._feature_layer = self.declare_parameter("feature_layer", "head").get_parameter_value().string_value
-
-        # Currently supported layers from torch's resnet_fpn_backbone
-        allowable_layers = ['0', '1', '2', '3', 'pool', 'head']
-        if self._feature_layer not in allowable_layers:
-            raise ValueError(
-                f"Layer {self._feature_layer} not currently supported"
-            )
+        self._image_topic = (
+            self.declare_parameter("image_topic", "PVFramesRGB")
+            .get_parameter_value()
+            .string_value
+        )
+        self._desc_topic = (
+            self.declare_parameter("descriptor_topic", "ObjectDetections")
+            .get_parameter_value()
+            .string_value
+        )
+        self._torch_device = (
+            self.declare_parameter("torch_device", "cuda")
+            .get_parameter_value()
+            .string_value
+        )
+        self._detection_threshold = (
+            self.declare_parameter("detection_threshold", 0.8)
+            .get_parameter_value()
+            .double_value
+        )
 
         log = self.get_logger()
         log.info(f"Image topic: {self._image_topic}")
         log.info(f"Torch device? {self._torch_device}")
-        log.info(f"Feature layer? {self._feature_layer}")
 
         self._model = None
 
         self._subscription = self.create_subscription(
             Image,
             self._image_topic,
-            self.listener_callback,
+            self.image_callback,
             1
         )
         self._publisher = self.create_publisher(
-            ObjectDescriptors,
+            ObjectDetection2dSet,
             self._desc_topic,
             1
         )
 
-        self.transforms = transforms.ToTensor()
+        # Load class labels
+        # TODO
+        self.classes = ['__background__']
+        with open('/angel_workspace/angel_system/fasterrcnn/objects_vocab.txt') as f:
+            for object in f.readlines():
+                self.classes.append(object.split(',')[0].lower().strip())
 
     def get_model(self) -> torch.nn.Module:
         """
@@ -128,18 +79,13 @@ class DescriptorGenerator(Node):
         """
         model = self._model
         if model is None:
-            if self._feature_layer == "head":
-                # Use default resnet from torch.models
-                model = torchvision.models.detection.fasterrcnn_resnet50_fpn(
-                    pretrained=True,
-                    progress=False,
-                )
-            else:
-                # Use custom resnet that overrides the forward method call
-                # so that we can access the output of the other layers
-                model = ResNetDescriptors()
+            model = resnet(self.classes, 101, pretrained=False, class_agnostic=False)
+            model.create_architecture()
 
-            model = model.eval()
+            load_name = "/angel_workspace/model_files/faster_rcnn_res101_vg.pth"
+            checkpoint = torch.load(load_name)
+            model.load_state_dict(checkpoint['model'])
+            model.eval()
 
             # Transfer the model to the requested device
             if self._torch_device != 'cpu':
@@ -158,41 +104,176 @@ class DescriptorGenerator(Node):
 
         return model
 
-    def listener_callback(self, image):
+    def image_callback(self, image):
         log = self.get_logger()
 
         model = self.get_model()
 
-        # Convert ROS Image message to CV2
-        rgb_image = BRIDGE.imgmsg_to_cv2(image, desired_encoding="rgb8")
-
-        # Convert to tensor
-        image_tensor = self.transforms(rgb_image)
-        image_tensor = image_tensor.unsqueeze(0)
+        # Preprocess image
+        im_in = np.array(BRIDGE.imgmsg_to_cv2(image, desired_encoding="rgb8"))
+        im_data, im_info, gt_boxes, num_boxes, im_scales = self.preprocess_image(im_in)
 
         # Send to model
-        with torch.no_grad():
-            output = model(image_tensor)
+        rois, cls_prob, bbox_pred, \
+        rpn_loss_cls, rpn_loss_box, \
+        RCNN_loss_cls, RCNN_loss_bbox, \
+        rois_label, pooled_feat = model(im_data, im_info, gt_boxes, num_boxes, pool_feat=True)
 
-        if self._feature_layer == "head":
-            # Use the object scores as the features
-            output = output[0]['scores']
-        else:
-            output = output[self._feature_layer]
+        # Postprocess
+        detection_info = self.postprocess_detections(
+            rois, cls_prob, bbox_pred, rpn_loss_cls, rpn_loss_box,
+            RCNN_loss_cls, RCNN_loss_bbox, rois_label, pooled_feat, im_scales
+        )
 
-        # Form into object descriptor message
-        msg = ObjectDescriptors()
+        # Form into object detection set message
+        msg = ObjectDetection2dSet()
         msg.header.stamp = self.get_clock().now().to_msg()
-        msg.header.frame_id = "Object descriptors"
+        msg.header.frame_id = image.header.frame_id
         msg.source_stamp = image.header.stamp
 
-        msg.descriptor_dims = list(output.shape)
+        if detection_info['boxes'] is None:
+            msg.num_detections = 0
+        else:
+            msg.num_detections = len(detection_info['labels'])
+            msg.label_vec = self.classes[1:]
+            msg.label_confidences = detection_info['scores'].ravel().tolist()
 
-        # Flatten the descriptors and convert to list
-        msg.descriptors = output.ravel().tolist()
+            msg.left = detection_info['boxes'][:,0].tolist()
+            msg.top = detection_info['boxes'][:,1].tolist()
+            msg.right = detection_info['boxes'][:,2].tolist()
+            msg.bottom = detection_info['boxes'][:,3].tolist()
+
+            msg.descriptor_dims = list(detection_info['feats'].shape)
+            # Flatten the descriptors and convert to list
+            msg.descriptors = detection_info['feats'].ravel().tolist()
 
         # Publish
         self._publisher.publish(msg)
+
+    def preprocess_image(self, im_in):
+        # initilize the tensor holder here.
+        im_data = torch.FloatTensor(1).to(device=self._torch_device)
+        im_info = torch.FloatTensor(1).to(device=self._torch_device)
+        num_boxes = torch.LongTensor(1).to(device=self._torch_device)
+        gt_boxes = torch.FloatTensor(1).to(device=self._torch_device)
+
+        # Make variable
+        with torch.no_grad():
+            im_data = Variable(im_data)
+            im_info = Variable(im_info)
+            num_boxes = Variable(num_boxes)
+            gt_boxes = Variable(gt_boxes)
+
+        # Load images
+        if len(im_in.shape) == 2:
+          im_in = im_in[:,:,np.newaxis]
+          im_in = np.concatenate((im_in,im_in,im_in), axis=2)
+        im = im_in
+
+        blobs, im_scales = _get_image_blob(im)
+        assert len(im_scales) == 1, "Only single-image batch implemented"
+        im_blob = blobs
+        im_info_np = np.array([[im_blob.shape[1], im_blob.shape[2], im_scales[0]]], dtype=np.float32)
+
+        im_data_pt = torch.from_numpy(im_blob)
+        im_data_pt = im_data_pt.permute(0, 3, 1, 2)
+        im_info_pt = torch.from_numpy(im_info_np)
+
+        with torch.no_grad():
+            im_data.resize_(im_data_pt.size()).copy_(im_data_pt)
+            im_info.resize_(im_info_pt.size()).copy_(im_info_pt)
+            gt_boxes.resize_(1, 1, 5).zero_()
+            num_boxes.resize_(1).zero_()
+
+        return im_data, im_info, gt_boxes, num_boxes, im_scales
+
+    def postprocess_detections(
+        self, rois, cls_prob, bbox_pred, rpn_loss_cls, rpn_loss_box,
+        RCNN_loss_cls, RCNN_loss_bbox, rois_label, pooled_feat, im_scales
+    ):
+        scores = cls_prob.data
+        boxes = rois.data[:, :, 1:5]
+
+        # Simply repeat the boxes, once for each class
+        pred_boxes = np.tile(boxes.cpu(), (1, scores.cpu().shape[2]))
+        pred_boxes /= im_scales[0]
+
+        scores = scores.squeeze()
+
+        pred_boxes = pred_boxes.squeeze()
+
+        max_conf = torch.zeros((pred_boxes.shape[0])).to(device=self._torch_device)
+
+        for j in range(1, len(self.classes)):
+            inds = torch.nonzero(scores[:,j]>self._detection_threshold).view(-1).cpu()
+            # if there is det
+            if inds.numel() > 0:
+              cls_scores = scores[:,j][inds]
+              _, order = torch.sort(cls_scores, 0, True)
+              #print("inds", inds, len(self.classes))
+              boxs_inds = pred_boxes[inds]
+              if boxs_inds.ndim == 1:
+                boxs_inds = np.expand_dims(boxs_inds, 0)
+              #print(boxs_inds.shape)
+              cls_boxes = torch.tensor(boxs_inds[:, j * 4:(j + 1) * 4]).to(device=self._torch_device)
+
+              cls_dets = torch.cat((cls_boxes, cls_scores.unsqueeze(1)), 1)
+              cls_dets = cls_dets[order]
+              keep = nms(cls_boxes[order, :], cls_scores[order], 0.3)
+              cls_dets = cls_dets[keep.view(-1).long()]
+              index = inds[order[keep]]
+              max_conf[index] = torch.where(scores[index, j] > max_conf[index], scores[index, j], max_conf[index])
+
+        keep_boxes = torch.where(max_conf >= self._detection_threshold, max_conf, torch.tensor(0.0).to(device=self._torch_device))
+
+        keep_boxes = torch.squeeze(torch.nonzero(keep_boxes))
+        if keep_boxes.numel():
+            if keep_boxes.ndim == 0:
+                objects = torch.argmax(scores[keep_boxes][1:])
+                objects = torch.unsqueeze(objects, 0)
+                box_dets = np.zeros((1, 4))
+                boxes = pred_boxes[keep_boxes.cpu()]
+                kind = objects + 1
+
+                bbox = boxes[kind * 4: (kind + 1) * 4]
+                box_dets[0] = bbox
+
+                scores = scores[keep_boxes][1:]
+                scores = torch.unsqueeze(scores, 0)
+                labels = []
+                for i in objects:
+                    labels.append(self.classes[i + 1])
+
+                feats = pooled_feat[keep_boxes].cpu().detach().numpy()
+                feats = np.expand_dims(feats, 0)
+            else:
+                objects = torch.argmax(scores[keep_boxes][:,1:], dim=1)
+                box_dets = np.zeros((len(keep_boxes), 4))
+                boxes = pred_boxes[keep_boxes.cpu()]
+                for i in range(len(keep_boxes)):
+                    kind = objects[i]+1
+                    bbox = boxes[i, kind * 4: (kind + 1) * 4]
+                    box_dets[i] = bbox
+
+                #scores = torch.max(scores[keep_boxes][:, 1:], dim=1).values
+                scores = scores[keep_boxes][:, 1:]
+                labels = []
+                for i in objects:
+                    labels.append(self.classes[i + 1])
+
+                feats = pooled_feat[keep_boxes].cpu().detach().numpy()
+
+            sample_info = dict(
+                labels=labels,
+                boxes=box_dets.astype('float32'),
+                objects=objects.cpu().numpy(),
+                feats=feats,
+                scores=scores
+            )
+        else:
+            sample_info = dict(boxes=None, objects=None, feats=None, labels=None, scores=None)
+
+        return sample_info
 
 
 def main():
