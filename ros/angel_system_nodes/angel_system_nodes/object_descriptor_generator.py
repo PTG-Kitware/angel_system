@@ -5,8 +5,6 @@ from rclpy.node import Node
 from sensor_msgs.msg import Image
 import torch
 from torch.autograd import Variable
-import torchvision
-from torchvision import transforms
 from torchvision.ops import nms
 
 from angel_msgs.msg import ObjectDetection2dSet
@@ -46,12 +44,25 @@ class DescriptorGenerator(Node):
             .get_parameter_value()
             .double_value
         )
+        self._object_vocabulary = (
+            self.declare_parameter("object_vocab_list",
+                                   "/angel_workspace/angel_system/fasterrcnn/objects_vocab.txt")
+            .get_parameter_value()
+            .string_value
+        )
+        self._model_checkpoint = (
+            self.declare_parameter("model_checkpoint",
+                                   "/angel_workspace/model_files/faster_rcnn_res101_vg.pth")
+            .get_parameter_value()
+            .string_value
+        )
 
         log = self.get_logger()
         log.info(f"Image topic: {self._image_topic}")
         log.info(f"Torch device? {self._torch_device}")
 
         self._model = None
+        self._model_device = None
 
         self._subscription = self.create_subscription(
             Image,
@@ -66,11 +77,10 @@ class DescriptorGenerator(Node):
         )
 
         # Load class labels
-        # TODO
         self.classes = ['__background__']
-        with open('/angel_workspace/angel_system/fasterrcnn/objects_vocab.txt') as f:
-            for object in f.readlines():
-                self.classes.append(object.split(',')[0].lower().strip())
+        with open(self._object_vocabulary) as f:
+            for obj in f.readlines():
+                self.classes.append(obj.split(',')[0].lower().strip())
 
     def get_model(self) -> torch.nn.Module:
         """
@@ -82,8 +92,7 @@ class DescriptorGenerator(Node):
             model = resnet(self.classes, 101, pretrained=False, class_agnostic=False)
             model.create_architecture()
 
-            load_name = "/angel_workspace/model_files/faster_rcnn_res101_vg.pth"
-            checkpoint = torch.load(load_name)
+            checkpoint = torch.load(self._model_checkpoint)
             model.load_state_dict(checkpoint['model'])
             model.eval()
 
@@ -105,8 +114,11 @@ class DescriptorGenerator(Node):
         return model
 
     def image_callback(self, image):
-        log = self.get_logger()
-
+        """
+        Callback function for the image subscriber. Performs image preprocessing,
+        model inference, output postprocessing, and detection set publishing for
+        each image received.
+        """
         model = self.get_model()
 
         # Preprocess image
@@ -114,15 +126,14 @@ class DescriptorGenerator(Node):
         im_data, im_info, gt_boxes, num_boxes, im_scales = self.preprocess_image(im_in)
 
         # Send to model
-        rois, cls_prob, bbox_pred, \
-        rpn_loss_cls, rpn_loss_box, \
-        RCNN_loss_cls, RCNN_loss_bbox, \
-        rois_label, pooled_feat = model(im_data, im_info, gt_boxes, num_boxes, pool_feat=True)
+        rois, cls_prob, \
+        _, _, _, _, _, _, \
+        pooled_feat = model(im_data, im_info, gt_boxes, num_boxes, pool_feat=True)
 
-        # Postprocess
+        # Postprocess model output
         detection_info = self.postprocess_detections(
-            rois, cls_prob, bbox_pred, rpn_loss_cls, rpn_loss_box,
-            RCNN_loss_cls, RCNN_loss_bbox, rois_label, pooled_feat, im_scales
+            rois, cls_prob,
+            pooled_feat, im_scales
         )
 
         # Form into object detection set message
@@ -144,13 +155,20 @@ class DescriptorGenerator(Node):
             msg.bottom = detection_info['boxes'][:,3].tolist()
 
             msg.descriptor_dims = list(detection_info['feats'].shape)
-            # Flatten the descriptors and convert to list
             msg.descriptors = detection_info['feats'].ravel().tolist()
 
-        # Publish
+        # Publish detection set message
         self._publisher.publish(msg)
 
     def preprocess_image(self, im_in):
+        """
+        Preprocess the image and return the necessary inputs for the fasterrcnn
+        mode. Returns the image blob data, image info, ground truth boxes, image
+        scales, and number of boxes.
+
+        Based on:
+        https://github.com/shilrley6/Faster-R-CNN-with-model-pretrained-on-Visual-Genome/blob/master/generate_tsv.py
+        """
         # initilize the tensor holder here.
         im_data = torch.FloatTensor(1).to(device=self._torch_device)
         im_info = torch.FloatTensor(1).to(device=self._torch_device)
@@ -164,16 +182,18 @@ class DescriptorGenerator(Node):
             num_boxes = Variable(num_boxes)
             gt_boxes = Variable(gt_boxes)
 
-        # Load images
         if len(im_in.shape) == 2:
-          im_in = im_in[:,:,np.newaxis]
-          im_in = np.concatenate((im_in,im_in,im_in), axis=2)
+            im_in = im_in[:,:,np.newaxis]
+            im_in = np.concatenate((im_in,im_in,im_in), axis=2)
         im = im_in
 
         blobs, im_scales = _get_image_blob(im)
         assert len(im_scales) == 1, "Only single-image batch implemented"
         im_blob = blobs
-        im_info_np = np.array([[im_blob.shape[1], im_blob.shape[2], im_scales[0]]], dtype=np.float32)
+        im_info_np = np.array(
+            [[im_blob.shape[1], im_blob.shape[2], im_scales[0]]],
+            dtype=np.float32
+        )
 
         im_data_pt = torch.from_numpy(im_blob)
         im_data_pt = im_data_pt.permute(0, 3, 1, 2)
@@ -187,10 +207,14 @@ class DescriptorGenerator(Node):
 
         return im_data, im_info, gt_boxes, num_boxes, im_scales
 
-    def postprocess_detections(
-        self, rois, cls_prob, bbox_pred, rpn_loss_cls, rpn_loss_box,
-        RCNN_loss_cls, RCNN_loss_bbox, rois_label, pooled_feat, im_scales
-    ):
+    def postprocess_detections(self, rois, cls_prob, pooled_feat, im_scales):
+        """
+        Form the model outputs into a dictionary containing the bounding boxes,
+        object indices, labels, features, and probability scores.
+
+        Based on:
+        https://github.com/shilrley6/Faster-R-CNN-with-model-pretrained-on-Visual-Genome/blob/master/generate_tsv.py
+        """
         scores = cls_prob.data
         boxes = rois.data[:, :, 1:5]
 
@@ -199,7 +223,6 @@ class DescriptorGenerator(Node):
         pred_boxes /= im_scales[0]
 
         scores = scores.squeeze()
-
         pred_boxes = pred_boxes.squeeze()
 
         max_conf = torch.zeros((pred_boxes.shape[0])).to(device=self._torch_device)
@@ -208,24 +231,31 @@ class DescriptorGenerator(Node):
             inds = torch.nonzero(scores[:,j]>self._detection_threshold).view(-1).cpu()
             # if there is det
             if inds.numel() > 0:
-              cls_scores = scores[:,j][inds]
-              _, order = torch.sort(cls_scores, 0, True)
-              #print("inds", inds, len(self.classes))
-              boxs_inds = pred_boxes[inds]
-              if boxs_inds.ndim == 1:
-                boxs_inds = np.expand_dims(boxs_inds, 0)
-              #print(boxs_inds.shape)
-              cls_boxes = torch.tensor(boxs_inds[:, j * 4:(j + 1) * 4]).to(device=self._torch_device)
+                cls_scores = scores[:,j][inds]
+                _, order = torch.sort(cls_scores, 0, True)
+                boxs_inds = pred_boxes[inds]
+                if boxs_inds.ndim == 1:
+                    boxs_inds = np.expand_dims(boxs_inds, 0)
+                cls_boxes = (
+                    torch.tensor(boxs_inds[:, j * 4:(j + 1) * 4])
+                    .to(device=self._torch_device)
+                )
 
-              cls_dets = torch.cat((cls_boxes, cls_scores.unsqueeze(1)), 1)
-              cls_dets = cls_dets[order]
-              keep = nms(cls_boxes[order, :], cls_scores[order], 0.3)
-              cls_dets = cls_dets[keep.view(-1).long()]
-              index = inds[order[keep]]
-              max_conf[index] = torch.where(scores[index, j] > max_conf[index], scores[index, j], max_conf[index])
+                cls_dets = torch.cat((cls_boxes, cls_scores.unsqueeze(1)), 1)
+                cls_dets = cls_dets[order]
+                keep = nms(cls_boxes[order, :], cls_scores[order], 0.3)
+                cls_dets = cls_dets[keep.view(-1).long()]
+                index = inds[order[keep]]
+                max_conf[index] = (
+                    torch.where(scores[index, j] > max_conf[index],
+                                scores[index, j],
+                                max_conf[index])
+                )
 
-        keep_boxes = torch.where(max_conf >= self._detection_threshold, max_conf, torch.tensor(0.0).to(device=self._torch_device))
-
+        keep_boxes = (
+            torch.where(max_conf >= self._detection_threshold, max_conf, torch.tensor(0.0)
+            .to(device=self._torch_device))
+        )
         keep_boxes = torch.squeeze(torch.nonzero(keep_boxes))
         if keep_boxes.numel():
             if keep_boxes.ndim == 0:
@@ -255,7 +285,6 @@ class DescriptorGenerator(Node):
                     bbox = boxes[i, kind * 4: (kind + 1) * 4]
                     box_dets[i] = bbox
 
-                #scores = torch.max(scores[keep_boxes][:, 1:], dim=1).values
                 scores = scores[keep_boxes][:, 1:]
                 labels = []
                 for i in objects:
@@ -291,4 +320,4 @@ def main():
 
 
 if __name__ == '__main__':
-    m
+    main()
