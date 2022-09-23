@@ -123,7 +123,7 @@ optional = false
 python-versions = "*"
 
 [package.extras]
-test = ["hypothesis (==3.55.3)", "flake8 (==3.7.8)"]
+test = ["flake8 (==3.7.8)", "hypothesis (==3.55.3)"]
 
 [[package]]
 name = "cycler"
@@ -148,6 +148,14 @@ description = "Decorators for Humans"
 category = "dev"
 optional = false
 python-versions = ">=3.5"
+
+[[package]]
+name = "easydict"
+version = "1.9"
+description = "Access dict values as attributes (works recursively)."
+category = "main"
+optional = false
+python-versions = "*"
 
 [[package]]
 name = "einops"
@@ -475,8 +483,8 @@ optional = false
 python-versions = "*"
 
 [package.extras]
+develop = ["pytest (>=4.6)", "pycodestyle", "pytest-cov", "codecov", "wheel"]
 tests = ["pytest (>=4.6)"]
-develop = ["wheel", "codecov", "pytest-cov", "pycodestyle", "pytest (>=4.6)"]
 
 [[package]]
 name = "msgpack"
@@ -613,9 +621,9 @@ python-versions = ">=3.5"
 pywin32 = {version = ">=226", markers = "platform_system == \"Windows\""}
 
 [package.extras]
-tests = ["redis", "pytest-mypy (>=0.8.0)", "sphinx (>=3.0.3)", "pytest-cov (>=2.8.1)", "pytest (>=5.4.1)"]
-redis = ["redis"]
 docs = ["sphinx (>=1.7.1)"]
+redis = ["redis"]
+tests = ["pytest (>=5.4.1)", "pytest-cov (>=2.8.1)", "sphinx (>=3.0.3)", "pytest-mypy (>=0.8.0)", "redis"]
 
 [[package]]
 name = "prompt-toolkit"
@@ -1004,8 +1012,8 @@ python-versions = "~=3.6"
 typeguard = "*"
 
 [package.extras]
-test = ["coveralls", "pytest-cov", "pytest"]
-doc = ["autoclasstoc", "sphinx-rtd-theme", "sphinx"]
+doc = ["sphinx", "sphinx-rtd-theme", "autoclasstoc"]
+test = ["pytest", "pytest-cov", "coveralls"]
 
 [[package]]
 name = "simpleaudio"
@@ -1126,7 +1134,7 @@ executing = "*"
 pure-eval = "*"
 
 [package.extras]
-tests = ["cython", "littleutils", "pygments", "typeguard", "pytest"]
+tests = ["pytest", "typeguard", "pygments", "littleutils", "cython"]
 
 [[package]]
 name = "svg.path"
@@ -1281,17 +1289,6 @@ diagrams = ["pygraphviz"]
 test = ["pytest"]
 
 [[package]]
-name = "triangle"
-version = "20220202"
-description = "Python binding to the triangle library"
-category = "main"
-optional = false
-python-versions = "*"
-
-[package.dependencies]
-numpy = "*"
-
-[[package]]
 name = "trimesh"
 version = "3.14.1"
 description = "Import, export, process, analyze and view triangular meshes."
@@ -1322,14 +1319,13 @@ scipy = {version = "*", optional = true, markers = "extra == \"all\""}
 shapely = {version = "*", optional = true, markers = "extra == \"all\""}
 "svg.path" = {version = "*", optional = true, markers = "extra == \"all\""}
 sympy = {version = "*", optional = true, markers = "extra == \"all\""}
-triangle = {version = "*", optional = true, markers = "extra == \"all\""}
 xatlas = {version = "*", optional = true, markers = "extra == \"all\""}
 xxhash = {version = "*", optional = true, markers = "extra == \"all\""}
 
 [package.extras]
-all = ["xxhash", "jsonschema", "psutil", "glooey", "pycollada", "requests", "colorlog", "scipy", "shapely", "rtree", "svg.path", "chardet", "sympy", "pillow", "networkx", "meshio", "mapbox-earcut", "xatlas", "scikit-image", "msgpack", "python-fcl", "triangle", "lxml", "setuptools", "pyglet"]
-easy = ["chardet", "sympy", "pillow", "jsonschema", "networkx", "setuptools", "pycollada", "msgpack", "requests", "colorlog", "scipy", "lxml", "shapely", "xxhash", "rtree", "pyglet", "svg.path"]
-test = ["pyinstrument", "pytest-cov", "pytest", "coveralls", "ezdxf"]
+all = ["setuptools", "lxml", "scipy", "svg.path", "scikit-image", "xxhash", "jsonschema", "sympy", "networkx", "requests", "glooey", "xatlas", "pillow", "mapbox-earcut", "chardet", "python-fcl", "rtree", "pyglet", "colorlog", "msgpack", "meshio", "psutil", "pycollada", "shapely"]
+easy = ["xxhash", "requests", "setuptools", "pillow", "lxml", "mapbox-earcut", "chardet", "scipy", "rtree", "pyglet", "svg.path", "colorlog", "msgpack", "jsonschema", "sympy", "networkx", "pycollada", "shapely"]
+test = ["pytest-cov", "pyinstrument", "pytest", "coveralls", "ezdxf"]
 
 [[package]]
 name = "typeguard"
@@ -1376,8 +1372,8 @@ python-versions = "*"
 autoprop = "*"
 
 [package.extras]
-tests = ["coveralls", "pytest-cov", "pytest"]
-docs = ["autoclasstoc", "sphinx-rtd-theme", "sphinx"]
+docs = ["sphinx", "sphinx-rtd-theme", "autoclasstoc"]
+tests = ["pytest", "pytest-cov", "coveralls"]
 
 [[package]]
 name = "wcwidth"
@@ -1429,7 +1425,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8,<3.10"
-content-hash = "6f7cc474c8e429a4e9f0544402d4de47d42333d8f9c83731641b529bd8358e9e"
+content-hash = "96d2d6ea6ca3db6672fa5784c70cd153e929e97141fe8a4a4cf2c9e8162d7757"
 
 [metadata.files]
 appnope = [
@@ -1556,6 +1552,9 @@ cython = [
 decorator = [
     {file = "decorator-5.1.1-py3-none-any.whl", hash = "sha256:b8c3f85900b9dc423225913c5aace94729fe1fa9763b38939a95226f02d37186"},
     {file = "decorator-5.1.1.tar.gz", hash = "sha256:637996211036b6385ef91435e4fae22989472f9d571faba8927ba8253acbc330"},
+]
+easydict = [
+    {file = "easydict-1.9.tar.gz", hash = "sha256:3f3f0dab07c299f0f4df032db1f388d985bb57fa4c5be30acd25c5f9a516883b"},
 ]
 einops = [
     {file = "einops-0.4.1-py3-none-any.whl", hash = "sha256:932b12bb3176caef629cc513fc8a442338fdbfe1e560794a6e7306dcee65a8af"},
@@ -2496,42 +2495,6 @@ traitlets = [
 transitions = [
     {file = "transitions-0.8.11-py2.py3-none-any.whl", hash = "sha256:9525dd9b708b0a54bb4562a06a483d237e75c94547ba9831c81c6872d0ea1522"},
     {file = "transitions-0.8.11.tar.gz", hash = "sha256:7b20d32906ea4d60ee6f6c1f5dc9c9f178802425c5b155213eb0f25c277f04e4"},
-]
-triangle = [
-    {file = "triangle-20220202-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:cfc913552cba9ac96d491dc5c5ae819ed5da3d764835e840163475f287d39726"},
-    {file = "triangle-20220202-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:7d80e0f4e408946f133911bb8df4c757de68bd898fc5af9b7cf85593e4386739"},
-    {file = "triangle-20220202-cp310-cp310-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:00b316057c9347ccc06328248ba14d1c559aa81a2d73cdfeef85ca3da27be237"},
-    {file = "triangle-20220202-cp310-cp310-musllinux_1_1_i686.whl", hash = "sha256:75fa78f25b1ef34dc552cd4ac87537f4449203f6950233e0698d452bb39517aa"},
-    {file = "triangle-20220202-cp310-cp310-musllinux_1_1_x86_64.whl", hash = "sha256:e0bd57f9b442b8335f169fde0b26b778f15bc52713eaa8efdf705f2f0b63b93e"},
-    {file = "triangle-20220202-cp310-cp310-win32.whl", hash = "sha256:4dffcc61d063397ad08be45fb068aff07841d39d98e53495bcb3f64659b3b281"},
-    {file = "triangle-20220202-cp310-cp310-win_amd64.whl", hash = "sha256:39c8b73a2bcdd8cd51ea8521e5d62cba1949c7df352b48cf65a576ac9f6b1497"},
-    {file = "triangle-20220202-cp36-cp36m-macosx_10_9_x86_64.whl", hash = "sha256:8c47e248b8aa2488dadab640b00bd7733d4909ca568a7434640cbb9633f02d17"},
-    {file = "triangle-20220202-cp36-cp36m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:bd4e3dd466c8a3d46ab71dd00928e45206fd3b669d44b17393915773aa7b4a6a"},
-    {file = "triangle-20220202-cp36-cp36m-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:37bf2873ee7ed6284e2b345d60c858e25866ff57719f2a01144880f771e6f750"},
-    {file = "triangle-20220202-cp36-cp36m-musllinux_1_1_i686.whl", hash = "sha256:79010dd97517d40a6d7dfb45fed5012830a55a5ce21ad0335fc348ebd6f2ff4d"},
-    {file = "triangle-20220202-cp36-cp36m-musllinux_1_1_x86_64.whl", hash = "sha256:328f647255a7322297a87806700d39b7c50eaa8daa92ed090aed2fc57f9d3d26"},
-    {file = "triangle-20220202-cp36-cp36m-win32.whl", hash = "sha256:a6235e557e5c2dd2d3400554d08b003a69b836b724b89ce3afc2e679e6726fd8"},
-    {file = "triangle-20220202-cp36-cp36m-win_amd64.whl", hash = "sha256:6056ac1dcaeca97572615c861ac75ce7a9dab52ff922cbc7b25b56063e570b59"},
-    {file = "triangle-20220202-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:7b94eea707f33d0c5acd2d757041a15fd78c853f6945203e561c2dae80b9bffe"},
-    {file = "triangle-20220202-cp37-cp37m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:287f7bf4b13d3dd90e7e70c8260e03cd1b6be67fb4b8e84842717f12f396e0b5"},
-    {file = "triangle-20220202-cp37-cp37m-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:ac81162c9922aa6c8bc04917466539bbaa532aeb236c481a6fa169faafe87dec"},
-    {file = "triangle-20220202-cp37-cp37m-musllinux_1_1_i686.whl", hash = "sha256:347ac787b141b3966fa4913173cdc0c3d77133f2f92434b215d1ab7e2d08127f"},
-    {file = "triangle-20220202-cp37-cp37m-musllinux_1_1_x86_64.whl", hash = "sha256:19fff47b073acefacbb4e0320d454ed444371ad9c5a429b6c93a3b821d9f0e34"},
-    {file = "triangle-20220202-cp37-cp37m-win32.whl", hash = "sha256:5739ceef82ecb2eb4fc3e01acced745ab133c5fd6fadb9f7cd24343b71c334d1"},
-    {file = "triangle-20220202-cp37-cp37m-win_amd64.whl", hash = "sha256:2ecaeeea293e01aeca295eda54f3eb2f75a58fee822a89c7f5e3a17f9dbbf794"},
-    {file = "triangle-20220202-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:1697d73720cadd3fda80c9ba476fc226d056871a125673712f2d38be0fff9497"},
-    {file = "triangle-20220202-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:78f7bc4d89a8fbf5c00dde92704d97728927fb4c6aecb86609f9a53c4cfc40b6"},
-    {file = "triangle-20220202-cp38-cp38-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:6ba0b79803fb0f214a0ddb0ad0ed3489150bc1088c97a13cb6c94df419bcc52f"},
-    {file = "triangle-20220202-cp38-cp38-musllinux_1_1_i686.whl", hash = "sha256:0eeec3d21fd4d74747f9db07494e250cfb1bc0ef352d6d999cb154dfc92510e8"},
-    {file = "triangle-20220202-cp38-cp38-musllinux_1_1_x86_64.whl", hash = "sha256:dd4bcf8982036c86e73080c0dc907b666e24ac15f8911e5972b409c2e2c4f09c"},
-    {file = "triangle-20220202-cp38-cp38-win32.whl", hash = "sha256:813989a3a7b3f7811db64720be2ee39a5129085ccb556ab5b60ea039616f226c"},
-    {file = "triangle-20220202-cp38-cp38-win_amd64.whl", hash = "sha256:0a2c0e18b4d811edbf6155af113ccb3369f74a0e0e04480d1028ce75b4386903"},
-    {file = "triangle-20220202-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:c4e7835c12836ffd824641e9798923b0ceba1f245ba8acae6154684250f5fd9d"},
-    {file = "triangle-20220202-cp39-cp39-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:ef12bc4aeb68333111f8b3ab5f5f45c17aa2c751ed4a67e8c7fc5660ecc5cf6d"},
-    {file = "triangle-20220202-cp39-cp39-musllinux_1_1_i686.whl", hash = "sha256:89c9ae3cbdb0a334e453c3713c132f624c38edbce89a80ce4d48256c1cc91de2"},
-    {file = "triangle-20220202-cp39-cp39-musllinux_1_1_x86_64.whl", hash = "sha256:2633c8e4b59497c89163c95a94c685af3a49c66806124f591269f4004e6f901c"},
-    {file = "triangle-20220202-cp39-cp39-win32.whl", hash = "sha256:ca705a7e135d657eee316e63c5a1066e4661eac21118b4f57e961c00a6ad4df1"},
-    {file = "triangle-20220202-cp39-cp39-win_amd64.whl", hash = "sha256:1c5bab1851280d14f5128edd5c71a89849e78274d6f41101c5efd8ed914b8740"},
 ]
 trimesh = [
     {file = "trimesh-3.14.1-py3-none-any.whl", hash = "sha256:6ec2eca32dc65d973ba7b23cb773fcf05479fa48d2f54dd1ebb5e772b92f7319"},
