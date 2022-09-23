@@ -37,3 +37,10 @@ float32[] bottom
 # This is a flattened 2D row-major matrix with shape:
 #   [num_detections, len(label_vec)]
 float64[] label_confidences
+
+# Original descriptor dimensions. For example, if the descriptor's dimensions
+# are (256, 16, 16) then this array should be set to [256, 16, 16].
+int32[] descriptor_dims
+
+# Flattened descriptor vector.
+float64[] descriptors
