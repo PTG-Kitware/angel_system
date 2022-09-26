@@ -113,8 +113,8 @@ class DescriptorGenerator(Node):
         """
         model = self.get_model()
 
-        # Preprocess image
-        im_in = np.array(BRIDGE.imgmsg_to_cv2(image, desired_encoding="rgb8"))
+        # Preprocess image - NOTE: bgr order required by _get_image_blob
+        im_in = np.array(BRIDGE.imgmsg_to_cv2(image, desired_encoding="bgr8"))
         im_data, im_info, gt_boxes, num_boxes, im_scales = self.preprocess_image(im_in)
 
         # Send to model
@@ -177,12 +177,7 @@ class DescriptorGenerator(Node):
             num_boxes = Variable(num_boxes)
             gt_boxes = Variable(gt_boxes)
 
-        if len(im_in.shape) == 2:
-            im_in = im_in[:,:,np.newaxis]
-            im_in = np.concatenate((im_in,im_in,im_in), axis=2)
-        im = im_in
-
-        blobs, im_scales = _get_image_blob(im)
+        blobs, im_scales = _get_image_blob(im_in)
         assert len(im_scales) == 1, "Only single-image batch implemented"
         im_blob = blobs
         im_info_np = np.array(
