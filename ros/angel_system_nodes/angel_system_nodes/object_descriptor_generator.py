@@ -89,7 +89,7 @@ class DescriptorGenerator(Node):
         """
         model = self._model
         if model is None:
-            model = resnet(self.classes, 101, pretrained=False, class_agnostic=False)
+            model = resnet(self.classes, pretrained=False, class_agnostic=False)
             model.create_architecture()
 
             checkpoint = torch.load(self._model_checkpoint)
@@ -97,16 +97,8 @@ class DescriptorGenerator(Node):
             model.eval()
 
             # Transfer the model to the requested device
-            if self._torch_device != 'cpu':
-                if torch.cuda.is_available():
-                    model_device = torch.device(device=self._torch_device)
-                    model = model.to(device=model_device)
-                else:
-                    raise RuntimeError(
-                        "Use of CUDA requested but not available."
-                    )
-            else:
-                model_device = torch.device(self._torch_device)
+            model_device = torch.device(device=self._torch_device)
+            model = model.to(device=model_device)
 
             self._model = model
             self._model_device = model_device
@@ -126,9 +118,12 @@ class DescriptorGenerator(Node):
         im_data, im_info, gt_boxes, num_boxes, im_scales = self.preprocess_image(im_in)
 
         # Send to model
-        rois, cls_prob, \
-        _, _, _, _, _, _, \
-        pooled_feat = model(im_data, im_info, gt_boxes, num_boxes, pool_feat=True)
+        with torch.no_grad():
+            (
+                rois, cls_prob,
+                _, _, _, _, _, _,
+                pooled_feat
+            ) = model(im_data, im_info, gt_boxes, num_boxes, pool_feat=True)
 
         # Postprocess model output
         detection_info = self.postprocess_detections(
@@ -241,10 +236,7 @@ class DescriptorGenerator(Node):
                     .to(device=self._torch_device)
                 )
 
-                cls_dets = torch.cat((cls_boxes, cls_scores.unsqueeze(1)), 1)
-                cls_dets = cls_dets[order]
                 keep = nms(cls_boxes[order, :], cls_scores[order], 0.3)
-                cls_dets = cls_dets[keep.view(-1).long()]
                 index = inds[order[keep]]
                 max_conf[index] = (
                     torch.where(scores[index, j] > max_conf[index],
