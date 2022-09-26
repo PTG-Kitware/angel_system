@@ -98,9 +98,24 @@ class UnifiedHOModule(torch.nn.Module):
 
         data_dict["labels"] = labels
 
-        print(data_dict["feats"].shape)
-        print(labels["l_hand"])
-        print(labels["r_hand"])
+        if len(aux_data["dets"]) == 0:
+            data_dict["dets"] = torch.empty((0, 2048)).to(device)
+        else:
+            data_dict["dets"] = torch.stack(aux_data["dets"]).to(device)
+            data_dict["dets"] = data_dict["dets"].reshape(
+                [1,
+                 data_dict["dets"].shape[0]*data_dict["dets"].shape[1],
+                 data_dict["dets"].shape[2]]
+            )
+        if len(aux_data["bbox"]) == 0:
+            data_dict["bbox"] = torch.empty((0, 2048)).to(device)
+        else:
+            data_dict["bbox"] = torch.stack(aux_data["bbox"]).to(device)
+            data_dict["bbox"] = data_dict["bbox"].reshape(
+                [1,
+                 data_dict["bbox"].shape[0]*data_dict["bbox"].shape[1],
+                 data_dict["bbox"].shape[2]]
+            )
 
         out = self.temporal(data_dict)
 
