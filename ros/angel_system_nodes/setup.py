@@ -30,7 +30,8 @@ setup(
                 'mm_activity_detector = angel_system_nodes.mm_activity_detector:main',
                 'task_monitor = angel_system_nodes.task_monitor:main',
                 'feedback_generator = angel_system_nodes.feedback_generator:main',
-                'annotation_event_monitor = angel_system_nodes.annotation_event_monitor:main'
+                'annotation_event_monitor = angel_system_nodes.annotation_event_monitor:main',
+                'object_detector_with_descriptors = angel_system_nodes.object_detector_with_descriptors:main',
             ],
     },
 )
