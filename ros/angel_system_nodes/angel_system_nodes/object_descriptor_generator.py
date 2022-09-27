@@ -46,13 +46,13 @@ class DescriptorGenerator(Node):
         )
         self._object_vocabulary = (
             self.declare_parameter("object_vocab_list",
-                                   "/angel_workspace/angel_system/fasterrcnn/objects_vocab.txt")
+                                   "/angel_workspace/model_files/fasterrcnn_label_list.txt")
             .get_parameter_value()
             .string_value
         )
         self._model_checkpoint = (
             self.declare_parameter("model_checkpoint",
-                                   "/angel_workspace/model_files/faster_rcnn_res101_vg.pth")
+                                   "/angel_workspace/model_files/fasterrcnn_res101_vg.pth")
             .get_parameter_value()
             .string_value
         )
