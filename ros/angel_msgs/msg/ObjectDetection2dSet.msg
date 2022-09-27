@@ -39,7 +39,8 @@ float32[] bottom
 float64[] label_confidences
 
 # Vector length of each descriptor.
-int32 descriptor_dims
+int32 descriptor_dim
 
-# Flattened descriptor vector.
+# Flattened descriptor vector. The length of this list should be equal to
+# num_detections * descriptor_dims.
 float64[] descriptors

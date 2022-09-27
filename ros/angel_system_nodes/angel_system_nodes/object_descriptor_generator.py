@@ -149,7 +149,7 @@ class DescriptorGenerator(Node):
             msg.right = detection_info['boxes'][:,2].tolist()
             msg.bottom = detection_info['boxes'][:,3].tolist()
 
-            msg.descriptor_dims = detection_info['feats'].shape[-1]
+            msg.descriptor_dim = detection_info['feats'].shape[-1]
             msg.descriptors = detection_info['feats'].ravel().tolist()
 
         # Publish detection set message
