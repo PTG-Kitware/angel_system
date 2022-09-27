@@ -15,7 +15,7 @@ from angel_system.fasterrcnn.processing_utils import _get_image_blob
 BRIDGE = CvBridge()
 
 
-class DescriptorGenerator(Node):
+class ObjectDetectorWithDescriptors(Node):
     """
     ROS node that subscribes to `Image` messages and publishes detections and
     descriptors for those images in the form of `ObjectDetectionSet2d` messages.
@@ -40,7 +40,7 @@ class DescriptorGenerator(Node):
             .string_value
         )
         self._detection_threshold = (
-            self.declare_parameter("detection_threshold", 0.8)
+            self.declare_parameter("detection_threshold", 0.05)
             .get_parameter_value()
             .double_value
         )
@@ -82,6 +82,8 @@ class DescriptorGenerator(Node):
             for obj in f.readlines():
                 self.classes.append(obj.split(',')[0].lower().strip())
 
+        log.info("Ready to detect")
+
     def get_model(self) -> torch.nn.Module:
         """
         Lazy load the torch model in an idempotent manner.
@@ -111,6 +113,7 @@ class DescriptorGenerator(Node):
         model inference, output postprocessing, and detection set publishing for
         each image received.
         """
+        log = self.get_logger()
         model = self.get_model()
 
         # Preprocess image - NOTE: bgr order required by _get_image_blob
@@ -154,6 +157,7 @@ class DescriptorGenerator(Node):
 
         # Publish detection set message
         self._publisher.publish(msg)
+        log.info("Published detection set message")
 
     def preprocess_image(self, im_in):
         """
@@ -295,13 +299,13 @@ class DescriptorGenerator(Node):
 def main():
     rclpy.init()
 
-    descriptor_generator = DescriptorGenerator()
-    rclpy.spin(descriptor_generator)
+    node = ObjectDetectorWithDescriptors()
+    rclpy.spin(node)
 
     # Destroy the node explicitly
     # (optional - otherwise it will be done automatically
     # when the garbage collector destroys the node object)
-    descriptor_generator.destroy_node()
+    node.destroy_node()
 
     rclpy.shutdown()
 

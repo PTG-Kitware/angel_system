@@ -31,7 +31,7 @@ setup(
                 'task_monitor = angel_system_nodes.task_monitor:main',
                 'feedback_generator = angel_system_nodes.feedback_generator:main',
                 'annotation_event_monitor = angel_system_nodes.annotation_event_monitor:main',
-                'descriptor_generator = angel_system_nodes.object_descriptor_generator:main',
+                'object_detector_with_descriptors = angel_system_nodes.object_detector_with_descriptors:main',
             ],
     },
 )
