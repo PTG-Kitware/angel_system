@@ -70,7 +70,8 @@ class UHOActivityDetector(Node):
         )
         self._model_checkpoint = (
             self.declare_parameter("model_checkpoint",
-                                   "/angel_workspace/angel_system/uho/epoch_046.ckpt")
+                                   #"/angel_workspace/angel_system/uho/epoch_046.ckpt")
+                                   "/angel_workspace/model_files/epoch_090.ckpt")
             .get_parameter_value()
             .string_value
         )
@@ -121,7 +122,7 @@ class UHOActivityDetector(Node):
 
         # Instantiate the activity detector models
         fcn = UnifiedFCNModule(net="resnext", num_cpts=21, obj_classes=9, verb_classes=12)
-        temporal = TemTRANSModule(act_classes=27, hidden=256, dropout=0.1, depth=4)
+        temporal = TemTRANSModule(act_classes=27, hidden=256, dropout=0.1, depth=6)
 
         self._detector: UnifiedHOModule = UnifiedHOModule(
             fcn=fcn,
@@ -176,9 +177,29 @@ class UHOActivityDetector(Node):
             # This will not always be true. For example, every nth frame may have a detection
             # message.
             frame_stamp_set = self._frame_stamps[:self._frames_per_det]
-            all_stamps_matched = True
+            ready_to_predict = False
             obj_det_indices = []
+
+            # If the source stamp for this detection message is after or equal to
+            # the last frame stamp in the current set, then we have all of the
+            # detections and can move onto processing this set of frames.
+            if msg.source_stamp.sec > frame_stamp_set[-1].sec:
+                print(frame_stamp_set, msg.source_stamp.sec)
+                ready_to_predict = True
+            elif msg.source_stamp.sec == frame_stamp_set[-1].sec:
+                if msg.source_stamp.nanosec >= frame_stamp_set[-1].nanosec:
+                    print(frame_stamp_set, msg.source_stamp.sec)
+                    ready_to_precict = True
+            else:
+                # Keep waiting
+                ready_to_predict = False
+
+            '''
             for f in frame_stamp_set:
+                print(f, self._obj_det_stamps)
+
+                # Check
+                if f
                 try:
                     index = self._obj_det_stamps.index(f)
                     obj_det_indices.append(index)
@@ -186,15 +207,16 @@ class UHOActivityDetector(Node):
                     all_stamps_matched = False
                     break
                 #print(f, self._obj_det_stamps)
-                if f not in self._obj_det_stamps:
-                    break
+                #if f not in self._obj_det_stamps:
+                # break
+            '''
 
             # Need to wait until the object detector has processed all of these frames
-            if not all_stamps_matched:
+            if not ready_to_predict:
                 log.info(f"Waiting for object detection results")
                 return
 
-            assert len(obj_det_indices) == self._frames_per_det
+            #assert len(obj_det_indices) == self._frames_per_det
 
             frame_set = self._frames[:self._frames_per_det]
             lhand_pose_set = self._hand_poses['lhand'][:self._frames_per_det]
@@ -211,8 +233,9 @@ class UHOActivityDetector(Node):
             )
 
             # Format the object detections into descriptors and bboxes
-            for d in obj_det_indices:
-                det = self._obj_dets[d]
+            #for d in obj_det_indices:
+            for det in self._obj_dets:
+                #det = self._obj_dets[d]
                 if det.num_detections == 0:
                     log.info(f"no dets, det source: {det.source_stamp}")
                     continue

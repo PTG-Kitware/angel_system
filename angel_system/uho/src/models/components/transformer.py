@@ -185,29 +185,37 @@ class TemTRANSModule(nn.Module):
 
     def forward(self, inputs):
         topK = 5
-
         # load features
         feat_x = inputs["feats"] # RGB features
         lh, rh = inputs["labels"]["l_hand"], inputs["labels"]["r_hand"] # hand poses
         feat_d = inputs["dets"] # detections
         feat_b = inputs["bbox"] # bounding boxes
+        #det_labels = inputs[0]["dcls"] # detections labels
+        #fr_idx = inputs[0]["idx"] # frame indices
+        #labels = inputs["act"] # action labels
+        #idx = inputs["idx"] # video clip index
 
-        '''
-        print(f"featx, {feat_x.shape}")
-        print(f"featd, {feat_d.shape}")
-        print(f"featb, {feat_b.shape}")
-        '''
+        # select detections
+        #det_step = np.random.randint(10) if if_train else 5
+        det_step = feat_d.size(1)
+        #print(det_step)
+        if det_step:
+            num_batch, num_det, num_dim = feat_d.shape
+            feat_d = [feat_d[:,k:k+topK,:] for k in range(0, num_det, det_step*topK)]
+            feat_d = torch.stack(feat_d,1).reshape(num_batch, -1, num_dim)
+            feat_b = [feat_b[:,k:k+topK,:] for k in range(0, num_det, det_step*topK)]
+            feat_b = torch.stack(feat_b,1).reshape(num_batch, -1, 4)
+            #det_labels = [det_labels[:,k:k+topK] for k in range(0, num_det, det_step*topK)]
+            #det_labels = torch.stack(det_labels,1).reshape(num_batch, -1)
 
         feat_x = self.fc_x(feat_x)
         feat_h = self.fc_h(torch.cat([lh, rh], axis=-1).float())
         feat_x = torch.cat([feat_x, feat_h], axis=-1)
         num_batch, num_frame, num_dim = feat_x.shape
 
-        '''
         print(f"num batch {num_batch}")
         print(f"num frame {num_frame}")
         print(f"num dim {num_dim}")
-        '''
 
         if feat_d.ndim == 2:
             feat_d = feat_d.unsqueeze(1)
@@ -239,7 +247,11 @@ class TemTRANSModule(nn.Module):
         else:
             pos_ids = torch.arange(num_frame, dtype=torch.long, device=enc_feat.device)
             pos_ids_frame = pos_ids.unsqueeze(0).expand(num_batch, -1)
-            pos_ids_det = pos_ids.repeat(topK,1).transpose(1,0).reshape(-1, feat_d.size(1)).expand(num_batch, -1)
+            if det_step:
+                pos_ids1 = pos_ids[0:num_frame:det_step]
+                pos_ids_det = pos_ids1.repeat(topK,1).transpose(1,0).reshape(-1, feat_d.size(1)).expand(num_batch, -1)
+            else:
+                pos_ids_det = pos_ids.repeat(topK,1).transpose(1,0).reshape(-1, feat_d.size(1)).expand(num_batch, -1)
             frame_pos_embed = self.frame_pos_embeddings(pos_ids_frame)
             det_pos_embed = self.frame_pos_embeddings(pos_ids_det)
             pos_embeddings = torch.cat([frame_pos_embed, det_pos_embed], axis=1)
