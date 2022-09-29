@@ -192,10 +192,22 @@ class TemTRANSModule(nn.Module):
         feat_d = inputs["dets"] # detections
         feat_b = inputs["bbox"] # bounding boxes
 
+        '''
+        print(f"featx, {feat_x.shape}")
+        print(f"featd, {feat_d.shape}")
+        print(f"featb, {feat_b.shape}")
+        '''
+
         feat_x = self.fc_x(feat_x)
         feat_h = self.fc_h(torch.cat([lh, rh], axis=-1).float())
         feat_x = torch.cat([feat_x, feat_h], axis=-1)
         num_batch, num_frame, num_dim = feat_x.shape
+
+        '''
+        print(f"num batch {num_batch}")
+        print(f"num frame {num_frame}")
+        print(f"num dim {num_dim}")
+        '''
 
         if feat_d.ndim == 2:
             feat_d = feat_d.unsqueeze(1)
