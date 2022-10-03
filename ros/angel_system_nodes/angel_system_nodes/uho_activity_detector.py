@@ -118,7 +118,6 @@ class UHOActivityDetector(Node):
         )
         self._frame_stamps = []
         self._obj_dets = []
-        self._obj_det_stamps = []
 
         # Instantiate the activity detector models
         fcn = UnifiedFCNModule(net="resnext", num_cpts=21, obj_classes=9, verb_classes=12)
@@ -168,7 +167,6 @@ class UHOActivityDetector(Node):
             return
 
         self._obj_dets.append(msg)
-        self._obj_det_stamps.append(msg.source_stamp)
 
         if len(self._frames) >= self._frames_per_det:
             # Check if the object detector has processed all of the frames for this frame set
@@ -178,17 +176,16 @@ class UHOActivityDetector(Node):
             # message.
             frame_stamp_set = self._frame_stamps[:self._frames_per_det]
             ready_to_predict = False
-            obj_det_indices = []
 
             # If the source stamp for this detection message is after or equal to
             # the last frame stamp in the current set, then we have all of the
             # detections and can move onto processing this set of frames.
             if msg.source_stamp.sec > frame_stamp_set[-1].sec:
-                print(frame_stamp_set, msg.source_stamp.sec)
+                #print(frame_stamp_set, msg.source_stamp.sec)
                 ready_to_predict = True
             elif msg.source_stamp.sec == frame_stamp_set[-1].sec:
                 if msg.source_stamp.nanosec >= frame_stamp_set[-1].nanosec:
-                    print(frame_stamp_set, msg.source_stamp.sec)
+                    #print(frame_stamp_set, msg.source_stamp.sec)
                     ready_to_precict = True
             else:
                 # Keep waiting
@@ -209,14 +206,14 @@ class UHOActivityDetector(Node):
                 #print(f, self._obj_det_stamps)
                 #if f not in self._obj_det_stamps:
                 # break
+
+            assert len(obj_det_indices) == self._frames_per_det
             '''
 
             # Need to wait until the object detector has processed all of these frames
             if not ready_to_predict:
                 log.info(f"Waiting for object detection results")
                 return
-
-            #assert len(obj_det_indices) == self._frames_per_det
 
             frame_set = self._frames[:self._frames_per_det]
             lhand_pose_set = self._hand_poses['lhand'][:self._frames_per_det]
@@ -233,12 +230,35 @@ class UHOActivityDetector(Node):
             )
 
             # Format the object detections into descriptors and bboxes
-            #for d in obj_det_indices:
-            for det in self._obj_dets:
-                #det = self._obj_dets[d]
+            idxs_to_remove = []
+            for idx, det in enumerate(self._obj_dets):
+                #print(det.source_stamp, frame_stamp_set[0], frame_stamp_set[-1])
                 if det.num_detections == 0:
                     log.info(f"no dets, det source: {det.source_stamp}")
                     continue
+
+                # Check this detection is within the range of time for the current
+                # frame set
+                if det.source_stamp.sec < frame_stamp_set[0].sec:
+                    # Detection is before the first frame in this set,
+                    # so we can remove it
+                    idxs_to_remove.append(idx)
+                    continue
+                elif det.source_stamp.sec == frame_stamp_set[0].sec:
+                    if det.source_stamp.nanosec < frame_stamp_set[0].nanosec:
+                        # Detection is before the first frame in this set,
+                        # so we can remove it
+                        idxs_to_remove.append(idx)
+                        continue
+                elif det.source_stamp.sec > frame_stamp_set[-1].sec:
+                    # Detection is after the last frame in this set,
+                    # so keep it for later
+                    continue
+                elif det.source_stamp.sec == frame_stamp_set[-1].sec:
+                    if det.source_stamp.nanosec > frame_stamp_set[-1].nanosec:
+                        # Detection is after the last frame in this set,
+                        # so keep it for later
+                        continue
 
                 topk = min(topk, det.num_detections)
 
@@ -254,6 +274,11 @@ class UHOActivityDetector(Node):
 
                 aux_data['bbox'].append(bboxes)
 
+            # Check if we didn't get any detections in the time range of the frame set
+            if len(aux_data["dets"]) == 0 or len(aux_data["bbox"]) == 0:
+                aux_data["dets"] = [torch.zeros((topk, 2048))]
+                aux_data["bbox"] = [torch.zeros((topk, 4))]
+
             # Inference!
             activities_detected = self._detector.forward(frame_set, aux_data)
 
@@ -265,8 +290,9 @@ class UHOActivityDetector(Node):
             self._frame_stamps = self._frame_stamps[self._frames_per_det:]
             self._hand_poses['lhand'] = self._hand_poses['lhand'][self._frames_per_det:]
             self._hand_poses['rhand'] = self._hand_poses['rhand'][self._frames_per_det:]
-            self._obj_dets = []
-            self._obj_det_stamps = []
+
+            for i in sorted(idxs_to_remove, reverse=True):
+                del self._obj_dets[i]
 
     def get_hand_pose_from_msg(self, msg):
         """

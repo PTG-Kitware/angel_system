@@ -198,7 +198,9 @@ class TemTRANSModule(nn.Module):
         # select detections
         #det_step = np.random.randint(10) if if_train else 5
         det_step = feat_d.size(1)
-        #print(det_step)
+        #det_step = feat_x.size(1)
+
+        #print(det_step, feat_d.size())
         if det_step:
             num_batch, num_det, num_dim = feat_d.shape
             feat_d = [feat_d[:,k:k+topK,:] for k in range(0, num_det, det_step*topK)]
@@ -213,9 +215,11 @@ class TemTRANSModule(nn.Module):
         feat_x = torch.cat([feat_x, feat_h], axis=-1)
         num_batch, num_frame, num_dim = feat_x.shape
 
+        '''
         print(f"num batch {num_batch}")
         print(f"num frame {num_frame}")
         print(f"num dim {num_dim}")
+        '''
 
         if feat_d.ndim == 2:
             feat_d = feat_d.unsqueeze(1)
@@ -248,7 +252,9 @@ class TemTRANSModule(nn.Module):
             pos_ids = torch.arange(num_frame, dtype=torch.long, device=enc_feat.device)
             pos_ids_frame = pos_ids.unsqueeze(0).expand(num_batch, -1)
             if det_step:
-                pos_ids1 = pos_ids[0:num_frame:det_step]
+                #pos_ids1 = pos_ids[0:num_frame:det_step]
+                pos_ids1 = pos_ids[0]
+                #pos_ids_det = pos_ids1.repeat(topK,1).transpose(1,0).reshape(-1, feat_d.size(1)).expand(num_batch, -1)
                 pos_ids_det = pos_ids1.repeat(topK,1).transpose(1,0).reshape(-1, feat_d.size(1)).expand(num_batch, -1)
             else:
                 pos_ids_det = pos_ids.repeat(topK,1).transpose(1,0).reshape(-1, feat_d.size(1)).expand(num_batch, -1)
