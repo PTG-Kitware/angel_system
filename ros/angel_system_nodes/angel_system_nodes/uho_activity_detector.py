@@ -1,6 +1,3 @@
-import time
-from typing import Dict
-
 # TODO: This is added so that the the angel_system/uho/src folder
 # is found when torch attempts to load the saved model checkpoints.
 # Is there a better way to do this?
@@ -13,8 +10,6 @@ import message_filters as mf
 import numpy as np
 import rclpy
 from rclpy.node import Node
-from rclpy.qos import qos_profile_sensor_data
-from smqtk_core.configuration import from_config_dict
 import torch
 
 from angel_msgs.msg import (
