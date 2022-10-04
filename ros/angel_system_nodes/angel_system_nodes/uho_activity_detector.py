@@ -70,8 +70,13 @@ class UHOActivityDetector(Node):
         )
         self._model_checkpoint = (
             self.declare_parameter("model_checkpoint",
-                                   #"/angel_workspace/angel_system/uho/epoch_046.ckpt")
                                    "/angel_workspace/model_files/epoch_090.ckpt")
+            .get_parameter_value()
+            .string_value
+        )
+        self._labels_file = (
+            self.declare_parameter("labels_file",
+                                   "/angel_workspace/model_files/uho_epoch_090_labels.txt")
             .get_parameter_value()
             .string_value
         )
@@ -82,6 +87,8 @@ class UHOActivityDetector(Node):
         log.info(f"Object detections topic: {self._obj_det_topic}")
         log.info(f"Device? {self._torch_device}")
         log.info(f"Frames per detection: {self._frames_per_det}")
+        log.info(f"Checkpoint: {self._model_checkpoint}")
+        log.info(f"Labels: {self._labels_file}")
 
         self.subscription_list = []
         # Image subscription
@@ -119,6 +126,9 @@ class UHOActivityDetector(Node):
         self._frame_stamps = []
         self._obj_dets = []
 
+        # TODO - parameterize this?
+        self._topk = 5
+
         # Instantiate the activity detector models
         fcn = UnifiedFCNModule(net="resnext", num_cpts=21, obj_classes=9, verb_classes=12)
         temporal = TemTRANSModule(act_classes=27, hidden=256, dropout=0.1, depth=6)
@@ -127,7 +137,8 @@ class UHOActivityDetector(Node):
             fcn=fcn,
             temporal=temporal,
             checkpoint=self._model_checkpoint,
-            device=self._torch_device
+            device=self._torch_device,
+            labels_file=self._labels_file
         )
         self._detector.eval()
         self._detector = self._detector.to(device=self._torch_device)
@@ -138,8 +149,6 @@ class UHOActivityDetector(Node):
         Callback function images + hand poses. Messages are synchronized with
         with the ROS time synchronizer.
         """
-        log = self.get_logger()
-
         # Convert ROS img msg to CV2 image and add it to the frame stack
         rgb_image = BRIDGE.imgmsg_to_cv2(image, desired_encoding="rgb8")
         rgb_image_np = np.asarray(rgb_image)
@@ -162,18 +171,13 @@ class UHOActivityDetector(Node):
         """
         log = self.get_logger()
 
-        # TODO: temp
-        if msg.num_detections < 5:
+        if msg.num_detections < self._topk:
+            log.warn(f"Received msg with less than {self._topk} detections.")
             return
 
         self._obj_dets.append(msg)
 
         if len(self._frames) >= self._frames_per_det:
-            # Check if the object detector has processed all of the frames for this frame set
-
-            # TODO: This is assuming all frames need a corresponding object detection message.
-            # This will not always be true. For example, every nth frame may have a detection
-            # message.
             frame_stamp_set = self._frame_stamps[:self._frames_per_det]
             ready_to_predict = False
 
@@ -186,29 +190,10 @@ class UHOActivityDetector(Node):
             elif msg.source_stamp.sec == frame_stamp_set[-1].sec:
                 if msg.source_stamp.nanosec >= frame_stamp_set[-1].nanosec:
                     #print(frame_stamp_set, msg.source_stamp.sec)
-                    ready_to_precict = True
+                    ready_to_predict = True
             else:
                 # Keep waiting
                 ready_to_predict = False
-
-            '''
-            for f in frame_stamp_set:
-                print(f, self._obj_det_stamps)
-
-                # Check
-                if f
-                try:
-                    index = self._obj_det_stamps.index(f)
-                    obj_det_indices.append(index)
-                except ValueError:
-                    all_stamps_matched = False
-                    break
-                #print(f, self._obj_det_stamps)
-                #if f not in self._obj_det_stamps:
-                # break
-
-            assert len(obj_det_indices) == self._frames_per_det
-            '''
 
             # Need to wait until the object detector has processed all of these frames
             if not ready_to_predict:
@@ -218,9 +203,6 @@ class UHOActivityDetector(Node):
             frame_set = self._frames[:self._frames_per_det]
             lhand_pose_set = self._hand_poses['lhand'][:self._frames_per_det]
             rhand_pose_set = self._hand_poses['rhand'][:self._frames_per_det]
-
-            # TODO - parameterize this
-            topk = 5
 
             aux_data = dict(
                 lhand=lhand_pose_set,
@@ -260,15 +242,13 @@ class UHOActivityDetector(Node):
                         # so keep it for later
                         continue
 
-                topk = min(topk, det.num_detections)
-
                 det_descriptors = (
                     torch.Tensor(det.descriptors).reshape((det.num_detections, det.descriptor_dim))
                 )
-                aux_data['dets'].append(det_descriptors[:topk])
+                aux_data['dets'].append(det_descriptors[:self._topk])
 
                 bboxes = [
-                    torch.Tensor((det.left[i], det.top[i], det.right[i], det.bottom[i])) for i in range(topk)
+                    torch.Tensor((det.left[i], det.top[i], det.right[i], det.bottom[i])) for i in range(self._topk)
                 ]
                 bboxes = torch.stack(bboxes)
 
@@ -276,14 +256,30 @@ class UHOActivityDetector(Node):
 
             # Check if we didn't get any detections in the time range of the frame set
             if len(aux_data["dets"]) == 0 or len(aux_data["bbox"]) == 0:
-                aux_data["dets"] = [torch.zeros((topk, 2048))]
-                aux_data["bbox"] = [torch.zeros((topk, 4))]
+                aux_data["dets"] = [torch.zeros((self._topk, msg.descriptor_dim))]
+                aux_data["bbox"] = [torch.zeros((self._topk, 4))]
 
             # Inference!
-            activities_detected = self._detector.forward(frame_set, aux_data)
+            activities_detected, labels = self._detector.forward(frame_set, aux_data)
 
-            log.info(f"Activities detected: {activities_detected} {activities_detected[0].shape}")
-            log.info(f"Activities detected: {activities_detected[1]}")
+            # Create and publish the ActivityDetection msg
+            activity_msg = ActivityDetection()
+
+            # This message time
+            activity_msg.header.stamp = self.get_clock().now().to_msg()
+
+            # Trace to the source
+            activity_msg.header.frame_id = "Activity detection"
+            activity_msg.source_stamp_start_frame = frame_stamp_set[0]
+            activity_msg.source_stamp_end_frame = frame_stamp_set[-1]
+
+            activity_msg.label_vec = labels
+            activity_msg.conf_vec = activities_detected[0].squeeze().tolist()
+
+            # Publish!
+            self._publisher.publish(activity_msg)
+            log.info(f"Activities detected: {activities_detected}")
+            log.info(f"Top activity detected: {activities_detected[1]}")
 
             # Clear out stored frames, aux_data, and timestamps
             self._frames = self._frames[self._frames_per_det:]

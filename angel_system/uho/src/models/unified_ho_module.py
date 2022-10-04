@@ -21,11 +21,13 @@ class UnifiedHOModule(torch.nn.Module):
         fcn: torch.nn.Module,
         temporal: torch.nn.Module,
         checkpoint: str,
+        labels_file: str,
         device: str = "cuda"
     ):
         super().__init__()
         self.fcn = fcn
         self.temporal = temporal
+        self.labels_file = labels_file
         self.device = device
 
         m = torch.load(checkpoint)
@@ -39,6 +41,11 @@ class UnifiedHOModule(torch.nn.Module):
                 transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
             ]
         )
+
+        self.labels = []
+        with open(self.labels_file, "r") as f:
+            for line in f:
+                self.labels.append(line.rstrip())
 
     def forward(self, frame_data, aux_data):
         """
@@ -167,4 +174,4 @@ class UnifiedHOModule(torch.nn.Module):
 
         out = self.temporal(data_dict)
 
-        return out
+        return out, self.labels
