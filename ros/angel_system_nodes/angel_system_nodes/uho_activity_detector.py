@@ -65,7 +65,7 @@ class UHOActivityDetector(Node):
         )
         self._model_checkpoint = (
             self.declare_parameter("model_checkpoint",
-                                   "/angel_workspace/model_files/epoch_090.ckpt")
+                                   "/angel_workspace/model_files/uho_epoch_090.ckpt")
             .get_parameter_value()
             .string_value
         )
@@ -179,20 +179,14 @@ class UHOActivityDetector(Node):
             # If the source stamp for this detection message is after or equal to
             # the last frame stamp in the current set, then we have all of the
             # detections and can move onto processing this set of frames.
-            if msg.source_stamp.sec > frame_stamp_set[-1].sec:
-                #print(frame_stamp_set, msg.source_stamp.sec)
+            msg_nsec = msg.source_stamp.sec * 10e9 + msg.source_stamp.nanosec
+            frm_nsec = frame_stamp_set[-1].sec * 10e9 + frame_stamp_set[-1].nanosec
+            if msg_nsec >= frm_nsec:
                 ready_to_predict = True
-            elif msg.source_stamp.sec == frame_stamp_set[-1].sec:
-                if msg.source_stamp.nanosec >= frame_stamp_set[-1].nanosec:
-                    #print(frame_stamp_set, msg.source_stamp.sec)
-                    ready_to_predict = True
-            else:
-                # Keep waiting
-                ready_to_predict = False
 
             # Need to wait until the object detector has processed all of these frames
             if not ready_to_predict:
-                log.info(f"Waiting for object detection results")
+                log.info(f"Waiting for more object detection results")
                 return
 
             frame_set = self._frames[:self._frames_per_det]
@@ -214,36 +208,43 @@ class UHOActivityDetector(Node):
                     log.info(f"no dets, det source: {det.source_stamp}")
                     continue
 
-                # Check this detection is within the range of time for the current
-                # frame set
-                if det.source_stamp.sec < frame_stamp_set[0].sec:
+                det_source_stamp_nsec = det.source_stamp.sec * 10e9 + det.source_stamp.nanosec
+                first_frm_nsec = frame_stamp_set[0].sec * 10e9 + frame_stamp_set[0].nanosec
+                last_frm_nsec = frame_stamp_set[-1].sec * 10e9 + frame_stamp_set[-1].nanosec
+
+                # Check that this detection is within the range of time
+                # for the current frame set
+                if det_source_stamp_nsec < first_frm_nsec:
                     # Detection is before the first frame in this set,
                     # so we can remove it
                     idxs_to_remove.append(idx)
                     continue
-                elif det.source_stamp.sec == frame_stamp_set[0].sec:
-                    if det.source_stamp.nanosec < frame_stamp_set[0].nanosec:
-                        # Detection is before the first frame in this set,
-                        # so we can remove it
-                        idxs_to_remove.append(idx)
-                        continue
-                elif det.source_stamp.sec > frame_stamp_set[-1].sec:
+                elif det_source_stamp_nsec > last_frm_nsec:
                     # Detection is after the last frame in this set,
                     # so keep it for later
                     continue
-                elif det.source_stamp.sec == frame_stamp_set[-1].sec:
-                    if det.source_stamp.nanosec > frame_stamp_set[-1].nanosec:
-                        # Detection is after the last frame in this set,
-                        # so keep it for later
-                        continue
+
+                # Get the topk detection confidences
+                det_confidences = (
+                    torch.Tensor(det.label_confidences)
+                    .reshape((det.num_detections, len(det.label_vec)))
+                )
+                topk, i = torch.topk(det_confidences.flatten(), self._topk)
+
+                ind_2d = np.array(np.unravel_index(i.numpy(), det_confidences.shape)).T
+                top_det_idx = ind_2d[:, 0]
 
                 det_descriptors = (
                     torch.Tensor(det.descriptors).reshape((det.num_detections, det.descriptor_dim))
                 )
-                aux_data['dets'].append(det_descriptors[:self._topk])
 
+                # Grab the descriptors corresponding to the top predictions
+                det_descriptors = det_descriptors[top_det_idx]
+                aux_data['dets'].append(det_descriptors)
+
+                # Grab the bboxes corresponding to the top predictions
                 bboxes = [
-                    torch.Tensor((det.left[i], det.top[i], det.right[i], det.bottom[i])) for i in range(self._topk)
+                    torch.Tensor((det.left[i], det.top[i], det.right[i], det.bottom[i])) for i in top_det_idx
                 ]
                 bboxes = torch.stack(bboxes)
 
@@ -297,11 +298,11 @@ class UHOActivityDetector(Node):
                       for m in msg.joints]
 
         # Rejecting joints not in OpenPose hand skeleton format
-        reject_joint_list = ['ThumbMetacarpalJoint',
+        reject_joint_list = {'ThumbMetacarpalJoint',
                             'IndexMetacarpal',
                             'MiddleMetacarpal',
                             'RingMetacarpal',
-                            'PinkyMetacarpal']
+                            'PinkyMetacarpal'}
         joint_pos = []
         for j in hand_joints:
             if j["joint"] not in reject_joint_list:
@@ -315,8 +316,7 @@ class UHOActivityDetector(Node):
             lhand = joint_pos
             rhand = np.zeros_like(joint_pos)
         else:
-            lhand = np.zeros_like(joint_pos)
-            rhand = np.zeros_like(joint_pos)
+            raise ValueError(f"Unexpected hand value. Got {msg.hand}")
 
         return lhand, rhand
 
