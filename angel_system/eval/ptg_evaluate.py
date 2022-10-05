@@ -95,6 +95,7 @@ def run_eval(args):
     # ============================
     metrics =  EvalMetrics(labels=labels, gt=gt, dets=detections, output_fn=f"{output_dir}/metrics.txt")
     metrics.detect_intersection_per_activity_label()
+    metrics.precision_recall_f1()
 
     log.info(f"Saved metrics to {output_dir}/metrics.txt")
     
@@ -119,7 +120,7 @@ def main():
     parser.add_argument(
         "--activity_gt",
         type=str,
-        default="data/ros_bags/labels_test_v1.2.feather",
+        default="data/ros_bags/Annotated_folding_filter/labels_test_v1.2.feather",
         help="Feather file containing the ground truth annotations in the PTG-LEARN format. \
             The expected filename format is \'labels_test_v<label version>.feather\'"
     )

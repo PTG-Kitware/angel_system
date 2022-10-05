@@ -5,7 +5,9 @@ import PIL
 from pathlib import Path
 import os
 from sklearn.metrics import precision_recall_curve, average_precision_score, PrecisionRecallDisplay
+import logging
 
+log = logging.getLogger("ptg_eval")
 
 class EvalVisualization:
     def __init__(self, labels, gt, dets, output_dir):
@@ -34,9 +36,11 @@ class EvalVisualization:
         """
         for i, row in self.labels.iterrows():
             label = row['class']
+            print(label)
 
             gt_ranges = self.gt.loc[self.gt['class'] == label]
             det_ranges = self.dets.loc[self.dets['class'] == label]
+
             if not gt_ranges.empty and not det_ranges.empty:
                 # ============================
                 # Setup figure

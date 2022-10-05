@@ -1,15 +1,16 @@
 import logging
-from sklearn.metrics import f1_score, precision_score, recall_score
+from sklearn.metrics import precision_recall_fscore_support
 
 
 log = logging.getLogger("ptg_eval")
 
 
 class EvalMetrics():
-    def __init__(self, labels, gt, dets, output_fn):
+    def __init__(self, labels, gt, dets, detect_intersection_thr=0.1, output_fn='metrics/txt'):
         self.labels = labels
         self.gt = gt
         self.dets = dets
+        self.detect_intersection_thr = detect_intersection_thr
         self.output_fn = output_fn
 
     def detect_intersection_per_activity_label(self):
@@ -79,6 +80,43 @@ class EvalMetrics():
         # Save to file
         with open(self.output_fn, "w") as f:
             f.write(f"detection intersection: {overall_detect_intersection}\n")
-            f.write(f"detection intersection Per Label:\n")
+            f.write(f"detection intersection per label:\n")
             for k, v in detect_intersection_per_label.items():
                 f.write(f"\t{k}: {v}\n")
+
+    def precision_recall_f1(self):
+        y_true = []
+        y_pred = []
+
+        # calulcating metrics based on detector frequency
+        time_ranges = self.dets[['start', 'end']].drop_duplicates()
+
+        for i, time in time_ranges.iterrows():
+            det_overlap = self.dets[(self.dets['start'] == time['start']) & (self.dets['end'] == time['end'])]
+            best_det = det_overlap.loc[det_overlap['conf'].idxmax()]
+
+            if best_det['detect_intersection'] > self.detect_intersection_thr:
+                gt_overlap = self.gt[(self.gt['end'] >= time['start']) & (time['end'] >= self.gt['end'])]
+
+                gt = gt_overlap.iloc[0]
+                y_true.append(self.labels.loc[self.labels['class'] == gt['class']].iloc[0]['id'])
+                y_pred.append(self.labels.loc[self.labels['class'] == best_det['class']].iloc[0]['id'])
+
+        labels = [row['id'] for i, row in self.labels.iterrows()]
+        label_names = [row['class'] for i, row in self.labels.iterrows()]
+        avg_precision, avg_recall, avg_fscore, _ = precision_recall_fscore_support(y_true, y_pred, labels=labels, average='weighted')
+        precision, recall, fscore, support = precision_recall_fscore_support(y_true, y_pred, labels=labels)
+
+        # ============================
+        # Save
+        # ============================
+        # Save to file
+        with open(self.output_fn, "a") as f:
+            f.write("\n")
+            for str_, avg_val, val in zip(['precision', 'recall', 'fscore'], [avg_precision, avg_recall, avg_fscore], [precision, recall, fscore]):
+                f.write(f"{str_}: {avg_val}\n")
+                f.write(f"{str_} per label: \n")
+                for l, v in zip(label_names, val):
+                    f.write(f"\t{l}: {v}\n")
+                f.write("\n")
+            
