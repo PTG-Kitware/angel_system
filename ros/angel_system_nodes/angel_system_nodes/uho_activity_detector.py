@@ -86,8 +86,8 @@ class UHOActivityDetector(Node):
         self.subscription_list.append(mf.Subscriber(self, HandJointPosesUpdate, self._hand_topic))
         self.time_sync = mf.ApproximateTimeSynchronizer(
             self.subscription_list,
-            1500, # TODO: queue size
-            10  # TODO: slop (delay msgs can be synchronized in seconds)
+            self._frames_per_det * 5, # queue size
+            5 / 60.0, # slop (hand msgs have rate of ~60hz per hand)
         )
 
         self.time_sync.registerCallback(self.multimodal_listener_callback)
@@ -97,7 +97,7 @@ class UHOActivityDetector(Node):
             ObjectDetection2dSet,
             self._obj_det_topic,
             self.obj_det_callback,
-            1000 # TODO: queue size
+            1
         )
 
         self._publisher = self.create_publisher(
@@ -153,10 +153,11 @@ class UHOActivityDetector(Node):
 
     def obj_det_callback(self, msg):
         """
-        Callback for the object detection set message. Once there is a object
-        detection message for each frame in the current set, the activity detector
-        model is called and a new activity detection message is published with
-        the current activity predictions.
+        Callback for the object detection set message. If there are enough frames
+        accumulated for the activity detector and there is an object detection
+        message received for the last frame in the frame set or after it,
+        the activity detector model is called and a new activity detection message
+        is published with the current activity predictions.
         """
         log = self.get_logger()
 
