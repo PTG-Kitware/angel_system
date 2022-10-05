@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+
+<link rel="stylesheet" href="stylesheets/layout.styl">
+
+<script type="text/javascript" src="http://static.robotwebtools.org/roslibjs/current/roslib.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.js"></script>
+
+</head>
+
+
+<body>
+  <div id="header">
+    <img src="static/Kitware Logo Stacked.png" alt="kitware"/>
+  </div> 
+  
+  <div id="blue-arrow" class="highlighted-body">
+    <div id="recipe">
+      <div class="highlighted-title">
+        <span class="icon-hex"></span>
+        <span class="text title-hex">Pour-over Coffee</span>
+      </div>
+      <div class="task-list">
+        <div class="task-line">
+          <span class="checkbox"><span class="checkmark"></span></span>
+          <span class="text body-text task">Measure 12 ounces of water in the liquid measuring cup</span>
+        </div>
+        <div class="task-line">
+          <span class="checkbox"><span class="checkmark"></span></span>
+          <span class="text body-text task">Pour the water from the liquid measuring cup into the electric kettle</span>
+        </div>
+        <div class="task-line">
+          <span class="checkbox"></span>
+          <span class="text body-text task">Place the folded filter into the dripper such that the the point of the quarter-circle rests in the center of the dripper
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div id="HL-live">
+      <img class="live-img" src="static/frame_00063_01658434941_944159031.png" alt="HoloLens2 live view">
+    </div>
+  </div>
+  
+  <div id="bottom-row">
+    <div id="activity">
+      <div class="highlighted-title">
+        <span class="icon-hex"></span>
+        <span class="text title-hex">Activity Classification</span>
+      </div>
+      
+    <canvas id="activity-conf"></canvas>
+    <script type="text/javascript" src="src/activity_conf.js"></script>
+
+    </div>
+
+    <div id="bottom-right">
+      <div id="status">
+        <div class="highlighted-title">
+          <span class="icon-hex"></span>
+          <span class="text title-hex">Status</span>
+        </div>
+
+        <p class="text body-text">Connection status: <span id="status-msg">N/A</span></p>
+        <p class="text body-text">Last /txt_msg received: <span id="msg"></span>N/A</p>
+        <script type="text/javascript" src="src/connection_status.js"></script>
+      </div>
+
+      <div id="errors">
+        <div class="highlighted-title">
+          <span class="icon-hex"></span>
+          <span class="text title-hex">Errors</span>
+        </div>
+      </div>
+
+      <div id="hmm">
+        <div class="highlighted-title">
+          <span class="icon-hex"></span>
+          <span class="text title-hex">HMM Monitor</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</body>
+
+</html>
