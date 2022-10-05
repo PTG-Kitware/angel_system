@@ -28,13 +28,13 @@ girder_file_downloads:
     #  dest: "{{ stage_dirs.build_itt_base }}/some_file.txt"
 
     # Two Stage label list text file.
-    - file_id: 62e3508bbddec9d0c438cb7a
-      sha512: df772b15614bf3f09b023adcd9450ebf33092e1749354387dfc43b01c8c570a6148d3ba110ab523b8ede1b016dc6755abeb9a764abd6b5533000841382e6c7d3
-      dest: "{{ stage_dirs.model_files }}/coffee_label_list.txt"
+    #- file_id: 62e3508bbddec9d0c438cb7a
+    #  sha512: df772b15614bf3f09b023adcd9450ebf33092e1749354387dfc43b01c8c570a6148d3ba110ab523b8ede1b016dc6755abeb9a764abd6b5533000841382e6c7d3
+    #  dest: "{{ stage_dirs.model_files }}/coffee_label_list.txt"
     # Two Stage (RULSTM) model weights checkpoint
-    - file_id: 62e80c63bddec9d0c45ef2bf
-      sha512: 9d50f3bd122815388108479755226f6770dcdb9f8af3b8dc99d94b1e89ea4aa5e08436437fe096ccf951cf282aa667824d7163ba4dfdc526c74bd8cf928d3905
-      dest: "{{ stage_dirs.model_files }}/two_stage_ros.ckpt"
+    #- file_id: 62e80c63bddec9d0c45ef2bf
+    #  sha512: 9d50f3bd122815388108479755226f6770dcdb9f8af3b8dc99d94b1e89ea4aa5e08436437fe096ccf951cf282aa667824d7163ba4dfdc526c74bd8cf928d3905
+    #  dest: "{{ stage_dirs.model_files }}/two_stage_ros.ckpt"
     # FasterRCNN label list text file
     - file_id: 6332f54b11dab814282085e9
       sha512: 2a635a859135f2360c0e02f58b9c9b78311ef07bb01cf6f5daac1c4ca92b827d7eeb5369362931e266c4b813ef472306803a4534d30c3f83712bea2b8d1cceb0
@@ -46,7 +46,7 @@ girder_file_downloads:
     # UHO model weights checkpoint
     - file_id: 633b095d11dab81428208933
       sha512: 643b1bd416f09b887f718c6e7347e7e7d4d9337025a1ad11c49a03c860b90a69168de85a2ff1f4a68c50960e0f7d70dbc63eac2de8f6ef6e11163f1218abff74
-      dest: "{{ stage_dirs.model_files }}/epoch_090.ckpt"
+      dest: "{{ stage_dirs.model_files }}/uho_epoch_090.ckpt"
     # UHO model label list text file.
     - file_id: 633c957011dab814282089ab
       sha512: 293ef83fbd745ba4a5882ab8d476c1c87747050223dd13dd50139dd07425a50ff265a986ea37fc91180be759eee4cbf3ae4b7f11e3050586a8e5bf1db2513136
