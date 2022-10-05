@@ -224,10 +224,9 @@ class UHOActivityDetector(Node):
                     torch.Tensor(det.label_confidences)
                     .reshape((det.num_detections, len(det.label_vec)))
                 )
-                topk, i = torch.topk(det_confidences.flatten(), self._topk)
 
-                ind_2d = np.array(np.unravel_index(i.numpy(), det_confidences.shape)).T
-                top_det_idx = ind_2d[:, 0]
+                det_max_confidences = det_confidences.max(axis=1).values
+                _, top_det_idx = torch.topk(det_max_confidences, self._topk)
 
                 det_descriptors = (
                     torch.Tensor(det.descriptors).reshape((det.num_detections, det.descriptor_dim))
@@ -294,10 +293,10 @@ class UHOActivityDetector(Node):
 
         # Rejecting joints not in OpenPose hand skeleton format
         reject_joint_list = {'ThumbMetacarpalJoint',
-                            'IndexMetacarpal',
-                            'MiddleMetacarpal',
-                            'RingMetacarpal',
-                            'PinkyMetacarpal'}
+                             'IndexMetacarpal',
+                             'MiddleMetacarpal',
+                             'RingMetacarpal',
+                             'PinkyMetacarpal'}
         joint_pos = []
         for j in hand_joints:
             if j["joint"] not in reject_joint_list:
