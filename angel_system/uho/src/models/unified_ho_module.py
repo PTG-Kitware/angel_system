@@ -31,7 +31,7 @@ class UnifiedHOModule(torch.nn.Module):
         self.device = device
 
         m = torch.load(checkpoint)
-        self.load_state_dict(m["state_dict"])
+        self.load_state_dict(m)
 
         # data transformations (Normalization values recommended by
         # torchvision model zoo)

@@ -1,9 +1,3 @@
-# TODO: This is added so that the the angel_system/uho/src folder
-# is found when torch attempts to load the saved model checkpoints.
-# Is there a better way to do this?
-import sys
-sys.path.append("angel_system/uho")
-
 from cv_bridge import CvBridge
 import cv2
 import message_filters as mf

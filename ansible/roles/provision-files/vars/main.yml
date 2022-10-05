@@ -45,7 +45,7 @@ girder_file_downloads:
       dest: "{{ stage_dirs.model_files }}/fasterrcnn_res101_vg.pth"
     # UHO model weights checkpoint
     - file_id: 633b095d11dab81428208933
-      sha512: 643b1bd416f09b887f718c6e7347e7e7d4d9337025a1ad11c49a03c860b90a69168de85a2ff1f4a68c50960e0f7d70dbc63eac2de8f6ef6e11163f1218abff74
+      sha512: 15aa06bcca0d775178adfbcda0426b983f72c14883b35b80e3114dba98e59840de2e54cf6620b0ddf96231ae378eed16ab1cb82b9a95545614543bec917ab81c
       dest: "{{ stage_dirs.model_files }}/uho_epoch_090.ckpt"
     # UHO model label list text file.
     - file_id: 633c957011dab814282089ab
