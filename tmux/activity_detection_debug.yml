@@ -53,9 +53,9 @@ tmux_options: -f <%= ENV["ANGEL_WORKSPACE_DIR"] %>/tmux/tmux.conf
 # attach: false
 
 windows:
-  # - datahub: ros2 run ros_tcp_endpoint default_server_endpoint --ros-args
-  #     -r __ns:=${ROS_NAMESPACE}
-  #     -p ROS_IP:=0.0.0.0
+  - datahub: ros2 run ros_tcp_endpoint default_server_endpoint --ros-args
+     -r __ns:=${ROS_NAMESPACE}
+     -p ROS_IP:=0.0.0.0
   - image_converter: ros2 run angel_datahub ImageConverter --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p ROS_IP:=0.0.0.0
@@ -76,23 +76,23 @@ windows:
       -p use_cuda:=True
       -p frames_per_det:=8.0
       -p detector_config:=${CONFIG_DIR}/two_stage_activity_det_config.json
-  # - task_monitor: ros2 run angel_system_nodes task_monitor --ros-args
-  #     -r __ns:=${ROS_NAMESPACE}
-  #     -p det_topic:=ActivityDetections
-  #     -p task_update_topic:=TaskUpdates
-  #     -p task_steps:=${CONFIG_DIR}/mit_ll_eval_one_coffee_recipe_steps.json
+  - task_monitor: ros2 run angel_system_nodes task_monitor --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p det_topic:=ActivityDetections
+      -p task_update_topic:=TaskUpdates
+      -p task_steps:=${CONFIG_DIR}/mit_ll_eval_one_coffee_recipe_steps.json
   # - detector: ros2 run angel_system_nodes object_detector --ros-args
   #     -r __ns:=${ROS_NAMESPACE}
   #     -p image_topic:=PVFramesRGB
   #     -p det_topic:=Detections
   #     -p use_cuda:=true
   #     -p detector_config:=${CONFIG_DIR}/default_object_det_config.json
-  # - spatial_mapper: ros2 run angel_system_nodes spatial_mapper --ros-args
-  #     -r __ns:=${ROS_NAMESPACE}
-  #     -p spatial_map_topic:=SpatialMapData
-  #     -p det_topic:=Detections
-  #     -p det_3d_topic:=ObjectDetections3d
-  #     -p headset_pose_topic:=HeadsetPoseData
+  - spatial_mapper: ros2 run angel_system_nodes spatial_mapper --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p spatial_map_topic:=SpatialMapData
+      -p det_topic:=Detections
+      -p det_3d_topic:=ObjectDetections3d
+      -p headset_pose_topic:=HeadsetPoseData
   - feedback_generator: ros2 run angel_system_nodes feedback_generator --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p activity_detector_topic:=ActivityDetections

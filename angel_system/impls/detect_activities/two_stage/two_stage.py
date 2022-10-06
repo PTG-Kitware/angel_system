@@ -2,8 +2,6 @@ import pdb
 
 import torch
 from torch import nn
-# from torchmetrics import MaxMetric
-# from torchmetrics.classification.accuracy import Accuracy
 
 from .spatial.fcn import SpatialFCNModule
 from .temporal.rulstm import RULSTM
@@ -23,12 +21,13 @@ class TwoStageModule(nn.Module):
 
          # FCN: input image (3, 1280, 720) -> Output feature from ResNext (2048)
         self.fcn = SpatialFCNModule('resnext')
-         # Temporal: (Dict) Input feature from ResNext (2048) + Aux_data ->
-         # Output (1, num_classes)
+        # Temporal: (Dict) Input feature from ResNext (2048) + Aux_data ->
+        # Output (1, num_classes)
         self.temporal = RULSTM(num_classes, hidden=128, dropout=0, depth=3)
-
         self.fcn.eval()
+        
         # Load checkpoint
+        # Expecting a state dict including only the temporal layer weights
         self.temporal.load_state_dict(torch.load(checkpoint))
         self.temporal.eval()
 
