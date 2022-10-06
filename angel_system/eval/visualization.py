@@ -17,6 +17,7 @@ class EvalVisualization:
         :param labels: Pandas df with columns id (int) and class (str)
         :param gt: Dict of activity start and end time ground truth values, organized by label keys
         :param dets: Dict of activity start and end time detections with confidence values, organized by label keys
+        :param detect_intersection_thr: detection intersection threshold in the range 0-1
         :param output_dir: Directory to write the plots to
         """
         self.output_dir = Path(os.path.join(output_dir, "plots/"))
@@ -106,8 +107,6 @@ class EvalVisualization:
     def plot_pr_curve(self):
         """
         Plot the PR curve for each label
-
-        :param detect_intersection_thr: detection intersection threshold
         """
         # ============================
         # Setup figure
@@ -162,7 +161,7 @@ class EvalVisualization:
         # ============================
         # Setup figure
         # ============================
-        fig = plt.figure(figsize=(8, 6))
+        fig = plt.figure(figsize=(16, 10))
         ax = fig.add_subplot(111)
 
         y_true = []
@@ -182,9 +181,10 @@ class EvalVisualization:
                 y_pred.append(self.labels.loc[self.labels['class'] == best_det['class']].iloc[0]['id'])
 
         labels = [row['id'] for i, row in self.labels.iterrows()]
+        display_labels = [row['class'] for i, row in self.labels.iterrows()]
 
         cm = confusion_matrix(y_true, y_pred, labels=labels)
-        cm_display = ConfusionMatrixDisplay(cm, display_labels=labels)
+        cm_display = ConfusionMatrixDisplay(cm, display_labels=display_labels)
         cm_display.plot(ax=ax)
 
         # ============================
