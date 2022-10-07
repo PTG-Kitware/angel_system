@@ -40,7 +40,8 @@
     </div>
 
     <div id="HL-live">
-      <img class="live-img" src="static/frame_00063_01658434941_944159031.png" alt="HoloLens2 live view">
+      <img id="hl-image" class="live-img" src="static/frame_00063_01658434941_944159031.png" alt="HoloLens2 live view">
+      <script type="text/javascript" src="src/hl_image.js"></script>
     </div>
   </div>
   
@@ -64,7 +65,6 @@
         </div>
 
         <p class="text body-text">Connection status: <span id="status-msg">N/A</span></p>
-        <p class="text body-text">Last /txt_msg received: <span id="msg"></span>N/A</p>
         <script type="text/javascript" src="src/connection_status.js"></script>
       </div>
 

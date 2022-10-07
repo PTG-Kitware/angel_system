@@ -17,7 +17,7 @@ root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 # Runs on project start, always
 # on_project_start: command
 on_project_start: |
-  export ROS_NAMESPACE=${ROS_NAMESPACE:-/angel}
+  export ROS_NAMESPACE=${ROS_NAMESPACE:-/debug}
   export HL2_IP=${HL2_IP:-192.168.1.101}
   export CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/src/angel_system_nodes/configs
 
@@ -60,6 +60,9 @@ windows:
       -r __ns:=${ROS_NAMESPACE}
       -p topic_input_images:=PVFramesNV12
       -p topic_output_images:=PVFramesRGB
+  - compress_image: ros2 run image_transport republish raw compressed --ros-args 
+       --remap in:=/debug/PVFramesRGB 
+       --remap out/compressed:=/debug/PVFramesRGB/compressed
   - activity_detector: ros2 run angel_system_nodes activity_detector --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p image_topic:=PVFramesRGB
@@ -95,5 +98,6 @@ windows:
   - rqt_2d_detections: rqt -s rqt_image_view/ImageView
       --args ${ROS_NAMESPACE}/PVFramesRGB
       --ros-args -p _image_transport:=raw
-  - demo_ui: echo "hello"
+  - demo_ui: ros2 launch src/angel_utils/demo_ui/launch/websocket.launch
+  - play bag: ros2 bag play src/rosbag2_2022_07_21-20_22_19_0.db3 --loop
   - debug: echo "hello"
