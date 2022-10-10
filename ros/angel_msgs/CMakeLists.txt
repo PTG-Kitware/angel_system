@@ -44,6 +44,7 @@ set( message_files
   msg/VisionBoundingBox3d.msg
   )
 set( service_files
+  srv/QueryActivityLabels.srv
   srv/QueryAllObjects3d.srv
   srv/QueryTaskGraph.srv
   srv/QueryImageSize.srv

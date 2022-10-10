@@ -11,6 +11,7 @@ from angel_msgs.msg import (
     HandJointPosesUpdate,
     ObjectDetection2dSet
 )
+from angel_msgs.srv import QueryActivityLabels
 from sensor_msgs.msg import Image
 
 from angel_system.uho.src.models.components.transformer import TemTRANSModule
@@ -49,6 +50,11 @@ class UHOActivityDetector(Node):
         )
         self._det_topic = (
             self.declare_parameter("det_topic", "ActivityDetections")
+            .get_parameter_value()
+            .string_value
+        )
+        self._label_srv_topic = (
+            self.declare_parameter("labels_service_topic", "QueryActivityLabels")
             .get_parameter_value()
             .string_value
         )
@@ -133,10 +139,23 @@ class UHOActivityDetector(Node):
         self._detector = self._detector.to(device=self._torch_device)
         log.info(f"UHO Detector initialized")
 
+        # Create service to provide model classification labels.
+        #
+        # self._detector.labels --> follows order as read from labels file, so
+        #                           will be deterministic as order here is tied
+        #                           to model output.
+        log.info("Creating activity label service ...")
+        self.srv_activity_labels = self.create_service(
+            QueryActivityLabels,
+            self._label_srv_topic,
+            self.srv_activity_labels_callback
+        )
+        log.info("Creating activity label service ... Done")
+
     def multimodal_listener_callback(self, image, hand_pose):
         """
         Callback function images + hand poses. Messages are synchronized with
-        with the ROS time synchronizer.
+        the ROS time synchronizer.
         """
         # Convert ROS img msg to CV2 image and add it to the frame stack
         rgb_image = BRIDGE.imgmsg_to_cv2(image, desired_encoding="rgb8")
@@ -313,6 +332,20 @@ class UHOActivityDetector(Node):
             raise ValueError(f"Unexpected hand value. Got {msg.hand}")
 
         return lhand, rhand
+
+    def srv_activity_labels_callback(self, request, response):
+        """
+        Serve the query for the loaded model's label array.
+
+        :param request: Expectedly empty request.
+        :param response: Response to populate
+        """
+        # This property follows the label order as read from labels file, so
+        # will be deterministic.
+        # This order is also specific to this model as it is tied to model
+        # output.
+        response.label_array = self._detector.labels
+        return response
 
 
 def main():

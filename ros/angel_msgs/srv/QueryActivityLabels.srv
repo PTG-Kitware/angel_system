@@ -1,0 +1,10 @@
+# Query from an activity detection and classification node the labels it
+# predicts.
+# Labels are provided in an array in a deterministic order such that the order
+# is maintained across multiple runs of the activity detector when
+# parameterized the same.
+# Due to this order determinism, the integer index of a specific label may be
+# considered it's integer ID.
+
+---
+string[] label_array
