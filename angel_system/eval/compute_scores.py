@@ -87,6 +87,7 @@ class EvalMetrics():
         time_ranges = self.dets[['start', 'end']].drop_duplicates()
 
         for i, time in time_ranges.iterrows():
+            # Determine best detection
             det_overlap = self.dets[(self.dets['start'] == time['start']) & (self.dets['end'] == time['end'])]
             best_det = det_overlap.loc[det_overlap['conf'].idxmax()]
 
@@ -95,6 +96,10 @@ class EvalMetrics():
 
                 gt = gt_overlap.iloc[0]
                 y_true.append(self.labels.loc[self.labels['class'] == gt['class']].iloc[0]['id'])
+                y_pred.append(self.labels.loc[self.labels['class'] == best_det['class']].iloc[0]['id'])
+            else:
+                # If there is no gt, gt is background
+                y_true.append(self.labels.loc[self.labels['class'] == "background"].iloc[0]['id'])
                 y_pred.append(self.labels.loc[self.labels['class'] == best_det['class']].iloc[0]['id'])
 
         labels = [row['id'] for i, row in self.labels.iterrows()]
