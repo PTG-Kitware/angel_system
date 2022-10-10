@@ -4,10 +4,10 @@ var ros = new ROSLIB.Ros({
   url : 'ws://localhost:9090'
 });
 
-// Create a listener for /angel/ActivityDetections
+// Create a listener for compressed images with boiunding boxes
 var image_listener = new ROSLIB.Topic({
     ros : ros,
-    name : workspace + '/PVFramesRGB/compressed',
+    name : workspace + '/pv_image_detections_2d/compressed',
     messageType : 'sensor_msgs/msg/CompressedImage' // find: $ ros2 topic type <>
 });
 

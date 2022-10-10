@@ -3,7 +3,7 @@
 # debug visualization of the detections in the image space.
 #
 
-name: 20220719-darpa-sitevisit-coffee-demo
+name: demo-ui
 root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 
 # Optional tmux socket
@@ -40,18 +40,6 @@ on_project_start: |
 # tmux_options: -f ~/.tmux.mac.conf
 tmux_options: -f <%= ENV["ANGEL_WORKSPACE_DIR"] %>/tmux/tmux.conf
 
-# Change the command to call tmux.  This can be used by derivatives/wrappers like byobu.
-# tmux_command: byobu
-
-# Specifies (by name or index) which window will be selected on project startup. If not set, the first window is used.
-# startup_window: editor
-
-# Specifies (by index) which pane of the specified window will be selected on project startup. If not set, the first pane is used.
-# startup_pane: 1
-
-# Controls whether the tmux session should be attached to automatically. Defaults to true.
-# attach: false
-
 windows:
   - datahub: ros2 run ros_tcp_endpoint default_server_endpoint --ros-args
       -r __ns:=${ROS_NAMESPACE}
@@ -60,9 +48,6 @@ windows:
       -r __ns:=${ROS_NAMESPACE}
       -p topic_input_images:=PVFramesNV12
       -p topic_output_images:=PVFramesRGB
-  - compress_image: ros2 run image_transport republish raw compressed --ros-args 
-       --remap in:=/debug/PVFramesRGB 
-       --remap out/compressed:=/debug/PVFramesRGB/compressed
   - activity_detector: ros2 run angel_system_nodes activity_detector --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p image_topic:=PVFramesRGB
@@ -76,12 +61,12 @@ windows:
       -p task_update_topic:=TaskUpdates
       -p task_steps:=${CONFIG_DIR}/mit_ll_eval_one_coffee_recipe_steps.json
       -p task_trigger_thresholds:=${CONFIG_DIR}/mit_ll_eval_one_coffee_recipe_thresholds.json
-#  - detector: ros2 run angel_system_nodes object_detector --ros-args
-#      -r __ns:=${ROS_NAMESPACE}
-#      -p image_topic:=PVFramesRGB
-#      -p det_topic:=Detections
-#      -p use_cuda:=true
-#      -p detector_config:=${CONFIG_DIR}/default_object_det_config.json
+  - detector: ros2 run angel_system_nodes object_detector --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p image_topic:=PVFramesRGB
+      -p det_topic:=detections
+      -p use_cuda:=true
+      -p detector_config:=${CONFIG_DIR}/default_object_det_config.json
 #  - spatial_mapper: ros2 run angel_system_nodes spatial_mapper --ros-args
 #      -r __ns:=${ROS_NAMESPACE}
 #      -p spatial_map_topic:=SpatialMapData
@@ -98,6 +83,15 @@ windows:
   - rqt_2d_detections: rqt -s rqt_image_view/ImageView
       --args ${ROS_NAMESPACE}/PVFramesRGB
       --ros-args -p _image_transport:=raw
+  - simple_2d_overlay: ros2 run angel_debug Simple2dDetectionOverlay --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p topic_input_images:=PVFramesRGB
+      -p topic_input_det_2d:=detections
+      -p topic_output_images:=pv_image_detections_2d
+  - compress_image: ros2 run image_transport republish raw compressed --ros-args 
+       -r __ns:=${ROS_NAMESPACE}
+       --remap in:=pv_image_detections_2d 
+       --remap out/compressed:=pv_image_detections_2d/compressed
   - demo_ui: ros2 launch src/angel_utils/demo_ui/launch/websocket.launch
   - play bag: ros2 bag play src/rosbag2_2022_07_21-20_22_19_0.db3 --loop
   - debug: echo "hello"
