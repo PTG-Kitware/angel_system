@@ -36,7 +36,6 @@ class EvalVisualization:
         """
         for i, row in self.labels.iterrows():
             label = row['class']
-            print(label)
 
             gt_ranges = self.gt.loc[self.gt['class'] == label]
             det_ranges = self.dets.loc[self.dets['class'] == label]

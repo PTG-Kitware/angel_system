@@ -77,12 +77,7 @@ class EvalMetrics():
         # ============================
         # Save
         # ============================
-        # Save to file
-        with open(self.output_fn, "w") as f:
-            f.write(f"detection intersection: {overall_detect_intersection}\n")
-            f.write(f"detection intersection per label:\n")
-            for k, v in detect_intersection_per_label.items():
-                f.write(f"\t{k}: {v}\n")
+        # TODO: write to plot
 
     def precision_recall_f1(self):
         y_true = []
