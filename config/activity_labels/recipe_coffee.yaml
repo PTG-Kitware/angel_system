@@ -1,0 +1,60 @@
+version: "1"
+labels:
+  # Item:
+  # - id: Integer identification number of the label.
+  # - label: Short human-readable semantic string to succinctly represent the
+  #          label.
+  - id: 0
+    label: "background"
+  - id: 1
+    label: "measure-12oz-water"
+  - id: 2
+    label: "pour-water-kettle"
+  - id: 3
+    label: "turn-kettle-on"
+  - id: 4
+    label: "place-dipper-on-mug"
+  - id: 5
+    label: "filter-fold-half"
+  - id: 6
+    label: "filter-fold-quarter"
+  - id: 7
+    label: "place-filter"
+  - id: 8
+    label: "spread-filter"
+  - id: 9
+    label: "scale-turn-on"
+  - id: 10
+    label: "place-bowl-on-scale"
+  - id: 11
+    label: "zero-scale"
+  - id: 12
+    label: "measure-coffee-beans"
+  - id: 13
+    label: "pour-coffee-grinder"
+  - id: 14
+    label: "set-timer-20"
+  - id: 15
+    label: "timer-turn-on"
+  - id: 16
+    label: "grind-beans"
+  - id: 17
+    label: "pour-beans-filter"
+  - id: 18
+    label: "thermometer-turn-on"
+  - id: 19
+    label: "thermometer-in-water"
+  - id: 20
+    label: "set-timer-30"
+  - id: 21
+    label: "pour-water-grounds-wet"
+  - id: 22
+    label: "pour-water-grounds-circular"
+  - id: 23
+    label: "water-drain"
+  - id: 24
+    label: "remove-dripper"
+  - id: 25
+    label: "remove-grounds"
+  - id: 26
+    label: "discard-grounds"
