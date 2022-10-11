@@ -1,0 +1,24 @@
+version: "1.0"
+activity_labels: "./config/activity_labels/recipe_coffee.yaml"
+steps:
+  - id: 0
+    activity_id: 1
+    description: >-
+      Pour 12 ounces of water into liquid measuring cup
+    median_duration_seconds: 10
+  - id: 1
+    activity_id: 2
+    description: >-
+      Pour the water from the liquid measuring cup into the electric kettle
+  - id: 2
+    activity_id: 3
+    description: >-
+      Turn on the kettle
+  - ...
+  # TODO: Add the rest of the steps, drawing from and replacing the file
+  #       `ros/angel_system_nodes/configs/mit_ll_eval_one_coffee_recipe_steps.json`
+hmm:
+  num_steps_can_jump_fwd: 1
+  num_steps_can_jump_bck: 2
+  class_mean_conf: 0.1
+  class_std_conf: 0.2
