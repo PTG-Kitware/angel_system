@@ -25,6 +25,8 @@ RUN apt-get -y update \
         ros-${ROS_DISTRO}-rmw-cyclonedds-cpp \
         ros-${ROS_DISTRO}-test-msgs \
         ros-${ROS_DISTRO}-pybind11-vendor \
+        # for demo-ui
+        ros-${ROS_DISTRO}-rosbridge-server \
         tmuxinator \
         # for python simpleaudio
         libasound2-dev \
@@ -37,6 +39,10 @@ RUN apt-get -y update \
         libx11-6 \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
+
+# For the Demo UI
+RUN source /opt/ros/${ROS_DISTRO}/setup.bash && \
+     apt-get dist-upgrade
 
 # Env vars for the nvidia-container-runtime.
 ENV NVIDIA_VISIBLE_DEVICES all
