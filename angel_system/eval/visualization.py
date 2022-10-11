@@ -26,7 +26,7 @@ class EvalVisualization:
     def plot_activities_confidence(self, custom_range=None, custom_range_color="red"):
         """
         Plot activity confidences over time
-       
+
         :param custom_range: Optional tuple indicating the starting and ending times of an additional
                              range to highlight in addition to the `gt_ranges`.
         :param custom_range_color: The color of the additional range to be drawn. If not set, we will
@@ -48,11 +48,13 @@ class EvalVisualization:
                 pad = 0.05 * total_time_delta
 
                 # Setup figure
-                fig = plt.figure(figsize=(14, 6))
+                fig = plt.figure(num=None, figsize=(18.3, 14), dpi=80)
+                plt.rc('font', **{'size': 35})
+                plt.rc('axes', linewidth=4)
                 ax = fig.add_subplot(111)
                 ax.set_title(f"Window Confidence over time for \"{label}\"\n in time range {min_start_time}:{max_end_time}")
-                ax.set_xlabel("Time (seconds)")
-                ax.set_ylabel("Confidence")
+                ax.set_xlabel("Time (seconds)", fontsize=50)
+                ax.set_ylabel("Confidence", fontsize=50)
                 ax.set_ylim(0, 1.05)
                 ax.set_xlim(0-pad, (max_end_time - min_start_time + pad))
 
@@ -63,7 +65,8 @@ class EvalVisualization:
                 xs_bars = [p - min_start_time for p in gt_ranges['start'].tolist()]
                 ys_gt_regions = [1] * gt_ranges.shape[0]
                 bar_widths = [p for p in gt_ranges['end']-gt_ranges['start']]
-                ax.bar(xs_bars, ys_gt_regions, width=bar_widths, align="edge", color="lightgreen", label="Ground truth")
+                ax.bar(xs_bars, ys_gt_regions, width=bar_widths, align="edge",
+                       color="lightgreen", label="Ground truth", linewidth=16)
 
                 if custom_range:
                     assert len(custom_range) == 2, "Assuming only two float values for custom range"
@@ -84,7 +87,7 @@ class EvalVisualization:
                 bar_widths2 = [p for p in det_ranges['end']-det_ranges['start']]
                 ax.bar(xs2_bars, ys2_det_regions, width=bar_widths2, align="edge", edgecolor="blue", fill=False, label="Detections")
 
-                ax.legend(loc="upper right")
+                ax.legend(loc="upper right", fontsize=40)
                 ax.plot
 
                 # ============================
@@ -96,7 +99,7 @@ class EvalVisualization:
                 fig.savefig(f"{str(activity_plot_dir)}/{label.replace(' ', '_')}.png")
             else:
                 log.warning(f"No detections/gt found for \"{label}\"")
-                
+
     def plot_pr_curve(self, detect_intersection_thr=0.1):
         """
         Plot the PR curve for each label
@@ -106,16 +109,18 @@ class EvalVisualization:
         # ============================
         # Setup figure
         # ============================
-        fig, ax = plt.subplots(figsize=(7, 8))
+        fig, ax = plt.figure(num=None, figsize=(18.3, 14), dpi=80)
+        plt.rc('font', **{'size': 22})
+        plt.rc('axes', linewidth=4)
 
         ax.set_xlim([0.0, 1.0])
         ax.set_ylim([0.0, 1.05])
         ax.set_title("Precision vs. Recall")
 
         colors = plt.cm.rainbow(np.linspace(0, 1, len(self.labels)))
-        
+
         # ============================
-        # Add F1 score 
+        # Add F1 score
         # ============================
         fscores = np.linspace(0.2, 0.8, num=4)
         for f_score in fscores:
@@ -125,7 +130,7 @@ class EvalVisualization:
             plt.annotate("f1={0:0.1f}".format(f_score), xy=(0.9, y[45] + 0.02))
 
         # ============================
-        # Get PR plot per class 
+        # Get PR plot per class
         # ============================
         for i, row in self.labels.iterrows():
             id = row['id']
