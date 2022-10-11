@@ -4,13 +4,6 @@ var ros = new ROSLIB.Ros({
   url : 'ws://localhost:9090'
 });
 
-// subscribe to QueryTaskGraph
-var query_task_graph = new ROSLIB.Service({
-  ros: ros,
-  name: workspace + '/query_task_graph',
-  serviceType: 'angel_msgs/srv/QueryTaskGraph'
-});
-
 var request = {};
 var chart;
 var xValues = [];
@@ -49,9 +42,6 @@ chart = new Chart(ctx, {
       display: false,
     }
   }
-});
-query_task_graph.callService(request, function(result){
-  
 });
 
 // Create a listener for activity detections

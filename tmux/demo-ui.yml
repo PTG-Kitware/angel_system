@@ -54,7 +54,7 @@ windows:
       -p frames_per_det:=32
   - detector: ros2 run angel_system_nodes object_detector_with_descriptors --ros-args
       -r __ns:=${ROS_NAMESPACE}
-      -p detection_threshold:=0.95
+      -p detection_threshold:=0.05
   # Nodes
   - task_monitor: ros2 run angel_system_nodes task_monitor --ros-args
       -r __ns:=${ROS_NAMESPACE}
@@ -75,9 +75,9 @@ windows:
       -p task_monitor_topic:=TaskUpdates
       -p arui_update_topic:=AruiUpdates
   # Display frames with relatively low latency (as opposed to device portal)
-  - rqt_2d_detections: rqt -s rqt_image_view/ImageView
-      --args ${ROS_NAMESPACE}/PVFramesRGB
-      --ros-args -p _image_transport:=raw
+  #- rqt_2d_detections: rqt -s rqt_image_view/ImageView
+  #    --args ${ROS_NAMESPACE}/PVFramesRGB
+  #    --ros-args -p _image_transport:=raw
   - simple_2d_overlay: ros2 run angel_debug Simple2dDetectionOverlay --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p topic_input_images:=PVFramesRGB
@@ -89,6 +89,3 @@ windows:
        --remap out/compressed:=pv_image_detections_2d/compressed
   # Demo UI
   - demo_ui: ros2 launch src/angel_utils/demo_ui/launch/websocket.launch
-  # Debugging
-  - play bag: ros2 bag play src/rosbag2_2022_07_21-20_22_19_0.db3 --loop
-  - debug: echo "hello"

@@ -16,7 +16,7 @@
       "Turn on the Kettle": {
         "level": 1,
         "index": 2,
-        "activity": "Turn on the kettle"
+        "activity": "Turn on the Kettle"
       }
     }
   },
@@ -40,17 +40,17 @@
       "Take the coffee filter and fold it in half to create a semi-circle": {
         "level": 1,
         "index": 0,
-        "activity": "Take the coffee filter and fold it in half to create a semi circle"
+        "activity": "Take the coffee filter and fold it in half to create a semi-circle"
       },
       "Fold the filter in half again to create a quarter-circle": {
         "level": 1,
         "index": 1,
-        "activity": "Fold the filter in half again to create a quarter circle"
+        "activity": "Fold the filter in half again to create a quarter-circle"
       },
       "Place the folded filter into the dripper such that the the point of the quarter-circle rests in the center of the dripper": {
         "level": 1,
         "index": 2,
-        "activity": "Place the folded filter into the dripper such that the point of the quarter circle rests in the center of the dripper"
+        "activity": "Place the folded filter into the dripper such that the the point of the quarter-circle rests in the center of the dripper"
       },
       "Spread the filter open to create a cone inside the dripper": {
         "level": 1,
@@ -67,22 +67,22 @@
       "Turn on the kitchen scale": {
         "level": 1,
         "index": 0,
-        "activity": "Turn on kitchen scale"
+        "activity": "Turn on the kitchen scale"
       },
       "Place a bowl on the scale": {
         "level": 1,
         "index": 1,
-        "activity": "Place bowl on scale"
+        "activity": "Place a bowl on the scale"
       },
       "Zero the scale": {
         "level": 1,
         "index": 2,
-        "activity": "Zero scale"
+        "activity": "Zero the scale"
       },
       "Add coffee beans to the bowl until the scale reads 25 grams": {
         "level": 1,
         "index": 3,
-        "activity": "Add coffee beans until scale reads 25 grams"
+        "activity": "Add coffee beans to the bowl until the scale reads 25 grams"
       },
       "Pour the measured coffee beans into the coffee grinder": {
         "level": 1,

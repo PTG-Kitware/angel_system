@@ -4,7 +4,7 @@ var ros = new ROSLIB.Ros({
   url : 'ws://localhost:9090'
 });
 
-// Create a listener for compressed images with boiunding boxes
+// Create a listener for compressed images with bounding boxes
 var image_listener = new ROSLIB.Topic({
     ros : ros,
     name : workspace + '/pv_image_detections_2d/compressed',
