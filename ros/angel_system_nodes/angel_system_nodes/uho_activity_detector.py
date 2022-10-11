@@ -16,6 +16,9 @@ from sensor_msgs.msg import Image
 from angel_system.uho.src.models.components.transformer import TemTRANSModule
 from angel_system.uho.src.models.components.unified_fcn import UnifiedFCNModule
 from angel_system.uho.src.models.unified_ho_module import UnifiedHOModule
+from angel_system.uho.src.data_helper import create_batch
+from angel_utils.conversion import get_hand_pose_from_msg
+from angel_utils.sync_msgs import get_frame_synced_hand_poses
 
 
 BRIDGE = CvBridge()
@@ -79,26 +82,29 @@ class UHOActivityDetector(Node):
         log.info(f"Checkpoint: {self._model_checkpoint}")
         log.info(f"Labels: {self._labels_file}")
 
-        self.subscription_list = []
-        # Image subscription
-        self.subscription_list.append(mf.Subscriber(self, Image, self._image_topic))
-        # Hand pose subscription
-        self.subscription_list.append(mf.Subscriber(self, HandJointPosesUpdate, self._hand_topic))
-        self.time_sync = mf.ApproximateTimeSynchronizer(
-            self.subscription_list,
-            self._frames_per_det * 5, # queue size
-            5 / 60.0, # slop (hand msgs have rate of ~60hz per hand)
+        # Image subscriber
+        self._image_subscription = self.create_subscription(
+            Image,
+            self._image_topic,
+            self.image_callback,
+            1
         )
-
-        self.time_sync.registerCallback(self.multimodal_listener_callback)
-
+        # Hand pose subscriber
+        self._hand_subscription = self.create_subscription(
+            HandJointPosesUpdate,
+            self._hand_topic,
+            self.hand_callback,
+            1
+        )
         # Object detections subscriber
         self._obj_det_subscriber = self.create_subscription(
             ObjectDetection2dSet,
             self._obj_det_topic,
             self.obj_det_callback,
-            1
+            10
         )
+
+        self._slop_ns = (5 / 60.0) * 1e9 # slop (hand msgs have rate of ~60hz per hand)
 
         self._publisher = self.create_publisher(
             ActivityDetection,
@@ -109,6 +115,10 @@ class UHOActivityDetector(Node):
         # Stores the data until we have enough to send to the detector
         self._frames = []
         self._hand_poses = dict(
+            lhand=[],
+            rhand=[],
+        )
+        self._hand_pose_stamps = dict(
             lhand=[],
             rhand=[],
         )
@@ -133,10 +143,21 @@ class UHOActivityDetector(Node):
         self._detector = self._detector.to(device=self._torch_device)
         log.info(f"UHO Detector initialized")
 
-    def multimodal_listener_callback(self, image, hand_pose):
+    def hand_callback(self, hand_pose):
         """
-        Callback function images + hand poses. Messages are synchronized with
-        with the ROS time synchronizer.
+        Callback function for hand poses. Messages are saved in the hand_poses list.
+        """
+        lhand, rhand = get_hand_pose_from_msg(hand_pose)
+        if hand_pose.hand == 'Right':
+            self._hand_poses['rhand'].append(rhand)
+            self._hand_pose_stamps['rhand'].append(hand_pose.header.stamp)
+        elif hand_pose.hand == 'Left':
+            self._hand_poses['lhand'].append(lhand)
+            self._hand_pose_stamps['lhand'].append(hand_pose.header.stamp)
+
+    def image_callback(self, image):
+        """
+        Callback function for images. Messages are saved in the images list.
         """
         # Convert ROS img msg to CV2 image and add it to the frame stack
         rgb_image = BRIDGE.imgmsg_to_cv2(image, desired_encoding="rgb8")
@@ -146,10 +167,6 @@ class UHOActivityDetector(Node):
 
         # Store the image timestamp
         self._frame_stamps.append(image.header.stamp)
-
-        lhand, rhand = self.get_hand_pose_from_msg(hand_pose)
-        self._hand_poses['lhand'].append(lhand)
-        self._hand_poses['rhand'].append(rhand)
 
     def obj_det_callback(self, msg):
         """
@@ -184,73 +201,53 @@ class UHOActivityDetector(Node):
                 log.info(f"Waiting for more object detection results")
                 return
 
+            # Get the frame synchronized hand poses for this set of frames
             frame_set = self._frames[:self._frames_per_det]
-            lhand_pose_set = self._hand_poses['lhand'][:self._frames_per_det]
-            rhand_pose_set = self._hand_poses['rhand'][:self._frames_per_det]
 
-            aux_data = dict(
-                lhand=lhand_pose_set,
-                rhand=rhand_pose_set,
-                dets=[],
-                bbox=[],
+            lhand_pose_set, rhand_pose_set = get_frame_synced_hand_poses(
+                frame_stamp_set,
+                self._hand_poses,
+                self._hand_pose_stamps,
+                self._slop_ns
             )
 
-            # Format the object detections into descriptors and bboxes
-            idxs_to_remove = []
+            # Get the object detections to use
+            first_frm_nsec = frame_stamp_set[0].sec * 10e9 + frame_stamp_set[0].nanosec
+            last_frm_nsec = frame_stamp_set[-1].sec * 10e9 + frame_stamp_set[-1].nanosec
+            obj_det_idxs_to_remove = []
+            obj_det_set = []
             for idx, det in enumerate(self._obj_dets):
-                #print(det.source_stamp, frame_stamp_set[0], frame_stamp_set[-1])
                 if det.num_detections == 0:
                     log.info(f"no dets, det source: {det.source_stamp}")
                     continue
 
                 det_source_stamp_nsec = det.source_stamp.sec * 10e9 + det.source_stamp.nanosec
-                first_frm_nsec = frame_stamp_set[0].sec * 10e9 + frame_stamp_set[0].nanosec
-                last_frm_nsec = frame_stamp_set[-1].sec * 10e9 + frame_stamp_set[-1].nanosec
 
                 # Check that this detection is within the range of time
                 # for the current frame set
                 if det_source_stamp_nsec < first_frm_nsec:
                     # Detection is before the first frame in this set,
                     # so we can remove it
-                    idxs_to_remove.append(idx)
+                    obj_det_idxs_to_remove.append(idx)
                     continue
                 elif det_source_stamp_nsec > last_frm_nsec:
                     # Detection is after the last frame in this set,
                     # so keep it for later
                     continue
 
-                # Get the topk detection confidences
-                det_confidences = (
-                    torch.Tensor(det.label_confidences)
-                    .reshape((det.num_detections, len(det.label_vec)))
-                )
+                obj_det_idxs_to_remove.append(idx)
+                obj_det_set.append(det)
 
-                det_max_confidences = det_confidences.max(axis=1).values
-                _, top_det_idx = torch.topk(det_max_confidences, self._topk)
-
-                det_descriptors = (
-                    torch.Tensor(det.descriptors).reshape((det.num_detections, det.descriptor_dim))
-                )
-
-                # Grab the descriptors corresponding to the top predictions
-                det_descriptors = det_descriptors[top_det_idx]
-                aux_data['dets'].append(det_descriptors)
-
-                # Grab the bboxes corresponding to the top predictions
-                bboxes = [
-                    torch.Tensor((det.left[i], det.top[i], det.right[i], det.bottom[i])) for i in top_det_idx
-                ]
-                bboxes = torch.stack(bboxes)
-
-                aux_data['bbox'].append(bboxes)
-
-            # Check if we didn't get any detections in the time range of the frame set
-            if len(aux_data["dets"]) == 0 or len(aux_data["bbox"]) == 0:
-                aux_data["dets"] = [torch.zeros((self._topk, msg.descriptor_dim))]
-                aux_data["bbox"] = [torch.zeros((self._topk, 4))]
+            frame_set_processed, aux_data = create_batch(
+                frame_set,
+                lhand_pose_set,
+                rhand_pose_set,
+                obj_det_set,
+                self._topk,
+            )
 
             # Inference!
-            activities_detected, labels = self._detector.forward(frame_set, aux_data)
+            activities_detected, labels = self._detector.forward(frame_set_processed, aux_data)
 
             # Create and publish the ActivityDetection msg
             activity_msg = ActivityDetection()
@@ -274,45 +271,26 @@ class UHOActivityDetector(Node):
             # Clear out stored frames, aux_data, and timestamps
             self._frames = self._frames[self._frames_per_det:]
             self._frame_stamps = self._frame_stamps[self._frames_per_det:]
-            self._hand_poses['lhand'] = self._hand_poses['lhand'][self._frames_per_det:]
-            self._hand_poses['rhand'] = self._hand_poses['rhand'][self._frames_per_det:]
 
-            for i in sorted(idxs_to_remove, reverse=True):
+            # Remove old hand poses
+            hands = self._hand_pose_stamps.keys()
+            last_frm_nsec = frame_stamp_set[-1].sec * 10e9 + frame_stamp_set[-1].nanosec
+            for h in hands:
+                hand_idxs_to_remove = []
+                for idx, stamp in enumerate(self._hand_pose_stamps[h]):
+                    h_nsec = stamp.sec * 10e9 + stamp.nanosec
+                    if h_nsec <= last_frm_nsec:
+                        # Hand pose is before or equal to the last frame
+                        # in the set of frames we just processed, so we can
+                        # remove it.
+                        hand_idxs_to_remove.append(idx)
+
+                for i in sorted(hand_idxs_to_remove, reverse=True):
+                    del self._hand_poses[h][i]
+                    del self._hand_pose_stamps[h][i]
+
+            for i in sorted(obj_det_idxs_to_remove, reverse=True):
                 del self._obj_dets[i]
-
-    def get_hand_pose_from_msg(self, msg):
-        """
-        Formats the hand pose information from the ROS hand pose message
-        into the format required by activity detector model.
-        """
-        hand_joints = [{"joint": m.joint,
-                        "position": [ m.pose.position.x,
-                                      m.pose.position.y,
-                                      m.pose.position.z]}
-                      for m in msg.joints]
-
-        # Rejecting joints not in OpenPose hand skeleton format
-        reject_joint_list = {'ThumbMetacarpalJoint',
-                             'IndexMetacarpal',
-                             'MiddleMetacarpal',
-                             'RingMetacarpal',
-                             'PinkyMetacarpal'}
-        joint_pos = []
-        for j in hand_joints:
-            if j["joint"] not in reject_joint_list:
-                joint_pos.append(j["position"])
-        joint_pos = np.array(joint_pos).flatten()
-
-        if msg.hand == 'Right':
-            rhand = joint_pos
-            lhand = np.zeros_like(joint_pos)
-        elif msg.hand == 'Left':
-            lhand = joint_pos
-            rhand = np.zeros_like(joint_pos)
-        else:
-            raise ValueError(f"Unexpected hand value. Got {msg.hand}")
-
-        return lhand, rhand
 
 
 def main():
