@@ -14,8 +14,6 @@ def create_batch(
     lhand_pose_set: List[np.array],
     rhand_pose_set: List[np.array],
     detection_set: List[ObjectDetection2dSet],
-    device: str,
-    fcn_transform: Callable,
     topk: int = 5,
 ):
     """
@@ -61,39 +59,4 @@ def create_batch(
         aux_data["dets"] = [torch.zeros((topk, msg.descriptor_dim))]
         aux_data["bbox"] = [torch.zeros((topk, 4))]
 
-    # Preprocess aux data
-    data_dict = {}
-
-    labels = {"l_hand": [], "r_hand": []}
-    labels["l_hand"] = torch.stack([torch.from_numpy(k) for k in aux_data["lhand"]]).to(device)
-    labels["l_hand"] = labels["l_hand"].unsqueeze(0)
-    labels["r_hand"] = torch.stack([torch.from_numpy(k) for k in aux_data["rhand"]]).to(device)
-    labels["r_hand"] = labels["r_hand"].unsqueeze(0)
-
-    data_dict["labels"] = labels
-
-    if len(aux_data["dets"]) == 0:
-        data_dict["dets"] = torch.empty((0, 2048)).to(device)
-    else:
-        data_dict["dets"] = torch.cat(aux_data["dets"]).to(device)
-        data_dict["dets"] = data_dict["dets"].reshape(
-            [1,
-             data_dict["dets"].shape[0],
-             data_dict["dets"].shape[1]]
-        )
-    if len(aux_data["bbox"]) == 0:
-        data_dict["bbox"] = torch.empty((0, 2048)).to(device)
-    else:
-        data_dict["bbox"] = torch.cat(aux_data["bbox"]).to(device)
-        data_dict["bbox"] = data_dict["bbox"].reshape(
-            [1,
-             data_dict["bbox"].shape[0],
-             data_dict["bbox"].shape[1]]
-        )
-
-    # Preprocess frames
-    frames = [fcn_transform(f) for f in frame_set]
-    frame_tensor = torch.stack(frames)
-    frame_tensor = frame_tensor.to(device=torch.device(device))
-
-    return frame_tensor, data_dict
+    return frame_set, aux_data

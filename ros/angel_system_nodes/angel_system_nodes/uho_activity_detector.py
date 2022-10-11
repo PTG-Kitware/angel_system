@@ -243,8 +243,6 @@ class UHOActivityDetector(Node):
                 lhand_pose_set,
                 rhand_pose_set,
                 obj_det_set,
-                self._torch_device,
-                self._detector.fcn_transform,
                 self._topk,
             )
 
