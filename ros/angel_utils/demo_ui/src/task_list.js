@@ -16,7 +16,6 @@ var user_level = 1;
 query_task_graph.callService(request, function(result){
   // Load title
   var task_title = result.task_title;
-  console.log(task_title);
   var title_container_block = document.getElementById('task_title');
   title_container_block.innerHTML = task_title;
 

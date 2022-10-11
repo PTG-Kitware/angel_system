@@ -46,7 +46,7 @@
   padding: 0 0 20px 0;
   position: relative;
 
-  margin-bottom: 10px;
+  margin-bottom: 5px;
 }
 .icon-hex {
   position: relative;
@@ -93,6 +93,7 @@
   left: 0;
   position: relative;
   display: flex;
+  max-height: 45%;
 
   clip-path: polygon(0% 0%, calc(100% - 226.0015px) 0%, 100% 50%, calc(100% - 226.0015px) 100%, 0% 100%);
 }
@@ -103,6 +104,8 @@
 #recipe { /* task list */
   padding: 10px;
   width: 50%;
+  max-height: 850px;
+  overflow: scroll;
 
   text-align: center;
 
@@ -111,6 +114,7 @@
 
 #task-list {
   text-align: left;
+  
 }
 .task-line {
   display: block;
@@ -120,7 +124,7 @@
 .task {
   font-size: clamp(1rem,1vw,1.8rem);
   font-weight: 300;
-  line-height: 1;
+  line-height: 0.5;
 
   color: white;
 }
@@ -208,6 +212,7 @@
 
 #activity {
   width: 50%;
+  max-height: 43%;
 
   text-align: center;
 

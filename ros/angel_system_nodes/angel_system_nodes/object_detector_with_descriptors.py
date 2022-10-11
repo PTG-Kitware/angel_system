@@ -67,6 +67,7 @@ class ObjectDetectorWithDescriptors(Node):
 
         log = self.get_logger()
         log.info(f"Image topic: {self._image_topic}")
+        log.info(f"Detection threshold: {self._detection_threshold}")
         log.info(f"Torch device? {self._torch_device}")
 
         self._model = None
