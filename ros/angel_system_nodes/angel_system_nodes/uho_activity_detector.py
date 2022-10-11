@@ -16,7 +16,7 @@ from sensor_msgs.msg import Image
 from angel_system.uho.src.models.components.transformer import TemTRANSModule
 from angel_system.uho.src.models.components.unified_fcn import UnifiedFCNModule
 from angel_system.uho.src.models.unified_ho_module import UnifiedHOModule
-from angel_system.uho.src.parse import create_batch
+from angel_system.uho.src.data_helper import create_batch
 from angel_utils.conversion import get_hand_pose_from_msg
 from angel_utils.sync_msgs import get_frame_synced_hand_poses
 
@@ -183,8 +183,6 @@ class UHOActivityDetector(Node):
             return
 
         self._obj_dets.append(msg)
-
-        print(len(self._obj_dets))
 
         if len(self._frames) >= self._frames_per_det:
             frame_stamp_set = self._frame_stamps[:self._frames_per_det]
