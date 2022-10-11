@@ -11,7 +11,7 @@ from typing import Tuple
 import cv2
 import numpy as np
 
-from angel_msgs.msg import ObjectDetection2dSet
+from angel_msgs.msg import HandJointPosesUpdate, ObjectDetection2dSet
 from smqtk_detection.utils.bbox import AxisAlignedBoundingBox
 
 
@@ -118,3 +118,38 @@ def convert_nv12_to_rgb(nv12_image: array.array,
     yuv_image = np.frombuffer(nv12_image, np.uint8).reshape(height*3//2, width)
     rgb_image = cv2.cvtColor(yuv_image, cv2.COLOR_YUV2BGR_NV12)
     return rgb_image
+
+
+def get_hand_pose_from_msg(msg: HandJointPosesUpdate) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Formats the hand pose information from the ROS hand pose message
+    into the format required by activity detector model.
+    """
+    hand_joints = [{"joint": m.joint,
+                    "position": [ m.pose.position.x,
+                                  m.pose.position.y,
+                                  m.pose.position.z]}
+                  for m in msg.joints]
+
+    # Rejecting joints not in OpenPose hand skeleton format
+    reject_joint_list = {'ThumbMetacarpalJoint',
+                         'IndexMetacarpal',
+                         'MiddleMetacarpal',
+                         'RingMetacarpal',
+                         'PinkyMetacarpal'}
+    joint_pos = []
+    for j in hand_joints:
+        if j["joint"] not in reject_joint_list:
+            joint_pos.append(j["position"])
+    joint_pos = np.array(joint_pos).flatten()
+
+    if msg.hand == 'Right':
+        rhand = joint_pos
+        lhand = np.zeros_like(joint_pos)
+    elif msg.hand == 'Left':
+        lhand = joint_pos
+        rhand = np.zeros_like(joint_pos)
+    else:
+        raise ValueError(f"Unexpected hand value. Got {msg.hand}")
+
+    return lhand, rhand
