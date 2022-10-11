@@ -63,3 +63,11 @@ task_update.subscribe(function(m) {
     empty_checkbox.appendChild(checkmark);
   }
 });
+
+// Done button
+function done() {
+  console.log("Done!");
+}
+
+var done_btn = document.getElementById("done-btn");
+done_btn.onclick = done;

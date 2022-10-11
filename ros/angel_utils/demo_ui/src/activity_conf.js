@@ -13,44 +13,45 @@ var query_task_graph = new ROSLIB.Service({
 
 var request = {};
 var chart;
-query_task_graph.callService(request, function(result){
-  var xValues = result.task_graph.task_steps;
-  var yValues = new Array(xValues.length).fill(0);
-  var barColors = "rgba(0, 104, 199, 1.0)";
+var xValues = [];
+var yValues = [];
+var barColors = "rgba(0, 104, 199, 1.0)";
 
-  var ctx = document.getElementById("activity-conf").getContext('2d');
+var ctx = document.getElementById("activity-conf").getContext('2d');
 
-  chart = new Chart(ctx, {
-    type: "bar",
-    data: {
-      labels: xValues,
-      datasets: [{
-        backgroundColor: barColors,
-        data: yValues
-      }]
+chart = new Chart(ctx, {
+  type: "bar",
+  data: {
+    labels: xValues,
+    datasets: [{
+      backgroundColor: barColors,
+      data: yValues
+    }]
+  },
+  options: {
+    scales: {
+        xAxes: [{
+          ticks: {
+              callback: function(t) {
+                return xValues.indexOf(t)
+              }
+          }
+        }],
+        yAxes: [{
+          ticks: {
+            beginAtZero: true,
+            max: 1
+          }
+        }]
     },
-    options: {
-      scales: {
-          xAxes: [{
-            ticks: {
-                callback: function(t) {
-                  return xValues.indexOf(t)
-                }
-            }
-          }],
-          yAxes: [{
-            ticks: {
-              beginAtZero: true,
-              max: 1
-            }
-          }]
-      },
-      legend: {display: false},
-      title: {
-        display: false,
-      }
+    legend: {display: false},
+    title: {
+      display: false,
     }
-  });
+  }
+});
+query_task_graph.callService(request, function(result){
+  
 });
 
 // Create a listener for activity detections
@@ -61,8 +62,13 @@ var activity_listener = new ROSLIB.Topic({
 });
 
 activity_listener.subscribe(function(m) {
-  // update chart
-  chart.data.labels = m.label_vec;
-  chart.data.datasets[0].data = m.conf_vec;
+  xValues = m.label_vec;
+  yValues = m.conf_vec;
+
+  chart.data.labels = xValues;
+  chart.data.datasets[0].data = yValues;
+
+  //chart.options.scales.xAxes[0]
+
   chart.update('none'); // don't animate
 });
