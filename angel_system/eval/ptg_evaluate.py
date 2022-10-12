@@ -104,6 +104,7 @@ def run_eval(args):
     vis = EvalVisualization(labels=labels, gt=gt, dets=detections, output_dir=output_dir)
     vis.plot_activities_confidence()
     vis.plot_pr_curve()
+    vis.plot_roc_curve()
     vis.plot_confusion_matrix()
 
     log.info(f"Saved plots to {output_dir}/plots/")
