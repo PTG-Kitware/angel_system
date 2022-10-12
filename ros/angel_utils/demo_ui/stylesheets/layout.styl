@@ -14,6 +14,23 @@
   --hex-right:  polygon(0 0, 100% 50%, 0 100%);
 }
 
+html,
+body {
+  height: 99%;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+}
+
+.content {
+  flex-grow: 1;
+}
+
+/* ------------ */
+/* TEXT         */
+/* ------------ */
 .text {
   font-family: "Roboto",sans-serif;
 }
@@ -69,6 +86,7 @@
   clip-path: polygon(0 0, calc(100% - 15px /*right top*/) 0, 100% 50%, calc(100% - 15px /*right bottom*/) 100%, 0 100%, 15px /* left*/ 50%);
   padding: 0 7rem 0 3rem;
   width: 450px;
+  max-width: 75%;
   
   font-size: clamp(1.75rem,3vw,2.25rem);
   font-weight: 550;
@@ -88,6 +106,7 @@
   
   padding: 10px;
   width: 99%;
+  height: 43%;
   background-color: var(--kit-blue);
 
   left: 0;
@@ -103,13 +122,14 @@
 /* ------------ */
 #recipe { /* task list */
   padding: 10px;
-  width: 50%;
-  max-height: 850px;
+  width: 43%;
+  max-width: 45vw;
+  
   overflow: scroll;
 
   text-align: center;
 
-  margin-left: 40px
+  margin-left: 40px;
 }
 
 #task-list {
@@ -186,12 +206,13 @@
   padding: 10px;
   margin-left: 10px;
   width: 41%
+  max-width: 45vw;
 }
 
 .live-img {
   float:left;
 
-  height: 850px;
+  height: 99%;
   width: auto; /* keep aspect ratio */
 }
 
@@ -204,6 +225,7 @@
   display: flex;
   margin-top: 10px;
   width: 99%;
+  max-height: 45vw;
 
   content: "";
 
