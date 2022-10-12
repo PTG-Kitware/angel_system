@@ -1,3 +1,14 @@
+from dataclasses import asdict
+from dataclasses import dataclass
+from typing import Callable
+from typing import Dict
+from typing import List
+from typing import Tuple
+
+import numpy as np
+import torch
+
+from angel_system.uho.src.data_helper import AuxData
 from angel_system.uho.src.models.components.transformer import TemTRANSModule
 from angel_system.uho.src.models.components.unified_fcn import UnifiedFCNModule
 from angel_system.uho.src.models.unified_ho_module import UnifiedHOModule
@@ -7,7 +18,7 @@ def get_uho_detector(
     checkpoint_path: str,
     labels_path: str,
     device: str,
-    net: str = "resnet", # Defaults from rulstm config
+    net: str = "resnext", # Defaults from rulstm config
     num_cpts: int = 21,
     obj_classes: int = 9,
     verb_classes: int = 12,
@@ -36,7 +47,7 @@ def get_uho_detector(
     detector: UnifiedHOModule = UnifiedHOModule(
         fcn=fcn,
         temporal=temporal,
-        checkpoint=checkpoint,
+        checkpoint=checkpoint_path,
         device=device,
         labels_file=labels_path
     )
@@ -46,7 +57,12 @@ def get_uho_detector(
 
 def predict(
     model: UnifiedHOModule,
-    frames,
-    aux_data
-) -> 
-    return model.forward(frames, aux_data)
+    frames: List[np.ndarray],
+    aux_data: AuxData
+) -> Tuple[Tuple[torch.Tensor, torch.Tensor], List[str]]:
+    """
+    Returns the result of the forward call for the UHO model.
+    """
+    # Convert aux_data class to dict as that is currently required
+    # by the UHO module transformer
+    return model.forward(frames, asdict(aux_data))
