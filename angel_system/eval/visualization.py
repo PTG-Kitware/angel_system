@@ -12,7 +12,6 @@ import logging
 
 log = logging.getLogger("ptg_eval")
 
-
 class EvalVisualization:
     def __init__(self, labels, gt, dets, detect_intersection_thr=0.1, output_dir=''):
         """
@@ -46,6 +45,7 @@ class EvalVisualization:
 
             gt_ranges = self.gt.loc[self.gt['class'] == label]
             det_ranges = self.dets.loc[self.dets['class'] == label]
+
             if not gt_ranges.empty and not det_ranges.empty:
                 # ============================
                 # Setup figure
