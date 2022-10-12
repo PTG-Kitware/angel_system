@@ -58,9 +58,27 @@ task_update.subscribe(function(m) {
   var empty_checkbox = document.getElementById(task_name);
 
   if(empty_checkbox != null){
-    var checkmark = document.createElement('span');
-    checkmark.className = "checkmark";
-    empty_checkbox.appendChild(checkmark);
+    var existing_check = empty_checkbox.querySelector("#checkmark");
+
+    if(existing_check == null){
+      // only add checkbox if it isn't there
+      var checkmark = document.createElement('span');
+      checkmark.className = "checkmark";
+      checkmark.id = "checkmark";
+      empty_checkbox.appendChild(checkmark);
+    }
+  }
+
+  // Remove checkmark from next step
+  var next_task_name = m.current_step;
+  var next_checkbox = document.getElementById(next_task_name);
+
+  if(next_checkbox != null){
+    var next_existing_check = next_checkbox.querySelector("#checkmark");
+
+    if(next_existing_check != null){
+      next_checkbox.removeChild(next_existing_check);
+    }
   }
 
   // Update colors in chart
