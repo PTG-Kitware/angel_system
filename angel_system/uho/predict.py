@@ -29,7 +29,8 @@ def get_uho_detector(
 ) -> UnifiedHOModule:
     """
     Instantiates and returns a UHO module with a two-stage UnifiedFCNModule
-    and a TemTRANSModule.
+    and a TemTRANSModule. The returned module should be used for evalation
+    only.
     """
     fcn = UnifiedFCNModule(
         net=net,
@@ -62,6 +63,14 @@ def predict(
 ) -> Tuple[Tuple[torch.Tensor, torch.Tensor], List[str]]:
     """
     Returns the result of the forward call for the UHO model.
+
+    Returns:
+        A tuple consisting of two elements:
+            0: Detection results: A tuple consisting of a [1 x n_classes] tensor
+               representing the detector's confidence for each class and a tensor
+               containing the index of the max confidence in the confidence tensor.
+            1: A list of length n_classes for mapping the detector confidence
+               indices to class strings.
     """
     # Convert aux_data class to dict as that is currently required
     # by the UHO module transformer

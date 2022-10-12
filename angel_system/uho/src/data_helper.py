@@ -17,6 +17,8 @@ class AuxData:
     """
     Class for representing the aux data dictionary required by the UHO module.
 
+    It is expected that all list attributes are of the same length.
+
     Attributes:
         lhand: List of np.ndarrays of size (63,) representing the 63 joint poses
             of the left hand.
