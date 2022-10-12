@@ -8,11 +8,25 @@ from typing import Iterable
 from typing import List
 from typing import Tuple
 
+from builtin_interfaces.msg import Time
 import cv2
 import numpy as np
 
 from angel_msgs.msg import HandJointPosesUpdate, ObjectDetection2dSet
 from smqtk_detection.utils.bbox import AxisAlignedBoundingBox
+
+
+SEC_TO_NANO = int(1e9)
+
+
+def time_to_int(time_msg: Time) -> int:
+    """
+    Convert the given time message into an integer representing nanoseconds,
+    which is easily comparible and index-able.
+    :param time_msg:
+    :return: Integer nanoseconds
+    """
+    return (time_msg.sec * SEC_TO_NANO) + time_msg.nanosec
 
 
 def from_detect_image_objects_result(

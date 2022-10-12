@@ -55,6 +55,11 @@ class UHOActivityDetector(Node):
             .get_parameter_value()
             .string_value
         )
+        self._min_time_topic = (
+            self.declare_parameter("min_time_topic", "ObjDetMinTime")
+            .get_parameter_value()
+            .string_value
+        )
         self._frames_per_det = (
             self.declare_parameter("frames_per_det", 32)
             .get_parameter_value()
@@ -72,6 +77,13 @@ class UHOActivityDetector(Node):
             .get_parameter_value()
             .string_value
         )
+        # Model specific top-K parameter.
+        self._topk = (
+            self.declare_parameter("top_k", 5)
+            .get_parameter_value()
+            .integer_value
+        )
+        self._slop_ns = (5 / 60.0) * 1e9 # slop (hand msgs have rate of ~60hz per hand)
 
         log = self.get_logger()
         log.info(f"Image topic: {self._image_topic}")
@@ -82,21 +94,24 @@ class UHOActivityDetector(Node):
         log.info(f"Checkpoint: {self._model_checkpoint}")
         log.info(f"Labels: {self._labels_file}")
 
-        # Image subscriber
+        # Subscribers for input data channels.
+        # These will collect on their own threads, adding to buffers from
+        # activity classification will draw from.
+        # - Image data
         self._image_subscription = self.create_subscription(
             Image,
             self._image_topic,
             self.image_callback,
             1
         )
-        # Hand pose subscriber
+        # - Hand pose
         self._hand_subscription = self.create_subscription(
             HandJointPosesUpdate,
             self._hand_topic,
             self.hand_callback,
             1
         )
-        # Object detections subscriber
+        # - Object detections
         self._obj_det_subscriber = self.create_subscription(
             ObjectDetection2dSet,
             self._obj_det_topic,
@@ -104,9 +119,14 @@ class UHOActivityDetector(Node):
             10
         )
 
-        self._slop_ns = (5 / 60.0) * 1e9 # slop (hand msgs have rate of ~60hz per hand)
-
-        self._publisher = self.create_publisher(
+        # Channel over which we communicate to the object detector a timestamp
+        # before which to skip processing/publication.
+        self._min_time_publisher = self.create_publisher(
+            Time,
+            self._min_time_topic,
+            1
+        )
+        self._activity_publisher = self.create_publisher(
             ActivityDetection,
             self._det_topic,
             1
@@ -124,9 +144,6 @@ class UHOActivityDetector(Node):
         )
         self._frame_stamps = []
         self._obj_dets = []
-
-        # TODO - parameterize this?
-        self._topk = 5
 
         # Instantiate the activity detector models
         fcn = UnifiedFCNModule(net="resnext", num_cpts=21, obj_classes=9, verb_classes=12)
@@ -179,7 +196,8 @@ class UHOActivityDetector(Node):
         log = self.get_logger()
 
         if msg.num_detections < self._topk:
-            log.warn(f"Received msg with less than {self._topk} detections.")
+            log.warn(f"Received msg with less than {self._topk} detections. "
+                     f"Skipping.")
             return
 
         self._obj_dets.append(msg)
@@ -264,7 +282,7 @@ class UHOActivityDetector(Node):
             activity_msg.conf_vec = activities_detected[0].squeeze().tolist()
 
             # Publish!
-            self._publisher.publish(activity_msg)
+            self._activity_publisher.publish(activity_msg)
             log.info(f"Activities detected: {activities_detected}")
             log.info(f"Top activity detected: {activities_detected[1]}")
 
