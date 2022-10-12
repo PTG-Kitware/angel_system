@@ -37,3 +37,10 @@ float32[] bottom
 # This is a flattened 2D row-major matrix with shape:
 #   [num_detections, len(label_vec)]
 float64[] label_confidences
+
+# Vector length of each descriptor.
+int32 descriptor_dim
+
+# Flattened descriptor vector. The length of this list should be equal to
+# num_detections * descriptor_dims.
+float64[] descriptors

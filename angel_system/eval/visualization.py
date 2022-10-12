@@ -4,17 +4,21 @@ import numpy as np
 import PIL
 from pathlib import Path
 import os
-from sklearn.metrics import precision_recall_curve, average_precision_score, PrecisionRecallDisplay
+
+from sklearn.metrics import PrecisionRecallDisplay, roc_curve, auc, confusion_matrix, ConfusionMatrixDisplay
+
 import logging
+
 
 log = logging.getLogger("ptg_eval")
 
 class EvalVisualization:
-    def __init__(self, labels, gt, dets, output_dir):
+    def __init__(self, labels, gt, dets, detect_intersection_thr=0.1, output_dir=''):
         """
         :param labels: Pandas df with columns id (int) and class (str)
         :param gt: Dict of activity start and end time ground truth values, organized by label keys
         :param dets: Dict of activity start and end time detections with confidence values, organized by label keys
+        :param detect_intersection_thr: detection intersection threshold in the range 0-1
         :param output_dir: Directory to write the plots to
         """
         self.output_dir = Path(os.path.join(output_dir, "plots/"))
@@ -24,6 +28,8 @@ class EvalVisualization:
         self.labels = labels
         self.gt = gt
         self.dets = dets
+
+        self.detect_intersection_thr = detect_intersection_thr
 
     def plot_activities_confidence(self, custom_range=None, custom_range_color="red"):
         """
@@ -99,21 +105,22 @@ class EvalVisualization:
                 fig.savefig(f"{str(activity_plot_dir)}/{label.replace(' ', '_')}.png")
             else:
                 log.warning(f"No detections/gt found for \"{label}\"")
-                
-    def plot_pr_curve(self, detect_intersection_thr=0.1):
+
+    def plot_pr_curve(self):
         """
         Plot the PR curve for each label
-
-        :param detect_intersection_thr: detection intersection threshold
         """
         # ============================
         # Setup figure
         # ============================
-        fig, ax = plt.subplots(figsize=(7, 8))
+        all_fig, all_ax = plt.subplots(figsize=(7, 8))
 
-        ax.set_xlim([0.0, 1.0])
-        ax.set_ylim([0.0, 1.05])
-        ax.set_title("Precision vs. Recall")
+        all_ax.set_xlim([0.0, 1.0])
+        all_ax.set_ylim([0.0, 1.05])
+        all_ax.set_title("Precision vs. Recall")
+
+        pr_plot_dir = Path(os.path.join(self.output_dir, "pr"))
+        pr_plot_dir.mkdir(parents=True, exist_ok=True)
 
         colors = plt.cm.rainbow(np.linspace(0, 1, len(self.labels)))
         
@@ -126,11 +133,104 @@ class EvalVisualization:
             y = f_score * x / (2 * x - f_score)
             (l,) = plt.plot(x[y >= 0], y[y >= 0], color="gray", alpha=0.2)
             plt.annotate("f1={0:0.1f}".format(f_score), xy=(0.9, y[45] + 0.02))
-
+    
         # ============================
         # Get PR plot per class 
         # ============================
         for i, row in self.labels.iterrows():
+            # ============================
+            # Setup figure
+            # ============================
+            fig, ax = plt.subplots(figsize=(7, 8))
+
+            ax.set_xlim([0.0, 1.0])
+            ax.set_ylim([0.0, 1.05])
+            ax.set_title("Precision vs. Recall")
+            
+            # ============================
+            # Add F1 score 
+            # ============================
+            fscores = np.linspace(0.2, 0.8, num=4)
+            for f_score in fscores:
+                x = np.linspace(0.001, 1)
+                y = f_score * x / (2 * x - f_score)
+                (l,) = plt.plot(x[y >= 0], y[y >= 0], color="gray", alpha=0.2)
+                plt.annotate("f1={0:0.1f}".format(f_score), xy=(0.9, y[45] + 0.02))
+
+            id = row['id']
+            label = row['class']
+
+            det_ranges = self.dets.loc[self.dets['class'] == label]
+
+            truth = [1 if det['detect_intersection'] > self.detect_intersection_thr else 0 for i, det in det_ranges.iterrows()]
+            pred = [det['conf'] for i, det in det_ranges.iterrows()]
+
+            PrecisionRecallDisplay.from_predictions(truth, pred).plot(ax=ax, name=label, color=colors[i])
+            PrecisionRecallDisplay.from_predictions(truth, pred).plot(ax=all_ax, name=label, color=colors[i])
+
+            # ============================
+            # Save
+            # ============================
+            # Add legend and f1 curves to plot
+            handles, labels = ax.get_legend_handles_labels()
+            handles.extend([l])
+            labels.extend(["iso-f1 curves"])
+            ax.legend(handles=handles, labels=labels, loc="best")
+
+            ax.set_xlabel("Recall")
+            ax.set_ylabel("Precision")
+
+            fig.savefig(f"{pr_plot_dir}/{label.replace(' ', '_')}.png")
+
+        # ============================
+        # Save
+        # ============================
+        # Add legend and f1 curves to plot
+        handles, labels = all_ax.get_legend_handles_labels()
+        handles.extend([l])
+        labels.extend(["iso-f1 curves"])
+        all_ax.legend(handles=handles, labels=labels, loc="best")
+
+        all_ax.set_xlabel("Recall")
+        all_ax.set_ylabel("Precision")
+
+        all_fig.savefig(f"{pr_plot_dir}/PR.png")
+
+    def plot_roc_curve(self, detect_intersection_thr=0.1):
+        colors = plt.cm.rainbow(np.linspace(0, 1, len(self.labels)))
+
+        roc_plot_dir = Path(os.path.join(self.output_dir, "roc"))
+        roc_plot_dir.mkdir(parents=True, exist_ok=True)
+
+        # ============================
+        # Setup figure
+        # ============================
+        av_fig, av_ax = plt.subplots(figsize=(7, 8))
+
+        av_ax.set_xlim([0.0, 1.0])
+        av_ax.set_ylim([0.0, 1.05])
+        av_ax.set_title("Receiver Operating Characteristic (ROC)")
+        av_ax.set_xlabel("False Positive Rate")
+        av_ax.set_ylabel("True Positive Rate")
+
+        # ============================
+        # Get ROC and AUC per class 
+        # ============================
+        fpr = dict()
+        tpr = dict()
+        roc_auc = dict()
+        for i, row in self.labels.iterrows():
+            # ============================
+            # Setup figure
+            # ============================
+            fig, ax = plt.subplots(figsize=(7, 8))
+
+            ax.set_xlim([0.0, 1.0])
+            ax.set_ylim([0.0, 1.05])
+            ax.set_title("Receiver Operating Characteristic (ROC)")
+            ax.set_xlabel("False Positive Rate")
+            ax.set_ylabel("True Positive Rate")
+
             id = row['id']
             label = row['class']
 
@@ -139,18 +239,87 @@ class EvalVisualization:
             truth = [1 if det['detect_intersection'] > detect_intersection_thr else 0 for i, det in det_ranges.iterrows()]
             pred = [det['conf'] for i, det in det_ranges.iterrows()]
 
-            PrecisionRecallDisplay.from_predictions(truth, pred).plot(ax=ax, name=f"class {id}", color=colors[i])
+            fpr[i], tpr[i], _ = roc_curve(truth, pred)
+            roc_auc[i] = auc(fpr[i], tpr[i])
 
+            ax.plot(fpr[i], tpr[i], color=colors[i], lw=2,
+                    label=label + " (area = {0:0.2f})".format(roc_auc[i]))
+            av_ax.plot(fpr[i], tpr[i], color=colors[i], lw=2,
+                    label=label + " (area = {0:0.2f})".format(roc_auc[i]))
+
+            # ============================
+            # Save
+            # ============================
+            leg = av_ax.legend(loc="best")
+            
+            fig.savefig(f"{roc_plot_dir}/{label.replace(' ', '_')}.png")
+
+        # ============================
+        # Plot average values
+        # ============================
+        n_classes = self.labels.shape[0]
+
+        # First aggregate all false positive rates
+        all_fpr = np.unique(np.concatenate([fpr[i] for i in range(n_classes)]))
+
+        # Then interpolate all ROC curves at this points
+        mean_tpr = np.zeros_like(all_fpr)
+        for i in range(n_classes):
+            mean_tpr += np.interp(all_fpr, fpr[i], tpr[i])
+
+        # Finally average it and compute AUC
+        mean_tpr /= n_classes
+
+        fpr["macro"] = all_fpr
+        tpr["macro"] = mean_tpr
+        roc_auc["macro"] = auc(fpr["macro"], tpr["macro"])
+
+        av_ax.plot(
+            fpr["macro"],
+            tpr["macro"],
+            label="macro-average ROC curve (area = {0:0.2f})".format(roc_auc["macro"]),
+            color="navy",
+            linestyle=":",
+            linewidth=4,
+        )
+
+        plt.legend(loc="best")
+        
+        av_fig.savefig(f"{roc_plot_dir}/ROC_macro_average.png")
+
+    def plot_confusion_matrix(self):
+        # ============================
+        # Setup figure
+        # ============================
+        fig = plt.figure(figsize=(16, 10))
+        ax = fig.add_subplot(111)
+
+        y_true = []
+        y_pred = []
+
+        # calulcating metrics based on detector frequency
+        time_ranges = self.dets[['start', 'end']].drop_duplicates()
+        
+        for i, time in time_ranges.iterrows():
+            det_overlap = self.dets[(self.dets['start'] == time['start']) & (self.dets['end'] == time['end'])]
+            best_det = det_overlap.loc[det_overlap['conf'].idxmax()]
+
+            if best_det['detect_intersection'] > self.detect_intersection_thr:
+                gt_overlap = self.gt[(self.gt['end'] >= time['start']) & (time['end'] >= self.gt['end'])].iloc[0]
+
+                y_true.append(self.labels.loc[self.labels['class'] == gt_overlap['class']].iloc[0]['id'])
+                y_pred.append(self.labels.loc[self.labels['class'] == best_det['class']].iloc[0]['id'])
+
+        labels = [row['id'] for i, row in self.labels.iterrows()]
+        display_labels = [row['class'] for i, row in self.labels.iterrows()]
+
+        cm = confusion_matrix(y_true, y_pred, labels=labels)
+        cm_display = ConfusionMatrixDisplay(cm, display_labels=display_labels)
+        cm_display.plot(ax=ax)
+        
         # ============================
         # Save
         # ============================
-        # Add legend and f1 curves to plot
-        handles, labels = ax.get_legend_handles_labels()
-        handles.extend([l])
-        labels.extend(["iso-f1 curves"])
-        ax.legend(handles=handles, labels=labels, loc="best")
 
-        ax.set_xlabel("Recall")
-        ax.set_ylabel("Precision")
-
-        fig.savefig(f"{self.output_dir}/PR.png")
+        fig.savefig(f"{self.output_dir}/confusion.png")
+        

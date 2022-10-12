@@ -4,6 +4,7 @@
 /.workspace-shell-dev/
 /.container_xauth
 /model_files
+/ros_bags
 
 # This .gitignore file should be placed at the root of your Unity project directory
 #

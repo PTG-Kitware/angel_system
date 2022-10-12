@@ -28,13 +28,29 @@ girder_file_downloads:
     #  dest: "{{ stage_dirs.build_itt_base }}/some_file.txt"
 
     # Two Stage label list text file.
-    - file_id: 62e3508bbddec9d0c438cb7a
-      sha512: df772b15614bf3f09b023adcd9450ebf33092e1749354387dfc43b01c8c570a6148d3ba110ab523b8ede1b016dc6755abeb9a764abd6b5533000841382e6c7d3
-      dest: "{{ stage_dirs.model_files }}/coffee_label_list.txt"
+    #- file_id: 62e3508bbddec9d0c438cb7a
+    #  sha512: df772b15614bf3f09b023adcd9450ebf33092e1749354387dfc43b01c8c570a6148d3ba110ab523b8ede1b016dc6755abeb9a764abd6b5533000841382e6c7d3
+    #  dest: "{{ stage_dirs.model_files }}/coffee_label_list.txt"
     # Two Stage (RULSTM) model weights checkpoint
-    - file_id: 62e80c63bddec9d0c45ef2bf
-      sha512: 9d50f3bd122815388108479755226f6770dcdb9f8af3b8dc99d94b1e89ea4aa5e08436437fe096ccf951cf282aa667824d7163ba4dfdc526c74bd8cf928d3905
-      dest: "{{ stage_dirs.model_files }}/two_stage_ros.ckpt"
+    #- file_id: 62e80c63bddec9d0c45ef2bf
+    #  sha512: 9d50f3bd122815388108479755226f6770dcdb9f8af3b8dc99d94b1e89ea4aa5e08436437fe096ccf951cf282aa667824d7163ba4dfdc526c74bd8cf928d3905
+    #  dest: "{{ stage_dirs.model_files }}/two_stage_ros.ckpt"
+    # FasterRCNN label list text file
+    - file_id: 6332f54b11dab814282085e9
+      sha512: 2a635a859135f2360c0e02f58b9c9b78311ef07bb01cf6f5daac1c4ca92b827d7eeb5369362931e266c4b813ef472306803a4534d30c3f83712bea2b8d1cceb0
+      dest: "{{ stage_dirs.model_files }}/fasterrcnn_label_list.txt"
+    # FasterRCNN model weights checkpoint
+    - file_id: 6332f52a11dab814282085e6
+      sha512: 73529a1c238c20417bc6197035b4307a8afb3884ed24bc5938c92ca4d42e8f0531ae9582809da9512b198ad88d64113fd557692ac0933da24d7433983eb4f0ad
+      dest: "{{ stage_dirs.model_files }}/fasterrcnn_res101_vg.pth"
+    # UHO model weights checkpoint
+    - file_id: 633b095d11dab81428208933
+      sha512: 15aa06bcca0d775178adfbcda0426b983f72c14883b35b80e3114dba98e59840de2e54cf6620b0ddf96231ae378eed16ab1cb82b9a95545614543bec917ab81c
+      dest: "{{ stage_dirs.model_files }}/uho_epoch_090.ckpt"
+    # UHO model label list text file.
+    - file_id: 633c957011dab814282089ab
+      sha512: 293ef83fbd745ba4a5882ab8d476c1c87747050223dd13dd50139dd07425a50ff265a986ea37fc91180be759eee4cbf3ae4b7f11e3050586a8e5bf1db2513136
+      dest: "{{ stage_dirs.model_files }}/uho_epoch_090_labels.txt"
     # # SwinB label list text file.
     # - file_id: 62cc5fa7bddec9d0c4faa19f
     #   sha512: 3fbf340b9cb87a71dd3df81880b38ee414c47b43fbfb78c37220020fbdb8d0d0ff93d76b079aecd94c10317ad6764590fd2a98849338f7fb46f943825820aaf6
