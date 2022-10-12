@@ -14,7 +14,7 @@ from angel_system.uho.src.models.components.unified_fcn import UnifiedFCNModule
 from angel_system.uho.src.models.unified_ho_module import UnifiedHOModule
 
 
-def get_uho_detector(
+def get_uho_classifier(
     checkpoint_path: str,
     labels_path: str,
     device: str,
@@ -45,15 +45,15 @@ def get_uho_detector(
         depth=depth
     )
 
-    detector: UnifiedHOModule = UnifiedHOModule(
+    classifier: UnifiedHOModule = UnifiedHOModule(
         fcn=fcn,
         temporal=temporal,
         checkpoint=checkpoint_path,
         device=device,
         labels_file=labels_path
     )
-    detector.eval()
-    return detector.to(device=device)
+    classifier.eval()
+    return classifier.to(device=device)
 
 
 def predict(
@@ -66,10 +66,10 @@ def predict(
 
     Returns:
         A tuple consisting of two elements:
-            0: Detection results: A tuple consisting of a [1 x n_classes] tensor
-               representing the detector's confidence for each class and a tensor
+            0: Classifier results: A tuple consisting of a [1 x n_classes] tensor
+               representing the classifier's confidence for each class and a tensor
                containing the index of the max confidence in the confidence tensor.
-            1: A list of length n_classes for mapping the detector confidence
+            1: A list of length n_classes for mapping the classifier's confidence
                indices to class strings.
     """
     # Convert aux_data class to dict as that is currently required
