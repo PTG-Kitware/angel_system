@@ -4,7 +4,9 @@ import numpy as np
 import PIL
 from pathlib import Path
 import os
-from sklearn.metrics import PrecisionRecallDisplay, roc_curve, auc
+
+from sklearn.metrics import PrecisionRecallDisplay, roc_curve, auc, confusion_matrix, ConfusionMatrixDisplay
+
 import logging
 
 
@@ -12,11 +14,12 @@ log = logging.getLogger("ptg_eval")
 
 
 class EvalVisualization:
-    def __init__(self, labels, gt, dets, output_dir):
+    def __init__(self, labels, gt, dets, detect_intersection_thr=0.1, output_dir=''):
         """
         :param labels: Pandas df with columns id (int) and class (str)
         :param gt: Dict of activity start and end time ground truth values, organized by label keys
         :param dets: Dict of activity start and end time detections with confidence values, organized by label keys
+        :param detect_intersection_thr: detection intersection threshold in the range 0-1
         :param output_dir: Directory to write the plots to
         """
         self.output_dir = Path(os.path.join(output_dir, "plots/"))
@@ -26,6 +29,8 @@ class EvalVisualization:
         self.labels = labels
         self.gt = gt
         self.dets = dets
+
+        self.detect_intersection_thr = detect_intersection_thr
 
     def plot_activities_confidence(self, custom_range=None, custom_range_color="red"):
         """
@@ -100,12 +105,10 @@ class EvalVisualization:
                 fig.savefig(f"{str(activity_plot_dir)}/{label.replace(' ', '_')}.png")
             else:
                 log.warning(f"No detections/gt found for \"{label}\"")
-                
-    def plot_pr_curve(self, detect_intersection_thr=0.1):
+
+    def plot_pr_curve(self):
         """
         Plot the PR curve for each label
-
-        :param detect_intersection_thr: detection intersection threshold
         """
         # ============================
         # Setup figure
@@ -159,7 +162,7 @@ class EvalVisualization:
 
             det_ranges = self.dets.loc[self.dets['class'] == label]
 
-            truth = [1 if det['detect_intersection'] > detect_intersection_thr else 0 for i, det in det_ranges.iterrows()]
+            truth = [1 if det['detect_intersection'] > self.detect_intersection_thr else 0 for i, det in det_ranges.iterrows()]
             pred = [det['conf'] for i, det in det_ranges.iterrows()]
 
             PrecisionRecallDisplay.from_predictions(truth, pred).plot(ax=ax, name=label, color=colors[i])
@@ -280,9 +283,43 @@ class EvalVisualization:
             linewidth=4,
         )
 
-        # ============================
-        # Save
-        # ============================
         plt.legend(loc="best")
         
         av_fig.savefig(f"{roc_plot_dir}/ROC_macro_average.png")
+
+    def plot_confusion_matrix(self):
+        # ============================
+        # Setup figure
+        # ============================
+        fig = plt.figure(figsize=(16, 10))
+        ax = fig.add_subplot(111)
+
+        y_true = []
+        y_pred = []
+
+        # calulcating metrics based on detector frequency
+        time_ranges = self.dets[['start', 'end']].drop_duplicates()
+        
+        for i, time in time_ranges.iterrows():
+            det_overlap = self.dets[(self.dets['start'] == time['start']) & (self.dets['end'] == time['end'])]
+            best_det = det_overlap.loc[det_overlap['conf'].idxmax()]
+
+            if best_det['detect_intersection'] > self.detect_intersection_thr:
+                gt_overlap = self.gt[(self.gt['end'] >= time['start']) & (time['end'] >= self.gt['end'])].iloc[0]
+
+                y_true.append(self.labels.loc[self.labels['class'] == gt_overlap['class']].iloc[0]['id'])
+                y_pred.append(self.labels.loc[self.labels['class'] == best_det['class']].iloc[0]['id'])
+
+        labels = [row['id'] for i, row in self.labels.iterrows()]
+        display_labels = [row['class'] for i, row in self.labels.iterrows()]
+
+        cm = confusion_matrix(y_true, y_pred, labels=labels)
+        cm_display = ConfusionMatrixDisplay(cm, display_labels=display_labels)
+        cm_display.plot(ax=ax)
+        
+        # ============================
+        # Save
+        # ============================
+
+        fig.savefig(f"{self.output_dir}/confusion.png")
+        
