@@ -6,9 +6,12 @@ var ros = new ROSLIB.Ros({
 
 var request = {};
 var chart;
-var xValues = [];
-var yValues = [];
+var xValues = [0];
+var yValues = [0];
 var barColors = "rgba(0, 104, 199, 1.0)";
+
+Chart.defaults.font.size = 25;
+Chart.defaults.font.family = "Roboto","sans-serif";
 
 var ctx = document.getElementById("activity-conf").getContext('2d');
 
@@ -23,21 +26,24 @@ chart = new Chart(ctx, {
   },
   options: {
     scales: {
-        xAxes: [{
+        x: {
           ticks: {
-              callback: function(t) {
-                return xValues.indexOf(t)
+              callback: function(val, index) {
+                return val;//return xValues.indexOf(t)
               }
           }
-        }],
-        yAxes: [{
+        },
+        y: {
+          min: 0,
+          max: 1,
           ticks: {
-            beginAtZero: true,
-            max: 1
+            stepSize: 0.1
           }
-        }]
+        }
     },
-    legend: {display: false},
+    plugins:{
+      legend: {display: false}
+    },
     title: {
       display: false,
     }
@@ -57,8 +63,6 @@ activity_listener.subscribe(function(m) {
 
   chart.data.labels = xValues;
   chart.data.datasets[0].data = yValues;
-
-  //chart.options.scales.xAxes[0]
 
   chart.update('none'); // don't animate
 });

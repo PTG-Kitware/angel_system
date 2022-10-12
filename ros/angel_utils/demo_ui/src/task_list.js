@@ -53,6 +53,7 @@ var task_update = new ROSLIB.Topic({
 });
 
 task_update.subscribe(function(m) {
+  // Add checkmark to task
   var task_name = m.previous_step;
   var empty_checkbox = document.getElementById(task_name);
 
@@ -61,6 +62,22 @@ task_update.subscribe(function(m) {
     checkmark.className = "checkmark";
     empty_checkbox.appendChild(checkmark);
   }
+
+  // Update colors in chart
+  var chart = Chart.getChart('activity-conf');
+  var colors = new Array(xValues.length).fill("rgba(0, 104, 199, 1.0)");
+  var idx = chart.data.labels.indexOf(task_name);
+
+  for(i=0; i<=idx; i++){
+    colors[i] = "rgba(62, 174, 43, 1.0)"; // green
+  }
+  if(idx+1 < colors.length){
+    colors[idx+1] = "rgb(254, 219, 101)"; // yellow
+  }
+
+  chart.data.datasets[0].backgroundColor = colors;
+
+  chart.update('none');
 });
 
 // Done button
