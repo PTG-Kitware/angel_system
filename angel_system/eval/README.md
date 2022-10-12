@@ -24,5 +24,5 @@ Turning off all flags is optional, but they are not needed for eval.
 `$ ros2 run angel_utils bag_extractor.py --ros-args -p bag_path:="<activity_only_ros_bag>" -p extract_images:="False" -p extract_audio:="False" -p extract_eye_gaze_data:="False" -p extract_head_pose_data:="False" -p extract_hand_pose_data:="False" -p extract_spatial_map_data:="False" -p extract_annotation_event_data:="False"`
 
 # Run eval
-`$ poetry run ptg_eval <optional flags>`
+`$ ptg_eval <optional flags>`
 
