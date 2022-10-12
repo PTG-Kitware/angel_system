@@ -74,6 +74,7 @@ task_update.subscribe(function(m) {
   if(idx+1 < colors.length){
     colors[idx+1] = "rgb(254, 219, 101)"; // yellow
   }
+  colors[chart.data.labels.indexOf("Background")] = "rgba(0, 104, 199, 1.0)"; // blue
 
   chart.data.datasets[0].backgroundColor = colors;
 
