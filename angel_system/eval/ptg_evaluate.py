@@ -118,7 +118,6 @@ def run_eval(args):
     time_idx = 0
 
     for time in time_windows:
-        print("######################", time)
         # Determine what detections we have
         det_overlap = detections.query(f'not (end < {time[0]} or {time[1]} < start)')
         if det_overlap.empty:
@@ -134,9 +133,7 @@ def run_eval(args):
         # Determiine what gt we have
         gt_overlap = gt.query(f'not (end < {time[0]-uncertain_pad} or {time[1]+uncertain_pad} < start)')
         if gt_overlap.empty:
-            #for i in range(len(labels)):
-                # fp
-            gt_true_pos_mask[time_idx][best_det] = False
+            gt_true_pos_mask[time_idx][best_det] = False # fp
             time_idx += 1
             continue
         for ii, r in gt_overlap.iterrows():

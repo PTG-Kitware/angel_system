@@ -43,4 +43,3 @@ class EvalMetrics():
                 precision = average_precision_score(y_true, s)
                
                 f.write(f'{label}: {precision}\n')
-
