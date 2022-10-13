@@ -296,8 +296,8 @@ class InputBuffer:
 
     def clear_before(self, time_nsec: int) -> None:
         """
-        Clear content in the buffer that is associate to a timestamp before the
-        one given.
+        Clear content in the buffer that is strictly older than the given
+        timestamp.
         """
         # for each deque, traverse from the left (the earliest time) and pop if
         # the ts is < the given.
@@ -453,6 +453,9 @@ class UHOActivityDetector(Node):
         )
         log.info(f"UHO Detector initialized")
         # TODO: Warmup detector?
+
+        # Variables used by window criterion methods
+        self._prev_leading_time_ns = None
 
         # Start the runtime thread
         log.info("Starting runtime thread...")
@@ -657,12 +660,59 @@ class UHOActivityDetector(Node):
         #     for i in sorted(obj_det_idxs_to_remove, reverse=True):
         #         del self._obj_dets[i]
 
+    def _window_criterion_correct_size(self, window: InputWindow) -> bool:
+        window_ok = len(window) == self._frames_per_det
+        if not window_ok:
+            self.get_logger().warn(f"Window is not the appropriate size "
+                                   f"(actual:{len(window)} != "
+                                   f"{self._frames_per_det}:expected)")
+        return window_ok
+
+    def _window_criterion_enough_dets(self, window: InputWindow) -> bool:
+        num_dets = len(list(filter(None, window.obj_dets)))
+        self.get_logger().info(f"Window num dets: {num_dets}")
+        window_ok = num_dets >= self._obj_dets_per_window
+        if not window_ok:
+            self.get_logger().warn(f"Window num dets ({num_dets}) not at "
+                                   f"least {self._obj_dets_per_window}")
+        return window_ok
+
+    def _window_criterion_new_leading_frame(self, window: InputWindow) -> bool:
+        """
+        The new window's leading frame should be beyond a previous window's
+        leading frame.
+        """
+        # Assuming _window_criterion_correct_size already passed.
+        cur_leading_time_ns = time_to_int(window.frames[-1][0])
+        prev_leading_time_ns = self._prev_leading_time_ns
+        if prev_leading_time_ns is not None:
+            window_ok = prev_leading_time_ns < cur_leading_time_ns
+            if not window_ok:
+                # current window is earlier/same lead as before, so not a good
+                # window
+                self.get_logger().warn("RT duplicate window detected, skipping.")
+                return False
+            # Window is OK, save new latest leading frame time below.
+        # Else:This is the first window. The first history will be recorded
+        # below.
+        self._prev_leading_time_ns = cur_leading_time_ns
+        return True
+
     def thread_predict_runtime(self):
         """
         Activity classification prediction runtime function.
         """
         log = self.get_logger()
         log.info("Runtime loop starting")
+
+        # These criterion predicates must all return true for us to proceed
+        # with processing activity classification for a window.
+        window_processing_criterion_fn_list: List[Callable[[InputWindow], bool]] = [
+            self._window_criterion_correct_size,
+            self._window_criterion_enough_dets,
+            self._window_criterion_new_leading_frame,
+        ]
+
         while self._rt_active.wait(0):  # will quickly return false if cleared.
             if self._rt_awake_evt.wait(self._rt_active_heartbeat):
                 log.info("RT loop awakened")
@@ -675,23 +725,30 @@ class UHOActivityDetector(Node):
                 #   object detection result associations.
                 # TODO: Include forced latency?
                 #       request window X seconds back from latest.
+                #       Paul's laptop: catching ~4 dets per 32-frames
+                #           ~1 every 8 frames, so (1/30)*8 ~=0.267 latency
                 window = self._input_buffer.get_window(self._frames_per_det)
-                num_dets = len(list(filter(None, window.obj_dets)))
-                log.info(f"RT window num dets: {num_dets}")
-                # if (
-                #     len(window) == self._frames_per_det and
-                #     num_dets >= self._obj_dets_per_window
-                # ):
-                #     # DEBUG: block queueing while in breakpoint
-                #     with self._input_buffer:
-                #         breakpoint()
+                if all(fn(window) for fn in window_processing_criterion_fn_list):
+                    log.info("RT Starting processing block")
 
-                # After getting the window, before processing, clear out old
-                # data from the buffer using timestamp of window first frame
-                # + a nanosecond.
+                    # DEBUG: block queueing while in breakpoint
+                    # with self._input_buffer:
+                    #     breakpoint()
 
-                # Before processing publish the latest frame time to the
-                # self._min_time_publisher.
+                    # After getting validating a window, before processing,
+                    # clear out older data from the buffer using the timestamp
+                    # of window first frame + a nanosecond.
+                    # TODO: Change this to first + forced latency time?
+                    old_time = window.frames[1][0]
+                    old_time_ns = time_to_int(old_time)
+                    self._input_buffer.clear_before(old_time_ns)
+
+                    # Before processing publish the latest frame time to the
+                    # self._min_time_publisher.
+                    # Also inform any listeners that we no
+                    self._min_time_publisher.publish(old_time)
+
+                    # TODO: Insert processing stuff here!
 
             else:
                 # wait timeout triggered, just loop.

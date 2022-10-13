@@ -135,14 +135,17 @@ class ObjectDetectorWithDescriptors(Node):
         this message.
         """
         with self._min_time_lock:
-            self._min_time = max(self._min_time, time_to_int(msg))
+            msg_ns = time_to_int(msg)
+            self.get_logger().info(f"Received new min frame time: {msg_ns} ns")
+            self._min_time = max(self._min_time, msg_ns)
 
     def get_min_time(self) -> int:
         """
-        Get the minimum valid time in nanoseconds for frame processing.
+        Get the minimum time (in nanoseconds) that new images must be more
+        recent than to be considered for processing.
 
         We should only process frames whose associated timestamp is greater
-        than this valid (in nanoseconds).
+        than this (in nanoseconds).
         """
         with self._min_time_lock:
             return self._min_time
@@ -160,9 +163,14 @@ class ObjectDetectorWithDescriptors(Node):
         model = self.get_model()
         img_time_ns = time_to_int(image.header.stamp)
 
-        if img_time_ns < self.get_min_time():
+        min_time = self.get_min_time()
+        if img_time_ns <= min_time:
             # Before min processing time, don't process this frame.
+            log.warn(f"Skipping frame with time {img_time_ns} ns <= min time "
+                     f"{min_time} ns")
             return
+
+        log.info(f"Starting detection for frame time {img_time_ns} ns")
 
         # Preprocess image - NOTE: bgr order required by _get_image_blob
         im_in = np.array(BRIDGE.imgmsg_to_cv2(image, desired_encoding="bgr8"))
