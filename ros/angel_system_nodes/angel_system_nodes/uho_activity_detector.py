@@ -7,11 +7,14 @@ import itertools
 import numpy as np
 import numpy.typing as npt
 import rclpy
+from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from rclpy.node import Node
+from rclpy.executors import MultiThreadedExecutor
 from sensor_msgs.msg import Image
-from threading import RLock
+from threading import Event, RLock, Thread
+from typing import Any
+from typing import Callable
 from typing import Deque
-from typing import Dict
 from typing import List
 from typing import Optional
 from typing import Tuple
@@ -33,7 +36,7 @@ from angel_utils.conversion import time_to_int
 BRIDGE = CvBridge()
 
 
-@dataclass(frozen=True)
+@dataclass
 class InputWindow:
     """
     Structure encapsulating a window of aligned data.
@@ -52,13 +55,17 @@ class InputWindow:
         return len(self.frames)
 
 
-@dataclass(frozen=True)
+@dataclass
 class InputBuffer:
     """
     Protected container for buffering input data.
 
     Frames are the primary index of this buffer to which everything else needs
     to associate to.
+
+    Data queueing methods enforce that the new message is temporally *after*
+    the latest message of that type. If this is not the case, then a ValueError
+    exception is raised.
 
     Hand pose sensor outputs are known to be output asynchronously and at a
     different rate than the images. Thus, we cannot presume there will be any
@@ -77,6 +84,9 @@ class InputBuffer:
     # Tolerance in nanoseconds for associating hand-pose messages to a frame.
     hand_msg_tolerance_nsec: int
 
+    # Function to get the logger from the parent ROS2 node.
+    get_logger_fn: Callable[[], Any]  # don't know where to get the type for this...
+
     # Buffer of RGB image matrices and the associated timestamp
     frames: Deque[Tuple[Time, npt.NDArray]] = field(default_factory=deque,
                                                     init=False, repr=False)
@@ -90,7 +100,7 @@ class InputBuffer:
     obj_dets: Deque[ObjectDetection2dSet] = field(default_factory=deque,
                                                   init=False, repr=False)
 
-    __state_lock: RLock = field(default_factory=RLock, repr=False)
+    __state_lock: RLock = field(default_factory=RLock, init=False, repr=False)
 
     def __enter__(self):
         """
@@ -104,20 +114,35 @@ class InputBuffer:
         # Same as RLock.__exit__
         self.__state_lock.release()
 
-    def queue_image(self, msg: Image):
+    def queue_image(self, msg: Image) -> bool:
+        """
+        Queue up a new image frame.
+        :returns: True if the image was queued, otherwise false because it was
+            not newer than the current latest frame.
+        """
         # Convert ROS img msg to CV2 image and add it to the frame stack
         rgb_image = BRIDGE.imgmsg_to_cv2(msg, desired_encoding="rgb8")
         rgb_image_np = np.asarray(rgb_image)
         with self.__state_lock:
+            # before the current lead frame?
+            if (
+                self.frames and
+                time_to_int(msg.header.stamp) <= time_to_int(self.frames[-1][0])
+            ):
+                self.get_logger_fn().warn(
+                    f"Input image frame was NOT after the previous latest: "
+                    f"(prev) {self.frames[-1][0]} !< {msg.header.stamp} (new)"
+                )
+                return False
             self.frames.append((msg.header.stamp, rgb_image_np))
+            return True
 
-    def queue_hand_pose(self, msg: HandJointPosesUpdate) -> None:
+    def queue_hand_pose(self, msg: HandJointPosesUpdate) -> bool:
         """
         Input hand pose may be of the left or right hand, as indicated by
         `msg.hand`.
-
-        :param msg:
-        :return:
+        :returns: True if the message was queued, otherwise false because it was
+            not newer than the current latest message.
         """
         hand_list: Deque[HandJointPosesUpdate]
         if msg.hand == 'Right':
@@ -127,16 +152,36 @@ class InputBuffer:
         else:
             raise ValueError(f"Input hand pose for hand '{msg.hand}'? What?")
         with self.__state_lock:
+            # before the current lead pose?
+            if (
+                hand_list and
+                time_to_int(msg.header.stamp) <= time_to_int(hand_list[-1].header.stamp)
+            ):
+                self.get_logger_fn().warn(
+                    f"Input hand pose was NOT after the previous latest: "
+                    f"(prev) {hand_list[-1].header.stamp} !< {msg.header.stamp} (new)"
+                )
+                return False
             hand_list.append(msg)
+            return True
 
-    def queue_object_detections(self, msg: ObjectDetection2dSet) -> None:
+    def queue_object_detections(self, msg: ObjectDetection2dSet) -> bool:
         """
         Queue up an object detection set for the
-        :param msg:
-        :return:
         """
         with self.__state_lock:
+            # before the current lead pose?
+            if (
+                self.obj_dets and
+                time_to_int(msg.header.stamp) <= time_to_int(self.obj_dets[-1].header.stamp)
+            ):
+                self.get_logger_fn().warn(
+                    f"Input object detection result was NOT after the previous latest: "
+                    f"(prev) {self.obj_dets[-1].header.stamp} !< {msg.header.stamp} (new)"
+                )
+                return False
             self.obj_dets.append(msg)
+            return True
 
     def get_frame_time(self, buff_index=-1) -> Time:
         """
@@ -352,56 +397,53 @@ class UHOActivityDetector(Node):
         # These will collect on their own threads, adding to buffers from
         # activity classification will draw from.
         # - Image data
+        self._image_subscription_cb_group = MutuallyExclusiveCallbackGroup()
         self._image_subscription = self.create_subscription(
             Image,
             self._image_topic,
             self.image_callback,
-            1
+            1,
+            callback_group=self._image_subscription_cb_group,
         )
         # - Hand pose
+        self._hand_subscription_cb_group = MutuallyExclusiveCallbackGroup()
         self._hand_subscription = self.create_subscription(
             HandJointPosesUpdate,
             self._hand_topic,
             self.hand_callback,
-            1
+            1,
+            callback_group=self._hand_subscription_cb_group,
         )
         # - Object detections
+        self._obj_det_subscriber_cb_group = MutuallyExclusiveCallbackGroup()
         self._obj_det_subscriber = self.create_subscription(
             ObjectDetection2dSet,
             self._obj_det_topic,
             self.obj_det_callback,
-            1
+            1,
+            callback_group=self._obj_det_subscriber_cb_group,
         )
 
         # Channel over which we communicate to the object detector a timestamp
         # before which to skip processing/publication.
+        self._min_time_publisher_cb_group = MutuallyExclusiveCallbackGroup()
         self._min_time_publisher = self.create_publisher(
             Time,
             self._min_time_topic,
-            1
+            1,
+            callback_group=self._min_time_publisher_cb_group,
         )
+        self._activity_publisher_cb_group = MutuallyExclusiveCallbackGroup()
         self._activity_publisher = self.create_publisher(
             ActivityDetection,
             self._det_topic,
-            1
+            1,
+            callback_group=self._activity_publisher_cb_group,
         )
 
         # Create the runtime thread to trigger processing and buffer cleanup
         # appropriately.
-        self._input_buffer = InputBuffer(int(self._slop_ns))
-
-        # Stores the data until we have enough to send to the detector
-        self._frames = []
-        self._hand_poses = dict(
-            lhand=[],
-            rhand=[],
-        )
-        self._hand_pose_stamps = dict(
-            lhand=[],
-            rhand=[],
-        )
-        self._frame_stamps = []
-        self._obj_dets = []
+        self._input_buffer = InputBuffer(int(self._slop_ns), self.get_logger)
 
         # Instantiate the activity detector models
         self._detector = get_uho_classifier(
@@ -413,22 +455,60 @@ class UHOActivityDetector(Node):
         # TODO: Warmup detector?
 
         # Start the runtime thread
+        log.info("Starting runtime thread...")
+        # switch for runtime loop
+        self._rt_active = Event()
+        self._rt_active.set()
+        # seconds to occasionally time out of the wait condition for the loop
+        # to check if it is supposed to still be alive.
+        self._rt_active_heartbeat = 0.1  # TODO: Parameterize?
+        # Event to notify runtime it should try processing now.
+        self._rt_awake_evt = Event()
+        self._rt_thread = Thread(
+            target=self.thread_predict_runtime,
+            name="prediction_runtime"
+        )
+        self._rt_thread.daemon = True
+        self._rt_thread.start()
+        log.info("Starting runtime thread... Done")
+
+    def rt_alive(self) -> bool:
+        """
+        Check that the prediction runtime is still alive and raise an exception
+        if it is not.
+        """
+        alive = self._rt_thread.is_alive()
+        if not alive:
+            self.get_logger().warn("Runtime thread no longer alive.")
+            self._rt_thread.join()
+        return alive
+
+    def stop_runtime(self) -> None:
+        """
+        Indicate that the runtime loop should cease.
+        """
+        self._rt_active.clear()
 
     def image_callback(self, image: Image) -> None:
         """
         Callback function for images. Messages are saved in the images list.
         """
-        self.get_logger().info(f"Queueing image (ts={image.header.stamp})")
-        self._input_buffer.queue_image(image)
+        # Check first, so we don't accumulate anything when we aren't using it.
+        if self.rt_alive() and self._input_buffer.queue_image(image):
+            self.get_logger().info(f"Queueing image (ts={image.header.stamp})")
+            # On new imagery, tell the RT loop to wake up and try to form a window
+            # for processing.
+            self._rt_awake_evt.set()
 
     def hand_callback(self, hand_pose: HandJointPosesUpdate) -> None:
         """
         Callback function for hand poses. Messages are saved in the hand_poses
         list.
         """
-        self.get_logger().info(f"Queueing hand pose (hand={hand_pose.hand}) "
-                               f"(ts={hand_pose.header.stamp})")
-        self._input_buffer.queue_hand_pose(hand_pose)
+        # Check first, so we don't accumulate anything when we aren't using it.
+        if self.rt_alive() and self._input_buffer.queue_hand_pose(hand_pose):
+            self.get_logger().info(f"Queueing hand pose (hand={hand_pose.hand}) "
+                                   f"(ts={hand_pose.header.stamp})")
 
     def obj_det_callback(self, msg):
         """
@@ -445,20 +525,9 @@ class UHOActivityDetector(Node):
                      f"Skipping.")
             return
 
-        log.info(f"Queueing object detections (ts={msg.header.stamp})")
-        self._input_buffer.queue_object_detections(msg)
-
-        # DEBUG: collect like 5 detections and then breakpoint to test calling
-        #        the buffer windowing stuff.
-        with self._input_buffer:
-            window_dets = self._input_buffer.get_window_detections(self._frames_per_det)
-            if len(list(filter(None, window_dets))) >= 5:
-                win = self._input_buffer.get_window(self._frames_per_det)
-                breakpoint()
-                # Incrementally clean up to see that resource usage does not ever increase
-                clean_ts = time_to_int(win.frames[0][0]) + 1
-                log.info(f"Cleaning before ts={clean_ts}")
-                self._input_buffer.clear_before(clean_ts)
+        # Check first, so we don't accumulate anything when we aren't using it.
+        if self.rt_alive() and self._input_buffer.queue_object_detections(msg):
+            log.info(f"Queueing object detections (ts={msg.header.stamp})")
 
         # self._obj_dets.append(msg)
         #
@@ -592,8 +661,50 @@ class UHOActivityDetector(Node):
         """
         Activity classification prediction runtime function.
         """
-        while True:
-            ...
+        log = self.get_logger()
+        log.info("Runtime loop starting")
+        while self._rt_active.wait(0):  # will quickly return false if cleared.
+            if self._rt_awake_evt.wait(self._rt_active_heartbeat):
+                log.info("RT loop awakened")
+                # reset the flag for the next go-around
+                self._rt_awake_evt.clear()
+
+                # We want to fire off a prediction run when:
+                # - The latest window is at least self._frames_per_det in size
+                # - The latest window contains at least self._obj_dets_per_window
+                #   object detection result associations.
+                # TODO: Include forced latency?
+                #       request window X seconds back from latest.
+                window = self._input_buffer.get_window(self._frames_per_det)
+                num_dets = len(list(filter(None, window.obj_dets)))
+                log.info(f"RT window num dets: {num_dets}")
+                # if (
+                #     len(window) == self._frames_per_det and
+                #     num_dets >= self._obj_dets_per_window
+                # ):
+                #     # DEBUG: block queueing while in breakpoint
+                #     with self._input_buffer:
+                #         breakpoint()
+
+                # After getting the window, before processing, clear out old
+                # data from the buffer using timestamp of window first frame
+                # + a nanosecond.
+
+                # Before processing publish the latest frame time to the
+                # self._min_time_publisher.
+
+            else:
+                # wait timeout triggered, just loop.
+                log.debug("RT heartbeat timeout: checking alive status")
+
+        log.info("Runtime function end.")
+
+    def destroy_node(self):
+        print("Shutting down runtime thread...")
+        self._rt_active.clear()  # make RT active flag "False"
+        self._rt_thread.join()
+        print("Shutting down runtime thread... Done")
+        super()
 
 
 def main():
@@ -601,11 +712,32 @@ def main():
 
     detector = UHOActivityDetector()
 
-    rclpy.spin(detector)
+    # If things are going wrong, set this False to debug in a serialized setup.
+    do_multithreading = True
+
+    if do_multithreading:
+        # Don't really want to use *all* available threads...
+        # 5 threads because:
+        # - 3 known subscribers which have their own groups
+        # - 1 for default group
+        # - 1 for publishers
+        executor = MultiThreadedExecutor(num_threads=5)
+        executor.add_node(detector)
+        try:
+            executor.spin()
+        except KeyboardInterrupt:
+            detector.stop_runtime()
+            detector.get_logger().info("Keyboard interrupt, shutting down.\n")
+    else:
+        try:
+            rclpy.spin(detector)
+        except KeyboardInterrupt:
+            detector.stop_runtime()
+            detector.get_logger().info("Keyboard interrupt, shutting down.\n")
 
     # Destroy the node explicitly
     # (optional - otherwise it will be done automatically
-    # when the garbage collector destroys the node object)
+    #  when the garbage collector destroys the node object... if it gets to it)
     detector.destroy_node()
 
     rclpy.shutdown()
