@@ -1,5 +1,5 @@
 import logging
-from sklearn.metrics import precision_recall_curve, average_precision_score
+from sklearn.metrics import auc, precision_recall_curve, average_precision_score
 import numpy as np
 
 log = logging.getLogger("ptg_eval")
@@ -41,5 +41,6 @@ class EvalMetrics():
 
                 #precision, recall, thresholds = precision_recall_curve(y_true, s)
                 precision = average_precision_score(y_true, s)
-
+               
                 f.write(f'{label}: {precision}\n')
+

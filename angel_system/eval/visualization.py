@@ -66,7 +66,6 @@ class EvalVisualization:
             label = row['class']
 
             class_dets_per_time_w = self.dets_per_time_w[:, id]
-            class_dets_per_time_w
             mask_per_class = self.gt_true_pos_mask[:, id]
 
             tp = class_dets_per_time_w[mask_per_class==True]

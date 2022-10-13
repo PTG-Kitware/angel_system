@@ -86,12 +86,10 @@ def run_eval(args):
     label_ver = label_re.match(os.path.basename(args.activity_gt)).group('version')
 
     vlabels = pd.read_excel(args.labels, sheet_name=label_ver)
-    print(vlabels)
     vlabels['class'] = vlabels['class'].str.lower()
     
     # grab all labels present in data
     dlabels = list(set([l.lower().strip().rstrip('.') for l in gt['class'].unique()] + [l.lower().strip().rstrip('.') for l in detections['class'].unique()]))
-    print(dlabels)
     # Remove any labels that we don't actually have
     missing_labels = []
     for i, row in vlabels.iterrows():
@@ -118,17 +116,12 @@ def run_eval(args):
     gt_true_pos_mask = np.full((len(time_windows), len(labels)), None)
     uncertain_pad = 1
     time_idx = 0
-    print(labels)
-    for i, row in labels.iterrows():
-        print(row)
 
     for time in time_windows:
-        print('#############################', time)
- 
+        print("######################", time)
         # Determine what detections we have
         det_overlap = detections.query(f'not (end < {time[0]} or {time[1]} < start)')
         if det_overlap.empty:
-            print('empty det')
             time_idx += 1
             continue
 
@@ -136,44 +129,23 @@ def run_eval(args):
         for i, row in labels.iterrows():
             class_overlap = det_overlap.loc[det_overlap['class'] == row['class']]
             dets_per_time_w[time_idx][row['id']] = class_overlap['conf'].max()
+        best_det = dets_per_time_w[time_idx].argmax()
 
-        # ground truth mask
-        gt_overlap = gt.query(f'not (end < {time[0]} or {time[1]} < start)')
+        # Determiine what gt we have
+        gt_overlap = gt.query(f'not (end < {time[0]-uncertain_pad} or {time[1]+uncertain_pad} < start)')
         if gt_overlap.empty:
-            print('empty gt')
-            for i in range(len(labels)):
-                gt_true_pos_mask[time_idx][i] = False
+            #for i in range(len(labels)):
+                # fp
+            gt_true_pos_mask[time_idx][best_det] = False
             time_idx += 1
             continue
-
-        for i, row in gt_overlap.iterrows():
-            correct_label = row['class'].strip().rstrip('.')
-            print(correct_label)
+        for ii, r in gt_overlap.iterrows():
+            # Mark detections as correct
+            correct_label = r['class'].strip().rstrip('.')
             correct_class_idx = labels.loc[labels['class'] == correct_label].iloc[0]['id']
-            print(correct_class_idx)
 
-            # if there is overlap, make sure we want to count it first
-            """
-            u_window_left = [row['start'] - uncertain_pad,  row['start'] + uncertain_pad]
-            u_window_right = [row['end'] - uncertain_pad,  row['end'] + uncertain_pad]
+            gt_true_pos_mask[time_idx][correct_class_idx] = True # tp
 
-            in_left_window = (u_window_left[0] <= time[0] <= u_window_left[1]) and \
-                            (u_window_left[0] <= time[1] <= u_window_left[1])
-
-            in_right_window = (u_window_right[0] <= time[0] <= u_window_right[1]) and \
-                            (u_window_right[0] <= time[1] <= u_window_right[1])
-
-            invalid = in_left_window or in_right_window
-            if invalid:
-                gt_true_pos_mask[time_idx][correct_class_idx] = None
-            """
-            if True:
-                # mark the correct class as a true positive
-                for i in range(len(labels)):
-                    if i == correct_class_idx:
-                        gt_true_pos_mask[time_idx][i] = True
-                    else: 
-                        gt_true_pos_mask[time_idx][i] = False
         time_idx += 1
     
     with open('debug-mat.txt', "w") as f:
