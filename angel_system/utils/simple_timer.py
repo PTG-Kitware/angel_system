@@ -8,7 +8,7 @@ LOG = logging.getLogger(__name__)
 
 class SimpleTimer:
     """
-    Little class to wrap the timing of things. To be use with the ``with``
+    Little class to wrap the timing of things. To be used with the ``with``
     statement.
     """
 
