@@ -55,18 +55,20 @@ def create_batch(
     )
 
     # Format the object detections into descriptors and bboxes
-    for det in detection_set:
+    # The current logic only converts real detection messages (skips Nones)
+    # NOTE: WE KNOW THIS IS NOT CORRECT, BUT MAINTAINING CURRENT LOGIC FOR NOW
+    for frame_dets in filter(None, detection_set):
         # Get the topk detection confidences
         det_confidences = (
-            torch.Tensor(det.label_confidences)
-            .reshape((det.num_detections, len(det.label_vec)))
+            torch.Tensor(frame_dets.label_confidences)
+            .reshape((frame_dets.num_detections, len(frame_dets.label_vec)))
         )
 
         det_max_confidences = det_confidences.max(axis=1).values
         _, top_det_idx = torch.topk(det_max_confidences, topk)
 
         det_descriptors = (
-            torch.Tensor(det.descriptors).reshape((det.num_detections, det.descriptor_dim))
+            torch.Tensor(frame_dets.descriptors).reshape((frame_dets.num_detections, frame_dets.descriptor_dim))
         )
 
         # Grab the descriptors corresponding to the top predictions
@@ -75,7 +77,7 @@ def create_batch(
 
         # Grab the bboxes corresponding to the top predictions
         bboxes = [
-            torch.Tensor((det.left[i], det.top[i], det.right[i], det.bottom[i])) for i in top_det_idx
+            torch.Tensor((frame_dets.left[i], frame_dets.top[i], frame_dets.right[i], frame_dets.bottom[i])) for i in top_det_idx
         ]
         bboxes = torch.stack(bboxes)
 
@@ -83,7 +85,7 @@ def create_batch(
 
     # Check if we didn't get any detections in the time range of the frame set
     if len(aux_data.dets) == 0 or len(aux_data.bbox) == 0:
-        aux_data.dets = [torch.zeros((topk, msg.descriptor_dim))]
+        aux_data.dets = [torch.zeros((topk, 2048))]
         aux_data.bbox = [torch.zeros((topk, 4))]
 
     return frame_set, aux_data

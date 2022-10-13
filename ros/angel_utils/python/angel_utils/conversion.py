@@ -11,6 +11,7 @@ from typing import Tuple
 from builtin_interfaces.msg import Time
 import cv2
 import numpy as np
+import numpy.typing as npt
 
 from angel_msgs.msg import HandJointPosesUpdate, ObjectDetection2dSet
 from smqtk_detection.utils.bbox import AxisAlignedBoundingBox
@@ -134,16 +135,16 @@ def convert_nv12_to_rgb(nv12_image: array.array,
     return rgb_image
 
 
-def get_hand_pose_from_msg(msg: HandJointPosesUpdate) -> Tuple[np.ndarray, np.ndarray]:
+def get_hand_pose_from_msg(msg: HandJointPosesUpdate) -> npt.NDArray[np.float64]:
     """
     Formats the hand pose information from the ROS hand pose message
-    into the format required by activity detector model.
+    into an array format required by activity detector model.
     """
     hand_joints = [{"joint": m.joint,
-                    "position": [ m.pose.position.x,
-                                  m.pose.position.y,
-                                  m.pose.position.z]}
-                  for m in msg.joints]
+                    "position": [m.pose.position.x,
+                                 m.pose.position.y,
+                                 m.pose.position.z]}
+                   for m in msg.joints]
 
     # Rejecting joints not in OpenPose hand skeleton format
     reject_joint_list = {'ThumbMetacarpalJoint',
@@ -151,19 +152,10 @@ def get_hand_pose_from_msg(msg: HandJointPosesUpdate) -> Tuple[np.ndarray, np.nd
                          'MiddleMetacarpal',
                          'RingMetacarpal',
                          'PinkyMetacarpal'}
+    # Shape: [N x 3], N = number of joints - reject list
     joint_pos = []
     for j in hand_joints:
         if j["joint"] not in reject_joint_list:
             joint_pos.append(j["position"])
     joint_pos = np.array(joint_pos).flatten()
-
-    if msg.hand == 'Right':
-        rhand = joint_pos
-        lhand = np.zeros_like(joint_pos)
-    elif msg.hand == 'Left':
-        lhand = joint_pos
-        rhand = np.zeros_like(joint_pos)
-    else:
-        raise ValueError(f"Unexpected hand value. Got {msg.hand}")
-
-    return lhand, rhand
+    return joint_pos

@@ -596,25 +596,7 @@ class UHOActivityDetector(Node):
         #         self._topk,
         #     )
         #
-        #     # TODO Modularize into angel_system package, use resulting
-        #     #      functionality here.
-        #     #
         #     # Inference!
-        #     #
-        #     # Model input format notes from conversations with Dawei.
-        #     # - Hand input should include both hands in a flattened vector,p
-        #     #   (J*3*2), where Dawei is expecting J=21.
-        #     #   shape [32 x (J*3*2)] (J=21 -> 126)
-        #     #   - If a one hand is missing from the frame, zero the whole
-        #     #     vector out.
-        #     # - Detection descriptors and bboxes should not have any zero
-        #     #   vectors. There is some expectation of "regularly" spaced
-        #     #   detections. A sample-step was described that is set to 5,
-        #     #   meaning that the input detections were rigidly assigned to
-        #     #   input frames.
-        #     #   - new discussion, provided packed matrix, K=<top-k size>
-        #     #       [32*K x 2048]
-        #     #       [32*K x 4]
         #     activities_detected, labels = self._detector.forward(frame_set_processed, aux_data)
         #
         #     # Create and publish the ActivityDetection msg
@@ -748,13 +730,74 @@ class UHOActivityDetector(Node):
                     # Also inform any listeners that we no
                     self._min_time_publisher.publish(old_time)
 
-                    # TODO: Insert processing stuff here!
-
+                    act_msg = self._process_window(window)
+                    log.info("RT publishing activity classification results")
+                    self._activity_publisher.publish(act_msg)
             else:
                 # wait timeout triggered, just loop.
                 log.debug("RT heartbeat timeout: checking alive status")
 
         log.info("Runtime function end.")
+
+    def _process_window(self, window: InputWindow) -> ActivityDetection:
+        """
+        Invoke activity classifier for this window of data, performing all
+        appropriate conversions to and from algorithm specific needs.
+
+        Assuming window has passed appropriate criterion checks.
+        """
+        frame_set = [frm[1] for frm in window.frames]
+
+        # Convert hand messages that we have into appropriate vector form.
+        known_hand_dim = 21 * 3  # model-specific, based on joints used
+        hand_zero_vec = np.zeros(known_hand_dim, dtype=np.float)
+        lhand_arrays: List[Optional[npt.NDArray]] = [None] * len(frame_set)
+        for i, msg in enumerate(window.hand_pose_left):
+            if msg is not None:
+                lhand_arrays[i] = get_hand_pose_from_msg(msg)
+            else:
+                lhand_arrays[i] = hand_zero_vec.copy()
+        rhand_arrays: List[Optional[npt.NDArray]] = [None] * len(frame_set)
+        for i, msg in enumerate(window.hand_pose_right):
+            if msg is not None:
+                rhand_arrays[i] = get_hand_pose_from_msg(msg)
+            else:
+                rhand_arrays[i] = hand_zero_vec.copy()
+
+        frame_set, aux_data = create_batch(
+            frame_set, lhand_arrays, rhand_arrays, window.obj_dets,
+            self._topk
+        )
+
+        # Model input format notes/questions
+        # - Hand input
+        #   - should include both hands in a flattened vector,p
+        #     (J*3*2), where Dawei is expecting J=21.
+        #     shape [32 x (J*3*2)] (J=21 -> 126)
+        #   - If a one hand is missing from the frame, zero the whole
+        #     vector out.
+        #   - Found a Left --> Right order detail in the transformer code
+        #   - What joints order was the model trained on? Can we check that?
+        # - Detection descriptors and bboxes should not have any zero
+        #   vectors. There is some expectation of "regularly" spaced
+        #   detections. A sample-step was described that is set to 5,
+        #   meaning that the input detections were rigidly assigned to
+        #   input frames.
+        #   - new discussion, provided packed matrix, K=<top-k size>
+        #       [32*K x 2048]
+        #       [32*K x 4]
+        pred_conf, pred_labels = predict(self._detector, frame_set, aux_data)
+
+        # Create activity message from results
+        activity_msg = ActivityDetection()
+        activity_msg.header.frame_id = "Activity Classification"
+        activity_msg.header.stamp = self.get_clock().now().to_msg()
+        activity_msg.source_stamp_start_frame = window.frames[0][0]
+        activity_msg.source_stamp_end_frame = window.frames[-1][0]
+        activity_msg.label_vec = pred_labels
+        activity_msg.conf_vec = pred_conf[0].squeeze().tolist()
+
+        return activity_msg
 
     def destroy_node(self):
         print("Shutting down runtime thread...")
