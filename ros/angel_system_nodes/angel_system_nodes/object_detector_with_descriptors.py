@@ -1,8 +1,10 @@
+from builtin_interfaces.msg import Time
 from cv_bridge import CvBridge
 import numpy as np
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
+from threading import Lock
 import torch
 from torch.autograd import Variable
 from torchvision.ops import nms
@@ -10,6 +12,7 @@ from torchvision.ops import nms
 from angel_msgs.msg import ObjectDetection2dSet
 from angel_system.fasterrcnn.faster_rcnn.resnet import resnet
 from angel_system.fasterrcnn.processing_utils import _get_image_blob
+from angel_utils.conversion import time_to_int
 
 
 BRIDGE = CvBridge()
@@ -31,6 +34,11 @@ class ObjectDetectorWithDescriptors(Node):
         )
         self._desc_topic = (
             self.declare_parameter("descriptor_topic", "ObjectDetections")
+            .get_parameter_value()
+            .string_value
+        )
+        self._min_time_topic = (
+            self.declare_parameter("min_time_topic", "ObjDetMinTime")
             .get_parameter_value()
             .string_value
         )
@@ -76,6 +84,18 @@ class ObjectDetectorWithDescriptors(Node):
             1
         )
 
+        # Be able to receive a notification that there is a minimum time
+        # before which we should not detect objects.
+        self._min_time_subscription = self.create_subscription(
+            Time,
+            self._min_time_topic,
+            self.receive_min_time,
+            1
+        )
+        # minimum time in nanoseconds (see `time_to_int`)
+        self._min_time_lock = Lock()
+        self._min_time: int = 0
+
         # Load class labels
         self.classes = ['__background__']
         with open(self._object_vocabulary) as f:
@@ -107,14 +127,50 @@ class ObjectDetectorWithDescriptors(Node):
 
         return model
 
+    def receive_min_time(self, msg: Time) -> None:
+        """
+        Set a minimum time for frame processing.
+
+        If the given time is older than an already set minimum time, ignore
+        this message.
+        """
+        with self._min_time_lock:
+            msg_ns = time_to_int(msg)
+            self.get_logger().info(f"Received new min frame time: {msg_ns} ns")
+            self._min_time = max(self._min_time, msg_ns)
+
+    def get_min_time(self) -> int:
+        """
+        Get the minimum time (in nanoseconds) that new images must be more
+        recent than to be considered for processing.
+
+        We should only process frames whose associated timestamp is greater
+        than this (in nanoseconds).
+        """
+        with self._min_time_lock:
+            return self._min_time
+
     def image_callback(self, image):
         """
         Callback function for the image subscriber. Performs image preprocessing,
         model inference, output postprocessing, and detection set publishing for
         each image received.
+
+        This callback may return early if we receive an image that is before
+        a received min processing time.
         """
         log = self.get_logger()
         model = self.get_model()
+        img_time_ns = time_to_int(image.header.stamp)
+
+        min_time = self.get_min_time()
+        if img_time_ns <= min_time:
+            # Before min processing time, don't process this frame.
+            log.warn(f"Skipping frame with time {img_time_ns} ns <= min time "
+                     f"{min_time} ns")
+            return
+
+        log.info(f"Starting detection for frame time {img_time_ns} ns")
 
         # Preprocess image - NOTE: bgr order required by _get_image_blob
         im_in = np.array(BRIDGE.imgmsg_to_cv2(image, desired_encoding="bgr8"))
@@ -133,6 +189,13 @@ class ObjectDetectorWithDescriptors(Node):
             rois, cls_prob,
             pooled_feat, im_scales
         )
+
+        # The above may take non-trivial time.
+        # Check if we were given a min frame processing time that exceeds the
+        # stamp of the frame just processed.
+        if img_time_ns < self.get_min_time():
+            # min processing time is now beyond us, don't output for this frame.
+            return
 
         # Form into object detection set message
         msg = ObjectDetection2dSet()
