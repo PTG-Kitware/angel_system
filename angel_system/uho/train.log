@@ -140,3 +140,4 @@
 [2022-10-13 15:57:08,125][src.training_pipeline][INFO] - Logging hyperparameters!
 [2022-10-13 15:57:08,141][src.training_pipeline][INFO] - Starting training!
 [2022-10-13 15:57:10,079][pytorch_lightning.accelerators.cuda][INFO] - LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [1]
+[2022-10-13 16:00:15,248][src.training_pipeline][INFO] - Starting testing!
