@@ -40,6 +40,11 @@ BRIDGE = CvBridge()
 class InputWindow:
     """
     Structure encapsulating a window of aligned data.
+
+    It should be the case that all lists contained in this window are of the
+    same length. The `frames` field should always be densely packed, but the
+    other fields may have None values, which indicates that no message of that
+    field's associated type was matched to the index's corresponding frame.
     """
     # Buffer of RGB image matrices and the associated timestamp.
     # Set at construction time with the known window of frames.
@@ -64,8 +69,8 @@ class InputBuffer:
     to associate to.
 
     Data queueing methods enforce that the new message is temporally *after*
-    the latest message of that type. If this is not the case, then a ValueError
-    exception is raised.
+    the latest message of that type. If this is not the case, i.e. we received
+    an out-of-order message, we do not queue the message.
 
     Hand pose sensor outputs are known to be output asynchronously and at a
     different rate than the images. Thus, we cannot presume there will be any
@@ -182,43 +187,6 @@ class InputBuffer:
                 return False
             self.obj_dets.append(msg)
             return True
-
-    def get_frame_time(self, buff_index=-1) -> Time:
-        """
-        Get the timestamp of the image frame at the given index.
-
-        By default, we return the most recent image's timestamp.
-
-        :param buff_index: Index into the frame buffer to return
-        :raises IndexError: Invalid index specified.
-        :return: Time message reference.
-        """
-        with self.__state_lock:
-            return self.frames[buff_index][0]
-
-    def get_window_detections(self, window_size: int) -> List[ObjectDetection2dSet]:
-        """
-        Get the list of detection messages in the window as considered from the
-        end of the buffer.
-        """
-        # We know that object detections are
-        with self.__state_lock:
-            # This window's frame in ascending time order
-            window_frame_times_ns: List[int] = [
-                time_to_int(f_time)
-                for f_time, _,
-                # deques don't support slicing, so thus the following madness
-                in list(itertools.islice(reversed(self.frames), window_size))[::-1]
-            ]
-
-            window_dets = descending_match_with_tolerance(
-                window_frame_times_ns,
-                self.obj_dets,
-                0,  # we expect exact matches for object detections.
-                time_from_value_fn=self._objdet_msg_to_time_ns,
-            )
-
-            return window_dets
 
     @staticmethod
     def _hand_msg_to_time_ns(msg: HandJointPosesUpdate):
@@ -590,6 +558,7 @@ class UHOActivityDetector(Node):
 
         # These criterion predicates must all return true for us to proceed
         # with processing activity classification for a window.
+        # Function order should consider short-circuiting rules.
         window_processing_criterion_fn_list: List[Callable[[InputWindow], bool]] = [
             self._window_criterion_correct_size,
             self._window_criterion_enough_dets,
@@ -613,10 +582,6 @@ class UHOActivityDetector(Node):
                 window = self._input_buffer.get_window(self._frames_per_det)
                 if all(fn(window) for fn in window_processing_criterion_fn_list):
                     log.info("RT Starting processing block")
-
-                    # DEBUG: block queueing while in breakpoint
-                    # with self._input_buffer:
-                    #     breakpoint()
 
                     # After getting validating a window, before processing,
                     # clear out older data from the buffer using the timestamp
@@ -673,6 +638,7 @@ class UHOActivityDetector(Node):
                 rhand_arrays[i] = get_hand_pose_from_msg(msg)
             else:
                 rhand_arrays[i] = hand_zero_vec.copy()
+        # TODO: zero out both vector pairs if any one is a zero vector.
 
         frame_set, aux_data = create_batch(
             frame_set, lhand_arrays, rhand_arrays, window.obj_dets,

@@ -31,7 +31,7 @@ def descending_match_with_tolerance(
     use-case is that of nanoseconds and with a tolerance that is significantly
     less than the normal distance between key times.
 
-    :param key_times: Integer time values (usually nanoseconds) in descending
+    :param key_times: Integer time values (usually nanoseconds) in ascending
         value order to match against.
     :param values: Reversible values to match against key times.
         These values should either be integer times themselves, be able to be
@@ -43,9 +43,9 @@ def descending_match_with_tolerance(
         consider the value *to be* the time.
 
     :returns: A list that is parallel in association to the `key_times`
-        sequence. Slots may be valued with None (no match) or with a time from
-        the `value_times` iterable. Time values in this list should also be in
-        relative descending order.
+        sequence. Slots may be valued with None (no match) or with a value from
+        the `values` iterable. Values in this list should also be in relative
+        ascending order.
     """
     # Values will be stored in descending temporal order, will reverse before
     # returning.
