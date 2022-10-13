@@ -30,7 +30,6 @@ from angel_system.uho.src.data_helper import create_batch
 from angel_system.utils.matching import descending_match_with_tolerance
 from angel_system.utils.simple_timer import SimpleTimer
 from angel_utils.conversion import get_hand_pose_from_msg
-from angel_utils.sync_msgs import get_frame_synced_hand_poses, match_hands_to_frames
 from angel_utils.conversion import time_to_int
 
 
