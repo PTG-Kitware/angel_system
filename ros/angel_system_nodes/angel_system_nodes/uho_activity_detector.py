@@ -28,6 +28,7 @@ from angel_msgs.msg import (
 from angel_system.uho.predict import get_uho_classifier, predict
 from angel_system.uho.src.data_helper import create_batch
 from angel_system.utils.matching import descending_match_with_tolerance
+from angel_system.utils.simple_timer import SimpleTimer
 from angel_utils.conversion import get_hand_pose_from_msg
 from angel_utils.sync_msgs import get_frame_synced_hand_poses, match_hands_to_frames
 from angel_utils.conversion import time_to_int
@@ -364,6 +365,16 @@ class UHOActivityDetector(Node):
             .get_parameter_value()
             .integer_value
         )
+        # Maximum size for our data buffer in terms of seconds.
+        # We will use this in our prediction runtime to make sure that we don't
+        # build up too much data if we happen to not predict for a while.
+        # Default value assumes frame-rate of ~30Hz and a processing window of
+        # about 1 seconds-worth of data (`frames_per_det` above).
+        self._buffer_max_size_seconds = (
+            self.declare_parameter("buffer_max_size_seconds", 2.0)
+            .get_parameter_value()
+            .double_value
+        )
         self._model_checkpoint = (
             self.declare_parameter("model_checkpoint",
                                    "/angel_workspace/model_files/uho_epoch_090.ckpt")
@@ -382,7 +393,8 @@ class UHOActivityDetector(Node):
             .get_parameter_value()
             .integer_value
         )
-        self._slop_ns = (5 / 60.0) * 1e9 # slop (hand msgs have rate of ~60hz per hand)
+        self._buffer_max_size_nanosec = int(self._buffer_max_size_seconds * 1e9)
+        self._slop_ns = (5 / 60.0) * 1e9  # slop (hand msgs have rate of ~60hz per hand)
 
         log = self.get_logger()
         log.info(f"Image topic: {self._image_topic}")
@@ -532,116 +544,6 @@ class UHOActivityDetector(Node):
         if self.rt_alive() and self._input_buffer.queue_object_detections(msg):
             log.info(f"Queueing object detections (ts={msg.header.stamp})")
 
-        # self._obj_dets.append(msg)
-        #
-        # if len(self._frames) >= self._frames_per_det:
-        #     frame_stamp_set = self._frame_stamps[:self._frames_per_det]
-        #     ready_to_predict = False
-        #
-        #     # If the source stamp for this detection message is after or equal to
-        #     # the last frame stamp in the current set, then we have all of the
-        #     # detections and can move onto processing this set of frames.
-        #     msg_nsec = msg.source_stamp.sec * 10e9 + msg.source_stamp.nanosec
-        #     frm_nsec = frame_stamp_set[-1].sec * 10e9 + frame_stamp_set[-1].nanosec
-        #     if msg_nsec >= frm_nsec:
-        #         ready_to_predict = True
-        #
-        #     # Need to wait until the object detector has processed all of these frames
-        #     if not ready_to_predict:
-        #         log.info(f"Waiting for more object detection results")
-        #         return
-        #
-        #     # Get the frame synchronized hand poses for this set of frames
-        #     frame_set = self._frames[:self._frames_per_det]
-        #
-        #     lhand_pose_set, rhand_pose_set = get_frame_synced_hand_poses(
-        #         frame_stamp_set,
-        #         self._hand_poses,
-        #         self._hand_pose_stamps,
-        #         self._slop_ns
-        #     )
-        #
-        #     # Get the object detections to use
-        #     first_frm_nsec = frame_stamp_set[0].sec * 10e9 + frame_stamp_set[0].nanosec
-        #     last_frm_nsec = frame_stamp_set[-1].sec * 10e9 + frame_stamp_set[-1].nanosec
-        #     obj_det_idxs_to_remove = []
-        #     obj_det_set = []
-        #     for idx, det in enumerate(self._obj_dets):
-        #         if det.num_detections == 0:
-        #             log.info(f"no dets, det source: {det.source_stamp}")
-        #             continue
-        #
-        #         det_source_stamp_nsec = det.source_stamp.sec * 10e9 + det.source_stamp.nanosec
-        #
-        #         # Check that this detection is within the range of time
-        #         # for the current frame set
-        #         if det_source_stamp_nsec < first_frm_nsec:
-        #             # Detection is before the first frame in this set,
-        #             # so we can remove it
-        #             obj_det_idxs_to_remove.append(idx)
-        #             continue
-        #         elif det_source_stamp_nsec > last_frm_nsec:
-        #             # Detection is after the last frame in this set,
-        #             # so keep it for later
-        #             continue
-        #
-        #         obj_det_idxs_to_remove.append(idx)
-        #         obj_det_set.append(det)
-        #
-        #     frame_set_processed, aux_data = create_batch(
-        #         frame_set,
-        #         lhand_pose_set,
-        #         rhand_pose_set,
-        #         obj_det_set,
-        #         self._topk,
-        #     )
-        #
-        #     # Inference!
-        #     activities_detected, labels = self._detector.forward(frame_set_processed, aux_data)
-        #
-        #     # Create and publish the ActivityDetection msg
-        #     activity_msg = ActivityDetection()
-        #
-        #     # This message time
-        #     activity_msg.header.stamp = self.get_clock().now().to_msg()
-        #
-        #     # Trace to the source
-        #     activity_msg.header.frame_id = "Activity detection"
-        #     activity_msg.source_stamp_start_frame = frame_stamp_set[0]
-        #     activity_msg.source_stamp_end_frame = frame_stamp_set[-1]
-        #
-        #     activity_msg.label_vec = labels
-        #     activity_msg.conf_vec = activities_detected[0].squeeze().tolist()
-        #
-        #     # Publish!
-        #     self._activity_publisher.publish(activity_msg)
-        #     log.info(f"Activities detected: {activities_detected}")
-        #     log.info(f"Top activity detected: {activities_detected[1]}")
-        #
-        #     # Clear out stored frames, aux_data, and timestamps
-        #     self._frames = self._frames[self._frames_per_det:]
-        #     self._frame_stamps = self._frame_stamps[self._frames_per_det:]
-        #
-        #     # Remove old hand poses
-        #     hands = self._hand_pose_stamps.keys()
-        #     last_frm_nsec = frame_stamp_set[-1].sec * 10e9 + frame_stamp_set[-1].nanosec
-        #     for h in hands:
-        #         hand_idxs_to_remove = []
-        #         for idx, stamp in enumerate(self._hand_pose_stamps[h]):
-        #             h_nsec = stamp.sec * 10e9 + stamp.nanosec
-        #             if h_nsec <= last_frm_nsec:
-        #                 # Hand pose is before or equal to the last frame
-        #                 # in the set of frames we just processed, so we can
-        #                 # remove it.
-        #                 hand_idxs_to_remove.append(idx)
-        #
-        #         for i in sorted(hand_idxs_to_remove, reverse=True):
-        #             del self._hand_poses[h][i]
-        #             del self._hand_pose_stamps[h][i]
-        #
-        #     for i in sorted(obj_det_idxs_to_remove, reverse=True):
-        #         del self._obj_dets[i]
-
     def _window_criterion_correct_size(self, window: InputWindow) -> bool:
         window_ok = len(window) == self._frames_per_det
         if not window_ok:
@@ -733,6 +635,15 @@ class UHOActivityDetector(Node):
                     act_msg = self._process_window(window)
                     log.info("RT publishing activity classification results")
                     self._activity_publisher.publish(act_msg)
+                else:
+                    # Clear at least to our max buffer size even if we didn't
+                    # process anything.
+                    old_time_ns = (
+                        time_to_int(window.frames[-1][0])
+                        - self._buffer_max_size_nanosec
+                    )
+                    self._input_buffer.clear_before(old_time_ns)
+
             else:
                 # wait timeout triggered, just loop.
                 log.debug("RT heartbeat timeout: checking alive status")
@@ -786,7 +697,8 @@ class UHOActivityDetector(Node):
         #   - new discussion, provided packed matrix, K=<top-k size>
         #       [32*K x 2048]
         #       [32*K x 4]
-        pred_conf, pred_labels = predict(self._detector, frame_set, aux_data)
+        with SimpleTimer("Activity classification prediction", self.get_logger().info):
+            pred_conf, pred_labels = predict(self._detector, frame_set, aux_data)
 
         # Create activity message from results
         activity_msg = ActivityDetection()
