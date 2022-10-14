@@ -80,10 +80,8 @@ def run_eval(args):
     # Load labels
     # ============================
     # grab all labels present in data
-    dlabels = list(set([l.lower().strip().rstrip('.') for l in gt['class'].unique()] + [l.lower().strip().rstrip('.') for l in detections['class'].unique()]))
-    labels = list(set(dlabels))
-    labels = pd.DataFrame(list(zip(range(len(labels)), labels)), columns=['id', 'class'])
-
+    labels = list(set([l.lower().strip().rstrip('.') for l in detections['class'].unique()]))
+   
     log.debug(f"Labels: {labels}")
 
     # ============================
@@ -99,37 +97,37 @@ def run_eval(args):
     time_windows = list(zip(time_windows[:-1], time_windows[1:]))
 
     # Create masked matrix of detections
-    dets_per_time_w = np.full((len(time_windows), len(labels)), None)
-    gt_true_mask = np.full((len(time_windows), len(labels)), None)
-    time_idx = 0
+    dets_per_valid_time_w = []
+    gt_true_mask = []
 
-    for time_idx, time in enumerate(time_windows):
-        # Determine what detections we have
-        det_overlap = detections.query(f'not (end < {time[0]} or {time[1]} < start)')
+    for time in time_windows:
+        det_confs_in_w = [0] * len(labels)
+        gt_tf_sample = [False] * len(labels)
+
+        # Determine what detections we have that completely contain the time window
+        det_overlap = detections.query(f'{time[0]} >= start and {time[1]} <= end')
         if det_overlap.empty:
             continue
 
-        # Determine the highest conf for each class
-        for i, row in labels.iterrows():
-            class_overlap = det_overlap.loc[det_overlap['class'] == row['class']]
-            dets_per_time_w[time_idx][row['id']] = class_overlap['conf'].max()
-        best_det = dets_per_time_w[time_idx].argmax()
-
-        # Determiine what gt we have
-        gt_overlap = gt.query(f'not (end < {time[0]} or {time[1]} < start)')
+        # Determine what gt we have that completely contain the time window
+        gt_overlap = gt.query(f'{time[0]} >= start+{args.uncertain_pad} and {time[1]} <= end-{args.uncertain_pad}')
         if gt_overlap.empty:
-            gt_true_mask[time_idx][best_det] = False # fp
             continue
 
-        for ii, r in gt_overlap.iterrows():
-            # Only mark as correct if we are really sure 
-            shrunk_gt = [r['start']+args.uncertain_pad, r['end']-args.uncertain_pad]
-            if not(shrunk_gt[1] < time[0] or time[1] < shrunk_gt[0]):
-                # Mark detection as correct
-                correct_label = r['class'].strip().rstrip('.')
-                correct_class_idx = labels.loc[labels['class'] == correct_label].iloc[0]['id']
+        # Determine the highest conf for each class
+        for id, label in enumerate(labels):
+            class_overlap = det_overlap.loc[det_overlap['class'] == label]
+            det_confs_in_w[id] = class_overlap['conf'].max()
 
-                gt_true_mask[time_idx][correct_class_idx] = True # tp
+        # Mark detection as correct
+        for ii, r in gt_overlap.iterrows():
+            correct_label = r['class'].strip().rstrip('.')
+            correct_class_idx = labels.index(correct_label)
+
+            gt_tf_sample[correct_class_idx] = True # tp
+        
+        dets_per_valid_time_w.append(det_confs_in_w)
+        gt_true_mask.append(gt_tf_sample)
 
     # plot activity timelines
     plot_activities_confidence(labels=labels, gt=gt, dets=detections, output_dir=f"{output_dir}/plots")
@@ -141,7 +139,7 @@ def run_eval(args):
     # ============================
     # Metrics
     # ============================
-    metrics =  EvalMetrics(labels, gt_true_mask, dets_per_time_w, output_fn=f"{output_dir}/metrics.txt")
+    metrics = EvalMetrics(labels, gt_true_mask, dets_per_valid_time_w, output_fn=f"{output_dir}/metrics.txt")
     #metrics.detect_intersection_per_activity_label()
     metrics.precision()
 
@@ -150,7 +148,7 @@ def run_eval(args):
     # ============================
     # Plot
     # ============================
-    vis = EvalVisualization(labels, gt_true_mask, dets_per_time_w, output_dir=output_dir)
+    vis = EvalVisualization(labels, gt_true_mask, dets_per_valid_time_w, output_dir=output_dir)
     vis.plot_pr_curve()
     #vis.plot_roc_curve()
     #vis.plot_confusion_matrix()
@@ -158,7 +156,7 @@ def run_eval(args):
     log.info(f"Saved plots to {output_dir}/plots/")
 
     del gt_true_mask
-    del dets_per_time_w
+    del dets_per_valid_time_w
 
     gc.collect()
 

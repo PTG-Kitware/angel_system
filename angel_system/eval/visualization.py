@@ -13,13 +13,13 @@ import logging
 log = logging.getLogger("ptg_eval")
 
 class EvalVisualization:
-    def __init__(self, labels, gt_true_mask, dets_per_time_w, output_dir=''):
+    def __init__(self, labels, gt_true_mask, dets_per_valid_time_w, output_dir=''):
         """
-        :param labels: Pandas df with columns id (int) and class (str)
-        :param gt_true_pos_mask: Matrix of size (number time windows x number classes) where True
-            indicates a TP, False inidcates a FP, and np.NaN indicates an invalid detection
-        :param dets_per_time_w: Matrix of size (number time windows x number classes) filled with 
-            the max confidence score per class
+        :param labels: Array of class labels (str)
+        :param gt_true_pos_mask: Matrix of size (number of valid time windows x number classes) where True
+            indicates a true class example, False inidcates a false class example
+        :param dets_per_time_w: Matrix of size (number of valid time windows x number classes) filled with 
+            the max confidence score per class for any detections in the time window
         :param output_dir: Directory to write the plots to
         """
         self.output_dir = Path(os.path.join(output_dir, "plots/"))
@@ -29,7 +29,7 @@ class EvalVisualization:
         self.labels = labels
 
         self.gt_true_mask = gt_true_mask
-        self.dets_per_time_w = dets_per_time_w
+        self.dets_per_valid_time_w = dets_per_valid_time_w
 
     def plot_pr_curve(self):
         """
@@ -43,7 +43,7 @@ class EvalVisualization:
         # ============================
         # Get PR plot per class 
         # ============================
-        for i, row in self.labels.iterrows():
+        for id in range(len(self.dets_per_valid_time_w[0])):
             # ============================
             # Setup figure
             # ============================
@@ -63,14 +63,13 @@ class EvalVisualization:
                 (l,) = plt.plot(x[y >= 0], y[y >= 0], color="gray", alpha=0.2)
                 plt.annotate("f1={0:0.1f}".format(f_score), xy=(0.9, y[45] + 0.02))
 
-            id = row['id']
-            label = row['class']
+            label = self.labels[id]
 
-            class_dets_per_time_w = self.dets_per_time_w[:, id]
-            mask_per_class = self.gt_true_mask[:, id]
+            class_dets_per_time_w = np.array([time_w[id] for time_w in self.dets_per_valid_time_w])
+            mask_per_class = np.array([time_w[id] for time_w in self.gt_true_mask])
 
-            tp = class_dets_per_time_w[mask_per_class==True]
-            fp = class_dets_per_time_w[mask_per_class==False]
+            tp = class_dets_per_time_w[mask_per_class]
+            fp = class_dets_per_time_w[~mask_per_class]
 
             s = np.hstack([tp, fp]).T
             y_true = np.hstack([np.ones(len(tp), dtype=bool),
@@ -78,8 +77,9 @@ class EvalVisualization:
             s.shape = (-1, 1)
             y_true.shape = (-1, 1)
 
-            PrecisionRecallDisplay.from_predictions(y_true, s).plot(ax=ax, name=label, color=colors[i])
-            
+            PrecisionRecallDisplay.from_predictions(y_true, s).plot(ax=ax, name=label, color=colors[id])
+            # TODO: add average and auc
+
             # ============================
             # Save
             # ============================
@@ -117,7 +117,7 @@ class EvalVisualization:
         fpr = dict()
         tpr = dict()
         roc_auc = dict()
-        for i, row in self.labels.iterrows():
+        for id in range(len(self.dets_per_valid_time_w[0])):
             # ============================
             # Setup figure
             # ============================
@@ -129,14 +129,13 @@ class EvalVisualization:
             ax.set_xlabel("False Positive Rate")
             ax.set_ylabel("True Positive Rate")
 
-            id = row['id']
-            label = row['class']
+            label = self.labels[id]
 
-            class_dets_per_time_w = self.dets_per_time_w[:, id]
-            mask_per_class = self.gt_true_mask[:, id]
+            class_dets_per_time_w = np.array([time_w[id] for time_w in self.dets_per_valid_time_w])
+            mask_per_class = np.array([time_w[id] for time_w in self.gt_true_mask])
 
-            tp = class_dets_per_time_w[mask_per_class==True]
-            fp = class_dets_per_time_w[mask_per_class==False]
+            tp = class_dets_per_time_w[mask_per_class]
+            fp = class_dets_per_time_w[~mask_per_class]
 
             s = np.hstack([tp, fp]).T
             y_true = np.hstack([np.ones(len(tp), dtype=bool),
@@ -144,13 +143,13 @@ class EvalVisualization:
             s.shape = (-1, 1)
             y_true.shape = (-1, 1)
 
-            fpr[i], tpr[i], _ = roc_curve(y_true, s)
-            roc_auc[i] = auc(fpr[i], tpr[i])
+            fpr[id], tpr[id], _ = roc_curve(y_true, s)
+            roc_auc[id] = auc(fpr[id], tpr[id])
 
-            ax.plot(fpr[i], tpr[i], color=colors[i], lw=2,
-                    label=label + " (area = {0:0.2f})".format(roc_auc[i]))
-            av_ax.plot(fpr[i], tpr[i], color=colors[i], lw=2,
-                    label=label + " (area = {0:0.2f})".format(roc_auc[i]))
+            ax.plot(fpr[id], tpr[id], color=colors[id], lw=2,
+                    label=label + " (area = {0:0.2f})".format(roc_auc[id]))
+            av_ax.plot(fpr[id], tpr[id], color=colors[id], lw=2,
+                    label=label + " (area = {0:0.2f})".format(roc_auc[id]))
 
             # ============================
             # Save
@@ -239,9 +238,7 @@ def plot_activities_confidence(labels, gt, dets, custom_range=None, output_dir='
     :param custom_range_color: The color of the additional range to be drawn. If not set, we will
                                 use "red".
     """
-    for i, row in labels.iterrows():
-        label = row['class']
-
+    for label in labels:
         gt_ranges = gt.loc[gt['class'] == label]
         det_ranges = dets.loc[dets['class'] == label]
 
