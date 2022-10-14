@@ -1,0 +1,154 @@
+version: "1.0"
+
+# Reference to the activity classification labels configuration that we will
+# reference into.
+activity_labels: "./config/activity_labels/recipe_coffee.yaml"
+
+# Layout of the steps that define this task.
+steps:
+  # Item format:
+  # - id: Identifying integer for the step.
+  # - activity_id: The ID of an activity classification associated with this
+  #                step. This must reference an ID within the `activity_labels`
+  #                configuration file referenced above.
+  # - description: Human semantic description of this step.
+  # - median_duration_seconds: Median expected time this task will
+  #                            consume in seconds.
+  - id: 0
+    activity_id: 1
+    description: >-
+      Pour 12 ounces of water into liquid measuring cup
+    median_duration_seconds: 5
+  - id: 1
+    activity_id: 2
+    description: >-
+      Pour the water from the liquid measuring cup into the electric kettle
+    median_duration_seconds: 5
+  - id: 2
+    activity_id: 3
+    description: >-
+      Turn on the kettle
+    median_duration_seconds: 5
+  - id: 3
+    activity_id: 4
+    description: >-
+      Place the dripper on top of the mug
+    median_duration_seconds: 5
+  - id: 4
+    activity_id: 5
+    description: >-
+      Take the coffee filter and fold it in half to create a semi-circle
+    median_duration_seconds: 5
+  - id: 5
+    activity_id: 6
+    description: >-
+      Fold the filter in half again to create a quarter-circle
+    median_duration_seconds: 5
+  - id: 6
+    activity_id: 7
+    description: >-
+      Place the folded filter into the dripper such that the the point of the quarter-circle rests in the center of the dripper
+    median_duration_seconds: 5
+  - id: 7
+    activity_id: 8
+    description: >-
+      Spread the filter open to create a cone inside the dripper
+    median_duration_seconds: 5
+  - id: 8
+    activity_id: 9
+    description: >-
+      Turn on the kitchen scale
+    median_duration_seconds: 5
+  - id: 9
+    activity_id: 10
+    description: >-
+      Place a bowl on the scale
+    median_duration_seconds: 5
+  - id: 10
+    activity_id: 11
+    description: >-
+      Zero the scale
+    median_duration_seconds: 5
+  - id: 11
+    activity_id: 12
+    description: >-
+      Add coffee beans to the bowl until the scale reads 25 grams
+    median_duration_seconds: 5
+  - id: 12
+    activity_id: 13
+    description: >-
+      Pour the measured coffee beans into the coffee grinder
+    median_duration_seconds: 5
+  - id: 13
+    activity_id: 14
+    description: >-
+      Set timer for 20 seconds
+    median_duration_seconds: 5
+  - id: 14
+    activity_id: 15
+    description: >-
+      Turn on the timer
+    median_duration_seconds: 5
+  - id: 15
+    activity_id: 16
+    description: >-
+      Grind the coffee beans by pressing and holding down on the black part of the lid
+    median_duration_seconds: 5
+  - id: 16
+    activity_id: 17
+    description: >-
+      Pour the grounded coffee beans into the filter cone prepared in step 2
+    median_duration_seconds: 5
+  - id: 17
+    activity_id: 18
+    description: >-
+      Turn on the thermometer
+    median_duration_seconds: 5
+  - id: 18
+    activity_id: 19
+    description: >-
+      Place the end of the thermometer into the water
+    median_duration_seconds: 5
+  - id: 19
+    activity_id: 20
+    description: >-
+      Set timer to 30 seconds # TODO: is this set and start the timer? Other time step has a separate turn on the timer step
+    median_duration_seconds: 5
+  - id: 20
+    activity_id: 21
+    description: >-
+      Pour a small amount of water over the grounds in order to wet the grounds
+    median_duration_seconds: 5
+  - id: 21
+    activity_id: 22
+    description: >-
+      Slowly pour the water over the grounds in a circular motion. Do not overfill beyond the top of the paper filter
+    median_duration_seconds: 5
+  - id: 22
+    activity_id: 23
+    description: >-
+      Allow the rest of the water in the dripper to drain
+    median_duration_seconds: 5
+  - id: 23
+    activity_id: 24
+    description: >-
+      Remove the dripper from the cup
+    median_duration_seconds: 5
+  - id: 24
+    activity_id: 25
+    description: >-
+      Remove the coffee grounds and paper filter from the dripper
+    median_duration_seconds: 5
+  - id: 25
+    activity_id: 26
+    description: >-
+      Discard the coffee grounds and paper filter
+    median_duration_seconds: 5
+
+# Hidden markov model configuration parameters
+hmm:
+  num_steps_can_jump_fwd: 1
+  num_steps_can_jump_bck: 2
+  class_mean_conf: 0.1
+  class_std_conf: 0.2
+  dt: 0.5 # Time (seconds) between time steps of HMM
