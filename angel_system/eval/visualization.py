@@ -13,7 +13,7 @@ import logging
 log = logging.getLogger("ptg_eval")
 
 class EvalVisualization:
-    def __init__(self, labels, gt_true_pos_mask, dets_per_time_w, output_dir=''):
+    def __init__(self, labels, gt_true_mask, dets_per_time_w, output_dir=''):
         """
         :param labels: Pandas df with columns id (int) and class (str)
         :param gt_true_pos_mask: Matrix of size (number time windows x number classes) where True
@@ -28,7 +28,7 @@ class EvalVisualization:
 
         self.labels = labels
 
-        self.gt_true_pos_mask = gt_true_pos_mask
+        self.gt_true_mask = gt_true_mask
         self.dets_per_time_w = dets_per_time_w
 
     def plot_pr_curve(self):
@@ -39,6 +39,7 @@ class EvalVisualization:
         pr_plot_dir.mkdir(parents=True, exist_ok=True)
 
         colors = plt.cm.rainbow(np.linspace(0, 1, len(self.labels)))
+
         # ============================
         # Get PR plot per class 
         # ============================
@@ -46,7 +47,7 @@ class EvalVisualization:
             # ============================
             # Setup figure
             # ============================
-            fig, ax = plt.subplots(figsize=(7, 8))
+            fig, ax = plt.subplots(figsize=(9, 8))
 
             ax.set_xlim([0.0, 1.0])
             ax.set_ylim([0.0, 1.05])
@@ -66,7 +67,7 @@ class EvalVisualization:
             label = row['class']
 
             class_dets_per_time_w = self.dets_per_time_w[:, id]
-            mask_per_class = self.gt_true_pos_mask[:, id]
+            mask_per_class = self.gt_true_mask[:, id]
 
             tp = class_dets_per_time_w[mask_per_class==True]
             fp = class_dets_per_time_w[mask_per_class==False]
@@ -93,7 +94,7 @@ class EvalVisualization:
 
             fig.savefig(f"{pr_plot_dir}/{label.replace(' ', '_')}.png")
 
-    def plot_roc_curve(self, detect_intersection_thr=0.1):
+    def plot_roc_curve(self):
         colors = plt.cm.rainbow(np.linspace(0, 1, len(self.labels)))
 
         roc_plot_dir = Path(os.path.join(self.output_dir, "roc"))
@@ -131,12 +132,19 @@ class EvalVisualization:
             id = row['id']
             label = row['class']
 
-            det_ranges = self.dets.loc[self.dets['class'] == label]
+            class_dets_per_time_w = self.dets_per_time_w[:, id]
+            mask_per_class = self.gt_true_mask[:, id]
 
-            truth = [1 if det['detect_intersection'] > detect_intersection_thr else 0 for i, det in det_ranges.iterrows()]
-            pred = [det['conf'] for i, det in det_ranges.iterrows()]
+            tp = class_dets_per_time_w[mask_per_class==True]
+            fp = class_dets_per_time_w[mask_per_class==False]
 
-            fpr[i], tpr[i], _ = roc_curve(truth, pred)
+            s = np.hstack([tp, fp]).T
+            y_true = np.hstack([np.ones(len(tp), dtype=bool),
+                     np.zeros(len(fp), dtype=bool)]).T
+            s.shape = (-1, 1)
+            y_true.shape = (-1, 1)
+
+            fpr[i], tpr[i], _ = roc_curve(y_true, s)
             roc_auc[i] = auc(fpr[i], tpr[i])
 
             ax.plot(fpr[i], tpr[i], color=colors[i], lw=2,
@@ -154,7 +162,7 @@ class EvalVisualization:
         # ============================
         # Plot average values
         # ============================
-        n_classes = self.labels.shape[0]
+        n_classes = len(self.labels)
 
         # First aggregate all false positive rates
         all_fpr = np.unique(np.concatenate([fpr[i] for i in range(n_classes)]))

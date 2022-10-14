@@ -100,15 +100,13 @@ def run_eval(args):
 
     # Create masked matrix of detections
     dets_per_time_w = np.full((len(time_windows), len(labels)), None)
-    gt_true_pos_mask = np.full((len(time_windows), len(labels)), None)
-    uncertain_pad = 1
+    gt_true_mask = np.full((len(time_windows), len(labels)), None)
     time_idx = 0
 
-    for time in time_windows:
+    for time_idx, time in enumerate(time_windows):
         # Determine what detections we have
         det_overlap = detections.query(f'not (end < {time[0]} or {time[1]} < start)')
         if det_overlap.empty:
-            time_idx += 1
             continue
 
         # Determine the highest conf for each class
@@ -120,28 +118,20 @@ def run_eval(args):
         # Determiine what gt we have
         gt_overlap = gt.query(f'not (end < {time[0]} or {time[1]} < start)')
         if gt_overlap.empty:
-            gt_true_pos_mask[time_idx][best_det] = False # fp
-            time_idx += 1
+            gt_true_mask[time_idx][best_det] = False # fp
             continue
 
         for ii, r in gt_overlap.iterrows():
             # Only mark as correct if we are really sure 
-            shrunk_gt = [r['start']+uncertain_pad, r['end']-uncertain_pad]
+            shrunk_gt = [r['start']+args.uncertain_pad, r['end']-args.uncertain_pad]
             if not(shrunk_gt[1] < time[0] or time[1] < shrunk_gt[0]):
                 # Mark detection as correct
                 correct_label = r['class'].strip().rstrip('.')
                 correct_class_idx = labels.loc[labels['class'] == correct_label].iloc[0]['id']
 
-                gt_true_pos_mask[time_idx][correct_class_idx] = True # tp
+                gt_true_mask[time_idx][correct_class_idx] = True # tp
 
-        time_idx += 1
-    
-    with open('debug-mat.txt', "w") as f:
-        i = 0
-        for row in dets_per_time_w:
-            f.write(f"{time_windows[i]}: {row}, {gt_true_pos_mask[i]}\n")
-            i+=1
-
+    # plot activity timelines
     plot_activities_confidence(labels=labels, gt=gt, dets=detections, output_dir=f"{output_dir}/plots")
     del gt
     del detections
@@ -151,36 +141,29 @@ def run_eval(args):
     # ============================
     # Metrics
     # ============================
-    metrics =  EvalMetrics(labels=labels, gt_true_pos_mask=gt_true_pos_mask, dets_per_time_w=dets_per_time_w, output_fn=f"{output_dir}/metrics.txt")
+    metrics =  EvalMetrics(labels, gt_true_mask, dets_per_time_w, output_fn=f"{output_dir}/metrics.txt")
     #metrics.detect_intersection_per_activity_label()
-    metrics.precision_recall_f1()
+    metrics.precision()
 
     log.info(f"Saved metrics to {output_dir}/metrics.txt")
     
     # ============================
     # Plot
     # ============================
-    vis = EvalVisualization(labels=labels, gt_true_pos_mask=gt_true_pos_mask, dets_per_time_w=dets_per_time_w, output_dir=output_dir)
+    vis = EvalVisualization(labels, gt_true_mask, dets_per_time_w, output_dir=output_dir)
     vis.plot_pr_curve()
     #vis.plot_roc_curve()
     #vis.plot_confusion_matrix()
 
     log.info(f"Saved plots to {output_dir}/plots/")
 
-    del gt_true_pos_mask
+    del gt_true_mask
     del dets_per_time_w
 
     gc.collect()
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--labels",
-        type=str,
-        default="model_files/activity_detector_annotation_labels.xlsx",
-        help="Multi-sheet Excel file of class ids and labels where each sheet is titled after the label version. \
-            The sheet used for evaluation is specified by the version number in the ground truth filename"
-    )
     parser.add_argument(
         "--activity_gt",
         type=str,
@@ -199,6 +182,12 @@ def main():
         type=float,
         default=1,
         help="Time window in seconds to evaluate results on."
+    )
+    parser.add_argument(
+        "--uncertain_pad",
+        type=float,
+        default=0.5,
+        help="Time in seconds to pad the groundtruth regions"
     )
     parser.add_argument(
         "--output_dir",
