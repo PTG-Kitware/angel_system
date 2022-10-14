@@ -1,6 +1,19 @@
 version: "1.0"
+
+# Reference to the activity classification labels configuration that we will
+# reference into.
 activity_labels: "./config/activity_labels/recipe_coffee.yaml"
+
+# Layout of the steps that define this task.
 steps:
+  # Item format:
+  # - id: Identifying integer for the step.
+  # - activity_id: The ID of an activity classification associated with this
+  #                step. This must reference an ID within the `activity_labels`
+  #                configuration file referenced above.
+  # - description: Human semantic description of this step.
+  # - median_duration_seconds: [Optional] Median expected time this task will=
+  #                            consume in seconds.
   - id: 0
     activity_id: 1
     description: >-
@@ -110,6 +123,7 @@ steps:
     description: >-
       Discard the coffee grounds and paper filter
 
+# Hidden markov model configuration parameters
 hmm:
   num_steps_can_jump_fwd: 1
   num_steps_can_jump_bck: 2
