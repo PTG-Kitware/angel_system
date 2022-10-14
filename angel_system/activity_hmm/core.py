@@ -14,7 +14,7 @@ except ModuleNotFoundError:
     HAS_MATLOTLIB = False
 
 
-class ActivityHMMRos(object):
+class ActivityHMMRos:
     def __init__(self, config_fname):
         """
 
