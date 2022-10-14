@@ -1,0 +1,20 @@
+[2022-10-14 14:32:11,033][torch.distributed.nn.jit.instantiator][INFO] - Created a temporary directory at /tmp/tmp3ueos582
+[2022-10-14 14:32:11,034][torch.distributed.nn.jit.instantiator][INFO] - Writing /tmp/tmp3ueos582/_remote_module_non_scriptable.py
+[2022-10-14 14:32:11,163][src.utils][INFO] - Disabling python warnings! <config.ignore_warnings=True>
+[2022-10-14 14:32:11,163][pytorch_lightning.utilities.seed][INFO] - Global seed set to 25
+[2022-10-14 14:32:11,164][src.training_pipeline][INFO] - Instantiating datamodule <src.datamodules.ros_datamodule.ROSDataModule>
+[2022-10-14 14:32:11,191][src.training_pipeline][INFO] - Instantiating model <src.models.unified_ho_module.UnifiedHOModule>
+[2022-10-14 14:32:11,799][src.training_pipeline][INFO] - Instantiating callback <pytorch_lightning.callbacks.ModelCheckpoint>
+[2022-10-14 14:32:11,801][src.training_pipeline][INFO] - Instantiating callback <pytorch_lightning.callbacks.EarlyStopping>
+[2022-10-14 14:32:11,802][src.training_pipeline][INFO] - Instantiating callback <pytorch_lightning.callbacks.RichModelSummary>
+[2022-10-14 14:32:11,802][src.training_pipeline][INFO] - Instantiating callback <pytorch_lightning.callbacks.RichProgressBar>
+[2022-10-14 14:32:11,803][src.training_pipeline][INFO] - Instantiating logger <pytorch_lightning.loggers.tensorboard.TensorBoardLogger>
+[2022-10-14 14:32:11,805][src.training_pipeline][INFO] - Instantiating trainer <pytorch_lightning.Trainer>
+[2022-10-14 14:32:12,054][pytorch_lightning.utilities.rank_zero][INFO] - Trainer already configured with model summary callbacks: [<class 'pytorch_lightning.callbacks.rich_model_summary.RichModelSummary'>]. Skipping setting a default `ModelSummary` callback.
+[2022-10-14 14:32:12,189][pytorch_lightning.utilities.rank_zero][INFO] - GPU available: True (cuda), used: True
+[2022-10-14 14:32:12,190][pytorch_lightning.utilities.rank_zero][INFO] - TPU available: False, using: 0 TPU cores
+[2022-10-14 14:32:12,190][pytorch_lightning.utilities.rank_zero][INFO] - IPU available: False, using: 0 IPUs
+[2022-10-14 14:32:12,190][pytorch_lightning.utilities.rank_zero][INFO] - HPU available: False, using: 0 HPUs
+[2022-10-14 14:32:12,313][src.training_pipeline][INFO] - Logging hyperparameters!
+[2022-10-14 14:32:12,328][src.training_pipeline][INFO] - Starting training!
+[2022-10-14 14:32:14,238][pytorch_lightning.accelerators.cuda][INFO] - LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [2]
