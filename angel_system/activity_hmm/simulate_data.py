@@ -6,7 +6,7 @@ from sklearn.metrics import precision_recall_curve
 from sklearn.metrics import  accuracy_score
 import scipy
 
-from angel_system.activity_hmm import ActivityHMM, get_skip_score, \
+from angel_system.activity_hmm.core import ActivityHMM, get_skip_score, \
     score_raw_detections
 from angel_system.impls.detect_activities.swinb.swinb_detect_activities import SwinBTransformer
 from angel_system.eval.support_functions import time_from_name
