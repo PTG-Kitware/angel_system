@@ -1,0 +1,13 @@
+_target_: src.datamodules.ros_datamodule.ROSDataModule
+
+action_files:
+  train_list: ${data_dir}/label_split/all_activities_action_train.txt
+  test_list: ${data_dir}/label_split/all_activities_action_val.txt
+  val_list: ${data_dir}/label_split/brian_coffee_action_test.txt  #new_action_val_32.txt #
+
+data_dir: ${data_dir} # data_dir is specified in test/train yaml file
+
+batch_size: 64
+num_workers: 0
+pin_memory: False
+frames_per_segment: 32
