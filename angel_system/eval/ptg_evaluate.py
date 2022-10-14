@@ -38,7 +38,7 @@ def run_eval(args):
     # Keys: class, start_frame,  end_frame, exploded_ros_bag_path
 
     gt = []
-    RE_FILENAME_TIME = re.compile(r"frame_(\d+)_\d+_\d+.\w+")
+    RE_FILENAME_TIME = re.compile(r"frame_\d+_(\d+)_\d+.\w+")
     for i, row in gt_f.iterrows():
         g = {
             'class': row["class"].lower().strip(), 
@@ -51,8 +51,6 @@ def run_eval(args):
 
     log.info(f"Loaded ground truth from {args.activity_gt}")
     gt = pd.DataFrame(gt)
-    for i, row in gt.iterrows():
-        print(row)
 
     # ============================
     # Load detections from
@@ -81,23 +79,12 @@ def run_eval(args):
     # ============================
     # Load labels
     # ============================
-    # Grab all labels based on gt file version
-    label_re = re.compile(r'labels_test_(?P<version>v\d+\.\d+)(?P<class>(\w+)?).feather')
-    label_ver = label_re.match(os.path.basename(args.activity_gt)).group('version')
-
-    vlabels = pd.read_excel(args.labels, sheet_name=label_ver)
-    vlabels['class'] = vlabels['class'].str.lower()
-    
     # grab all labels present in data
     dlabels = list(set([l.lower().strip().rstrip('.') for l in gt['class'].unique()] + [l.lower().strip().rstrip('.') for l in detections['class'].unique()]))
-    # Remove any labels that we don't actually have
-    missing_labels = []
-    for i, row in vlabels.iterrows():
-        if row['class'] not in dlabels:
-            missing_labels.append(i)
-    labels = vlabels.drop(missing_labels)
+    labels = list(set(dlabels))
+    labels = pd.DataFrame(list(zip(range(len(labels)), labels)), columns=['id', 'class'])
 
-    log.debug(f"Labels v{label_ver}: {labels}")
+    log.debug(f"Labels: {labels}")
 
     # ============================
     # Split by time window
@@ -131,17 +118,21 @@ def run_eval(args):
         best_det = dets_per_time_w[time_idx].argmax()
 
         # Determiine what gt we have
-        gt_overlap = gt.query(f'not (end < {time[0]-uncertain_pad} or {time[1]+uncertain_pad} < start)')
+        gt_overlap = gt.query(f'not (end < {time[0]} or {time[1]} < start)')
         if gt_overlap.empty:
             gt_true_pos_mask[time_idx][best_det] = False # fp
             time_idx += 1
             continue
-        for ii, r in gt_overlap.iterrows():
-            # Mark detections as correct
-            correct_label = r['class'].strip().rstrip('.')
-            correct_class_idx = labels.loc[labels['class'] == correct_label].iloc[0]['id']
 
-            gt_true_pos_mask[time_idx][correct_class_idx] = True # tp
+        for ii, r in gt_overlap.iterrows():
+            # Only mark as correct if we are really sure 
+            shrunk_gt = [r['start']+uncertain_pad, r['end']-uncertain_pad]
+            if not(shrunk_gt[1] < time[0] or time[1] < shrunk_gt[0]):
+                # Mark detection as correct
+                correct_label = r['class'].strip().rstrip('.')
+                correct_class_idx = labels.loc[labels['class'] == correct_label].iloc[0]['id']
+
+                gt_true_pos_mask[time_idx][correct_class_idx] = True # tp
 
         time_idx += 1
     
@@ -151,7 +142,7 @@ def run_eval(args):
             f.write(f"{time_windows[i]}: {row}, {gt_true_pos_mask[i]}\n")
             i+=1
 
-    plot_activities_confidence(labels=labels, gt=gt, dets=detections, output_dir=output_dir)
+    plot_activities_confidence(labels=labels, gt=gt, dets=detections, output_dir=f"{output_dir}/plots")
     del gt
     del detections
 
