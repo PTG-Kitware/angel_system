@@ -37,17 +37,11 @@ class ActivityHMMRos:
         # element of self.X.
         self.times = None
 
-        if False:
-            class_str = []
-            med_class_duration = []
-            class_mean_conf = []
-            class_std_conf = []
-        else:
-            # Start with a background class.
-            class_str = ['background']
-            med_class_duration = [1]
-            class_mean_conf = [default_mean_conf]
-            class_std_conf = [default_std_conf]
+        # Start with a background class.
+        class_str = ['background']
+        med_class_duration = [1]
+        class_mean_conf = [default_mean_conf]
+        class_std_conf = [default_std_conf]
 
         for i in range(len(config['steps'])):
             ii = config['steps'][i]['id']
@@ -558,8 +552,6 @@ class ActivityHMM(object):
         X : (n_samples, num_classes)
             Simulated detector confidences for each timestep (row) and each
             possible step being detected (column).
-        force_skip_step : None | int
-            Enforce that the solution skips a particular step.
 
         Return
         ------
