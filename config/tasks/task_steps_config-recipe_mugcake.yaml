@@ -1,0 +1,139 @@
+version: "1.0"
+activity_labels: "./config/activity_labels/recipe_mugcake.yaml"
+steps:
+  - id: 0
+    activity_id: 1
+    description: >-
+      Place the paper cupcake liner inside the mug.  Set aside
+  - id: 1
+    activity_id: 2
+    description: >-
+      Measure 1 Tablespoon of flour
+  - id: 2
+    activity_id: 3
+    description: >-
+      Add measured flour to the mixing bowl
+  - id: 3
+    activity_id: 4
+    description: >-
+      Measure 1 Tablespoon of sugar
+  - id: 4
+    activity_id: 5
+    description: >-
+      Add measured sugar to the mixing bowl
+  - id: 5
+    activity_id: 6
+    description: >-
+      Measure 1 teaspoon of sugar
+  - id: 6
+    activity_id: 7
+    description: >-
+      Measure 1/2 teaspoon of sugar
+  - id: 7
+    activity_id: 8
+    description: >-
+      Measure 1/4 teaspoon of baking powder
+  - id: 8
+    activity_id: 9
+    description: >-
+      Add measured baking powder to the mixing bowl
+  - id: 9
+    activity_id: 10
+    description: >-
+      Add a pinch of salt to the mixing bowl
+  - id: 10
+    activity_id: 11
+    description: >-
+      Whisk to combine
+  - id: 11
+    activity_id: 12
+    description: >-
+      Measure 1 teaspoon of oil
+  - id: 12
+    activity_id: 13
+    description: >-
+      Pour measured oil into the mixing bowl
+  - id: 13
+    activity_id: 14
+    description: >-
+      Measure 1 Tablespoon of water
+  - id: 14
+    activity_id: 15
+    description: >-
+      Pour measured water into the mixing bowl
+  - id: 15
+    activity_id: 16
+    description: >-
+      Measure 1/4 teaspoon of vanilla
+  - id: 16
+    activity_id: 17
+    description: >-
+      Pour measured vanilla into the mixing bowl
+  - id: 17
+    activity_id: 18
+    description: >-
+      Whisk batter until no lumps remain
+  - id: 18
+    activity_id: 19
+    description: >-
+      Pour batter into prepared mug
+  - id: 19
+    activity_id: 20
+    description: >-
+      Place the mug inside the microwave
+    # TODO: IDs 20-21, 22, and 23 are all different ways to start the microwave.
+    # How to tell the task monitor that only one of these is required?
+  - id: 20
+    activity_id: 21
+    description: >-
+      Set the microwave clock to 60 seconds
+  - id: 21
+    activity_id: 22
+    description: >-
+      Start the microwave
+  - id: 22
+    activity_id: 23
+    description: >-
+      Set+Start microwave
+  - id: 23
+    activity_id: 24
+    description: >-
+      Press Auto-1 minute button on microwave
+  - id: 24
+    activity_id: 25
+    description: >-
+      Remove the cake from the microwave
+  - id: 25
+    activity_id: 26
+    description: >-
+      Check if the cake is done by inserting a toothpick into the center of the cake
+  - id: 26
+    activity_id: 27
+    description: >-
+      Invert the mug to release the cake onto a plate
+  - id: 27
+    activity_id: 28
+    description: >-
+      Remove the paper cupcake liner
+  - id: 28
+    activity_id: 29
+    description: >-
+      While the cake is cooling, Scoop 1 spoonful of chocolate frosting into a zip-top bag
+  - id: 29
+    activity_id: 30
+    description: >-
+      Seal the zip-top bag, removing as much air as possible
+  - id: 30
+    activity_id: 31
+    description: >-
+      Use scissors to cut one corner from the bag to create a small opening 1/4-inch in diameter
+  - id: 31
+    activity_id: 32
+    description: >-
+      Squeeze the frosting through the opening to apply small dollops of frosting to the plate in a circle around the base of the cake
+
+hmm:
+  num_steps_can_jump_fwd: 1
+  num_steps_can_jump_bck: 2
+  class_mean_conf: 0.1
+  class_std_conf: 0.2

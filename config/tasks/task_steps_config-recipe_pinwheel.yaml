@@ -1,0 +1,70 @@
+version: "1.0"
+activity_labels: "./config/activity_labels/recipe_pinwheel.yaml"
+steps:
+  - id: 0
+    activity_id: 1
+    description: >-
+      Place tortilla on cutting board
+  - id: 1
+    activity_id: 2
+    description: >-
+      Use the butter knife to scoop nut butter from the jar
+  - id: 2
+    activity_id: 3
+    description: >-
+      Spread the nut butter evenly on the tortilla, leaving 1/2 inch margin from the edge uncovered onto the tortilla
+  - id: 3
+    activity_id: 4
+    description: >-
+      Clean the knife by wiping with a paper towel
+  - id: 4
+    activity_id: 5
+    description: >-
+      Use the butter knife to scoop jelly from the jar
+  - id: 5
+    activity_id: 6
+    description: >-
+      Spread the jelly evenly over the nut butter, leaving the same 1/2 inch margin from the edge uncovered
+  - id: 6
+    activity_id: 7
+    description: >-
+      Discard the paper towel
+  - id: 7
+    activity_id: 8
+    description: >-
+      Roll the tortilla from one end to the other into a log shape, about 1.5 inches thick.  Roll it tight enough to prevent gaps, but not so tight that the filling leaks
+  - id: 8
+    activity_id: 9
+    description: >-
+      Insert a toothpick into the tortilla approximately 1.5 inches from the end of the tortilla roll
+  - id: 9
+    activity_id: 10
+    description: >-
+      Insert another toothpick into the tortilla
+  - id: 10
+    activity_id: 11
+    description: >-
+      Trim one end of the tortilla roll leaving 1/2 inch margin from the toothpick
+  - id: 11
+    activity_id: 12
+    description: >-
+      Discard both ends of the tortilla
+  - id: 12
+    activity_id: 13
+    description: >-
+      Slide floss under the tortilla, perpendicular to the length of the roll.  Place the floss halfway between two toothpicks
+  - id: 13
+    activity_id: 14
+    description: >-
+      Cross the two ends of the floss over the top of the tortilla roll. Holding one end of the floss in each hand, pull the floss ends in opposite directions to slice
+  - id: 14
+    activity_id: 15
+    description: >-
+      Place the pinwheels on a plate
+
+
+hmm:
+  num_steps_can_jump_fwd: 1
+  num_steps_can_jump_bck: 2
+  class_mean_conf: 0.1
+  class_std_conf: 0.2
