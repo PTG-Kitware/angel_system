@@ -30,7 +30,7 @@ class ActivityHMMRos:
         default_mean_conf = config['hmm']['class_mean_conf']
         default_std_conf = config['hmm']['class_std_conf']
 
-        self.dt = 0.5
+        self.dt = config['hmm']['dt']
         self.X = None
 
         # Times associated with the center of the window associated with each
