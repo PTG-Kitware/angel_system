@@ -151,3 +151,4 @@ hmm:
   num_steps_can_jump_bck: 2
   class_mean_conf: 0.1
   class_std_conf: 0.2
+  dt: 0.5 # Time (seconds) between time steps of HMM
