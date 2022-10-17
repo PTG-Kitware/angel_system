@@ -44,7 +44,6 @@ class EvalVisualization:
         # Get PR plot per class 
         # ============================
         for id, label in enumerate(self.labels):
-            print(label)
             # ============================
             # Setup figure
             # ============================
@@ -61,18 +60,18 @@ class EvalVisualization:
             for f_score in fscores:
                 x = np.linspace(0.001, 1)
                 y = f_score * x / (2 * x - f_score)
-                (l,) = plt.plot(x[y >= 0], y[y >= 0], color="gray", alpha=0.2)
+                (l,) = plt.plot(x[y >= 0], y[y >= 0], color="gray", alpha=0.2, linestyle='dashed')
                 plt.annotate("f1={0:0.1f}".format(f_score), xy=(0.9, y[45] + 0.02))
 
             class_dets_per_time_w = self.dets_per_valid_time_w[:, id]
             mask_per_class = self.gt_true_mask[:, id]
 
-            tp = class_dets_per_time_w[mask_per_class]
-            fp = class_dets_per_time_w[~mask_per_class]
+            ts = class_dets_per_time_w[mask_per_class]
+            fs = class_dets_per_time_w[~mask_per_class]
 
-            s = np.hstack([tp, fp]).T
-            y_true = np.hstack([np.ones(len(tp), dtype=bool),
-                     np.zeros(len(fp), dtype=bool)]).T
+            s = np.hstack([ts, fs]).T
+            y_true = np.hstack([np.ones(len(ts), dtype=bool),
+                     np.zeros(len(fs), dtype=bool)]).T
             s.shape = (-1, 1)
             y_true.shape = (-1, 1)
 
@@ -134,12 +133,12 @@ class EvalVisualization:
             class_dets_per_time_w = self.dets_per_valid_time_w[:, id]
             mask_per_class = self.gt_true_mask[:, id]
 
-            tp = class_dets_per_time_w[mask_per_class]
-            fp = class_dets_per_time_w[~mask_per_class]
+            ts = class_dets_per_time_w[mask_per_class]
+            fs = class_dets_per_time_w[~mask_per_class]
 
-            s = np.hstack([tp, fp]).T
-            y_true = np.hstack([np.ones(len(tp), dtype=bool),
-                     np.zeros(len(fp), dtype=bool)]).T
+            s = np.hstack([ts, fs]).T
+            y_true = np.hstack([np.ones(len(ts), dtype=bool),
+                     np.zeros(len(fs), dtype=bool)]).T
             s.shape = (-1, 1)
             y_true.shape = (-1, 1)
 
