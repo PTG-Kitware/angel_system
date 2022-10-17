@@ -236,7 +236,7 @@ class ActivityHMM(object):
         class_str_.append('background')
         class_str_map.append(len(class_str_) - 1)
         bckg_mask.append(True)
-        inv_map.append(i)
+        inv_map.append(0)
 
         # Initialize the remainder of the classes
         for i, clss in enumerate(class_str[1:], start=1):
