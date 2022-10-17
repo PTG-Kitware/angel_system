@@ -27,8 +27,8 @@ class ActivityHMMRos:
         with open(config_fname, 'r') as stream:
             config = yaml.safe_load(stream)
 
-        default_mean_conf = config['hmm']['class_mean_conf']
-        default_std_conf = config['hmm']['class_std_conf']
+        default_mean_conf = config['hmm']['default_mean_conf']
+        default_std_conf = config['hmm']['default_std_conf']
 
         self.dt = config['hmm']['dt']
         self.X = None
