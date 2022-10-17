@@ -14,6 +14,7 @@ authors = ["Kitware, Inc. <kitware@kitware.com>"]
 python = "^3.8,<3.10"
 easydict = "^1.9"
 einops = "^0.4.1"
+hmmlearn = ">=0.2.8"
 matplotlib = "^3.5.1"
 numpy = "^1.22.2"
 openpyxl = "^3.0.10"
