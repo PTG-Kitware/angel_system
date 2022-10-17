@@ -43,6 +43,10 @@ class ActivityHMMRos:
         class_mean_conf = [default_mean_conf]
         class_std_conf = [default_std_conf]
 
+        if 'steps' not in config:
+            raise Exception(f'config \'{config_fname}\' does not have '
+                            '\'steps\' defined')
+
         for i in range(len(config['steps'])):
             ii = config['steps'][i]['id']
             if i != ii:
