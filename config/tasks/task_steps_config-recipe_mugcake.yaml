@@ -144,7 +144,8 @@ steps:
   - id: 25
     activity_id: 26
     description: >-
-      Check if the cake is done by inserting a toothpick into the center of the cake
+      Check if the cake is done by inserting a toothpick into the center of the
+      cake
     median_duration_seconds: 5
   - id: 26
     activity_id: 27
@@ -159,7 +160,8 @@ steps:
   - id: 28
     activity_id: 29
     description: >-
-      While the cake is cooling, Scoop 1 spoonful of chocolate frosting into a zip-top bag
+      While the cake is cooling, Scoop 1 spoonful of chocolate frosting into a
+      zip-top bag
     median_duration_seconds: 5
   - id: 29
     activity_id: 30
@@ -169,12 +171,14 @@ steps:
   - id: 30
     activity_id: 31
     description: >-
-      Use scissors to cut one corner from the bag to create a small opening 1/4-inch in diameter
+      Use scissors to cut one corner from the bag to create a small opening
+      1/4-inch in diameter
     median_duration_seconds: 5
   - id: 31
     activity_id: 32
     description: >-
-      Squeeze the frosting through the opening to apply small dollops of frosting to the plate in a circle around the base of the cake
+      Squeeze the frosting through the opening to apply small dollops of
+      frosting to the plate in a circle around the base of the cake
     median_duration_seconds: 5
 
 # Hidden markov model configuration parameters
