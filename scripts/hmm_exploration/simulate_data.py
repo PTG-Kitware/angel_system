@@ -6,8 +6,8 @@ from sklearn.metrics import precision_recall_curve
 from sklearn.metrics import  accuracy_score
 import scipy
 
-from angel_system.activity_hmm.core import ActivityHMM, get_skip_score, \
-    score_raw_detections
+from angel_system.activity_hmm.core import ActivityHMM, ActivityHMMRos, \
+    get_skip_score, score_raw_detections
 from angel_system.impls.detect_activities.swinb.swinb_detect_activities import SwinBTransformer
 from angel_system.eval.support_functions import time_from_name
 from angel_system.eval.visualization import EvalVisualization
@@ -313,7 +313,7 @@ plt.savefig('/mnt/data10tb/ptg/pr.png')
 
 # ----------------------------------------------------------------------------
 # Test live system.
-config_fname = '/mnt/data10tb/ptg/task_steps_config-recipe_coffee.yaml'
+config_fname = '/mnt/data2tb/libraries/angel_system/config/tasks/task_steps_config-recipe_coffee.yaml'
 live_model = ActivityHMMRos(config_fname)
 times, X0, Z0, X0_, Z0_ = live_model.model.sample(5000)
 ind = np.round(np.linspace(0, len(times), int(len(times)) - 1)).astype(int)
