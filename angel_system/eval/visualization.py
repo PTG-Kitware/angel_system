@@ -1,4 +1,6 @@
 import matplotlib.pyplot as plt
+plt.rcParams.update({'figure.max_open_warning': 0})
+plt.rcParams.update({'font.size': 12})
 from matplotlib.offsetbox import OffsetImage, AnnotationBbox, TextArea, AnchoredText
 import numpy as np
 import PIL
@@ -47,7 +49,7 @@ class EvalVisualization:
             # ============================
             # Setup figure
             # ============================
-            fig, ax = plt.subplots(figsize=(9, 8))
+            fig, ax = plt.subplots(figsize=(14, 8))
 
             ax.set_xlim([0.0, 1.0])
             ax.set_ylim([0.0, 1.05])
@@ -91,9 +93,9 @@ class EvalVisualization:
             ax.set_ylabel("Precision")
 
             fig.savefig(f"{pr_plot_dir}/{label.replace(' ', '_')}.png")
+            plt.close(fig)
 
     def plot_roc_curve(self):
-        # TODO: check this
         colors = plt.cm.rainbow(np.linspace(0, 1, len(self.labels)))
 
         roc_plot_dir = Path(os.path.join(self.output_dir, "roc"))
@@ -102,7 +104,7 @@ class EvalVisualization:
         # ============================
         # Setup figure
         # ============================
-        av_fig, av_ax = plt.subplots(figsize=(7, 8))
+        av_fig, av_ax = plt.subplots(figsize=(14, 8))
 
         av_ax.set_xlim([0.0, 1.0])
         av_ax.set_ylim([0.0, 1.05])
@@ -120,7 +122,7 @@ class EvalVisualization:
             # ============================
             # Setup figure
             # ============================
-            fig, ax = plt.subplots(figsize=(7, 8))
+            fig, ax = plt.subplots(figsize=(14, 8))
 
             ax.set_xlim([0.0, 1.0])
             ax.set_ylim([0.0, 1.05])
@@ -147,15 +149,13 @@ class EvalVisualization:
 
             ax.plot(fpr[id], tpr[id], color=colors[id], lw=2,
                     label=label + " (area = {0:0.2f})".format(roc_auc[id]))
-            av_ax.plot(fpr[id], tpr[id], color=colors[id], lw=2,
-                    label=label + " (area = {0:0.2f})".format(roc_auc[id]))
 
             # ============================
             # Save
             # ============================
-            leg = av_ax.legend(loc="best")
-            
+            ax.legend(loc="best")
             fig.savefig(f"{roc_plot_dir}/{label.replace(' ', '_')}.png")
+            plt.close(fig)
 
         # ============================
         # Plot average values
@@ -189,43 +189,7 @@ class EvalVisualization:
         plt.legend(loc="best")
         
         av_fig.savefig(f"{roc_plot_dir}/ROC_macro_average.png")
-
-    def plot_confusion_matrix(self):
-        # TODO: check this
-        # ============================
-        # Setup figure
-        # ============================
-        fig = plt.figure(figsize=(16, 10))
-        ax = fig.add_subplot(111)
-
-        y_true = []
-        y_pred = []
-
-        # calulcating metrics based on detector frequency
-        time_ranges = self.dets[['start', 'end']].drop_duplicates()
-        
-        for i, time in time_ranges.iterrows():
-            det_overlap = self.dets[(self.dets['start'] == time['start']) & (self.dets['end'] == time['end'])]
-            best_det = det_overlap.loc[det_overlap['conf'].idxmax()]
-
-            if best_det['detect_intersection'] > self.detect_intersection_thr:
-                gt_overlap = self.gt[(self.gt['end'] >= time['start']) & (time['end'] >= self.gt['end'])].iloc[0]
-
-                y_true.append(self.labels.loc[self.labels['class'] == gt_overlap['class']].iloc[0]['id'])
-                y_pred.append(self.labels.loc[self.labels['class'] == best_det['class']].iloc[0]['id'])
-
-        labels = [row['id'] for i, row in self.labels.iterrows()]
-        display_labels = [row['class'] for i, row in self.labels.iterrows()]
-
-        cm = confusion_matrix(y_true, y_pred, labels=labels)
-        cm_display = ConfusionMatrixDisplay(cm, display_labels=display_labels)
-        cm_display.plot(ax=ax)
-        
-        # ============================
-        # Save
-        # ============================
-
-        fig.savefig(f"{self.output_dir}/confusion.png")
+        plt.close(av_fig)
         
 def plot_activities_confidence(labels, gt, dets, custom_range=None, output_dir='', custom_range_color="red"):
     """
@@ -276,7 +240,7 @@ def plot_activities_confidence(labels, gt, dets, custom_range=None, output_dir='
                 ys_height = [1.025] #[0.1]
                 bar_widths2 = [custom_range[1]-custom_range[0]]
                 ys_bottom = [0] #[1.01]
-                # TODO: Make this something that is added be clicking?
+                # TODO: Make this something that is added by clicking?
                 ax.bar(xs_bars2, ys_height,
                     width=bar_widths2, bottom=ys_bottom, align="edge",
                     color=custom_range_color, alpha=0.5)
@@ -299,5 +263,6 @@ def plot_activities_confidence(labels, gt, dets, custom_range=None, output_dir='
             activity_plot_dir = Path(os.path.join(output_dir, "activities"))
             activity_plot_dir.mkdir(parents=True, exist_ok=True)
             fig.savefig(f"{str(activity_plot_dir)}/{label.replace(' ', '_')}.png")
+            plt.close(fig)
         else:
             log.warning(f"No detections/gt found for \"{label}\"")

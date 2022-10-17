@@ -88,7 +88,7 @@ def run_eval(args):
     # Split by time window
     # ============================
     # Get time ranges
-    assert args.time_window > args.uncertain_pad
+    assert args.time_window > args.uncertainty_pad
     min_start_time = min(gt['start'].min(), detections['start'].min())
     max_end_time = max(gt['end'].max(), detections['end'].max())
     dt = args.time_window
@@ -163,7 +163,7 @@ def run_eval(args):
     # padding, but there should always be at least one time window at the
     # center of the ground-truth span.
     gt_label = np.argmax(gt_true_mask, axis=1)
-    pad = int(np.round(args.uncertain_pad/dt))
+    pad = int(np.round(args.uncertainty_pad/dt))
     if pad > 0:
         ind = np.where(np.diff(gt_label, axis=0) != 0)[0] + 1
         if ind[0] != 0:
@@ -201,7 +201,6 @@ def run_eval(args):
     # Metrics
     # ============================
     metrics = EvalMetrics(labels, gt_true_mask, dets_per_valid_time_w, output_fn=f"{output_dir}/metrics.txt")
-    #metrics.detect_intersection_per_activity_label()
     metrics.precision()
 
     log.info(f"Saved metrics to {output_dir}/metrics.txt")
@@ -211,8 +210,7 @@ def run_eval(args):
     # ============================
     vis = EvalVisualization(labels, gt_true_mask, dets_per_valid_time_w, output_dir=output_dir)
     vis.plot_pr_curve()
-    #vis.plot_roc_curve()
-    #vis.plot_confusion_matrix()
+    vis.plot_roc_curve()
 
     log.info(f"Saved plots to {output_dir}/plots/")
 
