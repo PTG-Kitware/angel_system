@@ -44,6 +44,7 @@ class EvalVisualization:
         # Get PR plot per class 
         # ============================
         for id, label in enumerate(self.labels):
+            print(label)
             # ============================
             # Setup figure
             # ============================

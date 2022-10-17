@@ -11,8 +11,8 @@ class EvalMetrics():
         :param labels: Array of class labels (str)
         :param gt_true_pos_mask: Matrix of size (number of valid time windows x number classes) where True
             indicates a true class example, False inidcates a false class example
-        :param dets_per_valid_time_w: Matrix of size (number of valid time windows x number classes) filled with 
-            the max confidence score per class for any detections in the time window
+        :param dets_per_valid_time_w: Matrix of size (number of valid time windows x number classes)
+            filled with the max confidence score per class for any detections in the time window
         :param output_fn: Path (str) to a file
         """
         self.labels = labels
@@ -23,6 +23,7 @@ class EvalMetrics():
 
     def precision(self):
         with open(self.output_fn, "w") as f:
+            f.write('precision: \n')
             for id, label in enumerate(self.labels):
                 class_dets_per_time_w = self.dets_per_valid_time_w[:, id]
                 mask_per_class = self.gt_true_mask[:, id]
@@ -39,7 +40,5 @@ class EvalMetrics():
                 #precision, recall, thresholds = precision_recall_curve(y_true, s)
                 precision = average_precision_score(y_true, s)
                 # TODO add recall
-
-                
 
                 f.write(f'{self.labels[id]}: {precision}\n')

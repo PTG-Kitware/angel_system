@@ -88,6 +88,7 @@ def run_eval(args):
     # Split by time window
     # ============================
     # Get time ranges
+    assert args.time_window > args.uncertainty_pad
     min_start_time = min(gt['start'].min(), detections['start'].min())
     max_end_time = max(gt['end'].max(), detections['end'].max())
     time_windows = np.arange(min_start_time, max_end_time, args.time_window)
@@ -110,7 +111,7 @@ def run_eval(args):
             continue
 
         # Determine what gt we have that completely contain the time window
-        gt_overlap = gt.query(f'{time[0]} >= start+{args.uncertain_pad} and {time[1]} <= end-{args.uncertain_pad}')
+        gt_overlap = gt.query(f'{time[0]} >= start+{args.uncertainty_pad} and {time[1]} <= end-{args.uncertainty_pad}')
         if gt_overlap.empty:
             continue
 
@@ -185,7 +186,7 @@ def main():
         help="Time window in seconds to evaluate results on."
     )
     parser.add_argument(
-        "--uncertain_pad",
+        "--uncertainty_pad",
         type=float,
         default=0.5,
         help="Time in seconds to pad the groundtruth regions"
