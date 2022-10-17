@@ -232,13 +232,13 @@ class ActivityHMM(object):
         inv_map = []
 
         k = 0
-        for i, clss in enumerate(class_str):
-            if i == 0:
-                class_str_.append('background')
-                class_str_map.append(len(class_str_) - 1)
-                bckg_mask.append(True)
-                inv_map.append(i)
-                continue
+        # Assuming class_str[0] is always 'background'
+        class_str_.append('background')
+        class_str_map.append(len(class_str_) - 1)
+        bckg_mask.append(True)
+        inv_map.append(i)
+        # Initialize the remainder of the classes
+        for i, clss in enumerate(class_str[1:], start=1):
 
             class_str_.append(clss)
             class_str_map.append(len(class_str_) - 1)
