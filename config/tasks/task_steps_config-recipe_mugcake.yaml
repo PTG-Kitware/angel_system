@@ -1,3 +1,4 @@
+# Schema version.
 version: "1.0"
 
 # Reference to the activity classification labels configuration that we will
@@ -14,106 +15,149 @@ steps:
   # - description: Human semantic description of this step.
   # - median_duration_seconds: Median expected time this task will
   #                            consume in seconds.
+  # - mean_conf: mean value of classifier confidence for true examples.
+  # - std_conf: standard deviation of confidence for both true and false
+  #             examples.
   - id: 0
     activity_id: 1
     description: >-
       Place the paper cupcake liner inside the mug.  Set aside
     median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
   - id: 1
     activity_id: 2
     description: >-
       Measure 1 Tablespoon of flour
     median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
   - id: 2
     activity_id: 3
     description: >-
       Add measured flour to the mixing bowl
     median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
   - id: 3
     activity_id: 4
     description: >-
       Measure 1 Tablespoon of sugar
     median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
   - id: 4
     activity_id: 5
     description: >-
       Add measured sugar to the mixing bowl
     median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
   - id: 5
     activity_id: 6
     description: >-
       Measure 1 teaspoon of sugar
     median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
   - id: 6
     activity_id: 7
     description: >-
       Measure 1/2 teaspoon of sugar
     median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
   - id: 7
     activity_id: 8
     description: >-
       Measure 1/4 teaspoon of baking powder
     median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
   - id: 8
     activity_id: 9
     description: >-
       Add measured baking powder to the mixing bowl
     median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
   - id: 9
     activity_id: 10
     description: >-
       Add a pinch of salt to the mixing bowl
     median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
   - id: 10
     activity_id: 11
     description: >-
       Whisk to combine
     median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
   - id: 11
     activity_id: 12
     description: >-
       Measure 1 teaspoon of oil
     median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
   - id: 12
     activity_id: 13
     description: >-
       Pour measured oil into the mixing bowl
     median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
   - id: 13
     activity_id: 14
     description: >-
       Measure 1 Tablespoon of water
     median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
   - id: 14
     activity_id: 15
     description: >-
       Pour measured water into the mixing bowl
     median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
   - id: 15
     activity_id: 16
     description: >-
       Measure 1/4 teaspoon of vanilla
     median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
   - id: 16
     activity_id: 17
     description: >-
       Pour measured vanilla into the mixing bowl
     median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
   - id: 17
     activity_id: 18
     description: >-
       Whisk batter until no lumps remain
     median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
   - id: 18
     activity_id: 19
     description: >-
       Pour batter into prepared mug
     median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
   - id: 19
     activity_id: 20
     description: >-
       Place the mug inside the microwave
     median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
     # TODO: IDs 20-21, 22, and 23 are all different ways to start the microwave.
     # How to tell the task monitor that only one of these is required?
   - id: 20
@@ -121,70 +165,105 @@ steps:
     description: >-
       Set the microwave clock to 60 seconds
     median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
   - id: 21
     activity_id: 22
     description: >-
       Start the microwave
     median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
   - id: 22
     activity_id: 23
     description: >-
       Set+Start microwave
     median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
   - id: 23
     activity_id: 24
     description: >-
       Press Auto-1 minute button on microwave
     median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
   - id: 24
     activity_id: 25
     description: >-
       Remove the cake from the microwave
     median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
   - id: 25
     activity_id: 26
     description: >-
       Check if the cake is done by inserting a toothpick into the center of the
       cake
     median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
   - id: 26
     activity_id: 27
     description: >-
       Invert the mug to release the cake onto a plate
     median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
   - id: 27
     activity_id: 28
     description: >-
       Remove the paper cupcake liner
     median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
   - id: 28
     activity_id: 29
     description: >-
       While the cake is cooling, Scoop 1 spoonful of chocolate frosting into a
       zip-top bag
     median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
   - id: 29
     activity_id: 30
     description: >-
       Seal the zip-top bag, removing as much air as possible
     median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
   - id: 30
     activity_id: 31
     description: >-
       Use scissors to cut one corner from the bag to create a small opening
       1/4-inch in diameter
     median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
   - id: 31
     activity_id: 32
     description: >-
       Squeeze the frosting through the opening to apply small dollops of
       frosting to the plate in a circle around the base of the cake
     median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
 
 # Hidden markov model configuration parameters
 hmm:
-  num_steps_can_jump_fwd: 1
-  num_steps_can_jump_bck: 2
-  class_mean_conf: 0.1
-  class_std_conf: 0.2
-  dt: 0.5 # Time (seconds) between time steps of HMM
+  # Time (seconds) between time steps of HMM. Sets the temporal precision of
+  # the HMM analysis at the expense of processing costs.
+  dt: 0.5
+
+  # Constrain whether HMM sequence can skip steps or jump backwards. When both
+  # values are set to 0, forward progress without skipping steps is enforced.
+  num_steps_can_jump_fwd: 0
+  num_steps_can_jump_bck: 0
+
+  # Default classifier mean confidence to use if not explicitly provided for a
+  # step.
+  default_mean_conf: 0.5
+
+  # Default classifier standard deviation of confidence to use if not
+  # explicitly provided for a step.
+  default_std_conf: 0.2

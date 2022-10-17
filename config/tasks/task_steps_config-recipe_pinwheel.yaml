@@ -1,3 +1,4 @@
+# Schema version.
 version: "1.0"
 
 # Reference to the activity classification labels configuration that we will
@@ -14,43 +15,60 @@ steps:
   # - description: Human semantic description of this step.
   # - median_duration_seconds: Median expected time this task will
   #                            consume in seconds.
+  # - mean_conf: mean value of classifier confidence for true examples.
+  # - std_conf: standard deviation of confidence for both true and false
+  #             examples.
   - id: 0
     activity_id: 1
     description: >-
       Place tortilla on cutting board
     median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
   - id: 1
     activity_id: 2
     description: >-
       Use the butter knife to scoop nut butter from the jar
     median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
   - id: 2
     activity_id: 3
     description: >-
       Spread the nut butter evenly on the tortilla, leaving 1/2 inch margin
       from the edge uncovered onto the tortilla
     median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
   - id: 3
     activity_id: 4
     description: >-
       Clean the knife by wiping with a paper towel
     median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
   - id: 4
     activity_id: 5
     description: >-
       Use the butter knife to scoop jelly from the jar
     median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
   - id: 5
     activity_id: 6
     description: >-
       Spread the jelly evenly over the nut butter, leaving the same 1/2 inch
       margin from the edge uncovered
     median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
   - id: 6
     activity_id: 7
     description: >-
       Discard the paper towel
     median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
   - id: 7
     activity_id: 8
     description: >-
@@ -58,34 +76,46 @@ steps:
       inches thick.  Roll it tight enough to prevent gaps, but not so tight
       that the filling leaks
     median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
   - id: 8
     activity_id: 9
     description: >-
       Insert a toothpick into the tortilla approximately 1.5 inches from the
       end of the tortilla roll
     median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
   - id: 9
     activity_id: 10
     description: >-
       Insert another toothpick into the tortilla
     median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
   - id: 10
     activity_id: 11
     description: >-
       Trim one end of the tortilla roll leaving 1/2 inch margin from the
       toothpick
     median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
   - id: 11
     activity_id: 12
     description: >-
       Discard both ends of the tortilla
     median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
   - id: 12
     activity_id: 13
     description: >-
       Slide floss under the tortilla, perpendicular to the length of the roll.
       Place the floss halfway between two toothpicks
     median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
   - id: 13
     activity_id: 14
     description: >-
@@ -93,16 +123,31 @@ steps:
       Holding one end of the floss in each hand, pull the floss ends in
       opposite directions to slice
     median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
   - id: 14
     activity_id: 15
     description: >-
       Place the pinwheels on a plate
     median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
 
 # Hidden markov model configuration parameters
 hmm:
-  num_steps_can_jump_fwd: 1
-  num_steps_can_jump_bck: 2
-  class_mean_conf: 0.1
-  class_std_conf: 0.2
-  dt: 0.5 # Time (seconds) between time steps of HMM
+  # Time (seconds) between time steps of HMM. Sets the temporal precision of
+  # the HMM analysis at the expense of processing costs.
+  dt: 0.5
+
+  # Constrain whether HMM sequence can skip steps or jump backwards. When both
+  # values are set to 0, forward progress without skipping steps is enforced.
+  num_steps_can_jump_fwd: 0
+  num_steps_can_jump_bck: 0
+
+  # Default classifier mean confidence to use if not explicitly provided for a
+  # step.
+  default_mean_conf: 0.5
+
+  # Default classifier standard deviation of confidence to use if not
+  # explicitly provided for a step.
+  default_std_conf: 0.2
