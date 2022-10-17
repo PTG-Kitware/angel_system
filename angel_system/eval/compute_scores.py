@@ -28,12 +28,12 @@ class EvalMetrics():
                 class_dets_per_time_w = self.dets_per_valid_time_w[:, id]
                 mask_per_class = self.gt_true_mask[:, id]
 
-                tp = class_dets_per_time_w[mask_per_class]
-                fp = class_dets_per_time_w[~mask_per_class]
+                ts = class_dets_per_time_w[mask_per_class]
+                fs = class_dets_per_time_w[~mask_per_class]
 
-                s = np.hstack([tp, fp]).T
-                y_true = np.hstack([np.ones(len(tp), dtype=bool),
-                        np.zeros(len(fp), dtype=bool)]).T
+                s = np.hstack([ts, fs]).T
+                y_true = np.hstack([np.ones(len(ts), dtype=bool),
+                        np.zeros(len(fs), dtype=bool)]).T
                 s.shape = (-1, 1)
                 y_true.shape = (-1, 1)
 
