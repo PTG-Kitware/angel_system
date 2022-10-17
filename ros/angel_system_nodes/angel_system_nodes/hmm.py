@@ -66,19 +66,29 @@ class HMMNode(Node):
             self.query_task_graph_callback
         )
 
-        # Start the HMM thread
-        log.info(f"Starting HMM thread")
+        # Start the HMM state threads
+        log.info(f"Starting HMM threads")
         self._hmm_active = Event()
         self._hmm_active.set()
         self._hmm_active_heartbeat = 0.1
-        self._hmm_awake_evt = Event()
-        self._hmm_thread = Thread(
-            target=self.thread_run_hmm,
-            name="hmm_runtime"
+
+        self._hmm_state_awake_evt = Event()
+        self._hmm_skip_awake_evt = Event()
+
+        self._hmm_state_thread = Thread(
+            target=self.thread_run_hmm_state,
+            name="hmm_state_runtime"
         )
-        self._hmm_thread.daemon = True
-        self._hmm_thread.start()
-        log.info(f"Starting HMM thread... done")
+        self._hmm_state_thread.daemon = True
+        self._hmm_state_thread.start()
+
+        self._hmm_skip_thread = Thread(
+            target=self.thread_run_hmm_skip,
+            name="hmm_skip_runtime"
+        )
+        self._hmm_skip_thread.daemon = True
+        self._hmm_skip_thread.start()
+        log.info(f"Starting HMM threads... done")
 
     def det_callback(self, activity_msg: ActivityDetection):
         """
@@ -102,8 +112,9 @@ class HMMNode(Node):
                 source_stamp_end_frame_sec,
             )
 
-            # Tell the HMM thread to wake up
-            self._hmm_awake_evt.set()
+            # Tell the HMM threads to wake up
+            self._hmm_state_awake_evt.set()
+            self._hmm_skip_awake_evt.set()
 
     def publish_task_state_message(self, activity=None):
         """
@@ -153,17 +164,19 @@ class HMMNode(Node):
         response.task_graph = task_g
         return response
 
-    def thread_run_hmm(self):
+    def thread_run_hmm_state(self):
         """
-        HMM runtime thread.
+        HMM runtime thread that gets the current state.
+        Thread is awakened each time a new ActivityDetection message is
+        received.
         """
         log = self.get_logger()
-        log.info("HMM thread started")
+        log.info("HMM state thread started")
 
         while self._hmm_active.wait(0): # will quickly return false if cleared
-            if self._hmm_awake_evt.wait(self._hmm_active_heartbeat):
-                log.info("HMM loop awakened")
-                self._hmm_awake_evt.clear()
+            if self._hmm_state_awake_evt.wait(self._hmm_active_heartbeat):
+                log.info("HMM state loop awakened")
+                self._hmm_state_awake_evt.clear()
 
                 # Get the HMM prediction
                 start_time = time.time()
@@ -174,12 +187,36 @@ class HMMNode(Node):
                 # Publish a new TaskUpdate message
                 self.publish_task_state_message()
 
+    def thread_run_hmm_skip(self):
+        """
+        HMM runtime thread that gets the current likelihood of a step skip.
+        Thread is awakened each time a new ActivityDetection message is
+        received.
+        """
+        log = self.get_logger()
+        log.info("HMM skip thread started")
+
+        while self._hmm_active.wait(0): # will quickly return false if cleared
+            if self._hmm_skip_awake_evt.wait(self._hmm_active_heartbeat):
+                log.info("HMM skip loop awakened")
+                self._hmm_skip_awake_evt.clear()
+
+                # Get the HMM prediction
+                start_time = time.time()
+                skip_score = self._hmm.get_skip_score()
+                log.info(f"Skip score: {skip_score}")
+                log.info(f"HMM get_skip_score time: {time.time() - start_time}")
+
+                # TODO: need to figure out what to do with this score
+
     def hmm_alive(self) -> bool:
         """
         Check that the HMM runtime is still alive and raise an exception
         if it is not.
         """
-        alive = self._hmm_thread.is_alive()
+        alive = (
+            self._hmm_state_thread.is_alive() and self._hmm_skip_thread.is_alive()
+        )
         if not alive:
             self.get_logger().warn("HMM thread no longer alive.")
             self._hmm_thread.join()
@@ -187,11 +224,13 @@ class HMMNode(Node):
 
     def destroy_node(self):
         log = self.get_logger()
-        log.info("Shutting down runtime thread...")
+        log.info("Shutting down runtime threads...")
         self._hmm_active.clear()  # make HMM active flag "False"
-        self._hmm_thread.join()
-        log.info("Shutting down runtime thread... Done")
+        self._hmm_state_thread.join()
+        self._hmm_skip_thread.join()
+        log.info("Shutting down runtime threads... Done")
         super()
+
 
 def main():
     rclpy.init()
