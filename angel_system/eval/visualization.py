@@ -43,7 +43,7 @@ class EvalVisualization:
         # ============================
         # Get PR plot per class 
         # ============================
-        for id in range(len(self.dets_per_valid_time_w[0])):
+        for id, label in enumerate(self.labels):
             # ============================
             # Setup figure
             # ============================
@@ -63,10 +63,8 @@ class EvalVisualization:
                 (l,) = plt.plot(x[y >= 0], y[y >= 0], color="gray", alpha=0.2)
                 plt.annotate("f1={0:0.1f}".format(f_score), xy=(0.9, y[45] + 0.02))
 
-            label = self.labels[id]
-
-            class_dets_per_time_w = np.array([time_w[id] for time_w in self.dets_per_valid_time_w])
-            mask_per_class = np.array([time_w[id] for time_w in self.gt_true_mask])
+            class_dets_per_time_w = self.dets_per_valid_time_w[:, id]
+            mask_per_class = self.gt_true_mask[:, id]
 
             tp = class_dets_per_time_w[mask_per_class]
             fp = class_dets_per_time_w[~mask_per_class]
@@ -95,6 +93,7 @@ class EvalVisualization:
             fig.savefig(f"{pr_plot_dir}/{label.replace(' ', '_')}.png")
 
     def plot_roc_curve(self):
+        # TODO: check this
         colors = plt.cm.rainbow(np.linspace(0, 1, len(self.labels)))
 
         roc_plot_dir = Path(os.path.join(self.output_dir, "roc"))
@@ -117,7 +116,7 @@ class EvalVisualization:
         fpr = dict()
         tpr = dict()
         roc_auc = dict()
-        for id in range(len(self.dets_per_valid_time_w[0])):
+        for id, label in enumerate(self.labels):
             # ============================
             # Setup figure
             # ============================
@@ -131,8 +130,8 @@ class EvalVisualization:
 
             label = self.labels[id]
 
-            class_dets_per_time_w = np.array([time_w[id] for time_w in self.dets_per_valid_time_w])
-            mask_per_class = np.array([time_w[id] for time_w in self.gt_true_mask])
+            class_dets_per_time_w = self.dets_per_valid_time_w[:, id]
+            mask_per_class = self.gt_true_mask[:, id]
 
             tp = class_dets_per_time_w[mask_per_class]
             fp = class_dets_per_time_w[~mask_per_class]
@@ -192,6 +191,7 @@ class EvalVisualization:
         av_fig.savefig(f"{roc_plot_dir}/ROC_macro_average.png")
 
     def plot_confusion_matrix(self):
+        # TODO: check this
         # ============================
         # Setup figure
         # ============================

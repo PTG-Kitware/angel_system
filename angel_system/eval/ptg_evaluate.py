@@ -96,12 +96,12 @@ def run_eval(args):
         time_windows = np.append(time_windows, time_windows[-1] + args.time_window)
     time_windows = list(zip(time_windows[:-1], time_windows[1:]))
 
-    # Create masked matrix of detections
+    # Create masked matrix of detection confidences
     dets_per_valid_time_w = []
     gt_true_mask = []
 
     for time in time_windows:
-        det_confs_in_w = [0] * len(labels)
+        det_confs_in_w = []
         gt_tf_sample = [False] * len(labels)
 
         # Determine what detections we have that completely contain the time window
@@ -115,9 +115,9 @@ def run_eval(args):
             continue
 
         # Determine the highest conf for each class
-        for id, label in enumerate(labels):
+        for label in labels:
             class_overlap = det_overlap.loc[det_overlap['class'] == label]
-            det_confs_in_w[id] = class_overlap['conf'].max()
+            det_confs_in_w.append(class_overlap['conf'].max())
 
         # Mark detection as correct
         for ii, r in gt_overlap.iterrows():
@@ -128,6 +128,9 @@ def run_eval(args):
         
         dets_per_valid_time_w.append(det_confs_in_w)
         gt_true_mask.append(gt_tf_sample)
+
+    dets_per_valid_time_w = np.array(dets_per_valid_time_w)
+    gt_true_mask = np.array(gt_true_mask)
 
     # plot activity timelines
     plot_activities_confidence(labels=labels, gt=gt, dets=detections, output_dir=f"{output_dir}/plots")

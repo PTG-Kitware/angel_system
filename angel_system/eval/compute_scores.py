@@ -23,9 +23,9 @@ class EvalMetrics():
 
     def precision(self):
         with open(self.output_fn, "w") as f:
-            for id in range(len(self.dets_per_valid_time_w[0])):
-                class_dets_per_time_w = np.array([time_w[id] for time_w in self.dets_per_valid_time_w])
-                mask_per_class = np.array([time_w[id] for time_w in self.gt_true_mask])
+            for id, label in enumerate(self.labels):
+                class_dets_per_time_w = self.dets_per_valid_time_w[:, id]
+                mask_per_class = self.gt_true_mask[:, id]
 
                 tp = class_dets_per_time_w[mask_per_class]
                 fp = class_dets_per_time_w[~mask_per_class]
@@ -38,6 +38,7 @@ class EvalMetrics():
 
                 #precision, recall, thresholds = precision_recall_curve(y_true, s)
                 precision = average_precision_score(y_true, s)
+                # TODO add recall
 
                 
 
