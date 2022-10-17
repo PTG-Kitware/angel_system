@@ -276,7 +276,6 @@ class ActivityHMM(object):
         # Indices into N_-length arrays (e.g., class_str_) that correspond to the
         # original N-length arrays (e.g., class_str).
         not_bckg_mask_ = ~bckg_mask.copy()
-        #not_bckg_mask_[0] = True
 
 
         if class_mean_conf is not None and class_std_conf is not None:
@@ -294,29 +293,15 @@ class ActivityHMM(object):
             # Square to turn from std to cov. We'll reuse the name.
             class_std_conf = class_std_conf**2
 
-            #class_conf_mean_mat[:] = (1 - class_mean_conf[0])/(N - 1)
-
             ki = 0
             for i in range(N_):
                 if not_bckg_mask_[i]:
-                    #class_conf_mean_mat[i] = (1 - class_mean_conf[ki])/(N - 1)
-
                     class_conf_mean_mat[i, i] = class_mean_conf[ki]
-                    # np.sum(class_conf_mean_mat[i])
-
                     sphere_conf_cov_mat[i] = class_std_conf[ki]
-
                     ki += 1
                 else:
-                    #class_conf_mean_mat[i, ~bckg_mask] = (1 - class_mean_conf[0])/(N - 1)
                     class_conf_mean_mat[i, bckg_mask] = class_mean_conf[0]
-
                     sphere_conf_cov_mat[i] = class_std_conf[0]
-
-            #np.sum(class_conf_mean_mat[not_bckg_mask_][:, not_bckg_mask_], axis=1)
-            #class_conf_mean_mat[~not_bckg_mask_][:, ~not_bckg_mask_].ravel()
-
-            #class_conf_cov_mat[np.diag_indices_from(class_conf_cov_mat)] += 1e-6
 
             model.means_ = class_conf_mean_mat
             model._covars_ = sphere_conf_cov_mat
