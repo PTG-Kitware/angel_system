@@ -88,7 +88,7 @@ def run_eval(args):
     # Split by time window
     # ============================
     # Get time ranges
-    assert args.time_window > args.uncertainty_pad
+    assert args.time_window > args.uncertain_pad
     min_start_time = min(gt['start'].min(), detections['start'].min())
     max_end_time = max(gt['end'].max(), detections['end'].max())
     dt = args.time_window
@@ -148,32 +148,29 @@ def run_eval(args):
         ind1, ind2 = get_time_wind_range(gt['start'][i], gt['end'][i])
         correct_label = gt['class'][i].strip().rstrip('.')
         correct_class_idx = labels.index(correct_label)
-
-        #print(gt['start'][i], gt['end'][i], ind1, ind2, correct_class_idx)
-
-        if np.any(gt_true_mask[ind1:ind2, :]):
-            raise Exception()
-
         gt_true_mask[ind1:ind2, correct_class_idx] = True
 
     if not np.all(np.sum(gt_true_mask, axis=1) <= 1):
         raise Exception('Conflicting ground truth for same time windows')
 
+    # If ground truth isn't specified for a particular window, we should assume
+    # 'background'.
+    bckg_class_idx = labels.index('background')
+    ind = np.where(np.all(gt_true_mask == False, axis=1))[0]
+    gt_true_mask[ind, bckg_class_idx] = True
 
     # Any time the ground truth class changes, we want to add in uncertainty
     # padding, but there should always be at least one time window at the
     # center of the ground-truth span.
+    gt_label = np.argmax(gt_true_mask, axis=1)
     pad = int(np.round(args.uncertain_pad/dt))
     if pad > 0:
-        ind = np.where(np.any(np.diff(gt_true_mask, axis=0), axis=1))[0]
+        ind = np.where(np.diff(gt_label, axis=0) != 0)[0] + 1
         if ind[0] != 0:
-            ind = np.hstack([0, ind])
+            ind = np.hstack([1, ind])
 
         if ind[-1] != len(time_windows):
             ind = np.hstack([ind, len(time_windows)])
-
-        rows, cols = np.nonzero(gt_true_mask)
-        ind = np.where(np.diff(cols) > 0)[0]
 
         for i in range(len(ind) -1):
             ind1 = ind[i]
