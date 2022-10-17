@@ -46,9 +46,8 @@ class ActivityHMMRos:
         for i in range(len(config['steps'])):
             ii = config['steps'][i]['id']
             if i != ii:
-                raise Exception('The %i-th step in \'%s\' should have \'id\' '
-                                '%i but it has \'id\' %i' %
-                                (i, config_fname, i, ii))
+                raise Exception(f"The {i}th step in '{config_fname}' should have 'id' "
+                                f"{i} but it has 'id' {ii}")
 
             class_str.append(config['steps'][i]['description'])
             med_class_duration.append(config['steps'][i]['median_duration_seconds'])
