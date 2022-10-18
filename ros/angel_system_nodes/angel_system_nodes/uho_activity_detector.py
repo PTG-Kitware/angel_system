@@ -25,6 +25,7 @@ from angel_msgs.msg import (
     ObjectDetection2dSet
 )
 
+from angel_system.eval.gt_predict import gt_predict
 from angel_system.uho.predict import get_uho_classifier, predict
 from angel_system.uho.deprecated_src.data_helper import create_batch
 from angel_system.utils.matching import descending_match_with_tolerance
@@ -360,6 +361,13 @@ class UHOActivityDetector(Node):
             .get_parameter_value()
             .integer_value
         )
+        # Ground truth file for classifications (optional)
+        self._gt_file = (
+            self.declare_parameter("gt_file", "")
+            .get_parameter_value()
+            .string_value
+        )
+
         self._buffer_max_size_nanosec = int(self._buffer_max_size_seconds * 1e9)
         self._slop_ns = (5 / 60.0) * 1e9  # slop (hand msgs have rate of ~60hz per hand)
 
@@ -371,6 +379,7 @@ class UHOActivityDetector(Node):
         log.info(f"Frames per detection: {self._frames_per_det}")
         log.info(f"Checkpoint: {self._model_checkpoint}")
         log.info(f"Labels: {self._labels_file}")
+        log.info(f"GT file: {self._gt_file}")
 
         # Subscribers for input data channels.
         # These will collect on their own threads, adding to buffers from
@@ -663,7 +672,16 @@ class UHOActivityDetector(Node):
         #       [32*K x 2048]
         #       [32*K x 4]
         with SimpleTimer("Activity classification prediction", self.get_logger().info):
-            pred_conf, pred_labels = predict(self._detector, frame_set, aux_data)
+
+            if self._gt_file == "":
+                # No ground truth provided, use the detector
+                pred_conf, pred_labels = predict(self._detector, frame_set, aux_data)
+            else:
+                pred_conf, pred_labels = gt_predict(
+                    self._gt_file,
+                    time_to_int(window.frames[0][0]) * 1e-9,
+                    time_to_int(window.frames[-1][0]) * 1e-9,
+                )
 
         # Create activity message from results
         activity_msg = ActivityDetection()
