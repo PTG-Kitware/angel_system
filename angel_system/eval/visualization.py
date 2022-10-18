@@ -7,7 +7,8 @@ import PIL
 from pathlib import Path
 import os
 
-from sklearn.metrics import PrecisionRecallDisplay, roc_curve, auc
+from sklearn.metrics import PrecisionRecallDisplay, precision_recall_curve, average_precision_score
+from sklearn.metrics import roc_curve, auc
 
 import logging
 
@@ -42,8 +43,41 @@ class EvalVisualization:
 
         colors = plt.cm.rainbow(np.linspace(0, 1, len(self.labels)))
 
+        all_y_true = []
+        all_s = []
         # ============================
         # Get PR plot per class 
+        # ============================
+        precision = dict()
+        recall = dict()
+        average_precision = dict()
+        for id, label in enumerate(self.labels):
+            class_dets_per_time_w = self.dets_per_valid_time_w[:, id]
+            mask_per_class = self.gt_true_mask[:, id]
+
+            ts = class_dets_per_time_w[mask_per_class]
+            fs = class_dets_per_time_w[~mask_per_class]
+
+            s = np.hstack([ts, fs]).T
+            y_true = np.hstack([np.ones(len(ts), dtype=bool),
+                     np.zeros(len(fs), dtype=bool)]).T
+            s.shape = (-1, 1)
+            y_true.shape = (-1, 1)
+
+            all_y_true.extend(y_true)
+            all_s.extend(s)
+
+            precision[id], recall[id], _ = precision_recall_curve(y_true, s)
+            average_precision[id] = average_precision_score(y_true, s)
+
+        # ============================
+        # Average values
+        # ============================
+        precision["macro"], recall["macro"], _ = precision_recall_curve(all_y_true, all_s)
+        average_precision["macro"] = average_precision_score(all_y_true, all_s, average="macro")
+
+        # ============================
+        # Plot
         # ============================
         for id, label in enumerate(self.labels):
             # ============================
@@ -65,20 +99,22 @@ class EvalVisualization:
                 (l,) = plt.plot(x[y >= 0], y[y >= 0], color="gray", alpha=0.2, linestyle='dashed')
                 plt.annotate("f1={0:0.1f}".format(f_score), xy=(0.9, y[45] + 0.02))
 
-            class_dets_per_time_w = self.dets_per_valid_time_w[:, id]
-            mask_per_class = self.gt_true_mask[:, id]
+            # plot average values
+            av_display = PrecisionRecallDisplay(
+                recall=recall["macro"],
+                precision=precision["macro"],
+                average_precision=average_precision["macro"],
+            )
+            av_display.plot(ax=ax, name="Macro-averaged over all classes", 
+                            color="navy", linestyle=":", linewidth=4)
 
-            ts = class_dets_per_time_w[mask_per_class]
-            fs = class_dets_per_time_w[~mask_per_class]
-
-            s = np.hstack([ts, fs]).T
-            y_true = np.hstack([np.ones(len(ts), dtype=bool),
-                     np.zeros(len(fs), dtype=bool)]).T
-            s.shape = (-1, 1)
-            y_true.shape = (-1, 1)
-
-            PrecisionRecallDisplay.from_predictions(y_true, s).plot(ax=ax, name=label, color=colors[id])
-            # TODO: add average and auc
+            # plot class values
+            display = PrecisionRecallDisplay(
+                recall=recall[id],
+                precision=precision[id],
+                average_precision=average_precision[id],
+            )
+            display.plot(ax=ax, name=label, color=colors[id])
 
             # ============================
             # Save
@@ -102,36 +138,12 @@ class EvalVisualization:
         roc_plot_dir.mkdir(parents=True, exist_ok=True)
 
         # ============================
-        # Setup figure
-        # ============================
-        av_fig, av_ax = plt.subplots(figsize=(14, 8))
-
-        av_ax.set_xlim([0.0, 1.0])
-        av_ax.set_ylim([0.0, 1.05])
-        av_ax.set_title("Receiver Operating Characteristic (ROC)")
-        av_ax.set_xlabel("False Positive Rate")
-        av_ax.set_ylabel("True Positive Rate")
-
-        # ============================
         # Get ROC and AUC per class 
         # ============================
         fpr = dict()
         tpr = dict()
         roc_auc = dict()
         for id, label in enumerate(self.labels):
-            # ============================
-            # Setup figure
-            # ============================
-            fig, ax = plt.subplots(figsize=(14, 8))
-
-            ax.set_xlim([0.0, 1.0])
-            ax.set_ylim([0.0, 1.05])
-            ax.set_title("Receiver Operating Characteristic (ROC)")
-            ax.set_xlabel("False Positive Rate")
-            ax.set_ylabel("True Positive Rate")
-
-            label = self.labels[id]
-
             class_dets_per_time_w = self.dets_per_valid_time_w[:, id]
             mask_per_class = self.gt_true_mask[:, id]
 
@@ -147,18 +159,8 @@ class EvalVisualization:
             fpr[id], tpr[id], _ = roc_curve(y_true, s)
             roc_auc[id] = auc(fpr[id], tpr[id])
 
-            ax.plot(fpr[id], tpr[id], color=colors[id], lw=2,
-                    label=label + " (area = {0:0.2f})".format(roc_auc[id]))
-
-            # ============================
-            # Save
-            # ============================
-            ax.legend(loc="best")
-            fig.savefig(f"{roc_plot_dir}/{label.replace(' ', '_')}.png")
-            plt.close(fig)
-
         # ============================
-        # Plot average values
+        # Average values
         # ============================
         n_classes = len(self.labels)
 
@@ -177,19 +179,41 @@ class EvalVisualization:
         tpr["macro"] = mean_tpr
         roc_auc["macro"] = auc(fpr["macro"], tpr["macro"])
 
-        av_ax.plot(
-            fpr["macro"],
-            tpr["macro"],
-            label="macro-average ROC curve (area = {0:0.2f})".format(roc_auc["macro"]),
-            color="navy",
-            linestyle=":",
-            linewidth=4,
-        )
+        # ============================
+        # Plot
+        # ============================
+        for id, label in enumerate(self.labels):
+            # ============================
+            # Setup figure
+            # ============================
+            fig, ax = plt.subplots(figsize=(14, 8))
 
-        plt.legend(loc="best")
-        
-        av_fig.savefig(f"{roc_plot_dir}/ROC_macro_average.png")
-        plt.close(av_fig)
+            ax.set_xlim([0.0, 1.0])
+            ax.set_ylim([0.0, 1.05])
+            ax.set_title("Receiver Operating Characteristic (ROC)")
+            ax.set_xlabel("False Positive Rate")
+            ax.set_ylabel("True Positive Rate")
+
+            # plot average values
+            ax.plot(
+                fpr["macro"],
+                tpr["macro"],
+                label="macro-average ROC curve (area = {0:0.2f})".format(roc_auc["macro"]),
+                color="navy",
+                linestyle=":",
+                linewidth=4,
+            )
+
+            # plot class values
+            ax.plot(fpr[id], tpr[id], color=colors[id], lw=2,
+                    label=label + " (area = {0:0.2f})".format(roc_auc[id]))
+
+            # ============================
+            # Save
+            # ============================
+            ax.legend(loc="best")
+            fig.savefig(f"{roc_plot_dir}/{label.replace(' ', '_')}.png")
+            plt.close(fig)
         
 def plot_activities_confidence(labels, gt, dets, custom_range=None, output_dir='', custom_range_color="red"):
     """
