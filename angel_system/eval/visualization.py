@@ -16,6 +16,7 @@ import logging
 
 log = logging.getLogger("ptg_eval")
 
+
 class EvalVisualization:
     def __init__(self, labels, gt_true_mask, dets_per_valid_time_w, output_dir=''):
         """
@@ -39,6 +40,7 @@ class EvalVisualization:
         """
         Plot the PR curve for each label
         """
+        log.debug("Plotting PR curves")
         pr_plot_dir = Path(os.path.join(self.output_dir, "pr"))
         pr_plot_dir.mkdir(parents=True, exist_ok=True)
 
@@ -130,6 +132,7 @@ class EvalVisualization:
             plt.close(fig)
 
     def plot_roc_curve(self):
+        log.debug("Plotting ROC curves")
         colors = plt.cm.rainbow(np.linspace(0, 1, len(self.labels)))
 
         roc_plot_dir = Path(os.path.join(self.output_dir, "roc"))
@@ -214,6 +217,7 @@ class EvalVisualization:
             plt.close(fig)
 
     def confusion_mat(self):
+        log.debug("Plotting confusion matrix")
         fig, ax = plt.subplots(figsize=(20, 20))
 
         true_idxs = np.where(self.gt_true_mask==True)[1]
@@ -239,6 +243,7 @@ def plot_activities_confidence(labels, gt, dets, custom_range=None, output_dir='
     :param custom_range_color: The color of the additional range to be drawn. If not set, we will
                                 use "red".
     """
+    log.debug("Plotting activity confidences")
     for label in labels:
         gt_ranges = gt.loc[gt['class'] == label]
         det_ranges = dets.loc[dets['class'] == label]
