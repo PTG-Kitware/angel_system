@@ -1,0 +1,72 @@
+version: "1"
+labels:
+  # Item:
+  # - id: Integer identification number of the label.
+  # - label: Short human-readable semantic string to succinctly represent the
+  #          label.
+  - id: 0
+    label: "background"
+  - id: 1
+    label: "place-liner-mug"
+  - id: 2
+    label: "measure-tbsp-flour"
+  - id: 3
+    label: "add-flour-bowl"
+  - id: 4
+    label: "measure-tbsp-sugar"
+  - id: 5
+    label: "add-sugar-bowl"
+  - id: 6
+    label: "measure-tsp-sugar"
+  - id: 7
+    label: "measure-half-tsp-sugar"
+  - id: 8
+    label: "measure-quarter-tsp-baking-powder"
+  - id: 9
+    label: "add-baking-powder-bowl"
+  - id: 10
+    label: "add-salt-mixing-bowl"
+  - id: 11
+    label: "whisk-bowl-1"
+  - id: 12
+    label: "measure-tsp-oil"
+  - id: 13
+    label: "pour-oil-bowl"
+  - id: 14
+    label: "measure-tbsp-water"
+  - id: 15
+    label: "pour-water-bowl"
+  - id: 16
+    label: "measure-quarter-tsp-vanilla"
+  - id: 17
+    label: "pour-vanilla-bowl"
+  - id: 18
+    label: "whisk-bowl-2"
+  - id: 19
+    label: "pour-batter-mug"
+  - id: 20
+    label: "place-mug-microwave"
+  - id: 21
+    label: "set-microwave-60s"
+  - id: 22
+    label: "start-microwave"
+  - id: 23
+    label: "set-start-microwave"
+  - id: 24
+    label: "auto-min-microwave"
+  - id: 25
+    label: "remove-cake-microwave"
+  - id: 26
+    label: "check-cake"
+  - id: 27
+    label: "release-cake-on-plate"
+  - id: 28
+    label: "remove-liner"
+  - id: 29
+    label: "scoop-frosting-bag"
+  - id: 30
+    label: "seal-bag"
+  - id: 31
+    label: "cut-bag-corner"
+  - id: 32
+    label: "squeeze-frosting-plate"

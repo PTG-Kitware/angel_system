@@ -1,24 +1,287 @@
+from builtin_interfaces.msg import Time
+from collections import deque
 from cv_bridge import CvBridge
 import cv2
-import message_filters as mf
+from dataclasses import dataclass, field
+import itertools
 import numpy as np
+import numpy.typing as npt
 import rclpy
+from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from rclpy.node import Node
-import torch
+from rclpy.executors import MultiThreadedExecutor
+from sensor_msgs.msg import Image
+from threading import Event, RLock, Thread
+from typing import Any
+from typing import Callable
+from typing import Deque
+from typing import List
+from typing import Optional
+from typing import Tuple
 
 from angel_msgs.msg import (
     ActivityDetection,
     HandJointPosesUpdate,
     ObjectDetection2dSet
 )
-from sensor_msgs.msg import Image
 
-from angel_system.uho.src.models.components.transformer import TemTRANSModule
-from angel_system.uho.src.models.components.unified_fcn import UnifiedFCNModule
-from angel_system.uho.src.models.unified_ho_module import UnifiedHOModule
+from angel_system.uho.predict import get_uho_classifier, predict
+from angel_system.uho.deprecated_src.data_helper import create_batch
+from angel_system.utils.matching import descending_match_with_tolerance
+from angel_system.utils.simple_timer import SimpleTimer
+from angel_utils.conversion import get_hand_pose_from_msg
+from angel_utils.conversion import time_to_int
 
 
 BRIDGE = CvBridge()
+
+
+@dataclass
+class InputWindow:
+    """
+    Structure encapsulating a window of aligned data.
+
+    It should be the case that all lists contained in this window are of the
+    same length. The `frames` field should always be densely packed, but the
+    other fields may have None values, which indicates that no message of that
+    field's associated type was matched to the index's corresponding frame.
+    """
+    # Buffer of RGB image matrices and the associated timestamp.
+    # Set at construction time with the known window of frames.
+    frames: List[Tuple[Time, npt.NDArray]]
+    # Buffer of left-hand pose messages
+    hand_pose_left: List[Optional[HandJointPosesUpdate]]
+    # Buffer of right-hand pose messages
+    hand_pose_right: List[Optional[HandJointPosesUpdate]]
+    # Buffer of object detection predictions
+    obj_dets: List[Optional[ObjectDetection2dSet]]
+
+    def __len__(self):
+        return len(self.frames)
+
+
+@dataclass
+class InputBuffer:
+    """
+    Protected container for buffering input data.
+
+    Frames are the primary index of this buffer to which everything else needs
+    to associate to.
+
+    Data queueing methods enforce that the new message is temporally *after*
+    the latest message of that type. If this is not the case, i.e. we received
+    an out-of-order message, we do not queue the message.
+
+    Hand pose sensor outputs are known to be output asynchronously and at a
+    different rate than the images. Thus, we cannot presume there will be any
+    hand messages that directly align with an image. To associate a message
+    with the nearest image, we require a tolerance such that messages closer
+    than this value to an image may be considered "associated" with the image.
+
+    Object detection outputs are known to correlate strictly with an image
+    frame via the timestamp value.
+
+    Contained deques are in ascending time order (later indices are farther
+    ahead in time).
+
+    NOTE: `__post_init__` is a thing if we need it.
+    """
+    # Tolerance in nanoseconds for associating hand-pose messages to a frame.
+    hand_msg_tolerance_nsec: int
+
+    # Function to get the logger from the parent ROS2 node.
+    get_logger_fn: Callable[[], Any]  # don't know where to get the type for this...
+
+    # Buffer of RGB image matrices and the associated timestamp
+    frames: Deque[Tuple[Time, npt.NDArray]] = field(default_factory=deque,
+                                                    init=False, repr=False)
+    # Buffer of left-hand pose messages
+    hand_pose_left: Deque[HandJointPosesUpdate] = field(default_factory=deque,
+                                                        init=False, repr=False)
+    # Buffer of right-hand pose messages
+    hand_pose_right: Deque[HandJointPosesUpdate] = field(default_factory=deque,
+                                                         init=False, repr=False)
+    # Buffer of object detection predictions
+    obj_dets: Deque[ObjectDetection2dSet] = field(default_factory=deque,
+                                                  init=False, repr=False)
+
+    __state_lock: RLock = field(default_factory=RLock, init=False, repr=False)
+
+    def __enter__(self):
+        """
+        For when you want to call multiple things on the buffer in the same
+        locking context.
+        """
+        # Same as RLock.__enter__
+        self.__state_lock.acquire()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        # Same as RLock.__exit__
+        self.__state_lock.release()
+
+    def queue_image(self, msg: Image) -> bool:
+        """
+        Queue up a new image frame.
+        :returns: True if the image was queued, otherwise false because it was
+            not newer than the current latest frame.
+        """
+        # Convert ROS img msg to CV2 image and add it to the frame stack
+        rgb_image = BRIDGE.imgmsg_to_cv2(msg, desired_encoding="rgb8")
+        rgb_image_np = np.asarray(rgb_image)
+        with self.__state_lock:
+            # before the current lead frame?
+            if (
+                self.frames and
+                time_to_int(msg.header.stamp) <= time_to_int(self.frames[-1][0])
+            ):
+                self.get_logger_fn().warn(
+                    f"Input image frame was NOT after the previous latest: "
+                    f"(prev) {self.frames[-1][0]} !< {msg.header.stamp} (new)"
+                )
+                return False
+            self.frames.append((msg.header.stamp, rgb_image_np))
+            return True
+
+    def queue_hand_pose(self, msg: HandJointPosesUpdate) -> bool:
+        """
+        Input hand pose may be of the left or right hand, as indicated by
+        `msg.hand`.
+        :returns: True if the message was queued, otherwise false because it was
+            not newer than the current latest message.
+        """
+        hand_list: Deque[HandJointPosesUpdate]
+        if msg.hand == 'Right':
+            hand_list = self.hand_pose_right
+        elif msg.hand == 'Left':
+            hand_list = self.hand_pose_left
+        else:
+            raise ValueError(f"Input hand pose for hand '{msg.hand}'? What?")
+        with self.__state_lock:
+            # before the current lead pose?
+            if (
+                hand_list and
+                time_to_int(msg.header.stamp) <= time_to_int(hand_list[-1].header.stamp)
+            ):
+                self.get_logger_fn().warn(
+                    f"Input hand pose was NOT after the previous latest: "
+                    f"(prev) {hand_list[-1].header.stamp} !< {msg.header.stamp} (new)"
+                )
+                return False
+            hand_list.append(msg)
+            return True
+
+    def queue_object_detections(self, msg: ObjectDetection2dSet) -> bool:
+        """
+        Queue up an object detection set for the
+        """
+        with self.__state_lock:
+            # before the current lead pose?
+            if (
+                self.obj_dets and
+                time_to_int(msg.header.stamp) <= time_to_int(self.obj_dets[-1].header.stamp)
+            ):
+                self.get_logger_fn().warn(
+                    f"Input object detection result was NOT after the previous latest: "
+                    f"(prev) {self.obj_dets[-1].header.stamp} !< {msg.header.stamp} (new)"
+                )
+                return False
+            self.obj_dets.append(msg)
+            return True
+
+    @staticmethod
+    def _hand_msg_to_time_ns(msg: HandJointPosesUpdate):
+        return time_to_int(msg.header.stamp)
+
+    @staticmethod
+    def _objdet_msg_to_time_ns(msg: ObjectDetection2dSet):
+        # Using stamp that should associate to the source image
+        return time_to_int(msg.source_stamp)
+
+    def get_window(self, window_size: int) -> InputWindow:
+        """
+        Get a window buffered data as it is associated to frame data.
+
+        Data other than the image frames may not have direct association to a
+        particular frame, e.g. "missing" for that frame. In those cases there
+        will be a None in the applicable slot.
+
+        :param window_size: number of frames from the head of the buffer to
+            consider "the window."
+
+        :return: Mapping of associated data, each of window_size items.
+        """
+        # Knowns:
+        # - Object detections occur on a specific frame as associated by
+        #   timestamp *exactly*.
+
+        with self.__state_lock:
+            # Cache self accesses
+            hand_nsec_tol = self.hand_msg_tolerance_nsec
+
+            # This window's frame in ascending time order
+            # deques don't support slicing, so thus the following madness
+            window_frames = list(itertools.islice(reversed(self.frames), window_size))[::-1]
+            window_frame_times: List[Time] = [wf[0] for wf in window_frames]
+            window_frame_times_ns: List[int] = [time_to_int(wft) for wft
+                                                in window_frame_times]
+
+            # tolerance associate hand messages, left and right
+            # - For each frame backwards, reverse-iterate through hand messages
+            #   until encountering one that is more time-distance or out of
+            #   tolerance, which triggers moving on to the next frame.
+            # - carry variable for when the item being checked in previous
+            #   iteration did not match the current frame.
+            window_lhand = descending_match_with_tolerance(
+                window_frame_times_ns,
+                self.hand_pose_left,
+                hand_nsec_tol,
+                time_from_value_fn=self._hand_msg_to_time_ns,
+            )
+            window_rhand = descending_match_with_tolerance(
+                window_frame_times_ns,
+                self.hand_pose_right,
+                hand_nsec_tol,
+                time_from_value_fn=self._hand_msg_to_time_ns,
+            )
+
+            # Direct associate object detections within window time. For
+            # detections known to be in the window, creating a mapping (key=ts)
+            # to access the detection for a specific time.
+            window_dets = descending_match_with_tolerance(
+                window_frame_times_ns,
+                self.obj_dets,
+                0,  # we expect exact matches for object detections.
+                time_from_value_fn=self._objdet_msg_to_time_ns,
+            )
+
+            output = InputWindow(
+                frames=window_frames,
+                hand_pose_left=window_lhand,
+                hand_pose_right=window_rhand,
+                obj_dets=window_dets,
+            )
+            return output
+
+    def clear_before(self, time_nsec: int) -> None:
+        """
+        Clear content in the buffer that is strictly older than the given
+        timestamp.
+        """
+        # for each deque, traverse from the left (the earliest time) and pop if
+        # the ts is < the given.
+        with self.__state_lock:
+            while (self.frames and
+                   time_to_int(self.frames[0][0]) < time_nsec):
+                self.frames.popleft()
+            while (self.hand_pose_left and
+                   time_to_int(self.hand_pose_left[0].header.stamp) < time_nsec):
+                self.hand_pose_left.popleft()
+            while (self.hand_pose_right and
+                   time_to_int(self.hand_pose_right[0].header.stamp) < time_nsec):
+                self.hand_pose_right.popleft()
+            while (self.obj_dets and
+                   time_to_int(self.obj_dets[0].source_stamp) < time_nsec):
+                self.obj_dets.popleft()
 
 
 class UHOActivityDetector(Node):
@@ -52,10 +315,32 @@ class UHOActivityDetector(Node):
             .get_parameter_value()
             .string_value
         )
+        self._min_time_topic = (
+            self.declare_parameter("min_time_topic", "ObjDetMinTime")
+            .get_parameter_value()
+            .string_value
+        )
         self._frames_per_det = (
             self.declare_parameter("frames_per_det", 32)
             .get_parameter_value()
             .integer_value
+        )
+        # The number of object detections we require to be in the input buffer
+        # window before considering it value for processing.
+        self._obj_dets_per_window = (
+            self.declare_parameter("object_dets_per_window", 2)
+            .get_parameter_value()
+            .integer_value
+        )
+        # Maximum size for our data buffer in terms of seconds.
+        # We will use this in our prediction runtime to make sure that we don't
+        # build up too much data if we happen to not predict for a while.
+        # Default value assumes frame-rate of ~30Hz and a processing window of
+        # about 1 seconds-worth of data (`frames_per_det` above).
+        self._buffer_max_size_seconds = (
+            self.declare_parameter("buffer_max_size_seconds", 2.0)
+            .get_parameter_value()
+            .double_value
         )
         self._model_checkpoint = (
             self.declare_parameter("model_checkpoint",
@@ -69,6 +354,14 @@ class UHOActivityDetector(Node):
             .get_parameter_value()
             .string_value
         )
+        # Model specific top-K parameter.
+        self._topk = (
+            self.declare_parameter("top_k", 5)
+            .get_parameter_value()
+            .integer_value
+        )
+        self._buffer_max_size_nanosec = int(self._buffer_max_size_seconds * 1e9)
+        self._slop_ns = (5 / 60.0) * 1e9  # slop (hand msgs have rate of ~60hz per hand)
 
         log = self.get_logger()
         log.info(f"Image topic: {self._image_topic}")
@@ -79,77 +372,125 @@ class UHOActivityDetector(Node):
         log.info(f"Checkpoint: {self._model_checkpoint}")
         log.info(f"Labels: {self._labels_file}")
 
-        self.subscription_list = []
-        # Image subscription
-        self.subscription_list.append(mf.Subscriber(self, Image, self._image_topic))
-        # Hand pose subscription
-        self.subscription_list.append(mf.Subscriber(self, HandJointPosesUpdate, self._hand_topic))
-        self.time_sync = mf.ApproximateTimeSynchronizer(
-            self.subscription_list,
-            self._frames_per_det * 5, # queue size
-            5 / 60.0, # slop (hand msgs have rate of ~60hz per hand)
+        # Subscribers for input data channels.
+        # These will collect on their own threads, adding to buffers from
+        # activity classification will draw from.
+        # - Image data
+        self._image_subscription_cb_group = MutuallyExclusiveCallbackGroup()
+        self._image_subscription = self.create_subscription(
+            Image,
+            self._image_topic,
+            self.image_callback,
+            1,
+            callback_group=self._image_subscription_cb_group,
         )
-
-        self.time_sync.registerCallback(self.multimodal_listener_callback)
-
-        # Object detections subscriber
+        # - Hand pose
+        self._hand_subscription_cb_group = MutuallyExclusiveCallbackGroup()
+        self._hand_subscription = self.create_subscription(
+            HandJointPosesUpdate,
+            self._hand_topic,
+            self.hand_callback,
+            1,
+            callback_group=self._hand_subscription_cb_group,
+        )
+        # - Object detections
+        self._obj_det_subscriber_cb_group = MutuallyExclusiveCallbackGroup()
         self._obj_det_subscriber = self.create_subscription(
             ObjectDetection2dSet,
             self._obj_det_topic,
             self.obj_det_callback,
-            1
+            1,
+            callback_group=self._obj_det_subscriber_cb_group,
         )
 
-        self._publisher = self.create_publisher(
+        # Channel over which we communicate to the object detector a timestamp
+        # before which to skip processing/publication.
+        self._min_time_publisher_cb_group = MutuallyExclusiveCallbackGroup()
+        self._min_time_publisher = self.create_publisher(
+            Time,
+            self._min_time_topic,
+            1,
+            callback_group=self._min_time_publisher_cb_group,
+        )
+        self._activity_publisher_cb_group = MutuallyExclusiveCallbackGroup()
+        self._activity_publisher = self.create_publisher(
             ActivityDetection,
             self._det_topic,
-            1
+            1,
+            callback_group=self._activity_publisher_cb_group,
         )
 
-        # Stores the data until we have enough to send to the detector
-        self._frames = []
-        self._hand_poses = dict(
-            lhand=[],
-            rhand=[],
-        )
-        self._frame_stamps = []
-        self._obj_dets = []
-
-        # TODO - parameterize this?
-        self._topk = 5
+        # Create the runtime thread to trigger processing and buffer cleanup
+        # appropriately.
+        self._input_buffer = InputBuffer(int(self._slop_ns), self.get_logger)
 
         # Instantiate the activity detector models
-        fcn = UnifiedFCNModule(net="resnext", num_cpts=21, obj_classes=9, verb_classes=12)
-        temporal = TemTRANSModule(act_classes=27, hidden=256, dropout=0.1, depth=6)
-
-        self._detector: UnifiedHOModule = UnifiedHOModule(
-            fcn=fcn,
-            temporal=temporal,
-            checkpoint=self._model_checkpoint,
-            device=self._torch_device,
-            labels_file=self._labels_file
+        self._detector = get_uho_classifier(
+            self._model_checkpoint,
+            self._labels_file,
+            self._torch_device,
         )
-        self._detector.eval()
-        self._detector = self._detector.to(device=self._torch_device)
         log.info(f"UHO Detector initialized")
+        # TODO: Warmup detector?
 
-    def multimodal_listener_callback(self, image, hand_pose):
+        # Variables used by window criterion methods
+        self._prev_leading_time_ns = None
+
+        # Start the runtime thread
+        log.info("Starting runtime thread...")
+        # switch for runtime loop
+        self._rt_active = Event()
+        self._rt_active.set()
+        # seconds to occasionally time out of the wait condition for the loop
+        # to check if it is supposed to still be alive.
+        self._rt_active_heartbeat = 0.1  # TODO: Parameterize?
+        # Event to notify runtime it should try processing now.
+        self._rt_awake_evt = Event()
+        self._rt_thread = Thread(
+            target=self.thread_predict_runtime,
+            name="prediction_runtime"
+        )
+        self._rt_thread.daemon = True
+        self._rt_thread.start()
+        log.info("Starting runtime thread... Done")
+
+    def rt_alive(self) -> bool:
         """
-        Callback function images + hand poses. Messages are synchronized with
-        with the ROS time synchronizer.
+        Check that the prediction runtime is still alive and raise an exception
+        if it is not.
         """
-        # Convert ROS img msg to CV2 image and add it to the frame stack
-        rgb_image = BRIDGE.imgmsg_to_cv2(image, desired_encoding="rgb8")
-        rgb_image_np = np.asarray(rgb_image)
+        alive = self._rt_thread.is_alive()
+        if not alive:
+            self.get_logger().warn("Runtime thread no longer alive.")
+            self._rt_thread.join()
+        return alive
 
-        self._frames.append(rgb_image_np)
+    def stop_runtime(self) -> None:
+        """
+        Indicate that the runtime loop should cease.
+        """
+        self._rt_active.clear()
 
-        # Store the image timestamp
-        self._frame_stamps.append(image.header.stamp)
+    def image_callback(self, image: Image) -> None:
+        """
+        Callback function for images. Messages are saved in the images list.
+        """
+        # Check first, so we don't accumulate anything when we aren't using it.
+        if self.rt_alive() and self._input_buffer.queue_image(image):
+            self.get_logger().info(f"Queueing image (ts={image.header.stamp})")
+            # On new imagery, tell the RT loop to wake up and try to form a window
+            # for processing.
+            self._rt_awake_evt.set()
 
-        lhand, rhand = self.get_hand_pose_from_msg(hand_pose)
-        self._hand_poses['lhand'].append(lhand)
-        self._hand_poses['rhand'].append(rhand)
+    def hand_callback(self, hand_pose: HandJointPosesUpdate) -> None:
+        """
+        Callback function for hand poses. Messages are saved in the hand_poses
+        list.
+        """
+        # Check first, so we don't accumulate anything when we aren't using it.
+        if self.rt_alive() and self._input_buffer.queue_hand_pose(hand_pose):
+            self.get_logger().info(f"Queueing hand pose (hand={hand_pose.hand}) "
+                                   f"(ts={hand_pose.header.stamp})")
 
     def obj_det_callback(self, msg):
         """
@@ -162,157 +503,185 @@ class UHOActivityDetector(Node):
         log = self.get_logger()
 
         if msg.num_detections < self._topk:
-            log.warn(f"Received msg with less than {self._topk} detections.")
+            log.warn(f"Received msg with less than {self._topk} detections. "
+                     f"Skipping.")
             return
 
-        self._obj_dets.append(msg)
+        # Check first, so we don't accumulate anything when we aren't using it.
+        if self.rt_alive() and self._input_buffer.queue_object_detections(msg):
+            log.info(f"Queueing object detections (ts={msg.header.stamp})")
 
-        if len(self._frames) >= self._frames_per_det:
-            frame_stamp_set = self._frame_stamps[:self._frames_per_det]
-            ready_to_predict = False
+    def _window_criterion_correct_size(self, window: InputWindow) -> bool:
+        window_ok = len(window) == self._frames_per_det
+        if not window_ok:
+            self.get_logger().warn(f"Window is not the appropriate size "
+                                   f"(actual:{len(window)} != "
+                                   f"{self._frames_per_det}:expected)")
+        return window_ok
 
-            # If the source stamp for this detection message is after or equal to
-            # the last frame stamp in the current set, then we have all of the
-            # detections and can move onto processing this set of frames.
-            msg_nsec = msg.source_stamp.sec * 10e9 + msg.source_stamp.nanosec
-            frm_nsec = frame_stamp_set[-1].sec * 10e9 + frame_stamp_set[-1].nanosec
-            if msg_nsec >= frm_nsec:
-                ready_to_predict = True
+    def _window_criterion_enough_dets(self, window: InputWindow) -> bool:
+        num_dets = len(list(filter(None, window.obj_dets)))
+        self.get_logger().info(f"Window num dets: {num_dets}")
+        window_ok = num_dets >= self._obj_dets_per_window
+        if not window_ok:
+            self.get_logger().warn(f"Window num dets ({num_dets}) not at "
+                                   f"least {self._obj_dets_per_window}")
+        return window_ok
 
-            # Need to wait until the object detector has processed all of these frames
-            if not ready_to_predict:
-                log.info(f"Waiting for more object detection results")
-                return
-
-            frame_set = self._frames[:self._frames_per_det]
-            lhand_pose_set = self._hand_poses['lhand'][:self._frames_per_det]
-            rhand_pose_set = self._hand_poses['rhand'][:self._frames_per_det]
-
-            aux_data = dict(
-                lhand=lhand_pose_set,
-                rhand=rhand_pose_set,
-                dets=[],
-                bbox=[],
-            )
-
-            # Format the object detections into descriptors and bboxes
-            idxs_to_remove = []
-            for idx, det in enumerate(self._obj_dets):
-                #print(det.source_stamp, frame_stamp_set[0], frame_stamp_set[-1])
-                if det.num_detections == 0:
-                    log.info(f"no dets, det source: {det.source_stamp}")
-                    continue
-
-                det_source_stamp_nsec = det.source_stamp.sec * 10e9 + det.source_stamp.nanosec
-                first_frm_nsec = frame_stamp_set[0].sec * 10e9 + frame_stamp_set[0].nanosec
-                last_frm_nsec = frame_stamp_set[-1].sec * 10e9 + frame_stamp_set[-1].nanosec
-
-                # Check that this detection is within the range of time
-                # for the current frame set
-                if det_source_stamp_nsec < first_frm_nsec:
-                    # Detection is before the first frame in this set,
-                    # so we can remove it
-                    idxs_to_remove.append(idx)
-                    continue
-                elif det_source_stamp_nsec > last_frm_nsec:
-                    # Detection is after the last frame in this set,
-                    # so keep it for later
-                    continue
-
-                # Get the topk detection confidences
-                det_confidences = (
-                    torch.Tensor(det.label_confidences)
-                    .reshape((det.num_detections, len(det.label_vec)))
-                )
-
-                det_max_confidences = det_confidences.max(axis=1).values
-                _, top_det_idx = torch.topk(det_max_confidences, self._topk)
-
-                det_descriptors = (
-                    torch.Tensor(det.descriptors).reshape((det.num_detections, det.descriptor_dim))
-                )
-
-                # Grab the descriptors corresponding to the top predictions
-                det_descriptors = det_descriptors[top_det_idx]
-                aux_data['dets'].append(det_descriptors)
-
-                # Grab the bboxes corresponding to the top predictions
-                bboxes = [
-                    torch.Tensor((det.left[i], det.top[i], det.right[i], det.bottom[i])) for i in top_det_idx
-                ]
-                bboxes = torch.stack(bboxes)
-
-                aux_data['bbox'].append(bboxes)
-
-            # Check if we didn't get any detections in the time range of the frame set
-            if len(aux_data["dets"]) == 0 or len(aux_data["bbox"]) == 0:
-                aux_data["dets"] = [torch.zeros((self._topk, msg.descriptor_dim))]
-                aux_data["bbox"] = [torch.zeros((self._topk, 4))]
-
-            # Inference!
-            activities_detected, labels = self._detector.forward(frame_set, aux_data)
-
-            # Create and publish the ActivityDetection msg
-            activity_msg = ActivityDetection()
-
-            # This message time
-            activity_msg.header.stamp = self.get_clock().now().to_msg()
-
-            # Trace to the source
-            activity_msg.header.frame_id = "Activity detection"
-            activity_msg.source_stamp_start_frame = frame_stamp_set[0]
-            activity_msg.source_stamp_end_frame = frame_stamp_set[-1]
-
-            activity_msg.label_vec = labels
-            activity_msg.conf_vec = activities_detected[0].squeeze().tolist()
-
-            # Publish!
-            self._publisher.publish(activity_msg)
-            log.info(f"Activities detected: {activities_detected}")
-            log.info(f"Top activity detected: {activities_detected[1]}")
-
-            # Clear out stored frames, aux_data, and timestamps
-            self._frames = self._frames[self._frames_per_det:]
-            self._frame_stamps = self._frame_stamps[self._frames_per_det:]
-            self._hand_poses['lhand'] = self._hand_poses['lhand'][self._frames_per_det:]
-            self._hand_poses['rhand'] = self._hand_poses['rhand'][self._frames_per_det:]
-
-            for i in sorted(idxs_to_remove, reverse=True):
-                del self._obj_dets[i]
-
-    def get_hand_pose_from_msg(self, msg):
+    def _window_criterion_new_leading_frame(self, window: InputWindow) -> bool:
         """
-        Formats the hand pose information from the ROS hand pose message
-        into the format required by activity detector model.
+        The new window's leading frame should be beyond a previous window's
+        leading frame.
         """
-        hand_joints = [{"joint": m.joint,
-                        "position": [ m.pose.position.x,
-                                      m.pose.position.y,
-                                      m.pose.position.z]}
-                      for m in msg.joints]
+        # Assuming _window_criterion_correct_size already passed.
+        cur_leading_time_ns = time_to_int(window.frames[-1][0])
+        prev_leading_time_ns = self._prev_leading_time_ns
+        if prev_leading_time_ns is not None:
+            window_ok = prev_leading_time_ns < cur_leading_time_ns
+            if not window_ok:
+                # current window is earlier/same lead as before, so not a good
+                # window
+                self.get_logger().warn("RT duplicate window detected, skipping.")
+                return False
+            # Window is OK, save new latest leading frame time below.
+        # Else:This is the first window. The first history will be recorded
+        # below.
+        self._prev_leading_time_ns = cur_leading_time_ns
+        return True
 
-        # Rejecting joints not in OpenPose hand skeleton format
-        reject_joint_list = {'ThumbMetacarpalJoint',
-                             'IndexMetacarpal',
-                             'MiddleMetacarpal',
-                             'RingMetacarpal',
-                             'PinkyMetacarpal'}
-        joint_pos = []
-        for j in hand_joints:
-            if j["joint"] not in reject_joint_list:
-                joint_pos.append(j["position"])
-        joint_pos = np.array(joint_pos).flatten()
+    def thread_predict_runtime(self):
+        """
+        Activity classification prediction runtime function.
+        """
+        log = self.get_logger()
+        log.info("Runtime loop starting")
 
-        if msg.hand == 'Right':
-            rhand = joint_pos
-            lhand = np.zeros_like(joint_pos)
-        elif msg.hand == 'Left':
-            lhand = joint_pos
-            rhand = np.zeros_like(joint_pos)
-        else:
-            raise ValueError(f"Unexpected hand value. Got {msg.hand}")
+        # These criterion predicates must all return true for us to proceed
+        # with processing activity classification for a window.
+        # Function order should consider short-circuiting rules.
+        window_processing_criterion_fn_list: List[Callable[[InputWindow], bool]] = [
+            self._window_criterion_correct_size,
+            self._window_criterion_enough_dets,
+            self._window_criterion_new_leading_frame,
+        ]
 
-        return lhand, rhand
+        while self._rt_active.wait(0):  # will quickly return false if cleared.
+            if self._rt_awake_evt.wait(self._rt_active_heartbeat):
+                log.info("RT loop awakened")
+                # reset the flag for the next go-around
+                self._rt_awake_evt.clear()
+
+                # We want to fire off a prediction run when:
+                # - The latest window is at least self._frames_per_det in size
+                # - The latest window contains at least self._obj_dets_per_window
+                #   object detection result associations.
+                # TODO: Include forced latency?
+                #       request window X seconds back from latest.
+                #       Paul's laptop: catching ~4 dets per 32-frames
+                #           ~1 every 8 frames, so (1/30)*8 ~=0.267 latency
+                window = self._input_buffer.get_window(self._frames_per_det)
+                if all(fn(window) for fn in window_processing_criterion_fn_list):
+                    log.info("RT Starting processing block")
+
+                    # After getting validating a window, before processing,
+                    # clear out older data from the buffer using the timestamp
+                    # of window first frame + a nanosecond.
+                    # TODO: Change this to first + forced latency time?
+                    old_time = window.frames[1][0]
+                    old_time_ns = time_to_int(old_time)
+                    self._input_buffer.clear_before(old_time_ns)
+
+                    # Before processing publish the latest frame time to the
+                    # self._min_time_publisher.
+                    # Also inform any listeners that we no
+                    self._min_time_publisher.publish(old_time)
+
+                    act_msg = self._process_window(window)
+                    log.info("RT publishing activity classification results")
+                    self._activity_publisher.publish(act_msg)
+                else:
+                    # Clear at least to our max buffer size even if we didn't
+                    # process anything.
+                    old_time_ns = (
+                        time_to_int(window.frames[-1][0])
+                        - self._buffer_max_size_nanosec
+                    )
+                    self._input_buffer.clear_before(old_time_ns)
+
+            else:
+                # wait timeout triggered, just loop.
+                log.debug("RT heartbeat timeout: checking alive status")
+
+        log.info("Runtime function end.")
+
+    def _process_window(self, window: InputWindow) -> ActivityDetection:
+        """
+        Invoke activity classifier for this window of data, performing all
+        appropriate conversions to and from algorithm specific needs.
+
+        Assuming window has passed appropriate criterion checks.
+        """
+        frame_set = [frm[1] for frm in window.frames]
+
+        # Convert hand messages that we have into appropriate vector form.
+        known_hand_dim = 21 * 3  # model-specific, based on joints used
+        hand_zero_vec = np.zeros(known_hand_dim, dtype=np.float)
+        lhand_arrays: List[Optional[npt.NDArray]] = [None] * len(frame_set)
+        for i, msg in enumerate(window.hand_pose_left):
+            if msg is not None:
+                lhand_arrays[i] = get_hand_pose_from_msg(msg)
+            else:
+                lhand_arrays[i] = hand_zero_vec.copy()
+        rhand_arrays: List[Optional[npt.NDArray]] = [None] * len(frame_set)
+        for i, msg in enumerate(window.hand_pose_right):
+            if msg is not None:
+                rhand_arrays[i] = get_hand_pose_from_msg(msg)
+            else:
+                rhand_arrays[i] = hand_zero_vec.copy()
+        # TODO: zero out both vector pairs if any one is a zero vector.
+
+        frame_set, aux_data = create_batch(
+            frame_set, lhand_arrays, rhand_arrays, window.obj_dets,
+            self._topk
+        )
+
+        # Model input format notes/questions
+        # - Hand input
+        #   - should include both hands in a flattened vector,p
+        #     (J*3*2), where Dawei is expecting J=21.
+        #     shape [32 x (J*3*2)] (J=21 -> 126)
+        #   - If a one hand is missing from the frame, zero the whole
+        #     vector out.
+        #   - Found a Left --> Right order detail in the transformer code
+        #   - What joints order was the model trained on? Can we check that?
+        # - Detection descriptors and bboxes should not have any zero
+        #   vectors. There is some expectation of "regularly" spaced
+        #   detections. A sample-step was described that is set to 5,
+        #   meaning that the input detections were rigidly assigned to
+        #   input frames.
+        #   - new discussion, provided packed matrix, K=<top-k size>
+        #       [32*K x 2048]
+        #       [32*K x 4]
+        with SimpleTimer("Activity classification prediction", self.get_logger().info):
+            pred_conf, pred_labels = predict(self._detector, frame_set, aux_data)
+
+        # Create activity message from results
+        activity_msg = ActivityDetection()
+        activity_msg.header.frame_id = "Activity Classification"
+        activity_msg.header.stamp = self.get_clock().now().to_msg()
+        activity_msg.source_stamp_start_frame = window.frames[0][0]
+        activity_msg.source_stamp_end_frame = window.frames[-1][0]
+        activity_msg.label_vec = pred_labels
+        activity_msg.conf_vec = pred_conf[0].squeeze().tolist()
+
+        return activity_msg
+
+    def destroy_node(self):
+        print("Shutting down runtime thread...")
+        self._rt_active.clear()  # make RT active flag "False"
+        self._rt_thread.join()
+        print("Shutting down runtime thread... Done")
+        super()
 
 
 def main():
@@ -320,11 +689,32 @@ def main():
 
     detector = UHOActivityDetector()
 
-    rclpy.spin(detector)
+    # If things are going wrong, set this False to debug in a serialized setup.
+    do_multithreading = True
+
+    if do_multithreading:
+        # Don't really want to use *all* available threads...
+        # 5 threads because:
+        # - 3 known subscribers which have their own groups
+        # - 1 for default group
+        # - 1 for publishers
+        executor = MultiThreadedExecutor(num_threads=5)
+        executor.add_node(detector)
+        try:
+            executor.spin()
+        except KeyboardInterrupt:
+            detector.stop_runtime()
+            detector.get_logger().info("Keyboard interrupt, shutting down.\n")
+    else:
+        try:
+            rclpy.spin(detector)
+        except KeyboardInterrupt:
+            detector.stop_runtime()
+            detector.get_logger().info("Keyboard interrupt, shutting down.\n")
 
     # Destroy the node explicitly
     # (optional - otherwise it will be done automatically
-    # when the garbage collector destroys the node object)
+    #  when the garbage collector destroys the node object... if it gets to it)
     detector.destroy_node()
 
     rclpy.shutdown()
