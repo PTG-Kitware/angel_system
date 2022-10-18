@@ -9,6 +9,7 @@ import os
 
 from sklearn.metrics import PrecisionRecallDisplay, precision_recall_curve, average_precision_score
 from sklearn.metrics import roc_curve, auc
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 
 import logging
 
@@ -214,7 +215,29 @@ class EvalVisualization:
             ax.legend(loc="best")
             fig.savefig(f"{roc_plot_dir}/{label.replace(' ', '_')}.png")
             plt.close(fig)
+
+    def confusion_mat(self):
+        fig, ax = plt.subplots(figsize=(25, 25))
+
+        correct_class_per_tw = []
+        for row in self.gt_true_mask:
+            true_idx = np.where(row == True)[0][0]
+            true_label = self.labels[true_idx]
+            correct_class_per_tw.append(true_label)
         
+        predicted_class_per_tw = []
+        for row in self.dets_per_valid_time_w:
+            pred_idx = np.argmax(row)
+            pred_label = self.labels[pred_idx]
+            predicted_class_per_tw.append(pred_label)
+
+        cm = confusion_matrix(correct_class_per_tw, predicted_class_per_tw, labels=self.labels)
+        disp = ConfusionMatrixDisplay(confusion_matrix=cm,
+                                      display_labels=self.labels)
+        disp.plot(ax=ax, xticks_rotation=90)
+        fig.savefig(f"{self.output_dir}/confusion_mat.png")
+        plt.close(fig)
+
 def plot_activities_confidence(labels, gt, dets, custom_range=None, output_dir='', custom_range_color="red"):
     """
     Plot activity confidences over time

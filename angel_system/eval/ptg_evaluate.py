@@ -207,6 +207,7 @@ def run_eval(args):
     vis = EvalVisualization(labels, gt_true_mask, dets_per_valid_time_w, output_dir=output_dir)
     vis.plot_pr_curve()
     vis.plot_roc_curve()
+    vis.confusion_mat()
 
     log.info(f"Saved plots to {output_dir}/plots/")
 
