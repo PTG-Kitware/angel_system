@@ -26,7 +26,7 @@ from angel_msgs.msg import (
 )
 
 from angel_system.uho.predict import get_uho_classifier, predict
-from angel_system.uho.src.data_helper import create_batch
+from angel_system.uho.deprecated_src.data_helper import create_batch
 from angel_system.utils.matching import descending_match_with_tolerance
 from angel_system.utils.simple_timer import SimpleTimer
 from angel_utils.conversion import get_hand_pose_from_msg

@@ -1,0 +1,38 @@
+version: "1"
+labels:
+  # Item:
+  # - id: Integer identification number of the label.
+  # - label: Short human-readable semantic string to succinctly represent the
+  #          label.
+  - id: 0
+    label: "background"
+  - id: 1
+    label: "place-tortilla"
+  - id: 2
+    label: "knife-scoop-butter"
+  - id: 3
+    label: "spread-butter-tortilla"
+  - id: 4
+    label: "clean-knife"
+  - id: 5
+    label: "knife-scoop-jelly"
+  - id: 6
+    label: "spread-jelly-tortilla"
+  - id: 7
+    label: "discard-paper-towel"
+  - id: 8
+    label: "roll-tortilla"
+  - id: 9
+    label: "insert-toothpick-1"
+  - id: 10
+    label: "insert-toothpick-2"
+  - id: 11
+    label: "trim-tortilla"
+  - id: 12
+    label: "discard-tortilla-ends"
+  - id: 13
+    label: "place-floss-between-toothpicks"
+  - id: 14
+    label: "slice-tortilla"
+  - id: 15
+    label: "plate-pinwheels"

@@ -1,0 +1,10 @@
+_target_: src.models.unified_ho_module.UnifiedHOModule
+lr: 1e-3 
+weight_decay: 0
+
+temporal:
+  _target_: src.models.components.transformer.TemTRANSModule
+  act_classes: 27 # activity labels
+  hidden: 256
+  dropout: 0.1
+  depth: 6

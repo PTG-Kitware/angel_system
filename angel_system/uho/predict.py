@@ -8,10 +8,10 @@ from typing import Tuple
 import numpy as np
 import torch
 
-from angel_system.uho.src.data_helper import AuxData
-from angel_system.uho.src.models.components.transformer import TemTRANSModule
-from angel_system.uho.src.models.components.unified_fcn import UnifiedFCNModule
-from angel_system.uho.src.models.unified_ho_module import UnifiedHOModule
+from angel_system.uho.deprecated_src.data_helper import AuxData
+from angel_system.uho.deprecated_src.models.components.transformer import TemTRANSModule
+from angel_system.uho.deprecated_src.models.components.unified_fcn import UnifiedFCNModule
+from angel_system.uho.deprecated_src.models.unified_ho_module import UnifiedHOModule
 
 
 def get_uho_classifier(
