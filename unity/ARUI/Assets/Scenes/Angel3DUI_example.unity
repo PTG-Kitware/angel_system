@@ -177,7 +177,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 386400011}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3d674ff7b4a94e04d9a5dad6a0718a37, type: 3}
   m_Name: 
@@ -287,7 +287,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 83d9acc7968244a8886f3af591305bcb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  activeProfile: {fileID: 11400000, guid: dacfad6c4137a204da7073c0229736b3, type: 2}
+  activeProfile: {fileID: 11400000, guid: 50d0edc25d4a85646b41ca01eeeae346, type: 2}
 --- !u!4 &1070971223
 Transform:
   m_ObjectHideFlags: 0
@@ -347,6 +347,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   mainCamera: {fileID: 0}
   showARUIDebugMessages: 0
+  showEyeGazeTarget: 1
 --- !u!1001 &1200407600
 PrefabInstance:
   m_ObjectHideFlags: 0
