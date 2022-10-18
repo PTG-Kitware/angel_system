@@ -7,7 +7,7 @@ import PIL
 from pathlib import Path
 import os
 
-from sklearn.metrics import PrecisionRecallDisplay, roc_curve, auc, confusion_matrix, ConfusionMatrixDisplay
+from sklearn.metrics import PrecisionRecallDisplay, roc_curve, auc
 
 import logging
 

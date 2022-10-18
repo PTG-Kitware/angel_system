@@ -33,18 +33,14 @@ def run_eval(args):
     # ============================
     # Load truth annotations
     # ============================
-    #gt_label_to_ts_ranges = defaultdict(list)
     gt_f = pd.read_feather(args.activity_gt)
     # Keys: class, start_frame,  end_frame, exploded_ros_bag_path
 
     gt = []
-    RE_FILENAME_TIME = re.compile(r"frame_\d+_(\d+)_\d+.\w+")
     for i, row in gt_f.iterrows():
         g = {
             'class': row["class"].lower().strip(),
-            #'start': float(RE_FILENAME_TIME.match(row["start_frame"]).groups()[0]),
             'start': time_from_name(row["start_frame"]),
-            #'end': float(RE_FILENAME_TIME.match(row["end_frame"]).groups()[0])
             'end': time_from_name(row["end_frame"])
         }
         gt.append(g)

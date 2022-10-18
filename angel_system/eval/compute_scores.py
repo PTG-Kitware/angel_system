@@ -1,5 +1,5 @@
 import logging
-from sklearn.metrics import auc, precision_recall_curve, recall_score, f1_score, average_precision_score
+from sklearn.metrics import average_precision_score
 import numpy as np
 
 log = logging.getLogger("ptg_eval")
