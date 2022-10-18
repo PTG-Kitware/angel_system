@@ -44,8 +44,6 @@ class EvalVisualization:
 
         colors = plt.cm.rainbow(np.linspace(0, 1, len(self.labels)))
 
-        all_y_true = []
-        all_s = []
         # ============================
         # Get PR plot per class 
         # ============================
@@ -65,17 +63,16 @@ class EvalVisualization:
             s.shape = (-1, 1)
             y_true.shape = (-1, 1)
 
-            all_y_true.extend(y_true)
-            all_s.extend(s)
-
             precision[id], recall[id], _ = precision_recall_curve(y_true, s)
             average_precision[id] = average_precision_score(y_true, s)
 
         # ============================
         # Average values
         # ============================
-        precision["macro"], recall["macro"], _ = precision_recall_curve(all_y_true, all_s)
-        average_precision["macro"] = average_precision_score(all_y_true, all_s, average="macro")
+        all_y_true = self.gt_true_mask.ravel()
+        all_s = self.dets_per_valid_time_w.ravel()
+        precision["micro"], recall["micro"], _ = precision_recall_curve(all_y_true, all_s)
+        average_precision["micro"] = average_precision_score(all_y_true, all_s, average="micro")
 
         # ============================
         # Plot
@@ -102,9 +99,9 @@ class EvalVisualization:
 
             # plot average values
             av_display = PrecisionRecallDisplay(
-                recall=recall["macro"],
-                precision=precision["macro"],
-                average_precision=average_precision["macro"],
+                recall=recall["micro"],
+                precision=precision["micro"],
+                average_precision=average_precision["micro"],
             )
             av_display.plot(ax=ax, name="Macro-averaged over all classes", 
                             color="navy", linestyle=":", linewidth=4)
@@ -217,32 +214,25 @@ class EvalVisualization:
             plt.close(fig)
 
     def confusion_mat(self):
-        fig, ax = plt.subplots(figsize=(25, 25))
+        fig, ax = plt.subplots(figsize=(20, 20))
 
-        correct_class_per_tw = []
-        for row in self.gt_true_mask:
-            true_idx = np.where(row == True)[0][0]
-            true_label = self.labels[true_idx]
-            correct_class_per_tw.append(true_label)
-        
-        predicted_class_per_tw = []
-        for row in self.dets_per_valid_time_w:
-            pred_idx = np.argmax(row)
-            pred_label = self.labels[pred_idx]
-            predicted_class_per_tw.append(pred_label)
+        true_idxs = np.where(self.gt_true_mask==True)[1]
+        pred_idxs = np.argmax(self.dets_per_valid_time_w, axis=1)
 
-        cm = confusion_matrix(correct_class_per_tw, predicted_class_per_tw, labels=self.labels)
+        cm = confusion_matrix(true_idxs, pred_idxs, labels=range(len(self.labels)))
         disp = ConfusionMatrixDisplay(confusion_matrix=cm,
                                       display_labels=self.labels)
         disp.plot(ax=ax, xticks_rotation=90)
-        fig.savefig(f"{self.output_dir}/confusion_mat.png")
+        
+        plt.tight_layout()
+        fig.savefig(f"{self.output_dir}/confusion_mat.png", pad_inches=5)
         plt.close(fig)
 
 def plot_activities_confidence(labels, gt, dets, custom_range=None, output_dir='', custom_range_color="red"):
     """
     Plot activity confidences over time
-    :param gt: 
-    :param dets: 
+    :param gt: Pandas dataframe of the ground truth
+    :param dets: Pandas dataframe of all detections per class
     
     :param custom_range: Optional tuple indicating the starting and ending times of an additional
                             range to highlight in addition to the `gt_ranges`.
