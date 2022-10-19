@@ -1,6 +1,4 @@
 import matplotlib.pyplot as plt
-plt.rcParams.update({'figure.max_open_warning': 0})
-plt.rcParams.update({'font.size': 12})
 from matplotlib.offsetbox import OffsetImage, AnnotationBbox, TextArea, AnchoredText
 import numpy as np
 import PIL
@@ -16,15 +14,18 @@ import logging
 
 log = logging.getLogger("ptg_eval")
 
+plt.rcParams.update({'figure.max_open_warning': 0})
+plt.rcParams.update({'font.size': 12})
+
 
 class EvalVisualization:
     def __init__(self, labels, gt_true_mask, dets_per_valid_time_w, output_dir=''):
         """
         :param labels: Array of class labels (str)
-        :param gt_true_pos_mask: Matrix of size (number of valid time windows x number classes) where True
+        :param gt_true_mask: Matrix of size (number of valid time windows x number classes) where True
             indicates a true class example, False inidcates a false class example. There should only be one
             True value per row
-        :param dets_per_time_w: Matrix of size (number of valid time windows x number classes) filled with 
+        :param dets_per_valid_time_w: Matrix of size (number of valid time windows x number classes) filled with 
             the max confidence score per class for any detections in the time window
         :param output_dir: Directory to write the plots to
         """
@@ -63,16 +64,10 @@ class EvalVisualization:
             class_dets_per_time_w = self.dets_per_valid_time_w[:, id]
             mask_per_class = self.gt_true_mask[:, id]
 
-            ts = class_dets_per_time_w[mask_per_class]
-            fs = class_dets_per_time_w[~mask_per_class]
+            class_dets_per_time_w.shape = (-1, 1)
+            mask_per_class.shape = (-1, 1)
 
-            s = np.hstack([ts, fs]).T
-            y_true = np.hstack([np.ones(len(ts), dtype=bool),
-                     np.zeros(len(fs), dtype=bool)]).T
-            s.shape = (-1, 1)
-            y_true.shape = (-1, 1)
-
-            display = PrecisionRecallDisplay.from_predictions(y_true, s)
+            display = PrecisionRecallDisplay.from_predictions(mask_per_class, class_dets_per_time_w)
 
             # ============================
             # Plot
@@ -121,6 +116,10 @@ class EvalVisualization:
             plt.close(fig)
 
     def plot_roc_curve(self):
+        """
+        Plot the ROC curve for each label and the macro 
+        average ROC curve over all classes
+        """
         log.debug("Plotting ROC curves")
         colors = plt.cm.rainbow(np.linspace(0, 1, len(self.labels)))
 
@@ -137,16 +136,10 @@ class EvalVisualization:
             class_dets_per_time_w = self.dets_per_valid_time_w[:, id]
             mask_per_class = self.gt_true_mask[:, id]
 
-            ts = class_dets_per_time_w[mask_per_class]
-            fs = class_dets_per_time_w[~mask_per_class]
+            class_dets_per_time_w.shape = (-1, 1)
+            mask_per_class.shape = (-1, 1)
 
-            s = np.hstack([ts, fs]).T
-            y_true = np.hstack([np.ones(len(ts), dtype=bool),
-                     np.zeros(len(fs), dtype=bool)]).T
-            s.shape = (-1, 1)
-            y_true.shape = (-1, 1)
-
-            fpr[id], tpr[id], _ = roc_curve(y_true, s)
+            fpr[id], tpr[id], _ = roc_curve(mask_per_class, class_dets_per_time_w)
             roc_auc[id] = auc(fpr[id], tpr[id])
 
         # ============================
@@ -206,6 +199,9 @@ class EvalVisualization:
             plt.close(fig)
 
     def confusion_mat(self):
+        """
+        Plot a confusion matrix of size (number of labels x number of labels)
+        """
         log.debug("Plotting confusion matrix")
         fig, ax = plt.subplots(figsize=(20, 20))
 
@@ -225,11 +221,12 @@ class EvalVisualization:
 def plot_activities_confidence(labels, gt, dets, custom_range=None, output_dir='', custom_range_color="red"):
     """
     Plot activity confidences over time
+
     :param gt: Pandas dataframe of the ground truth
     :param dets: Pandas dataframe of all detections per class
-    
     :param custom_range: Optional tuple indicating the starting and ending times of an additional
                             range to highlight in addition to the `gt_ranges`.
+    :param output_dir: Directory to write the plots to
     :param custom_range_color: The color of the additional range to be drawn. If not set, we will
                                 use "red".
     """

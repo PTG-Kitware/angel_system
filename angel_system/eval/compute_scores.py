@@ -9,7 +9,7 @@ class EvalMetrics():
     def __init__(self, labels, gt_true_mask, dets_per_valid_time_w, output_fn='metrics.txt'):
         """
         :param labels: Array of class labels (str)
-        :param gt_true_pos_mask: Matrix of size (number of valid time windows x number classes) where True
+        :param gt_true_mask: Matrix of size (number of valid time windows x number classes) where True
             indicates a true class example, False inidcates a false class example. There should only be one
             True value per row
         :param dets_per_valid_time_w: Matrix of size (number of valid time windows x number classes)
@@ -32,16 +32,9 @@ class EvalMetrics():
                 class_dets_per_time_w = self.dets_per_valid_time_w[:, id]
                 mask_per_class = self.gt_true_mask[:, id]
 
-                ts = class_dets_per_time_w[mask_per_class]
-                fs = class_dets_per_time_w[~mask_per_class]
+                class_dets_per_time_w.shape = (-1, 1)
+                mask_per_class.shape = (-1, 1)
 
-                s = np.hstack([ts, fs]).T
-                y_true = np.hstack([np.ones(len(ts), dtype=bool),
-                        np.zeros(len(fs), dtype=bool)]).T
-                s.shape = (-1, 1)
-                y_true.shape = (-1, 1)
-
-                precision = average_precision_score(y_true, s)
-                # TODO add recall
+                precision = average_precision_score(mask_per_class, class_dets_per_time_w)
 
                 f.write(f'{self.labels[id]}: {precision}\n')

@@ -5,14 +5,8 @@ from pathlib import Path
 import argparse
 from tokenize import Double
 import numpy as np
-import PIL.Image
-import os
-import tqdm
-import pickle
 import pandas as pd
 import logging
-import re
-import gc
 
 from angel_system.impls.detect_activities.swinb.swinb_detect_activities import SwinBTransformer
 from angel_system.eval.support_functions import time_from_name
@@ -189,10 +183,6 @@ def run_eval(args):
 
     # plot activity timelines
     plot_activities_confidence(labels=labels, gt=gt, dets=detections, output_dir=f"{output_dir}/plots")
-    del gt
-    del detections
-
-    gc.collect()
 
     # ============================
     # Metrics
@@ -212,24 +202,20 @@ def run_eval(args):
 
     log.info(f"Saved plots to {output_dir}/plots/")
 
-    del gt_true_mask
-    del dets_per_valid_time_w
-
-    gc.collect()
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--activity_gt",
         type=str,
-        default="data/ros_bags/Annotated_folding_filter/labels_test_v1.2.feather",
+        default="labels_test_v1.2.feather",
         help="Feather file containing the ground truth annotations in the PTG-LEARN format. \
             The expected filename format is \'labels_test_v<label version>.feather\'"
     )
     parser.add_argument(
         "--extracted_activity_detections",
         type=str,
-        default="data/ros_bags/_extracted/activity_detection_data.json",
+        default="activity_detection_data.json",
         help="Text file containing the activity detections from an extracted ROS2 bag"
     )
     parser.add_argument(
