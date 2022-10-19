@@ -10,7 +10,7 @@ import logging
 
 from angel_system.impls.detect_activities.swinb.swinb_detect_activities import SwinBTransformer
 from angel_system.eval.support_functions import time_from_name
-from angel_system.eval.visualization import EvalVisualization, plot_activities_confidence
+from angel_system.eval.visualization import EvalVisualization
 from angel_system.eval.compute_scores import EvalMetrics
 
 
@@ -181,26 +181,24 @@ def run_eval(args):
     dets_per_valid_time_w = dets_per_valid_time_w[valid]
     gt_true_mask = gt_true_mask[valid]
 
-    # plot activity timelines
-    plot_activities_confidence(labels=labels, gt=gt, dets=detections, output_dir=f"{output_dir}/plots")
-
     # ============================
     # Metrics
     # ============================
     metrics = EvalMetrics(labels, gt_true_mask, dets_per_valid_time_w, output_fn=f"{output_dir}/metrics.txt")
     metrics.precision()
 
-    log.info(f"Saved metrics to {output_dir}/metrics.txt")
+    log.info(f"Saved metrics to {metrics.output_fn}")
 
     # ============================
     # Plot
     # ============================
     vis = EvalVisualization(labels, gt_true_mask, dets_per_valid_time_w, output_dir=output_dir)
+    vis.plot_activities_confidence(gt=gt, dets=detections)
     vis.plot_pr_curve()
     vis.plot_roc_curve()
     vis.confusion_mat()
 
-    log.info(f"Saved plots to {output_dir}/plots/")
+    log.info(f"Saved plots to {vis.output_dir}")
 
 
 def main():
