@@ -14,8 +14,6 @@ import logging
 import re
 import gc
 
-gc.collect()
-
 from angel_system.impls.detect_activities.swinb.swinb_detect_activities import SwinBTransformer
 from angel_system.eval.support_functions import time_from_name
 from angel_system.eval.visualization import EvalVisualization, plot_activities_confidence
@@ -84,7 +82,9 @@ def run_eval(args):
     # Split by time window
     # ============================
     # Get time ranges
-    assert args.time_window > args.uncertainty_pad
+    assert args.time_window > args.uncertainty_pad, (
+        "Time window must be longer than the uncertainty pad"
+    )
     min_start_time = min(gt['start'].min(), detections['start'].min())
     max_end_time = max(gt['end'].max(), detections['end'].max())
     dt = args.time_window
@@ -99,7 +99,8 @@ def run_eval(args):
 
 
     def get_time_wind_range(start, end):
-        """Return slice indices of time windows that reside completely in
+        """
+        Return slice indices of time windows that reside completely in
         start->end.
 
         time_windows[ind1:ind2] all live inside start->end.
@@ -147,7 +148,7 @@ def run_eval(args):
         gt_true_mask[ind1:ind2, correct_class_idx] = True
 
     if not np.all(np.sum(gt_true_mask, axis=1) <= 1):
-        raise Exception('Conflicting ground truth for same time windows')
+        raise AssertionError('Conflicting ground truth for same time windows')
 
     # If ground truth isn't specified for a particular window, we should assume
     # 'background'.

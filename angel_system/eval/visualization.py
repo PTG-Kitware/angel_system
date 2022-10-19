@@ -22,7 +22,8 @@ class EvalVisualization:
         """
         :param labels: Array of class labels (str)
         :param gt_true_pos_mask: Matrix of size (number of valid time windows x number classes) where True
-            indicates a true class example, False inidcates a false class example
+            indicates a true class example, False inidcates a false class example. There should only be one
+            True value per row
         :param dets_per_time_w: Matrix of size (number of valid time windows x number classes) filled with 
             the max confidence score per class for any detections in the time window
         :param output_dir: Directory to write the plots to
@@ -38,7 +39,8 @@ class EvalVisualization:
 
     def plot_pr_curve(self):
         """
-        Plot the PR curve for each label
+        Plot the PR curve for each label and the micro 
+        average PR curve over all classes
         """
         log.debug("Plotting PR curves")
         pr_plot_dir = Path(os.path.join(self.output_dir, "pr"))
@@ -47,11 +49,16 @@ class EvalVisualization:
         colors = plt.cm.rainbow(np.linspace(0, 1, len(self.labels)))
 
         # ============================
+        # Average values
+        # ============================
+        all_y_true = self.gt_true_mask.ravel()
+        all_s = self.dets_per_valid_time_w.ravel()
+        precision_micro, recall_micro, _ = precision_recall_curve(all_y_true, all_s)
+        average_precision_micro = average_precision_score(all_y_true, all_s, average="micro")
+
+        # ============================
         # Get PR plot per class 
         # ============================
-        precision = dict()
-        recall = dict()
-        average_precision = dict()
         for id, label in enumerate(self.labels):
             class_dets_per_time_w = self.dets_per_valid_time_w[:, id]
             mask_per_class = self.gt_true_mask[:, id]
@@ -65,23 +72,10 @@ class EvalVisualization:
             s.shape = (-1, 1)
             y_true.shape = (-1, 1)
 
-            precision[id], recall[id], _ = precision_recall_curve(y_true, s)
-            average_precision[id] = average_precision_score(y_true, s)
+            display = PrecisionRecallDisplay.from_predictions(y_true, s)
 
-        # ============================
-        # Average values
-        # ============================
-        all_y_true = self.gt_true_mask.ravel()
-        all_s = self.dets_per_valid_time_w.ravel()
-        precision["micro"], recall["micro"], _ = precision_recall_curve(all_y_true, all_s)
-        average_precision["micro"] = average_precision_score(all_y_true, all_s, average="micro")
-
-        # ============================
-        # Plot
-        # ============================
-        for id, label in enumerate(self.labels):
             # ============================
-            # Setup figure
+            # Plot
             # ============================
             fig, ax = plt.subplots(figsize=(14, 8))
 
@@ -101,19 +95,14 @@ class EvalVisualization:
 
             # plot average values
             av_display = PrecisionRecallDisplay(
-                recall=recall["micro"],
-                precision=precision["micro"],
-                average_precision=average_precision["micro"],
+                recall=recall_micro,
+                precision=precision_micro,
+                average_precision=average_precision_micro,
             )
-            av_display.plot(ax=ax, name="Macro-averaged over all classes", 
+            av_display.plot(ax=ax, name="Micro-averaged over all classes", 
                             color="navy", linestyle=":", linewidth=4)
 
             # plot class values
-            display = PrecisionRecallDisplay(
-                recall=recall[id],
-                precision=precision[id],
-                average_precision=average_precision[id],
-            )
             display.plot(ax=ax, name=label, color=colors[id])
 
             # ============================
@@ -231,6 +220,7 @@ class EvalVisualization:
         plt.tight_layout()
         fig.savefig(f"{self.output_dir}/confusion_mat.png", pad_inches=5)
         plt.close(fig)
+
 
 def plot_activities_confidence(labels, gt, dets, custom_range=None, output_dir='', custom_range_color="red"):
     """

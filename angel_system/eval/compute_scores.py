@@ -6,11 +6,12 @@ log = logging.getLogger("ptg_eval")
 
 
 class EvalMetrics():
-    def __init__(self, labels, gt_true_mask, dets_per_valid_time_w, output_fn='metrics/txt'):
+    def __init__(self, labels, gt_true_mask, dets_per_valid_time_w, output_fn='metrics.txt'):
         """
         :param labels: Array of class labels (str)
         :param gt_true_pos_mask: Matrix of size (number of valid time windows x number classes) where True
-            indicates a true class example, False inidcates a false class example
+            indicates a true class example, False inidcates a false class example. There should only be one
+            True value per row
         :param dets_per_valid_time_w: Matrix of size (number of valid time windows x number classes)
             filled with the max confidence score per class for any detections in the time window
         :param output_fn: Path (str) to a file
@@ -22,6 +23,9 @@ class EvalMetrics():
         self.output_fn = output_fn
 
     def precision(self):
+        """
+        Calculate the average precision per class and output to a file
+        """
         with open(self.output_fn, "w") as f:
             f.write('precision: \n')
             for id, label in enumerate(self.labels):
@@ -37,7 +41,6 @@ class EvalMetrics():
                 s.shape = (-1, 1)
                 y_true.shape = (-1, 1)
 
-                #precision, recall, thresholds = precision_recall_curve(y_true, s)
                 precision = average_precision_score(y_true, s)
                 # TODO add recall
 
