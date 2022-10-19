@@ -18,7 +18,6 @@ ENV LC_ALL=C.UTF-8 \
 # Basic system package installations
 RUN apt-get -y update \
  && apt-get -y install \
-        apt-utils \
         gettext-base \
         python3-pip \
         python3-venv \
