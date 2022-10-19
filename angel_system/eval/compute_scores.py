@@ -6,7 +6,7 @@ log = logging.getLogger("ptg_eval")
 
 
 class EvalMetrics():
-    def __init__(self, labels, gt_true_mask, dets_per_valid_time_w, output_fn='metrics.txt'):
+    def __init__(self, labels, gt_true_mask, dets_per_valid_time_w, output_dir=''):
         """
         :param labels: Array of class labels (str)
         :param gt_true_mask: Matrix of size (number of valid time windows x number classes) where True
@@ -20,7 +20,7 @@ class EvalMetrics():
         self.gt_true_mask = gt_true_mask
         self.dets_per_valid_time_w = dets_per_valid_time_w
 
-        self.output_fn = output_fn
+        self.output_fn = f"{output_dir}/metrics.txt"
 
     def precision(self):
         """

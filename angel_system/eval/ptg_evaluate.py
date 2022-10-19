@@ -184,7 +184,7 @@ def run_eval(args):
     # ============================
     # Metrics
     # ============================
-    metrics = EvalMetrics(labels, gt_true_mask, dets_per_valid_time_w, output_fn=f"{output_dir}/metrics.txt")
+    metrics = EvalMetrics(labels, gt_true_mask, dets_per_valid_time_w, output_dir=output_dir)
     metrics.precision()
 
     log.info(f"Saved metrics to {metrics.output_fn}")
