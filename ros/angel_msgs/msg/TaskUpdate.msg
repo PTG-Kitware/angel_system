@@ -31,3 +31,7 @@ string next_activity
 # Time remaining to move to next task (e.g. waiting for tea to steep)
 # -1 means that this is not a time based task
 int32 time_remaining_until_next_task
+
+# Current confidence from the HMM that a recipe is complete.
+# Only task_monitor_v2 will fill this in.
+float32 task_complete_confidence

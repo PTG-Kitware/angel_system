@@ -52,6 +52,9 @@ class HMMNode(Node):
         self._previous_step = None
         self._current_step = None
 
+        # HMM's confidence that task is done
+        self._task_complete_confidence = 0.0
+
         # Initialize ROS hooks
         self._subscription = self.create_subscription(
             ActivityDetection,
@@ -147,6 +150,8 @@ class HMMNode(Node):
         else:
             message.previous_step = self._previous_step
 
+        message.task_complete_confidence = self._task_complete_confidence
+
         # TODO: Populate task name and description
         # TODO: Do we need to fill in current/next activity?
         # TODO: Fill in time remaining?
@@ -227,7 +232,8 @@ class HMMNode(Node):
                 log.info(f"HMM get_skip_score time: {time.time() - start_time}")
                 log.info(f"Skip score: {skip_score}")
 
-                # TODO: modify and publish in a TaskUpdate message
+                # TODO: how does skip score relate to task completion conf.
+                self._task_complete_confidence = skip_score
 
     def hmm_alive(self) -> bool:
         """
