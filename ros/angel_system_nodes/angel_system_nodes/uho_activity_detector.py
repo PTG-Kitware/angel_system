@@ -367,6 +367,12 @@ class UHOActivityDetector(Node):
             .get_parameter_value()
             .string_value
         )
+        # Whether overlapping windows are passed to the classifier
+        self._overlapping_mode  = (
+            self.declare_parameter("overlapping_mode", True)
+            .get_parameter_value()
+            .bool_value
+        )
 
         self._buffer_max_size_nanosec = int(self._buffer_max_size_seconds * 1e9)
         self._slop_ns = (5 / 60.0) * 1e9  # slop (hand msgs have rate of ~60hz per hand)
@@ -444,6 +450,7 @@ class UHOActivityDetector(Node):
 
         # Variables used by window criterion methods
         self._prev_leading_time_ns = None
+        self._prev_last_time_ns = None
 
         # Start the runtime thread
         log.info("Starting runtime thread...")
@@ -558,6 +565,26 @@ class UHOActivityDetector(Node):
         self._prev_leading_time_ns = cur_leading_time_ns
         return True
 
+    def _window_criterion_ensure_non_overlapping(self, window: InputWindow) -> bool:
+        """
+        The new window's leading frame should be beyond a previous window's
+        last frame.
+        """
+        # Assuming _window_criterion_correct_size already passed.
+        cur_first_time_ns = time_to_int(window.frames[0][0])
+        prev_last_time_ns = self._prev_last_time_ns
+        if prev_last_time_ns is not None:
+            window_ok = prev_last_time_ns < cur_first_time_ns
+            if not window_ok:
+                # current window is earlier/same lead as before, so not a good
+                # window
+                self.get_logger().warn("RT overlapping window detected, skipping.")
+                return False
+            # Window is OK, save new latest prev last time below.
+        # Else: This is the first window, save the last frame's time below.
+        self._prev_last_time_ns = time_to_int(window.frames[-1][0])
+        return True
+
     def thread_predict_runtime(self):
         """
         Activity classification prediction runtime function.
@@ -573,6 +600,11 @@ class UHOActivityDetector(Node):
             self._window_criterion_enough_dets,
             self._window_criterion_new_leading_frame,
         ]
+
+        if self._overlapping_mode == False:
+            window_processing_criterion_fn_list.append(
+                self._window_criterion_ensure_non_overlapping
+            )
 
         while self._rt_active.wait(0):  # will quickly return false if cleared.
             if self._rt_awake_evt.wait(self._rt_active_heartbeat):
