@@ -1,3 +1,4 @@
+import time
 from typing import (
     List,
     Tuple,
@@ -13,12 +14,14 @@ from angel_system.eval.support_functions import time_from_name
 def gt_predict(
     gt_file: str,
     frame_set_start_stamp: float,
-    frame_set_end_stamp: float
+    frame_set_end_stamp: float,
+    predict_time: float = 1.0
 ) -> Tuple[Tuple[torch.Tensor, torch.Tensor], List[str]]:
     """
     Creates a simulated classifier prediction given the ground truth annotation
     file and the frame timestamps. The frame stamps are used to determine which
-    activity was being performed in the ground truth file.
+    activity was being performed in the ground truth file. By default, there
+    is an artificial delay to simulate the classifier's computation time.
 
     The return type is consistent with the UHO's predict function.
 
@@ -27,6 +30,8 @@ def gt_predict(
     :param frame_set_start_stamp: The start time in seconds for this frame
         window.
     :param frame_set_end_stamp: The end time in seconds for this frame window.
+    :param predict_time: How long to delay returning the result to simulate the
+        computation time the classifier would take.
 
     :return: A tuple consisting of two elements:
             0: Classifier results: A tuple consisting of a [1 x n_classes] tensor
@@ -76,5 +81,7 @@ def gt_predict(
 
     confidences[classifier_label_idx] = 1.0
     class_idx = torch.tensor(classifier_label_idx)
+
+    time.sleep(predict_time)
 
     return (confidences, class_idx), classes
