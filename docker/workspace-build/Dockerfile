@@ -18,6 +18,7 @@ ENV LC_ALL=C.UTF-8 \
 # Basic system package installations
 RUN apt-get -y update \
  && apt-get -y install \
+        apt-utils \
         gettext-base \
         python3-pip \
         python3-venv \
@@ -41,8 +42,7 @@ RUN apt-get -y update \
  && rm -rf /var/lib/apt/lists/*
 
 # For the Demo UI
-RUN source /opt/ros/${ROS_DISTRO}/setup.bash && \
-     apt-get dist-upgrade
+RUN source /opt/ros/${ROS_DISTRO}/setup.bash
 
 # Env vars for the nvidia-container-runtime.
 ENV NVIDIA_VISIBLE_DEVICES all
