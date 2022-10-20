@@ -601,10 +601,16 @@ class UHOActivityDetector(Node):
             self._window_criterion_new_leading_frame,
         ]
 
-        if self._overlapping_mode == False:
+        if self._overlapping_mode is False:
             window_processing_criterion_fn_list.append(
                 self._window_criterion_ensure_non_overlapping
             )
+
+        # If the ground truth file is provided, use the gt processing function
+        if self._gt_file == "":
+            process_window_fn = self._process_window
+        else:
+            process_window_fn = self._process_window_gt
 
         while self._rt_active.wait(0):  # will quickly return false if cleared.
             if self._rt_awake_evt.wait(self._rt_active_heartbeat):
@@ -637,7 +643,7 @@ class UHOActivityDetector(Node):
                     # Also inform any listeners that we no
                     self._min_time_publisher.publish(old_time)
 
-                    act_msg = self._process_window(window)
+                    act_msg = process_window_fn(window)
                     log.info("RT publishing activity classification results")
                     self._activity_publisher.publish(act_msg)
                 else:
@@ -704,16 +710,32 @@ class UHOActivityDetector(Node):
         #       [32*K x 2048]
         #       [32*K x 4]
         with SimpleTimer("Activity classification prediction", self.get_logger().info):
+            pred_conf, pred_labels = predict(self._detector, frame_set, aux_data)
 
-            if self._gt_file == "":
-                # No ground truth provided, use the detector
-                pred_conf, pred_labels = predict(self._detector, frame_set, aux_data)
-            else:
-                pred_conf, pred_labels = gt_predict(
-                    self._gt_file,
-                    time_to_int(window.frames[0][0]) * 1e-9,
-                    time_to_int(window.frames[-1][0]) * 1e-9,
-                )
+        # Create activity message from results
+        activity_msg = ActivityDetection()
+        activity_msg.header.frame_id = "Activity Classification"
+        activity_msg.header.stamp = self.get_clock().now().to_msg()
+        activity_msg.source_stamp_start_frame = window.frames[0][0]
+        activity_msg.source_stamp_end_frame = window.frames[-1][0]
+        activity_msg.label_vec = pred_labels
+        activity_msg.conf_vec = pred_conf[0].squeeze().tolist()
+
+        return activity_msg
+
+    def _process_window_gt(self, window: InputWindow) -> ActivityDetection:
+        """
+        Invoke the ground truth activity classifier stub for this window of
+        data.
+
+        Assuming window has passed appropriate criterion checks.
+        """
+        with SimpleTimer("Activity classification prediction", self.get_logger().info):
+            pred_conf, pred_labels = gt_predict(
+                self._gt_file,
+                time_to_int(window.frames[0][0]) * 1e-9,
+                time_to_int(window.frames[-1][0]) * 1e-9,
+            )
 
         # Create activity message from results
         activity_msg = ActivityDetection()
