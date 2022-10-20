@@ -4,6 +4,10 @@ from sklearn.metrics import precision_recall_curve
 import pandas as pd
 import json
 import yaml
+import re
+from ast import literal_eval
+
+from angel_system.eval.support_functions import time_from_name
 
 try:
     import matplotlib.pyplot as plt
@@ -236,7 +240,7 @@ class ActivityHMM(object):
         class_str_.append('background')
         class_str_map.append(len(class_str_) - 1)
         bckg_mask.append(True)
-        inv_map.append(i)
+        inv_map.append(0)
 
         # Initialize the remainder of the classes
         for i, clss in enumerate(class_str[1:], start=1):
@@ -275,37 +279,63 @@ class ActivityHMM(object):
 
         # Indices into N_-length arrays (e.g., class_str_) that correspond to the
         # original N-length arrays (e.g., class_str).
-        not_bckg_mask_ = ~bckg_mask.copy()
+        not_bckg_mask = ~bckg_mask
 
+        # Mask capturing the elements of X_ that correspond to the elements of
+        # X.
+        orig_mask = not_bckg_mask.copy()
+        orig_mask[0] = True
 
-        if class_mean_conf is not None and class_std_conf is not None:
+        if class_mean_conf is not None:
             class_mean_conf = np.array(class_mean_conf)
-            class_std_conf = np.array(class_std_conf)
 
-            # We define an N x N mean matrix where element (i, j) is the mean value
-            # emmitted for class j when class i is the state.
+            # We define an N x N mean matrix where element (i, j) is the mean
+            # value emmitted for class j when class i is the state.
             if np.any(class_mean_conf > 1):
-                raise Exception('\'class_mean_conf\' must be between 0-1')
+                raise ValueError('\'class_mean_conf\' must be between 0-1')
+
+            if np.ndim(class_mean_conf) == 1:
+                class_mean_conf = np.diag(class_mean_conf)
+            elif np.ndim(class_mean_conf) > 2:
+                raise ValueError('np.ndim(class_mean_conf) must be 1 or 2')
 
             class_conf_mean_mat = np.zeros((N_, N_))
-            sphere_conf_cov_mat = np.zeros(N_)
+            ki = 0
+            for i in range(N_):
+                if orig_mask[i]:
+                    class_conf_mean_mat[i, orig_mask] = class_mean_conf[ki]
+                    class_conf_mean_mat[i, ~orig_mask] = class_conf_mean_mat[i, 0]
+                    ki += 1
+                else:
+                    class_conf_mean_mat[i] = class_conf_mean_mat[0]
 
-            # Square to turn from std to cov. We'll reuse the name.
-            class_std_conf = class_std_conf**2
+            model.means_ = class_conf_mean_mat
+
+        if class_std_conf is not None:
+            class_std_conf = np.array(class_std_conf)
+
+            # Square to turn from std to cov.
+            class_std_conf2 = class_std_conf**2
+
+            if np.ndim(class_std_conf) == 1:
+                class_std_conf2 = np.tile(class_std_conf2, (N, 1))
+            elif np.ndim(class_mean_conf) > 2:
+                raise ValueError('np.ndim(class_std_conf) must be 1 or 2')
+
+            # Full covariance
+            model.covariance_type = 'diag'
+            conf_cov_mat = np.zeros((N_, N_))
 
             ki = 0
             for i in range(N_):
-                if not_bckg_mask_[i]:
-                    class_conf_mean_mat[i, i] = class_mean_conf[ki]
-                    sphere_conf_cov_mat[i] = class_std_conf[ki]
+                if orig_mask[i]:
+                    conf_cov_mat[i, orig_mask] = class_std_conf2[ki]
+                    conf_cov_mat[i, ~orig_mask] = conf_cov_mat[i, 0]
                     ki += 1
                 else:
-                    class_conf_mean_mat[i, bckg_mask] = class_mean_conf[0]
-                    sphere_conf_cov_mat[i] = class_std_conf[0]
+                    conf_cov_mat[i] = conf_cov_mat[0]
 
-            model.means_ = class_conf_mean_mat
-            model._covars_ = sphere_conf_cov_mat
-
+            model.covars_ = conf_cov_mat + 1e-9
 
         # -------------- Define transition probabilities -------------------------
         # Median number of timesteps spent in each step.
@@ -436,8 +466,9 @@ class ActivityHMM(object):
 
         if force_skip_step is not None:
             if force_skip_step == 0 or force_skip_step >= len(self.class_str):
-                raise Exception('\'force_skip_step\' must be an integer '
-                                'between 1 and %i' % (len(self.class_str) - 1))
+                raise ValueError('\'force_skip_step\' must be an integer '
+                                 'between 1 and %i' %
+                                 (len(self.class_str) - 1))
 
             # Make a copy of the model so we can adjust it.
             model = GaussianHMM(n_components=self.model.n_components,
@@ -743,11 +774,226 @@ def score_raw_detections(X, Z, plot_results=False):
 
     if plot_results:
         fig = plt.figure(num=None, figsize=(14, 10), dpi=80)
-        plt.rc('font', **{'size': 22})
+        plt.rc('font', **{'size': 28})
         plt.rc('axes', linewidth=4)
         plt.plot(recall, precision, linewidth=6, label='Raw Detections')
         plt.xlabel('Recall', fontsize=40)
         plt.ylabel('Precision', fontsize=40)
         fig.tight_layout()
 
+        plt.xlim([0, 1.01])
+        plt.ylim([0, 1.01])
+        fig.tight_layout()
+
+        plt.gca().yaxis.set_minor_locator(AutoMinorLocator(2))
+        plt.tick_params(
+                axis="y",
+                which="major",
+                grid_color='lightgrey')
+        plt.tick_params(
+                axis="y",
+                which="minor",
+                grid_linestyle='--',
+                grid_color='lightgrey')
+        plt.grid(axis='y', which='both')
+        plt.gca().xaxis.set_minor_locator(AutoMinorLocator(2))
+        plt.tick_params(
+                axis="x",
+                which="major",
+                grid_color='lightgrey')
+        plt.tick_params(
+                axis="x",
+                which="minor",
+                grid_linestyle='--',
+                grid_color='lightgrey')
+        plt.grid(axis='x', which='both')
+        plt.legend(fontsize=20, loc=0)
+
     return auc
+
+
+def load_and_discretize_data(activity_gt: str,
+                             extracted_activity_detections: str,
+                             time_window: float, uncertain_pad: float):
+    """Loads unstructured detection and ground truth data and discretize.
+
+    Parameters
+    ----------
+    activity_gt : str
+        Path to activity ground truth feather file.
+    extracted_activity_detections : str
+        Path to detection json.
+    time_window : float
+        Time (seconds) to discretize to.
+    uncertain_pad : float
+        Time uncertainty padding (seconds) during change of class.
+
+    Returns
+    -------
+    time_windows : Numpy 2-D array of float
+        time_windows[i, 0] encodes the start time for the ith time window and
+        time_windows[i, 1] the end time of the ith window (seconds).
+    labels : list of str
+        labels[j] encodes the string name for the ith activity class.
+    dets_per_valid_time_w : Numpy 2-D array
+        dets_per_valid_time_w[i, j] encodes the classifier's confidence that
+        activity j occurred in the ith time window.
+    gt_label : array-like of int
+        gt_label[i] encodes the ground truth class integer that occurred at in
+        the ith time window.
+    valid : array-like of bool
+        Encodes which time windows are valid for scoring. An invalid time
+        window may occur when it is too close to a change in ground-truth
+        class.
+
+    """
+    gt_f = pd.read_feather(activity_gt)
+    # Keys: class, start_frame,  end_frame, exploded_ros_bag_path
+
+    gt = []
+    for i, row in gt_f.iterrows():
+        g = {
+            'class': row["class"].lower().strip(),
+            'start': time_from_name(row["start_frame"]),
+            'end': time_from_name(row["end_frame"])
+        }
+        gt.append(g)
+
+    print(f"Loaded ground truth from {activity_gt}")
+    gt = pd.DataFrame(gt)
+
+    with open(extracted_activity_detections) as json_file:
+        detections_input = json.load(json_file)
+
+    detections = []
+
+    for dets in detections_input:
+        good_dets = {}
+        for l, conf in zip(dets["label_vec"], dets["conf_vec"]):
+            good_dets[l] = conf
+
+        for l in dets["label_vec"]:
+            d = {
+                'class': l.lower().strip(),
+                'start': dets["source_stamp_start_frame"],
+                'end': dets["source_stamp_end_frame"],
+                'conf': good_dets[l],
+                'detect_intersection': np.nan
+            }
+            detections.append(d)
+    detections = pd.DataFrame(detections)
+    print(f"Loaded detections from {extracted_activity_detections}")
+
+    # ============================
+    # Load labels
+    # ============================
+    labels0 = [l.lower().strip().rstrip('.') for l in detections['class']]
+    labels = []
+    labels_ = set()
+    for label in labels0:
+        if label not in labels_:
+            labels_.add(label)
+            labels.append(label)
+
+    print(f"Labels: {labels}")
+
+    # ============================
+    # Split by time window
+    # ============================
+    # Get time ranges
+    min_start_time = min(gt['start'].min(), detections['start'].min())
+    max_end_time = max(gt['end'].max(), detections['end'].max())
+    dt = time_window
+    time_windows = np.arange(min_start_time, max_end_time, time_window)
+
+    if time_windows[-1] < max_end_time:
+        time_windows = np.append(time_windows, time_windows[-1] + time_window)
+    time_windows = list(zip(time_windows[:-1], time_windows[1:]))
+    time_windows = np.array(time_windows)
+    dets_per_valid_time_w = np.zeros((len(time_windows), len(labels)),
+                                     dtype=float)
+
+
+    def get_time_wind_range(start, end):
+        """Return slice indices of time windows that reside completely in
+        start->end.
+        time_windows[ind1:ind2] all live inside start->end.
+        """
+        # The start time of the ith window is min_start_time + dt*i.
+        ind1_ = (start - min_start_time)/dt
+        ind1 = int(np.ceil(ind1_))
+        if ind1_ - ind1 + 1 < 1e-15:
+            # We want to avoid the case where ind1_ is (j + eps) and it gets
+            # rounded up to j + 1.
+            ind1 -= 1
+
+        # The end time of the ith window is min_start_time + dt*(i + 1).
+        ind2_ = (end - min_start_time)/dt
+        ind2 = int(np.floor(ind2_))
+        if -ind2_ + ind2 + 1 < 1e-15:
+            # We want to avoid the case where ind1_ is (j - eps) and it gets
+            # rounded up to j - 1.
+            ind1 += 1
+
+        ind1 = max([ind1, 0])
+        ind2 = min([ind2, len(time_windows)])
+
+        return ind1, ind2
+
+
+    # Valid time windows overlap with a detection.
+    valid = np.zeros(len(time_windows), dtype=bool)
+    for i in range(len(detections)):
+        ind1, ind2 = get_time_wind_range(detections['start'][i],
+                                         detections['end'][i])
+
+        valid[ind1:ind2] = True
+        correct_label = detections['class'][i].strip().rstrip('.')
+        correct_class_idx = labels.index(correct_label)
+        dets_per_valid_time_w[ind1:ind2, correct_class_idx] = np.maximum(dets_per_valid_time_w[ind1:ind2, correct_class_idx],
+                                                              detections['conf'][i])
+
+    gt_true_mask = np.zeros((len(time_windows), len(labels)), dtype=bool)
+    for i in range(len(gt)):
+        ind1, ind2 = get_time_wind_range(gt['start'][i], gt['end'][i])
+        correct_label = gt['class'][i].strip().rstrip('.')
+        correct_class_idx = labels.index(correct_label)
+        gt_true_mask[ind1:ind2, correct_class_idx] = True
+
+    if not np.all(np.sum(gt_true_mask, axis=1) <= 1):
+        raise ValueError('Conflicting ground truth for same time windows')
+
+    # If ground truth isn't specified for a particular window, we should assume
+    # 'background'.
+    bckg_class_idx = labels.index('background')
+    ind = np.where(np.all(gt_true_mask == False, axis=1))[0]
+    gt_true_mask[ind, bckg_class_idx] = True
+
+    # Any time the ground truth class changes, we want to add in uncertainty
+    # padding, but there should always be at least one time window at the
+    # center of the ground-truth span.
+    gt_label = np.argmax(gt_true_mask, axis=1)
+    pad = int(np.round(uncertain_pad/dt))
+    if pad > 0:
+        ind = np.where(np.diff(gt_label, axis=0) != 0)[0] + 1
+        if ind[0] != 0:
+            ind = np.hstack([1, ind])
+
+        if ind[-1] != len(time_windows):
+            ind = np.hstack([ind, len(time_windows)])
+
+        for i in range(len(ind) -1):
+            ind1 = ind[i]
+            ind2 = ind[i+1]
+            # time windows in range ind1:ind2 all have the same ground
+            # truth class.
+
+            ind1_ = ind1 + pad
+            ind2_ = ind2 - pad
+            indc = int(np.round((ind1 + ind2)/2))
+            ind1_ = min([ind1_, indc])
+            ind2_ = max([ind2_, indc + 1])
+            valid[ind1:ind1_] = False
+            valid[ind2_:ind2] = False
+
+    return time_windows, labels, dets_per_valid_time_w, gt_label, valid

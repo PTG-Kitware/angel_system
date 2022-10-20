@@ -7,7 +7,7 @@ from sklearn.metrics import  accuracy_score
 import scipy
 
 from angel_system.activity_hmm.core import ActivityHMM, ActivityHMMRos, \
-    get_skip_score, score_raw_detections
+    get_skip_score, score_raw_detections, load_and_discretize_data
 from angel_system.impls.detect_activities.swinb.swinb_detect_activities import SwinBTransformer
 from angel_system.eval.support_functions import time_from_name
 from angel_system.eval.visualization import EvalVisualization
@@ -63,7 +63,7 @@ dt = 1    # s
 # Define the median time spent in each step.
 med_class_duration = np.ones(N)*5
 
-class_mean_conf = np.ones(N)*0.5
+class_mean_conf = np.ones(N)*0.4
 class_std_conf = np.ones(N)*0.1
 
 # ----------------------------------------------------------------------------
@@ -78,7 +78,90 @@ times, X, Z, X_, Z_ = model.sample(500)
 det_json_fname = '/mnt/data10tb/ptg/activity_detection_data2.json'
 gt_feather_fname = '/mnt/data10tb/ptg/simulated.feather'
 model.save_to_disk(times, X, Z, det_json_fname, gt_feather_fname)
+# ----------------------------------------------------------------------------
 
+# ----------------------------------------------------------------------------
+# Load from real system.
+activity_gt = '/mnt/data10tb/ptg/labels_test_v1.5.feather'
+extracted_activity_detections = '/mnt/data10tb/ptg/activity_detection_data.json'
+dt = 0.25
+ret = load_and_discretize_data(activity_gt, extracted_activity_detections,
+                               dt, 0.5)
+time_windows, class_str, X, Z, valid = ret
+valid[Z == 0] = False
+
+
+# Fit HMM.
+num_classes = max(Z) + 1
+true_mask = np.diag(np.ones(num_classes, dtype=bool))[Z]
+class_mean_conf = []
+class_std_conf = []
+med_class_duration = []
+for i in range(num_classes):
+    class_mean_conf.append(np.mean(X[true_mask[:, i], :], axis=0))
+    class_std_conf.append(np.std(X[true_mask[:, i], :], axis=0))
+
+    indr = np.where(np.diff(true_mask[:, i].astype(np.int8)) < 0)[0]
+    indl = np.where(np.diff(true_mask[:, i].astype(np.int8)) > 0)[0]
+
+    if true_mask[0, i] and indl[0] != 0:
+        indl = np.hstack([0, indl])
+
+    if true_mask[-1, i] and indr[-1] != len(true_mask) - 1:
+        indr = np.hstack([indr, len(true_mask) - 1])
+
+    # wins has shape (2, num_instances) where wins[0, i] indicates when the ith
+    # instance starts and wins[1, i] indicates when the ith instance ends.
+    wins = np.array(list(zip(indl, indr))).T
+
+    # During (seconds) of each instance.
+    twins = time_windows[wins[1], 1] - time_windows[wins[0], 0]
+
+    med_class_duration.append(np.mean(twins))
+
+med_class_duration = np.array(med_class_duration)
+class_mean_conf = np.array(class_mean_conf)
+class_std_conf = np.array(class_std_conf)
+
+#plt.plot(class_mean_conf/class_std_conf, 'ro')
+#plt.imshow(X.T, interpolation='nearest', aspect='auto'); plt.plot(Z, 'r.')
+
+
+model = ActivityHMM(dt, class_str,
+                    med_class_duration=med_class_duration,
+                    num_steps_can_jump_fwd=0, num_steps_can_jump_bck=0,
+                    class_mean_conf=class_mean_conf,
+                    class_std_conf=class_std_conf)
+model_skip = ActivityHMM(dt, class_str,
+                         med_class_duration=med_class_duration,
+                         num_steps_can_jump_fwd=10, num_steps_can_jump_bck=10,
+                         class_mean_conf=class_mean_conf,
+                         class_std_conf=class_std_conf)
+
+plt.close('all')
+score_raw_detections(X[valid], Z[valid], plot_results=True)
+
+Z2 = model.decode(X)[1]
+tp = int(sum(Z[valid] == Z2[valid]))
+fp = fn = int(len(Z[valid]) - tp)
+p = tp/(tp + fp)
+r = tp/(tp + fn)
+plt.plot(r, p, 'o', markersize=18, label='HMM (No Skipping)')
+
+Z2 = model_skip.decode(X)[1]
+tp = int(sum(Z[valid] == Z2[valid]))
+fp = fn = int(len(Z[valid]) - tp)
+p = tp/(tp + fp)
+r = tp/(tp + fn)
+plt.plot(r, p, 'o', markersize=18, label='HMM (Allow Skipping)')
+plt.title('Classify Active Steps', fontsize=40)
+plt.gcf().tight_layout()
+plt.legend(fontsize=20, loc=0)
+plt.savefig('/mnt/data10tb/ptg/det_pr_vs_hmm.png')
+
+plt.plot(Z2[valid], 'g-')
+plt.plot(Z[valid], 'bo')
+# ----------------------------------------------------------------------------
 
 # ----------------------------------------------------------------------------
 # Verify covariance is being respectfed.
@@ -336,151 +419,153 @@ for i in range(len(ind) - 1):
 # ----------------------------------------------------------------------------
 # Measure performance of “Did user complete every step?”
 
-model = ActivityHMM(dt, class_str, med_class_duration=med_class_duration,
-                    num_steps_can_jump_fwd=0, num_steps_can_jump_bck=0,
-                    class_mean_conf=class_mean_conf,
-                    class_std_conf=class_std_conf)
+for snr in [1, 2, 3, 4, 5, 6, 7]:
+    class_mean_conf = np.ones(N)*0.1*snr
+    class_std_conf = np.ones(N)*0.1
 
-model_skip = ActivityHMM(dt, class_str, med_class_duration=med_class_duration,
-                         num_steps_can_jump_fwd=1, num_steps_can_jump_bck=0,
-                         class_mean_conf=class_mean_conf,
-                         class_std_conf=class_std_conf)
+    model = ActivityHMM(dt, class_str, med_class_duration=med_class_duration,
+                        num_steps_can_jump_fwd=0, num_steps_can_jump_bck=0,
+                        class_mean_conf=class_mean_conf,
+                        class_std_conf=class_std_conf)
+
+    model_skip = ActivityHMM(dt, class_str, med_class_duration=med_class_duration,
+                             num_steps_can_jump_fwd=1, num_steps_can_jump_bck=0,
+                             class_mean_conf=class_mean_conf,
+                             class_std_conf=class_std_conf)
 
 
-num_trials = 1000
-tp_hmm = []
-fp_hmm = []
-for i in range(num_trials):
-    print('%i/%i' % (i + 1, num_trials))
+    num_trials = 500
+    tp_hmm = []
+    fp_hmm = []
+    for i in range(num_trials):
+        print('%i/%i' % (i + 1, num_trials))
 
-    # Simulate trial
-    X0, Z0, X0_, Z0_ = model.sample(1000)[1:]
+        # Simulate trial
+        X0, Z0, X0_, Z0_ = model.sample(1000)[1:]
+
+        if False:
+            # Sanity checking low scores.
+            print(min([X0_[i, Z0_[i]] for i in range(len(Z0_))]))
+            print(max([X0_[i, Z0_[i]] for i in range(len(Z0_))]))
+
+            print(min([X0[i, Z0[i]] for i in range(len(Z0))]))
+            print(max([X0[i, Z0[i]] for i in range(len(Z0))]))
+
+            log_prob1, Z1, X_, Z1_ = model.decode(X0)
+            print(min([X_[i, Z1_[i]] for i in range(len(Z1_))]))
+            print(max([X_[i, Z1_[i]] for i in range(len(Z1_))]))
+
+
+            print('log_prob', model.calc_log_prob_(X0_, Z0_))
+            log_prob1, Z1, X_, Z1_ = model.decode(X0)
+            s = [X_[i, Z1_[i]] for i in range(len(Z1_))]
+            print('log_prob', model.calc_log_prob_(X_, Z1_, verbose=True))
+            s = [X0_[i, Z0_[i]] for i in range(len(Z0_))]
+
+        s = get_skip_score(model, model_skip, X0)
+
+        fp_hmm.append(s)
+
+        # Remove one step for the skipped-step example.
+        inds = list(set(Z0))
+        skip_ind = inds[np.random.randint(1, len(inds))]
+        inds = np.array([True if Z0[i] != skip_ind else False for i in range(len(Z0))])
+
+        X = X0[inds]
+        Z = Z0[inds]
+
+        s = get_skip_score(model, model_skip, X)
+
+        tp_hmm.append(s)
+
 
     if False:
-        # Sanity checking low scores.
-        print(min([X0_[i, Z0_[i]] for i in range(len(Z0_))]))
-        print(max([X0_[i, Z0_[i]] for i in range(len(Z0_))]))
+        tp = np.array(tp_hmm)
+        fp = np.array(fp_hmm)
+        plt.plot((tp[:, 0] - tp[:, 1])/tp[:, 1], 'go', markersize=2)
+        plt.plot((fp[:, 0] - fp[:, 1])/fp[:, 1], 'ro', markersize=2)
 
-        print(min([X0[i, Z0[i]] for i in range(len(Z0))]))
-        print(max([X0[i, Z0[i]] for i in range(len(Z0))]))
+        plt.plot(tp[:, 0]- tp[:, 1], 'go', markersize=10)
+        plt.plot(fp[:, 0] - fp[:, 1], 'ro', markersize=10)
 
-        log_prob1, Z1, X_, Z1_ = model.decode(X0)
-        print(min([X_[i, Z1_[i]] for i in range(len(Z1_))]))
-        print(max([X_[i, Z1_[i]] for i in range(len(Z1_))]))
+        plt.plot(fp[:, 0]/fp[:, 1], fp[:, 1], 'ro', markersize=2)
+        plt.plot(tp[:, 0]/tp[:, 1], tp[:, 1], 'go', markersize=2)
 
+        plt.plot(fp[:, 0] - fp[:, 1], fp[:, 1], 'ro', markersize=2)
+        plt.plot(tp[:, 0] - tp[:, 1], tp[:, 1], 'go', markersize=2)
 
-        print('log_prob', model.calc_log_prob_(X0_, Z0_))
-        log_prob1, Z1, X_, Z1_ = model.decode(X0)
-        s = [X_[i, Z1_[i]] for i in range(len(Z1_))]
-        print('log_prob', model.calc_log_prob_(X_, Z1_, verbose=True))
-        s = [X0_[i, Z0_[i]] for i in range(len(Z0_))]
-
-    s = get_skip_score(model, model_skip, X0)
-
-    fp_hmm.append(s)
-
-    # Remove one step for the skipped-step example.
-    inds = list(set(Z0))
-    skip_ind = inds[np.random.randint(1, len(inds))]
-    inds = np.array([True if Z0[i] != skip_ind else False for i in range(len(Z0))])
-
-    X = X0[inds]
-    Z = Z0[inds]
-
-    s = get_skip_score(model, model_skip, X)
-
-    tp_hmm.append(s)
+        plt.plot(fp[:, 0], fp[:, 1], 'ro', markersize=2)
+        plt.plot(tp[:, 0], tp[:, 1], 'go', markersize=2)
 
 
-if False:
-    tp = np.array(tp_hmm)
-    fp = np.array(fp_hmm)
-    plt.plot((tp[:, 0] - tp[:, 1])/tp[:, 1], 'go', markersize=2)
-    plt.plot((fp[:, 0] - fp[:, 1])/fp[:, 1], 'ro', markersize=2)
+    tp = -np.diff(np.array(tp_hmm), axis=1).ravel()
+    fp = -np.diff(np.array(fp_hmm), axis=1).ravel()
 
-    plt.plot(tp[:, 0]- tp[:, 1], 'go', markersize=10)
-    plt.plot(fp[:, 0] - fp[:, 1], 'ro', markersize=10)
+    plt.close('all')
+    plt.plot(fp, 'ro', markersize=2)
+    plt.plot(tp, 'go', markersize=2)
 
-    plt.plot(fp[:, 0]/fp[:, 1], fp[:, 1], 'ro', markersize=2)
-    plt.plot(tp[:, 0]/tp[:, 1], tp[:, 1], 'go', markersize=2)
-
-    plt.plot(fp[:, 0] - fp[:, 1], fp[:, 1], 'ro', markersize=2)
-    plt.plot(tp[:, 0] - tp[:, 1], tp[:, 1], 'go', markersize=2)
-
-    plt.plot(fp[:, 0], fp[:, 1], 'ro', markersize=2)
-    plt.plot(tp[:, 0], tp[:, 1], 'go', markersize=2)
+    s = np.hstack([tp, fp]).T
+    y_tue = np.hstack([np.ones(len(tp), dtype=bool),
+                       np.zeros(len(fp), dtype=bool)]).T
+    s.shape = (-1, 1)
+    y_tue.shape = (-1, 1)
+    precision, recall, thresholds = precision_recall_curve(y_tue, s)
+    thresholds = np.hstack([thresholds[0], thresholds])
+    auc = -np.trapz(precision, recall)
 
 
-tp = -np.diff(np.array(tp_hmm), axis=1).ravel()
-fp = -np.diff(np.array(fp_hmm), axis=1).ravel()
-
-plt.close('all')
-plt.plot(fp, 'ro', markersize=2)
-plt.plot(tp, 'go', markersize=2)
-
-s = np.hstack([tp, fp]).T
-y_tue = np.hstack([np.ones(len(tp), dtype=bool),
-                   np.zeros(len(fp), dtype=bool)]).T
-s.shape = (-1, 1)
-y_tue.shape = (-1, 1)
-precision, recall, thresholds = precision_recall_curve(y_tue, s)
-thresholds = np.hstack([thresholds[0], thresholds])
-auc = -np.trapz(precision, recall)
+    save_dir = '/mnt/data10tb/ptg/skip_step_classifier_pr'
+    snr = np.mean(np.diag(model.model.means_)/np.sqrt(model.model._covars_))
+    print(snr)
+    np.savetxt('%s/pr_snr=%0.5f.txt' % (save_dir, snr),
+               np.vstack([precision, recall, thresholds]))
 
 
-save_dir = '/mnt/data10tb/ptg/skip_step_classifier_pr'
-snr = np.mean(np.diag(model.model.means_)/np.sqrt(model.model._covars_))
-print(snr)
-np.savetxt('%s/pr_snr=%0.5f.txt' % (save_dir, snr),
-           np.vstack([precision, recall, thresholds]))
+    fig = plt.figure(num=None, figsize=(14, 10), dpi=80)
+    plt.rc('font', **{'size': 22})
+    plt.rc('axes', linewidth=4)
+    for fname in sorted(glob.glob('%s/*.txt' % save_dir)):
+        snr = float(os.path.splitext(os.path.split(fname)[1])[0].split('pr_snr=')[1])
+        # if snr < 4:
+        #     continue
 
+        precision, recall, thresholds = np.loadtxt(fname)
+        plt.plot(recall, precision, linewidth=6, label='Detection SNR=%0.1f' % snr)
 
-fig = plt.figure(num=None, figsize=(14, 10), dpi=80)
-plt.rc('font', **{'size': 22})
-plt.rc('axes', linewidth=4)
-for fname in sorted(glob.glob('%s/*.txt' % save_dir)):
-    snr = float(os.path.splitext(os.path.split(fname)[1])[0].split('pr_snr=')[1])
-    # if snr < 4:
-    #     continue
+    plt.plot([0, 1], [0.5, 0.5], 'k--', linewidth=4, label='Guessing')
 
-    precision, recall, thresholds = np.loadtxt(fname)
-    plt.plot(recall, precision, linewidth=6, label='Detection SNR=%0.1f' % snr)
+    plt.xlabel('Recall', fontsize=40)
+    plt.ylabel('Precision', fontsize=40)
+    plt.title('"Was Step Skipped?" Classifier', fontsize=40)
+    plt.xlim([0, 1.01])
+    plt.ylim([0, 1.01])
+    fig.tight_layout()
 
-plt.plot([0, 1], [0.5, 0.5], 'k--', linewidth=4, label='Guessing')
+    plt.gca().yaxis.set_minor_locator(AutoMinorLocator(2))
+    plt.tick_params(
+            axis="y",
+            which="major",
+            grid_color='lightgrey')
+    plt.tick_params(
+            axis="y",
+            which="minor",
+            grid_linestyle='--',
+            grid_color='lightgrey')
+    plt.grid(axis='y', which='both')
+    plt.gca().xaxis.set_minor_locator(AutoMinorLocator(2))
+    plt.tick_params(
+            axis="x",
+            which="major",
+            grid_color='lightgrey')
+    plt.tick_params(
+            axis="x",
+            which="minor",
+            grid_linestyle='--',
+            grid_color='lightgrey')
+    plt.grid(axis='x', which='both')
+    plt.legend(fontsize=20, loc=0)
 
-plt.xlabel('Recall', fontsize=40)
-plt.ylabel('Precision', fontsize=40)
-plt.title('"Was Step Skipped?" Classifier', fontsize=40)
-plt.xlim([0, 1.01])
-plt.ylim([0, 1.01])
-fig.tight_layout()
-
-plt.gca().yaxis.set_minor_locator(AutoMinorLocator(2))
-plt.tick_params(
-        axis="y",
-        which="major",
-        grid_color='lightgrey')
-plt.tick_params(
-        axis="y",
-        which="minor",
-        grid_linestyle='--',
-        grid_color='lightgrey')
-plt.grid(axis='y', which='both')
-plt.gca().xaxis.set_minor_locator(AutoMinorLocator(2))
-plt.tick_params(
-        axis="x",
-        which="major",
-        grid_color='lightgrey')
-plt.tick_params(
-        axis="x",
-        which="minor",
-        grid_linestyle='--',
-        grid_color='lightgrey')
-plt.grid(axis='x', which='both')
-plt.legend(fontsize=20, loc=0)
-
-plt.show()
-plt.savefig('/mnt/data10tb/ptg/skipped_step_classifier.png')
-
-
+    plt.show()
+    plt.savefig('/mnt/data10tb/ptg/skipped_step_classifier.png')
 # ----------------------------------------------------------------------------
