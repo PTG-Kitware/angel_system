@@ -25,6 +25,7 @@ from angel_msgs.msg import (
     ObjectDetection2dSet
 )
 
+from angel_system.utils.activity_classification import gt_predict
 from angel_system.uho.predict import get_uho_classifier, predict
 from angel_system.uho.deprecated_src.data_helper import create_batch
 from angel_system.utils.matching import descending_match_with_tolerance
@@ -360,6 +361,19 @@ class UHOActivityDetector(Node):
             .get_parameter_value()
             .integer_value
         )
+        # Ground truth file for classifications (optional)
+        self._gt_file = (
+            self.declare_parameter("gt_file", "")
+            .get_parameter_value()
+            .string_value
+        )
+        # Whether overlapping windows are passed to the classifier
+        self._overlapping_mode  = (
+            self.declare_parameter("overlapping_mode", True)
+            .get_parameter_value()
+            .bool_value
+        )
+
         self._buffer_max_size_nanosec = int(self._buffer_max_size_seconds * 1e9)
         self._slop_ns = (5 / 60.0) * 1e9  # slop (hand msgs have rate of ~60hz per hand)
 
@@ -371,6 +385,7 @@ class UHOActivityDetector(Node):
         log.info(f"Frames per detection: {self._frames_per_det}")
         log.info(f"Checkpoint: {self._model_checkpoint}")
         log.info(f"Labels: {self._labels_file}")
+        log.info(f"GT file: {self._gt_file}")
 
         # Subscribers for input data channels.
         # These will collect on their own threads, adding to buffers from
@@ -435,6 +450,7 @@ class UHOActivityDetector(Node):
 
         # Variables used by window criterion methods
         self._prev_leading_time_ns = None
+        self._prev_last_time_ns = None
 
         # Start the runtime thread
         log.info("Starting runtime thread...")
@@ -549,6 +565,26 @@ class UHOActivityDetector(Node):
         self._prev_leading_time_ns = cur_leading_time_ns
         return True
 
+    def _window_criterion_ensure_non_overlapping(self, window: InputWindow) -> bool:
+        """
+        The new window's leading frame should be beyond a previous window's
+        last frame.
+        """
+        # Assuming _window_criterion_correct_size already passed.
+        cur_first_time_ns = time_to_int(window.frames[0][0])
+        prev_last_time_ns = self._prev_last_time_ns
+        if prev_last_time_ns is not None:
+            window_ok = prev_last_time_ns < cur_first_time_ns
+            if not window_ok:
+                # current window is earlier/same lead as before, so not a good
+                # window
+                self.get_logger().warn("RT overlapping window detected, skipping.")
+                return False
+            # Window is OK, save new latest prev last time below.
+        # Else: This is the first window, save the last frame's time below.
+        self._prev_last_time_ns = time_to_int(window.frames[-1][0])
+        return True
+
     def thread_predict_runtime(self):
         """
         Activity classification prediction runtime function.
@@ -564,6 +600,17 @@ class UHOActivityDetector(Node):
             self._window_criterion_enough_dets,
             self._window_criterion_new_leading_frame,
         ]
+
+        if self._overlapping_mode is False:
+            window_processing_criterion_fn_list.append(
+                self._window_criterion_ensure_non_overlapping
+            )
+
+        # If the ground truth file is provided, use the gt processing function
+        if self._gt_file == "":
+            process_window_fn = self._process_window
+        else:
+            process_window_fn = self._process_window_gt
 
         while self._rt_active.wait(0):  # will quickly return false if cleared.
             if self._rt_awake_evt.wait(self._rt_active_heartbeat):
@@ -596,7 +643,7 @@ class UHOActivityDetector(Node):
                     # Also inform any listeners that we no
                     self._min_time_publisher.publish(old_time)
 
-                    act_msg = self._process_window(window)
+                    act_msg = process_window_fn(window)
                     log.info("RT publishing activity classification results")
                     self._activity_publisher.publish(act_msg)
                 else:
@@ -664,6 +711,31 @@ class UHOActivityDetector(Node):
         #       [32*K x 4]
         with SimpleTimer("Activity classification prediction", self.get_logger().info):
             pred_conf, pred_labels = predict(self._detector, frame_set, aux_data)
+
+        # Create activity message from results
+        activity_msg = ActivityDetection()
+        activity_msg.header.frame_id = "Activity Classification"
+        activity_msg.header.stamp = self.get_clock().now().to_msg()
+        activity_msg.source_stamp_start_frame = window.frames[0][0]
+        activity_msg.source_stamp_end_frame = window.frames[-1][0]
+        activity_msg.label_vec = pred_labels
+        activity_msg.conf_vec = pred_conf[0].squeeze().tolist()
+
+        return activity_msg
+
+    def _process_window_gt(self, window: InputWindow) -> ActivityDetection:
+        """
+        Invoke the ground truth activity classifier stub for this window of
+        data.
+
+        Assuming window has passed appropriate criterion checks.
+        """
+        with SimpleTimer("Activity classification prediction", self.get_logger().info):
+            pred_conf, pred_labels = gt_predict(
+                self._gt_file,
+                time_to_int(window.frames[0][0]) * 1e-9,
+                time_to_int(window.frames[-1][0]) * 1e-9,
+            )
 
         # Create activity message from results
         activity_msg = ActivityDetection()
