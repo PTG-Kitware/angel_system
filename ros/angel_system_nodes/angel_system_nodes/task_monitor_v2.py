@@ -10,6 +10,7 @@ from rclpy.node import Node
 
 from angel_msgs.msg import (
     ActivityDetection,
+    AruiUserNotification,
     TaskUpdate,
     TaskGraph,
 )
@@ -43,9 +44,15 @@ class HMMNode(Node):
             .get_parameter_value()
             .string_value
         )
-        # TODO: Figure out a good default value for this
-        self._skip_error_threshold = (
-            self.declare_parameter("skip_error_threshold", 100.0)
+        self._task_error_topic = (
+            self.declare_parameter("task_error_topic", "TaskErrors")
+            .get_parameter_value()
+            .string_value
+        )
+        # TODO: Figure out a good default value for this. This gets to as high
+        # as 200 in one of the "good" coffee recordings with GT annotations.
+        self._skip_score_threshold = (
+            self.declare_parameter("skip_score_threshold", 200.0)
             .get_parameter_value()
             .double_value
         )
@@ -57,9 +64,16 @@ class HMMNode(Node):
         # Tracks the current/previous steps
         self._previous_step = None
         self._current_step = None
+        # Track the step skips we previously notified the user about to avoid
+        # sending duplicate notifications for the same error.
+        self._previous_step_skip = None
+        self._current_step_skip = None
 
         # HMM's confidence that task is done
         self._task_complete_confidence = 0.0
+
+        # HMM's confidence that a step was skipped
+        self._skip_score = 0.0
 
         # Initialize ROS hooks
         self._subscription = self.create_subscription(
@@ -68,9 +82,14 @@ class HMMNode(Node):
             self.det_callback,
             1
         )
-        self._publisher = self.create_publisher(
+        self._task_update_publisher = self.create_publisher(
             TaskUpdate,
             self._task_state_topic,
+            1
+        )
+        self._task_error_publisher = self.create_publisher(
+            AruiUserNotification,
+            self._task_error_topic,
             1
         )
         self._task_graph_service = self.create_service(
@@ -156,7 +175,27 @@ class HMMNode(Node):
         # TODO: Do we need to fill in current/next activity?
         # TODO: Fill in time remaining?
 
-        self._publisher.publish(message)
+        self._task_update_publisher.publish(message)
+
+    def publish_task_error_message(self):
+        """
+        Forms and sends a `angel_msgs/AruiUserNotification` message to the
+        task errors topic.
+        """
+        log = self.get_logger()
+
+        message = AruiUserNotification()
+        message.category = message.N_CAT_NOTICE
+        message.context = message.N_CONTEXT_TASK_ERROR
+
+        message.title = "Step skip detected"
+        message.description = (
+            f"Detected skip with confidence {self._skip_score}. "
+            f"Current step: {self._current_step}, "
+            f"previous step: {self._previous_step}."
+        )
+
+        self._task_error_publisher.publish(message)
 
     def query_task_graph_callback(self, request, response):
         """
@@ -196,7 +235,7 @@ class HMMNode(Node):
                 start_time = time.time()
                 with self._hmm_lock:
                     step = self._hmm.get_current_state()
-                    skip_score = self._hmm.get_skip_score()
+                    self._skip_score = self._hmm.get_skip_score()
                 log.info(f"HMM computation time: {time.time() - start_time}")
 
                 if self._current_step != step:
@@ -208,11 +247,19 @@ class HMMNode(Node):
                 self._task_complete_confidence = 0.0
 
                 log.info(f"Current step {self._current_step}")
-                log.info(f"Skip score: {skip_score}")
+                log.info(f"Skip score: {self._skip_score}")
 
-                if skip_score > self._skip_error_threshold:
-                    # TODO: Send error message
-                    pass
+                if self._skip_score > self._skip_score_threshold:
+                    # Check if we've already sent a notification for this step
+                    # skip to avoid sending lots of notifcations for the same
+                    # error.
+                    if (
+                        self._current_step != self._current_step_skip or
+                        self._previous_step != self._previous_step_skip
+                    ):
+                        self.publish_task_error_message()
+                        self._current_step_skip = self._current_step
+                        self._previous_step_skip = self._previous_step
 
                 # Publish a new TaskUpdate message
                 self.publish_task_state_message()
