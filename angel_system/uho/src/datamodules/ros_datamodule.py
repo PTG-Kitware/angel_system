@@ -22,10 +22,9 @@ def collate_fn_pad(batch):
     :returns lengths (torch.Tensor): Lengths of sequences of each
         sample in batch
     """
-    max_fr = min([len(t[0]["feats"]) for t in batch])
     ## get sequence lengths
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    lengths = torch.tensor([len(t[0]["feats"][:max_fr]) for t in batch]).to(device)
+    lengths = torch.tensor([len(t[0]["feats"]) for t in batch]).to(device)
     ## padd
     data_dic = {}
     feats = [torch.cat(t[0]["feats"]).to(device) for t in batch]
@@ -40,7 +39,6 @@ def collate_fn_pad(batch):
     labels["r_hand"] = torch.stack(labels["r_hand"])
     data_dic["labels"] = labels
 
-
     dets = []
     dcls = []
     bbox = []
@@ -49,17 +47,17 @@ def collate_fn_pad(batch):
     for t in batch:
         # collect detections
         det1 = [torch.from_numpy(tmp[:topK]) for tmp in t[0]["dets"]]
-        det1 = torch.stack(det1[:max_fr])
+        det1 = torch.stack(det1)
         det1 = det1.reshape([det1.shape[0]*det1.shape[1],1,det1.shape[2]])
         dets.append(det1.to(device))
         # collect detection outputs
         dcls1 = [torch.from_numpy(tmp[:topK]) for tmp in t[0]["dcls"]]
-        dcls1 = torch.stack(dcls1[:max_fr])
+        dcls1 = torch.stack(dcls1)
         dcls1 = dcls1.reshape([dcls1.shape[0]*dcls1.shape[1],1])
         dcls.append(dcls1.to(device))
         # collect detection outputs
         bbox1 = [torch.from_numpy(tmp[:topK]) for tmp in t[0]["bbox"]]
-        bbox1 = torch.stack(bbox1[:max_fr])
+        bbox1 = torch.stack(bbox1)
         bbox1 = bbox1.reshape([bbox1.shape[0]*bbox1.shape[1],1,bbox1.shape[2]])
         bbox.append(bbox1.to(device))
 
@@ -360,6 +358,10 @@ class ROSVideoDataset(torch.utils.data.Dataset):
                     sample_data["dcls"] = det_data["objects"]
                     sample_data["bbox"] = det_data["boxes"]
 
+                sample_data["frm"] = self._load_image(record.path, frame_index)
+                if self.transform is not None:
+                    sample_data["frm"] = self.transform(sample_data["frm"])
+
                 for k in sample_data:
                     if k not in data:
                         data[k] = [sample_data[k]]
@@ -373,8 +375,6 @@ class ROSVideoDataset(torch.utils.data.Dataset):
 
     def __len__(self):
         return len(self.video_list)
-
-
 
 class ROSFrameDataset(torch.utils.data.Dataset):
     """A dataset class to load labels per frame from ros data.
@@ -501,8 +501,6 @@ class ROSDataModule(LightningDataModule):
         # torchvision model zoo)
         self.transforms = transforms.Compose(
             [
-                transforms.Resize(256),
-                transforms.CenterCrop(224),
                 transforms.ToTensor(),
                 transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
             ]

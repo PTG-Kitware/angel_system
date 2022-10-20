@@ -10,10 +10,6 @@ defaults:
   - trainer: default.yaml
   - log_dir: default.yaml
 
-  # enable color logging
-  - override hydra/hydra_logging: colorlog
-  - override hydra/job_logging: colorlog
-
 # path to original working directory
 # hydra hijacks working directory by changing it to the new log directory
 # https://hydra.cc/docs/next/tutorials/basic/running_your_app/working_directory
