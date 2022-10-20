@@ -202,8 +202,8 @@ MonoBehaviour:
     very very very very very very very very very very very very very very very very
     very very long  placeholder text
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: b7b7aad347bf1fa4c990aeb3355289fe, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: b7b7aad347bf1fa4c990aeb3355289fe, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -451,10 +451,10 @@ MonoBehaviour:
   pivot: 1
   width: 0.005
   height: 0.005
-  type: 0
+  type: 2
   cornerRadiusMode: 0
   cornerRadii: {x: 0.25, y: 0.25, z: 0.25, w: 0.25}
-  thickness: 0.1
+  thickness: 0.001
   thicknessSpace: 0
   matchDashSpacingToSize: 1
   dashed: 0
@@ -503,7 +503,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 4c5c07ca7d8914b49b41056dfe1c19f3, type: 2}
+  - {fileID: 2100000, guid: 2ff2f8d08564fc84d80a4b2e2daa7c53, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0

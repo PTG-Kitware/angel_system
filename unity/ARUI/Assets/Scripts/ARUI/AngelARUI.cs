@@ -1,4 +1,5 @@
 using DilmerGames.Core.Singletons;
+using System;
 using UnityEngine;
 
 public enum msgCat
@@ -24,7 +25,6 @@ public class AngelARUI : Singleton<AngelARUI>
     // If true, ARUI debug messages are shown in the unity console and scene Logger (if available)
     public bool showARUIDebugMessages = true;
     public bool showEyeGazeTarget = false;
-
 
     private void Awake()
     {
@@ -66,20 +66,18 @@ public class AngelARUI : Singleton<AngelARUI>
     /// <param name="taskID">index of the current task, in the task</param>
     public void SetCurrentTaskID(int taskID) => TaskListManager.Instance.SetCurrentTask(taskID);
 
-    #endregion
-
-    #region Notifications
     /// <summary>
-    /// Show a notification message to the user
+    /// Turn the task list on or off.
     /// </summary>
-    /// <param name="cat">Category of the message (ignored for now)</param>
-    /// <param name="context">Contxt of the message (ignored for now)</param>
-    /// <param name="message"></param>
-    public void ShowNotificationmsg(msgCat cat, msgContext context, string message) => Orb.Instance.SetNotificationMessage(message);
+    public void SetTaskListActive(bool isActive) => TaskListManager.Instance.SetTaskListActive(isActive);
 
-    public void CloseNotification() => Orb.Instance.SetNotificationMessage("");
+    /// <summary>
+    /// Toggles the task list. If on, the task list is positioned in front of the user's current gaze.
+    /// </summary>
+    public void ToggleTasklist() => TaskListManager.Instance.ToggleTasklist();
 
     #endregion
+
 
     /// <summary>
     /// For debugging, print ARUI logging messages
@@ -95,4 +93,6 @@ public class AngelARUI : Singleton<AngelARUI>
             Debug.Log("***ARUI: " + message);
         }
     }
+
+    public void SetAllTasksDone() => TaskListManager.Instance.SetAllTasksDone();
 }

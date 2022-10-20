@@ -354,4 +354,18 @@ public static class Utils
 
         return false;
     }
+
+    public static float GetCameraToEnvironmentDist()
+    {
+        // Bit shift the index of the layer (8) to get a bit mask
+        int layerMask = 1 << 31;
+
+        RaycastHit hit;
+        // Does the ray intersect any objects excluding the player layer
+        if (Physics.Raycast(AngelARUI.Instance.mainCamera.transform.position,
+                            AngelARUI.Instance.mainCamera.transform.forward, out hit, Mathf.Infinity, layerMask))
+            return Mathf.Abs(hit.distance);
+
+        return -1;
+    }
 }

@@ -49,7 +49,8 @@ public class OrbMessage : MonoBehaviour
     private GameObject indicator;
     private Vector3 initialIndicatorPos;
     private float initialmessageYOffset;
-    
+
+    private TMPro.TextMeshProUGUI progressText;
 
     private void Start()
     {
@@ -57,9 +58,12 @@ public class OrbMessage : MonoBehaviour
 
         //init task message group
         HGroupTaskMessage = temp[1].gameObject.GetComponent<RectTransform>();
-        textTask = HGroupTaskMessage.gameObject.GetComponentInChildren<TMPro.TextMeshProUGUI>();
+        TMPro.TextMeshProUGUI[] allText = HGroupTaskMessage.gameObject.GetComponentsInChildren<TMPro.TextMeshProUGUI>();
+        textTask = allText[0];
         textTask.text = "";
         textTaskRect = textTask.gameObject.GetComponent<RectTransform>();
+        progressText = textTask.transform.GetChild(0).gameObject.GetComponent<TMPro.TextMeshProUGUI>();
+        progressText.text = "";
 
         Image bkgr = HGroupTaskMessage.GetComponentInChildren<Image>();
         taskBackgroundMat = new Material(bkgr.material);
@@ -304,13 +308,15 @@ public class OrbMessage : MonoBehaviour
                         .Select(g => string.Join(" ", g));
 
         this.textTask.text = String.Join("\n", lines.ToArray());
-    }
 
-    public void SetVisible(bool isActive)
-    {
-        taskBackgroundMat.color = activeColorBG;
-        SetTextAlpha(1f);
-        isMessageVisible = true;
+        progressText.text = TaskListManager.Instance.GetCurrentTaskID() + "/" + TaskListManager.Instance.GetTaskCount();
+
+        if (message.Contains("Done") ){
+            progressText.gameObject.SetActive(false);
+        } else
+        {
+            progressText.gameObject.SetActive(true);
+        }
     }
 
     public void SetTextAlpha(float alpha)
@@ -331,9 +337,17 @@ public class OrbMessage : MonoBehaviour
         indicator.SetActive(active);
 
         if (active)
+        {
             UpdateAnchorInstant();
-    }
+            taskBackgroundMat.color = activeColorBG;
+            SetTextAlpha(1f);
+        }
+        else
+            isMessageFading = false;
 
+        isMessageVisible = active;
+    }
+   
     public bool isActive() => textContainer.activeSelf;
 
     public BoxCollider GetCollider() => taskMessageCollider;

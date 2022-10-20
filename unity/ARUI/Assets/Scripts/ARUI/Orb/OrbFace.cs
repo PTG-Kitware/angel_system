@@ -1,6 +1,7 @@
 ﻿using Microsoft.MixedReality.Toolkit.Input;
 using System;
 using System.Collections.Generic;
+using Unity.Robotics.ROSTCPConnector.MessageGeneration;
 using UnityEngine;
 
 /// <summary>
@@ -14,10 +15,8 @@ public class OrbFace : MonoBehaviour
     private Shapes.Disc draggableHandle;
     private Color faceColorInner = new Color(1, 1, 1, 1f);
     private Color faceColorOuter;
-
     private Color faceColorOuterNotification = new Color(0.68f, 0.51f, 0f, 0.3f);
     
-
     private void Start()
     {
         Shapes.Disc[] allDiscs = GetComponentsInChildren<Shapes.Disc>();
@@ -62,6 +61,14 @@ public class OrbFace : MonoBehaviour
             faceBG.ColorInner = Color.black;
         else
             faceBG.ColorInner = faceColorInner;
+    }
+
+    public void ChangeColorToDone(bool isDone)
+    {
+        if (isDone)
+            faceBG.ColorOuter = new Color(0,0.5f,0,0.7f);
+        else
+            faceBG.ColorOuter = faceColorOuter;
     }
 
     #endregion

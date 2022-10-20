@@ -74,7 +74,7 @@ public class TaskListElement : MonoBehaviour
             textCanvas.margin = prefabMargin;
             subTaskIndicator.gameObject.SetActive(false);
 
-            textCanvas.fontStyle = TMPro.FontStyles.UpperCase;
+            //textCanvas.fontStyle = TMPro.FontStyles.UpperCase;
         }
         else
         {
@@ -118,13 +118,20 @@ public class TaskListElement : MonoBehaviour
 
         //define color and alpha of element based on user attention and task state
         if (isDone)
+        {
             UpdateColor(doneColor);
+            checkBox.Type = Shapes.Rectangle.RectangleType.HardSolid;
+        }
         else
+        {
             UpdateColor(inactiveColor);
-
+            checkBox.Type = Shapes.Rectangle.RectangleType.HardBorder;
+        }
+            
         this.postMessage = "";
         if (taskLevel == 0)
             textCanvas.text = taskMessage;
+
     }
 
     public void SetAsCurrent(string postMessage)

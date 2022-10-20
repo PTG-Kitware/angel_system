@@ -6,6 +6,10 @@ using System;
 using Microsoft.MixedReality.Toolkit;
 using Microsoft.MixedReality.Toolkit.Input;
 using UnityEngine.UI;
+using System.Runtime.Remoting.Messaging;
+using System.Runtime.CompilerServices;
+using UnityEngine.InputSystem.HID;
+using System.Diagnostics.Eventing.Reader;
 
 public class TaskListManager : Singleton<TaskListManager>
 {
@@ -25,19 +29,30 @@ public class TaskListManager : Singleton<TaskListManager>
 
     /// Must be >=1 and an odd number
     private int numTasks = 7;
+    private int currentTaskID = 0;
 
     private Shapes.Line progressLine;
     private GameObject topPointsParent;
     private GameObject bottomPointsParent;
 
     // Eye-gaze based updates
-    private bool isCurrentlyLooking = false;
+    private bool isLookingAtTaskList = false;
     private bool isVisible = false;
     private bool isFading = false;
     private Material bgMat;
     private EyeTrackingTarget listEyeTarget;
     private Color activeColor = new Color(0.06f, 0.06f, 0.06f, 0.5f);
-    private float step = 0.002f;
+    private float step = 0.001f;
+
+    private BoxCollider taskListCollider;
+    private Vector3 openCollidersize;
+    private Vector3 openColliderCenter;
+
+    private Vector3 closedCollidersize;
+    private Vector3 closedColliderCenter;
+
+    private float minDistance = 0.6f;
+    private float maxDistance = 1f;
 
     private void Awake()
     {
@@ -48,8 +63,8 @@ public class TaskListManager : Singleton<TaskListManager>
         taskPrefab = Resources.Load(StringResources.taskprefab_path) as GameObject;
 
         listEyeTarget = GetComponentInChildren<EyeTrackingTarget>();
-        listEyeTarget.OnLookAtStart.AddListener(delegate { IsLookingAt(true); });
-        listEyeTarget.OnLookAway.AddListener(delegate { IsLookingAt(false); });
+        //listEyeTarget.OnLookAtStart.AddListener(delegate { SetIsLookingAt(true); });
+        //listEyeTarget.OnLookAway.AddListener(delegate { SetIsLookingAt(false); });
 
         progressLine = GetComponentInChildren<Shapes.Line>();
         bottomPointsParent = GameObject.Find("BottomPoints");
@@ -61,47 +76,83 @@ public class TaskListManager : Singleton<TaskListManager>
 
         list.SetActive(false);
 
-        //gameObject.AddComponent<Billboard>();
-    }
+        taskListCollider = gameObject.GetComponent<BoxCollider>();
+        openCollidersize = taskListCollider.size;
+        openColliderCenter = taskListCollider.center;
+        closedCollidersize = new Vector3 (0.1f, 0.3f, 0.03f);
+        closedColliderCenter = new Vector3(-0.21f,0,0);
 
-    public bool IsTaskListActive() => list.activeInHierarchy;
+        StartCoroutine(RunDistanceUpdate());
+    }
+    private IEnumerator RunDistanceUpdate()
+    {
+        while (true)
+        {
+            if (isVisible)
+            {
+                float dist = Utils.GetCameraToEnvironmentDist();
+
+                if (dist!=-1)
+                    maxDistance = Mathf.Max(minDistance, Mathf.Min(dist, 1.0f));
+            }
+
+            yield return new WaitForSeconds(1f);
+        }
+    }
 
     private void Update()
     {
-        if (!taskListGenerated ) return;
+        if (!taskListGenerated || !GetIsTaskListActive()) return;
+        
+        //**Tasklist is active
 
-        if (!IsTaskListActive()) return;
-
-        if (CoreServices.InputSystem.EyeGazeProvider.GazeTarget == null)
-            isCurrentlyLooking = false;
-
-        if (isCurrentlyLooking && !CoreServices.InputSystem.EyeGazeProvider.GazeTarget.name.Contains("Tasklist"))
-            isCurrentlyLooking = false;
-
-        if (isCurrentlyLooking && !isVisible && !isFading)
+        // Update eye tracking flag
+        if (isLookingAtTaskList && FollowEyeTarget.Instance.currentHit != EyeTarget.tasklist)
         {
+            isLookingAtTaskList = false;
+            Orb.Instance.SetSticky(false);
+        }
+        else if (!isLookingAtTaskList && FollowEyeTarget.Instance.currentHit == EyeTarget.tasklist)
+        {
+            isLookingAtTaskList = true;
+            Orb.Instance.SetSticky(true);
+        }
+
+        if (isLookingAtTaskList && !isVisible && !isFading)
+        {
+            isVisible = true;
+            taskListCollider.center = openColliderCenter;
+            taskListCollider.size = openCollidersize;
+
             bgMat.color = activeColor;
             for (int i = 0; i < currentTaskIDOnList.Count; i++)
                 currentTaskIDOnList[i].SetAlpha(1f);
-            isVisible = true;
+            
+            taskContainer.gameObject.SetActive(true);
         }
-        else if (isCurrentlyLooking && isVisible && isFading)
+        else if (isLookingAtTaskList && isVisible && isFading)
         {
             StopCoroutine(FadeOut());
 
             isFading = false;
+            taskListCollider.center = openColliderCenter;
+            taskListCollider.size = openCollidersize;
+
             bgMat.color = activeColor;
             for (int i = 0; i < currentTaskIDOnList.Count; i++)
                 currentTaskIDOnList[i].SetAlpha(1f);
         }
-        else if (!isCurrentlyLooking && isVisible && !isFading)
+        else if (!isLookingAtTaskList && isVisible && !isFading)
         {
             StartCoroutine(FadeOut());
         } 
 
-        if (!isCurrentlyLooking && !isProcessingOpening)
+        if (!isLookingAtTaskList && !isProcessingOpening)
             UpdatePosition();
+
+        transform.rotation = Quaternion.LookRotation(transform.position - AngelARUI.Instance.mainCamera.transform.position, Vector3.up);
     }
+
 
     private void UpdatePosition()
     {
@@ -137,8 +188,15 @@ public class TaskListManager : Singleton<TaskListManager>
             yield return new WaitForEndOfFrame();
         }
 
-        isFading = false;
-        isVisible = false;
+        if(isFading)
+        {
+            isFading = false;
+            isVisible = false;
+
+            taskContainer.gameObject.SetActive(false);
+            taskListCollider.center = closedColliderCenter;
+            taskListCollider.size = closedCollidersize;
+        }
     }
 
     /// <summary>
@@ -148,17 +206,24 @@ public class TaskListManager : Singleton<TaskListManager>
     {
         if (tasks == null) return;
 
-        if (currentTaskID < 0 || currentTaskID >= tasks.GetLength(0))
+        if (currentTaskID < 0)
         {
             AngelARUI.Instance.LogDebugMessage("TaskID was invalid: id " + currentTaskID + ", task list length: " + tasks.GetLength(0), false);
             Orb.Instance.SetTaskMessage("");
             return;
         }
 
-        StartCoroutine(SetCurrentTaskAsync(currentTaskID));
+        string orbTaskMessage = "All Done!";
+        if (currentTaskID<GetTaskCount())
+        {
+            orbTaskMessage = tasks[currentTaskID, 1];
+        } 
+       
+        StartCoroutine(SetCurrentTaskAsync(Mathf.Min(GetTaskCount()-1, currentTaskID), orbTaskMessage));
+        this.currentTaskID = Mathf.Min(GetTaskCount()-1, currentTaskID);
     }
 
-    private IEnumerator SetCurrentTaskAsync(int currentTaskID)
+    private IEnumerator SetCurrentTaskAsync(int currentTaskID, string orbMessage)
     {
         while (!taskListGenerated)
             yield return new WaitForEndOfFrame();
@@ -225,8 +290,8 @@ public class TaskListManager : Singleton<TaskListManager>
             currentTaskIDOnList.Add(current);
         }
 
+        Orb.Instance.SetTaskMessage(orbMessage);
         AudioManager.Instance.PlaySound(Orb.Instance.transform.position, SoundType.taskDone);
-        Orb.Instance.SetTaskMessage(tasks[currentTaskID, 1]);
     }
 
     public void SetTasklist(string[,] tasks)
@@ -274,6 +339,7 @@ public class TaskListManager : Singleton<TaskListManager>
         SetTaskListActive(false);
 
         list.SetActive(false);
+        taskListCollider.enabled = false;
 
         if (taskToElement != null)
         {
@@ -315,7 +381,7 @@ public class TaskListManager : Singleton<TaskListManager>
 
         taskListGenerated = true;
 
-        //Orb.Instance.SetTaskListButtonActive(true);
+        Orb.Instance.SetTaskListButtonActive(true);
         AngelARUI.Instance.LogDebugMessage("Finished generating task list", false);
     }
 
@@ -329,9 +395,8 @@ public class TaskListManager : Singleton<TaskListManager>
         topPointsParent.transform.position = progressLine.transform.TransformPoint(progressLine.Start);
         bottomPointsParent.transform.position = progressLine.transform.TransformPoint(progressLine.End);
 
+        taskListCollider.size = new Vector3(taskListCollider.size.x, taskContainer.rect.height, taskListCollider.size.z);
     }
-
-    private void IsLookingAt(bool isLooking) => isCurrentlyLooking = isLooking;
 
     public void ToggleTasklist()
     {
@@ -339,20 +404,6 @@ public class TaskListManager : Singleton<TaskListManager>
             SetTaskListActive(!list.activeInHierarchy);
     }
 
-    public void SetTaskListActive(bool isActive)
-    {
-        if (isProcessingOpening || !taskListGenerated) return;
-        AngelARUI.Instance.LogDebugMessage("Show Task list: " + isActive, false);
-
-        if (isActive)
-        {
-            StartCoroutine(ShowTaskList(false));
-        } else
-        {
-            list.SetActive(false);
-            AudioManager.Instance.PlaySound(transform.position, SoundType.notification);
-        }
-    }
 
     private IEnumerator ShowTaskList(bool reposition)
     {
@@ -382,7 +433,7 @@ public class TaskListManager : Singleton<TaskListManager>
 
             transform.position = AngelARUI.Instance.mainCamera.transform.position + Vector3.Scale(
                 direction,
-                new Vector3(1.1f, 1.1f, 1.1f));
+                new Vector3(maxDistance, maxDistance, maxDistance));
             transform.SetYPos(AngelARUI.Instance.mainCamera.transform.position.y);
 
             yield return new WaitForEndOfFrame();
@@ -390,6 +441,8 @@ public class TaskListManager : Singleton<TaskListManager>
             if (!reposition)
             {
                 list.SetActive(true);
+                taskListCollider.enabled = true;
+                
                 AudioManager.Instance.PlaySound(transform.position, SoundType.notification);
             }
         }
@@ -397,5 +450,52 @@ public class TaskListManager : Singleton<TaskListManager>
         isProcessingOpening = false;
     }
 
+
+    #region Getter and Setter
+
+    public bool GetIsTaskListActive() => list.activeInHierarchy;
+
     public string GetTask(int id) => tasks[id, 1];
+
+    public int GetTaskCount()
+    {
+        if (tasks != null)
+            return tasks.GetLength(0);
+        else
+            return 0;
+    }
+
+    public int GetCurrentTaskID() => currentTaskID + 1;
+
+    public void SetTaskListActive(bool isActive)
+    {
+        if (isProcessingOpening || !taskListGenerated) return;
+        AngelARUI.Instance.LogDebugMessage("Show Task list: " + isActive, false);
+
+        if (isActive)
+        {
+            StartCoroutine(ShowTaskList(false));
+        }
+        else
+        {
+            list.SetActive(false);
+            taskListCollider.enabled = false;
+
+            AudioManager.Instance.PlaySound(transform.position, SoundType.notification);
+        }
+    }
+
+    public void SetIsDragging(bool isDragging)
+    {
+        //TODO
+    }
+
+    public void SetNearHover(bool isHovering)
+    {
+        //TODO
+    }
+
+    public void SetAllTasksDone() => SetCurrentTask(GetTaskCount() + 2);
+
+    #endregion
 }

@@ -1,6 +1,9 @@
 using DilmerGames.Core.Singletons;
+using Microsoft.MixedReality.Toolkit;
 using Microsoft.MixedReality.Toolkit.Input;
+using System;
 using System.Collections;
+using TMPro;
 using UnityEngine;
 
 /// <summary>
@@ -19,6 +22,9 @@ public class Orb : Singleton<Orb>
     //Input events 
     private EyeTrackingTarget eyeEvents;
     public bool IsLookingAtOrb = false;
+    public bool lazyLookAtRunning = false;
+
+    private DwellButtonTaskList taskListbutton;
 
     /// <summary>
     /// Instantiate and Initialise all objects related to the orb.
@@ -40,6 +46,11 @@ public class Orb : Singleton<Orb>
         eyeEvents = transform.GetChild(0).GetComponent<EyeTrackingTarget>();
         eyeEvents.OnLookAtStart.AddListener(delegate { SetIsLookingAtFace(true); });
         eyeEvents.OnLookAway.AddListener(delegate { SetIsLookingAtFace(false); });
+
+        ////Init tasklist button
+        GameObject taskListbtn = transform.GetChild(0).GetChild(2).gameObject;
+        taskListbutton = taskListbtn.AddComponent<DwellButtonTaskList>();
+        taskListbtn.SetActive(false);
     }
 
     public void Update()
@@ -49,6 +60,8 @@ public class Orb : Singleton<Orb>
             followSolver.MoveToEyeTarget(false);
             face.SetNotificationIconActive(false);
         }
+
+        followSolver.SetPaused(taskListbutton.GetIsLookingAtBtn());
 
         UpdateOrbVisibility();
     }
@@ -64,6 +77,7 @@ public class Orb : Singleton<Orb>
     {
         if (messageContainer.userHasNotSeenNewTask) return;
 
+        //Debug.Log(IsLookingAtOrb + ", " + messageContainer.isMessageVisible + ", " + messageContainer.isMessageFading); 
         if ((IsLookingAtOrb && !messageContainer.isMessageVisible && !messageContainer.isMessageFading))
         { //Set the message visible!
             SetMessageActive(true);
@@ -98,6 +112,21 @@ public class Orb : Singleton<Orb>
         followSolver.SetPaused(false);
         lazyFollowStarted = false;
     }
+
+    private IEnumerator StartLazyLookAt()
+    {
+        //Debug.Log("Start Lazy Look at");
+        yield return new WaitForSeconds(0.2f);
+
+        if (lazyLookAtRunning)
+        {
+            IsLookingAtOrb = true;
+            lazyLookAtRunning = false;
+        }
+        
+        //Debug.Log("Set looking at orb true");
+    }
+
 
     #endregion
 
@@ -139,13 +168,14 @@ public class Orb : Singleton<Orb>
         }
 
         messageContainer.SetTaskMessage(message);
+
+        face.ChangeColorToDone(message.Contains("Done"));
     }
 
     private void SetMessageActive(bool isActive)
     {
         messageContainer.isMessageActive = isActive;
         messageContainer.SetActive(messageContainer.isMessageActive);
-        messageContainer.SetVisible(isActive);
     }
 
     #endregion
@@ -180,6 +210,7 @@ public class Orb : Singleton<Orb>
         if (isDragging && lazyFollowStarted)
         {
             StopCoroutine(EnableLazyFollow());
+
             lazyFollowStarted = false;
             followSolver.SetPaused(false);
         }
@@ -187,7 +218,34 @@ public class Orb : Singleton<Orb>
 
     public void SetNearHover(bool isHovering) => face.SetDraggableHandle(isHovering);
 
-    private void SetIsLookingAtFace(bool isLooking) => IsLookingAtOrb = isLooking;
+    private void SetIsLookingAtFace(bool isLooking)
+    {
+        if (isLooking && !lazyLookAtRunning)
+        {
+            lazyLookAtRunning = true;
+            StartCoroutine(StartLazyLookAt());
+        }
+        else if (!isLooking)
+        {
+            if (lazyLookAtRunning)
+                StopCoroutine(StartLazyLookAt());
+
+            IsLookingAtOrb = false;
+            lazyLookAtRunning = false;
+            //Debug.Log("Set looking at orb false");
+        }
+        
+    }
+
+    public void SetTaskListButtonActive(bool isActive) => taskListbutton.gameObject.SetActive(isActive);
+
+    public void SetSticky(bool isSticky)
+    {
+        followSolver.SetSticky(isSticky);
+
+        if (isSticky)
+            SetMessageActive(false);
+    }
 
     #endregion
 

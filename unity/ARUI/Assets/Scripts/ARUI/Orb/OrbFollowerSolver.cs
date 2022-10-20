@@ -24,9 +24,10 @@ public class OrbFollowerSolver : Solver
     [Tooltip("The element will stay at least this close to the center of view")]
     private float maxViewDegrees = 10f;
 
-    private bool useEyeTarget = false;
+    public bool useEyeTarget = false;
 
-    private bool paused = false;
+    public bool paused = false;
+    public bool isSticky;
 
     /// <summary>
     /// Position to the view direction, or the movement direction, or the direction of the view cone.
@@ -82,6 +83,8 @@ public class OrbFollowerSolver : Solver
         // Calculate the current angle
         float currentAngle = Vector3.Angle(elementDir, direction);
         float currentAngleClamped = Mathf.Clamp(currentAngle, minViewDegrees * verticalAspectScale, maxViewDegrees * verticalAspectScale);
+        if (isSticky)
+            currentAngleClamped = maxViewDegrees * verticalAspectScale;
 
         // Clamp distance too, if desired
         float clampedDistance = Mathf.Clamp(elementDist, minDistance, maxDistance);
@@ -105,7 +108,7 @@ public class OrbFollowerSolver : Solver
         else 
         {
             //If the angle was clamped, do some special update stuff
-            if (currentAngle != currentAngleClamped)
+            if (currentAngle != currentAngleClamped || isSticky)
             {
                 float angRad = currentAngleClamped * Mathf.Deg2Rad;
                 // Calculate new position
@@ -133,16 +136,10 @@ public class OrbFollowerSolver : Solver
         {
             if (!paused)
             {
-                // Bit shift the index of the layer (8) to get a bit mask
-                int layerMask = 1 << 31;
+                float dist = Utils.GetCameraToEnvironmentDist();
 
-                RaycastHit hit;
-                // Does the ray intersect any objects excluding the player layer
-                if (Physics.Raycast(AngelARUI.Instance.mainCamera.transform.position,
-                                    AngelARUI.Instance.mainCamera.transform.forward, out hit, Mathf.Infinity, layerMask))
-                {
-                    maxDistance = Mathf.Max(minDistance, Mathf.Min(hit.distance, 1.0f));
-                }
+                if (dist != -1)
+                    maxDistance = Mathf.Max(minDistance, Mathf.Min(dist, 1.0f));
             }
 
             yield return new WaitForSeconds(1f);
@@ -156,6 +153,23 @@ public class OrbFollowerSolver : Solver
 
     public bool GetPaused() => paused;
     public void SetPaused(bool isPaused) => paused = isPaused;
+
+    public void SetSticky(bool isSticky)
+    {
+        this.isSticky = isSticky;
+
+        if (isSticky)
+        {
+            maxViewDegrees = 20;
+            MoveLerpTime = 0.5f;
+        }
+        else
+        {
+            maxViewDegrees = 10;
+            MoveLerpTime = 0.3f;
+        }
+            
+    }
 
     #endregion
 }

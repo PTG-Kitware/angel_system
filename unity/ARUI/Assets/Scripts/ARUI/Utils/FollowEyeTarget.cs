@@ -1,11 +1,7 @@
 using Microsoft.MixedReality.Toolkit.Input;
 using Microsoft.MixedReality.Toolkit.Utilities;
 using Microsoft.MixedReality.Toolkit;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
-using UnityEditor.PackageManager;
-using System.Runtime.CompilerServices;
 using DilmerGames.Core.Singletons;
 using System;
 
@@ -14,6 +10,8 @@ public enum EyeTarget
     nothing = 0,
     orbFace = 1,
     orbMessage = 2,
+    tasklist = 3,
+    orbtasklistButton =4
 }
 
 public class FollowEyeTarget : Singleton<FollowEyeTarget>
@@ -45,17 +43,21 @@ public class FollowEyeTarget : Singleton<FollowEyeTarget>
                 float dist = (hitInfo.point - CameraCache.Main.transform.position).magnitude;
                 gameObject.transform.position = eyeGazeProvider.GazeOrigin + eyeGazeProvider.GazeDirection.normalized * dist;
 
-                if (lookedAtEyeTarget.gameObject.name.Equals("TextContainer"))
-                {
+                if (lookedAtEyeTarget.gameObject.name.Contains("TextContainer"))
                     currentHit = EyeTarget.orbMessage;
-                } else if (lookedAtEyeTarget.gameObject.name.Equals("BodyPlacement"))
-                {
-                    currentHit = EyeTarget.orbFace;
-                }else
-                {
-                    currentHit = EyeTarget.nothing;
-                }
 
+                else if (lookedAtEyeTarget.gameObject.name.Contains("BodyPlacement"))
+                    currentHit = EyeTarget.orbFace;
+
+                else if (lookedAtEyeTarget.gameObject.name.Contains("Tasklist"))
+                    currentHit = EyeTarget.tasklist;
+
+                else if (lookedAtEyeTarget.gameObject.name.Contains("FaceTaskListButton"))
+                    currentHit = EyeTarget.orbtasklistButton;
+                else
+                    currentHit = EyeTarget.nothing;
+
+                //Debug.Log(lookedAtEyeTarget.gameObject.name);
             }
             else
             {
