@@ -292,12 +292,12 @@ class ActivityHMM(object):
             # We define an N x N mean matrix where element (i, j) is the mean
             # value emmitted for class j when class i is the state.
             if np.any(class_mean_conf > 1):
-                raise Exception('\'class_mean_conf\' must be between 0-1')
+                raise ValueError('\'class_mean_conf\' must be between 0-1')
 
             if np.ndim(class_mean_conf) == 1:
                 class_mean_conf = np.diag(class_mean_conf)
             elif np.ndim(class_mean_conf) > 2:
-                raise Exception('np.ndim(class_mean_conf) must be 1 or 2')
+                raise ValueError('np.ndim(class_mean_conf) must be 1 or 2')
 
             class_conf_mean_mat = np.zeros((N_, N_))
             ki = 0
@@ -320,7 +320,7 @@ class ActivityHMM(object):
             if np.ndim(class_std_conf) == 1:
                 class_std_conf2 = np.tile(class_std_conf2, (N, 1))
             elif np.ndim(class_mean_conf) > 2:
-                raise Exception('np.ndim(class_std_conf) must be 1 or 2')
+                raise ValueError('np.ndim(class_std_conf) must be 1 or 2')
 
             # Full covariance
             model.covariance_type = 'diag'
@@ -335,7 +335,7 @@ class ActivityHMM(object):
                 else:
                     conf_cov_mat[i] = conf_cov_mat[0]
 
-            model.covars_ = conf_cov_mat + 1e-6
+            model.covars_ = conf_cov_mat + 1e-9
 
         # -------------- Define transition probabilities -------------------------
         # Median number of timesteps spent in each step.
@@ -466,8 +466,9 @@ class ActivityHMM(object):
 
         if force_skip_step is not None:
             if force_skip_step == 0 or force_skip_step >= len(self.class_str):
-                raise Exception('\'force_skip_step\' must be an integer '
-                                'between 1 and %i' % (len(self.class_str) - 1))
+                raise ValueError('\'force_skip_step\' must be an integer '
+                                 'between 1 and %i' %
+                                 (len(self.class_str) - 1))
 
             # Make a copy of the model so we can adjust it.
             model = GaussianHMM(n_components=self.model.n_components,
@@ -814,7 +815,7 @@ def score_raw_detections(X, Z, plot_results=False):
 def load_and_discretize_data(activity_gt: str,
                              extracted_activity_detections: str,
                              time_window: float, uncertain_pad: float):
-    """
+    """Loads unstructured detection and ground truth data and discretize.
 
     Parameters
     ----------
@@ -825,30 +826,35 @@ def load_and_discretize_data(activity_gt: str,
     time_window : float
         Time (seconds) to discretize to.
     uncertain_pad : float
-        Time uncertainty padding during change of class.
-
-    Raises
-    ------
-    Exception
-        DESCRIPTION.
+        Time uncertainty padding (seconds) during change of class.
 
     Returns
     -------
-    TYPE
-        DESCRIPTION.
+    time_windows : Numpy 2-D array of float
+        time_windows[i, 0] encodes the start time for the ith time window and
+        time_windows[i, 1] the end time of the ith window (seconds).
+    labels : list of str
+        labels[j] encodes the string name for the ith activity class.
+    dets_per_valid_time_w : Numpy 2-D array
+        dets_per_valid_time_w[i, j] encodes the classifier's confidence that
+        activity j occurred in the ith time window.
+    gt_label : array-like of int
+        gt_label[i] encodes the ground truth class integer that occurred at in
+        the ith time window.
+    valid : array-like of bool
+        Encodes which time windows are valid for scoring. An invalid time
+        window may occur when it is too close to a change in ground-truth
+        class.
 
     """
     gt_f = pd.read_feather(activity_gt)
     # Keys: class, start_frame,  end_frame, exploded_ros_bag_path
 
     gt = []
-    RE_FILENAME_TIME = re.compile(r"frame_\d+_(\d+)_\d+.\w+")
     for i, row in gt_f.iterrows():
         g = {
             'class': row["class"].lower().strip(),
-            #'start': float(RE_FILENAME_TIME.match(row["start_frame"]).groups()[0]),
             'start': time_from_name(row["start_frame"]),
-            #'end': float(RE_FILENAME_TIME.match(row["end_frame"]).groups()[0])
             'end': time_from_name(row["end_frame"])
         }
         gt.append(g)
@@ -856,7 +862,9 @@ def load_and_discretize_data(activity_gt: str,
     print(f"Loaded ground truth from {activity_gt}")
     gt = pd.DataFrame(gt)
 
-    detections_input = [det for det in (literal_eval(s) for s in open(extracted_activity_detections))][0]
+    with open(extracted_activity_detections) as json_file:
+        detections_input = json.load(json_file)
+
     detections = []
 
     for dets in detections_input:
@@ -953,7 +961,7 @@ def load_and_discretize_data(activity_gt: str,
         gt_true_mask[ind1:ind2, correct_class_idx] = True
 
     if not np.all(np.sum(gt_true_mask, axis=1) <= 1):
-        raise Exception('Conflicting ground truth for same time windows')
+        raise ValueError('Conflicting ground truth for same time windows')
 
     # If ground truth isn't specified for a particular window, we should assume
     # 'background'.
