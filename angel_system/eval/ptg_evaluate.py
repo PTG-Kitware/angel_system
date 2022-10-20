@@ -206,15 +206,13 @@ def main():
     parser.add_argument(
         "--activity_gt",
         type=str,
-        default="labels_test_v1.2.feather",
         help="Feather file containing the ground truth annotations in the PTG-LEARN format. \
-            The expected filename format is \'labels_test_v<label version>.feather\'"
+              The expected filename format is \'labels_test_v<label version>.feather\'"
     )
     parser.add_argument(
         "--extracted_activity_detections",
         type=str,
-        default="activity_detection_data.json",
-        help="Text file containing the activity detections from an extracted ROS2 bag"
+        help="JSON file containing the activity detections from an extracted ROS2 bag"
     )
     parser.add_argument(
         "--time_window",
