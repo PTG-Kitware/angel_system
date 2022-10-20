@@ -10,7 +10,6 @@ import torch
 from angel_system.eval.support_functions import time_from_name
 
 
-# TODO: What is the best place for this function?
 def gt_predict(
     gt_file: str,
     frame_set_start_stamp: float,

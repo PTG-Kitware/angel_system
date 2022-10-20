@@ -25,7 +25,7 @@ from angel_msgs.msg import (
     ObjectDetection2dSet
 )
 
-from angel_system.eval.gt_predict import gt_predict
+from angel_system.utils.activity_classification import gt_predict
 from angel_system.uho.predict import get_uho_classifier, predict
 from angel_system.uho.deprecated_src.data_helper import create_batch
 from angel_system.utils.matching import descending_match_with_tolerance
