@@ -43,6 +43,12 @@ class HMMNode(Node):
             .get_parameter_value()
             .string_value
         )
+        # TODO: Figure out a good default value for this
+        self._skip_error_threshold = (
+            self.declare_parameter("skip_error_threshold", 100.0)
+            .get_parameter_value()
+            .double_value
+        )
 
         # Instantiate the HMM module
         self._hmm = ActivityHMMRos(self._config_file)
@@ -76,28 +82,21 @@ class HMMNode(Node):
         # Control access to HMM
         self._hmm_lock = RLock()
 
-        # Start the HMM state threads
+        # Start the HMM threads
         log.info(f"Starting HMM threads")
         self._hmm_active = Event()
         self._hmm_active.set()
         self._hmm_active_heartbeat = 0.1
 
-        self._hmm_state_awake_evt = Event()
-        self._hmm_skip_awake_evt = Event()
+        self._hmm_awake_evt = Event()
 
-        self._hmm_state_thread = Thread(
-            target=self.thread_run_hmm_state,
-            name="hmm_state_runtime"
+        self._hmm_thread = Thread(
+            target=self.thread_run_hmm,
+            name="hmm_runtime"
         )
-        self._hmm_state_thread.daemon = True
-        self._hmm_state_thread.start()
+        self._hmm_thread.daemon = True
+        self._hmm_thread.start()
 
-        self._hmm_skip_thread = Thread(
-            target=self.thread_run_hmm_skip,
-            name="hmm_skip_runtime"
-        )
-        self._hmm_skip_thread.daemon = True
-        self._hmm_skip_thread.start()
         log.info(f"Starting HMM threads... done")
 
     def det_callback(self, activity_msg: ActivityDetection):
@@ -123,9 +122,8 @@ class HMMNode(Node):
                     source_stamp_end_frame_sec,
                 )
 
-            # Tell the HMM threads to wake up
-            self._hmm_state_awake_evt.set()
-            self._hmm_skip_awake_evt.set()
+            # Tell the HMM thread to wake up
+            self._hmm_awake_evt.set()
 
     def publish_task_state_message(self):
         """
@@ -141,9 +139,11 @@ class HMMNode(Node):
         message.header.frame_id = "Task message"
 
         # Populate steps and current step
-        message.steps = self._hmm.model.class_str
+        with self._hmm_lock:
+            message.steps = self._hmm.model.class_str
+            message.current_step_id = self._hmm.model.class_str.index(self._current_step)
+
         message.current_step = self._current_step
-        message.current_step_id = self._hmm.model.class_str.index(self._current_step)
 
         if self._previous_step is None:
             message.previous_step = "N/A"
@@ -166,96 +166,77 @@ class HMMNode(Node):
         log = self.get_logger()
         task_g = TaskGraph()
 
-        task_g.task_steps = self._hmm.model.class_str
-
-        # TODO: support different task levels?
-        task_g.task_levels = [0] * len(self._hmm.model.class_str)
+        with self._hmm_lock:
+            task_g.task_steps = self._hmm.model.class_str
+            # TODO: support different task levels?
+            task_g.task_levels = [0] * len(self._hmm.model.class_str)
 
         response.task_graph = task_g
         return response
 
-    def thread_run_hmm_state(self):
+    def thread_run_hmm(self):
         """
-        HMM runtime thread that gets the current state.
+        HMM runtime thread that gets the current state and skip score.
         Thread is awakened each time a new ActivityDetection message is
         received.
 
-        It is expected that the HMM's current state computation will finish
+        It is expected that the HMM's computation will finish
         well before a new ActivityDetection message arrives, but we put it in a
         separate thread just to be safe.
         """
         log = self.get_logger()
-        log.info("HMM state thread started")
+        log.info("HMM thread started")
 
         while self._hmm_active.wait(0): # will quickly return false if cleared
-            if self._hmm_state_awake_evt.wait(self._hmm_active_heartbeat):
-                log.info("HMM state loop awakened")
-                self._hmm_state_awake_evt.clear()
+            if self._hmm_awake_evt.wait(self._hmm_active_heartbeat):
+                log.info("HMM loop awakened")
+                self._hmm_awake_evt.clear()
 
                 # Get the HMM prediction
                 start_time = time.time()
                 with self._hmm_lock:
                     step = self._hmm.get_current_state()
-                log.info(f"HMM get_current_state time: {time.time() - start_time}")
+                    skip_score = self._hmm.get_skip_score()
+                log.info(f"HMM computation time: {time.time() - start_time}")
 
                 if self._current_step != step:
                     self._previous_step = self._current_step
                     self._current_step = step
 
+                # TODO: If we are on the last step, set this to 1. Get this from
+                # HMM?
+                self._task_complete_confidence = 0.0
+
                 log.info(f"Current step {self._current_step}")
+                log.info(f"Skip score: {skip_score}")
+
+                if skip_score > self._skip_error_threshold:
+                    # TODO: Send error message
+                    pass
 
                 # Publish a new TaskUpdate message
                 self.publish_task_state_message()
 
-    def thread_run_hmm_skip(self):
-        """
-        HMM runtime thread that gets the current likelihood of a step skip.
-        Thread is awakened each time a new ActivityDetection message is
-        received.
-
-        It is expected that the skip score computation will finish well before
-        a new ActivityDetection message arrives, but we put it in a separate
-        thread just to be safe.
-        """
-        log = self.get_logger()
-        log.info("HMM skip thread started")
-
-        while self._hmm_active.wait(0): # will quickly return false if cleared
-            if self._hmm_skip_awake_evt.wait(self._hmm_active_heartbeat):
-                log.info("HMM skip loop awakened")
-                self._hmm_skip_awake_evt.clear()
-
-                # Get the HMM prediction
-                start_time = time.time()
-                with self._hmm_lock:
-                    skip_score = self._hmm.get_skip_score()
-                log.info(f"HMM get_skip_score time: {time.time() - start_time}")
-                log.info(f"Skip score: {skip_score}")
-
-                # TODO: how does skip score relate to task completion conf.
-                self._task_complete_confidence = skip_score
 
     def hmm_alive(self) -> bool:
         """
         Check that the HMM runtime is still alive and raise an exception
         if it is not.
         """
-        alive = (
-            self._hmm_state_thread.is_alive() and self._hmm_skip_thread.is_alive()
-        )
+        alive = self._hmm_thread.is_alive()
         if not alive:
             self.get_logger().warn("HMM thread no longer alive.")
             self._hmm_active.clear()  # make HMM active flag "False"
-            self._hmm_state_thread.join()
-            self._hmm_skip_thread.join()
+            self._hmm_awake_evt.clear()
+            self._hmm_thread.join()
         return alive
 
     def destroy_node(self):
         log = self.get_logger()
         log.info("Shutting down runtime threads...")
         self._hmm_active.clear()  # make HMM active flag "False"
-        self._hmm_state_thread.join()
-        self._hmm_skip_thread.join()
+        self._hmm_awake_evt.clear()
+        self._hmm_thread.join()
         log.info("Shutting down runtime threads... Done")
         super()
 
