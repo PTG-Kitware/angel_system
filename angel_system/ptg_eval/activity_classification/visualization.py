@@ -1,7 +1,5 @@
 import matplotlib.pyplot as plt
-from matplotlib.offsetbox import OffsetImage, AnnotationBbox, TextArea, AnchoredText
 import numpy as np
-import PIL
 from pathlib import Path
 import os
 
@@ -19,13 +17,13 @@ plt.rcParams.update({'font.size': 12})
 
 
 class EvalVisualization:
-    def __init__(self, labels, gt_true_mask, dets_per_valid_time_w, output_dir=''):
+    def __init__(self, labels, gt_true_mask, window_class_scores, output_dir=''):
         """
         :param labels: Array of class labels (str)
         :param gt_true_mask: Matrix of size (number of valid time windows x number classes) where True
             indicates a true class example, False inidcates a false class example. There should only be one
             True value per row
-        :param dets_per_valid_time_w: Matrix of size (number of valid time windows x number classes) filled with 
+        :param window_class_scores: Matrix of size (number of valid time windows x number classes) filled with 
             the max confidence score per class for any detections in the time window
         :param output_dir: Directory to write the plots to
         """
@@ -36,7 +34,7 @@ class EvalVisualization:
         self.labels = labels
 
         self.gt_true_mask = gt_true_mask
-        self.dets_per_valid_time_w = dets_per_valid_time_w
+        self.window_class_scores = window_class_scores
 
     def plot_pr_curve(self):
         """
@@ -53,7 +51,7 @@ class EvalVisualization:
         # Average values
         # ============================
         all_y_true = self.gt_true_mask.ravel()
-        all_s = self.dets_per_valid_time_w.ravel()
+        all_s = self.window_class_scores.ravel()
         precision_micro, recall_micro, _ = precision_recall_curve(all_y_true, all_s)
         average_precision_micro = average_precision_score(all_y_true, all_s, average="micro")
 
@@ -61,7 +59,7 @@ class EvalVisualization:
         # Get PR plot per class 
         # ============================
         for id, label in enumerate(self.labels):
-            class_dets_per_time_w = self.dets_per_valid_time_w[:, id]
+            class_dets_per_time_w = self.window_class_scores[:, id]
             mask_per_class = self.gt_true_mask[:, id]
 
             class_dets_per_time_w.shape = (-1, 1)
@@ -133,7 +131,7 @@ class EvalVisualization:
         tpr = dict()
         roc_auc = dict()
         for id, label in enumerate(self.labels):
-            class_dets_per_time_w = self.dets_per_valid_time_w[:, id]
+            class_dets_per_time_w = self.window_class_scores[:, id]
             mask_per_class = self.gt_true_mask[:, id]
 
             class_dets_per_time_w.shape = (-1, 1)
@@ -206,7 +204,7 @@ class EvalVisualization:
         fig, ax = plt.subplots(figsize=(20, 20))
 
         true_idxs = np.where(self.gt_true_mask==True)[1]
-        pred_idxs = np.argmax(self.dets_per_valid_time_w, axis=1)
+        pred_idxs = np.argmax(self.window_class_scores, axis=1)
 
         cm = confusion_matrix(true_idxs, pred_idxs, labels=range(len(self.labels)))
         disp = ConfusionMatrixDisplay(confusion_matrix=cm,

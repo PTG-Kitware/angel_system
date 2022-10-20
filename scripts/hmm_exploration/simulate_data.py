@@ -9,9 +9,9 @@ import scipy
 from angel_system.activity_hmm.core import ActivityHMM, ActivityHMMRos, \
     get_skip_score, score_raw_detections, load_and_discretize_data
 from angel_system.impls.detect_activities.swinb.swinb_detect_activities import SwinBTransformer
-from angel_system.eval.support_functions import time_from_name
-from angel_system.eval.visualization import EvalVisualization
-from angel_system.eval.compute_scores import EvalMetrics
+from angel_system.ptg_eval.common.load_data import time_from_name
+from angel_system.ptg_eval.activity_classification.visualization import EvalVisualization
+from angel_system.ptg_eval.activity_classification.compute_scores import EvalMetrics
 
 try:
     import matplotlib.pyplot as plt
