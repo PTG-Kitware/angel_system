@@ -3,7 +3,7 @@ import argparse
 
 import logging
 
-from angel_system.ptg_eval.common.load_data import load
+from angel_system.ptg_eval.common.load_data import load_from_file
 from angel_system.ptg_eval.common.discretize_data import discretize_data_to_windows
 from angel_system.ptg_eval.activity_classification.visualization import EvalVisualization
 from angel_system.ptg_eval.activity_classification.compute_scores import EvalMetrics
@@ -17,7 +17,7 @@ def run_eval(args):
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    labels, gt, detections = load(args.activity_gt, args.extracted_activity_detections)
+    labels, gt, detections = load_from_file(args.activity_gt, args.extracted_activity_detections)
     gt_true_mask, dets_per_valid_time_w = discretize_data_to_windows(labels, gt, detections,
                                                                      args.time_window, args.uncertainty_pad)
     

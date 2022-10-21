@@ -20,7 +20,7 @@ def time_from_name(fname):
     time = RE_FILENAME_TIME.match(fname).groups()[0].split('_')
     return float(time[0]) + (float(time[1]) * 1e-9)
 
-def load(gt_fn, detections_fn):
+def load_from_file(gt_fn, detections_fn):
     """
     Load the labels, ground truth, and detections from files
 
