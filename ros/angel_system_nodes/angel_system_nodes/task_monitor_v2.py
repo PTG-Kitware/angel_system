@@ -184,6 +184,9 @@ class HMMNode(Node):
         """
         log = self.get_logger()
 
+        # TODO: Using AruiUserNotification for this error is a temporary
+        # placeholder. There should be a new message created for this task
+        # error.
         message = AruiUserNotification()
         message.category = message.N_CAT_NOTICE
         message.context = message.N_CONTEXT_TASK_ERROR
