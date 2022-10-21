@@ -7,33 +7,12 @@ from typing import Dict
 from typing import List
 from typing import Tuple
 
-from angel_msgs.msg import ObjectDetection2dSet
 import numpy as np
 import torch
 
+from angel_system.uho.aux_data import AuxData
 
-@dataclass
-class AuxData:
-    """
-    Class for representing the aux data dictionary required by the UHO module.
-
-    It is expected that all list attributes are of the same length.
-
-    Attributes:
-        lhand: List of np.ndarrays of size (63,) representing the 63 joint poses
-            of the left hand.
-        rhand: List of np.ndarrays of size (63,) representing the 63 joint poses
-            of the right hand.
-        dets: List of torch.Tensors of size [N x D], where N is the number of
-            detections and D is the size of detection's descriptor vector.
-        bbox: List of torch.Tensors of size [N x 4], where N is the number of
-            detections.
-
-    """
-    lhand: List[np.ndarray]
-    rhand: List[np.ndarray]
-    dets: List[torch.Tensor]
-    bbox: List[torch.Tensor]
+from angel_msgs.msg import ObjectDetection2dSet
 
 
 def create_batch(
