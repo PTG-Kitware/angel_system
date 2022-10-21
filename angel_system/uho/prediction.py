@@ -1,15 +1,19 @@
-import tqdm
-import sys
 import os
 import random
-import torch
+from typing import List
+
 import numpy as np
-from src.datamodules.ros_datamodule import ROSVideoDataset
-from src.models.components.fcn import UnifiedFCNModule
-from src.models.components.transformer import TemTRANSModule
-from torch.utils.data import DataLoader, Dataset
+import numpy.typing as npt
+import torch
+from torch.utils.data import DataLoader
 from torchvision.transforms import transforms
-import pdb
+import tqdm
+
+from .src.datamodules.ros_datamodule import ROSVideoDataset
+from .src.models.components.fcn import UnifiedFCNModule
+from .src.models.components.transformer import TemTRANSModule
+from .aux_data import AuxData
+
 
 # prepare input data
 def collate_fn_pad(batch):
@@ -59,7 +63,14 @@ def collate_fn_pad(batch):
 
     return batch
 
-def load_model(model, checkpoint_path):
+
+def load_model(model: TemTRANSModule, checkpoint_path: str) -> TemTRANSModule:
+    """
+    Load a checkpoint file's state into the given TemTRANSModule instance.
+    :param model:
+    :param checkpoint_path:
+    :return:
+    """
     print("loading checkpoint at "+checkpoint_path)
     checkpoint = torch.load(checkpoint_path)
     own_state = model.state_dict()
@@ -69,8 +80,56 @@ def load_model(model, checkpoint_path):
             own_state[key].copy_(v)
 
     model.load_state_dict(own_state)
-    
+
     return model
+
+
+def get_uho_classifier(checkpoint_path: str,
+                       device: str) -> ...:
+    """
+    Instantiate and return the UHO activity classification model to be given to
+    the prediction function.
+
+    :param checkpoint_path: Filepath to the temporal model weights.
+    :param device: The device identifier to load the model onto.
+
+    :return: New UHO classifier model instance.
+    """
+    # TODO: Implement such that we return the instantiated ALL models
+    #       required to perform activity classification, and any tightly
+    #       associated structures/metadata (e.g. image normalization
+    #       transform).
+
+
+def get_uho_classifier_labels() -> List[str]:
+    """
+    Get the ordered sequence of labels that are index-associative to the class
+    indices that are returned from the UHO classifier.
+    """
+    # TODO: Return the semantic labels that the classifier model was trained
+    #       on.
+
+
+def predict(model: ...,
+            frames: List[npt.NDArray],
+            aux_data: AuxData):
+    """
+    Predict an activity classification for a single window of image frames and
+    auxiliary data.
+
+    `frames` must be of a window length that the given model supports.
+
+    :param model:
+    :param frames:
+    :param aux_data:
+    :return: Two tensors, the first of which is the vector of class
+        confidences, and the second of which is ...
+        TODO: fill in what this second component is.
+    """
+    # TODO: Implement everything required to transform images and aux-data into
+    #       activity classification confidences, including use of the fcn,
+    #       image normalization, etc.
+
 
 if __name__ == "__main__":
     # paths and hyper-parameters
@@ -96,8 +155,8 @@ if __name__ == "__main__":
     fcn.eval()
     temporal.eval()
 
-    # inference 
-    for data in tqdm.tqdm(dataloader):  
+    # inference
+    for data in tqdm.tqdm(dataloader):
         # calculate resnet features
         feats = fcn(data)
 
@@ -118,4 +177,3 @@ if __name__ == "__main__":
         data["bbox"] = bbox.unsqueeze(0)
         action_prob, action_pred = temporal.predict(data)
         #print(action_prob, action_pred)
-        
