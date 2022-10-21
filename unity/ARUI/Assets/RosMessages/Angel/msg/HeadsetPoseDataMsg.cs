@@ -18,7 +18,12 @@ namespace RosMessageTypes.Angel
         //  with each frame from the HoloLens.
         // 
         public Std.HeaderMsg header;
+        //  Camera-to-world projection matrix. This is a flattened 4x4 matrix in
+        //  row-major order (e.g. [00,01,02,03,10,...]). The world coordinate system
+        //  described by this transform is left-handed (Unity).
         public float[] world_matrix;
+        //  Camera matrix (flattened 4x4 format).
+        //  See: https://docs.unity3d.com/ScriptReference/Camera-projectionMatrix.html
         public float[] projection_matrix;
 
         public HeadsetPoseDataMsg()

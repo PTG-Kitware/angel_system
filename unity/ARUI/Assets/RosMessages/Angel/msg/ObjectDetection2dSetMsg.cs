@@ -46,6 +46,11 @@ namespace RosMessageTypes.Angel
         //  This is a flattened 2D row-major matrix with shape:
         //    [num_detections, len(label_vec)]
         public double[] label_confidences;
+        //  Vector length of each descriptor.
+        public int descriptor_dim;
+        //  Flattened descriptor vector. The length of this list should be equal to
+        //  num_detections * descriptor_dims.
+        public double[] descriptors;
 
         public ObjectDetection2dSetMsg()
         {
@@ -58,9 +63,11 @@ namespace RosMessageTypes.Angel
             this.top = new float[0];
             this.bottom = new float[0];
             this.label_confidences = new double[0];
+            this.descriptor_dim = 0;
+            this.descriptors = new double[0];
         }
 
-        public ObjectDetection2dSetMsg(Std.HeaderMsg header, BuiltinInterfaces.TimeMsg source_stamp, string[] label_vec, long num_detections, float[] left, float[] right, float[] top, float[] bottom, double[] label_confidences)
+        public ObjectDetection2dSetMsg(Std.HeaderMsg header, BuiltinInterfaces.TimeMsg source_stamp, string[] label_vec, long num_detections, float[] left, float[] right, float[] top, float[] bottom, double[] label_confidences, int descriptor_dim, double[] descriptors)
         {
             this.header = header;
             this.source_stamp = source_stamp;
@@ -71,6 +78,8 @@ namespace RosMessageTypes.Angel
             this.top = top;
             this.bottom = bottom;
             this.label_confidences = label_confidences;
+            this.descriptor_dim = descriptor_dim;
+            this.descriptors = descriptors;
         }
 
         public static ObjectDetection2dSetMsg Deserialize(MessageDeserializer deserializer) => new ObjectDetection2dSetMsg(deserializer);
@@ -86,6 +95,8 @@ namespace RosMessageTypes.Angel
             deserializer.Read(out this.top, sizeof(float), deserializer.ReadLength());
             deserializer.Read(out this.bottom, sizeof(float), deserializer.ReadLength());
             deserializer.Read(out this.label_confidences, sizeof(double), deserializer.ReadLength());
+            deserializer.Read(out this.descriptor_dim);
+            deserializer.Read(out this.descriptors, sizeof(double), deserializer.ReadLength());
         }
 
         public override void SerializeTo(MessageSerializer serializer)
@@ -105,6 +116,9 @@ namespace RosMessageTypes.Angel
             serializer.Write(this.bottom);
             serializer.WriteLength(this.label_confidences);
             serializer.Write(this.label_confidences);
+            serializer.Write(this.descriptor_dim);
+            serializer.WriteLength(this.descriptors);
+            serializer.Write(this.descriptors);
         }
 
         public override string ToString()
@@ -118,7 +132,9 @@ namespace RosMessageTypes.Angel
             "\nright: " + System.String.Join(", ", right.ToList()) +
             "\ntop: " + System.String.Join(", ", top.ToList()) +
             "\nbottom: " + System.String.Join(", ", bottom.ToList()) +
-            "\nlabel_confidences: " + System.String.Join(", ", label_confidences.ToList());
+            "\nlabel_confidences: " + System.String.Join(", ", label_confidences.ToList()) +
+            "\ndescriptor_dim: " + descriptor_dim.ToString() +
+            "\ndescriptors: " + System.String.Join(", ", descriptors.ToList());
         }
 
 #if UNITY_EDITOR
