@@ -5,6 +5,9 @@ version: "1.0"
 # reference into.
 activity_labels: "./config/activity_labels/recipe_pinwheel.yaml"
 
+# Task title for display purposes.
+title: "Pinwheels"
+
 # Layout of the steps that define this task.
 steps:
   # Item format:

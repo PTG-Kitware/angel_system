@@ -4,6 +4,7 @@ from threading import (
     Thread,
 )
 import time
+import yaml
 
 import rclpy
 from rclpy.node import Node
@@ -60,6 +61,13 @@ class HMMNode(Node):
         # Instantiate the HMM module
         self._hmm = ActivityHMMRos(self._config_file)
         log.info(f"HMM node initialized with {self._config_file}")
+
+        # Get the task title from the config
+        with open(self._config_file, 'r') as f:
+            config = yaml.safe_load(f)
+
+        self._task_title = config["title"]
+        log.info(f"Task: {self._task_title}")
 
         # Tracks the current/previous steps
         self._previous_step = None
@@ -156,6 +164,7 @@ class HMMNode(Node):
         # Populate message header
         message.header.stamp = self.get_clock().now().to_msg()
         message.header.frame_id = "Task message"
+        message.task_name = self._task_title
 
         # Populate steps and current step
         with self._hmm_lock:
@@ -171,9 +180,7 @@ class HMMNode(Node):
 
         message.task_complete_confidence = self._task_complete_confidence
 
-        # TODO: Populate task name and description
-        # TODO: Do we need to fill in current/next activity?
-        # TODO: Fill in time remaining?
+        # TODO: Do we need to fill in the other fields
 
         self._task_update_publisher.publish(message)
 
@@ -214,6 +221,8 @@ class HMMNode(Node):
             task_g.task_levels = [0] * len(self._hmm.model.class_str)
 
         response.task_graph = task_g
+
+        # TODO: add task title after demo UI merge
         return response
 
     def thread_run_hmm(self):
@@ -266,7 +275,6 @@ class HMMNode(Node):
 
                 # Publish a new TaskUpdate message
                 self.publish_task_state_message()
-
 
     def hmm_alive(self) -> bool:
         """
