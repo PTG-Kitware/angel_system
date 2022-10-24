@@ -7,6 +7,7 @@ import numpy as np
 import torch
 from PIL import Image
 import pdb
+
 from pytorch_lightning import LightningDataModule
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import DataLoader, Dataset
@@ -25,6 +26,7 @@ def collate_fn_pad(batch):
     ## get sequence lengths
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     lengths = torch.tensor([len(t[0]["feats"]) for t in batch]).to(device)
+
     data_dic = {}
     feats = [torch.cat(t[0]["feats"]).to(device) for t in batch]
     data_dic["feats"] = torch.stack(feats)
@@ -39,6 +41,7 @@ def collate_fn_pad(batch):
     data_dic["labels"] = labels
 
     dets, dcls, bbox, frms = [], [], [], []
+
     topK = 10
     for t in batch:
         # collect detections
@@ -81,23 +84,13 @@ class VideoRecord(object):
              5) any following elements are labels in the case of multi-label classification
     """
 
-    def __init__(self, row, root_datapath, use_feats, use_dets):
+    def __init__(self, row, root_datapath):
         self._data = row
         self._path = root_datapath
         self._path = os.path.join(root_datapath, row[1])
 
-        self.use_feats = use_feats
-        self.use_dets = use_dets
-
-        if self.use_feats:
-            self._feat_path = os.path.join(self._path, "feat")
-        else:
-            self._feat_path = None
-
-        if self.use_dets:
-            self._det_path = os.path.join(self._path, "det")
-        else:
-            self._det_path = None
+        self._feat_path = os.path.join(self._path, "feat")
+        self._det_path = os.path.join(self._path, "det")
 
     @property
     def path(self) -> str:
@@ -206,10 +199,8 @@ class ROSVideoDataset(torch.utils.data.Dataset):
         self.imagefile_template = imagefile_template
         self.transform = transform
         self.test_mode = test_mode
-        self.use_feats = True
-        self.use_dets = True
 
-        self._parse_annotationfile(self.use_feats, self.use_dets)
+        self._parse_annotationfile()
         self._sanity_check_samples()
 
     def _load_image(self, directory: str, idx: int) -> Image.Image:
@@ -222,10 +213,10 @@ class ROSVideoDataset(torch.utils.data.Dataset):
         feats = torch.load(feat_file)
         return feats
 
-    def _parse_annotationfile(self, use_feats=False, use_dets=False):
+    def _parse_annotationfile(self):
         ann_file = open(self.annotationfile_path)
         self.video_list = [
-            VideoRecord(x.strip().split(), self.root_path, use_feats, use_dets)
+            VideoRecord(x.strip().split(), self.root_path)
             for x in ann_file.readlines()[1:]
         ]
 
@@ -585,3 +576,251 @@ class ROSDataModule(LightningDataModule):
         )
 
         return dataloader
+
+class AngelDataset(torch.utils.data.Dataset):
+    r"""
+    A highly efficient and adaptable dataset class for videos.
+    Instead of loading every frame of a video,
+    loads x RGB frames of a video (sparse temporal sampling) and evenly
+    chooses those frames from start to end of the video, returning
+    a list of x PIL images or ``FRAMES x CHANNELS x HEIGHT x WIDTH``
+    tensors where FRAMES=x if the ``ImglistToTensor()``
+    transform is used.
+
+    More specifically, the frame range [START_FRAME, END_FRAME] is divided into NUM_SEGMENTS
+    segments and FRAMES_PER_SEGMENT consecutive frames are taken from each segment.
+
+    Note:
+        A demonstration of using this class can be seen
+        in ``demo.py``
+        https://github.com/RaivoKoot/Video-Dataset-Loading-Pytorch
+
+    Note:
+        This dataset broadly corresponds to the frame sampling technique
+        introduced in ``Temporal Segment Networks`` at ECCV2016
+        https://arxiv.org/abs/1608.00859.
+
+    Note:
+        This class relies on receiving video data in a structure where
+        inside a ``ROOT_DATA`` folder, each video lies in its own folder,
+        where each video folder contains the frames of the video as
+        individual files with a naming convention such as
+        img_001.jpg ... img_059.jpg.
+        For enumeration and annotations, this class expects to receive
+        the path to a .txt file where each video sample has a row with four
+        (or more in the case of multi-label, see README on Github)
+        space separated values:
+        ``VIDEO_FOLDER_PATH     START_FRAME      END_FRAME      LABEL_INDEX``.
+        ``VIDEO_FOLDER_PATH`` is expected to be the path of a video folder
+        excluding the ``ROOT_DATA`` prefix. For example, ``ROOT_DATA`` might
+        be ``home\data\datasetxyz\videos\``, inside of which a ``VIDEO_FOLDER_PATH``
+        might be ``jumping\0052\`` or ``sample1\`` or ``00053\``.
+
+    Args:
+        root_path: The root path in which video folders lie.
+                   this is ROOT_DATA from the description above.
+        annotationfile_path: The .txt annotation file containing
+                             one row per video sample as described above.
+        num_segments: The number of segments the video should
+                      be divided into to sample frames from.
+        frames_per_segment: The number of frames that should
+                            be loaded per segment. For each segment's
+                            frame-range, a random start index or the
+                            center is chosen, from which frames_per_segment
+                            consecutive frames are loaded.
+        imagefile_template: The image filename template that video frame files
+                            have inside of their video folders as described above.
+        transform: Transform pipeline that receives a list of PIL images/frames.
+        test_mode: If True, frames are taken from the center of each
+                   segment, instead of a random location in each segment.
+
+    """
+
+    def __init__(
+        self,
+        root_path: str,
+        annotationfile_path: str,
+        num_segments: int = 1,
+        frames_per_segment: int = 32,
+        imagefile_template: str = "{:06d}"
+    ):
+        super(AngelDataset, self).__init__()
+
+        self.root_path = root_path
+        self.annotationfile_path = annotationfile_path
+        self.num_segments = num_segments
+        self.frames_per_segment = frames_per_segment
+        self.imagefile_template = imagefile_template
+        self.transform = transforms.Compose([transforms.ToTensor(),transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])])
+
+        self._parse_annotationfile()
+        self._sanity_check_samples()
+
+    def _load_image(self, directory: str, idx: int) -> Image.Image:
+        return Image.open(
+            os.path.join(directory, "rgb", self.imagefile_template.format(idx) + ".png")
+        ).convert("RGB")
+
+    def _load_feats(self, directory: str, idx: int) -> Dict:
+        feat_file = os.path.join(directory, self.imagefile_template.format(idx) + ".pk")
+        feats = torch.load(feat_file)
+
+        return feats
+
+    def _load_hand_pose(self, annotation_file: str) -> Tuple[List[float], List[float]]:
+        with open(annotation_file) as f:
+            lines = f.readlines()[0].strip().split()
+            num_kpts = 21
+
+            if int(float(lines[0])) == 1:
+                lefth = [float(pos) for pos in lines[1 : (num_kpts * 3 + 1)]]
+            else:
+                lefth = np.zeros(num_kpts * 3).tolist()
+            if int(float(lines[num_kpts * 3 + 1])) == 1:
+                righth = [float(pos) for pos in lines[(num_kpts * 3 + 2) :]]
+            else:
+                righth = np.zeros(num_kpts * 3).tolist()
+
+        return lefth, righth
+
+    def _parse_annotationfile(self):
+        ann_file = open(self.annotationfile_path)
+        self.video_list = [
+            VideoRecord(x.strip().split(), self.root_path)
+            for x in ann_file.readlines()[1:]
+        ]
+
+    def _sanity_check_samples(self):
+        for record in self.video_list:
+            if record.num_frames <= 0 or record.start_frame == record.end_frame:
+                print(record.num_frames, record.start_frame, record.end_frame)
+                print(
+                    f"\nDataset Warning: video {record.path} seems to have zero RGB frames on disk!\n"
+                )
+
+            elif record.num_frames < (self.num_segments * self.frames_per_segment):
+                print(
+                    f"\nDataset Warning: video {record.path} has {record.num_frames} frames "
+                    f"but the dataloader is set up to load "
+                    f"(num_segments={self.num_segments})*(frames_per_segment={self.frames_per_segment})"
+                    f"={self.num_segments * self.frames_per_segment} frames. Dataloader will throw an "
+                    f"error when trying to load this video.\n"
+                )
+
+    def _get_start_indices(self, record: VideoRecord) -> "np.ndarray[int]":
+        """For each segment, choose a start index from where frames are to be
+        loaded from.
+
+        Args:
+            record: VideoRecord denoting a video sample.
+        Returns:
+            List of indices of where the frames of each
+            segment are to be loaded from.
+        """
+        # choose start indices that are perfectly evenly spread across the video frames.
+        distance_between_indices = (record.num_frames - self.frames_per_segment + 1) / float(
+            self.num_segments
+        )
+
+        start_indices = np.array(
+            [
+                int(distance_between_indices / 2.0 + distance_between_indices * x)
+                for x in range(self.num_segments)
+            ]
+        )
+
+        return start_indices
+
+    def __getitem__(
+        self, idx: int
+    ) -> Union[
+        Tuple[List[Image.Image], Union[int, List[int]]],
+        Tuple[
+            "torch.Tensor[num_frames, channels, height, width]",
+            Union[int, List[int]],
+        ],
+        Tuple[Any, Union[int, List[int]]],
+    ]:
+        """
+        For video with id idx, loads self.NUM_SEGMENTS * self.FRAMES_PER_SEGMENT
+        frames from evenly chosen locations across the video.
+
+        Args:
+            idx: Video sample index.
+        Returns:
+            A tuple of (video, label). Label is either a single
+            integer or a list of integers in the case of multiple labels.
+            Video is either 1) a list of PIL images if no transform is used
+            2) a batch of shape (NUM_IMAGES x CHANNELS x HEIGHT x WIDTH) in the range [0,1]
+            if the transform "ImglistToTensor" is used
+            3) or anything else if a custom transform is used.
+        """
+        record: VideoRecord = self.video_list[idx]
+        frame_start_indices: "np.ndarray[int]" = self._get_start_indices(record)
+
+        return self._get(record, frame_start_indices)
+
+    def _get(
+        self, record: VideoRecord, frame_start_indices: "np.ndarray[int]"
+    ) -> Union[
+        Tuple[List[Image.Image], Union[int, List[int]]],
+        Tuple[
+            "torch.Tensor[num_frames, channels, height, width]",
+            Union[int, List[int]],
+        ],
+        Tuple[Any, Union[int, List[int]]]
+    ]:
+        """Loads the frames of a video at the corresponding indices.
+
+        Args:
+            record: VideoRecord denoting a video sample.
+            frame_start_indices: Indices from which to load consecutive frames from.
+        Returns:
+            A tuple of (video, label). Label is either a single
+            integer or a list of integers in the case of multiple labels.
+            Video is either 1) a list of PIL images if no transform is used
+            2) a batch of shape (NUM_IMAGES x CHANNELS x HEIGHT x WIDTH) in the range [0,1]
+            if the transform "ImglistToTensor" is used
+            3) or anything else if a custom transform is used.
+        """
+        data = {}
+        frame_start_indices = frame_start_indices + record.start_frame
+        
+        # from each start_index, load self.frames_per_segment
+        # consecutive frames
+        for start_index in frame_start_indices:
+            frame_index = int(start_index)
+
+            # load self.frames_per_segment consecutive frames
+            for _ in range(self.frames_per_segment):
+                if not os.path.exists(os.path.join(record.feat_path, self.imagefile_template.format(frame_index) + ".pk")):
+                    frame_index -= 1
+
+                sample_data = {}
+                det_data = self._load_feats(record.det_path, frame_index)
+                sample_data["dets"] = det_data["feats"]
+                sample_data["dcls"] = det_data["objects"]
+                sample_data["bbox"] = det_data["boxes"]
+                sample_data["frm"] = self._load_image(record.path, frame_index)
+                if self.transform is not None:
+                    sample_data["frm"] = self.transform(sample_data["frm"])
+
+                fname = self.imagefile_template.format(frame_index)
+                #pdb.set_trace()
+                l_hand, r_hand = self._load_hand_pose(os.path.join(record.path, "hand_pose", f"{fname}.txt"))
+                sample_data["l_hand"] = np.array(l_hand)
+                sample_data["r_hand"] = np.array(r_hand)
+
+                for k in sample_data:
+                    if k not in data:
+                        data[k] = [sample_data[k]]
+                    else:
+                        data[k].append(sample_data[k])
+
+                if frame_index < record.end_frame:
+                    frame_index += 1
+
+        return data, record.label
+
+    def __len__(self):
+        return len(self.video_list)

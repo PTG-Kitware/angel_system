@@ -42,8 +42,7 @@ class UnifiedFCNModule(nn.Module):
 
         return net
 
-    def forward(self, data: Dict):
-        x = data["frm"]
+    def forward(self, x):
         out = self.net(x)
         x = self.selected_out["avgpool"].reshape(-1, 2048)
 

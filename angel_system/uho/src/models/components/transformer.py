@@ -185,7 +185,7 @@ class TemTRANSModule(nn.Module):
         topK = 10
         # load features       
         feat_x = inputs["feats"] # RGB features
-        lh, rh = inputs["labels"]["l_hand"], inputs["labels"]["r_hand"] # hand poses
+        lh, rh = inputs["lhand"], inputs["rhand"] # hand poses
         feat_d = inputs["dets"] # detection features
         feat_b = inputs["bbox"] # bounding boxes
 
