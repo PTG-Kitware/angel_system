@@ -6,6 +6,7 @@ from threading import (
 import time
 import yaml
 
+from pynput import keyboard
 import rclpy
 from rclpy.node import Node
 
@@ -76,12 +77,15 @@ class HMMNode(Node):
         # sending duplicate notifications for the same error.
         self._previous_step_skip = None
         self._current_step_skip = None
+        # Track the latest activity classification end time sent to the HMM
+        self._latest_act_classification_end_time = None
 
         # HMM's confidence that task is done
         self._task_complete_confidence = 0.0
 
         # HMM's confidence that a step was skipped
         self._skip_score = 0.0
+
 
         # Initialize ROS hooks
         self._subscription = self.create_subscription(
@@ -126,6 +130,13 @@ class HMMNode(Node):
 
         log.info(f"Starting HMM threads... done")
 
+        # Start the keyboard monitoring thread
+        log.info(f"Starting keyboard threads")
+        self._keyboard_t = Thread(target=self.monitor_keypress)
+        self._keyboard_t.daemon = True
+        self._keyboard_t.start()
+        log.info(f"Starting keyboard threads... done")
+
     def det_callback(self, activity_msg: ActivityDetection):
         """
         Callback function for the activity detection subscriber topic.
@@ -139,6 +150,16 @@ class HMMNode(Node):
             source_stamp_end_frame_sec = time_to_int(
                 activity_msg.source_stamp_end_frame
             ) * 1e-9 # time_to_int returns ns
+
+            if (
+                self._latest_act_classification_end_time is not None and
+                self._latest_act_classification_end_time >= source_stamp_start_frame_sec
+            ):
+                # We already sent an activity classification to the HMM
+                # that was after this frame window end time
+                return
+
+            self._latest_act_classification_end_time = source_stamp_end_frame_sec
 
             # Add activity classification to the HMM
             with self._hmm_lock:
@@ -168,10 +189,14 @@ class HMMNode(Node):
 
         # Populate steps and current step
         with self._hmm_lock:
-            message.steps = self._hmm.model.class_str
-            message.current_step_id = self._hmm.model.class_str.index(self._current_step)
+            message.steps = self._hmm.model.class_str[1:] # exclude background
 
-        message.current_step = self._current_step
+            if self._current_step is None:
+                message.current_step_id = 1
+            else:
+                message.current_step_id = self._hmm.model.class_str.index(self._current_step)
+
+        message.current_step = message.steps[message.current_step_id - 1]
 
         if self._previous_step is None:
             message.previous_step = "N/A"
@@ -216,7 +241,7 @@ class HMMNode(Node):
         task_g = TaskGraph()
 
         with self._hmm_lock:
-            task_g.task_steps = self._hmm.model.class_str
+            task_g.task_steps = self._hmm.model.class_str[1:] # exclude background
             # TODO: support different task levels?
             task_g.task_levels = [0] * len(self._hmm.model.class_str)
 
@@ -250,7 +275,10 @@ class HMMNode(Node):
                     self._skip_score = self._hmm.get_skip_score()
                 log.info(f"HMM computation time: {time.time() - start_time}")
 
-                if self._current_step != step:
+                step_id = self._hmm.model.class_str.index(step)
+
+                # Only change steps if we have a new step and it is not background
+                if self._current_step != step and step_id != 0:
                     self._previous_step = self._current_step
                     self._current_step = step
 
@@ -258,7 +286,7 @@ class HMMNode(Node):
                 # HMM?
                 self._task_complete_confidence = 0.0
 
-                log.info(f"Current step {self._current_step}")
+                log.info(f"Current step: {self._current_step}")
                 log.info(f"Skip score: {self._skip_score}")
 
                 if self._skip_score > self._skip_score_threshold:
@@ -297,6 +325,82 @@ class HMMNode(Node):
         self._hmm_thread.join()
         log.info("Shutting down runtime threads... Done")
         super()
+
+    def monitor_keypress(self):
+        log = self.get_logger()
+        log.info(f"Starting keyboard monitor. Press the right arrow key to"
+                 + " proceed to the next step. Press the left arrow key to"
+                 + " go back to the previous step.")
+        # Collect events until released
+        with keyboard.Listener(on_press=self.on_press) as listener:
+            listener.join()
+
+    def on_press(self, key):
+        """
+        Callback function for keypress events. If the right arrow is pressed,
+        the task monitor advances to the next step. If the left arrow is
+        pressed, the task monitor advances to the previous step.
+        """
+        log = self.get_logger()
+        if key == keyboard.Key.right:
+            forward = True
+        elif key == keyboard.Key.left:
+            forward = False
+        else:
+            return # ignore
+
+        with self._hmm_lock:
+            if self._latest_act_classification_end_time is None:
+                # No classifications received yet
+                # Set time window to now + 1 second
+                start_time = time_to_int(
+                    self.get_clock().now().to_msg()
+                ) * 1e-9 # time_to_int returns ns
+                end_time = start_time + 1 # 1 second later
+            else:
+                # Assuming ~30Hz frame rate, so set start one frame later
+                start_time = (
+                    self._latest_act_classification_end_time + (1 / 30.0)
+                )
+                end_time = start_time + 1 # 1 second later
+
+            self._latest_act_classification_end_time = end_time
+
+            # Get the current HMM state
+            steps = self._hmm.model.class_str
+            if self._current_step is None:
+                # Nothing set yet, so assume we start at step 1
+                curr_step_id = 1 # Exclude background class
+            else:
+                curr_step_id = steps.index(self._current_step)
+            curr_step = steps[curr_step_id]
+
+            # Create confidence vector where all classes are
+            # negative except the new desired step
+            conf_vec = [-1000000.0] * len(steps)
+            if forward:
+                # Check if we are at the end of the list
+                if curr_step_id == (len(steps) - 1):
+                    log.info("Attempting to advance past end of list... ignoring")
+                    return
+                conf_vec[curr_step_id + 1] = 1.0
+            else:
+                # Check if we are at the start of the list
+                if curr_step_id == 1:
+                    log.info("Attempting to advance before start of list... ignoring")
+                    return
+                conf_vec[curr_step_id - 1] = 1.0
+
+            # Add activity classification to the HMM
+            self._hmm.add_activity_classification(
+                steps,
+                conf_vec,
+                start_time,
+                end_time
+            )
+
+            # Tell the HMM thread to wake up
+            self._hmm_awake_evt.set()
 
 
 def main():
