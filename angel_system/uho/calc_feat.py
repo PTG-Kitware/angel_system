@@ -45,6 +45,7 @@ if __name__ == "__main__":
             data["frm"] = data["frm"].to('cuda')
             feats = fcn(data)
             labels = {k: data[k] for k in data if k != 'frm'}
+            pdb.set_trace()
             sample_info = dict(feats=feats, labels=labels)
             torch.save(sample_info, fpath)
 

@@ -1,4 +1,5 @@
-﻿using Microsoft.MixedReality.Toolkit.Input;
+﻿using Microsoft.MixedReality.Toolkit;
+using Microsoft.MixedReality.Toolkit.Input;
 using Microsoft.MixedReality.Toolkit.UI;
 using System;
 using System.Collections;
@@ -10,7 +11,7 @@ public class DwellButtonTaskList : MonoBehaviour
     private EyeTrackingTarget eyeEvents;
 
     private float startingAngle;
-    public bool isLooking = false;
+    private bool isLookingAtBtn = false;
 
     private Material btnBGMat;
     private Color baseColor;
@@ -27,29 +28,38 @@ public class DwellButtonTaskList : MonoBehaviour
         baseColor = btnBGMat.color;
     }
 
-    public void Start()
-    { 
-        eyeEvents.OnLookAtStart.AddListener(delegate { CurrentlyLooking(true); });
-        eyeEvents.OnLookAway.AddListener(delegate { CurrentlyLooking(false); });
-    }
+    private void Update()
+    {
+        CurrentlyLooking(FollowEyeTarget.Instance.currentHit == EyeTarget.orbtasklistButton);
 
+        if (!isLookingAtBtn && TaskListManager.Instance.GetIsTaskListActive())
+        {
+            loadingDisc.AngRadiansEnd = 6.24f;
+            loadingDisc.Color = new Color(0.8f, 0.8f, 0.8f);
+        }
+        else if (!isLookingAtBtn && !TaskListManager.Instance.GetIsTaskListActive())
+        {
+            loadingDisc.AngRadiansEnd = startingAngle;
+            loadingDisc.Color = Color.white;
+        }
+    }
 
     private void CurrentlyLooking(bool looking)
     {
-        if (looking&&!isLooking)
+        if (looking&&!isLookingAtBtn)
         {
-            isLooking = true;
+            isLookingAtBtn = true;
             StartCoroutine(Dwelling());
         }  
 
         if (!looking)
         {
-            isLooking = false;
+            isLookingAtBtn = false;
             StopCoroutine(Dwelling());
             btnBGMat.color = baseColor;
         }
 
-        isLooking = looking;
+        isLookingAtBtn = looking;
     }
     
     private IEnumerator Dwelling()
@@ -62,13 +72,16 @@ public class DwellButtonTaskList : MonoBehaviour
         float duration = 6.24f/4f; //full circle in radians
 
         float elapsed = 0f;
-        while (isLooking && elapsed < duration)
+        while (isLookingAtBtn && elapsed < duration)
         {
+            if (CoreServices.InputSystem.EyeGazeProvider.GazeTarget == null)
+                break;
+
             elapsed += Time.deltaTime;
             loadingDisc.AngRadiansEnd = elapsed*4f;
             loadingDisc.Color = Color.white;
 
-            if (elapsed>duration && isLooking)
+            if (elapsed>duration && isLookingAtBtn)
                 success = true;
 
             yield return null;
@@ -82,18 +95,11 @@ public class DwellButtonTaskList : MonoBehaviour
         btnBGMat.color = baseColor;
     }
 
-    public void Update()
-    {
-        if (!isLooking && TaskListManager.Instance.IsTaskListActive())
-        {
-            loadingDisc.AngRadiansEnd = 6.24f;
-            loadingDisc.Color = new Color(0.8f,0.8f,0.8f);
-        }
-        else if (!isLooking && !TaskListManager.Instance.IsTaskListActive())
-        {
-            loadingDisc.AngRadiansEnd =startingAngle;
-            loadingDisc.Color = Color.white;
-        }
-    }
+    #region Getter and Setter 
+
+    public bool GetIsLookingAtBtn() => isLookingAtBtn;
+
+    #endregion
+
 
 }

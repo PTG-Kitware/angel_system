@@ -45,10 +45,11 @@ Goto:
 
 Local InputSystemProfile -> Pointers -> Pointing Raycast Layer Masks -> Disable every option, except the layer "UI"
 In the AngelMRTK profiles, the pointers (hand, eye, rays) collide with all objects marked as layer "UI"
+In the hierarchy, at the main camera, search for the "GazeProvider" script and select Raycast Layer Masks -> "UI"
 
 **** UI Functions
 The UI uses eye gaze as input. The user can enable and disable the task list by looking at the button next to the white orb.
-The position of the orb can be locally adjusted using the tap gesture.
+The position of the orb and the tasklist can be adjusted using the tap gesture or the raycast (far)
 
 **** Debugging
 If an instance of the Logger is in the scene, the ARUI prints debug message to the Unity console and the logger window.
@@ -57,4 +58,19 @@ One can disable the ARUI debug messages in the unity hierarchy by setting the "S
 **** Limitations
 - The eye tracking might not be reliable if the user wears glasses.
 - At start-up, it might take few seconds until the eye gaze rays is reliable
+- If it is recognized by the system that a new user uses the application, the eye tracking calibration might start. This is good, since
+  eye tracking is not reliable if not correctly calibrated to the current user.
+
+
+**** Changelog
+10/20/22: 
+* Adding direct manipulation to task list
+* If the tasklistID is greater than the number if tasks, the user sees a message "All done". Alternatively, the recipe can be set as 
+  done by calling AngelARUI.Instance.SetAllTasksDone();
+* The orb moves out of the way if the user reads the task list
+* The orb shows an inidicator on the progress of the recipe
+* the tasklist button is moved to the top 
+* Delayed task message activation to avoid accidental trigger
+* Both, the task list and the orb can be moved using far (with ray) and near interactions with either hand
+
 

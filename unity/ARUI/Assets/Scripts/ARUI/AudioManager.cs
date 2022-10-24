@@ -12,6 +12,7 @@ public enum SoundType
     taskDone=3,
     moveStart=4,
     moveEnd=5,
+    select = 6,
 }
 
 public class AudioManager : Singleton<AudioManager>
@@ -26,6 +27,7 @@ public class AudioManager : Singleton<AudioManager>
         StringResources.nextTaskSound_path,
         StringResources.moveStart_path,
         StringResources.moveEnd_path,
+        StringResources.selectSound_path,
     };
     
     private void InitIfNeeded()

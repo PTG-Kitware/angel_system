@@ -3,14 +3,10 @@ from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 import argparse
+from tokenize import Double
 import numpy as np
-import PIL.Image
-import os
-import tqdm
-import pickle
 import pandas as pd
 import logging
-import re
 
 from angel_system.impls.detect_activities.swinb.swinb_detect_activities import SwinBTransformer
 from angel_system.eval.support_functions import time_from_name
@@ -29,15 +25,14 @@ def run_eval(args):
     # ============================
     # Load truth annotations
     # ============================
-    #gt_label_to_ts_ranges = defaultdict(list)
     gt_f = pd.read_feather(args.activity_gt)
     # Keys: class, start_frame,  end_frame, exploded_ros_bag_path
 
     gt = []
     for i, row in gt_f.iterrows():
         g = {
-            'class': row["class"].lower(), 
-            'start': time_from_name(row["start_frame"]), 
+            'class': row["class"].lower().strip(),
+            'start': time_from_name(row["start_frame"]),
             'end': time_from_name(row["end_frame"])
         }
         gt.append(g)
@@ -59,75 +54,177 @@ def run_eval(args):
 
         for l in dets["label_vec"]:
             d = {
-                'class': l.lower(), 
-                'start': dets["source_stamp_start_frame"], 
+                'class': l.lower().strip(),
+                'start': dets["source_stamp_start_frame"],
                 'end': dets["source_stamp_end_frame"],
                 'conf': good_dets[l],
                 'detect_intersection': np.nan
             }
             detections.append(d)
     detections = pd.DataFrame(detections)
+    log.info(f"Loaded detections from {args.extracted_activity_detections}")
 
     # ============================
     # Load labels
     # ============================
-    # Grab all labels based on gt file version
-    label_re = re.compile(r'labels_test_(?P<version>v\d+\.\d+)(?P<class>(\w+)?).feather')
-    label_ver = label_re.match(os.path.basename(args.activity_gt)).group('version')
-
-    vlabels = pd.read_excel(args.labels, sheet_name=label_ver)
-    vlabels['class'] = vlabels['class'].str.lower()
-    
     # grab all labels present in data
-    dlabels = list(set([l.lower() for l in gt['class'].unique()] + [l.lower() for l in detections['class'].unique()]))
+    labels = list(set([l.lower().strip().rstrip('.') for l in detections['class'].unique()]))
 
-    # Remove any labels that we don't actually have
-    missing_labels = []
-    for i, row in vlabels.iterrows():
-        if row['class'] not in dlabels:
-            missing_labels.append(i)
-    labels = vlabels.drop(missing_labels)
+    log.debug(f"Labels: {labels}")
 
-    log.debug(f"Labels v{label_ver}: {labels}")
+    # ============================
+    # Split by time window
+    # ============================
+    # Get time ranges
+    assert args.time_window > args.uncertainty_pad, (
+        "Time window must be longer than the uncertainty pad"
+    )
+    min_start_time = min(gt['start'].min(), detections['start'].min())
+    max_end_time = max(gt['end'].max(), detections['end'].max())
+    dt = args.time_window
+    time_windows = np.arange(min_start_time, max_end_time, args.time_window)
+
+    if time_windows[-1] < max_end_time:
+        time_windows = np.append(time_windows, time_windows[-1] + args.time_window)
+    time_windows = list(zip(time_windows[:-1], time_windows[1:]))
+    time_windows = np.array(time_windows)
+    dets_per_valid_time_w = np.zeros((len(time_windows), len(labels)),
+                                     dtype=float)
+
+
+    def get_time_wind_range(start, end):
+        """
+        Return slice indices of time windows that reside completely in
+        start->end.
+
+        time_windows[ind1:ind2] all live inside start->end.
+
+        """
+        # The start time of the ith window is min_start_time + dt*i.
+        ind1_ = (start - min_start_time)/dt
+        ind1 = int(np.ceil(ind1_))
+        if ind1_ - ind1 + 1 < 1e-15:
+            # We want to avoid the case where ind1_ is (j + eps) and it gets
+            # rounded up to j + 1.
+            ind1 -= 1
+
+        # The end time of the ith window is min_start_time + dt*(i + 1).
+        ind2_ = (end - min_start_time)/dt
+        ind2 = int(np.floor(ind2_))
+        if -ind2_ + ind2 + 1 < 1e-15:
+            # We want to avoid the case where ind1_ is (j - eps) and it gets
+            # rounded up to j - 1.
+            ind1 += 1
+
+        ind1 = max([ind1, 0])
+        ind2 = min([ind2, len(time_windows)])
+
+        return ind1, ind2
+
+
+    # Valid time windows overlap with a detection.
+    valid = np.zeros(len(time_windows), dtype=bool)
+    for i in range(len(detections)):
+        ind1, ind2 = get_time_wind_range(detections['start'][i],
+                                         detections['end'][i])
+
+        valid[ind1:ind2] = True
+        correct_label = detections['class'][i].strip().rstrip('.')
+        correct_class_idx = labels.index(correct_label)
+        dets_per_valid_time_w[ind1:ind2, correct_class_idx] = np.maximum(dets_per_valid_time_w[ind1:ind2, correct_class_idx],
+                                                              detections['conf'][i])
+
+    gt_true_mask = np.zeros((len(time_windows), len(labels)), dtype=bool)
+    for i in range(len(gt)):
+        ind1, ind2 = get_time_wind_range(gt['start'][i], gt['end'][i])
+        correct_label = gt['class'][i].strip().rstrip('.')
+        correct_class_idx = labels.index(correct_label)
+        gt_true_mask[ind1:ind2, correct_class_idx] = True
+
+    if not np.all(np.sum(gt_true_mask, axis=1) <= 1):
+        raise AssertionError('Conflicting ground truth for same time windows')
+
+    # If ground truth isn't specified for a particular window, we should assume
+    # 'background'.
+    bckg_class_idx = labels.index('background')
+    ind = np.where(np.all(gt_true_mask == False, axis=1))[0]
+    gt_true_mask[ind, bckg_class_idx] = True
+
+    # Any time the ground truth class changes, we want to add in uncertainty
+    # padding, but there should always be at least one time window at the
+    # center of the ground-truth span.
+    gt_label = np.argmax(gt_true_mask, axis=1)
+    pad = int(np.round(args.uncertainty_pad/dt))
+    if pad > 0:
+        ind = np.where(np.diff(gt_label, axis=0) != 0)[0] + 1
+        if ind[0] != 0:
+            ind = np.hstack([1, ind])
+
+        if ind[-1] != len(time_windows):
+            ind = np.hstack([ind, len(time_windows)])
+
+        for i in range(len(ind) -1):
+            ind1 = ind[i]
+            ind2 = ind[i+1]
+            # time windows in range ind1:ind2 all have the same ground
+            # truth class.
+
+            ind1_ = ind1 + pad
+            ind2_ = ind2 - pad
+            indc = int(np.round((ind1 + ind2)/2))
+            ind1_ = min([ind1_, indc])
+            ind2_ = max([ind2_, indc + 1])
+            valid[ind1:ind1_] = False
+            valid[ind2_:ind2] = False
+
+    time_windows = time_windows[valid]
+    dets_per_valid_time_w = dets_per_valid_time_w[valid]
+    gt_true_mask = gt_true_mask[valid]
 
     # ============================
     # Metrics
     # ============================
-    metrics =  EvalMetrics(labels=labels, gt=gt, dets=detections, output_fn=f"{output_dir}/metrics.txt")
-    metrics.detect_intersection_per_activity_label()
+    metrics = EvalMetrics(labels, gt_true_mask, dets_per_valid_time_w, output_dir=output_dir)
+    metrics.precision()
 
-    log.info(f"Saved metrics to {output_dir}/metrics.txt")
-    
+    log.info(f"Saved metrics to {metrics.output_fn}")
+
     # ============================
     # Plot
     # ============================
-    vis = EvalVisualization(labels=labels, gt=gt, dets=detections, output_dir=output_dir)
-    vis.plot_activities_confidence()
+    vis = EvalVisualization(labels, gt_true_mask, dets_per_valid_time_w, output_dir=output_dir)
+    vis.plot_activities_confidence(gt=gt, dets=detections)
     vis.plot_pr_curve()
+    vis.plot_roc_curve()
+    vis.confusion_mat()
 
-    log.info(f"Saved plots to {output_dir}/plots/")
+    log.info(f"Saved plots to {vis.output_dir}")
+
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--labels",
-        type=str,
-        default="model_files/activity_detector_annotation_labels.xlsx",
-        help="Multi-sheet Excel file of class ids and labels where each sheet is titled after the label version. \
-            The sheet used for evaluation is specified by the version number in the ground truth filename"
-    )
-    parser.add_argument(
         "--activity_gt",
         type=str,
-        default="data/ros_bags/labels_test_v1.2.feather",
         help="Feather file containing the ground truth annotations in the PTG-LEARN format. \
-            The expected filename format is \'labels_test_v<label version>.feather\'"
+              The expected filename format is \'labels_test_v<label version>.feather\'"
     )
     parser.add_argument(
         "--extracted_activity_detections",
         type=str,
-        default="data/ros_bags/_extracted/activity_detection_data.json",
-        help="Text file containing the activity detections from an extracted ROS2 bag"
+        help="JSON file containing the activity detections from an extracted ROS2 bag"
+    )
+    parser.add_argument(
+        "--time_window",
+        type=float,
+        default=1,
+        help="Time window in seconds to evaluate results on."
+    )
+    parser.add_argument(
+        "--uncertainty_pad",
+        type=float,
+        default=0.5,
+        help="Time in seconds to pad the groundtruth regions"
     )
     parser.add_argument(
         "--output_dir",
