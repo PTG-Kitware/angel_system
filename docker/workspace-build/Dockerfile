@@ -40,9 +40,6 @@ RUN apt-get -y update \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
-# For the Demo UI
-RUN source /opt/ros/${ROS_DISTRO}/setup.bash
-
 # Env vars for the nvidia-container-runtime.
 ENV NVIDIA_VISIBLE_DEVICES all
 ENV NVIDIA_DRIVER_CAPABILITIES graphics,utility,compute
