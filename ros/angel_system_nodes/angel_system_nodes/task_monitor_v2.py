@@ -192,11 +192,11 @@ class HMMNode(Node):
             message.steps = self._hmm.model.class_str[1:] # exclude background
 
             if self._current_step is None:
-                message.current_step_id = 1
+                message.current_step_id = 0
             else:
-                message.current_step_id = self._hmm.model.class_str.index(self._current_step)
+                message.current_step_id = message.steps.index(self._current_step)
 
-        message.current_step = message.steps[message.current_step_id - 1]
+        message.current_step = message.steps[message.current_step_id]
 
         if self._previous_step is None:
             message.previous_step = "N/A"
@@ -373,7 +373,6 @@ class HMMNode(Node):
                 curr_step_id = 1 # Exclude background class
             else:
                 curr_step_id = steps.index(self._current_step)
-            curr_step = steps[curr_step_id]
 
             # Create confidence vector where all classes are
             # negative except the new desired step
