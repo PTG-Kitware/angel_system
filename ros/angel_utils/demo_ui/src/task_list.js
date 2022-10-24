@@ -6,19 +6,20 @@ var query_task_graph = new ROSLIB.Service({
 });
 
 var request = {};
+var task_list;
 query_task_graph.callService(request, function(result){
   // Load title
-  console.log(result);
   var task_title = result.task_title;
   var title_container_block = document.getElementById('task_title');
   title_container_block.innerHTML = task_title;
 
   // Load tasks
-  var task_list = result.task_graph.task_steps;
+  task_list = result.task_graph.task_steps;
   var task_levels = result.task_graph.task_levels;
   var container_block = document.getElementById('task-list');
 
   task_list.forEach(function(task, index){
+    // TODO: support different task levels
     var task_level = task_levels[index];
 
     var task_line = document.createElement('div');
@@ -28,6 +29,11 @@ query_task_graph.callService(request, function(result){
     checkbox.className = "checkbox";
     checkbox.id = task;
     task_line.appendChild(checkbox);
+
+    var checkmark = document.createElement('span');
+    checkmark.className = "checkmark_hidden checkmark";
+    checkmark.id = "checkmark";
+    checkbox.appendChild(checkmark);
 
     var text = document.createElement('span');
     text.className = "text body-text task";
@@ -47,40 +53,29 @@ var task_update = new ROSLIB.Topic({
 });
 
 task_update.subscribe(function(m) {
-  // Add checkmark to task
+  // Update checkmarks
   var task_name = m.previous_step;
-  var empty_checkbox = document.getElementById(task_name);
+  var task_idx = task_list.indexOf(task_name);
 
-  if(empty_checkbox != null){
-    var existing_check = empty_checkbox.querySelector("#checkmark");
+  task_list.forEach(function(task, index){
+    var el = document.getElementById(task);
 
-    if(existing_check == null){
-      // only add checkbox if it isn't there
-      var checkmark = document.createElement('span');
-      checkmark.className = "checkmark";
-      checkmark.id = "checkmark";
-      empty_checkbox.appendChild(checkmark);
+    if (index <= task_idx){
+      // Add checkmark to all tasks up to and including task
+      el.querySelector('.checkmark').className = 'checkmark_visible checkmark';
     }
-  }
-
-  // Remove checkmark from next step
-  var next_task_name = m.current_step;
-  var next_checkbox = document.getElementById(next_task_name);
-
-  if(next_checkbox != null){
-    var next_existing_check = next_checkbox.querySelector("#checkmark");
-
-    if(next_existing_check != null){
-      next_checkbox.removeChild(next_existing_check);
-    }
-  }
+    else{
+      // Remove checkmarks for all tasks after the task
+      el.querySelector('.checkmark').className = 'checkmark_hidden checkmark';
+    } 
+  });
 
   // Update colors in chart
   var chart = Chart.getChart('activity-conf');
-  var colors = new Array(xValues.length).fill("rgba(0, 104, 199, 1.0)");
+  var colors = new Array(chart.data.labels.length).fill("rgba(0, 104, 199, 1.0)");
   var idx = chart.data.labels.indexOf(task_name);
 
-  for(i=0; i<=idx; i++){
+  for(var i=0; i<=idx; i++){
     colors[i] = "rgba(62, 174, 43, 1.0)"; // green
   }
   if(idx+1 < colors.length){
@@ -95,6 +90,7 @@ task_update.subscribe(function(m) {
 
 // Done button
 function done() {
+  // TODO: Update this
   console.log("Done!");
 }
 
