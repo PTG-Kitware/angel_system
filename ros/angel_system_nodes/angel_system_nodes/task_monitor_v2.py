@@ -86,7 +86,6 @@ class HMMNode(Node):
         # HMM's confidence that a step was skipped
         self._skip_score = 0.0
 
-
         # Initialize ROS hooks
         self._subscription = self.create_subscription(
             ActivityDetection,
@@ -194,9 +193,17 @@ class HMMNode(Node):
             if self._current_step is None:
                 message.current_step_id = 0
             else:
-                message.current_step_id = message.steps.index(self._current_step)
+                hmm_current_step_id = message.steps.index(
+                    self._current_step
+                )
+                message.current_step_id = hmm_current_step_id + 1
 
-        message.current_step = message.steps[message.current_step_id]
+        if message.current_step_id == len(message.steps):
+            # Because we don't have a done step, keep this previous step but
+            # advance the index so the ARUI can see we're done
+            message.current_step = message.steps[message.current_step_id - 1]
+        else:
+            message.current_step = message.steps[message.current_step_id]
 
         if self._previous_step is None:
             message.previous_step = "N/A"
