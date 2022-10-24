@@ -1,9 +1,3 @@
-// Get data from angel_system
-workspace = '/debug';
-var ros = new ROSLIB.Ros({
-  url : 'ws://localhost:9090'
-});
-
 var request = {};
 var chart;
 var xValues = [0];

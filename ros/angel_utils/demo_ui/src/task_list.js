@@ -1,9 +1,3 @@
-// Get data from angel_system
-workspace = '/debug';
-var ros = new ROSLIB.Ros({
-  url : 'ws://localhost:9090'
-});
-
 // subscribe to QueryTaskGraph
 var query_task_graph = new ROSLIB.Service({
   ros: ros,

@@ -1,7 +1,3 @@
-var ros = new ROSLIB.Ros({
-    url : 'ws://localhost:9090'
-});
-
 // connection status
 ros.on('connection', function() {
     document.getElementById("status-msg").innerHTML = "Connected";

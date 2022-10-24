@@ -1,9 +1,3 @@
-// Get data from angel_system
-workspace = '/debug';
-var ros = new ROSLIB.Ros({
-  url : 'ws://localhost:9090'
-});
-
 // Create a listener for compressed images with bounding boxes
 var image_listener = new ROSLIB.Topic({
     ros : ros,
