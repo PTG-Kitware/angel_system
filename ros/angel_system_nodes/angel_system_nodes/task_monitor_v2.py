@@ -222,7 +222,7 @@ class HMMNode(Node):
 
         response.task_graph = task_g
 
-        # TODO: add task title after demo UI merge
+        response.task_title = self._task_title
         return response
 
     def thread_run_hmm(self):

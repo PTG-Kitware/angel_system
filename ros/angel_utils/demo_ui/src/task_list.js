@@ -6,9 +6,9 @@ var query_task_graph = new ROSLIB.Service({
 });
 
 var request = {};
-var user_level = 1;
 query_task_graph.callService(request, function(result){
   // Load title
+  console.log(result);
   var task_title = result.task_title;
   var title_container_block = document.getElementById('task_title');
   title_container_block.innerHTML = task_title;
@@ -20,22 +20,22 @@ query_task_graph.callService(request, function(result){
 
   task_list.forEach(function(task, index){
     var task_level = task_levels[index];
-    if(task_level == user_level){
-      var task_line = document.createElement('div');
-      task_line.className = "task-line";
 
-      var checkbox = document.createElement('span');
-      checkbox.className = "checkbox";
-      checkbox.id = task;
-      task_line.appendChild(checkbox);
+    var task_line = document.createElement('div');
+    task_line.className = "task-line";
 
-      var text = document.createElement('span');
-      text.className = "text body-text task";
-      text.innerHTML = task;
-      task_line.appendChild(text);
+    var checkbox = document.createElement('span');
+    checkbox.className = "checkbox";
+    checkbox.id = task;
+    task_line.appendChild(checkbox);
 
-      container_block.appendChild(task_line);
-    }
+    var text = document.createElement('span');
+    text.className = "text body-text task";
+    text.innerHTML = task;
+    task_line.appendChild(text);
+
+    container_block.appendChild(task_line);
+
   });
 });
 
