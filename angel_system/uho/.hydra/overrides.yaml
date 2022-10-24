@@ -1,0 +1,2 @@
+- trainer.gpus=4
+- trainer=ddp

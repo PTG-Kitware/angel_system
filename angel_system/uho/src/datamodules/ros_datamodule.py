@@ -6,7 +6,7 @@ from typing import List, Tuple
 import numpy as np
 import torch
 from PIL import Image
-
+import pdb
 from pytorch_lightning import LightningDataModule
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import DataLoader, Dataset
@@ -25,7 +25,6 @@ def collate_fn_pad(batch):
     ## get sequence lengths
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     lengths = torch.tensor([len(t[0]["feats"]) for t in batch]).to(device)
-    ## padd
     data_dic = {}
     feats = [torch.cat(t[0]["feats"]).to(device) for t in batch]
     data_dic["feats"] = torch.stack(feats)
@@ -39,10 +38,7 @@ def collate_fn_pad(batch):
     labels["r_hand"] = torch.stack(labels["r_hand"])
     data_dic["labels"] = labels
 
-    dets = []
-    dcls = []
-    bbox = []
-    frms = []
+    dets, dcls, bbox, frms = [], [], [], []
     topK = 10
     for t in batch:
         # collect detections
@@ -224,7 +220,6 @@ class ROSVideoDataset(torch.utils.data.Dataset):
     def _load_feats(self, directory: str, idx: int) -> Dict:
         feat_file = os.path.join(directory, self.imagefile_template.format(idx) + ".pk")
         feats = torch.load(feat_file)
-
         return feats
 
     def _parse_annotationfile(self, use_feats=False, use_dets=False):
@@ -358,9 +353,9 @@ class ROSVideoDataset(torch.utils.data.Dataset):
                     sample_data["dcls"] = det_data["objects"]
                     sample_data["bbox"] = det_data["boxes"]
 
-                sample_data["frm"] = self._load_image(record.path, frame_index)
-                if self.transform is not None:
-                    sample_data["frm"] = self.transform(sample_data["frm"])
+                #sample_data["frm"] = self._load_image(record.path, frame_index)
+                #if self.transform is not None:
+                #    sample_data["frm"] = self.transform(sample_data["frm"])
 
                 for k in sample_data:
                     if k not in data:

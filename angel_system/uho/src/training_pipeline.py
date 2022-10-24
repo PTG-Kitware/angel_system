@@ -97,7 +97,7 @@ def train(config: DictConfig) -> Optional[float]:
     if config.get("test"):
         ckpt_path = "best"
         if not config.get("train") or config.trainer.get("fast_dev_run"):
-            ckpt_path = '/data/dawei.du/angel_system/angel_system/uho/checkpoints/epoch_063.ckpt'
+            ckpt_path = '/data/dawei.du/angel_system/angel_system/uho/checkpoints/epoch_052.ckpt'
         log.info("Starting testing!")
         trainer.test(model=model, datamodule=datamodule, ckpt_path=ckpt_path)
 

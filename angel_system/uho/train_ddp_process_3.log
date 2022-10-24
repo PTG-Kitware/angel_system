@@ -1,0 +1,104 @@
+[2022-10-22 00:44:59,562][torch.distributed.nn.jit.instantiator][INFO] - Created a temporary directory at /tmp/tmpc6sa_rle
+[2022-10-22 00:44:59,562][torch.distributed.nn.jit.instantiator][INFO] - Writing /tmp/tmpc6sa_rle/_remote_module_non_scriptable.py
+[2022-10-22 00:44:59,665][pytorch_lightning.utilities.seed][INFO] - Global seed set to 25
+[2022-10-22 00:45:00,695][pytorch_lightning.utilities.seed][INFO] - Global seed set to 25
+[2022-10-22 00:45:00,696][pytorch_lightning.utilities.distributed][INFO] - Initializing distributed: GLOBAL_RANK: 3, MEMBER: 4/4
+[2022-10-22 00:45:01,711][torch.distributed.distributed_c10d][INFO] - Added key: store_based_barrier_key:1 to store for rank: 3
+[2022-10-22 00:45:01,742][torch.distributed.distributed_c10d][INFO] - Rank 3: Completed store-based barrier for key:store_based_barrier_key:1 with 4 nodes.
+[2022-10-22 00:45:03,126][pytorch_lightning.accelerators.cuda][INFO] - LOCAL_RANK: 3 - CUDA_VISIBLE_DEVICES: [0,1,2,3]
+[2022-10-22 01:18:35,595][torch.distributed.nn.jit.instantiator][INFO] - Created a temporary directory at /tmp/tmppkecp7fo
+[2022-10-22 01:18:35,595][torch.distributed.nn.jit.instantiator][INFO] - Writing /tmp/tmppkecp7fo/_remote_module_non_scriptable.py
+[2022-10-22 01:18:35,714][pytorch_lightning.utilities.seed][INFO] - Global seed set to 25
+[2022-10-22 01:18:36,470][pytorch_lightning.utilities.seed][INFO] - Global seed set to 25
+[2022-10-22 01:18:36,471][pytorch_lightning.utilities.distributed][INFO] - Initializing distributed: GLOBAL_RANK: 3, MEMBER: 4/4
+[2022-10-22 01:18:37,500][torch.distributed.distributed_c10d][INFO] - Added key: store_based_barrier_key:1 to store for rank: 3
+[2022-10-22 01:18:37,510][torch.distributed.distributed_c10d][INFO] - Rank 3: Completed store-based barrier for key:store_based_barrier_key:1 with 4 nodes.
+[2022-10-22 01:18:38,780][pytorch_lightning.accelerators.cuda][INFO] - LOCAL_RANK: 3 - CUDA_VISIBLE_DEVICES: [0,1,2,3]
+[2022-10-22 08:18:36,584][pytorch_lightning.utilities.seed][INFO] - Global seed set to 25
+[2022-10-22 08:18:38,036][pytorch_lightning.accelerators.cuda][INFO] - LOCAL_RANK: 3 - CUDA_VISIBLE_DEVICES: [0,1,2,3]
+[2022-10-22 10:05:16,447][pytorch_lightning.utilities.seed][INFO] - Global seed set to 25
+[2022-10-22 10:05:18,233][pytorch_lightning.accelerators.cuda][INFO] - LOCAL_RANK: 3 - CUDA_VISIBLE_DEVICES: [0,1,2,3]
+[2022-10-24 01:31:11,245][torch.distributed.nn.jit.instantiator][INFO] - Created a temporary directory at /tmp/tmpde8p7ut4
+[2022-10-24 01:31:11,245][torch.distributed.nn.jit.instantiator][INFO] - Writing /tmp/tmpde8p7ut4/_remote_module_non_scriptable.py
+[2022-10-24 01:31:11,349][pytorch_lightning.utilities.seed][INFO] - Global seed set to 25
+[2022-10-24 01:31:12,327][pytorch_lightning.utilities.seed][INFO] - Global seed set to 25
+[2022-10-24 01:31:12,328][pytorch_lightning.utilities.distributed][INFO] - Initializing distributed: GLOBAL_RANK: 3, MEMBER: 4/4
+[2022-10-24 01:31:13,367][torch.distributed.distributed_c10d][INFO] - Added key: store_based_barrier_key:1 to store for rank: 3
+[2022-10-24 01:31:13,377][torch.distributed.distributed_c10d][INFO] - Rank 3: Completed store-based barrier for key:store_based_barrier_key:1 with 4 nodes.
+[2022-10-24 01:31:14,770][pytorch_lightning.accelerators.cuda][INFO] - LOCAL_RANK: 3 - CUDA_VISIBLE_DEVICES: [0,1,2,3]
+[2022-10-24 01:38:19,508][torch.distributed.nn.jit.instantiator][INFO] - Created a temporary directory at /tmp/tmp0rnsqrgq
+[2022-10-24 01:38:19,508][torch.distributed.nn.jit.instantiator][INFO] - Writing /tmp/tmp0rnsqrgq/_remote_module_non_scriptable.py
+[2022-10-24 01:38:19,610][pytorch_lightning.utilities.seed][INFO] - Global seed set to 25
+[2022-10-24 01:38:20,640][pytorch_lightning.utilities.seed][INFO] - Global seed set to 25
+[2022-10-24 01:38:20,641][pytorch_lightning.utilities.distributed][INFO] - Initializing distributed: GLOBAL_RANK: 3, MEMBER: 4/4
+[2022-10-24 01:38:20,711][torch.distributed.distributed_c10d][INFO] - Added key: store_based_barrier_key:1 to store for rank: 3
+[2022-10-24 01:38:21,332][torch.distributed.distributed_c10d][INFO] - Rank 3: Completed store-based barrier for key:store_based_barrier_key:1 with 4 nodes.
+[2022-10-24 01:38:22,765][pytorch_lightning.accelerators.cuda][INFO] - LOCAL_RANK: 3 - CUDA_VISIBLE_DEVICES: [0,1,2,3]
+[2022-10-24 01:38:40,409][torch.distributed.nn.jit.instantiator][INFO] - Created a temporary directory at /tmp/tmp4s7ohd72
+[2022-10-24 01:38:40,409][torch.distributed.nn.jit.instantiator][INFO] - Writing /tmp/tmp4s7ohd72/_remote_module_non_scriptable.py
+[2022-10-24 01:38:40,513][pytorch_lightning.utilities.seed][INFO] - Global seed set to 25
+[2022-10-24 01:38:41,269][pytorch_lightning.utilities.seed][INFO] - Global seed set to 25
+[2022-10-24 01:38:41,270][pytorch_lightning.utilities.distributed][INFO] - Initializing distributed: GLOBAL_RANK: 3, MEMBER: 4/4
+[2022-10-24 01:38:42,307][torch.distributed.distributed_c10d][INFO] - Added key: store_based_barrier_key:1 to store for rank: 3
+[2022-10-24 01:38:42,480][torch.distributed.distributed_c10d][INFO] - Rank 3: Completed store-based barrier for key:store_based_barrier_key:1 with 4 nodes.
+[2022-10-24 01:38:43,852][pytorch_lightning.accelerators.cuda][INFO] - LOCAL_RANK: 3 - CUDA_VISIBLE_DEVICES: [0,1,2,3]
+[2022-10-24 12:07:56,982][pytorch_lightning.utilities.seed][INFO] - Global seed set to 25
+[2022-10-24 12:07:58,525][pytorch_lightning.accelerators.cuda][INFO] - LOCAL_RANK: 3 - CUDA_VISIBLE_DEVICES: [0,1,2,3]
+[2022-10-24 12:09:36,556][pytorch_lightning.utilities.seed][INFO] - Global seed set to 25
+[2022-10-24 12:09:39,792][pytorch_lightning.accelerators.cuda][INFO] - LOCAL_RANK: 3 - CUDA_VISIBLE_DEVICES: [0,1,2,3]
+[2022-10-24 13:27:30,526][torch.distributed.nn.jit.instantiator][INFO] - Created a temporary directory at /tmp/tmpil4whkrv
+[2022-10-24 13:27:30,526][torch.distributed.nn.jit.instantiator][INFO] - Writing /tmp/tmpil4whkrv/_remote_module_non_scriptable.py
+[2022-10-24 13:27:30,627][pytorch_lightning.utilities.seed][INFO] - Global seed set to 25
+[2022-10-24 13:27:31,602][pytorch_lightning.utilities.seed][INFO] - Global seed set to 25
+[2022-10-24 13:27:31,603][pytorch_lightning.utilities.distributed][INFO] - Initializing distributed: GLOBAL_RANK: 3, MEMBER: 4/4
+[2022-10-24 13:27:32,637][torch.distributed.distributed_c10d][INFO] - Added key: store_based_barrier_key:1 to store for rank: 3
+[2022-10-24 13:27:32,657][torch.distributed.distributed_c10d][INFO] - Rank 3: Completed store-based barrier for key:store_based_barrier_key:1 with 4 nodes.
+[2022-10-24 13:27:34,632][pytorch_lightning.accelerators.cuda][INFO] - LOCAL_RANK: 3 - CUDA_VISIBLE_DEVICES: [0,1,2,3]
+[2022-10-24 14:02:46,803][torch.distributed.nn.jit.instantiator][INFO] - Created a temporary directory at /tmp/tmpmxggnk0f
+[2022-10-24 14:02:46,803][torch.distributed.nn.jit.instantiator][INFO] - Writing /tmp/tmpmxggnk0f/_remote_module_non_scriptable.py
+[2022-10-24 14:02:46,905][pytorch_lightning.utilities.seed][INFO] - Global seed set to 25
+[2022-10-24 14:02:47,920][pytorch_lightning.utilities.seed][INFO] - Global seed set to 25
+[2022-10-24 14:02:47,921][pytorch_lightning.utilities.distributed][INFO] - Initializing distributed: GLOBAL_RANK: 3, MEMBER: 4/4
+[2022-10-24 14:02:48,956][torch.distributed.distributed_c10d][INFO] - Added key: store_based_barrier_key:1 to store for rank: 3
+[2022-10-24 14:02:48,967][torch.distributed.distributed_c10d][INFO] - Rank 3: Completed store-based barrier for key:store_based_barrier_key:1 with 4 nodes.
+[2022-10-24 14:02:50,421][pytorch_lightning.accelerators.cuda][INFO] - LOCAL_RANK: 3 - CUDA_VISIBLE_DEVICES: [0,1,2,3]
+[2022-10-24 14:06:55,615][torch.distributed.nn.jit.instantiator][INFO] - Created a temporary directory at /tmp/tmpdg8v5quj
+[2022-10-24 14:06:55,615][torch.distributed.nn.jit.instantiator][INFO] - Writing /tmp/tmpdg8v5quj/_remote_module_non_scriptable.py
+[2022-10-24 14:06:55,717][pytorch_lightning.utilities.seed][INFO] - Global seed set to 25
+[2022-10-24 14:06:57,046][pytorch_lightning.utilities.seed][INFO] - Global seed set to 25
+[2022-10-24 14:06:57,047][pytorch_lightning.utilities.distributed][INFO] - Initializing distributed: GLOBAL_RANK: 3, MEMBER: 4/4
+[2022-10-24 14:06:57,080][torch.distributed.distributed_c10d][INFO] - Added key: store_based_barrier_key:1 to store for rank: 3
+[2022-10-24 14:06:57,397][torch.distributed.distributed_c10d][INFO] - Rank 3: Completed store-based barrier for key:store_based_barrier_key:1 with 4 nodes.
+[2022-10-24 14:06:58,838][pytorch_lightning.accelerators.cuda][INFO] - LOCAL_RANK: 3 - CUDA_VISIBLE_DEVICES: [0,1,2,3]
+[2022-10-24 14:23:02,572][torch.distributed.nn.jit.instantiator][INFO] - Created a temporary directory at /tmp/tmp8b_en3j6
+[2022-10-24 14:23:02,572][torch.distributed.nn.jit.instantiator][INFO] - Writing /tmp/tmp8b_en3j6/_remote_module_non_scriptable.py
+[2022-10-24 14:23:02,674][pytorch_lightning.utilities.seed][INFO] - Global seed set to 25
+[2022-10-24 14:23:03,651][pytorch_lightning.utilities.seed][INFO] - Global seed set to 25
+[2022-10-24 14:23:03,652][pytorch_lightning.utilities.distributed][INFO] - Initializing distributed: GLOBAL_RANK: 3, MEMBER: 4/4
+[2022-10-24 14:23:04,689][torch.distributed.distributed_c10d][INFO] - Added key: store_based_barrier_key:1 to store for rank: 3
+[2022-10-24 14:23:04,699][torch.distributed.distributed_c10d][INFO] - Rank 3: Completed store-based barrier for key:store_based_barrier_key:1 with 4 nodes.
+[2022-10-24 14:23:06,155][pytorch_lightning.accelerators.cuda][INFO] - LOCAL_RANK: 3 - CUDA_VISIBLE_DEVICES: [0,1,2,3]
+[2022-10-24 14:26:37,053][torch.distributed.nn.jit.instantiator][INFO] - Created a temporary directory at /tmp/tmp79ni0ow6
+[2022-10-24 14:26:37,053][torch.distributed.nn.jit.instantiator][INFO] - Writing /tmp/tmp79ni0ow6/_remote_module_non_scriptable.py
+[2022-10-24 14:26:37,155][pytorch_lightning.utilities.seed][INFO] - Global seed set to 25
+[2022-10-24 14:26:38,133][pytorch_lightning.utilities.seed][INFO] - Global seed set to 25
+[2022-10-24 14:26:38,134][pytorch_lightning.utilities.distributed][INFO] - Initializing distributed: GLOBAL_RANK: 3, MEMBER: 4/4
+[2022-10-24 14:26:39,148][torch.distributed.distributed_c10d][INFO] - Added key: store_based_barrier_key:1 to store for rank: 3
+[2022-10-24 14:26:39,179][torch.distributed.distributed_c10d][INFO] - Rank 3: Completed store-based barrier for key:store_based_barrier_key:1 with 4 nodes.
+[2022-10-24 14:26:40,519][pytorch_lightning.accelerators.cuda][INFO] - LOCAL_RANK: 3 - CUDA_VISIBLE_DEVICES: [0,1,2,3]
+[2022-10-24 14:30:10,136][torch.distributed.nn.jit.instantiator][INFO] - Created a temporary directory at /tmp/tmplpdjoenu
+[2022-10-24 14:30:10,136][torch.distributed.nn.jit.instantiator][INFO] - Writing /tmp/tmplpdjoenu/_remote_module_non_scriptable.py
+[2022-10-24 14:30:10,242][pytorch_lightning.utilities.seed][INFO] - Global seed set to 25
+[2022-10-24 14:30:11,771][pytorch_lightning.utilities.seed][INFO] - Global seed set to 25
+[2022-10-24 14:30:11,772][pytorch_lightning.utilities.distributed][INFO] - Initializing distributed: GLOBAL_RANK: 3, MEMBER: 4/4
+[2022-10-24 14:30:11,800][torch.distributed.distributed_c10d][INFO] - Added key: store_based_barrier_key:1 to store for rank: 3
+[2022-10-24 14:30:11,962][torch.distributed.distributed_c10d][INFO] - Rank 3: Completed store-based barrier for key:store_based_barrier_key:1 with 4 nodes.
+[2022-10-24 14:30:13,393][pytorch_lightning.accelerators.cuda][INFO] - LOCAL_RANK: 3 - CUDA_VISIBLE_DEVICES: [0,1,2,3]
+[2022-10-24 14:39:44,761][torch.distributed.nn.jit.instantiator][INFO] - Created a temporary directory at /tmp/tmp_u_3je99
+[2022-10-24 14:39:44,761][torch.distributed.nn.jit.instantiator][INFO] - Writing /tmp/tmp_u_3je99/_remote_module_non_scriptable.py
+[2022-10-24 14:39:44,866][pytorch_lightning.utilities.seed][INFO] - Global seed set to 25
+[2022-10-24 14:39:45,916][pytorch_lightning.utilities.seed][INFO] - Global seed set to 25
+[2022-10-24 14:39:45,917][pytorch_lightning.utilities.distributed][INFO] - Initializing distributed: GLOBAL_RANK: 3, MEMBER: 4/4
+[2022-10-24 14:39:45,987][torch.distributed.distributed_c10d][INFO] - Added key: store_based_barrier_key:1 to store for rank: 3
+[2022-10-24 14:39:46,620][torch.distributed.distributed_c10d][INFO] - Rank 3: Completed store-based barrier for key:store_based_barrier_key:1 with 4 nodes.
+[2022-10-24 14:39:48,100][pytorch_lightning.accelerators.cuda][INFO] - LOCAL_RANK: 3 - CUDA_VISIBLE_DEVICES: [0,1,2,3]
