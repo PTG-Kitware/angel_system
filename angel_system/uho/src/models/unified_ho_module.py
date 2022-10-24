@@ -33,7 +33,7 @@ class UnifiedHOModule(LightningModule):
         # to ensure a proper reduction over the epoch
         self.train_acc = Accuracy(ignore_index=-1)
         self.val_acc = Accuracy(ignore_index=-1)
-        self.test_acc = Accuracy(ignore_index=-1)
+        self.test_acc = Accuracy(ignore_index=0)
 
         # for logging best so far validation accuracy
         self.val_acc_best = MaxMetric()
