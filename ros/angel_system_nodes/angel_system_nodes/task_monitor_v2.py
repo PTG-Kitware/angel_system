@@ -21,6 +21,10 @@ from angel_system.activity_hmm.core import ActivityHMMRos
 from angel_utils.conversion import time_to_int
 
 
+KEY_LEFT_SQBRACKET = keyboard.KeyCode.from_char("[")
+KEY_RIGHT_SQBRACKET = keyboard.KeyCode.from_char("]")
+
+
 class HMMNode(Node):
     """
     ROS node that runs the HMM and publishes TaskUpdate messages. The HMM is
@@ -330,9 +334,9 @@ class HMMNode(Node):
 
     def monitor_keypress(self):
         log = self.get_logger()
-        log.info(f"Starting keyboard monitor. Press the right arrow key to"
-                 + " proceed to the next step. Press the left arrow key to"
-                 + " go back to the previous step.")
+        log.info(f"Starting keyboard monitor. Press the right-bracket key, `]`,"
+                 f"to proceed to the next step. Press the left-bracket key, `[`, "
+                 f"to go back to the previous step.")
         # Collect events until released
         with keyboard.Listener(on_press=self.on_press) as listener:
             listener.join()
@@ -344,9 +348,9 @@ class HMMNode(Node):
         pressed, the task monitor advances to the previous step.
         """
         log = self.get_logger()
-        if key == keyboard.Key.right:
+        if key == KEY_RIGHT_SQBRACKET:
             forward = True
-        elif key == keyboard.Key.left:
+        elif key == KEY_LEFT_SQBRACKET:
             forward = False
         else:
             return  # ignore
