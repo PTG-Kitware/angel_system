@@ -17,11 +17,12 @@ TaskItem[] task_items
 # List of steps for this task
 string[] steps
 
-# Current step index
-uint8 current_step_id
+# Current step index (-1 indicates no step has been finished yet)
+int8 current_step_id
 
-# Current/previous steps
+# Current step is the task step most recently completed
 string current_step
+# Previous step is the step before the most recently completed
 string previous_step
 
 # Current activity

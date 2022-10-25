@@ -155,9 +155,10 @@ steps:
     mean_conf: 0.5
     std_conf: 0.2
   - id: 19
+    # TODO: is this set and start the timer? Other time step has a separate turn on the timer step
     activity_id: 20
     description: >-
-      Set timer to 30 seconds # TODO: is this set and start the timer? Other time step has a separate turn on the timer step
+      Set timer to 30 seconds
     median_duration_seconds: 5
     mean_conf: 0.5
     std_conf: 0.2
@@ -212,8 +213,8 @@ hmm:
 
   # Constrain whether HMM sequence can skip steps or jump backwards. When both
   # values are set to 0, forward progress without skipping steps is enforced.
-  num_steps_can_jump_fwd: 0
-  num_steps_can_jump_bck: 0
+  num_steps_can_jump_fwd: 1
+  num_steps_can_jump_bck: 1
 
   # Default classifier mean confidence to use if not explicitly provided for a
   # step.

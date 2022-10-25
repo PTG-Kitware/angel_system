@@ -66,7 +66,9 @@ public class AngelARUIBridge : MonoBehaviour
     /// <param name="msg"></param>
     private void AruiUpdateCallback(AruiUpdateMsg msg)
     {
-        AngelARUI.Instance.SetCurrentTaskID(msg.task_update.current_step_id);
+        // TaskUpdate message current step ID is the most recently completed
+        // step ID, so set the ARUI current ID to one greater than that.
+        AngelARUI.Instance.SetCurrentTaskID(msg.task_update.current_step_id + 1);
     }
 
     /// <summary>

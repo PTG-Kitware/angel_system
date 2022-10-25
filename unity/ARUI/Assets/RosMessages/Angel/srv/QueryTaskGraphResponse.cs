@@ -13,15 +13,18 @@ namespace RosMessageTypes.Angel
         public const string k_RosMessageName = "angel_msgs/QueryTaskGraph";
         public override string RosMessageName => k_RosMessageName;
 
+        public string task_title;
         public TaskGraphMsg task_graph;
 
         public QueryTaskGraphResponse()
         {
+            this.task_title = "";
             this.task_graph = new TaskGraphMsg();
         }
 
-        public QueryTaskGraphResponse(TaskGraphMsg task_graph)
+        public QueryTaskGraphResponse(string task_title, TaskGraphMsg task_graph)
         {
+            this.task_title = task_title;
             this.task_graph = task_graph;
         }
 
@@ -29,17 +32,20 @@ namespace RosMessageTypes.Angel
 
         private QueryTaskGraphResponse(MessageDeserializer deserializer)
         {
+            deserializer.Read(out this.task_title);
             this.task_graph = TaskGraphMsg.Deserialize(deserializer);
         }
 
         public override void SerializeTo(MessageSerializer serializer)
         {
+            serializer.Write(this.task_title);
             serializer.Write(this.task_graph);
         }
 
         public override string ToString()
         {
             return "QueryTaskGraphResponse: " +
+            "\ntask_title: " + task_title.ToString() +
             "\ntask_graph: " + task_graph.ToString();
         }
 
