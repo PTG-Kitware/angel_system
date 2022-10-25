@@ -63,7 +63,7 @@ dt = 1    # s
 # Define the median time spent in each step.
 med_class_duration = np.ones(N)*5
 
-class_mean_conf = np.ones(N)*0.4
+class_mean_conf = np.ones(N)*0.5
 class_std_conf = np.ones(N)*0.1
 
 # ----------------------------------------------------------------------------
@@ -416,6 +416,23 @@ for i in range(len(ind) - 1):
 
 # ----------------------------------------------------------------------------
 
+
+# ----------------------------------------------------------------------------
+config_fname = '/mnt/data2tb/libraries/angel_system/config/tasks/task_steps_config-recipe_coffee.yaml'
+live_model = ActivityHMMRos(config_fname)
+start_time = 0
+end_time = 1
+i = 1
+conf_vec = np.ones(len(live_model.model.class_str))*(-10000);   conf_vec[i] = 1
+live_model.add_activity_classification(live_model.model.class_str,
+                                       conf_vec, start_time, end_time)
+live_model.get_current_state()
+start_time += 1
+end_time += 1
+i += 1
+
+# ----------------------------------------------------------------------------
+
 # ----------------------------------------------------------------------------
 # Measure performance of “Did user complete every step?”
 
@@ -434,9 +451,9 @@ for snr in [1, 2, 3, 4, 5, 6, 7]:
                              class_std_conf=class_std_conf)
 
 
-    num_trials = 500
-    tp_hmm = []
-    fp_hmm = []
+    num_trials = 50
+    #tp_hmm = []
+    #fp_hmm = []
     for i in range(num_trials):
         print('%i/%i' % (i + 1, num_trials))
 
