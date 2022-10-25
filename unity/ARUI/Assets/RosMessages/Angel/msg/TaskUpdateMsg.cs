@@ -28,8 +28,9 @@ namespace RosMessageTypes.Angel
         public string[] steps;
         //  Current step index
         public byte current_step_id;
-        //  Current/previous steps
+        //  Current step is the task step most recently completed
         public string current_step;
+        //  Previous step is the step before the most recently completed
         public string previous_step;
         //  Current activity
         public string current_activity;
