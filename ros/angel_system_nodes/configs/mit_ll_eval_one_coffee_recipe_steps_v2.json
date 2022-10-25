@@ -1,0 +1,187 @@
+{
+  "Measure 12 ounces of cold water and transfer to a kettle. Boil the water.": {
+    "level": 0,
+    "index": 0,
+    "sub-steps": {
+      "Measure 12 ounces of water in the liquid measuring cup": {
+        "level": 1,
+        "index": 0,
+        "activity": "Measure 12 ounces of water in the liquid measuring cup"
+      },
+      "Pour the water from the liquid measuring cup into the electric kettle": {
+        "level": 1,
+        "index": 1,
+        "activity": "Pour the water from the liquid measuring cup into the electric kettle"
+      },
+      "Turn on the Kettle": {
+        "level": 1,
+        "index": 2,
+        "activity": "Turn on the Kettle"
+      }
+    }
+  },
+
+  "While the water is boiling, place the dripper on top of a coffee mug.": {
+    "level": 0,
+    "index": 1,
+    "sub-steps": {
+      "Place the dripper on top of the mug": {
+        "level": 1,
+        "index": 0,
+        "activity": "Place the dripper on top of the mug"
+      }
+    }
+  },
+
+  "Prepare the filter insert by folding the paper filter in half to create a semi-circle, and in half again to create a quarter-circle. Place the paper filter in the dripper and spread open to create a cone.": {
+    "level": 0,
+    "index": 2,
+    "sub-steps": {
+      "Take the coffee filter and fold it in half to create a semi-circle": {
+        "level": 1,
+        "index": 0,
+        "activity": "Take the coffee filter and fold it in half to create a semi-circle"
+      },
+      "Fold the filter in half again to create a quarter-circle": {
+        "level": 1,
+        "index": 1,
+        "activity": "Fold the filter in half again to create a quarter-circle"
+      },
+      "Place the folded filter into the dripper such that the the point of the quarter-circle rests in the center of the dripper": {
+        "level": 1,
+        "index": 2,
+        "activity": "Place the folded filter into the dripper such that the the point of the quarter-circle rests in the center of the dripper"
+      },
+      "Spread the filter open to create a cone inside the dripper": {
+        "level": 1,
+        "index": 3,
+        "activity": "Spread the filter open to create a cone inside the dripper"
+      }
+    }
+  },
+
+  "Weigh the coffee beans and grind until the coffee grounds are the consistency of coarse sand, about 20 seconds. Transfer the grounds to the filter cone.": {
+    "level": 0,
+    "index": 3,
+    "sub-steps": {
+      "Turn on the kitchen scale": {
+        "level": 1,
+        "index": 0,
+        "activity": "Turn on the kitchen scale"
+      },
+      "Place a bowl on the scale": {
+        "level": 1,
+        "index": 1,
+        "activity": "Place a bowl on the scale"
+      },
+      "Zero the scale": {
+        "level": 1,
+        "index": 2,
+        "activity": "Zero the scale"
+      },
+      "Add coffee beans to the bowl until the scale reads 25 grams": {
+        "level": 1,
+        "index": 3,
+        "activity": "Add coffee beans to the bowl until the scale reads 25 grams"
+      },
+      "Pour the measured coffee beans into the coffee grinder": {
+        "level": 1,
+        "index": 4,
+        "activity": "Pour the measured coffee beans into the coffee grinder"
+      },
+      "Set timer for 20 seconds": {
+        "level": 1,
+        "index": 5,
+        "activity": "Set timer for 20 seconds"
+      },
+      "Turn on the timer": {
+        "level": 1,
+        "index": 6,
+        "activity": "Turn on the timer"
+      },
+      "Grind the coffee beans by pressing and holding down on the black part of the lid": {
+        "level": 1,
+        "index": 7,
+        "activity": "Grind the coffee beans by pressing and holding down on the black part of the lid"
+      },
+      "Pour the grounded coffee beans into the filter cone prepared in step 2": {
+        "level": 1,
+        "index": 8,
+        "activity": "Pour the grounded coffee beans into the filter cone prepared in step 2"
+      }
+    }
+  },
+
+  "Check the temperature.": {
+    "level": 0,
+    "index": 4,
+    "sub-steps": {
+      "Turn on the thermometer": {
+        "level": 1,
+        "index": 0,
+        "activity": "Turn on the thermometer"
+      },
+      "Place the end of the thermometer into the water": {
+        "level": 1,
+        "index": 1,
+        "activity": "Place the end of the thermometer into the water"
+      }
+    }
+  },
+
+  "Pour a small amount of water in the filter to wet the grounds.  Wait about 30 seconds.": {
+    "level": 0,
+    "index": 5,
+    "sub-steps": {
+      "Set timer to 30 seconds": {
+        "level": 1,
+        "index": 0,
+        "activity": "Set timer to 30 seconds"
+      },
+      "Pour a small amount of water over the grounds in order to wet the grounds": {
+        "level": 1,
+        "index": 1,
+        "activity": "Pour a small amount of water over the grounds in order to wet the grounds"
+      }
+    }
+  },
+
+  "Slowly pour the rest of the water over the grounds in a circular motion. Do not overfill beyond the top of the paper filter.": {
+    "level": 0,
+    "index": 6,
+    "sub-steps": {
+      "Slowly pour the water over the grounds in a circular motion. Do not overfill beyond the top of the paper filter": {
+        "level": 1,
+        "index": 0,
+        "activity": "Slowly pour the water over the grounds in a circular motion. Do not overfill beyond the top of the paper filter"
+      }
+    }
+  },
+
+  "Let the coffee drain completely into the mug before removing the dripper. Discard the paper filter and coffee grounds.": {
+    "level": 0,
+    "index": 7,
+    "sub-steps": {
+      "Allow the rest of the water in the dripper to drain": {
+        "level": 1,
+        "index": 0,
+        "activity": "Allow the rest of the water in the dripper to drain"
+      },
+      "Remove the dripper from the cup": {
+        "level": 1,
+        "index": 1,
+        "activity": "Remove the dripper from the cup"
+      },
+      "Remove the coffee grounds and paper filter from the dripper": {
+        "level": 1,
+        "index": 2,
+        "activity": "Remove the coffee grounds and paper filter from the dripper"
+      },
+      "Discard the coffee grounds and paper filter": {
+        "level": 1,
+        "index": 3,
+        "activity": "Discard the coffee grounds and paper filter"
+      }
+    }
+  }
+}

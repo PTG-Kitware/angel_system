@@ -294,6 +294,7 @@ class TaskMonitor(Node):
         task_g.task_steps = self._task.task_graph_steps
         task_g.task_levels = self._task.task_graph_step_levels
 
+        response.task_title = self._task.name
         response.task_graph = task_g
         return response
 

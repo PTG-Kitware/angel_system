@@ -11,6 +11,7 @@ SHELL ["/bin/bash", "-c"]
 # System Package dependencies
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get -y update \
+ && apt-get dist-upgrade \
  && apt-get -y install \
         bash-completion \
         gdb \

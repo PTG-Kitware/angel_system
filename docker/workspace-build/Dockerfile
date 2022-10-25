@@ -25,6 +25,8 @@ RUN apt-get -y update \
         ros-${ROS_DISTRO}-rmw-cyclonedds-cpp \
         ros-${ROS_DISTRO}-test-msgs \
         ros-${ROS_DISTRO}-pybind11-vendor \
+        # for demo-ui
+        ros-${ROS_DISTRO}-rosbridge-server \
         tmuxinator \
         # for python simpleaudio
         libasound2-dev \

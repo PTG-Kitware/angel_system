@@ -1,0 +1,258 @@
+/* Kitware Colors */
+:root {
+  --light-gray-3:   rgb(243, 243, 243); /* light gray 3 */
+  --kit-light-blue: rgb(220, 227, 236); /* kitware light blue */
+  --kit-dark-blue:  rgb(0, 55, 101); /* kitware dark blue*/
+  --kit-blue:       rgb(0, 104, 199); /* kitware blue */
+  --kit-green:      rgb(62, 174, 43);
+
+  /* Hex Options */
+  --hex-full:   polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+  --hex-top:    polygon(25% 100%, 75% 100%, 100% 100%, 75% 0, 25% 0, 0 100%);
+  --hex-bottom: polygon(25% 0, 75% 0, 100% 0, 75% 100%, 25% 100%, 0 0);
+  --hex-left:   polygon(100% 0, 0 50%, 100% 100%);
+  --hex-right:  polygon(0 0, 100% 50%, 0 100%);
+}
+
+html,
+body {
+  height: 99%;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+}
+
+.content {
+  flex-grow: 1;
+}
+
+/* ------------ */
+/* TEXT         */
+/* ------------ */
+.text {
+  font-family: "Roboto",sans-serif;
+}
+.body-text {
+  font-size: clamp(1rem,1vw,1.8rem);
+  font-weight: 300;
+  line-height: 1;
+
+  color: var(--kit-dark-blue);
+}
+
+/* ------------ */
+/* MENU         */
+/* ------------ */
+#header { /* main menu */
+  padding: 10px;
+  background: var(--light-gray-3);
+  position: relative;
+}
+#header img { /* kitware logo */
+  height: 70px;
+  width: auto; /* keep aspect ratio */
+  float: top;
+}
+
+/* ------------ */
+/* TITLE        */
+/* ------------ */
+.highlighted-title {
+  padding: 0 0 20px 0;
+  position: relative;
+
+  margin-bottom: 5px;
+}
+.icon-hex {
+  position: relative;
+  display: inline-block;
+  vertical-align: middle;
+  margin: 0 1px 0 0;
+
+  height:64.8px;
+  width: 69.8px;
+  clip-path: var(--hex-full);
+  background-color: var(--kit-green);
+  
+}
+.title-hex {
+  position: relative;
+  background-color: var(--kit-light-blue);
+  display: inline-block;
+  vertical-align: middle;
+
+  clip-path: polygon(0 0, calc(100% - 15px /*right top*/) 0, 100% 50%, calc(100% - 15px /*right bottom*/) 100%, 0 100%, 15px /* left*/ 50%);
+  padding: 0 7rem 0 3rem;
+  width: 450px;
+  max-width: 75%;
+  
+  font-size: clamp(1.75rem,3vw,2.25rem);
+  font-weight: 550;
+  line-height: 1.8;
+  color: var(--kit-dark-blue);
+}
+
+/* ------------ */
+/* BLUE ARROW   */
+/* ------------ */
+.highlighted-body { /* blue arrow */
+  margin-top: 10px;
+
+  content: "";
+
+  clear: both;
+  
+  padding: 10px;
+  width: 99%;
+  height: 43%;
+  background-color: var(--kit-blue);
+
+  left: 0;
+  position: relative;
+  display: flex;
+  max-height: 45%;
+
+  clip-path: polygon(0% 0%, calc(100% - 226.0015px) 0%, 100% 50%, calc(100% - 226.0015px) 100%, 0% 100%);
+}
+
+/* ------------ */
+/* RECIPE       */
+/* ------------ */
+#recipe { /* task list */
+  padding: 10px;
+  width: 43%;
+  max-width: 45vw;
+  
+  overflow: scroll;
+
+  text-align: center;
+
+  margin-left: 40px;
+}
+
+#task-list {
+  text-align: left;
+  
+}
+.task-line {
+  display: block;
+  margin-bottom: 5px;
+}
+/* task text */
+.task {
+  font-size: clamp(1rem,1vw,1.8rem);
+  font-weight: 300;
+  line-height: 1;
+
+  color: white;
+}
+.btn {
+  position: relative;
+  background-color: var(--kit-green);
+  display: inline-block;
+  vertical-align: middle;
+
+  clip-path:polygon(12.5556px 0, calc(100% - 12.5556px) 0, 100% 50%, calc(100% - 12.5556px) 100%, 12.5556px 100%, 0% 50%);
+  padding: 0 2.25rem;
+  margin-top: 10px;
+  height: 2.75rem;
+  
+  font-size: 1.3rem;
+  font-weight: 400;
+  line-height: 1;
+  color: var(--kit-light-blue);
+
+  border: none;
+  border-radius: 0;
+}
+.btn:hover {
+  background-color: rgb(212, 238, 213);
+  color: var(--kit-green);
+  box-shadow: none;
+  text-decoration: none;
+}
+
+/* checkmark */
+.checkbox { 
+  border: 1.5px solid white; 
+  width: 1.3em; 
+  height: 1.3em; 
+
+  display: inline-block;
+  margin-right: 8px;
+}
+/* from: https://stackoverflow.com/questions/21968531/how-to-draw-a-checkmark-tick-using-css */
+.checkmark {
+  display: inline-block;
+  vertical-align: middle;
+  position: relative;
+  top: -10px;
+
+  transform: rotate(45deg);
+  height: 25px;
+  width: 12px; 
+
+  border-bottom: 7px solid var(--kit-green);
+  border-right: 7px solid var(--kit-green);
+}
+.checkmark_hidden {
+  visibility: hidden;
+}
+.checkmark_visible {
+  visibility: visible;
+}
+
+/* ------------ */
+/* LIVE VIEW    */
+/* ------------ */
+#HL-live{
+  float: left;
+  padding: 10px;
+  margin-left: 10px;
+  width: 41%
+  max-width: 45vw;
+}
+
+.live-img {
+  float:left;
+
+  height: 99%;
+  width: auto; /* keep aspect ratio */
+}
+
+/* ------------ */
+/* BOTTOM ROW   */
+/* ------------ */
+#bottom-row {
+  left: 0;
+  position: relative;
+  display: flex;
+  margin-top: 10px;
+  width: 99%;
+  max-height: 45vw;
+
+  content: "";
+
+  clear: both;
+}
+
+#activity {
+  width: 43%;
+  max-width: 45vw;
+  max-height: 43%;
+
+  text-align: center;
+
+  margin-left: 60px
+}
+#activity-conf { /* plot */
+  margin-left: -30px;
+}
+
+#bottom-right {
+  display: inline-block;
+
+  margin-left: 70px;
+}

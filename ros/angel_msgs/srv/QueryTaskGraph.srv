@@ -1,4 +1,6 @@
 # Get the full task graph for the current task.
 uint8 test
 ---
+string task_title
+
 angel_msgs/TaskGraph task_graph
