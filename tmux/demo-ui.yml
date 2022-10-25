@@ -58,18 +58,18 @@ windows:
       -p detection_threshold:=0.05
 
   # Nodes
-  #- task_monitor: ros2 run angel_system_nodes task_monitor_v2 --ros-args
-  #    -r __ns:=${ROS_NAMESPACE}
-  #    -p det_topic:=ActivityDetections
-  #    -p task_update_topic:=TaskUpdates
-  #    -p task_error_topic:=TaskErrors
-  #    -p config_file:=config/tasks/task_steps_config-recipe_coffee.yaml
-  - task_monitor: ros2 run angel_system_nodes task_monitor_v1 --ros-args
+  - task_monitor: ros2 run angel_system_nodes task_monitor_v2 --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p det_topic:=ActivityDetections
       -p task_update_topic:=TaskUpdates
-      -p task_steps:=${CONFIG_DIR}/mit_ll_eval_one_coffee_recipe_steps_v2.json
-      -p task_trigger_thresholds:=${CONFIG_DIR}/mit_ll_eval_one_coffee_recipe_thresholds_v2.json
+      -p task_error_topic:=TaskErrors
+      -p config_file:=config/tasks/task_steps_config-recipe_coffee.yaml
+  #- task_monitor: ros2 run angel_system_nodes task_monitor_v1 --ros-args
+  #    -r __ns:=${ROS_NAMESPACE}
+  #    -p det_topic:=ActivityDetections
+  #    -p task_update_topic:=TaskUpdates
+  #    -p task_steps:=${CONFIG_DIR}/mit_ll_eval_one_coffee_recipe_steps_v2.json
+  #    -p task_trigger_thresholds:=${CONFIG_DIR}/mit_ll_eval_one_coffee_recipe_thresholds_v2.json
   #- spatial_mapper: ros2 run angel_system_nodes spatial_mapper --ros-args
   #    -r __ns:=${ROS_NAMESPACE}
   #    -p spatial_map_topic:=SpatialMapData

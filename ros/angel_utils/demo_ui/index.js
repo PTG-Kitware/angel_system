@@ -5,7 +5,7 @@ const port = 5000;                  //Save the port number where your server wil
 
 // Add stylesheets
 app.use(express.static(path.join(__dirname, 'public')));
-console.log(process.env.ROS_NAMESPACE)
+
 app.get('/ns', (req, res) => {
     res.json({ namespace: process.env.ROS_NAMESPACE });
 });
