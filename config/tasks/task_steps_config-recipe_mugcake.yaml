@@ -260,8 +260,8 @@ hmm:
 
   # Constrain whether HMM sequence can skip steps or jump backwards. When both
   # values are set to 0, forward progress without skipping steps is enforced.
-  num_steps_can_jump_fwd: 0
-  num_steps_can_jump_bck: 0
+  num_steps_can_jump_fwd: 1
+  num_steps_can_jump_bck: 1
 
   # Default classifier mean confidence to use if not explicitly provided for a
   # step.
