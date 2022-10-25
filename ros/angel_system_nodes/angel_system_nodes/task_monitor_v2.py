@@ -55,6 +55,11 @@ class HMMNode(Node):
             .get_parameter_value()
             .string_value
         )
+        self._query_task_graph_topic = (
+            self.declare_parameter("query_task_graph_topic", "query_task_graph")
+            .get_parameter_value()
+            .string_value
+        )
         self._skip_score_threshold = (
             self.declare_parameter("skip_score_threshold", 300.0)
             .get_parameter_value()
@@ -108,7 +113,7 @@ class HMMNode(Node):
         )
         self._task_graph_service = self.create_service(
             QueryTaskGraph,
-            "query_task_graph",
+            self._query_task_graph_topic,
             self.query_task_graph_callback
         )
 
