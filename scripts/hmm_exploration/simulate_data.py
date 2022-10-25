@@ -123,7 +123,9 @@ med_class_duration = np.array(med_class_duration)
 class_mean_conf = np.array(class_mean_conf)
 class_std_conf = np.array(class_std_conf)
 
-#plt.plot(class_mean_conf/class_std_conf, 'ro')
+#plt.imshow(class_mean_conf); plt.colorbar()
+#plt.imshow(class_std_conf); plt.colorbar()
+#plt.imshow(class_mean_conf/class_std_conf); plt.colorbar()
 #plt.imshow(X.T, interpolation='nearest', aspect='auto'); plt.plot(Z, 'r.')
 
 
@@ -164,6 +166,9 @@ plt.plot(Z[valid], 'bo')
 # ----------------------------------------------------------------------------
 
 # ----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
+
+# ----------------------------------------------------------------------------
 # Verify covariance is being respectfed.
 times, X, Z, X_, Z_ = model.sample(5000)
 tp = np.array([X[i, Z[i]] for i in range(len(Z))])
@@ -173,7 +178,42 @@ fp = np.array(fp).ravel()
 print('True examples mean:', np.mean(tp), 'std:', np.std(tp))
 print('False examples mean:', np.mean(fp), 'std:',
       np.sqrt(np.mean(np.mean(fp**2))))
+# ----------------------------------------------------------------------------
 
+
+# ----------------------------------------------------------------------------
+config_fname = '/mnt/data2tb/libraries/angel_system/config/tasks/task_steps_config-recipe_coffee.yaml'
+live_model = ActivityHMMRos(config_fname)
+
+curr_step = 0
+start_time = 0
+end_time = 1
+
+for _ in range(25):
+    conf_vec = np.zeros(len(live_model.model.class_str));
+    conf_vec[curr_step] = 0.5
+    live_model.add_activity_classification(live_model.model.class_str,
+                                           conf_vec, start_time, end_time)
+    curr_step += 1
+    start_time += 1
+    end_time += 1
+
+    print(live_model.get_current_state())
+
+
+live_model.revert_to_step(10)
+print(live_model.get_current_state())
+print(live_model.model.class_str[10])
+
+#plt.imshow(live_model.X)
+
+live_model.get_current_state()
+live_model
+live_model.times
+start_time
+start_time=10000; end_time=10001
+live_model.add_activity_classification(live_model.model.class_str,
+                                       conf_vec, start_time, end_time)
 # ----------------------------------------------------------------------------
 
 
@@ -436,7 +476,7 @@ i += 1
 # ----------------------------------------------------------------------------
 # Measure performance of “Did user complete every step?”
 
-for snr in [1, 2, 3, 4, 5, 6, 7]:
+for snr in [8]:
     class_mean_conf = np.ones(N)*0.1*snr
     class_std_conf = np.ones(N)*0.1
 
