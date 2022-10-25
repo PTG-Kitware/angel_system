@@ -362,14 +362,18 @@ class UHOActivityDetector(Node):
             .integer_value
         )
         # Ground truth file for classifications (optional)
+        # This is expecting a feather file format. Activity prediction vector
+        # size will be dictated by the number of unique activities labeled
+        # (+ background), and the confidence vector order will be determined
+        # by the order labels appear in this file.
         self._gt_file = (
             self.declare_parameter("gt_file", "")
             .get_parameter_value()
             .string_value
         )
         # Whether overlapping windows are passed to the classifier
-        self._overlapping_mode  = (
-            self.declare_parameter("overlapping_mode", True)
+        self._overlapping_mode = (
+            self.declare_parameter("overlapping_mode", False)
             .get_parameter_value()
             .bool_value
         )
