@@ -292,7 +292,7 @@ class HMMNode(Node):
                         self._previous_step = self._current_step
                         self._current_step = step
 
-                    log.info(f"Current step: {self._current_step}")
+                    log.info(f"Last completed step: {self._current_step}")
                     log.info(f"Skip score: {self._skip_score}")
 
                     if self._skip_score > self._skip_score_threshold:
