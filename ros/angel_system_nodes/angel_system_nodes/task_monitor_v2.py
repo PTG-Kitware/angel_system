@@ -144,23 +144,23 @@ class HMMNode(Node):
         if self.hmm_alive():
             source_stamp_start_frame_sec = time_to_int(
                 activity_msg.source_stamp_start_frame
-            ) * 1e-9 # time_to_int returns ns
+            ) * 1e-9  # time_to_int returns ns
             source_stamp_end_frame_sec = time_to_int(
                 activity_msg.source_stamp_end_frame
-            ) * 1e-9 # time_to_int returns ns
-
-            if (
-                self._latest_act_classification_end_time is not None and
-                self._latest_act_classification_end_time >= source_stamp_start_frame_sec
-            ):
-                # We already sent an activity classification to the HMM
-                # that was after this frame window's start time
-                return
-
-            self._latest_act_classification_end_time = source_stamp_end_frame_sec
+            ) * 1e-9  # time_to_int returns ns
 
             # Add activity classification to the HMM
             with self._hmm_lock:
+                if (
+                    self._latest_act_classification_end_time is not None and
+                    self._latest_act_classification_end_time >= source_stamp_start_frame_sec
+                ):
+                    # We already sent an activity classification to the HMM
+                    # that was after this frame window's start time
+                    return
+
+                self._latest_act_classification_end_time = source_stamp_end_frame_sec
+
                 self._hmm.add_activity_classification(
                     activity_msg.label_vec,
                     activity_msg.conf_vec,
@@ -187,31 +187,28 @@ class HMMNode(Node):
 
         # Populate steps and current step
         with self._hmm_lock:
-            message.steps = self._hmm.model.class_str[1:] # exclude background
+            message.steps = self._hmm.model.class_str[1:]  # exclude background
             last_step_id = len(message.steps) - 1
 
             if self._current_step is None:
                 message.current_step_id = -1
+                message.current_step = "None"
             else:
                 steps_list_id = message.steps.index(
                     self._current_step
                 )
                 message.current_step_id = steps_list_id
+                message.current_step = message.steps[message.current_step_id]
+
+            if self._previous_step is None:
+                message.previous_step = "N/A"
+            else:
+                message.previous_step = self._previous_step
 
         if message.current_step_id == last_step_id:
             message.task_complete_confidence = 1.0
         else:
             message.task_complete_confidence = 0.0
-
-        if message.current_step_id == -1:
-            message.current_step = "None"
-        else:
-            message.current_step = message.steps[message.current_step_id]
-
-        if self._previous_step is None:
-            message.previous_step = "N/A"
-        else:
-            message.previous_step = self._previous_step
 
         # TODO: Do we need to fill in the other fields
 
@@ -232,11 +229,12 @@ class HMMNode(Node):
         message.context = message.N_CONTEXT_TASK_ERROR
 
         message.title = "Step skip detected"
-        message.description = (
-            f"Detected skip with confidence {self._skip_score}. "
-            f"Current step: {self._current_step}, "
-            f"previous step: {self._previous_step}."
-        )
+        with self._hmm_lock:
+            message.description = (
+                f"Detected skip with confidence {self._skip_score}. "
+                f"Current step: {self._current_step}, "
+                f"previous step: {self._previous_step}."
+            )
 
         self._task_error_publisher.publish(message)
 
@@ -271,7 +269,7 @@ class HMMNode(Node):
         log = self.get_logger()
         log.info("HMM thread started")
 
-        while self._hmm_active.wait(0): # will quickly return false if cleared
+        while self._hmm_active.wait(0):  # will quickly return false if cleared
             if self._hmm_awake_evt.wait(self._hmm_active_heartbeat):
                 log.info("HMM loop awakened")
                 self._hmm_awake_evt.clear()
@@ -281,32 +279,32 @@ class HMMNode(Node):
                 with self._hmm_lock:
                     step = self._hmm.get_current_state()
                     self._skip_score = self._hmm.get_skip_score()
-                log.info(f"HMM computation time: {time.time() - start_time}")
+                    log.info(f"HMM computation time: {time.time() - start_time}")
 
-                step_id = self._hmm.model.class_str.index(step)
+                    step_id = self._hmm.model.class_str.index(step)
 
-                # Only change steps if we have a new step and it is not background
-                if self._current_step != step and step_id != 0:
-                    self._previous_step = self._current_step
-                    self._current_step = step
+                    # Only change steps if we have a new step, and it is not background
+                    if self._current_step != step and step_id != 0:
+                        self._previous_step = self._current_step
+                        self._current_step = step
 
-                log.info(f"Current step: {self._current_step}")
-                log.info(f"Skip score: {self._skip_score}")
+                    log.info(f"Current step: {self._current_step}")
+                    log.info(f"Skip score: {self._skip_score}")
 
-                if self._skip_score > self._skip_score_threshold:
-                    # Check if we've already sent a notification for this step
-                    # skip to avoid sending lots of notifcations for the same
-                    # error.
-                    if (
-                        self._current_step != self._current_step_skip or
-                        self._previous_step != self._previous_step_skip
-                    ):
-                        self.publish_task_error_message()
-                        self._current_step_skip = self._current_step
-                        self._previous_step_skip = self._previous_step
+                    if self._skip_score > self._skip_score_threshold:
+                        # Check if we've already sent a notification for this step
+                        # skip to avoid sending lots of notifications for the same
+                        # error.
+                        if (
+                            self._current_step != self._current_step_skip or
+                            self._previous_step != self._previous_step_skip
+                        ):
+                            self.publish_task_error_message()
+                            self._current_step_skip = self._current_step
+                            self._previous_step_skip = self._previous_step
 
-                # Publish a new TaskUpdate message
-                self.publish_task_state_message()
+                    # Publish a new TaskUpdate message
+                    self.publish_task_state_message()
 
     def hmm_alive(self) -> bool:
         """
@@ -351,7 +349,7 @@ class HMMNode(Node):
         elif key == keyboard.Key.left:
             forward = False
         else:
-            return # ignore
+            return  # ignore
 
         with self._hmm_lock:
             if self._latest_act_classification_end_time is None:
@@ -359,14 +357,14 @@ class HMMNode(Node):
                 # Set time window to now + 1 second
                 start_time = time_to_int(
                     self.get_clock().now().to_msg()
-                ) * 1e-9 # time_to_int returns ns
-                end_time = start_time + 1 # 1 second later
+                ) * 1e-9  # time_to_int returns ns
+                end_time = start_time + 1  # 1 second later
             else:
                 # Assuming ~30Hz frame rate, so set start one frame later
                 start_time = (
                     self._latest_act_classification_end_time + (1 / 30.0)
                 )
-                end_time = start_time + 1 # 1 second later
+                end_time = start_time + 1  # 1 second later
 
             self._latest_act_classification_end_time = end_time
 
@@ -374,7 +372,7 @@ class HMMNode(Node):
             steps = self._hmm.model.class_str
             if self._current_step is None:
                 # Nothing set yet, so assume we start at step 1
-                curr_step_id = 1 # Exclude background class
+                curr_step_id = 1  # Exclude background class
             else:
                 curr_step_id = steps.index(self._current_step)
 
