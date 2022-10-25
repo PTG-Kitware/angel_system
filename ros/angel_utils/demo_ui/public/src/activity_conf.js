@@ -44,19 +44,22 @@ chart = new Chart(ctx, {
   }
 });
 
-// Create a listener for activity detections
-var activity_listener = new ROSLIB.Topic({
-  ros : ros,
-  name : workspace + '/ActivityDetections',
-  messageType : 'angel_msgs/ActivityDetection'
-});
+$.get( "/ns")
+.done(function( data ){
+  // Create a listener for activity detections
+  var activity_listener = new ROSLIB.Topic({
+    ros : ros,
+    name : data.namespace + '/ActivityDetections',
+    messageType : 'angel_msgs/ActivityDetection'
+  });
 
-activity_listener.subscribe(function(m) {
-  xValues = m.label_vec;
-  yValues = m.conf_vec;
+  activity_listener.subscribe(function(m) {
+    xValues = m.label_vec;
+    yValues = m.conf_vec;
 
-  chart.data.labels = xValues;
-  chart.data.datasets[0].data = yValues;
+    chart.data.labels = xValues;
+    chart.data.datasets[0].data = yValues;
 
-  chart.update('none'); // don't animate
+    chart.update('none'); // don't animate
+  });
 });

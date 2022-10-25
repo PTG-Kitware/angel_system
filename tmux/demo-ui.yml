@@ -48,6 +48,7 @@ windows:
       -r __ns:=${ROS_NAMESPACE}
       -p topic_input_images:=PVFramesNV12
       -p topic_output_images:=PVFramesRGB
+
   # Detectors
   - activity_detector: ros2 run angel_system_nodes uho_activity_detector --ros-args
       -r __ns:=${ROS_NAMESPACE}
@@ -55,25 +56,33 @@ windows:
   - detector: ros2 run angel_system_nodes object_detector_with_descriptors --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p detection_threshold:=0.05
+
   # Nodes
-  - task_monitor: ros2 run angel_system_nodes task_monitor --ros-args
+  #- task_monitor: ros2 run angel_system_nodes task_monitor_v2 --ros-args
+  #    -r __ns:=${ROS_NAMESPACE}
+  #    -p det_topic:=ActivityDetections
+  #    -p task_update_topic:=TaskUpdates
+  #    -p task_error_topic:=TaskErrors
+  #    -p config_file:=config/tasks/task_steps_config-recipe_coffee.yaml
+  - task_monitor: ros2 run angel_system_nodes task_monitor_v1 --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p det_topic:=ActivityDetections
       -p task_update_topic:=TaskUpdates
       -p task_steps:=${CONFIG_DIR}/mit_ll_eval_one_coffee_recipe_steps_v2.json
       -p task_trigger_thresholds:=${CONFIG_DIR}/mit_ll_eval_one_coffee_recipe_thresholds_v2.json
-#  - spatial_mapper: ros2 run angel_system_nodes spatial_mapper --ros-args
-#      -r __ns:=${ROS_NAMESPACE}
-#      -p spatial_map_topic:=SpatialMapData
-#      -p det_topic:=Detections
-#      -p det_3d_topic:=ObjectDetections3d
-#      -p headset_pose_topic:=HeadsetPoseData
-  - feedback_generator: ros2 run angel_system_nodes feedback_generator --ros-args
-      -r __ns:=${ROS_NAMESPACE}
-      -p activity_detector_topic:=ActivityDetections
-      -p object_detection_topic:=ObjectDetections3d
-      -p task_monitor_topic:=TaskUpdates
-      -p arui_update_topic:=AruiUpdates
+  #- spatial_mapper: ros2 run angel_system_nodes spatial_mapper --ros-args
+  #    -r __ns:=${ROS_NAMESPACE}
+  #    -p spatial_map_topic:=SpatialMapData
+  #    -p det_topic:=Detections
+  #    -p det_3d_topic:=ObjectDetections3d
+  #    -p headset_pose_topic:=HeadsetPoseData
+  #- feedback_generator: ros2 run angel_system_nodes feedback_generator --ros-args
+  #    -r __ns:=${ROS_NAMESPACE}
+  #    -p activity_detector_topic:=ActivityDetections
+  #    -p object_detection_topic:=ObjectDetections3d
+  #    -p task_monitor_topic:=TaskUpdates
+  #    -p arui_update_topic:=AruiUpdates
+
   # Display frames with relatively low latency (as opposed to device portal)
   #- rqt_2d_detections: rqt -s rqt_image_view/ImageView
   #    --args ${ROS_NAMESPACE}/PVFramesRGB
@@ -88,4 +97,6 @@ windows:
        --remap in:=pv_image_detections_2d 
        --remap out/compressed:=pv_image_detections_2d/compressed
   # Demo UI
-  - demo_ui: ros2 launch src/angel_utils/demo_ui/launch/websocket.launch
+  - rosbridge_websocket: ros2 launch src/angel_utils/demo_ui/launch/demo_ui_launch.xml
+  - demo_ui: node src/angel_utils/demo_ui/index.js
+  - debug: 
