@@ -31,6 +31,12 @@ class ActivityHMMRos:
         with open(config_fname, 'r') as stream:
             config = yaml.safe_load(stream)
 
+        # Verify that all of the sections of the config exist.
+        for key in ['version', 'activity_labels', 'title', 'steps', 'hmm']:
+            if key not in config:
+                raise AssertionError(f'config \'{config_fname}\' does not '
+                                     f'have the required \'{key}\' defined')
+
         default_mean_conf = config['hmm']['default_mean_conf']
         default_std_conf = config['hmm']['default_std_conf']
 
@@ -46,10 +52,6 @@ class ActivityHMMRos:
         med_class_duration = [1]
         class_mean_conf = [default_mean_conf]
         class_std_conf = [default_std_conf]
-
-        if 'steps' not in config:
-            raise Exception(f'config \'{config_fname}\' does not have '
-                            '\'steps\' defined')
 
         for i in range(len(config['steps'])):
             ii = config['steps'][i]['id']
@@ -79,10 +81,12 @@ class ActivityHMMRos:
                                  class_mean_conf=class_mean_conf,
                                  class_std_conf=class_std_conf)
 
+        num_steps_can_jump_fwd = config['hmm']['num_steps_can_jump_fwd']
+        num_steps_can_jump_bck = config['hmm']['num_steps_can_jump_bck']
         self.model_skip = ActivityHMM(self.dt, class_str,
                                       med_class_duration=med_class_duration,
-                                      num_steps_can_jump_fwd=1,
-                                      num_steps_can_jump_bck=0,
+                                      num_steps_can_jump_fwd=num_steps_can_jump_fwd,
+                                      num_steps_can_jump_bck=num_steps_can_jump_bck,
                                       class_mean_conf=class_mean_conf,
                                       class_std_conf=class_std_conf)
 
@@ -114,7 +118,7 @@ class ActivityHMMRos:
         n += 1
         times_ = np.linspace(start_time, end_time, n)
         times_ = (times_[1:] + times_[:-1])/2
-        X = np.tile(np.atleast_2d(conf_vec), (n,1))
+        X = np.tile(np.atleast_2d(conf_vec), (len(times_), 1))
 
         if self.X is None:
             self.times = times_
@@ -130,7 +134,7 @@ class ActivityHMMRos:
                                                                    DT,
                                                                    self.times[-1]))
 
-        if self.times[-1]:
+        if DT > self.dt:
             last_time = self.times[-1]
 
             # If there is a long idle period, at most, let's add in 5 seconds
@@ -142,7 +146,7 @@ class ActivityHMMRos:
             n += 1
             times_fill = np.linspace(last_time, start_time, n)
             times_fill = (times_fill[1:] + times_fill[:-1])/2
-            X_fill = np.tile(self.class_mean_conf, (n,1))
+            X_fill = np.tile(self.class_mean_conf, (len(times_fill), 1))
 
             self.times = np.hstack([self.times, times_fill])
             self.X = np.vstack([self.X, X_fill])
@@ -157,6 +161,53 @@ class ActivityHMMRos:
     def get_current_state(self):
         log_prob1, Z, X_, Z_ = self.model.decode(self.X)
         return self.model.class_str[Z[-1]]
+
+    def analyze_current_state(self):
+        """Return information about the current state.
+
+        Returns
+        -------
+        Z_can_skip_ : int
+            Index of most likely current step assuming steps could have been
+            skipped according to 'num_steps_can_jump_fwd' and
+            'num_steps_can_jump_bck'.
+        Z_no_skip : int
+            Index of most likely current step assuming steps that no steps were
+            skipped.
+        skip_score : float
+            Score indicating how much more likely it is that a step was skipped
+            than no steps being skipped.
+        """
+        log_prob1, Z_no_skip, X_, Z_no_skip_ = model.decode(X)
+        log_prob1 = model_skip.calc_log_prob_(X_, Z_no_skip_)
+
+        log_prob2, Z_can_skip, _, Z_can_skip_ = model_skip.decode(X)
+
+        #log_prob2 = model_skip.calc_log_prob_(X_, Z_can_skip_)
+
+        if len(model_skip.did_skip_step(Z_can_skip)[0]) == 0:
+            # The maximum likelihood solution doesn't skip a step, so we need to
+            # explicitly check various assumptions of forced skipped steps.
+
+            skipped_step_check = range(1, len(model.class_str))
+            log_prob2 = []
+            #skipped = []
+            Z2s_ = []
+            for j in skipped_step_check:
+                log_prob2_, Z2_ = model.decode(X, force_skip_step=j)[:2]
+                Z2s_.append(Z2_)
+                log_prob2.append(log_prob2_)
+                #skipped.append(model.did_skip_step(Z2_)[0])
+
+            ind = np.argmax(log_prob2)
+            Z_can_skip_ = Z2s_[ind]
+            log_prob2 = log_prob2[ind]
+
+        #score = (log_prob2 - log_prob1)/log_prob2
+
+        skip_score = log_prob2 - log_prob1
+
+        return Z_can_skip_, Z_no_skip, skip_score
 
 
 class ActivityHMM(object):
