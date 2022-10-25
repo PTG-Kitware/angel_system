@@ -15,12 +15,18 @@ string task_description
 TaskItem[] task_items
 
 # List of steps for this task
+# DEPRECATED: Users should instead query the QueryTaskGraph service.
 string[] steps
 
-# Current step index (-1 indicates no step has been finished yet)
+# The index of the step most recently completed.
+# A value of `-1` indicates that no step has been completed yet.
+# TODO: The use of the word "current" is misleading: We don't predict a
+#       step-in-action, but the step most recently completed. Maybe rename to
+#       "recently_completed_step_id"
 int8 current_step_id
 
-# Current step is the task step most recently completed
+# String of the most recently completed step.
+# TODO: Maybe rename to "recently_completed_step"
 string current_step
 # Previous step is the step before the most recently completed
 string previous_step
