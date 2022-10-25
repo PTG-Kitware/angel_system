@@ -20,8 +20,9 @@ string[] steps
 # Current step index
 uint8 current_step_id
 
-# Current/previous steps
+# Current step is the task step most recently completed
 string current_step
+# Previous step is the step before the most recently completed
 string previous_step
 
 # Current activity

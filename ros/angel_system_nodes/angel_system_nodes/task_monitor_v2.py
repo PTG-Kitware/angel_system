@@ -51,10 +51,8 @@ class HMMNode(Node):
             .get_parameter_value()
             .string_value
         )
-        # TODO: Figure out a good default value for this. This gets to as high
-        # as 200 in one of the "good" coffee recordings with GT annotations.
         self._skip_score_threshold = (
-            self.declare_parameter("skip_score_threshold", 200.0)
+            self.declare_parameter("skip_score_threshold", 300.0)
             .get_parameter_value()
             .double_value
         )
@@ -71,6 +69,10 @@ class HMMNode(Node):
         log.info(f"Task: {self._task_title}")
 
         # Tracks the current/previous steps
+        # Current step is the most recently completed step the user has finished
+        # as predicted by the HMM.
+        # Previous step is the step before the current step.
+        # Values will be either None or the step string label.
         self._previous_step = None
         self._current_step = None
         # Track the step skips we previously notified the user about to avoid
@@ -79,9 +81,6 @@ class HMMNode(Node):
         self._current_step_skip = None
         # Track the latest activity classification end time sent to the HMM
         self._latest_act_classification_end_time = None
-
-        # HMM's confidence that task is done
-        self._task_complete_confidence = 0.0
 
         # HMM's confidence that a step was skipped
         self._skip_score = 0.0
@@ -155,7 +154,7 @@ class HMMNode(Node):
                 self._latest_act_classification_end_time >= source_stamp_start_frame_sec
             ):
                 # We already sent an activity classification to the HMM
-                # that was after this frame window end time
+                # that was after this frame window's start time
                 return
 
             self._latest_act_classification_end_time = source_stamp_end_frame_sec
@@ -189,28 +188,27 @@ class HMMNode(Node):
         # Populate steps and current step
         with self._hmm_lock:
             message.steps = self._hmm.model.class_str[1:] # exclude background
+            last_step_id = len(message.steps) - 1
 
             if self._current_step is None:
                 message.current_step_id = 0
             else:
-                hmm_current_step_id = message.steps.index(
+                steps_list_id = message.steps.index(
                     self._current_step
                 )
-                message.current_step_id = hmm_current_step_id + 1
+                message.current_step_id = steps_list_id
 
-        if message.current_step_id == len(message.steps):
-            # Because we don't have a done step, keep this previous step but
-            # advance the index so the ARUI can see we're done
-            message.current_step = message.steps[message.current_step_id - 1]
+        if message.current_step_id == last_step_id:
+            message.task_complete_confidence = 1.0
         else:
-            message.current_step = message.steps[message.current_step_id]
+            message.task_complete_confidence = 0.0
+
+        message.current_step = message.steps[message.current_step_id]
 
         if self._previous_step is None:
             message.previous_step = "N/A"
         else:
             message.previous_step = self._previous_step
-
-        message.task_complete_confidence = self._task_complete_confidence
 
         # TODO: Do we need to fill in the other fields
 
@@ -288,10 +286,6 @@ class HMMNode(Node):
                 if self._current_step != step and step_id != 0:
                     self._previous_step = self._current_step
                     self._current_step = step
-
-                # TODO: If we are on the last step, set this to 1. Get this from
-                # HMM?
-                self._task_complete_confidence = 0.0
 
                 log.info(f"Current step: {self._current_step}")
                 log.info(f"Skip score: {self._skip_score}")
@@ -382,8 +376,8 @@ class HMMNode(Node):
                 curr_step_id = steps.index(self._current_step)
 
             # Create confidence vector where all classes are
-            # negative except the new desired step
-            conf_vec = [-1000000.0] * len(steps)
+            # zero except the new desired step
+            conf_vec = [0.0] * len(steps)
             if forward:
                 # Check if we are at the end of the list
                 if curr_step_id == (len(steps) - 1):
