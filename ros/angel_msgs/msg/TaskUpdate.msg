@@ -17,8 +17,8 @@ TaskItem[] task_items
 # List of steps for this task
 string[] steps
 
-# Current step index
-uint8 current_step_id
+# Current step index (-1 indicates no step has been finished yet)
+int8 current_step_id
 
 # Current step is the task step most recently completed
 string current_step

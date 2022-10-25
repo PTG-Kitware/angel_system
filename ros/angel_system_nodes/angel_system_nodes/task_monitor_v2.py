@@ -191,7 +191,7 @@ class HMMNode(Node):
             last_step_id = len(message.steps) - 1
 
             if self._current_step is None:
-                message.current_step_id = 0
+                message.current_step_id = -1
             else:
                 steps_list_id = message.steps.index(
                     self._current_step
@@ -203,7 +203,10 @@ class HMMNode(Node):
         else:
             message.task_complete_confidence = 0.0
 
-        message.current_step = message.steps[message.current_step_id]
+        if message.current_step_id == -1:
+            message.current_step = "None"
+        else:
+            message.current_step = message.steps[message.current_step_id]
 
         if self._previous_step is None:
             message.previous_step = "N/A"
