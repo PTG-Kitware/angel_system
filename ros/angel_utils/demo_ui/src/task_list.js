@@ -54,8 +54,8 @@ var task_update = new ROSLIB.Topic({
 
 task_update.subscribe(function(m) {
   // Update checkmarks
-  var task_name = m.previous_step;
-  var task_idx = task_list.indexOf(task_name);
+  var task_name = m.current_step;
+  var task_idx = m.current_step_id // -1 at start;
 
   task_list.forEach(function(task, index){
     var el = document.getElementById(task);
@@ -67,25 +67,8 @@ task_update.subscribe(function(m) {
     else{
       // Remove checkmarks for all tasks after the task
       el.querySelector('.checkmark').className = 'checkmark_hidden checkmark';
-    } 
+    }
   });
-
-  // Update colors in chart
-  var chart = Chart.getChart('activity-conf');
-  var colors = new Array(chart.data.labels.length).fill("rgba(0, 104, 199, 1.0)");
-  var idx = chart.data.labels.indexOf(task_name);
-
-  for(var i=0; i<=idx; i++){
-    colors[i] = "rgba(62, 174, 43, 1.0)"; // green
-  }
-  if(idx+1 < colors.length){
-    colors[idx+1] = "rgb(254, 219, 101)"; // yellow
-  }
-  colors[chart.data.labels.indexOf("Background")] = "rgba(0, 104, 199, 1.0)"; // blue
-
-  chart.data.datasets[0].backgroundColor = colors;
-
-  chart.update('none');
 });
 
 // Done button
