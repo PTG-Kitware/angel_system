@@ -27,6 +27,7 @@ from angel_msgs.msg import (
 )
 
 from angel_system.uho.aux_data import AuxData
+from angel_system.berkeley.activity_classification import predict as predict_berkeley
 from angel_system.utils.activity_classification import gt_predict
 from angel_system.uho.prediction import (
     get_uho_classifier,
@@ -532,6 +533,25 @@ class UHOActivityDetector(Node):
         activity_msg.conf_vec = pred_conf[0].squeeze().tolist()
 
         return activity_msg
+
+    def _process_window_berkeley(self, window: InputWindow) -> ActivityDetection:
+        """
+        Invoke the berkeley activity classification algorithm.
+        """
+        log = self.get_logger()
+        frames_list = [tf[1] for tf in window.frames]
+        with SimpleTimer("Activity classification prediction", log.info):
+            pred_conf, pred_labels = predict_berkeley(frames_list)
+
+        # Create output message
+        msg = ActivityDetection()
+        msg.header.frame_id = "Activity Classification"
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.source_stamp_start_frame = window.frames[0][0]
+        msg.source_stamp_end_frame = window.frames[-1][0]
+        msg.label_vec = list(pred_labels)
+        msg.conf_vec = list(pred_conf)
+        return msg
 
     def destroy_node(self):
         print("Shutting down runtime thread...")
