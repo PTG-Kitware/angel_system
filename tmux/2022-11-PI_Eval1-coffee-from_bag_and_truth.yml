@@ -47,11 +47,12 @@ on_project_start: |
 tmux_options: -f <%= ENV["ANGEL_WORKSPACE_DIR"] %>/tmux/tmux.conf
 
 windows:
-  - datahub: ros2 run ros_tcp_endpoint default_server_endpoint --ros-args
-      -r __ns:=${ROS_NAMESPACE}
-      -p ROS_IP:=0.0.0.0
-
-  # Visualize RGB Images being output from the headset
+  # DEBUG -- Play data from a recorded bag into the configured namespace
+  #          instead of from the HL2 app.
+  #          DO NOT RUN WITH HoloLens2 USE! -> There will be conflicting data
+  #          on the same topics.
+  - ros2_bag: "#ros2 bag play -l ${ANGEL_WORKSPACE_DIR}/ros_bags/all_activities_5"
+  # DEBUG -- View images as output from the HL2/Bag
   - rqt_2d_detections: rqt -s rqt_image_view/ImageView
       --args ${ROS_NAMESPACE}/PVFramesRGB
       --ros-args -p _image_transport:=raw
@@ -80,6 +81,7 @@ windows:
        --remap in:=pv_image_detections_2d
        --remap out/compressed:=pv_image_detections_2d/compressed
 
+  # TODO: Remove gt_file lower parameters to move to real activity classification
   - activity_classifier: ros2 run angel_system_nodes uho_activity_detector --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p image_topic:=PVFramesRGB
@@ -95,6 +97,7 @@ windows:
       -p labels_file:=${MODEL_DIR}/uho_epoch_090_labels.txt
       -p top_k:=5
       -p overlapping_mode:=False
+      -p gt_file:=${ANGEL_WORKSPACE_DIR}/ros_bags/sorted_all_activities_5.feather
 
   - task_monitor: ros2 run angel_system_nodes task_monitor_v2 --ros-args
       -r __ns:=${ROS_NAMESPACE}
@@ -107,10 +110,3 @@ windows:
 
   # Currently hard-coded to use the /debug ROS namespace.
   - engineering_ui: ros2 launch src/angel_utils/demo_ui/launch/websocket.launch
-
-  - feedback_generator: ros2 run angel_system_nodes feedback_generator --ros-args
-      -r __ns:=${ROS_NAMESPACE}
-      -p activity_detector_topic:=ActivityDetections
-      -p object_detection_topic:=ObjectDetections3d
-      -p task_monitor_topic:=TaskUpdates
-      -p arui_update_topic:=AruiUpdates
