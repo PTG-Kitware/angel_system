@@ -21,6 +21,10 @@ from angel_system.activity_hmm.core import ActivityHMMRos
 from angel_utils.conversion import time_to_int
 
 
+KEY_LEFT_SQBRACKET = keyboard.KeyCode.from_char("[")
+KEY_RIGHT_SQBRACKET = keyboard.KeyCode.from_char("]")
+
+
 class HMMNode(Node):
     """
     ROS node that runs the HMM and publishes TaskUpdate messages. The HMM is
@@ -48,6 +52,11 @@ class HMMNode(Node):
         )
         self._task_error_topic = (
             self.declare_parameter("task_error_topic", "TaskErrors")
+            .get_parameter_value()
+            .string_value
+        )
+        self._query_task_graph_topic = (
+            self.declare_parameter("query_task_graph_topic", "query_task_graph")
             .get_parameter_value()
             .string_value
         )
@@ -104,7 +113,7 @@ class HMMNode(Node):
         )
         self._task_graph_service = self.create_service(
             QueryTaskGraph,
-            "query_task_graph",
+            self._query_task_graph_topic,
             self.query_task_graph_callback
         )
 
@@ -288,7 +297,7 @@ class HMMNode(Node):
                         self._previous_step = self._current_step
                         self._current_step = step
 
-                    log.info(f"Current step: {self._current_step}")
+                    log.info(f"Last completed step: {self._current_step}")
                     log.info(f"Skip score: {self._skip_score}")
 
                     if self._skip_score > self._skip_score_threshold:
@@ -330,9 +339,9 @@ class HMMNode(Node):
 
     def monitor_keypress(self):
         log = self.get_logger()
-        log.info(f"Starting keyboard monitor. Press the right arrow key to"
-                 + " proceed to the next step. Press the left arrow key to"
-                 + " go back to the previous step.")
+        log.info(f"Starting keyboard monitor. Press the right-bracket key, `]`,"
+                 f"to proceed to the next step. Press the left-bracket key, `[`, "
+                 f"to go back to the previous step.")
         # Collect events until released
         with keyboard.Listener(on_press=self.on_press) as listener:
             listener.join()
@@ -344,9 +353,9 @@ class HMMNode(Node):
         pressed, the task monitor advances to the previous step.
         """
         log = self.get_logger()
-        if key == keyboard.Key.right:
+        if key == KEY_RIGHT_SQBRACKET:
             forward = True
-        elif key == keyboard.Key.left:
+        elif key == KEY_LEFT_SQBRACKET:
             forward = False
         else:
             return  # ignore
