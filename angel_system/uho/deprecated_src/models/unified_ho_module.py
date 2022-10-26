@@ -80,7 +80,7 @@ class UnifiedHOModule(torch.nn.Module):
         # Preprocess frames
         frames = [self.fcn_transform(f) for f in frame_data]
         frame_tensor = torch.stack(frames)
-        frame_tensor = frame_tensor.to(device=torch.device("cuda"))
+        frame_tensor = frame_tensor.to(device=torch.device(self.device))
 
         # Extract frame features
         frame_feats = self.fcn(frame_tensor)

@@ -100,8 +100,8 @@ windows:
       -p model_checkpoint:=${MODEL_DIR}/uho_epoch_090.ckpt
       -p labels_file:=${MODEL_DIR}/uho_epoch_090_labels.txt
       -p top_k:=5
-      -p gt_file:=${ANGEL_WORKSPACE_DIR}/ros_bags/sorted_all_activities_5.feather
       -p overlapping_mode:=False
+       #      -p gt_file:=${ANGEL_WORKSPACE_DIR}/ros_bags/sorted_all_activities_5.feather
 
   - task_monitor: ros2 run angel_system_nodes task_monitor_v2 --ros-args
       -r __ns:=${ROS_NAMESPACE}
