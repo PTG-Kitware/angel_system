@@ -6,8 +6,10 @@ const port = 5000;                  //Save the port number where your server wil
 // Add stylesheets
 app.use(express.static(path.join(__dirname, 'public')));
 
+var namespace = process.env.ROS_NAMESPACE;
+console.log('ROS Namespace: ' + namespace)
 app.get('/ns', (req, res) => {
-    res.json({ namespace: process.env.ROS_NAMESPACE });
+    res.json({ namespace: namespace });
 });
 
 //Idiomatic expression in express to route and respond to a client request

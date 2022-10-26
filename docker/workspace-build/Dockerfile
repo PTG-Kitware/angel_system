@@ -102,6 +102,11 @@ COPY ./ros "${ANGEL_WORKSPACE_DIR}/src"
 COPY docker/workspace_build.sh "${ANGEL_WORKSPACE_DIR}"/
 RUN "${ANGEL_WORKSPACE_DIR}/workspace_build.sh"
 
+# For demo ui
+RUN curl -sL https://deb.nodesource.com/setup_14.x | bash - 
+RUN apt-get install -y nodejs && node -v && npm -v
+RUN cd "${ANGEL_WORKSPACE_DIR}"/src/angel_utils/demo_ui/ && npm install
+
 # Bring in tmux run configurations
 # - add symlink to tmuxinator's expected "config home"
 # - add symlink to default the tmux config for manual use
