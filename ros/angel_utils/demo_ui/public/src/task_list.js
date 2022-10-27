@@ -39,11 +39,10 @@ $.get( "/ns")
 
       var text = document.createElement('span');
       text.className = "text body-text task";
-      text.innerHTML = task;
+      text.innerHTML = index+1 + '. ' + task;
       task_line.appendChild(text);
 
       container_block.appendChild(task_line);
-
     });
   });
 
@@ -55,10 +54,10 @@ $.get( "/ns")
   });
 
   task_update.subscribe(function(m) {
-    // Update checkmarks
     var task_name = m.current_step;
     var task_idx = m.current_step_id; // -1 at start
-
+    
+    // Update checkmarks
     task_list.forEach(function(task, index){
       var el = document.getElementById(task);
 
@@ -71,6 +70,24 @@ $.get( "/ns")
         el.querySelector('.checkmark').className = 'checkmark_hidden checkmark';
       }
     });
+
+    // Update colors in chart
+    // This assumes that the task list and activity classifier are
+    // aligned. This will not be the case in the future. 
+    var chart = Chart.getChart('activity-conf');
+    var colors = new Array(chart.data.labels.length).fill("rgba(0, 104, 199, 1.0)");
+    var idx = task_idx + 1; // This list includes background as id 0
+
+    for(var i=0; i<=idx; i++){
+      colors[i] = "rgba(62, 174, 43, 1.0)"; // green
+    }
+    if(idx+1 < colors.length){
+      colors[idx+1] = "rgb(254, 219, 101)"; // yellow
+    }
+    colors[chart.data.labels.indexOf("Background")] = "rgba(0, 104, 199, 1.0)"; // blue
+
+    chart.data.datasets[0].backgroundColor = colors;
+    chart.update('none'); // don't animate update
   });
 
 });
