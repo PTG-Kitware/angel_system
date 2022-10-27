@@ -73,12 +73,4 @@ $.get( "/ns")
     });
   });
 
-  // Done button
-  function done() {
-    // TODO: Update this
-    console.log("Done!");
-  }
-
-  var done_btn = document.getElementById("done-btn");
-  done_btn.onclick = done;
 });
