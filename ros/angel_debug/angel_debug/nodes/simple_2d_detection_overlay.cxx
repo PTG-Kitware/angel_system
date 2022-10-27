@@ -45,6 +45,9 @@ DEFINE_PARAM_NAME( PARAM_TOPIC_OUTPUT_IMAGE, "topic_output_images" );
 // we do not continue to collect the world. This is in raw frames, so adjust
 // accordingly based on frame-rate.
 DEFINE_PARAM_NAME( PARAM_MAX_IMAGE_HISTORY, "max_image_history" );
+// Filter detections to the highest <filter_top_k> values
+// Value of -1 means display all detections
+DEFINE_PARAM_NAME( PARAM_FILTER_TOP_K, "filter_top_k" );
 
 #undef DEFINE_PARAM_NAME
 
@@ -103,6 +106,8 @@ private:
   // Maximum number of images to retain as "history" for incoming detection set
   // messages to potentialy match against.
   size_t m_max_image_history;
+  // Number of detections to display
+  int filter_top_k;
 
   // Measure and report receive/publish FPS - RGB Images
   RateTracker m_img_rate_tracker;
@@ -140,6 +145,7 @@ Simple2dDetectionOverlay
   declare_parameter( PARAM_TOPIC_INPUT_DET_2D );
   declare_parameter( PARAM_TOPIC_OUTPUT_IMAGE );
   declare_parameter( PARAM_MAX_IMAGE_HISTORY, 30 );
+  declare_parameter( PARAM_FILTER_TOP_K, -1 );
 
   auto topic_input_images =
     this->get_parameter( PARAM_TOPIC_INPUT_IMAGES ).as_string();
@@ -157,6 +163,9 @@ Simple2dDetectionOverlay
         << m_max_image_history;
     throw std::invalid_argument( ss.str() );
   }
+
+  filter_top_k =
+    get_parameter( PARAM_FILTER_TOP_K ).get_value< int >();
 
   RCLCPP_INFO( log, "Creating subscribers and publishers" );
   // Alternative "best effort" QoS: rclcpp::SensorDataQoS().keep_last( 1 )
@@ -296,20 +305,55 @@ Simple2dDetectionOverlay
 
   cv::Point max_point;  // Only x will be populated due to single row scan.
   std::string max_label;
+  double maxVal;
+
+  std::vector<std::string> all_labels;
+  std::vector<double> all_dets;
   for( size_t i = 0; i < num_detections; ++i )
   {
-    // Determine the label to apply to the image based on max confidence item.
-    cv::minMaxLoc( det_label_conf_mat.row( i ), NULL, NULL, NULL, &max_point );
+    // Determine the label for each detection based on max confidence item.
+    cv::minMaxLoc( det_label_conf_mat.row( i ), NULL, &maxVal, NULL, &max_point );
     max_label = det_set->label_vec[ max_point.x ];
 
-    // Draw the stuff
+    all_labels.push_back(max_label);
+    all_dets.push_back(maxVal);
+  }
+
+  // Find top k results
+  std::vector<std::string> top_k_labels;
+  std::vector<double> top_k_dets;
+  if( filter_top_k != -1 )
+  {
+    RCLCPP_DEBUG( log, "Top k: %d", filter_top_k );
+    std::vector<size_t> indices(all_dets.size());
+    std::iota(indices.begin(), indices.end(), 0);
+    std::partial_sort(indices.begin(), indices.begin() + filter_top_k, indices.end(),
+                      [&](size_t A, size_t B) {
+                        return all_dets[A] > all_dets[B];
+                      });
+
+    for( int idx = 0; idx < filter_top_k; ++idx )
+    {
+      top_k_labels.push_back(all_labels[indices[idx]]);
+      top_k_dets.push_back(all_dets[indices[idx]]);
+    }
+  }
+  else
+  {
+    top_k_labels = all_labels;
+    top_k_dets = all_dets;
+  }
+
+  // Draw the stuff
+  for( size_t i = 0; i < top_k_dets.size(); ++i )
+  {
     cv::Point pt_ul = { (int) round( det_set->left[ i ] ),
                         (int) round( det_set->top[ i ] ) },
               pt_br = { (int) round( det_set->right[ i ] ),
                         (int) round( det_set->bottom[ i ] ) };
     cv::rectangle( img_ptr->image, pt_ul, pt_br,
                    COLOR_BOX, line_thickness, cv::LINE_8 );
-    cv::putText( img_ptr->image, max_label, pt_ul,
+    cv::putText( img_ptr->image, top_k_labels[i], pt_ul,
                  cv::FONT_HERSHEY_COMPLEX, line_thickness, COLOR_TEXT,
                  line_thickness );
   }
