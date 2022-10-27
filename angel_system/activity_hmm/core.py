@@ -75,7 +75,9 @@ class ActivityHMMRos:
         class_mean_conf = np.array(class_mean_conf)
         self.class_mean_conf = class_mean_conf
 
-        self.model = ActivityHMM(self.dt, class_str, med_class_duration,
+        # This is the model that enforces steps are done in order without
+        # skipping steps.
+        self.noskip_model = ActivityHMM(self.dt, class_str, med_class_duration,
                                  num_steps_can_jump_fwd=0,
                                  num_steps_can_jump_bck=0,
                                  class_mean_conf=class_mean_conf,
@@ -83,7 +85,7 @@ class ActivityHMMRos:
 
         num_steps_can_jump_fwd = config['hmm']['num_steps_can_jump_fwd']
         num_steps_can_jump_bck = config['hmm']['num_steps_can_jump_bck']
-        self.model_skip = ActivityHMM(self.dt, class_str,
+        self.model = ActivityHMM(self.dt, class_str,
                                       med_class_duration=med_class_duration,
                                       num_steps_can_jump_fwd=num_steps_can_jump_fwd,
                                       num_steps_can_jump_bck=num_steps_can_jump_bck,
@@ -154,8 +156,30 @@ class ActivityHMMRos:
         self.times = np.hstack([self.times, times_])
         self.X = np.vstack([self.X, X])
 
+    def revert_to_step(self, step_ind):
+        """Erase history back to when we were at the specified step.
+
+        Parameters
+        ----------
+        step_ind : int
+            Step to revert with integer index that matches with 'id' field in
+            the recipe file.
+
+        Returns
+        -------
+        None.
+
+        """
+        log_prob1, Z, X_, Z_ = self.model.decode(self.X)
+        ind = np.where(Z <= step_ind)[0]
+        if len(ind) == 0:
+            raise ValueError(f'Found no previous steps <= {step_ind}')
+
+        self.X = self.X[:ind[-1] + 1]
+        self.times = self.times[:ind[-1] + 1]
+
     def get_skip_score(self):
-        s = get_skip_score(self.model, self.model_skip, self.X)
+        s = get_skip_score(self.noskip_model, self.model, self.X)
         return s[0] - s[1]
 
     def get_current_state(self):
@@ -178,23 +202,23 @@ class ActivityHMMRos:
             Score indicating how much more likely it is that a step was skipped
             than no steps being skipped.
         """
-        log_prob1, Z_no_skip, X_, Z_no_skip_ = model.decode(X)
-        log_prob1 = model_skip.calc_log_prob_(X_, Z_no_skip_)
+        log_prob1, Z_no_skip, X_, Z_no_skip_ = self.noskip_model.decode(self.X)
+        log_prob1 = self.model.calc_log_prob_(X_, Z_no_skip_)
 
-        log_prob2, Z_can_skip, _, Z_can_skip_ = model_skip.decode(X)
+        log_prob2, Z_can_skip, _, Z_can_skip_ = self.model.decode(self.X)
 
         #log_prob2 = model_skip.calc_log_prob_(X_, Z_can_skip_)
 
-        if len(model_skip.did_skip_step(Z_can_skip)[0]) == 0:
+        if len(self.model.did_skip_step(Z_can_skip)[0]) == 0:
             # The maximum likelihood solution doesn't skip a step, so we need to
             # explicitly check various assumptions of forced skipped steps.
 
-            skipped_step_check = range(1, len(model.class_str))
+            skipped_step_check = range(1, len(self.noskip_model.class_str))
             log_prob2 = []
             #skipped = []
             Z2s_ = []
             for j in skipped_step_check:
-                log_prob2_, Z2_ = model.decode(X, force_skip_step=j)[:2]
+                log_prob2_, Z2_ = self.noskip_model.decode(X, force_skip_step=j)[:2]
                 Z2s_.append(Z2_)
                 log_prob2.append(log_prob2_)
                 #skipped.append(model.did_skip_step(Z2_)[0])
@@ -207,7 +231,7 @@ class ActivityHMMRos:
 
         skip_score = log_prob2 - log_prob1
 
-        return Z_can_skip_, Z_no_skip, skip_score
+        return Z_can_skip, Z_no_skip, skip_score
 
 
 class ActivityHMM(object):
@@ -285,6 +309,7 @@ class ActivityHMM(object):
         class_str_map = []
 
         inv_map = []
+        fwd_map = []
 
         k = 0
         # Assuming class_str[0] is always 'background'
@@ -292,11 +317,13 @@ class ActivityHMM(object):
         class_str_map.append(len(class_str_) - 1)
         bckg_mask.append(True)
         inv_map.append(0)
+        fwd_map.append(0)
 
         # Initialize the remainder of the classes
         for i, clss in enumerate(class_str[1:], start=1):
             class_str_.append(clss)
             class_str_map.append(len(class_str_) - 1)
+            fwd_map.append(len(inv_map))
             inv_map.append(i)
             bckg_mask.append(False)
             bckg_mask.append(True)
@@ -310,6 +337,7 @@ class ActivityHMM(object):
         self.bckg_mask = bckg_mask
         self.class_str_ = class_str_
         self.inv_map = inv_map
+        self.fwd_map = fwd_map
 
         N = len(class_str)
         N_ = len(class_str_)
@@ -418,14 +446,13 @@ class ActivityHMM(object):
                     i0 -= 2*num_steps_can_jump_bck
             else:
                 i0 += 0
-                i1 += 0
+                i1 += 1
 
                 if num_steps_can_jump_fwd > 0:
                     i1 += num_steps_can_jump_fwd*2 + 1
 
                 if num_steps_can_jump_bck > 0:
                     i0 -= 2*num_steps_can_jump_bck
-
 
             for ii in range(i0, i1):
                 if ii < 0 or ii >= N_:
