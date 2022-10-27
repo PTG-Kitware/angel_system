@@ -6,6 +6,7 @@ import torch
 from torch import nn
 from torchvision.models import resnext50_32x4d
 
+
 class UnifiedFCNModule(nn.Module):
     """Class implements fully convolutional network for extracting spatial
     features from the video frames."""

@@ -98,9 +98,11 @@ class UnifiedHOModule(torch.nn.Module):
 
         labels = {"l_hand": [], "r_hand": []}
 
-        labels["l_hand"] = torch.stack([torch.from_numpy(k) for k in aux_data["lhand"]]).to(self.device)
+        # relies on aux_data field being formatted into a Sequence[array] with
+        # combined shape of [nImages x 63].
+        labels["l_hand"] = torch.stack([torch.as_tensor(k) for k in aux_data["lhand"]]).to(self.device)
         labels["l_hand"] = labels["l_hand"].unsqueeze(0)
-        labels["r_hand"] = torch.stack([torch.from_numpy(k) for k in aux_data["rhand"]]).to(self.device)
+        labels["r_hand"] = torch.stack([torch.as_tensor(k) for k in aux_data["rhand"]]).to(self.device)
         labels["r_hand"] = labels["r_hand"].unsqueeze(0)
 
         data_dict["labels"] = labels

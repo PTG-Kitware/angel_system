@@ -5,6 +5,7 @@ import random
 import torch
 import numpy as np
 from typing import List
+from typing import Tuple
 import numpy.typing as npt
 from torch.utils.data import DataLoader
 from src.datamodules.ros_datamodule import AngelDataset
@@ -12,6 +13,7 @@ from src.models.components.fcn import UnifiedFCNModule
 from src.models.components.transformer import TemTRANSModule
 from aux_data import AuxData
 import pdb
+
 
 # prepare input data
 def collate_fn_pad(batch):
@@ -56,6 +58,7 @@ def collate_fn_pad(batch):
 
     return frames, aux_data
 
+
 def load_model(model: TemTRANSModule, checkpoint_path: str) -> TemTRANSModule:
     """
     Load a checkpoint file's state into the given TemTRANSModule instance.
@@ -75,8 +78,9 @@ def load_model(model: TemTRANSModule, checkpoint_path: str) -> TemTRANSModule:
     
     return model
 
+
 def get_uho_classifier(checkpoint_path: str,
-                       device: str) -> ...:
+                       device: str) -> Tuple[UnifiedFCNModule, TemTRANSModule]:
     """
     Instantiate and return the UHO activity classification model to be given to
     the prediction function.
@@ -86,27 +90,24 @@ def get_uho_classifier(checkpoint_path: str,
 
     :return: New UHO classifier model instance.
     """
-    # TODO: Implement such that we return the instantiated ALL models
-    #       required to perform activity classification, and any tightly
-    #       associated structures/metadata (e.g. image normalization
-    #       transform).
-    UHO_classifier = TemTRANSModule(27, 256, dropout=0.1, depth=6).to(device) # transformer for temporal modeling
-    UHO_classifier = load_model(UHO_classifier, model_path) # loading checkpoint
+    # transformer for temporal modeling
+    UHO_classifier = TemTRANSModule(27, 256, dropout=0.1, depth=6).to(device)
+    # loading checkpoint
+    UHO_classifier = load_model(UHO_classifier, model_path)
 
-    fcn = UnifiedFCNModule("resnext").cuda() # feature extractor
+    # feature extractor
+    fcn = UnifiedFCNModule("resnext").to(device)
     fcn.eval()
     UHO_classifier.eval()
 
     return fcn, UHO_classifier
+
 
 def get_uho_classifier_labels(index: int) -> List[str]:
     """
     Get the ordered sequence of labels that are index-associative to the class
     indices that are returned from the UHO classifier.
     """
-    # TODO: Return the semantic labels that the classifier model was trained
-    #       on.
-
     uho_labels = ["Background",
                    "Measure 12 ounces of water in the liquid measuring cup",
                    "Pour the water from the liquid measuring cup into the electric kettle",
@@ -138,8 +139,8 @@ def get_uho_classifier_labels(index: int) -> List[str]:
     return uho_labels[index]
 
 
-def predict(fcn: ...,
-            temporal: ...,
+def predict(fcn: UnifiedFCNModule,
+            temporal: TemTRANSModule,
             frames: List[npt.NDArray],
             aux_data: AuxData):
     """
@@ -155,20 +156,16 @@ def predict(fcn: ...,
     :return: Two tensors, the first of which is the vector of class
         confidences, and the second of which is the index of predicted class
     """
-    # TODO: Implement everything required to transform images and aux-data into
-    #       activity classification confidences, including use of the fcn,
-    #       image normalization, etc.
-
     # calculate resnet features
     feats = fcn(frames)
- 
+
     # simulation: select detections at arbitrary 4~8 frames
     max_sample_fr = 8
     min_sample_fr = 4
     num_det_fr = np.random.randint(max_sample_fr-min_sample_fr+1)+min_sample_fr
     all_fr = np.random.permutation(feats.shape[0])
     valid_fr = np.sort(all_fr[:num_det_fr])
-    bbox = aux_data["bbox"]
+    bbox = torch.as_tensor(aux_data.bbox)
     # zero out bbox at invalid frames
     for k in all_fr[num_det_fr:]:
         bbox[k*topK:(k+1)*topK,:] = 0
@@ -176,12 +173,16 @@ def predict(fcn: ...,
     # predict actions
     data = {}
     data["feats"] = feats.unsqueeze(0)
-    data["lhand"], data["rhand"] = aux_data["lhand"].unsqueeze(0), aux_data["rhand"].unsqueeze(0)
-    data["dets"] = aux_data["dets"].unsqueeze(0)
+    # Relies on hand fields to be tensor of shape [nImages x 63], unsqueezing
+    # into shape [1 x nImages x 63]
+    data["lhand"] = torch.as_tensor(aux_data.lhand).unsqueeze(0)
+    data["rhand"] = torch.as_tensor(aux_data.rhand).unsqueeze(0)
+    data["dets"] = torch.as_tensor(aux_data.dets).unsqueeze(0)
     data["bbox"] = bbox.unsqueeze(0)
     action_prob, action_index = temporal.predict(data)
 
     return action_prob, action_index
+
 
 if __name__ == "__main__":
     # paths and hyper-parameters
@@ -206,7 +207,13 @@ if __name__ == "__main__":
 
     # inference
     for frames, aux_data in tqdm.tqdm(dataloader):
-        action_prob, action_index = predict(fcn, uho_classifier, frames, aux_data)
+        aux_data_struct = AuxData(
+            lhand=aux_data["lhand"],
+            rhand=aux_data["rhand"],
+            dets=aux_data["dets"],
+            bbox=aux_data["bbox"],
+        )
+        action_prob, action_index = predict(fcn, uho_classifier, frames, aux_data_struct)
         action_step = get_uho_classifier_labels(action_index)
         print(action_step)
         pdb.set_trace()
