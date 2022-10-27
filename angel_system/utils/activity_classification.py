@@ -7,7 +7,7 @@ from typing import (
 import pandas
 import torch
 
-from angel_system.eval.support_functions import time_from_name
+from angel_system.ptg_eval.common.load_data import time_from_name
 
 
 def gt_predict(

@@ -8,6 +8,8 @@ logging.basicConfig(level = logging.INFO)
 log = logging.getLogger("ptg_eval_common")
 
 RE_FILENAME_TIME = re.compile(r"frame_\d+_(\d+_\d+).\w+")
+
+
 def time_from_name(fname):
     """
     Extract the float timestamp from the filename.
@@ -19,6 +21,7 @@ def time_from_name(fname):
     """
     time = RE_FILENAME_TIME.match(fname).groups()[0].split('_')
     return float(time[0]) + (float(time[1]) * 1e-9)
+
 
 def load_from_file(gt_fn, detections_fn):
     """
