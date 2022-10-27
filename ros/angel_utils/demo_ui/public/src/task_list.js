@@ -1,3 +1,32 @@
+var task_ctx = document.getElementById("task-complete-chart").getContext('2d');
+
+var task_complete_chart = new Chart(task_ctx, {
+  type: "bar",
+  data: {
+    labels: ["task completion"],
+    datasets: [{
+      backgroundColor: "rgba(0, 104, 199, 1.0)",
+      data: [0]
+    }]
+  },
+  options: {
+    scales: {
+        x: { display: false },
+        y: {
+          min: 0,
+          max: 1,
+          ticks: {
+            stepSize: 0.1
+          }
+        }
+    },
+    title: {
+      display: false,
+    },
+    maintainAspectRatio: false
+  }
+});
+
 $.get( "/ns")
 .done(function( data ){
   // subscribe to QueryTaskGraph
@@ -71,10 +100,14 @@ $.get( "/ns")
       }
     });
 
-    // Update colors in chart
+    // Update task completion chart
+    task_complete_chart.data.datasets[0].data = [m.task_complete_confidence];
+    task_complete_chart.update('none'); // don't animate
+
+    // Update colors in activity confidence chart
     // This assumes that the task list and activity classifier are
     // aligned. This will not be the case in the future. 
-    var chart = Chart.getChart('activity-conf');
+    var chart = Chart.getChart('activity-conf-chart');
     var colors = new Array(chart.data.labels.length).fill("rgba(0, 104, 199, 1.0)");
     var idx = task_idx + 1; // This list includes background as id 0
 
