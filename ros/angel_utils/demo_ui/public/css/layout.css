@@ -85,7 +85,7 @@ body {
 
   clip-path: polygon(0 0, calc(100% - 15px /*right top*/) 0, 100% 50%, calc(100% - 15px /*right bottom*/) 100%, 0 100%, 15px /* left*/ 50%);
   padding: 0 7rem 0 3rem;
-  width: 450px;
+  width: 440px;
   max-width: 75%;
   
   font-size: clamp(1.75rem,3vw,2.25rem);
@@ -211,7 +211,7 @@ body {
   float: left;
   padding: 10px;
   margin-left: 10px;
-  width: 41%
+  width: 41%;
   max-width: 45vw;
 }
 
@@ -231,28 +231,47 @@ body {
   display: flex;
   margin-top: 10px;
   width: 99%;
+  height: 43%;
   max-height: 45vw;
 
   content: "";
 
   clear: both;
+
+  text-align: center;
+}
+
+#charts {
+  position: relative;
+  display: flex;
+  
+  width: 66%;
+  max-width: 70vw;
 }
 
 #activity {
-  width: 43%;
-  max-width: 45vw;
-  max-height: 43%;
-
   text-align: center;
 
-  margin-left: 60px
+  margin-left: 60px;
+
+  width: 65%;
 }
-#activity-conf { /* plot */
-  margin-left: -30px;
+#activity-conf-chart { /* chart */
+  
+}
+
+#task-complete {
+  margin-left: 70px;
+  text-align: center;
+}
+#task-complete-chart { /* chart */
+  margin-bottom: 25px; /* matches font size of x axis */
 }
 
 #bottom-right {
   display: inline-block;
 
   margin-left: 70px;
+
+  text-align: left;
 }

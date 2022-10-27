@@ -1,15 +1,11 @@
 var request = {};
-var chart;
 var xValues = [0];
 var yValues = [0];
 var barColors = "rgba(0, 104, 199, 1.0)";
 
-Chart.defaults.font.size = 25;
-Chart.defaults.font.family = "Roboto","sans-serif";
+var ctx = document.getElementById("activity-conf-chart").getContext('2d');
 
-var ctx = document.getElementById("activity-conf").getContext('2d');
-
-chart = new Chart(ctx, {
+var chart = new Chart(ctx, {
   type: "bar",
   data: {
     labels: xValues,
@@ -23,7 +19,7 @@ chart = new Chart(ctx, {
         x: {
           ticks: {
               callback: function(val, index) {
-                return val;//return xValues.indexOf(t)
+                return val;
               }
           }
         },
@@ -35,12 +31,10 @@ chart = new Chart(ctx, {
           }
         }
     },
-    plugins:{
-      legend: {display: false}
-    },
     title: {
       display: false,
-    }
+    },
+    maintainAspectRatio: false
   }
 });
 
