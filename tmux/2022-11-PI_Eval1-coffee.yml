@@ -106,7 +106,8 @@ windows:
       -p skip_score_threshold:=300.0
 
   # Currently hard-coded to use the /debug ROS namespace.
-  - engineering_ui: ros2 launch src/angel_utils/demo_ui/launch/websocket.launch
+  - engineering_ui_websocket: ros2 launch rosbridge_server rosbridge_websocket_launch.xml port:=9090
+  - engineering_ui_server: node src/angel_utils/demo_ui/index.js
 
   - feedback_generator: ros2 run angel_system_nodes feedback_generator --ros-args
       -r __ns:=${ROS_NAMESPACE}
