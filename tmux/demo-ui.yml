@@ -97,6 +97,6 @@ windows:
        --remap in:=pv_image_detections_2d 
        --remap out/compressed:=pv_image_detections_2d/compressed
   # Demo UI
-  - rosbridge_websocket: ros2 launch src/angel_utils/demo_ui/launch/demo_ui_launch.xml
+  - rosbridge_websocket: ros2 launch rosbridge_server rosbridge_websocket_launch.xml port:=9090
   - demo_ui: node src/angel_utils/demo_ui/index.js
   - debug: 

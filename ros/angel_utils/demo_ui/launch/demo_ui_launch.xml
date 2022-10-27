@@ -1,6 +1,0 @@
-<launch>
-  <include file="src/angel_utils/demo_ui/launch/websocket.launch">
-    <arg name="port" value="9090"></arg>
-  </include>
-</launch>
-
