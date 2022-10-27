@@ -40,6 +40,10 @@ RUN apt-get -y update \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
+# For the demo-ui
+RUN curl -sL https://deb.nodesource.com/setup_14.x | bash - 
+RUN apt-get install -y nodejs && node -v && npm -v
+
 # Env vars for the nvidia-container-runtime.
 ENV NVIDIA_VISIBLE_DEVICES all
 ENV NVIDIA_DRIVER_CAPABILITIES graphics,utility,compute
@@ -101,6 +105,9 @@ RUN cd "${ANGEL_WORKSPACE_DIR}" \
 COPY ./ros "${ANGEL_WORKSPACE_DIR}/src"
 COPY docker/workspace_build.sh "${ANGEL_WORKSPACE_DIR}"/
 RUN "${ANGEL_WORKSPACE_DIR}/workspace_build.sh"
+
+RUN cd "${ANGEL_WORKSPACE_DIR}"/src/angel_utils/demo_ui/ \
+    && npm install
 
 # Bring in tmux run configurations
 # - add symlink to tmuxinator's expected "config home"
