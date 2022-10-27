@@ -7,7 +7,7 @@ import yaml
 import re
 from ast import literal_eval
 
-from angel_system.eval.support_functions import time_from_name
+from angel_system.ptg_eval.common.load_data import time_from_name
 
 try:
     import matplotlib.pyplot as plt

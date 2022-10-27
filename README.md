@@ -232,7 +232,7 @@ In the .hwdb file, make sure to map the keyboard presses to the up and down arro
 various components in the ANGEL system python package.
 
 ### Running PTG evaluation
-See `angel_system/eval/README.md` for details.
+See `docs/evaluation.rst` for details.
 
 ## Lessons Learned
 ### `rosdep`
