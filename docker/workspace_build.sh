@@ -33,3 +33,8 @@ fi
 # shellcheck disable=SC1090
 source "/opt/ros/${ROS_DISTRO}/setup.bash"
 colcon build --continue-on-error --merge-install "$@"
+
+# Build web resources for Demo/Engineering UI
+pushd "${ANGEL_WORKSPACE_DIR}"/src/angel_utils/demo_ui
+npm install
+popd
