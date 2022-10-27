@@ -49,7 +49,9 @@ sphinx-prompt = "*"
 livereload = "*"
 
 [tool.poetry.scripts]
-ptg_eval = "angel_system.eval.ptg_evaluate:main"
+# Evaluation
+ptg_eval_activity = "angel_system.ptg_eval.activity_classification.evaluate_activity:main"
+ptg_eval_step = "angel_system.ptg_eval.step_completion.evaluate_step:main"
 
 [tool.poetry.plugins."smqtk_plugins"]
 # Activity detector

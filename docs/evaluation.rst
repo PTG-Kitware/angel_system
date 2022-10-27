@@ -31,7 +31,7 @@ Extract activity detections from the new ros bag
 
 Run eval
 ########
-`$ poetry run ptg_eval <optional flags>`
+`$ ptg_eval_activity <optional flags>`
 
 E.g.:
 ```bash
