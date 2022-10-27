@@ -491,9 +491,9 @@ for snr in [8]:
                              class_std_conf=class_std_conf)
 
 
-    num_trials = 50
-    #tp_hmm = []
-    #fp_hmm = []
+    num_trials = 500
+    tp_hmm = []
+    fp_hmm = []
     for i in range(num_trials):
         print('%i/%i' % (i + 1, num_trials))
 

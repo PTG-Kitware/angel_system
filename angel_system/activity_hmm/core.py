@@ -162,7 +162,8 @@ class ActivityHMMRos:
         Parameters
         ----------
         step_ind : int
-            Step to revert to.
+            Step to revert with integer index that matches with 'id' field in
+            the recipe file.
 
         Returns
         -------
@@ -201,10 +202,10 @@ class ActivityHMMRos:
             Score indicating how much more likely it is that a step was skipped
             than no steps being skipped.
         """
-        log_prob1, Z_no_skip, X_, Z_no_skip_ = self.noskip_model.decode(X)
+        log_prob1, Z_no_skip, X_, Z_no_skip_ = self.noskip_model.decode(self.X)
         log_prob1 = self.model.calc_log_prob_(X_, Z_no_skip_)
 
-        log_prob2, Z_can_skip, _, Z_can_skip_ = self.model.decode(X)
+        log_prob2, Z_can_skip, _, Z_can_skip_ = self.model.decode(self.X)
 
         #log_prob2 = model_skip.calc_log_prob_(X_, Z_can_skip_)
 
