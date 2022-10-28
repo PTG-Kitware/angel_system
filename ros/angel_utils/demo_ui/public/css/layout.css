@@ -294,7 +294,7 @@ body {
 #error-msgs {
   max-height:100%;
   height: 70%;
-  
+
   overflow: scroll;
   scrollbar-color: var(--dark-gray-30) white;
 }
@@ -303,6 +303,7 @@ body {
   margin-bottom: 10px;
 }
 
+/* https://www.w3schools.com/howto/howto_js_collapsible.asp */
 .collapsible {
   background-color: #eee;
   cursor: pointer;

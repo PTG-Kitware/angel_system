@@ -99,10 +99,8 @@ $.get( "/ns")
         el.querySelector('.checkmark').className = 'checkmark_hidden checkmark';
       }
     }
-    else {
-      var el = document.getElementById(task_name);
-      el.querySelector('.checkmark').className = 'checkmark_visible checkmark';
-    }
+    var el = document.getElementById(task_name);
+    el.querySelector('.checkmark').className = 'checkmark_visible checkmark';
 
     // Update task completion chart
     task_complete_chart.data.datasets[0].data = [m.task_complete_confidence];
@@ -115,16 +113,12 @@ $.get( "/ns")
     var idx = task_idx + 1; // This list includes background as id 0
 
     if( previous_idx > task_idx ) {
-      // We are going backwards, remove coolors after current_step
+      // We are going backwards, remove colors after current_step
       for(var i=idx+1; i<=previous_idx+1; i++) {
-        colors[i] = "rgb(254, 219, 101)"; // yellow
-        colors[i+1] = "rgba(0, 104, 199, 1.0)" // blue
+        colors[i] = "rgba(0, 104, 199, 1.0)" // blue
       }
     }
-    else {
-      colors[idx] = "rgba(62, 174, 43, 1.0)"; // green
-      colors[idx+1] = "rgb(254, 219, 101)"; // yellow
-    }
+    colors[idx] = "rgba(62, 174, 43, 1.0)"; // green
     colors[chart.data.labels.indexOf("Background")] = "rgba(0, 104, 199, 1.0)"; // blue
 
     chart.data.datasets[0].backgroundColor = colors;
