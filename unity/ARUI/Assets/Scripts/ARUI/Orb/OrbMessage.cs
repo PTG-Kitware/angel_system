@@ -114,7 +114,6 @@ public class OrbMessage : MonoBehaviour
 
     }
 
-
     #region Message and Notification Updates
     /// <summary>
     /// Turn on or off message fading

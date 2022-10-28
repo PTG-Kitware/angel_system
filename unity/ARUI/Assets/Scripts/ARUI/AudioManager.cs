@@ -1,4 +1,5 @@
 using DilmerGames.Core.Singletons;
+using Microsoft.MixedReality.Toolkit.Audio;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -17,6 +18,7 @@ public enum SoundType
 
 public class AudioManager : Singleton<AudioManager>
 {
+    private TextToSpeech tTos;
     private Dictionary<SoundType, AudioSource> typeToSound;
 
     private List<string> soundTypeToPathMapping = new List<string>()
@@ -29,7 +31,15 @@ public class AudioManager : Singleton<AudioManager>
         StringResources.moveEnd_path,
         StringResources.selectSound_path,
     };
-    
+
+    private void Start()
+    {
+        GameObject tmp = new GameObject("TextToSpeechSource");
+        tmp.transform.parent = transform;
+        tmp.transform.position = transform.position;
+        tTos = tmp.gameObject.AddComponent<TextToSpeech>();
+    }
+
     private void InitIfNeeded()
     {
         typeToSound = new Dictionary<SoundType, AudioSource>();
@@ -43,6 +53,20 @@ public class AudioManager : Singleton<AudioManager>
             typeToSound.Add((SoundType)i, sound);
         }
     }
+
+    public void PlayText(string text) => StartCoroutine(Play(Orb.Instance.transform.position, text));
+    private IEnumerator Play(Vector3 pos, String text)
+    {
+        tTos.StopSpeaking();
+        tTos.gameObject.transform.position = pos;
+
+        yield return new WaitForEndOfFrame();
+
+        var msg = string.Format(text, tTos.Voice.ToString());
+        tTos.StartSpeaking(text);
+    }
+
+    public void StopPlayText() => tTos.StopSpeaking();
 
     public void PlaySound(Vector3 pos, SoundType type) => StartCoroutine(Play(pos, type));
 

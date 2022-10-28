@@ -165,6 +165,7 @@ public class Orb : Singleton<Orb>
             messageContainer.HandleNewTask();
             //followSolver.MoveToEyeTarget(true);
             face.SetNotificationIconActive(true);
+            AudioManager.Instance.PlayText(message);
         }
 
         messageContainer.SetTaskMessage(message);

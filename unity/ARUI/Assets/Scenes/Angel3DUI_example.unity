@@ -346,8 +346,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   mainCamera: {fileID: 0}
-  showARUIDebugMessages: 0
-  showEyeGazeTarget: 0
+  showARUIDebugMessages: 1
+  showEyeGazeTarget: 1
 --- !u!1001 &1200407600
 PrefabInstance:
   m_ObjectHideFlags: 0

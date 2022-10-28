@@ -22,12 +22,21 @@ public class OrbFollowerSolver : Solver
     private float minViewDegrees = 0f;
 
     [Tooltip("The element will stay at least this close to the center of view")]
-    private float maxViewDegrees = 10f;
+    private float currentMaxViewDegrees = 10f;
+    private float maxViewDegreesRegular = 10f;
+    private float maxViewDegreesSticky = 23f;
 
+    [HideInInspector]
     public bool useEyeTarget = false;
 
+    private bool lazyEyeDisableProcessing = false;
+
+    [HideInInspector]
     public bool paused = false;
+    [HideInInspector]
     public bool isSticky;
+
+    private bool isLookingAtOrbFlag = false;
 
     /// <summary>
     /// Position to the view direction, or the movement direction, or the direction of the view cone.
@@ -36,17 +45,29 @@ public class OrbFollowerSolver : Solver
 
     private Vector3 ReferencePoint => SolverHandler.TransformTarget != null ? SolverHandler.TransformTarget.position : Vector3.zero;
 
-    private void Start()
+    private new void Start()
     {
         base.Start();
 
         StartCoroutine(RunDistanceUpdate());
+
+        MoveLerpTime = 0.3f;
+        RotateLerpTime = 0.1f;
+        Smoothing = true;
+    }
+
+    public new void Update()
+    {
+        if (isLookingAtOrbFlag && !Orb.Instance.GetIsUserLookingAtOrb() && !lazyEyeDisableProcessing)
+            StartCoroutine(LazyDisableIsLooking());
+        else if (!isLookingAtOrbFlag && Orb.Instance.GetIsUserLookingAtOrb())
+            isLookingAtOrbFlag = true;
     }
 
     /// <inheritdoc />
     public override void SolverUpdate()
     {
-        if (!(paused || Orb.Instance.GetIsUserLookingAtOrb()))
+        if (!(paused || isLookingAtOrbFlag))
         {
             Vector3 goalPosition = WorkingPosition;
             GetDesiredPos(ref goalPosition);
@@ -82,9 +103,9 @@ public class OrbFollowerSolver : Solver
 
         // Calculate the current angle
         float currentAngle = Vector3.Angle(elementDir, direction);
-        float currentAngleClamped = Mathf.Clamp(currentAngle, minViewDegrees * verticalAspectScale, maxViewDegrees * verticalAspectScale);
+        float currentAngleClamped = Mathf.Clamp(currentAngle, minViewDegrees * verticalAspectScale, currentMaxViewDegrees * verticalAspectScale);
         if (isSticky)
-            currentAngleClamped = maxViewDegrees * verticalAspectScale;
+            currentAngleClamped = currentMaxViewDegrees * verticalAspectScale;
 
         // Clamp distance too, if desired
         float clampedDistance = Mathf.Clamp(elementDist, minDistance, maxDistance);
@@ -136,17 +157,30 @@ public class OrbFollowerSolver : Solver
         {
             if (!paused)
             {
-                float dist = Utils.GetCameraToEnvironmentDist();
+                float dist = Utils.GetCameraToPosDist(transform.position);
 
                 if (dist != -1)
-                    maxDistance = Mathf.Max(minDistance, Mathf.Min(dist, 1.0f));
+                    maxDistance = Mathf.Max(minDistance, Mathf.Min(dist-0.05f, 1.0f));
             }
 
             yield return new WaitForSeconds(1f);
         }
     }
 
-    public void MoveToEyeTarget(bool move) => useEyeTarget = move;
+    public void MoveToEyeTarget(bool move) {
+        useEyeTarget = move;
+    }
+
+    private IEnumerator LazyDisableIsLooking()
+    {
+        lazyEyeDisableProcessing = true;
+        yield return new WaitForSeconds(0.5f);
+
+        if (!Orb.Instance.GetIsUserLookingAtOrb())
+            isLookingAtOrbFlag = false;
+
+        lazyEyeDisableProcessing = false;
+    }
 
 
     #region Getter and Setter
@@ -157,18 +191,40 @@ public class OrbFollowerSolver : Solver
     public void SetSticky(bool isSticky)
     {
         this.isSticky = isSticky;
-
+        
         if (isSticky)
         {
-            maxViewDegrees = 20;
+            currentMaxViewDegrees = maxViewDegreesSticky;
             MoveLerpTime = 0.5f;
+
+            StopCoroutine("LazyDisableStickyMode()");
         }
         else
         {
-            maxViewDegrees = 10;
-            MoveLerpTime = 0.3f;
+            StartCoroutine(LazyDisableStickyMode(0.5f, (maxViewDegreesSticky-maxViewDegreesRegular)/5, 5,false));
         }
             
+    }
+
+    private IEnumerator LazyDisableStickyMode(float start, float stepSize, int stepNum, bool status)
+    {
+        yield return new WaitForSeconds(0.5f);
+        int counter = 0;
+        while (this.isSticky == false && counter < stepNum)
+        {
+            currentMaxViewDegrees = start+ (stepSize*stepNum);
+            counter++;
+            yield return new WaitForSeconds(0.1f);
+        }
+
+        if (this.isSticky == false)
+        {
+            MoveLerpTime = 0.3f;
+        } else
+        {
+            currentMaxViewDegrees = maxViewDegreesSticky;
+            MoveLerpTime = 0.5f;
+        }
     }
 
     #endregion
