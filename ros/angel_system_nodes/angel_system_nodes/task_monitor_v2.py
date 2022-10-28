@@ -286,11 +286,13 @@ class HMMNode(Node):
                 # Get the HMM prediction
                 start_time = time.time()
                 with self._hmm_lock:
-                    step = self._hmm.get_current_state()
-                    self._skip_score = self._hmm.get_skip_score()
+                    skip_idx, no_skip_idx, self._skip_score = (
+                        self._hmm.analyze_current_state()
+                    )
                     log.info(f"HMM computation time: {time.time() - start_time}")
 
-                    step_id = self._hmm.model.class_str.index(step)
+                    step_id = skip_idx[-1]
+                    step = self._hmm.model.class_str[step_id]
 
                     # Only change steps if we have a new step, and it is not background
                     if self._current_step != step and step_id != 0:
@@ -377,11 +379,11 @@ class HMMNode(Node):
 
             self._latest_act_classification_end_time = end_time
 
+
             # Get the current HMM state
             steps = self._hmm.model.class_str
             if self._current_step is None:
-                # Nothing set yet, so assume we start at step 1
-                curr_step_id = 1  # Exclude background class
+                curr_step_id = 0
             else:
                 curr_step_id = steps.index(self._current_step)
 
@@ -394,23 +396,39 @@ class HMMNode(Node):
                     log.info("Attempting to advance past end of list... ignoring")
                     return
                 conf_vec[curr_step_id + 1] = 1.0
+
+                # Add activity classification to the HMM
+                self._hmm.add_activity_classification(
+                    steps,
+                    conf_vec,
+                    start_time,
+                    end_time
+                )
+
+                # Tell the HMM thread to wake up
+                self._hmm_awake_evt.set()
             else:
                 # Check if we are at the start of the list
-                if curr_step_id == 1:
+                if self._current_step is None:
                     log.info("Attempting to advance before start of list... ignoring")
                     return
-                conf_vec[curr_step_id - 1] = 1.0
 
-            # Add activity classification to the HMM
-            self._hmm.add_activity_classification(
-                steps,
-                conf_vec,
-                start_time,
-                end_time
-            )
+                new_step_id = curr_step_id - 1
+                if new_step_id == 0:
+                    # Attempting to go back to before the first step, so just
+                    # clear out the stored HMM models steps and times
+                    self._hmm.X = None
+                    self._hmm.times = None
+                    self._current_step = None
+                    self._previous_step = None
 
-            # Tell the HMM thread to wake up
-            self._hmm_awake_evt.set()
+                    self.publish_task_state_message()
+                    log.info("HMM reset to beginning")
+                else:
+                    self._hmm.revert_to_step(new_step_id)
+
+                    # Tell the HMM thread to wake up
+                    self._hmm_awake_evt.set()
 
 
 def main():
