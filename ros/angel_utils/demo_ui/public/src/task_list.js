@@ -29,6 +29,8 @@ var task_complete_chart = new Chart(task_ctx, {
 
 $.get( "/ns")
 .done(function( data ){
+  var colors;
+
   // subscribe to QueryTaskGraph
   var query_task_graph = new ROSLIB.Service({
     ros: ros,
@@ -73,6 +75,8 @@ $.get( "/ns")
 
       container_block.appendChild(task_line);
     });
+
+    colors = new Array(task_list.length+1).fill("rgba(0, 104, 199, 1.0)");
   });
 
   // Create a listener for task completion updates
@@ -85,12 +89,15 @@ $.get( "/ns")
   task_update.subscribe(function(m) {
     var task_name = m.current_step;
     var task_idx = m.current_step_id; // -1 at start
+    var previous_name = m.previous_step;
+    var previous_idx = task_list.indexOf(previous_name);
 
-   
-    if( m.previous_step_id > task_idx ) {
-      // We are going backwards, remove checks
-      var el = document.getElementById(m.previous_step);
-      el.querySelector('.checkmark').className = 'checkmark_hidden checkmark';
+    if( previous_idx > task_idx ) {
+      // We are going backwards, remove checks after current_step
+      for(var i=task_idx+1; i<=previous_idx; i++) {
+        var el = document.getElementById(task_list[i]);
+        el.querySelector('.checkmark').className = 'checkmark_hidden checkmark';
+      }
     }
     else {
       var el = document.getElementById(task_name);
@@ -105,13 +112,17 @@ $.get( "/ns")
     // This assumes that the task list and activity classifier are
     // aligned. This will not be the case in the future. 
     var chart = Chart.getChart('activity-conf-chart');
-    var colors = new Array(chart.data.labels.length).fill("rgba(0, 104, 199, 1.0)");
     var idx = task_idx + 1; // This list includes background as id 0
 
-    for(var i=0; i<=idx; i++){
-      colors[i] = "rgba(62, 174, 43, 1.0)"; // green
+    if( previous_idx > task_idx ) {
+      // We are going backwards, remove coolors after current_step
+      for(var i=idx+1; i<=previous_idx+1; i++) {
+        colors[i] = "rgb(254, 219, 101)"; // yellow
+        colors[i+1] = "rgba(0, 104, 199, 1.0)" // blue
+      }
     }
-    if(idx+1 < colors.length){
+    else {
+      colors[idx] = "rgba(62, 174, 43, 1.0)"; // green
       colors[idx+1] = "rgb(254, 219, 101)"; // yellow
     }
     colors[chart.data.labels.indexOf("Background")] = "rgba(0, 104, 199, 1.0)"; // blue
