@@ -85,20 +85,17 @@ $.get( "/ns")
   task_update.subscribe(function(m) {
     var task_name = m.current_step;
     var task_idx = m.current_step_id; // -1 at start
-    
-    // Update checkmarks
-    task_list.forEach(function(task, index){
-      var el = document.getElementById(task);
 
-      if (index <= task_idx){
-        // Add checkmark to all tasks up to and including task
-        el.querySelector('.checkmark').className = 'checkmark_visible checkmark';
-      }
-      else{
-        // Remove checkmarks for all tasks after the task
-        el.querySelector('.checkmark').className = 'checkmark_hidden checkmark';
-      }
-    });
+   
+    if( m.previous_step_id > task_idx ) {
+      // We are going backwards, remove checks
+      var el = document.getElementById(m.previous_step);
+      el.querySelector('.checkmark').className = 'checkmark_hidden checkmark';
+    }
+    else {
+      var el = document.getElementById(task_name);
+      el.querySelector('.checkmark').className = 'checkmark_visible checkmark';
+    }
 
     // Update task completion chart
     task_complete_chart.data.datasets[0].data = [m.task_complete_confidence];
