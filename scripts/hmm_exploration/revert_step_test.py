@@ -24,8 +24,8 @@ for _ in range(2):
     live_model.add_activity_classification(live_model.model.class_str,
                                            conf_vec, start_time, end_time)
     curr_step += 1
-    start_time += 1
-    end_time += 1
+    start_time += 1.25
+    end_time += 1.25
 
     print('\'get_current_state\' yields:', live_model.get_current_state())
 

@@ -169,7 +169,7 @@ class ActivityHMMRos:
 
         """
         log_prob1, Z, X_, Z_ = self.model.decode(self.X)
-        ind = np.where(Z <= step_ind)[0]
+        ind = np.where(Z == step_ind)[0]
         if len(ind) == 0:
             raise ValueError(f'Found no previous steps <= {step_ind}')
 
