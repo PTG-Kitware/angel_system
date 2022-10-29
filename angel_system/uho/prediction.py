@@ -1,18 +1,52 @@
-import tqdm
-import sys
 import os
 import random
-import torch
+
 import numpy as np
-from typing import List
-from typing import Tuple
 import numpy.typing as npt
+import torch
 from torch.utils.data import DataLoader
-from src.datamodules.ros_datamodule import AngelDataset
-from src.models.components.fcn import UnifiedFCNModule
-from src.models.components.transformer import TemTRANSModule
-from aux_data import AuxData
+import tqdm
+from typing import List
+from typing import Optional
+from typing import Tuple
+
+from angel_system.utils.simple_timer import SimpleTimer
+from .src.datamodules.ros_datamodule import get_common_transform, AngelDataset
+from .src.models.components.fcn import UnifiedFCNModule
+from .src.models.components.transformer import TemTRANSModule
+from .aux_data import AuxData
+
 import pdb
+
+
+# TODO: Pull in from a resource file instead of defining via hard-coding.
+UHO_LABELS = ["Background",
+              "Measure 12 ounces of water in the liquid measuring cup",
+              "Pour the water from the liquid measuring cup into the electric kettle",
+              "Turn on the Kettle",
+              "Place the dripper on top of the mug",
+              "Take the coffee filter and fold it in half to create a semi-circle",
+              "Fold the filter in half again to create a quarter-circle",
+              "Place the folded filter into the dripper such that the the point of the quarter-circle rests in the center of the dripper",
+              "Spread the filter open to create a cone inside the dripper",
+              "Turn on the kitchen scale",
+              "Place a bowl on the scale",
+              "Zero the scale",
+              "Add coffee beans to the bowl until the scale reads 25 grams",
+              "Pour the measured coffee beans into the coffee grinder",
+              "Set timer for 20 seconds",
+              "Turn on the timer",
+              "Grind the coffee beans by pressing and holding down on the black part of the lid",
+              "Pour the grounded coffee beans into the filter cone prepared in step 2",
+              "Turn on the thermometer",
+              "Place the end of the thermometer into the water",
+              "Set timer to 30 seconds",
+              "Pour a small amount of water over the grounds in order to wet the grounds",
+              "Slowly pour the water over the grounds in a circular motion. Do not overfill beyond the top of the paper filter",
+              "Allow the rest of the water in the dripper to drain",
+              "Remove the dripper from the cup",
+              "Remove the coffee grounds and paper filter from the dripper",
+              "Discard the coffee grounds and paper filter"]
 
 
 # prepare input data
@@ -93,7 +127,7 @@ def get_uho_classifier(checkpoint_path: str,
     # transformer for temporal modeling
     UHO_classifier = TemTRANSModule(27, 256, dropout=0.1, depth=6).to(device)
     # loading checkpoint
-    UHO_classifier = load_model(UHO_classifier, model_path)
+    UHO_classifier = load_model(UHO_classifier, checkpoint_path)
 
     # feature extractor
     fcn = UnifiedFCNModule("resnext").to(device)
@@ -103,46 +137,19 @@ def get_uho_classifier(checkpoint_path: str,
     return fcn, UHO_classifier
 
 
-def get_uho_classifier_labels(index: int) -> List[str]:
+def get_uho_classifier_labels() -> List[str]:
     """
     Get the ordered sequence of labels that are index-associative to the class
     indices that are returned from the UHO classifier.
     """
-    uho_labels = ["Background",
-                   "Measure 12 ounces of water in the liquid measuring cup",
-                   "Pour the water from the liquid measuring cup into the electric kettle",
-                   "Turn on the Kettle",
-                   "Place the dripper on top of the mug",
-                   "Take the coffee filter and fold it in half to create a semi-circle",
-                   "Fold the filter in half again to create a quarter-circle",
-                   "Place the folded filter into the dripper such that the the point of the quarter-circle rests in the center of the dripper",
-                   "Spread the filter open to create a cone inside the dripper",
-                   "Turn on the kitchen scale",
-                   "Place a bowl on the scale",
-                   "Zero the scale",
-                   "Add coffee beans to the bowl until the scale reads 25 grams",
-                   "Pour the measured coffee beans into the coffee grinder",
-                   "Set timer for 20 seconds",
-                   "Turn on the timer",
-                   "Grind the coffee beans by pressing and holding down on the black part of the lid",
-                   "Pour the grounded coffee beans into the filter cone prepared in step 2",
-                   "Turn on the thermometer",
-                   "Place the end of the thermometer into the water",
-                   "Set timer to 30 seconds",
-                   "Pour a small amount of water over the grounds in order to wet the grounds",
-                   "Slowly pour the water over the grounds in a circular motion. Do not overfill beyond the top of the paper filter",
-                   "Allow the rest of the water in the dripper to drain",
-                   "Remove the dripper from the cup",
-                   "Remove the coffee grounds and paper filter from the dripper", 
-                   "Discard the coffee grounds and paper filter"] 
-
-    return uho_labels[index]
+    return UHO_LABELS
 
 
 def predict(fcn: UnifiedFCNModule,
             temporal: TemTRANSModule,
             frames: List[npt.NDArray],
-            aux_data: AuxData):
+            aux_data: AuxData,
+            fcn_batch_size: Optional[int] = None):
     """
     Predict an activity classification for a single window of image frames and
     auxiliary data.
@@ -153,35 +160,111 @@ def predict(fcn: UnifiedFCNModule,
     :param temporal:
     :param frames:
     :param aux_data:
+    :param fcn_batch_size: If an integer value, compute frame descriptors in
+        batches of the given size.
+
     :return: Two tensors, the first of which is the vector of class
         confidences, and the second of which is the index of predicted class
     """
-    # calculate resnet features
-    feats = fcn(frames)
+    topk = temporal.det_topk
 
-    # simulation: select detections at arbitrary 4~8 frames
-    max_sample_fr = 8
-    min_sample_fr = 4
-    num_det_fr = np.random.randint(max_sample_fr-min_sample_fr+1)+min_sample_fr
-    all_fr = np.random.permutation(feats.shape[0])
-    valid_fr = np.sort(all_fr[:num_det_fr])
-    bbox = torch.as_tensor(aux_data.bbox)
-    # zero out bbox at invalid frames
-    for k in all_fr[num_det_fr:]:
-        bbox[k*topK:(k+1)*topK,:] = 0
+    # Assuming that all the fcn's parameters are on the same device.
+    # Generally a safe assumption...
+    device = next(fcn.parameters()).device
+
+    n_frames = len(frames)
+    transform = get_common_transform()
+    with SimpleTimer("Transform images for FCN feature extraction"):
+        frames_tformed = torch.stack([transform(f) for f in frames]).to(device)
+    with SimpleTimer("FCN feature extraction"):
+        if fcn_batch_size is None or fcn_batch_size >= len(frames):
+            feats = fcn(frames_tformed)
+        else:
+            feats_batched = []
+            batch_sections = np.arange(fcn_batch_size, n_frames, fcn_batch_size)
+            for frame_batch in np.split(frames_tformed, batch_sections):
+                # calculate resnet features
+                feats_batched.append(
+                    fcn(frame_batch.to(device))
+                )
+            feats = torch.cat(feats_batched)
+
+    # Will reject hand pose joints not in OpenPose hand skeleton format.
+    # TODO: Invert and set the order of expected joint names? network likely
+    #  requires a specific order that is currently just implicitly followed
+    #  through from training.
+    reject_joint_list = {'ThumbMetacarpalJoint',
+                         'IndexMetacarpal',
+                         'MiddleMetacarpal',
+                         'RingMetacarpal',
+                         'PinkyMetacarpal'}
+    # Collate left/right hand positions into vectors for the network.
+    # Known quantity that network needs a 21*3=63 length tensor.
+    # Missing hands for a frame should be filled with zero-vectors.
+    assert temporal.fc_h.in_features % 2 == 0
+    per_hand_dim = temporal.fc_h.in_features // 2
+    with SimpleTimer("Composing sparse hand pos tensors"):
+        lhand_tensor = torch.zeros(n_frames, per_hand_dim)
+        rhand_tensor = torch.zeros(n_frames, per_hand_dim)
+        if aux_data.hand_joint_names:
+            # Collect indices of non-rejected labels, use that to index into
+            # position matrices
+            keep_indices = [i
+                            for i, joint_label
+                            in enumerate(aux_data.hand_joint_names)
+                            if joint_label not in reject_joint_list]
+            for i, j_pos in enumerate(aux_data.lhand):
+                if j_pos is not None:
+                    lhand_tensor[i] = torch.from_numpy(j_pos[keep_indices].flatten()).float()
+            for i, j_pos in enumerate(aux_data.rhand):
+                if j_pos is not None:
+                    rhand_tensor[i] = torch.from_numpy(j_pos[keep_indices].flatten()).float()
+
+    # Collate detection descriptors and boxes based on top-k detections by max
+    # label confidence score.
+    # Missing detections for a frame should be filled with zero-vectors.
+    #       dets should have shape: [ n_frames*top_k x 2048 ]
+    #       bbox should have shape: [ n_frames*top_k x 4 ]
+    n_dets_feats = temporal.fc_d.in_features
+    n_bbox_feats = temporal.fc_b.in_features
+    with SimpleTimer("Composing sparse dets/bbox tensors"):
+        dets = torch.zeros(n_frames, topk, n_dets_feats)
+        bbox = torch.zeros(n_frames, topk, n_bbox_feats)
+        if aux_data.labels:
+            # There are labels, so there must be at least one detection
+            # Assuming scores/dets/bbox are all the same length for a frame.
+            for i, (s, d, b) in enumerate(zip(aux_data.scores, aux_data.dets, aux_data.bbox)):
+                if None not in (s, d, b):
+                    assert s.shape[0] == d.shape[0] == b.shape[0]
+                    # determine indices of top-k determine by det-wise max score
+                    s_max = s.max(axis=1).values
+                    topk_idx = torch.topk(s_max, topk).indices
+                    d_topk = d[topk_idx]
+                    b_topk = b[topk_idx]
+                    dets[i] = d_topk
+                    bbox[i] = b_topk
+        # Bring into network expected shapes:
+        dets = dets.reshape(n_frames * topk, n_dets_feats)
+        bbox = bbox.reshape(n_frames * topk, n_bbox_feats)
 
     # predict actions
+    # Everything needs a "batch" dimension still, so unsqueezing to get that in
+    # the front.
     data = {}
-    data["feats"] = feats.unsqueeze(0)
-    # Relies on hand fields to be tensor of shape [nImages x 63], unsqueezing
-    # into shape [1 x nImages x 63]
-    data["lhand"] = torch.as_tensor(aux_data.lhand).unsqueeze(0)
-    data["rhand"] = torch.as_tensor(aux_data.rhand).unsqueeze(0)
-    data["dets"] = torch.as_tensor(aux_data.dets).unsqueeze(0)
-    data["bbox"] = bbox.unsqueeze(0)
-    action_prob, action_index = temporal.predict(data)
+    with SimpleTimer("Composing data package for temporal network - feats"):
+        data["feats"] = feats.unsqueeze(0)  # already on device
+    with SimpleTimer("Composing data package for temporal network - lhand"):
+        data["lhand"] = lhand_tensor.unsqueeze(0).to(device)
+    with SimpleTimer("Composing data package for temporal network - rhand"):
+        data["rhand"] = rhand_tensor.unsqueeze(0).to(device)
+    with SimpleTimer("Composing data package for temporal network - dets"):
+        data["dets"] = dets.unsqueeze(0).to(device)
+    with SimpleTimer("Composing data package for temporal network - bbox"):
+        data["bbox"] = bbox.unsqueeze(0).to(device)
+    with SimpleTimer("Predicting against temporal network"):
+        action_prob, _ = temporal.predict(data)
 
-    return action_prob, action_index
+    return action_prob.squeeze()
 
 
 if __name__ == "__main__":
@@ -199,7 +282,8 @@ if __name__ == "__main__":
 
     # dataloader
     data_test = AngelDataset(root_path, test_list)
-    dataloader = DataLoader(dataset=data_test, batch_size=batch_size, num_workers=num_workers, pin_memory=False,
+    dataloader = DataLoader(dataset=data_test, batch_size=batch_size,
+                            num_workers=num_workers, pin_memory=False,
                 shuffle=False, collate_fn=collate_fn_pad)
 
     # models

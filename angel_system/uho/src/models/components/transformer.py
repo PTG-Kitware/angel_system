@@ -72,6 +72,7 @@ class TemTRANSModule(nn.Module):
         depth=4,
         num_head=8):
         super().__init__()
+        self._det_topk = 10
 
         # 2048 -> The length of features out of last layer of ResNext
         self.fc_x = nn.Linear(2048, hidden)
@@ -93,6 +94,10 @@ class TemTRANSModule(nn.Module):
         class_weight[0] = 2./float(act_classes)
         self.loss_action = nn.CrossEntropyLoss(weight=class_weight, label_smoothing=0.1) 
         self.apply(self.init_weights)
+
+    @property
+    def det_topk(self):
+        return self._det_topk
 
     def init_weights(self, module):
         """ Initialize the weights.
@@ -128,7 +133,7 @@ class TemTRANSModule(nn.Module):
         valid_fr = np.sort(valid_fr)
 
         # sample detections
-        topK = 10
+        topK = self._det_topk
         num_batch, num_det, num_dim = feat_d.shape
         feat_d = [feat_d[:,k*topK:(k+1)*topK,:] for k in valid_fr]
         feat_d = torch.stack(feat_d,1).reshape(num_batch, -1, num_dim)
@@ -182,7 +187,7 @@ class TemTRANSModule(nn.Module):
         return action_out, action_pred, loss, idx
 
     def predict(self, inputs):
-        topK = 10
+        topK = self._det_topk
         # load features       
         feat_x = inputs["feats"] # RGB features
         lh, rh = inputs["lhand"], inputs["rhand"] # hand poses

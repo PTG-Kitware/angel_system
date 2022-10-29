@@ -1,9 +1,11 @@
 from typing import Any, Dict, List, Tuple, Union, Optional
+from typing import Sequence
 
 import os
 import os.path
 from typing import List, Tuple
 import numpy as np
+import numpy.typing as npt
 import torch
 from PIL import Image
 import pdb
@@ -11,7 +13,19 @@ import pdb
 from pytorch_lightning import LightningDataModule
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import DataLoader, Dataset
+from torch.utils.data.dataset import T_co
 from torchvision.transforms import transforms
+
+
+def get_common_transform() -> transforms.Compose:
+    return transforms.Compose(
+        [
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                 std=[0.229, 0.224, 0.225]),
+        ]
+    )
+
 
 def collate_fn_pad(batch):
     """Padds batch of variable length.
@@ -67,6 +81,7 @@ def collate_fn_pad(batch):
     batch = data_dic
 
     return batch, lengths
+
 
 class VideoRecord(object):
     """Helper class for class H2OVideoDataset. This class represents a video
@@ -362,6 +377,7 @@ class ROSVideoDataset(torch.utils.data.Dataset):
     def __len__(self):
         return len(self.video_list)
 
+
 class ROSFrameDataset(torch.utils.data.Dataset):
     """A dataset class to load labels per frame from ros data.
 
@@ -485,12 +501,7 @@ class ROSDataModule(LightningDataModule):
 
         # data transformations (Normalization values recommended by 
         # torchvision model zoo)
-        self.transforms = transforms.Compose(
-            [
-                transforms.ToTensor(),
-                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-            ]
-        )
+        self.transforms = get_common_transform()
 
         self.data_train: Optional[Dataset] = None
         self.data_val: Optional[Dataset] = None
@@ -577,6 +588,7 @@ class ROSDataModule(LightningDataModule):
 
         return dataloader
 
+
 class AngelDataset(torch.utils.data.Dataset):
     r"""
     A highly efficient and adaptable dataset class for videos.
@@ -651,7 +663,7 @@ class AngelDataset(torch.utils.data.Dataset):
         self.num_segments = num_segments
         self.frames_per_segment = frames_per_segment
         self.imagefile_template = imagefile_template
-        self.transform = transforms.Compose([transforms.ToTensor(),transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])])
+        self.transform = get_common_transform()
 
         self._parse_annotationfile()
         self._sanity_check_samples()

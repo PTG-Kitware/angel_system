@@ -51,6 +51,9 @@ girder_file_downloads:
     - file_id: 633c957011dab814282089ab
       sha512: 293ef83fbd745ba4a5882ab8d476c1c87747050223dd13dd50139dd07425a50ff265a986ea37fc91180be759eee4cbf3ae4b7f11e3050586a8e5bf1db2513136
       dest: "{{ stage_dirs.model_files }}/uho_epoch_090_labels.txt"
+    - file_id: 635c785711dab8142820abbb
+      sha512: 1d9d371b1c8b3377de27ac36de04c7a267c6ad5991ce9e6a19dca3f71af905a18c4510762155ca7c7ac4d85bc3959d6773871b5191372568333f4416b7b4c813
+      dest: "{{ stage_dirs.model_files }}/uho_checkpoint_20221022.ckpt"
     # # SwinB label list text file.
     # - file_id: 62cc5fa7bddec9d0c4faa19f
     #   sha512: 3fbf340b9cb87a71dd3df81880b38ee414c47b43fbfb78c37220020fbdb8d0d0ff93d76b079aecd94c10317ad6764590fd2a98849338f7fb46f943825820aaf6
