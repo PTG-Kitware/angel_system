@@ -66,7 +66,7 @@ def collate_fn_pad(batch):
     topK = 10
     for t in batch:
         lhand = [torch.from_numpy(tmp).to(device) for tmp in t[0]["l_hand"]]
-        rhand = [torch.from_numpy(tmp).to(device) for tmp in t[0]["l_hand"]]
+        rhand = [torch.from_numpy(tmp).to(device) for tmp in t[0]["r_hand"]]
 
         # collect detections
         det1 = [torch.from_numpy(tmp[:topK]) for tmp in t[0]["dets"]]
