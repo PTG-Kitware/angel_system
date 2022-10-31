@@ -14,8 +14,12 @@ public enum SoundType
     moveStart=4,
     moveEnd=5,
     select = 6,
+    warning = 7,
 }
 
+/// <summary>
+/// Plays user feedback at run-time
+/// </summary>
 public class AudioManager : Singleton<AudioManager>
 {
     private TextToSpeech tTos;
@@ -30,6 +34,7 @@ public class AudioManager : Singleton<AudioManager>
         StringResources.moveStart_path,
         StringResources.moveEnd_path,
         StringResources.selectSound_path,
+        StringResources.warningSound_path,
     };
 
     private void Start()
@@ -54,6 +59,10 @@ public class AudioManager : Singleton<AudioManager>
         }
     }
 
+    /// <summary>
+    /// Speech-To-Text for the task
+    /// </summary>
+    /// <param name="text"></param>
     public void PlayText(string text) => StartCoroutine(Play(Orb.Instance.transform.position, text));
     private IEnumerator Play(Vector3 pos, String text)
     {
@@ -68,8 +77,18 @@ public class AudioManager : Singleton<AudioManager>
 
     public void StopPlayText() => tTos.StopSpeaking();
 
+    /// <summary>
+    /// Plays a sound effect from a certain position
+    /// </summary>
+    /// <param name="pos"></param>
+    /// <param name="type"></param>
     public void PlaySound(Vector3 pos, SoundType type) => StartCoroutine(Play(pos, type));
 
+    /// <summary>
+    /// Plays a sound effect from a certain position
+    /// </summary>
+    /// <param name="pos"></param>
+    /// <param name="type"></param>
     public void PlaySound(Vector3 pos, AudioClip clip) => StartCoroutine(Play(pos, clip));
 
     private IEnumerator Play(Vector3 pos, SoundType type)

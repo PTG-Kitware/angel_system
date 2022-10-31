@@ -4,6 +4,7 @@ using Microsoft.MixedReality.Toolkit;
 using UnityEngine;
 using DilmerGames.Core.Singletons;
 using System;
+using System.Diagnostics.Eventing.Reader;
 
 public enum EyeTarget
 {
@@ -19,10 +20,9 @@ public class FollowEyeTarget : Singleton<FollowEyeTarget>
     public EyeTarget currentHit = EyeTarget.nothing;
     private MeshRenderer cube;
 
-    private void Awake()
-    {
-        cube=gameObject.GetComponent<MeshRenderer>();
-    }
+    private bool showRayDebugCube = false;
+
+    private void Awake() => cube = gameObject.GetComponent<MeshRenderer>();
 
     private void Update()
     {
@@ -30,34 +30,37 @@ public class FollowEyeTarget : Singleton<FollowEyeTarget>
         if (eyeGazeProvider != null)
         {
             gameObject.transform.position = eyeGazeProvider.GazeOrigin + eyeGazeProvider.GazeDirection.normalized * 2.0f;
+            cube.enabled = false;
 
-            EyeTrackingTarget lookedAtEyeTarget = EyeTrackingTarget.LookedAtEyeTarget;
+            Ray rayToCenter = new Ray(eyeGazeProvider.GazeOrigin, eyeGazeProvider.GazeDirection);
+            RaycastHit hitInfo;
+
+            int layerMask = 1 << 5; //Ignore everything except layer 5, which is the UI
+            UnityEngine.Physics.Raycast(rayToCenter, out hitInfo, 100f, layerMask);
 
             // Update GameObject to the current eye gaze position at a given distance
-            if (lookedAtEyeTarget != null)
+            if (hitInfo.collider != null)
             {
-                Ray rayToCenter = new Ray(CameraCache.Main.transform.position, lookedAtEyeTarget.transform.position - CameraCache.Main.transform.position);
-                RaycastHit hitInfo;
-                UnityEngine.Physics.Raycast(rayToCenter, out hitInfo);
-
-                float dist = (hitInfo.point - CameraCache.Main.transform.position).magnitude;
+                float dist = (hitInfo.point - AngelARUI.Instance.mainCamera.transform.position).magnitude;
                 gameObject.transform.position = eyeGazeProvider.GazeOrigin + eyeGazeProvider.GazeDirection.normalized * dist;
+                //Debug.Log(hitInfo.collider.gameObject.name);
 
-                if (lookedAtEyeTarget.gameObject.name.Contains("TextContainer"))
+                if (hitInfo.collider.gameObject.name.Contains("TextContainer")) 
                     currentHit = EyeTarget.orbMessage;
 
-                else if (lookedAtEyeTarget.gameObject.name.Contains("BodyPlacement"))
+                else if (hitInfo.collider.gameObject.name.Contains("BodyPlacement"))
                     currentHit = EyeTarget.orbFace;
 
-                else if (lookedAtEyeTarget.gameObject.name.Contains("Tasklist"))
+                else if (hitInfo.collider.gameObject.name.Contains("Tasklist"))
                     currentHit = EyeTarget.tasklist;
 
-                else if (lookedAtEyeTarget.gameObject.name.Contains("FaceTaskListButton"))
+                else if (hitInfo.collider.gameObject.name.Contains("FaceTaskListButton"))
                     currentHit = EyeTarget.orbtasklistButton;
                 else
                     currentHit = EyeTarget.nothing;
 
-                //Debug.Log(lookedAtEyeTarget.gameObject.name);
+                if (currentHit != EyeTarget.nothing)
+                    cube.enabled = true;
             }
             else
             {
@@ -71,5 +74,5 @@ public class FollowEyeTarget : Singleton<FollowEyeTarget>
         }
     }
 
-    public void ShowDebugTarget(bool showEyeGazeTarget) => cube.enabled = showEyeGazeTarget;
+    public void ShowDebugTarget(bool showEyeGazeTarget) => showRayDebugCube = showEyeGazeTarget;
 }

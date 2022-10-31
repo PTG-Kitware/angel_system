@@ -5,14 +5,18 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Catches pointer and dragging events at orb
+/// Catch pointer and dragging events at orb
 /// </summary>
 public class OrbGrabbable : MonoBehaviour, IMixedRealityPointerHandler
 {
     private ObjectManipulator grabbable;
-    public bool isDragging;
+    private bool isDragging;
+    public bool IsDragging
+    {
+        get { return isDragging; }
+    }
 
-    public void Start()
+    private void Start()
     {
         grabbable = gameObject.GetComponent<ObjectManipulator>();
 
@@ -26,26 +30,23 @@ public class OrbGrabbable : MonoBehaviour, IMixedRealityPointerHandler
 
     public void OnPointerDown(MixedRealityPointerEventData eventData)
     {
-        Orb.Instance.SetIsDragging(true);
+        Orb.Instance.IsDragging =(true);
         isDragging = true;
         AudioManager.Instance.PlaySound(transform.position, SoundType.moveStart);
     }
 
     public void OnPointerDragged(MixedRealityPointerEventData eventData)
     {
-        Orb.Instance.SetIsDragging(true);
+        Orb.Instance.IsDragging =(true);
         isDragging = true;
     }
 
     public void OnPointerUp(MixedRealityPointerEventData eventData)
     {
-        Orb.Instance.SetIsDragging(false);
+        Orb.Instance.IsDragging = (false);
         isDragging = false;
         AudioManager.Instance.PlaySound(transform.position, SoundType.moveEnd);
     }
 
-    public void OnPointerClicked(MixedRealityPointerEventData eventData)
-    {
-        
-    }
+    public void OnPointerClicked(MixedRealityPointerEventData eventData) {}
 }

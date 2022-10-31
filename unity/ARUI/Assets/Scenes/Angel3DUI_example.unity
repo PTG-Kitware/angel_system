@@ -346,8 +346,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   mainCamera: {fileID: 0}
-  showARUIDebugMessages: 1
+  showARUIDebugMessages: 0
   showEyeGazeTarget: 1
+  SkipNotificationMessage: 'You are skipping the current task:'
+  textToSpeechOn: 0
 --- !u!1001 &1200407600
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -680,7 +682,7 @@ MonoBehaviour:
   maxGazeCollisionDistance: 10
   raycastLayerMasks:
   - serializedVersion: 2
-    m_Bits: 32
+    m_Bits: 4294967291
   stabilizer:
     storedStabilitySamples: 60
   gazeTransform: {fileID: 0}

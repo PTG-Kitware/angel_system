@@ -3,6 +3,7 @@ using Microsoft.MixedReality.Toolkit;
 using Microsoft.MixedReality.Toolkit.Input;
 using System;
 using System.Collections;
+using System.Diagnostics.Eventing.Reader;
 using TMPro;
 using UnityEngine;
 
@@ -11,23 +12,34 @@ using UnityEngine;
 /// </summary>
 public class Orb : Singleton<Orb>
 {
+    //Reference to parts of the orb
     private OrbFace face;
     private OrbGrabbable grabbable;
     private OrbMessage messageContainer;
+    private DwellButtonTaskList taskListbutton;
 
     //Placement behaviors
     private OrbFollowerSolver followSolver;
+    
+    private EyeTrackingTarget eyeEvents;
+
+    //Flags
+    private bool isLookingAtOrb = false;
+    public bool IsLookingAtOrb
+    {
+        get { return isLookingAtOrb || messageContainer.IsLookingAtMessage; }
+    }
+    public bool IsDragging
+    {
+        get { return grabbable.IsDragging; }
+        set { SetIsDragging(value); }
+    }
+
+    private bool lazyLookAtRunning = false;
     private bool lazyFollowStarted = false;
 
-    //Input events 
-    private EyeTrackingTarget eyeEvents;
-    public bool IsLookingAtOrb = false;
-    public bool lazyLookAtRunning = false;
-
-    private DwellButtonTaskList taskListbutton;
-
     /// <summary>
-    /// Instantiate and Initialise all objects related to the orb.
+    /// Get all orb references from prefab
     /// </summary>
     void Awake()
     {
@@ -42,32 +54,28 @@ public class Orb : Singleton<Orb>
         followSolver = gameObject.GetComponentInChildren<OrbFollowerSolver>();
         grabbable = gameObject.GetComponentInChildren<OrbGrabbable>();
 
-        //Init input events
-        eyeEvents = transform.GetChild(0).GetComponent<EyeTrackingTarget>();
-        eyeEvents.OnLookAtStart.AddListener(delegate { SetIsLookingAtFace(true); });
-        eyeEvents.OnLookAway.AddListener(delegate { SetIsLookingAtFace(false); });
-
         ////Init tasklist button
         GameObject taskListbtn = transform.GetChild(0).GetChild(2).gameObject;
         taskListbutton = taskListbtn.AddComponent<DwellButtonTaskList>();
         taskListbtn.SetActive(false);
     }
 
-    public void Update()
+    private void Update()
     {
-        if (messageContainer.userHasNotSeenNewTask && (messageContainer.isLookingAtMessage || IsLookingAtOrb))
-        {
-            followSolver.MoveToEyeTarget(false);
-            face.SetNotificationIconActive(false);
-        }
+        // Update eye tracking flag
+        if (isLookingAtOrb && FollowEyeTarget.Instance.currentHit != EyeTarget.orbFace)
+            SetIsLookingAtFace(false);
+        else if (!isLookingAtOrb && FollowEyeTarget.Instance.currentHit == EyeTarget.orbFace)
+            SetIsLookingAtFace(true);
 
-        followSolver.SetPaused(taskListbutton.GetIsLookingAtBtn());
+        if (messageContainer.UserHasNotSeenNewTask && (messageContainer.IsLookingAtMessage || IsLookingAtOrb)) 
+            face.SetNotificationIconActive(false);
 
         UpdateOrbVisibility();
     }
 
 
-    #region Visibility and Position Updates
+    #region Visibility, Position Updates and eye/collision event handler
 
     /// <summary>
     /// luminance-based view management
@@ -75,19 +83,21 @@ public class Orb : Singleton<Orb>
     /// </summary>
     private void UpdateOrbVisibility()
     {
-        if (messageContainer.userHasNotSeenNewTask) return;
+        if (messageContainer.UserHasNotSeenNewTask) return;
 
         //Debug.Log(IsLookingAtOrb + ", " + messageContainer.isMessageVisible + ", " + messageContainer.isMessageFading); 
-        if ((IsLookingAtOrb && !messageContainer.isMessageVisible && !messageContainer.isMessageFading))
+        if ((IsLookingAtOrb && !messageContainer.IsMessageVisible && !messageContainer.IsMessageFading))
         { //Set the message visible!
-            SetMessageActive(true);
+            messageContainer.SetIsActive(true, false);
+        } else if (!messageContainer.IsLookingAtMessage && !IsLookingAtOrb && followSolver.IsOutOfFOV){
+            messageContainer.SetIsActive(false, false);
         }
-        else if ((messageContainer.isLookingAtMessage || IsLookingAtOrb) && messageContainer.isMessageVisible && messageContainer.isMessageFading)
+        else if ((messageContainer.IsLookingAtMessage || IsLookingAtOrb) && messageContainer.IsMessageVisible && messageContainer.IsMessageFading)
         { //Stop Fading, set the message visible
             messageContainer.SetFadeOutMessage(false);
         }
-        else if (!IsLookingAtOrb && messageContainer.isMessageVisible && !messageContainer.isMessageFading 
-            && !messageContainer.isLookingAtMessage && !messageContainer.userHasNotSeenNewTask && !messageContainer.isNotificationActive)
+        else if (!IsLookingAtOrb && messageContainer.IsMessageVisible && !messageContainer.IsMessageFading 
+            && !messageContainer.IsLookingAtMessage && !messageContainer.UserHasNotSeenNewTask && !messageContainer.IsNotificationActive)
         { //Start Fading
             messageContainer.SetFadeOutMessage(true);
         }
@@ -102,108 +112,42 @@ public class Orb : Singleton<Orb>
 
         yield return new WaitForEndOfFrame();
 
-        followSolver.SetPaused(true);
+        followSolver.IsPaused = (true);
 
         while (Utils.InFOV(AngelARUI.Instance.mainCamera, grabbable.transform.position))
         {
             yield return new WaitForSeconds(0.1f);
         }
 
-        followSolver.SetPaused(false);
+        followSolver.IsPaused = (false);
         lazyFollowStarted = false;
     }
 
+    /// <summary>
+    /// Make sure that fast eye movements are not detected as dwelling
+    /// </summary>
+    /// <returns></returns>
     private IEnumerator StartLazyLookAt()
     {
-        //Debug.Log("Start Lazy Look at");
         yield return new WaitForSeconds(0.2f);
 
         if (lazyLookAtRunning)
         {
-            IsLookingAtOrb = true;
+            isLookingAtOrb = true;
             lazyLookAtRunning = false;
         }
-        
-        //Debug.Log("Set looking at orb true");
-    }
-
-
-    #endregion
-
-    #region Messages and Notifications
-
-    /// <summary>
-    /// Set the notification messages the orb communicates, if 'message' is less than 2 char, the message is deactivated
-    /// </summary>
-    /// <param name="message"></param>
-    public void SetNotificationMessage(string message)
-    {
-        if (message.Length <= 1 && messageContainer.isNotificationActive && messageContainer.isActive())
-        {
-            messageContainer.SetNotificationTextActive(false);
-            face.ChangeColorToNotificationActive(false);
-        }
-        else
-        {
-            messageContainer.SetNotificationText(message);
-            messageContainer.SetNotificationTextActive(true);
-            face.ChangeColorToNotificationActive(true);
-        }
     }
 
     /// <summary>
-    /// Set the task messages the orb communicates, if 'message' is less than 2 char, the message is deactivated
+    /// Called if input events with hand collider are detected
     /// </summary>
-    /// <param name="message"></param>
-    public void SetTaskMessage(string message)
-    {
-        if (message.Length <= 1 && messageContainer.isMessageActive && messageContainer.isActive())
-            SetMessageActive(false);
-        else
-        {
-            SetMessageActive(true);
-            messageContainer.HandleNewTask();
-            //followSolver.MoveToEyeTarget(true);
-            face.SetNotificationIconActive(true);
-            AudioManager.Instance.PlayText(message);
-        }
-
-        messageContainer.SetTaskMessage(message);
-
-        face.ChangeColorToDone(message.Contains("Done"));
-    }
-
-    private void SetMessageActive(bool isActive)
-    {
-        messageContainer.isMessageActive = isActive;
-        messageContainer.SetActive(messageContainer.isMessageActive);
-    }
-
-    #endregion
-
-    #region Getter and Setter
-
-    public bool GetCurrentMessageCollider(ref BoxCollider collider)
-    {
-        if (messageContainer.isMessageActive && messageContainer.isMessageVisible)
-        {
-            collider = messageContainer.GetCollider();
-            return true;
-        }
-        else
-            return false;
-    }
-
-    public bool GetIsUserLookingAtOrb() => IsLookingAtOrb || messageContainer.isLookingAtMessage;
-
-    public bool GetIsDragging() => grabbable.isDragging;
-
-    public void SetIsDragging(bool isDragging)
+    /// <param name="isDragging"></param>
+    private void SetIsDragging(bool isDragging)
     {
         face.ChangeDragginColorActive(isDragging);
-        followSolver.SetPaused(isDragging);
+        followSolver.IsPaused = (isDragging);
 
-        if ( !isDragging && !lazyFollowStarted)
+        if (!isDragging && !lazyFollowStarted)
         {
             StartCoroutine(EnableLazyFollow());
         }
@@ -213,12 +157,14 @@ public class Orb : Singleton<Orb>
             StopCoroutine(EnableLazyFollow());
 
             lazyFollowStarted = false;
-            followSolver.SetPaused(false);
+            followSolver.IsPaused = (false);
         }
     }
 
-    public void SetNearHover(bool isHovering) => face.SetDraggableHandle(isHovering);
-
+    /// <summary>
+    /// Called if changes in eye events are detected
+    /// </summary>
+    /// <param name="isLooking"></param>
     private void SetIsLookingAtFace(bool isLooking)
     {
         if (isLooking && !lazyLookAtRunning)
@@ -231,21 +177,107 @@ public class Orb : Singleton<Orb>
             if (lazyLookAtRunning)
                 StopCoroutine(StartLazyLookAt());
 
-            IsLookingAtOrb = false;
+            isLookingAtOrb = false;
             lazyLookAtRunning = false;
             //Debug.Log("Set looking at orb false");
         }
-        
+
     }
 
+    #endregion
+
+    #region Task Messages and Notifications
+
+    /// <summary>
+    /// Set the notification messages the orb communicates, if 'message' is less than 2 char, the message is deactivated
+    /// </summary>
+    /// <param name="message"></param>
+    public void SetNotificationMessage(string message)
+    {
+        if (message.Length <= 1)
+        {
+            messageContainer.IsNotificationActive = false ;
+            face.ChangeColorToNotificationActive(false);
+            followSolver.MoveToCenter(false);
+        }
+        else
+        {
+            messageContainer.SetIsActive(true, false);
+            messageContainer.IsNotificationActive = true;
+            face.ChangeColorToNotificationActive(true);
+            followSolver.MoveToCenter(true);
+
+            AudioManager.Instance.PlaySound(transform.position, SoundType.warning);
+        }
+
+        messageContainer.SetNotificationMessage(message);
+    }
+
+    /// <summary>
+    /// Set the task messages the orb communicates, if 'message' is less than 2 char, the message is deactivated
+    /// </summary>
+    /// <param name="message"></param>
+    public void SetTaskMessage(string message, bool playTextToSpeech)
+    {
+        if (message.Length <= 1)
+            messageContainer.SetIsActive(false, false);
+        else
+        {
+            messageContainer.SetIsActive(true, true);
+            face.SetNotificationIconActive(true);
+
+            if (playTextToSpeech)
+                AudioManager.Instance.PlayText(message);
+        }
+
+        messageContainer.SetTaskMessage(message);
+
+        SetNotificationMessage("");
+        face.ChangeColorToDone(message.Contains("Done"));
+    }
+
+    #endregion
+
+    #region Getter and Setter
+
+    /// <summary>
+    /// Access to collider of orb (including task message)
+    /// </summary>
+    /// <param name="collider"></param>
+    /// <returns></returns>
+    public bool GetCurrentMessageCollider(ref BoxCollider collider)
+    {
+        if (messageContainer.GetIsActive() && messageContainer.IsMessageVisible)
+        {
+            collider = messageContainer.MessageCollider;
+            return true;
+        }
+        else
+            return false;
+    }
+
+    /// <summary>
+    /// Detect hand hovering events
+    /// </summary>
+    /// <param name="isHovering"></param>
+    public void SetNearHover(bool isHovering) => face.SetDraggableHandle(isHovering);
+    
+    /// <summary>
+    /// Change the visibility of the tasklist button
+    /// </summary>
+    /// <param name="isActive"></param>
     public void SetTaskListButtonActive(bool isActive) => taskListbutton.gameObject.SetActive(isActive);
 
+    /// <summary>
+    /// Update the position behavior of the orb
+    /// </summary>
+    /// <param name="isSticky"></param>
     public void SetSticky(bool isSticky)
     {
         followSolver.SetSticky(isSticky);
 
         if (isSticky)
-            SetMessageActive(false);
+            messageContainer.SetIsActive(false, false);
     }
 
     #endregion

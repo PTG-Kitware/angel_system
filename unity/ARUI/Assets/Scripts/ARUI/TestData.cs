@@ -34,7 +34,35 @@ public class TestData : MonoBehaviour
 
     private void Start()
     {
+        StartCoroutine(GenerateAtRuntime());
+    }
+
+    private IEnumerator GenerateAtRuntime()
+    {
+        AngelARUI.Instance.textToSpeechOn = true;
+        yield return new WaitForSeconds(3f);
         AngelARUI.Instance.SetTasks(tasks);
+
+        yield return new WaitForSeconds(2f);
+        currentTask++;
+        AngelARUI.Instance.SetCurrentTaskID(currentTask);
+
+        AngelARUI.Instance.textToSpeechOn = false;
+
+        yield return new WaitForSeconds(2f);
+        currentTask++;
+        AngelARUI.Instance.SetCurrentTaskID(currentTask);
+
+        yield return new WaitForSeconds(2f);
+        currentTask++;
+        AngelARUI.Instance.SetCurrentTaskID(currentTask);
+
+        yield return new WaitForSeconds(3f);
+        AngelARUI.Instance.ShowSkipNotification(true);
+
+        yield return new WaitForSeconds(5f);
+        currentTask++;
+        AngelARUI.Instance.SetCurrentTaskID(currentTask);
     }
 
 #if UNITY_EDITOR
@@ -44,6 +72,11 @@ public class TestData : MonoBehaviour
     /// </summary>
     public void Update()
     {
+        if (Input.GetKeyUp(KeyCode.O))
+        {
+            AngelARUI.Instance.SetTasks(tasks);
+        }
+
         if (Input.GetKeyUp(KeyCode.RightArrow))
         {
             currentTask++;
@@ -60,16 +93,20 @@ public class TestData : MonoBehaviour
             AngelARUI.Instance.ToggleTasklist();
         }
 
-        if (Input.GetKeyUp(KeyCode.D))
-        {
-            currentTask = tasks.GetLength(0) + 2;
-            AngelARUI.Instance.SetAllTasksDone();
-        }
-
         if (Input.GetKeyUp(KeyCode.R))
         {
             currentTask = UnityEngine.Random.Range(0, tasks.GetLength(0) + 2);
             AngelARUI.Instance.SetCurrentTaskID(currentTask);
+        }
+
+        if (Input.GetKeyUp(KeyCode.M))
+        {
+            AngelARUI.Instance.ShowSkipNotification(true);
+        }
+
+        if (Input.GetKeyUp(KeyCode.B))
+        {
+            AngelARUI.Instance.ShowSkipNotification(false);
         }
     }
 #endif

@@ -1,7 +1,7 @@
 How to use ARUI in your scene:
 
 * Create empty GameObject in the highest hierarchy level
-* Add the AngelARUI script to it. (The script generates all necessary UI elements at run time)
+* Add the AngelARUI script to it. (This script generates all necessary UI elements at run-time)
 
 **** Examples
 
@@ -38,6 +38,9 @@ Examples can be found in "TapTestData.cs".
 
 The tasklist can be toggled using AngelARUI.Instance.ToggleTasklist();
 
+** Notifications
+For now, the ARUI supports skip notifications. The notification message can be changed, before build and runtime, in the AngelARUI script. 
+
 **** MRTK settings
 For eye-tracking to work, the user has to give permission to the eye-tracking. Also, eye-tracking has to be enabled in the MRTK toolkit.
 If eye tracking does not work through the spatial map created by Hololens:
@@ -47,22 +50,40 @@ Local InputSystemProfile -> Pointers -> Pointing Raycast Layer Masks -> Disable 
 In the AngelMRTK profiles, the pointers (hand, eye, rays) collide with all objects marked as layer "UI"
 In the hierarchy, at the main camera, search for the "GazeProvider" script and select Raycast Layer Masks -> "UI"
 
+The ARUI uses layers to detect various collisions (eg. between eye gaze and UI elements). It is important that the layer "UI" exists in the
+Unity project, and the layer index should be 5.
+
 **** UI Functions
 The UI uses eye gaze as input. The user can enable and disable the task list by looking at the button next to the white orb.
-The position of the orb and the tasklist can be adjusted using the tap gesture or the raycast (far)
+The position of the orb and the tasklist can be adjusted using the tap gesture (near interactions) or the raycast (far interactions)
 
 **** Debugging
-If an instance of the Logger is in the scene, the ARUI prints debug message to the Unity console and the logger window.
+"ShowARUIDebugMessages" - If an instance of the Logger is in the scene, the ARUI prints debug message to the Unity console and the logger window.
 One can disable the ARUI debug messages in the unity hierarchy by setting the "ShowARUIDebugMessages" to false.
+
+"ShowEyeGazeTarget" - If enabled, a small box will appear that represents the eye gaze target at runtime
+
+"TextToSpeechOn" - If enabled, the user will hear audio feedback in addition to the text on the orb if a new task is set (only works in build)
 
 **** Limitations
 - The eye tracking might not be reliable if the user wears glasses.
 - At start-up, it might take few seconds until the eye gaze rays is reliable
 - If it is recognized by the system that a new user uses the application, the eye tracking calibration might start. This is good, since
   eye tracking is not reliable if not correctly calibrated to the current user.
-
+- TextToSpeech only works in build
+- If eye calibration is not ideal, one has to manually go to the hololens2 settings and rerun the eye calibration
 
 **** Changelog
+10/30/22: 
+* Added dragging signifier to the task list
+* Added Skip notification (message + warning sound)
+* Added textToSpeech option
+* fixes with eye collisions with spatial mesh
+* fixes with task progress and 'all done' handling
+* fixed 'jitter' of orb in some situations by adding lazy orb reactions in the follow solver
+* Added halo, so user can find task list more easily
+* Disabled auto repositioning of task list (but allowing manual adjustments)
+
 10/20/22: 
 * Adding direct manipulation to task list
 * If the tasklistID is greater than the number if tasks, the user sees a message "All done". Alternatively, the recipe can be set as 
