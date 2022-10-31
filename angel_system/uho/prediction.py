@@ -177,6 +177,7 @@ def predict(fcn: UnifiedFCNModule,
         confidences, and the second of which is the index of predicted class
     """
     topk = temporal.det_topk
+    n_frames = len(frames)
 
     # Assuming that all the fcn's parameters are on the same device.
     # Generally a safe assumption...
@@ -221,6 +222,10 @@ def predict(fcn: UnifiedFCNModule,
                 )
             feats = torch.cat(feats_batched)
 
+    # Collate left/right hand positions into vectors for the network.
+    # Known quantity that network needs a 21*3=63 length tensor.
+    # Missing hands for a frame should be filled with zero-vectors.
+    #
     # Will reject hand pose joints not in OpenPose hand skeleton format.
     # TODO: Invert and set the order of expected joint names? network likely
     #  requires a specific order that is currently just implicitly followed
@@ -230,9 +235,6 @@ def predict(fcn: UnifiedFCNModule,
                          'MiddleMetacarpal',
                          'RingMetacarpal',
                          'PinkyMetacarpal'}
-    # Collate left/right hand positions into vectors for the network.
-    # Known quantity that network needs a 21*3=63 length tensor.
-    # Missing hands for a frame should be filled with zero-vectors.
     assert temporal.fc_h.in_features % 2 == 0
     per_hand_dim = temporal.fc_h.in_features // 2
     with SimpleTimer("Composing sparse hand pos tensors"):
@@ -251,6 +253,10 @@ def predict(fcn: UnifiedFCNModule,
             for i, j_pos in enumerate(aux_data.rhand):
                 if j_pos is not None:
                     rhand_tensor[i] = torch.from_numpy(j_pos[keep_indices].flatten()).float()
+    with SimpleTimer("Composing data package for temporal network - lhand"):
+        data["lhand"] = lhand_tensor.unsqueeze(0).to(device)
+    with SimpleTimer("Composing data package for temporal network - rhand"):
+        data["rhand"] = rhand_tensor.unsqueeze(0).to(device)
 
     # Collate detection descriptors and boxes based on top-k detections by max
     # label confidence score.
@@ -278,21 +284,30 @@ def predict(fcn: UnifiedFCNModule,
         # Bring into network expected shapes:
         dets = dets.reshape(n_frames * topk, n_dets_feats)
         bbox = bbox.reshape(n_frames * topk, n_bbox_feats)
-
-    # predict actions
-    # Everything needs a "batch" dimension still, so unsqueezing to get that in
-    # the front.
-    data = {}
-    with SimpleTimer("Composing data package for temporal network - feats"):
-        data["feats"] = feats.unsqueeze(0)  # already on device
-    with SimpleTimer("Composing data package for temporal network - lhand"):
-        data["lhand"] = lhand_tensor.unsqueeze(0).to(device)
-    with SimpleTimer("Composing data package for temporal network - rhand"):
-        data["rhand"] = rhand_tensor.unsqueeze(0).to(device)
     with SimpleTimer("Composing data package for temporal network - dets"):
         data["dets"] = dets.unsqueeze(0).to(device)
     with SimpleTimer("Composing data package for temporal network - bbox"):
         data["bbox"] = bbox.unsqueeze(0).to(device)
+
+    # Compute FCN features for input frames
+    transform = get_common_transform()
+    with SimpleTimer("Transform images for FCN feature extraction"):
+        frames_tformed = torch.stack([transform(f) for f in frames]).to(device)
+    with SimpleTimer("FCN feature extraction"):
+        if fcn_batch_size is None or fcn_batch_size >= len(frames):
+            feats = fcn(frames_tformed)
+        else:
+            feats_batched = []
+            batch_sections = np.arange(fcn_batch_size, n_frames, fcn_batch_size)
+            for frame_batch in np.split(frames_tformed, batch_sections):
+                # calculate resnet features
+                feats_batched.append(
+                    fcn(frame_batch.to(device))
+                )
+            feats = torch.cat(feats_batched)
+    with SimpleTimer("Composing data package for temporal network - feats"):
+        data["feats"] = feats.unsqueeze(0)  # already on device
+
     with SimpleTimer("Predicting against temporal network"):
         action_prob, _ = temporal.predict(data)
 
