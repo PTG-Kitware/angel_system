@@ -122,7 +122,8 @@ def get_uho_classifier(checkpoint_path: str,
     :param checkpoint_path: Filepath to the temporal model weights.
     :param device: The device identifier to load the model onto.
 
-    :return: New UHO classifier model instance.
+    :return: New UHO classifier model instances for (FCN model, temporal
+        model).
     """
     # transformer for temporal modeling
     UHO_classifier = TemTRANSModule(27, 256, dropout=0.1, depth=6).to(device)
@@ -141,6 +142,9 @@ def get_uho_classifier_labels() -> List[str]:
     """
     Get the ordered sequence of labels that are index-associative to the class
     indices that are returned from the UHO classifier.
+
+    :returns: List of string labels in index-associative order to the temporal
+        model prediction output.
     """
     return UHO_LABELS
 
@@ -156,10 +160,16 @@ def predict(fcn: UnifiedFCNModule,
 
     `frames` must be of a window length that the given model supports.
 
-    :param fcn:
-    :param temporal:
-    :param frames:
-    :param aux_data:
+    Auxiliary multi-modal data may be sparse, but the lists contained must be
+    of the same length as the input frames sequence, as we make index
+    association assumptions within.
+
+    :param fcn: Torch FCN model as returned by `get_uho_classifier`.
+    :param temporal: Torch temporal model as returned by `get_uho_classifier`.
+    :param frames: List of temporally sequential RGB image matrices that
+        compose the temporal prediction window. This is expected to be dense,
+        i.e. we there is an image for every "slot".
+    :param aux_data: Auxiliary multi-modal data for this window.
     :param fcn_batch_size: If an integer value, compute frame descriptors in
         batches of the given size.
 
@@ -172,7 +182,29 @@ def predict(fcn: UnifiedFCNModule,
     # Generally a safe assumption...
     device = next(fcn.parameters()).device
 
+    # Input sanity checking.
     n_frames = len(frames)
+    assert len(aux_data.lhand) == n_frames, (
+        f"Auxiliary left-hand sequence must be the same size as the number of "
+        f"frames: (frames) {n_frames} != {len(aux_data.lhand)}"
+    )
+    assert len(aux_data.rhand) == n_frames, (
+        f"Auxiliary right-hand sequence must be the same size as the number of "
+        f"frames: (frames) {n_frames} != {len(aux_data.lhand)}"
+    )
+    assert len(aux_data.scores) == n_frames, (
+        f"Auxiliary detection scores sequence must be the same size as the "
+        f"number of frames: (frames) {n_frames} != {len(aux_data.lhand)}"
+    )
+    assert len(aux_data.dets) == n_frames, (
+        f"Auxiliary detection descriptors sequence must be the same size as "
+        f"the number of frames: (frames) {n_frames} != {len(aux_data.lhand)}"
+    )
+    assert len(aux_data.bbox) == n_frames, (
+        f"Auxiliary detection boxes sequence must be the same size as the "
+        f"number of frames: (frames) {n_frames} != {len(aux_data.lhand)}"
+    )
+
     transform = get_common_transform()
     with SimpleTimer("Transform images for FCN feature extraction"):
         frames_tformed = torch.stack([transform(f) for f in frames]).to(device)
