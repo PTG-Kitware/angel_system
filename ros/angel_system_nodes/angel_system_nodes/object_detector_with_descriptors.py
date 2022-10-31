@@ -14,6 +14,9 @@ from angel_system.fasterrcnn.faster_rcnn.resnet import resnet
 from angel_system.fasterrcnn.processing_utils import _get_image_blob
 from angel_utils.conversion import time_to_int
 
+import cProfile, pstats, io
+from pstats import SortKey
+
 
 BRIDGE = CvBridge()
 
@@ -284,9 +287,10 @@ class ObjectDetectorWithDescriptors(Node):
         pred_boxes = pred_boxes.squeeze()
 
         max_conf = torch.zeros((pred_boxes.shape[0])).to(device=self._torch_device)
-
+        thresh_scores = torch.nonzero(scores>self._detection_threshold).cpu()
         for j in range(1, len(self.classes)):
-            inds = torch.nonzero(scores[:,j]>self._detection_threshold).view(-1).cpu()
+            inds = thresh_scores[thresh_scores[:,1]==j][:,0].view(-1)
+            #inds = torch.nonzero(scores[:,j]>self._detection_threshold).view(-1).cpu()
             # if there is det
             if inds.numel() > 0:
                 cls_scores = scores[:,j][inds]
@@ -335,9 +339,9 @@ class ObjectDetectorWithDescriptors(Node):
                 objects = torch.argmax(scores[keep_boxes][:,1:], dim=1)
                 box_dets = np.zeros((len(keep_boxes), 4))
                 boxes = pred_boxes[keep_boxes.cpu()]
+                kind = objects + 1
                 for i in range(len(keep_boxes)):
-                    kind = objects[i]+1
-                    bbox = boxes[i, kind * 4: (kind + 1) * 4]
+                    bbox = boxes[i,kind[i] *4: (kind[i] + 1)*4]
                     box_dets[i] = bbox
 
                 scores = scores[keep_boxes][:, 1:]
