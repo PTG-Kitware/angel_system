@@ -20,7 +20,7 @@ Activity Classifier
 +++++++++++++++++++
 
 Hidden Markov Model (HMM)
-+++++++++++++++++++
++++++++++++++++++++++++++
 The `step HMM <https://github.com/PTG-Kitware/angel_system/blob/master/angel_system/activity_hmm/core.py#L162>`_ is
 based on a `Guassian HMM <https://hmmlearn.readthedocs.io/en/stable/api.html#gaussianhmm>`_ to filter activity
 classifications to recover the estimated true sequence of steps as a function of time.
@@ -39,4 +39,4 @@ or move to ``i+1`` without being considered as skipping a step.
 Simulating Data
 +++++++++++++++
 The simulating scripts are bit unstructured at the moment, but generation code
-lives `here <https://github.com/PTG-Kitware/angel_system/blob/master/scripts/hmm_exploration/simulate_data.py#L71>_.
+lives `here <https://github.com/PTG-Kitware/angel_system/blob/master/scripts/hmm_exploration/simulate_data.py#L71>`_.
