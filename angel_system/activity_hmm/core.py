@@ -249,7 +249,7 @@ class ActivityHMMRos:
                                  'relative to most-recent update for time '
                                  '%0.4f' % (start_time, DT, self.times[-1]))
 
-        if DT > self.dt:
+        if DT > self.dt*1.5:
             last_time = self.times[-1]
 
             # If there is a long idle period, at most, let's add in 5 seconds
@@ -261,7 +261,14 @@ class ActivityHMMRos:
             n += 1
             times_fill = np.linspace(last_time, start_time, n)
             times_fill = (times_fill[1:] + times_fill[:-1])/2
-            X_fill = np.tile(self.class_mean_conf, (len(times_fill), 1))
+
+            X_fill = np.zeros((len(times_fill), self.X.shape[1]))
+
+            # These are the mean values for each classifier. Spoofing to these
+            # during blackout periods tells HMM that no state is more likely
+            # than another.
+            mean_vals = np.diag(self.model.model.means_)[self.model.fwd_map]
+            X_fill = np.tile(mean_vals, (len(times_), 1))
 
             self.times = np.hstack([self.times, times_fill])
             self.X = np.vstack([self.X, X_fill])
