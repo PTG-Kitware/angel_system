@@ -2,9 +2,10 @@ from threading import Event, RLock, Thread
 from typing import List
 
 import numpy as np
-
 import rclpy
+from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from rclpy.node import Node
+from rclpy.executors import MultiThreadedExecutor
 
 from angel_msgs.msg import (
     HandJointPose,
@@ -40,6 +41,15 @@ PROJECTION_MATRIX = [
 
 
 class HandPoseConverter(Node):
+    """
+    ROS node that converts the MRTK hand joint positions from 3D world space to
+    2D RGB camera image space.
+
+    Currently, the input/output messages are of the same type,
+    HandJointPosesUpdate, with the 2D version having 1.0 for the z-position
+    component. HeadsetPoseMessages are used to get the world-to-camera matrix
+    at the time of the hand pose messages.
+    """
 
     def __init__(self):
         super().__init__(self.__class__.__name__)
@@ -61,7 +71,7 @@ class HandPoseConverter(Node):
             .string_value
         )
         self._tol = (
-            self.declare_parameter("tol", 1 / 30.0)
+            self.declare_parameter("tol", 2 / 30.0)
             .get_parameter_value()
             .double_value
         )
@@ -72,23 +82,31 @@ class HandPoseConverter(Node):
         log.info(f"Hand output topic: {self._hand_out_topic}")
 
         # Hand pose subscriber
+        self._hand_subscription_cb_group = MutuallyExclusiveCallbackGroup()
         self._hand_subscription = self.create_subscription(
             HandJointPosesUpdate,
             self._hand_in_topic,
             self.hand_callback,
-            1,
+            # Hand poses arrive in bursts @ up to 60hz per hand, so this gives
+            # a buffer to make sure we don't drop any messages.
+            (60 * 2 * 2),
+            callback_group=self._hand_subscription_cb_group,
         )
         # Head pose subscriber
-        self._hand_subscription = self.create_subscription(
+        self._head_subscription_cb_group = MutuallyExclusiveCallbackGroup()
+        self._head_subscription = self.create_subscription(
             HeadsetPoseData,
             self._head_pose_in_topic,
             self.head_callback,
-            1,
+            (30 * 2), # 2 seconds of frames
+            callback_group=self._head_subscription_cb_group,
         )
+        self._hand_publisher_cb_group = MutuallyExclusiveCallbackGroup()
         self._hand_publisher = self.create_publisher(
             HandJointPosesUpdate,
             self._hand_out_topic,
             1,
+            callback_group=self._hand_publisher_cb_group,
         )
 
         # Stores the messages received
@@ -220,7 +238,11 @@ class HandPoseConverter(Node):
                         for i in sorted(idxs_to_remove, reverse=True):
                             del self._hand_poses[i]
 
-    def clear_head_poses(self, t, window: float = -1e9 / 2.0):
+    def clear_head_poses(
+        self,
+        t,
+        window: float = -1e9 / 2.0 # 0.5 seconds
+    ):
         """
         Clear out headset pose messages older than window from the given
         time.
@@ -264,11 +286,28 @@ def main():
 
     converter = HandPoseConverter()
 
-    try:
-        rclpy.spin(converter)
-    except KeyboardInterrupt:
-        converter.stop_runtime()
-        converter.get_logger().info("Keyboard interrupt, shutting down.\n")
+    # If things are going wrong, set this False to debug in a serialized setup.
+    do_multithreading = True
+
+    if do_multithreading:
+        # Don't really want to use *all* available threads...
+        # 4 threads because:
+        # - 2 known subscribers which have their own groups
+        # - 1 for default group
+        # - 1 for publishers
+        executor = MultiThreadedExecutor(num_threads=4)
+        executor.add_node(converter)
+        try:
+            executor.spin()
+        except KeyboardInterrupt:
+            converter.stop_runtime()
+            converter.get_logger().info("Keyboard interrupt, shutting down.\n")
+    else:
+        try:
+            rclpy.spin(converter)
+        except KeyboardInterrupt:
+            converter.stop_runtime()
+            converter.get_logger().info("Keyboard interrupt, shutting down.\n")
 
     # Destroy the node explicitly
     # (optional - otherwise it will be done automatically
