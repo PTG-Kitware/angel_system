@@ -60,10 +60,4 @@ def project_3d_pos_to_2d_image(
     # Convert from camera space to image space
     image = np.matmul(projection_mat, x)
 
-    # Normalize
-    image_scaled = image / image[3]
-
-    image_scaled_x = image_scaled[0]
-    image_scaled_y = image_scaled[1]
-
-    return [image_scaled_x, image_scaled_y, 1.0]
+    return [image[0], image[1], 1.0]
