@@ -1,6 +1,3 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public enum ListPosition
@@ -35,6 +32,9 @@ public class TaskListElement : MonoBehaviour
     private string postMessage = "";
     private string taskMessage = "";
 
+    /// <summary>
+    /// Get all reference from the task list element prefab
+    /// </summary>
     private void InitIfNeeded()
     {
         if (checkBox == null)
@@ -55,7 +55,24 @@ public class TaskListElement : MonoBehaviour
         }
     }
 
-    public void SetText(int taskID, string text, int taskLevel)
+    /// <summary>
+    /// Reset all values
+    /// </summary>
+    public void Reset()
+    {
+        textCanvas.text = taskMessage;
+        checkBox.gameObject.SetActive(false);
+        checkBoxCurrent.gameObject.SetActive(false);
+        UpdateColor(inactiveColor);
+    }
+
+    /// <summary>
+    /// Set text, ID and level in task hierarchy (0 for main task, 1 for subtask)
+    /// </summary>
+    /// <param name="taskID">id in the task list (starts with 0)</param>
+    /// <param name="text">text of task message</param>
+    /// <param name="taskLevel">0 or 1</param>
+    public void InitText(int taskID, string text, int taskLevel)
     {
         InitIfNeeded();
 
@@ -73,7 +90,6 @@ public class TaskListElement : MonoBehaviour
         {
             textCanvas.margin = prefabMargin;
             subTaskIndicator.gameObject.SetActive(false);
-
             //textCanvas.fontStyle = TMPro.FontStyles.UpperCase;
         }
         else
@@ -83,30 +99,10 @@ public class TaskListElement : MonoBehaviour
         }
     }
     
-    public void UpdateListPosition(ListPosition pos)
-    {
-        if (pos.Equals(ListPosition.Top)) {
-            if (taskLevel == 0)
-                textCanvas.margin = prefabMargin + new Vector4(0, topBottomMargin, 0, 0f);
-            else 
-                textCanvas.margin = prefabMargin + subTaskMargin + new Vector4(0, topBottomMargin, 0, 0f);
-        }
-        else if (pos.Equals(ListPosition.Bottom))
-        {
-            if (taskLevel == 0)
-                textCanvas.margin = prefabMargin + new Vector4(0, 0, 0, topBottomMargin);
-            else
-                textCanvas.margin = prefabMargin + subTaskMargin + new Vector4(0, 0, 0, topBottomMargin);
-        }
-        else if (pos.Equals(ListPosition.Middle))
-        {
-            if (taskLevel == 0)
-                textCanvas.margin = prefabMargin;
-            else
-                textCanvas.margin = prefabMargin + subTaskMargin;
-        }
-    }
-
+    /// <summary>
+    /// Set the this task as done
+    /// </summary>
+    /// <param name="isDone"></param>
     public void SetIsDone(bool isDone)
     {
         InitIfNeeded();
@@ -134,6 +130,10 @@ public class TaskListElement : MonoBehaviour
 
     }
 
+    /// <summary>
+    /// Set this task as the one the user has to do
+    /// </summary>
+    /// <param name="postMessage"></param>
     public void SetAsCurrent(string postMessage)
     {
         InitIfNeeded();
@@ -149,6 +149,10 @@ public class TaskListElement : MonoBehaviour
 
     }
 
+    /// <summary>
+    /// Update the color of the task message and icon depending on it's state
+    /// </summary>
+    /// <param name="newColor"></param>
     private void UpdateColor(Color newColor)
     {
         textCanvas.color = new Color(newColor.r, newColor.g, newColor.b, currentAlpha);
@@ -157,6 +161,10 @@ public class TaskListElement : MonoBehaviour
         subTaskIndicator.Color = new Color(newColor.r, newColor.g, newColor.b, currentAlpha);
     }
 
+    /// <summary>
+    ///  Set the alpha value of the task text, used for fading
+    /// </summary>
+    /// <param name="alpha"></param>
     public void SetAlpha(float alpha)
     {
         textCanvas.color = new Color(textCanvas.color.r, textCanvas.color.g, textCanvas.color.b, alpha);
@@ -166,4 +174,6 @@ public class TaskListElement : MonoBehaviour
 
         currentAlpha = alpha;
     }
+
+
 }

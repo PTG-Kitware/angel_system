@@ -1,7 +1,4 @@
-﻿using Microsoft.MixedReality.Toolkit.Input;
-using System;
-using System.Collections.Generic;
-using Unity.Robotics.ROSTCPConnector.MessageGeneration;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -13,8 +10,10 @@ public class OrbFace : MonoBehaviour
     private Dictionary<string, Sprite> allFaces;
     private Shapes.Disc faceBG;
     private Shapes.Disc draggableHandle;
+
+    // Colors of orb states
     private Color faceColorInner = new Color(1, 1, 1, 1f);
-    private Color faceColorOuter;
+    private Color faceColorOuter = new Color(1, 1, 1, 1f);
     private Color faceColorOuterNotification = new Color(0.68f, 0.51f, 0f, 0.3f);
     
     private void Start()

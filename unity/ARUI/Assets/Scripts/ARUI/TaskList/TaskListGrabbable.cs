@@ -1,7 +1,5 @@
 using Microsoft.MixedReality.Toolkit.Input;
 using Microsoft.MixedReality.Toolkit.UI;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -44,8 +42,5 @@ public class TaskListGrabbable : MonoBehaviour, IMixedRealityPointerHandler
         AudioManager.Instance.PlaySound(transform.position, SoundType.moveEnd);
     }
 
-    public void OnPointerClicked(MixedRealityPointerEventData eventData)
-    {
-        
-    }
+    public void OnPointerClicked(MixedRealityPointerEventData eventData) { }
 }

@@ -1,4 +1,5 @@
 using DilmerGames.Core.Singletons;
+using Microsoft.MixedReality.Toolkit.Audio;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -13,10 +14,15 @@ public enum SoundType
     moveStart=4,
     moveEnd=5,
     select = 6,
+    warning = 7,
 }
 
+/// <summary>
+/// Plays user feedback at run-time
+/// </summary>
 public class AudioManager : Singleton<AudioManager>
 {
+    private TextToSpeech tTos;
     private Dictionary<SoundType, AudioSource> typeToSound;
 
     private List<string> soundTypeToPathMapping = new List<string>()
@@ -28,8 +34,17 @@ public class AudioManager : Singleton<AudioManager>
         StringResources.moveStart_path,
         StringResources.moveEnd_path,
         StringResources.selectSound_path,
+        StringResources.warningSound_path,
     };
-    
+
+    private void Start()
+    {
+        GameObject tmp = new GameObject("TextToSpeechSource");
+        tmp.transform.parent = transform;
+        tmp.transform.position = transform.position;
+        tTos = tmp.gameObject.AddComponent<TextToSpeech>();
+    }
+
     private void InitIfNeeded()
     {
         typeToSound = new Dictionary<SoundType, AudioSource>();
@@ -44,8 +59,36 @@ public class AudioManager : Singleton<AudioManager>
         }
     }
 
+    /// <summary>
+    /// Speech-To-Text for the task
+    /// </summary>
+    /// <param name="text"></param>
+    public void PlayText(string text) => StartCoroutine(Play(Orb.Instance.transform.position, text));
+    private IEnumerator Play(Vector3 pos, String text)
+    {
+        tTos.StopSpeaking();
+        tTos.gameObject.transform.position = pos;
+
+        yield return new WaitForEndOfFrame();
+
+        var msg = string.Format(text, tTos.Voice.ToString());
+        tTos.StartSpeaking(text);
+    }
+
+    public void StopPlayText() => tTos.StopSpeaking();
+
+    /// <summary>
+    /// Plays a sound effect from a certain position
+    /// </summary>
+    /// <param name="pos"></param>
+    /// <param name="type"></param>
     public void PlaySound(Vector3 pos, SoundType type) => StartCoroutine(Play(pos, type));
 
+    /// <summary>
+    /// Plays a sound effect from a certain position
+    /// </summary>
+    /// <param name="pos"></param>
+    /// <param name="type"></param>
     public void PlaySound(Vector3 pos, AudioClip clip) => StartCoroutine(Play(pos, clip));
 
     private IEnumerator Play(Vector3 pos, SoundType type)

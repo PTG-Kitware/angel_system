@@ -1,14 +1,15 @@
 ﻿using Microsoft.MixedReality.Toolkit;
 using Microsoft.MixedReality.Toolkit.Input;
 using Microsoft.MixedReality.Toolkit.UI;
+using Microsoft.MixedReality.Toolkit.Utilities.Solvers;
 using System;
 using System.Collections;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 public class DwellButtonTaskList : MonoBehaviour
 {
     private Shapes.Disc loadingDisc;
-    private EyeTrackingTarget eyeEvents;
 
     private float startingAngle;
     private bool isLookingAtBtn = false;
@@ -22,7 +23,6 @@ public class DwellButtonTaskList : MonoBehaviour
         loadingDisc = disc;
 
         startingAngle = loadingDisc.AngRadiansStart;
-        eyeEvents = gameObject.GetComponentInChildren<EyeTrackingTarget>();
 
         btnBGMat = GetComponentInChildren<MeshRenderer>().material;
         baseColor = btnBGMat.color;
@@ -89,7 +89,6 @@ public class DwellButtonTaskList : MonoBehaviour
 
         if (success)
             AngelARUI.Instance.ToggleTasklist();
-
 
         loadingDisc.AngRadiansEnd = startingAngle;
         btnBGMat.color = baseColor;
