@@ -331,7 +331,7 @@ class ActivityHMMRos:
             #skipped = []
             Z2s_ = []
             for j in skipped_step_check:
-                log_prob2_, Z2_ = self.noskip_model.decode(X, force_skip_step=j)[:2]
+                log_prob2_, Z2_ = self.noskip_model.decode(self.X, force_skip_step=j)[:2]
                 Z2s_.append(Z2_)
                 log_prob2.append(log_prob2_)
                 #skipped.append(model.did_skip_step(Z2_)[0])
