@@ -339,7 +339,7 @@ body {
 /* Style the collapsible content. Note: hidden by default */
 .content {
   padding: 0 18px;
-  display: none;
+  display: block;
   overflow: hidden;
   background-color: var(--kit-light-blue);
   text-align: left;
@@ -347,19 +347,14 @@ body {
 }
 
 .collapsible:after {
-  content: '\02795'; /* Unicode character for "plus" sign (+) */
   font-size: 10px;
   float: right;
   margin-left: 5px;
-}
-
-.active:after {
-  content: "\2796"; /* Unicode character for "minus" sign (-) */
 }
 
 .lapse{
   background-color: rgb(238, 143, 77);
 }
 .lapse:hover {
-  background-color: rgb(239, 119, 36);
+  background-color: rgb(238, 143, 77);
 }
