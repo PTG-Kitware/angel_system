@@ -34,6 +34,7 @@ setup(
                 'object_detector_with_descriptors = angel_system_nodes.object_detector_with_descriptors:main',
                 'uho_activity_detector = angel_system_nodes.uho_activity_detector:main',
                 'task_monitor_v2 = angel_system_nodes.task_monitor_v2:main',
+                'hand_pose_converter = angel_system_nodes.hand_pose_converter:main',
             ],
     },
 )
