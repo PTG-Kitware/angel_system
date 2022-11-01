@@ -77,7 +77,7 @@ times, X, Z, X_, Z_ = model.sample(500)
 
 det_json_fname = '/mnt/data10tb/ptg/activity_detection_data2.json'
 gt_feather_fname = '/mnt/data10tb/ptg/simulated.feather'
-model.save_to_disk(times, X, Z, det_json_fname, gt_feather_fname)
+model.save_sequence_to_disk(times, X, Z, det_json_fname, gt_feather_fname)
 # ----------------------------------------------------------------------------
 
 # ----------------------------------------------------------------------------
@@ -91,54 +91,16 @@ time_windows, class_str, X, Z, valid = ret
 valid[Z == 0] = False
 
 
-# Fit HMM.
-num_classes = max(Z) + 1
-true_mask = np.diag(np.ones(num_classes, dtype=bool))[Z]
-class_mean_conf = []
-class_std_conf = []
-med_class_duration = []
-for i in range(num_classes):
-    class_mean_conf.append(np.mean(X[true_mask[:, i], :], axis=0))
-    class_std_conf.append(np.std(X[true_mask[:, i], :], axis=0))
+fname = '/mnt/data2tb/libraries/angel_system/config/tasks/task_steps_config-recipe_coffee.yaml'
+live_model = ActivityHMMRos(config_fname)
 
-    indr = np.where(np.diff(true_mask[:, i].astype(np.int8)) < 0)[0]
-    indl = np.where(np.diff(true_mask[:, i].astype(np.int8)) > 0)[0]
+for i in range(len(time_windows)):
+    label_vec = range(X.shape[1])
+    live_model.add_activity_classification(label_vec, X[i], time_windows[i, 0],
+                                           time_windows[i, 1])
 
-    if true_mask[0, i] and indl[0] != 0:
-        indl = np.hstack([0, indl])
+model = live_model.model
 
-    if true_mask[-1, i] and indr[-1] != len(true_mask) - 1:
-        indr = np.hstack([indr, len(true_mask) - 1])
-
-    # wins has shape (2, num_instances) where wins[0, i] indicates when the ith
-    # instance starts and wins[1, i] indicates when the ith instance ends.
-    wins = np.array(list(zip(indl, indr))).T
-
-    # During (seconds) of each instance.
-    twins = time_windows[wins[1], 1] - time_windows[wins[0], 0]
-
-    med_class_duration.append(np.mean(twins))
-
-med_class_duration = np.array(med_class_duration)
-class_mean_conf = np.array(class_mean_conf)
-class_std_conf = np.array(class_std_conf)
-
-#plt.imshow(class_mean_conf); plt.colorbar()
-#plt.imshow(class_std_conf); plt.colorbar()
-#plt.imshow(class_mean_conf/class_std_conf); plt.colorbar()
-#plt.imshow(X.T, interpolation='nearest', aspect='auto'); plt.plot(Z, 'r.')
-
-
-model = ActivityHMM(dt, class_str,
-                    med_class_duration=med_class_duration,
-                    num_steps_can_jump_fwd=0, num_steps_can_jump_bck=0,
-                    class_mean_conf=class_mean_conf,
-                    class_std_conf=class_std_conf)
-model_skip = ActivityHMM(dt, class_str,
-                         med_class_duration=med_class_duration,
-                         num_steps_can_jump_fwd=10, num_steps_can_jump_bck=10,
-                         class_mean_conf=class_mean_conf,
-                         class_std_conf=class_std_conf)
 
 plt.close('all')
 score_raw_detections(X[valid], Z[valid], plot_results=True)
@@ -191,7 +153,7 @@ end_time = 1
 
 for _ in range(25):
     conf_vec = np.zeros(len(live_model.model.class_str));
-    conf_vec[curr_step] = 0.5
+    conf_vec[curr_step] = 1
     live_model.add_activity_classification(live_model.model.class_str,
                                            conf_vec, start_time, end_time)
     curr_step += 1
