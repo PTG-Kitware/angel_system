@@ -1,3 +1,7 @@
+==========
+Evaluation
+==========
+
 Enter the ANGEL system workspace
 ################################
 `$ ./angel-workplace-shell.sh`
@@ -33,10 +37,9 @@ Run eval
 ########
 `$ ptg_eval_activity <optional flags>`
 
-E.g.:
-```bash
-$ poetry run ptg_eval --labels activity_detector_annotation_labels.xlsx \
-                      --activity_gt labels_test_v1.4.feather \
-                      --extracted_activity_detections sample_dets.json \
-                      --output_dir ./eval_output/
-```
+E.g.::
+
+    $ poetry run ptg_eval --labels activity_detector_annotation_labels.xlsx \
+                          --activity_gt labels_test_v1.4.feather \
+                          --extracted_activity_detections sample_dets.json \
+                          --output_dir ./eval_output/

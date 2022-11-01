@@ -72,6 +72,7 @@ class TemTRANSModule(nn.Module):
         depth=4,
         num_head=8):
         super().__init__()
+        self._det_topk = 10
 
         # 2048 -> The length of features out of last layer of ResNext
         self.fc_x = nn.Linear(2048, hidden)
@@ -94,6 +95,10 @@ class TemTRANSModule(nn.Module):
         self.loss_action = nn.CrossEntropyLoss(weight=class_weight, label_smoothing=0.1) 
         self.apply(self.init_weights)
 
+    @property
+    def det_topk(self):
+        return self._det_topk
+
     def init_weights(self, module):
         """ Initialize the weights.
         """
@@ -115,7 +120,7 @@ class TemTRANSModule(nn.Module):
         # load features       
         feat_x = inputs[0]["feats"] # RGB features
         lh, rh = inputs[0]["labels"]["l_hand"], inputs[0]["labels"]["r_hand"] # hand poses
-        feat_d = inputs[0]["dets"] # detections
+        feat_d = inputs[0]["dets"] # detection features
         feat_b = inputs[0]["bbox"] # bounding boxes
         det_labels = inputs[0]["dcls"] # detections labels
         labels = inputs[0]["act"] # action labels
@@ -128,7 +133,7 @@ class TemTRANSModule(nn.Module):
         valid_fr = np.sort(valid_fr)
 
         # sample detections
-        topK = 10
+        topK = self._det_topk
         num_batch, num_det, num_dim = feat_d.shape
         feat_d = [feat_d[:,k*topK:(k+1)*topK,:] for k in valid_fr]
         feat_d = torch.stack(feat_d,1).reshape(num_batch, -1, num_dim)
@@ -180,3 +185,59 @@ class TemTRANSModule(nn.Module):
         loss = action_loss + 0.025*detection_loss
 
         return action_out, action_pred, loss, idx
+
+    def predict(self, inputs):
+        topK = self._det_topk
+        # load features       
+        feat_x = inputs["feats"] # RGB features
+        lh, rh = inputs["lhand"], inputs["rhand"] # hand poses
+        feat_d = inputs["dets"] # detection features
+        feat_b = inputs["bbox"] # bounding boxes
+
+        # extract detections at valid frames
+        num_batch, num_det, num_dim = feat_d.shape
+        tmp = torch.sum(feat_b, 2)
+        valid_fr = [k for k in range(feat_x.shape[1]) if torch.sum(tmp[:,k*topK:(k+1)*topK]) != 0]
+
+        feat_d = [feat_d[:,k*topK:(k+1)*topK,:] for k in valid_fr]
+        feat_d = torch.stack(feat_d,1).reshape(num_batch, -1, num_dim)
+        feat_b = [feat_b[:,k*topK:(k+1)*topK,:] for k in valid_fr]
+        feat_b = torch.stack(feat_b,1).reshape(num_batch, -1, 4)
+
+        # convert features
+        feat_x = self.fc_x(feat_x)
+        feat_h = self.fc_h(torch.cat([lh, rh], axis=-1).float())
+        feat_x = torch.cat([feat_x, feat_h], axis=-1)
+        num_batch, num_frame, num_dim = feat_x.shape
+
+        feat_d = self.fc_d(feat_d)
+        feat_b[:,:,[0,2]] = feat_b[:,:,[0,2]]/1280.
+        feat_b[:,:,[1,3]] = feat_b[:,:,[1,3]]/720.
+        feat_b = self.fc_b(feat_b.float())
+        feat_d = torch.cat([feat_d, feat_b], axis=-1)
+
+        enc_feat = torch.cat([feat_x, feat_d], axis=1)
+        enc_feat = enc_feat.contiguous()
+
+        # add positional encoding
+        pos_ids = torch.arange(num_frame, dtype=torch.long, device=enc_feat.device)
+        pos_ids_frame = pos_ids.unsqueeze(0).expand(num_batch, -1)
+        pos_ids_det = pos_ids[valid_fr].repeat(topK,1).transpose(1,0).reshape(-1, feat_d.size(1)).expand(num_batch, -1)
+        frame_pos_embed = self.frame_pos_embeddings(pos_ids_frame)
+        det_pos_embed = self.frame_pos_embeddings(pos_ids_det)    
+        pos_embeddings = torch.cat([frame_pos_embed, det_pos_embed], axis=1)
+        trans_feat = enc_feat + pos_embeddings
+
+        # calculate attentions
+        trans_feat = trans_feat.permute(1, 0, 2)  # NLD -> LND
+        trans_feat = self.transformer(trans_feat)
+        trans_feat = trans_feat.permute(1, 0, 2)  # LND -> NLD
+        trans_feat = trans_feat.type(enc_feat.dtype) + enc_feat
+
+        # classification
+        action_feat = trans_feat[:,:num_frame,:]
+        action_out = self.classifier_action(action_feat.mean(dim=1, keepdim=False))
+        action_pred = torch.argmax(action_out, dim=1)
+        action_out = torch.softmax(action_out, dim=1)
+
+        return action_out, action_pred

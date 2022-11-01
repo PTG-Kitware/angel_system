@@ -26,6 +26,9 @@ on_project_start: |
   export CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/config
   export NODE_CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/src/angel_system_nodes/configs
   export MODEL_DIR=${ANGEL_WORKSPACE_DIR}/model_files
+  if [ -z "${PARAM_ROS_BAG_DIR}" ]; then echo "MISSING: PARAM_ROS_BAG_DIR -> Set to path of ROS2 bag directory."; LOCAL_ERROR=1; fi
+  if [ -z "${PARAM_ACTIVITY_GT_FILE}" ]; then echo "MISSING: PARAM_ACTIVITY_GT_FILE -> Set to path of activity GT feather file."; LOCAL_ERROR=1; fi
+  if [ -n "${LOCAL_ERROR}" ]; then exit "${LOCAL_ERROR}"; fi
 
 # Run on project start, the first time
 # on_project_first_start: command
@@ -51,7 +54,7 @@ windows:
   #          instead of from the HL2 app.
   #          DO NOT RUN WITH HoloLens2 USE! -> There will be conflicting data
   #          on the same topics.
-  - ros2_bag: "#ros2 bag play -l ${ANGEL_WORKSPACE_DIR}/ros_bags/all_activities_5"
+  - ros2_bag: "#ros2 bag play -l ${PARAM_ROS_BAG_DIR}"
   # DEBUG -- View images as output from the HL2/Bag
   - rqt_2d_detections: rqt -s rqt_image_view/ImageView
       --args ${ROS_NAMESPACE}/PVFramesRGB
@@ -93,11 +96,10 @@ windows:
       -p frames_per_det:=32
       -p object_dets_per_window:=2
       -p buffer_max_size_seconds:=2.0
-      -p model_checkpoint:=${MODEL_DIR}/uho_epoch_090.ckpt
-      -p labels_file:=${MODEL_DIR}/uho_epoch_090_labels.txt
-      -p top_k:=5
+      -p model_checkpoint:=${MODEL_DIR}/uho_checkpoint_20221022.ckpt
+      -p top_k:=10
       -p overlapping_mode:=False
-      -p gt_file:=${ANGEL_WORKSPACE_DIR}/ros_bags/sorted_all_activities_5.feather
+      -p gt_file:=${PARAM_ACTIVITY_GT_FILE}
 
   - task_monitor: ros2 run angel_system_nodes task_monitor_v2 --ros-args
       -r __ns:=${ROS_NAMESPACE}

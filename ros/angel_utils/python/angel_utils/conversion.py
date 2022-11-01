@@ -2,10 +2,13 @@
 Various conversion functions into and out of angel_msg types.
 """
 import array
+import itertools
 from typing import Dict
 from typing import Hashable
 from typing import Iterable
 from typing import List
+from typing import Optional
+from typing import Sequence
 from typing import Tuple
 
 from builtin_interfaces.msg import Time
@@ -135,27 +138,64 @@ def convert_nv12_to_rgb(nv12_image: array.array,
     return rgb_image
 
 
-def get_hand_pose_from_msg(msg: HandJointPosesUpdate) -> npt.NDArray[np.float64]:
+def hand_joint_poses_to_struct(msg: HandJointPosesUpdate) -> Tuple[List[str], npt.NDArray[np.float64]]:
     """
-    Formats the hand pose information from the ROS hand pose message
-    into an array format required by activity detector model.
-    """
-    hand_joints = [{"joint": m.joint,
-                    "position": [m.pose.position.x,
-                                 m.pose.position.y,
-                                 m.pose.position.z]}
-                   for m in msg.joints]
+    Convert a hand joint pose message into a list of joint labels and the
+    matrix of 3D joint positions ([x, y, z] format).
 
-    # Rejecting joints not in OpenPose hand skeleton format
-    reject_joint_list = {'ThumbMetacarpalJoint',
-                         'IndexMetacarpal',
-                         'MiddleMetacarpal',
-                         'RingMetacarpal',
-                         'PinkyMetacarpal'}
-    # Shape: [N x 3], N = number of joints - reject list
-    joint_pos = []
-    for j in hand_joints:
-        if j["joint"] not in reject_joint_list:
-            joint_pos.append(j["position"])
-    joint_pos = np.array(joint_pos).flatten()
-    return joint_pos
+    The output matrix will be of shape `[nJoints x 3]`, where `nJoints` is the
+    size of the `joints` vector in the input message.
+
+    :param msg:
+
+    :return:
+    """
+    n_joints = len(msg.joints)
+    joint_labels = [''] * n_joints
+    joint_poses = np.empty((n_joints, 3))
+    for i, j in enumerate(msg.joints):
+        joint_labels[i] = j.joint
+        joint_poses[i] = [j.pose.position.x,
+                          j.pose.position.y,
+                          j.pose.position.z,]
+    return joint_labels, joint_poses
+
+
+def sparse_hand_joint_poses_to_structs(
+    msgs: Sequence[Optional[HandJointPosesUpdate]],
+) -> Tuple[List[str], List[Optional[npt.NDArray[np.float64]]]]:
+    """
+    Convert a sparse sequence of hand joint labels and sparse pose matrices
+    whose coordinates correspond to the order of the label sequence.
+
+    If no messages in the input sequence, the returned label sequence will be
+    empty and the position mats list will be a list of `None` values equivalent
+    to the input sequence length.
+
+    If subsequent messages do not have the same joint labels order as the first
+    non-None message, we raise a ValueError.
+
+    :param msgs: Sparse sequence of HandJointPosesUpdate messages.
+    :return: List of hand joint labels, and an equivalently sparse list of
+        hand joint position matrices.
+    """
+    ret_labels = None
+    position_mats: List[Optional[npt.NDArray]] = [None] * len(msgs)
+    # Progress to the first not-None value, storing label list order and
+    # the first position matrix. Then progress through the remainder of the
+    # value messages, asserting the label order is consistent.
+    msg_it = enumerate(msgs)
+    for i, msg in msg_it:
+        if msg is not None:
+            # First non-None item in the given sequence
+            ret_labels, poses = hand_joint_poses_to_struct(msg)
+            position_mats[i] = poses
+            break
+    for i, msg in msg_it:
+        if msg is not None:
+            labels, poses = hand_joint_poses_to_struct(msg)
+            if labels != ret_labels:
+                raise ValueError("Subsequent message does not have the same "
+                                 "joints labels order as the first.")
+            position_mats[i] = poses
+    return ret_labels, position_mats

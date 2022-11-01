@@ -32,7 +32,7 @@ class UnifiedHOModule(LightningModule):
         # use separate metric instance for train, val and test step
         # to ensure a proper reduction over the epoch
         self.train_acc = Accuracy(ignore_index=-1)
-        self.val_acc = Accuracy(ignore_index=0)
+        self.val_acc = Accuracy(ignore_index=-1)
         self.test_acc = Accuracy(ignore_index=0)
 
         # for logging best so far validation accuracy
