@@ -60,6 +60,12 @@ windows:
       -r __ns:=${ROS_NAMESPACE}
       -p topic_input_images:=PVFramesNV12
       -p topic_output_images:=PVFramesRGB
+  - hand_pose_converter: ros2 run angel_system_nodes hand_pose_converter --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p hand_pose_in_topic:=HandJointPoseData
+      -p head_pose_in_topic:=HeadsetPoseData
+      -p hand_pose_out_topic:=HandJointPoseData2d
+      -p tol:=83333333.3333 # (5/60) * 1e9
 
   - object_detector: ros2 run angel_system_nodes object_detector_with_descriptors --ros-args
       -r __ns:=${ROS_NAMESPACE}
@@ -83,7 +89,7 @@ windows:
   - activity_classifier: ros2 run angel_system_nodes uho_activity_detector --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p image_topic:=PVFramesRGB
-      -p hand_pose_topic:=HandJointPoseData
+      -p hand_pose_topic:=HandJointPoseData2d
       -p obj_det_topic:=ObjectDetections
       -p torch_device:=cuda:1
       -p det_topic:=ActivityDetections
