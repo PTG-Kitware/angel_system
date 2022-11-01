@@ -14,8 +14,6 @@ from angel_system.fasterrcnn.faster_rcnn.resnet import resnet
 from angel_system.fasterrcnn.processing_utils import _get_image_blob
 from angel_utils.conversion import time_to_int
 
-import cProfile, pstats, io
-from pstats import SortKey
 
 
 BRIDGE = CvBridge()
@@ -330,8 +328,10 @@ class ObjectDetectorWithDescriptors(Node):
                 scores = scores[keep_boxes][1:]
                 scores = torch.unsqueeze(scores, 0)
                 labels = []
-                for i in objects:
-                    labels.append(self.classes[i + 1])
+                labels = [None]*len(objects)
+                for i in range(len(objects)):
+                    obj = objects[i]
+                    labels[i] = self.classes[obj + 1]
 
                 feats = pooled_feat[keep_boxes].cpu().detach().numpy()
                 feats = np.expand_dims(feats, 0)
@@ -345,9 +345,10 @@ class ObjectDetectorWithDescriptors(Node):
                     box_dets[i] = bbox
 
                 scores = scores[keep_boxes][:, 1:]
-                labels = []
-                for i in objects:
-                    labels.append(self.classes[i + 1])
+                labels = [None]*len(objects)
+                for i in range(len(objects)):
+                    obj = objects[i]
+                    labels[i] = self.classes[obj + 1]
 
                 feats = pooled_feat[keep_boxes].cpu().detach().numpy()
 
