@@ -43,7 +43,7 @@ body {
 
   color: var(--kit-dark-blue);
 
-    text-align: left;
+  text-align: left;
 }
 
 /* ------------ */
@@ -66,8 +66,13 @@ body {
 .highlighted-title {
   padding: 0 0 20px 0;
   position: relative;
+  margin: 0 auto;
 
   margin-bottom: 5px;
+  max-width: 20vw;
+
+  overflow-x: hidden;
+  text-overflow: clip;
 }
 .icon-hex {
   position: relative;
@@ -75,8 +80,10 @@ body {
   vertical-align: middle;
   margin: 0 1px 0 0;
 
-  height:64.8px;
-  width: 69.8px;
+  /*height:64.8px;
+  width: 69.8px;*/
+  width: 49px;
+  height: 49px;
   clip-path: var(--hex-full);
   background-color: var(--kit-green);
   
@@ -87,12 +94,15 @@ body {
   display: inline-block;
   vertical-align: middle;
 
-  clip-path: polygon(0 0, calc(100% - 15px /*right top*/) 0, 100% 50%, calc(100% - 15px /*right bottom*/) 100%, 0 100%, 15px /* left*/ 50%);
-  padding: 0 7rem 0 3rem;
-  width: 440px;
-  max-width: 75%;
+  clip-path: polygon(12.5556px 0, calc(100% - 12.5556px) 0, 100% 50%, calc(100% - 12.5556px) 100%, 12.5556px 100%, 0% 50%);
+
+  /* Paired with hexagon
+  clip-path: polygon(15px 0, calc(100% - 15px) 0, 100% 50%, calc(100% - 15px) 100%, 15px 100%, 0% 50%); */
+  padding: 0 2rem 0 2rem;
+  width: 80%;
+  max-width: 85%;
   
-  font-size: clamp(1.75rem,3vw,2.25rem);
+  font-size: 1.7rem;
   font-weight: 550;
   line-height: 1.8;
   color: var(--kit-dark-blue);
@@ -252,8 +262,8 @@ body {
   position: relative;
   display: flex;
   
-  width: 66%;
-  max-width: 70vw;
+  width: 75%;
+  max-width: 77vw;
 }
 
 #activity {
@@ -261,7 +271,7 @@ body {
 
   margin-left: 60px;
 
-  width: 65%;
+  width: 70%;
 }
 #activity-conf-chart { /* chart */
   
@@ -270,6 +280,8 @@ body {
 #task-complete {
   margin-left: 70px;
   text-align: center;
+
+  width: 25%;
 }
 #task-complete-chart { /* chart */
   margin-bottom: 25px; /* matches font size of x axis */
@@ -278,8 +290,8 @@ body {
 #bottom-right {
   display: inline-block;
 
-  width: 20%;
-  max-width: 29vw;
+  width: 24%;
+  max-width: 22vw;
 
   margin-left: 70px;
 }
