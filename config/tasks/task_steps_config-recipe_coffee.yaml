@@ -10,7 +10,7 @@ activity_labels: "./config/activity_labels/recipe_coffee.yaml"
 # mean and standard deviation should be N x N matrices such that when activity
 # i is actually occuring, the classifier will emit confidence
 # mean[i, j] +/- std[i, j] for activity j.
-activity_mean_and_std_file: "./config/activity_labels/recipe_coffee_mean_std.npy"
+activity_mean_and_std_file: "./model_files/recipe_coffee_mean_std.npy"
 
 # Task title for display purposes.
 title: "Pour-over coffee"
