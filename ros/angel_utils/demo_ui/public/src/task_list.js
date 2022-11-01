@@ -1,5 +1,36 @@
+var task_ctx = document.getElementById("task-complete-chart").getContext('2d');
+
+var task_complete_chart = new Chart(task_ctx, {
+  type: "bar",
+  data: {
+    labels: ["task completion"],
+    datasets: [{
+      backgroundColor: "rgba(0, 104, 199, 1.0)",
+      data: [0]
+    }]
+  },
+  options: {
+    scales: {
+        x: { display: false },
+        y: {
+          min: 0,
+          max: 1,
+          ticks: {
+            stepSize: 0.1
+          }
+        }
+    },
+    title: {
+      display: false,
+    },
+    maintainAspectRatio: false
+  }
+});
+
 $.get( "/ns")
 .done(function( data ){
+  var colors;
+
   // subscribe to QueryTaskGraph
   var query_task_graph = new ROSLIB.Service({
     ros: ros,
@@ -39,12 +70,13 @@ $.get( "/ns")
 
       var text = document.createElement('span');
       text.className = "text body-text task";
-      text.innerHTML = task;
+      text.innerHTML = index+1 + '. ' + task;
       task_line.appendChild(text);
 
       container_block.appendChild(task_line);
-
     });
+
+    colors = new Array(task_list.length+1).fill("rgba(0, 104, 199, 1.0)");
   });
 
   // Create a listener for task completion updates
@@ -55,30 +87,42 @@ $.get( "/ns")
   });
 
   task_update.subscribe(function(m) {
-    // Update checkmarks
     var task_name = m.current_step;
     var task_idx = m.current_step_id; // -1 at start
+    var previous_name = m.previous_step;
+    var previous_idx = task_list.indexOf(previous_name);
 
-    task_list.forEach(function(task, index){
-      var el = document.getElementById(task);
-
-      if (index <= task_idx){
-        // Add checkmark to all tasks up to and including task
-        el.querySelector('.checkmark').className = 'checkmark_visible checkmark';
-      }
-      else{
-        // Remove checkmarks for all tasks after the task
+    if( previous_idx > task_idx ) {
+      // We are going backwards, remove checks after current_step
+      for(var i=task_idx+1; i<=previous_idx; i++) {
+        var el = document.getElementById(task_list[i]);
         el.querySelector('.checkmark').className = 'checkmark_hidden checkmark';
       }
-    });
+    }
+    var el = document.getElementById(task_name);
+    el.querySelector('.checkmark').className = 'checkmark_visible checkmark';
+
+    // Update task completion chart
+    task_complete_chart.data.datasets[0].data = [m.task_complete_confidence];
+    task_complete_chart.update('none'); // don't animate
+
+    // Update colors in activity confidence chart
+    // This assumes that the task list and activity classifier are
+    // aligned. This will not be the case in the future. 
+    var chart = Chart.getChart('activity-conf-chart');
+    var idx = task_idx + 1; // This list includes background as id 0
+
+    if( previous_idx > task_idx ) {
+      // We are going backwards, remove colors after current_step
+      for(var i=idx+1; i<=previous_idx+1; i++) {
+        colors[i] = "rgba(0, 104, 199, 1.0)" // blue
+      }
+    }
+    colors[idx] = "rgba(62, 174, 43, 1.0)"; // green
+    colors[chart.data.labels.indexOf("Background")] = "rgba(0, 104, 199, 1.0)"; // blue
+
+    chart.data.datasets[0].backgroundColor = colors;
+    chart.update('none'); // don't animate update
   });
 
-  // Done button
-  function done() {
-    // TODO: Update this
-    console.log("Done!");
-  }
-
-  var done_btn = document.getElementById("done-btn");
-  done_btn.onclick = done;
 });

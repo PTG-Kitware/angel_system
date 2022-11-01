@@ -79,6 +79,7 @@ windows:
       -p topic_input_images:=PVFramesRGB
       -p topic_input_det_2d:=ObjectDetections
       -p topic_output_images:=pv_image_detections_2d
+      -p filter_top_k:=5
   - compress_image: ros2 run image_transport republish raw compressed --ros-args
        -r __ns:=${ROS_NAMESPACE}
        --remap in:=pv_image_detections_2d

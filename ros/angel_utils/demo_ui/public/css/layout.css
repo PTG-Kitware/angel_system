@@ -1,10 +1,12 @@
 /* Kitware Colors */
 :root {
-  --light-gray-3:   rgb(243, 243, 243); /* light gray 3 */
-  --kit-light-blue: rgb(220, 227, 236); /* kitware light blue */
-  --kit-dark-blue:  rgb(0, 55, 101); /* kitware dark blue*/
-  --kit-blue:       rgb(0, 104, 199); /* kitware blue */
-  --kit-green:      rgb(62, 174, 43);
+  --light-gray-3:    rgb(243, 243, 243); /* light gray 3 */
+  --dark-gray-30:    rgb(36, 42, 55);
+  --kit-light-blue:  rgb(220, 227, 236); /* kitware light blue */
+  --kit-dark-blue:   rgb(0, 55, 101); /* kitware dark blue*/
+  --kit-blue:        rgb(0, 104, 199); /* kitware blue */
+  --kit-green:       rgb(62, 174, 43);
+  --light-red-berry: rgb(244, 40, 54);
 
   /* Hex Options */
   --hex-full:   polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
@@ -40,6 +42,8 @@ body {
   line-height: 1;
 
   color: var(--kit-dark-blue);
+
+  text-align: left;
 }
 
 /* ------------ */
@@ -62,8 +66,13 @@ body {
 .highlighted-title {
   padding: 0 0 20px 0;
   position: relative;
+  margin: 0 auto;
 
   margin-bottom: 5px;
+  max-width: 20vw;
+
+  overflow-x: hidden;
+  text-overflow: clip;
 }
 .icon-hex {
   position: relative;
@@ -71,8 +80,10 @@ body {
   vertical-align: middle;
   margin: 0 1px 0 0;
 
-  height:64.8px;
-  width: 69.8px;
+  /*height:64.8px;
+  width: 69.8px;*/
+  width: 49px;
+  height: 49px;
   clip-path: var(--hex-full);
   background-color: var(--kit-green);
   
@@ -83,12 +94,15 @@ body {
   display: inline-block;
   vertical-align: middle;
 
-  clip-path: polygon(0 0, calc(100% - 15px /*right top*/) 0, 100% 50%, calc(100% - 15px /*right bottom*/) 100%, 0 100%, 15px /* left*/ 50%);
-  padding: 0 7rem 0 3rem;
-  width: 450px;
-  max-width: 75%;
+  clip-path: polygon(12.5556px 0, calc(100% - 12.5556px) 0, 100% 50%, calc(100% - 12.5556px) 100%, 12.5556px 100%, 0% 50%);
+
+  /* Paired with hexagon
+  clip-path: polygon(15px 0, calc(100% - 15px) 0, 100% 50%, calc(100% - 15px) 100%, 15px 100%, 0% 50%); */
+  padding: 0 2rem 0 2rem;
+  width: 80%;
+  max-width: 85%;
   
-  font-size: clamp(1.75rem,3vw,2.25rem);
+  font-size: 2rem;
   font-weight: 550;
   line-height: 1.8;
   color: var(--kit-dark-blue);
@@ -107,12 +121,13 @@ body {
   padding: 10px;
   width: 99%;
   height: 43%;
+  max-height: 45h;
+
   background-color: var(--kit-blue);
 
   left: 0;
   position: relative;
   display: flex;
-  max-height: 45%;
 
   clip-path: polygon(0% 0%, calc(100% - 226.0015px) 0%, 100% 50%, calc(100% - 226.0015px) 100%, 0% 100%);
 }
@@ -122,10 +137,8 @@ body {
 /* ------------ */
 #recipe { /* task list */
   padding: 10px;
-  width: 43%;
+  width: 40%;
   max-width: 45vw;
-  
-  overflow: scroll;
 
   text-align: center;
 
@@ -133,6 +146,11 @@ body {
 }
 
 #task-list {
+  height:85%;
+
+  overflow: scroll;
+  scrollbar-color: var(--dark-gray-30) white;
+
   text-align: left;
   
 }
@@ -210,9 +228,10 @@ body {
 #HL-live{
   float: left;
   padding: 10px;
-  margin-left: 10px;
-  width: 41%
-  max-width: 45vw;
+  margin-left: 30px;
+  margin-right: 10px;
+  width: 45%;
+  max-width: 40vw;
 }
 
 .live-img {
@@ -220,6 +239,7 @@ body {
 
   height: 99%;
   width: auto; /* keep aspect ratio */
+  max-width: 40vw;
 }
 
 /* ------------ */
@@ -231,28 +251,110 @@ body {
   display: flex;
   margin-top: 10px;
   width: 99%;
-  max-height: 45vw;
+  height: 43%;
+  max-height: 45vh;
 
   content: "";
 
   clear: both;
+
+  text-align: center;
+}
+
+#charts {
+  position: relative;
+  display: flex;
+  
+  width: 75%;
+  max-width: 77vw;
 }
 
 #activity {
-  width: 43%;
-  max-width: 45vw;
-  max-height: 43%;
-
   text-align: center;
 
-  margin-left: 60px
+  margin-left: 60px;
+
+  width: 70%;
 }
-#activity-conf { /* plot */
-  margin-left: -30px;
+#activity-conf-chart { /* chart */
+  
+}
+
+#task-complete {
+  margin-left: 70px;
+  text-align: center;
+
+  width: 25%;
+}
+#task-complete-chart { /* chart */
+  margin-bottom: 25px; /* matches font size of x axis */
 }
 
 #bottom-right {
   display: inline-block;
 
+  width: 24%;
+  max-width: 22vw;
+
   margin-left: 70px;
+}
+
+/* ------------ */
+/* ERRORS       */
+/* ------------ */
+#errors {
+  height:100%;
+  position: relative;
+}
+#error-msgs {
+  max-height:100%;
+  height: 70%;
+
+  overflow: scroll;
+  scrollbar-color: var(--dark-gray-30) white;
+}
+
+.error-msg {
+  margin-bottom: 10px;
+}
+
+/* https://www.w3schools.com/howto/howto_js_collapsible.asp */
+.collapsible {
+  background-color: #eee;
+  cursor: pointer;
+  padding: 18px;
+  width: 100%;
+  border: none;
+  text-align: left;
+  outline: none;
+  font-size: clamp(1rem,1vw,1.8rem);
+  font-weight: 550;
+}
+
+/* Add a background color to the button if it is clicked on (add the .active class with JS), and when you move the mouse over it (hover) */
+.active, .collapsible:hover {
+  background-color: #ccc;
+}
+
+/* Style the collapsible content. Note: hidden by default */
+.content {
+  padding: 0 18px;
+  display: block;
+  overflow: hidden;
+  background-color: var(--kit-light-blue);
+  text-align: left;
+  font-size: clamp(1rem,1vw,1.5rem);;
+}
+
+.collapsible:after {
+  font-size: 10px;
+  float: right;
+  margin-left: 5px;
+}
+
+.lapse{
+  background-color: rgb(238, 143, 77);
+}
+.lapse:hover {
+  background-color: rgb(238, 143, 77);
 }
