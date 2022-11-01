@@ -26,52 +26,148 @@ class ActivityHMMRos:
             Path to the configuration yaml.
 
         """
-        with open(config_fname, 'r') as stream:
-            config = yaml.safe_load(stream)
-
-        # Verify that all of the sections of the config exist.
-        for key in ['version', 'activity_labels', 'title', 'steps', 'hmm']:
-            if key not in config:
-                raise AssertionError(f'config \'{config_fname}\' does not '
-                                     f'have the required \'{key}\' defined')
-
-        default_mean_conf = config['hmm']['default_mean_conf']
-        default_std_conf = config['hmm']['default_std_conf']
-
-        self.dt = config['hmm']['dt']
+        # Initialize variables
         self.X = None
+        self.default_std_conf = None
+        self.default_mean_conf = None
+
 
         # Times associated with the center of the window associated with each
         # element of self.X.
         self.times = None
 
-        # Start with a background class.
-        class_str = ['background']
-        med_class_duration = [1]
-        class_mean_conf = [default_mean_conf]
-        class_std_conf = [default_std_conf]
+        with open(config_fname, 'r') as stream:
+            config = yaml.safe_load(stream)
 
-        for i in range(len(config['steps'])):
-            ii = config['steps'][i]['id']
-            if i != ii:
-                raise Exception(f"The {i}th step in '{config_fname}' should have 'id' "
-                                f"{i} but it has 'id' {ii}")
+        # Verify that all of the top-level sections of the config exist.
+        for key in ['version', 'activity_labels', 'title', 'steps', 'hmm']:
+            if key not in config:
+                raise AssertionError(f'config \'{config_fname}\' does not '
+                                     f'have the required \'{key}\' defined')
 
-            class_str.append(config['steps'][i]['description'])
-            med_class_duration.append(config['steps'][i]['median_duration_seconds'])
+        try:
+            self.activity_labels_fname = config['activity_labels']
+        except KeyError:
+            raise AssertionError(f"config '{config_fname}' does not "
+                                 f"have the required 'activity_labels' "
+                                 "defined")
 
-            try:
-                class_mean_conf.append(config['steps'][i]['class_mean_conf'])
-            except KeyError:
-                class_mean_conf.append(default_mean_conf)
+        try:
+            self.activity_mean_and_cov_fname = config['activity_mean_and_std_file']
+            loaded_mean_and_cov = True
+        except KeyError:
+            loaded_mean_and_cov = False
+            self.activity_mean_and_cov_fname = None
 
-            try:
-                class_std_conf.append(config['steps'][i]['class_std_conf'])
-            except KeyError:
-                class_std_conf.append(default_std_conf)
+        if self.activity_mean_and_cov_fname is not None:
+            ret = np.load(self.activity_mean_and_cov_fname)
+            class_mean_conf, class_std_conf = ret
+        else:
+            self.default_mean_conf = config['hmm']['default_mean_conf']
+            self.default_std_conf = config['hmm']['default_std_conf']
+            class_mean_conf = []
+            class_std_conf = []
 
-        class_mean_conf = np.array(class_mean_conf)
-        self.class_mean_conf = class_mean_conf
+        try:
+            self.task_title = config['title']
+        except KeyError:
+            raise AssertionError(f"config '{config_fname}' does not "
+                                 f"have the required 'title' defined")
+
+        try:
+            self.dt = config['hmm']['dt']
+        except KeyError:
+            raise AssertionError(f"config '{config_fname}' does not "
+                                 f"have the required 'dt' under 'hmm' defined")
+
+        class_str = []
+        med_class_duration = []
+        activity_per_step = []
+
+        steps = config['steps']
+
+        # Verify that all steps have sufficient information defined.
+        for i in range(len(steps)):
+            if 'id' not in steps[i]:
+                raise AssertionError(f"The {i}th step in '{config_fname}' "
+                                     f"does not define the 'id'")
+
+            for key in ['description', 'activity_id',
+                        'median_duration_seconds']:
+                if key not in steps[i]:
+                    raise AssertionError(f"The step with id: {steps[i]['id']} "
+                                         f"in '{config_fname}' does not "
+                                         f"define the required field '{key}'")
+
+            # Strip inline comments.
+            steps[i]['description'] = steps[i]['description'].split('#')[0].rstrip()
+
+        # Step 0 must be the background step. The recipe yaml may explicitly
+        # define it as such, or it may leave it out (and imply it), starting by
+        # defining step 1.
+        if steps[0]['id'] == 0:
+            # If step with id=0 is defined, it better be background.
+            if steps[0]['description'].lower() not in ['background', 'background.']:
+                raise AssertionError(f"'{config_fname}' defines a step with "
+                                     "id=0, but the first step should start "
+                                     "with id=1 with id=0 implied but not "
+                                     "explicitly defined to be a background "
+                                     "state")
+        else:
+            # Create the implied background step.
+            steps.insert(0, {'id': 0,
+                             'activity_id': 0,
+                             'description': 'Background',
+                             'median_duration_seconds': 5})
+            if not loaded_mean_and_cov:
+                steps[0]['mean_conf'] = self.default_mean_conf
+                steps[0]['std_conf'] = self.default_std_conf
+
+
+        for i in range(len(steps)):
+            ii = steps[i]['id']
+
+            if i  != ii:
+                raise AssertionError(f"The {i}th step in '{config_fname}' "
+                                     f"should have 'id' {i} but it has "
+                                     f"'id' {ii}")
+
+            if i == 0:
+                # This must be the background step.
+                if not steps[0]['description'].lower() in ['background', 'background.']:
+                    raise AssertionError(f"The step with id=0 must be the "
+                                         "background state with "
+                                         "description='Background'")
+            elif steps[i]['description'].lower() in ['background', 'background.']:
+                raise AssertionError(f"The background state must have id=0")
+
+            activity_per_step.append(steps[i]['activity_id'])
+
+            class_str_ = steps[i]['description']
+            class_str_ = class_str_.split('#')[0]
+            class_str_ = class_str_.rstrip()
+            class_str.append(class_str_)
+
+            med_class_duration.append(steps[i]['median_duration_seconds'])
+
+            if loaded_mean_and_cov:
+                pass
+            else:
+                try:
+                    class_mean_conf.append(steps[i]['class_mean_conf'])
+                except KeyError:
+                    class_mean_conf.append(self.default_mean_conf)
+
+                try:
+                    class_std_conf.append(steps[i]['class_std_conf'])
+                except KeyError:
+                    class_std_conf.append(self.default_std_conf)
+
+        self.activity_per_step = activity_per_step
+        self.class_str = class_str
+        self.med_class_duration = med_class_duration
+        self.class_mean_conf = np.array(class_mean_conf)
+        self.class_std_conf = np.array(class_std_conf)
 
         # This is the model that enforces steps are done in order without
         # skipping steps.
@@ -81,14 +177,33 @@ class ActivityHMMRos:
                                  class_mean_conf=class_mean_conf,
                                  class_std_conf=class_std_conf)
 
-        num_steps_can_jump_fwd = config['hmm']['num_steps_can_jump_fwd']
-        num_steps_can_jump_bck = config['hmm']['num_steps_can_jump_bck']
-        self.model = ActivityHMM(self.dt, class_str,
-                                      med_class_duration=med_class_duration,
-                                      num_steps_can_jump_fwd=num_steps_can_jump_fwd,
-                                      num_steps_can_jump_bck=num_steps_can_jump_bck,
-                                      class_mean_conf=class_mean_conf,
-                                      class_std_conf=class_std_conf)
+        self.num_steps_can_jump_fwd = config['hmm']['num_steps_can_jump_fwd']
+        self.num_steps_can_jump_bck = config['hmm']['num_steps_can_jump_bck']
+        self.model = ActivityHMM(self.dt, self.class_str,
+                                 med_class_duration=self.med_class_duration,
+                                 num_steps_can_jump_fwd=self.num_steps_can_jump_fwd,
+                                 num_steps_can_jump_bck=self.num_steps_can_jump_bck,
+                                 class_mean_conf=self.class_mean_conf,
+                                 class_std_conf=self.class_std_conf)
+
+    def get_hmm_mean_and_std(self):
+        """Return the mean and standard deviation of activity classifications.
+
+        """
+        return self.model.get_hmm_mean_and_std()
+
+    def set_hmm_mean_and_std(self, class_mean_conf, class_std_conf):
+        """Set the mean and standard deviation of activity classifications.
+
+        """
+        self.class_mean_conf = np.array(class_mean_conf)
+        self.class_std_conf = np.array(class_std_conf)
+        self.model = ActivityHMM(self.dt, self.class_str,
+                                 med_class_duration=self.med_class_duration,
+                                 num_steps_can_jump_fwd=self.num_steps_can_jump_fwd,
+                                 num_steps_can_jump_bck=self.num_steps_can_jump_bck,
+                                 class_mean_conf=self.class_mean_conf,
+                                 class_std_conf=self.class_std_conf)
 
     def add_activity_classification(self, label_vec, conf_vec, start_time,
                                     end_time):
@@ -113,6 +228,7 @@ class ActivityHMMRos:
         None.
 
         """
+        assert end_time > start_time
         n = int(np.round((end_time - start_time)/self.dt))
         n = max([n, 1])
         n += 1
@@ -127,12 +243,11 @@ class ActivityHMMRos:
 
         DT = times_[0] - self.times[-1]
 
-        if DT < 0:
-            raise Exception('Set a new classification time starting at time '
-                            '%0.4f s that is %0.4f s in the past relative to '
-                            'most-recent update for time %0.4f' % (start_time,
-                                                                   DT,
-                                                                   self.times[-1]))
+        if DT <= 0:
+            raise AssertionError('Set a new classification time starting at '
+                                 'time %0.4f s that is %0.4f s in the past '
+                                 'relative to most-recent update for time '
+                                 '%0.4f' % (start_time, DT, self.times[-1]))
 
         if DT > self.dt:
             last_time = self.times[-1]
@@ -231,6 +346,82 @@ class ActivityHMMRos:
 
         return Z_can_skip, Z_no_skip, skip_score
 
+    def save_task_yaml(self, fname, save_weights_inline=False):
+        if save_weights_inline:
+            mean, std = self.get_hmm_mean_and_std()
+
+        with open(fname, 'w') as f:
+            f.write('# Schema version.\n')
+            f.write('version: "1.0"\n\n')
+            f.write('# Reference to the activity classification labels '
+                    'configuration that we will\n')
+            f.write('# reference into.\n')
+
+            f.write(f'activity_labels: "{self.activity_labels_fname}"\n\n')
+
+            if not save_weights_inline:
+                f.write('# Reference to the file defining the mean and standard deviation of the\n')
+                f.write('# activity classifications to be used by the HMM. For N activities, both the\n')
+                f.write('# mean and standard deviation should be N x N matrices such that when activity\n')
+                f.write('# i is actually occuring, the classifier will emit confidence\n')
+                f.write('# mean[i, j] +/- std[i, j] for activity j.\n')
+                f.write(f'activity_mean_and_std_file: "{self.activity_mean_and_cov_fname}"\n\n')
+
+            f.write('# Task title for display purposes.\n')
+            f.write(f'title: "{self.task_title}"\n\n')
+
+            f.write('# Layout of the steps that define this task.\n')
+            f.write('steps:\n')
+            f.write('  # Item format:\n'
+                    '  # - id: Identifying integer for the step.\n'
+                    '  # - activity_id: The ID of an activity classification associated with this\n'
+                    '  #                step. This must reference an ID within the `activity_labels`\n'
+                    '  #                configuration file referenced above.\n'
+                    '  # - description: Human semantic description of this step.\n'
+                    '  # - median_duration_seconds: Median expected time this task will\n'
+                    '  #                            consume in seconds.\n'
+                    '  # - mean_conf: mean value of classifier confidence for true examples.\n'
+                    '  # - std_conf: standard deviation of confidence for both true and false\n'
+                    '  #             examples.\n')
+
+            for i in range(1, len(self.activity_per_step)):
+                if i == 1:
+                    f.write(f'  - id: {i}   # Must start at 1, 0 is reserved for background.\n')
+                else:
+                    f.write(f'  - id: {i}\n')
+
+                f.write(f'    activity_id: {self.activity_per_step[i]}\n')
+                f.write(f'    description: >-\n')
+                f.write(f'      {self.class_str[i]}\n')
+                f.write(f'    median_duration_seconds: {self.med_class_duration[i]}\n')
+
+                if save_weights_inline:
+                    mean_ = str(mean[i]).replace('\n', '')
+                    f.write(f'    mean_conf: {mean_}\n')
+                    std_ = str(std[i]).replace('\n', '')
+                    f.write(f'    std_conf: {std_}\n')
+
+            # Write the final details about the HMM.
+            f.write(f'\n# Hidden markov model configuration parameters\n')
+            f.write(f'hmm:\n')
+            f.write(f'  # Time (seconds) between time steps of HMM. Sets the temporal precision of\n')
+            f.write(f'  # the HMM analysis at the expense of processing costs.\n')
+            f.write(f'  dt: {self.dt}\n\n')
+            f.write(f'  # Constrain whether HMM sequence can skip steps or jump backwards. When both\n')
+            f.write(f'  # values are set to 0, forward progress without skipping steps is enforced.\n')
+            f.write(f'  num_steps_can_jump_fwd: {self.num_steps_can_jump_fwd}\n')
+            f.write(f'  num_steps_can_jump_bck: {self.num_steps_can_jump_bck}\n\n')
+
+            if self.default_mean_conf is not None:
+                f.write(f'  # Default classifier mean confidence to use if not explicitly provided for a\n')
+                f.write(f'  # step.\n')
+                f.write(f'  default_mean_conf: {self.default_mean_conf}\n\n')
+
+            if self.default_std_conf is not None:
+                f.write(f'  # Default classifier standard deviation of confidence to use if not\n')
+                f.write(f'  # explicitly provided for a step.\n')
+                f.write(f'  default_std_conf: {self.default_std_conf}\n')
+
 
 class ActivityHMM(object):
     def __init__(self, dt, class_str, med_class_duration,
@@ -281,6 +472,7 @@ class ActivityHMM(object):
             actually active.
 
         """
+        self.cov_eps = 1e-9
         med_class_duration = np.array(med_class_duration)
         assert class_str[0].lower() == 'background'
         assert num_steps_can_jump_fwd >= 0
@@ -412,7 +604,7 @@ class ActivityHMM(object):
                 else:
                     conf_cov_mat[i] = conf_cov_mat[0]
 
-            model.covars_ = conf_cov_mat + 1e-9
+            model.covars_ = conf_cov_mat + self.cov_eps
 
         # -------------- Define transition probabilities -------------------------
         # Median number of timesteps spent in each step.
@@ -474,6 +666,16 @@ class ActivityHMM(object):
                 ki += 1
             else:
                 model.transmat_[i, valid[i]] = 1/(sum(valid[i]))
+
+    def get_hmm_mean_and_std(self):
+        """Return the mean and covariance of the model.
+
+        """
+        mean = self.model.means_.copy()
+        cov = self.model._covars_.copy() - self.cov_eps
+        mean = mean[self.fwd_map][:, self.fwd_map]
+        std = np.sqrt(cov[self.fwd_map][:, self.fwd_map])
+        return mean, std
 
     def sample(self, N):
         """Return simulated classifier output X and truth state Z.
@@ -698,7 +900,7 @@ class ActivityHMM(object):
 
         return missing_ind, missing_class
 
-    def save_to_disk(self, times, X, Z, det_json_fname, gt_feather_fname):
+    def save_sequence_to_disk(self, times, X, Z, det_json_fname, gt_feather_fname):
         """Save siumulated data to disk.
 
         Parameters
