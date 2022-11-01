@@ -1,3 +1,5 @@
+import numpy as np
+
 def convert_1d_4x4_to_2d_matrix(matrix_1d):
     matrix_2d = [[], [], [], []]
     for row in range(4):
