@@ -16,28 +16,12 @@ from angel_system.utils.matching import descending_match_with_tolerance
 from angel_system.utils.matrix_conversion import (
     convert_1d_4x4_to_2d_matrix,
     project_3d_pos_to_2d_image,
+    PROJECTION_MATRIX,
 )
 from angel_utils.conversion import time_to_int
 from geometry_msgs.msg import (
     Point,
 )
-
-
-# NOTE: These values were extracted from the projection matrix provided by the
-# Unity main camera with the Windows MR plugin (now deprecated).
-# For some unknown reason, the values provided by the Open XR plugin are
-# different and do not provide the correct results. In the future, we should
-# figure out why they are different or extract the focal length values from the
-# MediaFrameReader which provides the frames, instead of the Unity main camera.
-FOCAL_LENGTH_X = 1.6304
-FOCAL_LENGTH_Y = 2.5084
-
-PROJECTION_MATRIX = [
-    [FOCAL_LENGTH_X, 0.0, 0.0, 0.0],
-    [0.0, FOCAL_LENGTH_Y, 0.0, 0.0],
-    [0.0, 0.0, -1.0020020008087158, -0.20020020008087158],
-    [0.0, 0.0, -1.0, 0.0]
-]
 
 
 class HandPoseConverter(Node):
@@ -71,7 +55,7 @@ class HandPoseConverter(Node):
             .string_value
         )
         self._tol = (
-            self.declare_parameter("tol", 2 / 30.0)
+            self.declare_parameter("tol", (5 / 60.0) * 1e9)
             .get_parameter_value()
             .double_value
         )
@@ -111,7 +95,8 @@ class HandPoseConverter(Node):
 
         # Stores the messages received
         self._head_poses: List[HeadsetPoseData] = []
-        self._hand_poses: List[HandJointPosesUpdate] = []
+        self._hand_poses_left: List[HandJointPosesUpdate] = []
+        self._hand_poses_right: List[HandJointPosesUpdate] = []
         self._converter_lock = RLock()
 
         # Create the runtime thread to trigger processing and publish 2D hand
@@ -139,7 +124,10 @@ class HandPoseConverter(Node):
         """
         if self.rt_alive():
             with self._converter_lock:
-                self._hand_poses.append(hand_pose)
+                if hand_pose.hand == "Left":
+                    self._hand_poses_left.append(hand_pose)
+                elif hand_pose.hand == "Right":
+                    self._hand_poses_right.append(hand_pose)
                 self._rt_awake_evt.set()
 
     def head_callback(self, head_pose: HeadsetPoseData) -> None:
@@ -164,79 +152,83 @@ class HandPoseConverter(Node):
                 self._rt_awake_evt.clear()
 
                 with self._converter_lock:
-                    hand_times = [time_to_int(p.header.stamp) for p in self._hand_poses]
+                    frame_times_ns = [time_to_int(p.header.stamp) for p in self._head_poses]
 
-                    # Get the matching head pose data for this hand pose
-                    head_poses_synced = descending_match_with_tolerance(
-                        hand_times,
-                        self._head_poses,
+                    lhand_poses_synced = descending_match_with_tolerance(
+                        frame_times_ns,
+                        self._hand_poses_left,
+                        self._tol,
+                        time_from_value_fn=self.head_pose_msg_to_time
+                    )
+                    rhand_poses_synced = descending_match_with_tolerance(
+                        frame_times_ns,
+                        self._hand_poses_right,
                         self._tol,
                         time_from_value_fn=self.head_pose_msg_to_time
                     )
 
-                    idxs_to_remove = []
-                    idx = 0
+                    hand_lists = [lhand_poses_synced, rhand_poses_synced]
                     first_hand_time = None
-                    for head_pose, hand_pose in zip(head_poses_synced, self._hand_poses):
-                        if head_pose is None:
-                            # No matching head pose yet
-                            continue
+                    for hand_poses in hand_lists:
+                        for head_pose, hand_pose in zip(self._head_poses, hand_poses):
+                            if hand_pose is None:
+                                # No matching head pose yet
+                                continue
 
-                        if first_hand_time is None:
-                            first_hand_time = hand_times[idx]
+                            if first_hand_time is None:
+                                first_hand_time = time_to_int(hand_pose.header.stamp)
 
-                        # Compute the transformation matrices
-                        cam_to_world_matrix = convert_1d_4x4_to_2d_matrix(
-                            head_pose.world_matrix
-                        )
-                        world_to_cam_matrix = np.linalg.inv(cam_to_world_matrix)
-                        projection_matrix = PROJECTION_MATRIX
-
-                        hand_joint_pose_update_2d = HandJointPosesUpdate()
-                        hand_joint_pose_update_2d.header.stamp = hand_pose.header.stamp
-                        hand_joint_pose_update_2d.header.frame_id = "2d hand pose"
-                        hand_joint_pose_update_2d.hand = hand_pose.hand
-
-                        for j in hand_pose.joints:
-                            # Get the hand pose
-                            joint_position_3d = np.array(
-                                [j.pose.position.x,
-                                 j.pose.position.y,
-                                 j.pose.position.z,
-                                 1]
+                            # Compute the transformation matrices
+                            cam_to_world_matrix = convert_1d_4x4_to_2d_matrix(
+                                head_pose.world_matrix
                             )
-                            # Convert to 2d coordinates
-                            coords = project_3d_pos_to_2d_image(
-                                joint_position_3d,
-                                world_to_cam_matrix,
-                                projection_matrix,
-                            )
-                            # Create the new HandJointPose message
-                            point_2d = Point()
-                            point_2d.x = coords[0]
-                            point_2d.y = coords[1]
-                            point_2d.z = coords[2] # always 1
+                            world_to_cam_matrix = np.linalg.inv(cam_to_world_matrix)
+                            projection_matrix = PROJECTION_MATRIX
 
-                            pose_msg = HandJointPose()
-                            pose_msg.joint = j.joint
-                            pose_msg.pose.position = point_2d
+                            hand_joint_pose_update_2d = HandJointPosesUpdate()
+                            hand_joint_pose_update_2d.header.stamp = hand_pose.header.stamp
+                            hand_joint_pose_update_2d.header.frame_id = "2d hand pose"
+                            hand_joint_pose_update_2d.hand = hand_pose.hand
 
-                            hand_joint_pose_update_2d.joints.append(pose_msg)
+                            for j in hand_pose.joints:
+                                # Get the hand pose
+                                joint_position_3d = np.array(
+                                    [j.pose.position.x,
+                                     j.pose.position.y,
+                                     j.pose.position.z,
+                                     1]
+                                )
+                                # Convert to 2d coordinates
+                                coords = project_3d_pos_to_2d_image(
+                                    joint_position_3d,
+                                    world_to_cam_matrix,
+                                    projection_matrix,
+                                )
+                                # Create the new HandJointPose message
+                                point_2d = Point()
+                                point_2d.x = coords[0]
+                                point_2d.y = coords[1]
+                                point_2d.z = coords[2] # always 1
 
-                        # Publish 2d joint msg
-                        self._hand_publisher.publish(hand_joint_pose_update_2d)
+                                pose_msg = HandJointPose()
+                                pose_msg.joint = j.joint
+                                pose_msg.pose.position = point_2d
 
-                        idxs_to_remove.append(idx)
-                        idx += 1
+                                hand_joint_pose_update_2d.joints.append(pose_msg)
+
+                            # Publish 2d joint msg
+                            self._hand_publisher.publish(hand_joint_pose_update_2d)
+                            log.info("Publish 2d hand pose msg")
+
+                            # Remove this hand pose from the global list
+                            if hand_pose.hand == "Left":
+                                self._hand_poses_left.remove(hand_pose)
+                            else:
+                                self._hand_poses_right.remove(hand_pose)
 
                     # Clear out old head poses
                     if first_hand_time is not None:
-                        log.info(f"Published {len(idxs_to_remove)} 2d hand poses")
                         self.clear_head_poses(first_hand_time)
-
-                        # Clear out these hand poses
-                        for i in sorted(idxs_to_remove, reverse=True):
-                            del self._hand_poses[i]
 
     def clear_head_poses(
         self,
@@ -268,6 +260,7 @@ class HandPoseConverter(Node):
         Indicate that the runtime loop should cease.
         """
         self._rt_active.clear()
+        self._rt_thread.join()
 
     def rt_alive(self) -> bool:
         """
