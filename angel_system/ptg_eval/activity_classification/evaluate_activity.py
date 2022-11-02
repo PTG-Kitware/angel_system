@@ -3,7 +3,11 @@ import argparse
 
 import logging
 
-from angel_system.ptg_eval.common.load_data import load_from_file
+from angel_system.ptg_eval.common.load_data import (
+    activities_from_dive_csv,
+    activities_from_ros_export_json,
+    activities_as_dataframe
+)
 from angel_system.ptg_eval.common.discretize_data import discretize_data_to_windows
 from angel_system.ptg_eval.activity_classification.visualization import EvalVisualization
 from angel_system.ptg_eval.activity_classification.compute_scores import EvalMetrics
@@ -17,9 +21,19 @@ def run_eval(args):
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    labels, gt, detections = load_from_file(args.activity_gt, args.extracted_activity_detections)
-    gt_true_mask, dets_per_valid_time_w = discretize_data_to_windows(labels, gt, detections,
-                                                                     args.time_window, args.uncertainty_pad)
+    # labels, gt, detections = load_from_file(args.activity_gt, args.extracted_activity_detections)
+    gt = activities_from_dive_csv(args.activity_gt)
+    labels, detections = activities_from_ros_export_json(args.extracted_activity_detections)
+
+    # Make gt/detections pd.DataFrame instance to be consistent with downstream
+    # implementation.
+    gt = activities_as_dataframe(gt)
+    detections = activities_as_dataframe(detections)
+
+    gt_true_mask, dets_per_valid_time_w, time_windows = (
+        discretize_data_to_windows(labels, gt, detections,
+                                   args.time_window, args.uncertainty_pad)
+    )
     
     # ============================
     # Metrics
@@ -46,8 +60,7 @@ def main():
     parser.add_argument(
         "--activity_gt",
         type=str,
-        help="Feather file containing the ground truth annotations in the PTG-LEARN format. \
-              The expected filename format is \'labels_test_v<label version>.feather\'"
+        help="CSV file containing the ground truth annotations as exported from DIVE."
     )
     parser.add_argument(
         "--extracted_activity_detections",
@@ -64,7 +77,7 @@ def main():
         "--uncertainty_pad",
         type=float,
         default=0.5,
-        help="Time in seconds to pad the groundtruth regions"
+        help="Time in seconds to pad the ground-truth regions"
     )
     parser.add_argument(
         "--output_dir",
@@ -75,6 +88,7 @@ def main():
 
     args = parser.parse_args()
     run_eval(args)
+
 
 if __name__ == '__main__':
     main()

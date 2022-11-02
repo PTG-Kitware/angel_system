@@ -228,8 +228,8 @@ class EvalVisualization:
         """
         log.debug("Plotting activity confidences")
         for label in self.labels:
-            gt_ranges = gt.loc[gt['class'] == label]
-            det_ranges = dets.loc[dets['class'] == label]
+            gt_ranges = gt.loc[gt["class_label"] == label]
+            det_ranges = dets.loc[dets["class_label"] == label]
 
             if not gt_ranges.empty and not det_ranges.empty:
                 # ============================

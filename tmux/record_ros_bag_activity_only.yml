@@ -54,17 +54,34 @@ tmux_options: -f <%= ENV["ANGEL_WORKSPACE_DIR"] %>/tmux/tmux.conf
 # attach: false
 
 windows:
+  - ros_bag_play: #ros2 bag play <<PATH_TO_BAG_FILE>>
   - image_converter: ros2 run angel_datahub ImageConverter --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p topic_input_images:=PVFramesNV12
       -p topic_output_images:=PVFramesRGB
-  - activity_detector: ros2 run angel_system_nodes activity_detector --ros-args
+  - object_detector: ros2 run angel_system_nodes object_detector_with_descriptors --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p image_topic:=PVFramesRGB
+      -p descriptor_topic:=ObjectDetections
+      -p min_time_topic:=ObjDetMinTime
+      -p torch_device:=cuda:0
+      -p detection_threshold:=0.05
+      -p object_vocab_list:=${MODEL_DIR}/fasterrcnn_label_list.txt
+      -p model_checkpoint:=${MODEL_DIR}/fasterrcnn_res101_vg.pth
+  - activity_classifier: ros2 run angel_system_nodes uho_activity_detector --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p image_topic:=PVFramesRGB
+      -p hand_pose_topic:=HandJointPoseData
+      -p obj_det_topic:=ObjectDetections
+      -p torch_device:=cuda:1
       -p det_topic:=ActivityDetections
-      -p use_cuda:=True
-      -p frames_per_det:=64.0
-      -p detector_config:=${CONFIG_DIR}/swinb_activity_det_config.json
+      -p min_time_topic:=ObjDetMinTime
+      -p frames_per_det:=32
+      -p object_dets_per_window:=2
+      -p buffer_max_size_seconds:=2.0
+      -p model_checkpoint:=${MODEL_DIR}/uho_checkpoint_20221022.ckpt
+      -p top_k:=10
+      -p overlapping_mode:=False
   - ros_bag_record: ros2 bag record
       ${ROS_NAMESPACE}/ActivityDetections
       ${ROS_NAMESPACE}/PVFramesRGB
