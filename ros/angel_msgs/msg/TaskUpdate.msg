@@ -38,3 +38,7 @@ int32 time_remaining_until_next_task
 # Current confidence from the HMM that a recipe is complete.
 # Only task_monitor_v2 will fill this in.
 float32 task_complete_confidence
+
+# Array of length n_steps (same length as `steps` above) that indicates which
+# steps, by index association, are complete.
+bool[] completed_steps

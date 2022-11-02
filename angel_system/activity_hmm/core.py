@@ -311,7 +311,7 @@ class ActivityHMMRos:
 
         Returns
         -------
-        Z_can_skip_ : int
+        Z_can_skip : int
             Index of most likely current step assuming steps could have been
             skipped according to 'num_steps_can_jump_fwd' and
             'num_steps_can_jump_bck'.
