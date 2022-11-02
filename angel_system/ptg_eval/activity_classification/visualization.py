@@ -13,7 +13,7 @@ import logging
 log = logging.getLogger("ptg_eval")
 
 plt.rcParams.update({'figure.max_open_warning': 0})
-plt.rcParams.update({'font.size': 12})
+plt.rcParams.update({'font.size': 35})
 
 
 class EvalVisualization:
@@ -70,7 +70,7 @@ class EvalVisualization:
             # ============================
             # Plot
             # ============================
-            fig, ax = plt.subplots(figsize=(14, 8))
+            fig, ax = plt.subplots(figsize=(30, 15))
 
             ax.set_xlim([0.0, 1.0])
             ax.set_ylim([0.0, 1.05])
@@ -167,7 +167,7 @@ class EvalVisualization:
             # ============================
             # Setup figure
             # ============================
-            fig, ax = plt.subplots(figsize=(14, 8))
+            fig, ax = plt.subplots(figsize=(30, 15))
 
             ax.set_xlim([0.0, 1.0])
             ax.set_ylim([0.0, 1.05])
@@ -201,7 +201,8 @@ class EvalVisualization:
         Plot a confusion matrix of size (number of labels x number of labels)
         """
         log.debug("Plotting confusion matrix")
-        fig, ax = plt.subplots(figsize=(20, 20))
+        plt.rcParams.update({'font.size': 55})
+        fig, ax = plt.subplots(figsize=(100, 100))
 
         true_idxs = np.where(self.gt_true_mask==True)[1]
         pred_idxs = np.argmax(self.window_class_scores, axis=1)
@@ -227,6 +228,7 @@ class EvalVisualization:
                                     use "red".
         """
         log.debug("Plotting activity confidences")
+        plt.rcParams.update({'font.size': 25})
         for label in self.labels:
             gt_ranges = gt.loc[gt['class'] == label]
             det_ranges = dets.loc[dets['class'] == label]
@@ -242,9 +244,9 @@ class EvalVisualization:
                 pad = 0.05 * total_time_delta
 
                 # Setup figure
-                fig = plt.figure(figsize=(14, 6))
+                fig = plt.figure(figsize=(28, 12))
                 ax = fig.add_subplot(111)
-                ax.set_title(f"Window Confidence over time for \"{label}\"\n in time range {min_start_time}:{max_end_time}")
+                ax.set_title(f"Window Confidence over time for \n\"{label}\"\n in time range {min_start_time}:{max_end_time}")
                 ax.set_xlabel("Time (seconds)")
                 ax.set_ylabel("Confidence")
                 ax.set_ylim(0, 1.05)
