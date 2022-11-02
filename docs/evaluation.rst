@@ -66,9 +66,17 @@ Run eval
 ########
 ``$ ptg_eval_activity <optional flags>``
 
+The evaluation tool should be run with a ``--time_window`` option that is
+non-trivially smaller than predicted activity time windows.
+This is due to evaluation needing to associate any ground-truth or predicted
+activities to a time-window that is *fully contained* within that activity's
+temporal bounds.
+
 E.g.::
 
     $ poetry run ptg_eval_activity \
             --activity_gt labels_test_v1.4.csv \
             --extracted_activity_detections sample_dets.json \
+            --time_window 0.1 \
+            --uncertainty_pad 0.05 \
             --output_dir ./eval_output/
