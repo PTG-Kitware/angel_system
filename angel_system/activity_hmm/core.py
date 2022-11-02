@@ -4,8 +4,10 @@ from sklearn.metrics import precision_recall_curve
 import pandas as pd
 import json
 import yaml
+import os
 
 from angel_system.ptg_eval.common.load_data import time_from_name
+from angel_system.ptg_eval.common.load_data import activities_from_dive_csv
 
 try:
     import matplotlib.pyplot as plt
@@ -276,6 +278,17 @@ class ActivityHMMRos:
         self.times = np.hstack([self.times, times_])
         self.X = np.vstack([self.X, X])
 
+    def clear_history(self):
+        """Erase all history of classifier outputs.
+
+        Returns
+        -------
+        None.
+
+        """
+        self.X = None
+        self.times = None
+
     def revert_to_step(self, step_ind):
         """Erase history back to when we were at the specified step.
 
@@ -528,6 +541,8 @@ class ActivityHMM(object):
             inv_map.append(0)
             k += 1
 
+        self.num_steps = len(class_str)
+
         class_str_map = np.array(class_str_map, dtype=int)
         self.class_str_map = class_str_map
         bckg_mask = np.array(bckg_mask, dtype=bool)
@@ -725,6 +740,27 @@ class ActivityHMM(object):
 
         return times, X, Z, X_, Z_
 
+    def pad_in_hidden_background(self, X):
+        """Add in hidden background state values to be consistent with HMM.
+
+        :param X: Confidence array
+        :type X: array of shape (num_classes,) or (N, num_classes)
+        """
+        if X.ndim == 1:
+            X_ = np.zeros((1, len(self.class_str_)))
+            for i in np.where(self.bckg_mask)[0]:
+                X_[:, i] = X[0]
+
+            X_[:, ~self.bckg_mask] = X[1:]
+        else:
+            X_ = np.zeros((len(X), len(self.class_str_)))
+            for i in np.where(self.bckg_mask)[0]:
+                X_[:, i] = X[:, 0]
+
+            X_[:, ~self.bckg_mask] = X[:, 1:]
+
+        return X_
+
     def decode(self, X, force_skip_step=None):
         """
         Parameters
@@ -742,12 +778,7 @@ class ActivityHMM(object):
         Z : (n_samples,)
             Truth state associated with each time step.
         """
-        X_ = np.zeros((len(X), len(self.class_str_)))
-
-        for i in np.where(self.bckg_mask)[0]:
-            X_[:, i] = X[:, 0]
-
-        X_[:, ~self.bckg_mask] = X[:, 1:]
+        X_ = self.pad_in_hidden_background(X)
 
         if force_skip_step is not None:
             if force_skip_step == 0 or force_skip_step >= len(self.class_str):
@@ -1105,7 +1136,7 @@ def load_and_discretize_data(activity_gt: str,
     Parameters
     ----------
     activity_gt : str
-        Path to activity ground truth feather file.
+        Path to activity ground truth feather or Dive csv file.
     extracted_activity_detections : str
         Path to detection json.
     time_window : float
@@ -1132,17 +1163,33 @@ def load_and_discretize_data(activity_gt: str,
         class.
 
     """
-    gt_f = pd.read_feather(activity_gt)
-    # Keys: class, start_frame,  end_frame, exploded_ros_bag_path
+    ext = os.path.splitext(activity_gt)[1]
 
-    gt = []
-    for i, row in gt_f.iterrows():
-        g = {
-            'class': row["class"].lower().strip(),
-            'start': time_from_name(row["start_frame"]),
-            'end': time_from_name(row["end_frame"])
-        }
-        gt.append(g)
+    if ext == '.csv':
+        gt0 = activities_from_dive_csv(activity_gt)
+
+        gt = []
+        for i, row in enumerate(gt0):
+            g = {
+                'class': row.class_label.lower().strip(),
+                'start': row.start,
+                'end': row.end
+            }
+            gt.append(g)
+    elif ext == '.feather':
+        gt_f = pd.read_feather(activity_gt)
+        # Keys: class, start_frame,  end_frame, exploded_ros_bag_path
+
+        gt = []
+        for i, row in gt_f.iterrows():
+            g = {
+                'class': row["class"].lower().strip(),
+                'start': time_from_name(row["start_frame"]),
+                'end': time_from_name(row["end_frame"])
+            }
+            gt.append(g)
+    else:
+        raise Exception(f'Unhandled file extension {ext}')
 
     print(f"Loaded ground truth from {activity_gt}")
     gt = pd.DataFrame(gt)
