@@ -25,14 +25,16 @@ namespace RosMessageTypes.Angel
         //  Items required
         public TaskItemMsg[] task_items;
         //  List of steps for this task
+        //  DEPRECATED: Users should instead query the QueryTaskGraph service.
         public string[] steps;
-        //  Current step index (-1 indicates no step has been finished yet)
+        //  The index of the step currently in progress.
+        //  A value of `-1` indicates that no step has been started yet.
         public sbyte current_step_id;
-        //  Current step is the task step most recently completed
+        //  String of the step currently in progress.
         public string current_step;
-        //  Previous step is the step before the most recently completed
+        //  Previous step is the step worked on before the current step.
         public string previous_step;
-        //  Current activity
+        //  Current activity classification prediction
         public string current_activity;
         public string next_activity;
         //  Time remaining to move to next task (e.g. waiting for tea to steep)
@@ -41,6 +43,9 @@ namespace RosMessageTypes.Angel
         //  Current confidence from the HMM that a recipe is complete.
         //  Only task_monitor_v2 will fill this in.
         public float task_complete_confidence;
+        //  Array of length n_steps (same length as `steps` above) that indicates which
+        //  steps, by index association, are complete.
+        public bool[] completed_steps;
 
         public TaskUpdateMsg()
         {
@@ -56,9 +61,10 @@ namespace RosMessageTypes.Angel
             this.next_activity = "";
             this.time_remaining_until_next_task = 0;
             this.task_complete_confidence = 0.0f;
+            this.completed_steps = new bool[0];
         }
 
-        public TaskUpdateMsg(Std.HeaderMsg header, string task_name, string task_description, TaskItemMsg[] task_items, string[] steps, sbyte current_step_id, string current_step, string previous_step, string current_activity, string next_activity, int time_remaining_until_next_task, float task_complete_confidence)
+        public TaskUpdateMsg(Std.HeaderMsg header, string task_name, string task_description, TaskItemMsg[] task_items, string[] steps, sbyte current_step_id, string current_step, string previous_step, string current_activity, string next_activity, int time_remaining_until_next_task, float task_complete_confidence, bool[] completed_steps)
         {
             this.header = header;
             this.task_name = task_name;
@@ -72,6 +78,7 @@ namespace RosMessageTypes.Angel
             this.next_activity = next_activity;
             this.time_remaining_until_next_task = time_remaining_until_next_task;
             this.task_complete_confidence = task_complete_confidence;
+            this.completed_steps = completed_steps;
         }
 
         public static TaskUpdateMsg Deserialize(MessageDeserializer deserializer) => new TaskUpdateMsg(deserializer);
@@ -90,6 +97,7 @@ namespace RosMessageTypes.Angel
             deserializer.Read(out this.next_activity);
             deserializer.Read(out this.time_remaining_until_next_task);
             deserializer.Read(out this.task_complete_confidence);
+            deserializer.Read(out this.completed_steps, sizeof(bool), deserializer.ReadLength());
         }
 
         public override void SerializeTo(MessageSerializer serializer)
@@ -108,6 +116,8 @@ namespace RosMessageTypes.Angel
             serializer.Write(this.next_activity);
             serializer.Write(this.time_remaining_until_next_task);
             serializer.Write(this.task_complete_confidence);
+            serializer.WriteLength(this.completed_steps);
+            serializer.Write(this.completed_steps);
         }
 
         public override string ToString()
@@ -124,7 +134,8 @@ namespace RosMessageTypes.Angel
             "\ncurrent_activity: " + current_activity.ToString() +
             "\nnext_activity: " + next_activity.ToString() +
             "\ntime_remaining_until_next_task: " + time_remaining_until_next_task.ToString() +
-            "\ntask_complete_confidence: " + task_complete_confidence.ToString();
+            "\ntask_complete_confidence: " + task_complete_confidence.ToString() +
+            "\ncompleted_steps: " + System.String.Join(", ", completed_steps.ToList());
         }
 
 #if UNITY_EDITOR
