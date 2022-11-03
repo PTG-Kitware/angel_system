@@ -2,10 +2,12 @@ import numpy as np
 import pandas as pd
 import glob
 import os
+import copy
 from sklearn.metrics import precision_recall_curve
 from sklearn.metrics import  accuracy_score
 import scipy
 import yaml
+from scipy.optimize import minimize, root_scalar
 
 from angel_system.activity_hmm.core import ActivityHMM, ActivityHMMRos, \
     get_skip_score, score_raw_detections, load_and_discretize_data
@@ -28,21 +30,66 @@ os.chdir('/home/local/KHQ/matt.brown/libraries/angel_system')
 
 # ----------------------------------------------------------------------------
 # Load from real system.
-activity_gt = '/mnt/data10tb/ptg/labels_test_v1.5.feather'
-extracted_activity_detections = '/mnt/data10tb/ptg/activity_detection_data.json'
 dt = 0.25
-ret = load_and_discretize_data(activity_gt, extracted_activity_detections,
-                               dt, 0.5)
-time_windows, class_str, X, Z, valid = ret
-valid[Z == 0] = False
+base_dir = '/mnt/data10tb/ptg/hmm_training_data'
+gt = []
+for sdir in os.listdir(base_dir):
+    activity_gt = glob.glob('%s/%s/*.csv' % (base_dir, sdir))[0]
+    extracted_activity_detections = glob.glob('%s/%s/*.json' % (base_dir, sdir))[0]
+    gt.append([sdir, load_and_discretize_data(activity_gt,
+                                              extracted_activity_detections,
+                                              dt, 0.5)])
 
+
+# For the purpose of fitting mean and std outside of the HMM, we can just
+# append everything together.
+
+X = []
+activity_ids = []
+time_windows = []
+valid = []
+for gt_ in gt:
+    time_windowsi, class_str, Xi, activity_idsi, validi = gt_[1]
+    time_windows.append(time_windowsi)
+    X.append(Xi)
+    activity_ids.append(activity_idsi)
+    valid.append(validi)
+
+time_windows = np.vstack(time_windows)
+X = np.vstack(X)
+valid = np.hstack(valid)
+activity_ids = np.hstack(activity_ids)
+
+# ----------------------------------------------------------------------------
+# What was loaded is activity_id ground truth, but we want step ground truth.
+
+# Map activities to steps
+with open(config_fname, 'r') as stream:
+    config = yaml.safe_load(stream)
+
+activity_id_to_step = {}
+for step in config['steps']:
+    if isinstance(step['activity_id'], str):
+        a_ids = [float(s) for s in step['activity_id'].split(',')]
+    else:
+        a_ids = [step['activity_id']]
+
+    for i in a_ids:
+        activity_id_to_step[i] = step['id']
+
+activity_id_to_step[0] = 0
+steps = sorted(list(activity_id_to_step.keys()))
+assert steps == list(range(max(steps) + 1))
+
+true_step = [activity_id_to_step[activity_id] for activity_id in activity_ids]
+# ----------------------------------------------------------------------------
 
 # Fit HMM.
-num_classes = max(Z) + 1
-true_mask = np.diag(np.ones(num_classes, dtype=bool))[Z]
+num_classes = max(true_step) + 1
 class_mean_conf = []
 class_std_conf = []
 med_class_duration = []
+true_mask = np.diag(np.ones(num_classes, dtype=bool))[true_step]
 for i in range(num_classes):
     class_mean_conf.append(np.mean(X[true_mask[:, i], :], axis=0))
     class_std_conf.append(np.std(X[true_mask[:, i], :], axis=0))
@@ -74,11 +121,182 @@ class_std_conf = np.array(class_std_conf)
 #plt.imshow(class_mean_conf/class_std_conf); plt.colorbar()
 #plt.imshow(X.T, interpolation='nearest', aspect='auto'); plt.plot(Z, 'r.')
 
-np.save("/mnt/data2tb/libraries/angel_system/config/activity_labels/recipe_coffee_mean_std.npy", [class_mean_conf, class_std_conf])
+snr = []
+
+
+np.save("/mnt/data2tb/libraries/angel_system/model_files/recipe_coffee_mean_std.npy", [class_mean_conf, class_std_conf])
+
+# ----------------------------------------------------------------------------
+
+# Analyse how quickly we can move to next step.
+config_fname = '/mnt/data2tb/libraries/angel_system/config/tasks/task_steps_config-recipe_coffee.yaml'
+live_model = ActivityHMMRos(config_fname)
+model = live_model.noskip_model
+
+
+_, X, Z_true, _, _ = model.sample(1000)
+_, Z, _, _ = model.decode(X)
+
+ind = Z_true > 0
+Z_true[ind] == Z[ind]
+
+Z = Z[Z != 0]
+
+
+# ----------------------------------------------------------------------------
+# Fit median durations.
+
+config_fname = '/mnt/data2tb/libraries/angel_system/config/tasks/task_steps_config-recipe_coffee.yaml'
+live_model = ActivityHMMRos(config_fname)
+
+dt = live_model.dt
+class_str = live_model.class_str
+med_class_duration = live_model.med_class_duration
+num_steps_can_jump_fwd = live_model.num_steps_can_jump_fwd
+num_steps_can_jump_bck = live_model.num_steps_can_jump_bck
+class_mean_conf = live_model.class_mean_conf
+class_std_conf = live_model.class_std_conf
+
+
+def err(med_class_duration):
+    model = ActivityHMM(dt, class_str,
+                        med_class_duration=med_class_duration,
+                        num_steps_can_jump_fwd=num_steps_can_jump_fwd,
+                        num_steps_can_jump_bck=num_steps_can_jump_bck,
+                        class_mean_conf=class_mean_conf,
+                        class_std_conf=class_std_conf)
+
+    log_prob = model.decode(X)[0]
+    print(log_prob, med_class_duration)
+    return -log_prob
+
+res = minimize(err, med_class_duration, bounds=[(0, 10) for _ in range(num_classes)])
+
+med_class_duration = res.x
+# ----------------------------------------------------------------------------
+
+# Investigate which steps we might get stuck in.
+config_fname = '/mnt/data2tb/libraries/angel_system/config/tasks/task_steps_config-recipe_coffee_trimmed.yaml'
+live_model = ActivityHMMRos(config_fname)
+model = live_model.model
+model.model.transmat_ += 1e-12
+model.model.startprob_ += 1e-12
+class_mean_conf = live_model.class_mean_conf
+class_std_conf = live_model.class_std_conf
+
+fract = []
+med_class_duration_ = []
+for curr_step_ind in range(0, len(live_model.class_str) - 1):
+    print('Processing step:', curr_step_ind)
+    n1= scipy.stats.norm(loc=class_mean_conf[curr_step_ind],
+                         scale=class_std_conf[curr_step_ind])
+
+    N = 1000
+    conf = np.array([n1.rvs() for _ in range(N)])
+
+    log_prob1 = -((conf - class_mean_conf[curr_step_ind])/class_std_conf[curr_step_ind])**2
+    log_prob1 = np.sum(log_prob1, axis=1)
+    log_prob2 = -((conf - class_mean_conf[curr_step_ind + 1])/class_std_conf[curr_step_ind + 1])**2
+    log_prob2 = np.sum(log_prob2, axis=1)
+
+    llr = log_prob1 - log_prob2
+
+    # Log of likelihood ratio for how much more likely it is that we move to
+    # the next step when we should.
+    llr0 = np.percentile(llr, 10)
+
+    def err(n):
+        if n < 0:
+            return 1e10
+
+        # llr to move on due to transition probability
+        err = np.log(1 - (0.5)**(1/n)) - np.log((0.5)**(1/n))
+        err += llr0
+        return err
+
+    n0 = 5/dt
+    n = np.logspace(-5, np.log10(n0), 10000)
+    errs = [abs(err(n_)) for n_ in n[:-1]]
+    ind = np.argmin(errs)
+    n = root_scalar(err, x0=n[ind - 1], x1=n[ind + 1]).root
+    n = min([n, n0])
+    med_class_duration_.append(dt*n)
+
+    fract.append(np.mean(llr > 0))
+
+[(i, med_class_duration_[i]) for i in range(len(med_class_duration_))]
+# ----------------------------------------------------------------------------
 
 
 config_fname = '/mnt/data2tb/libraries/angel_system/config/tasks/task_steps_config-recipe_coffee.yaml'
 live_model = ActivityHMMRos(config_fname)
+
+if False:
+    # Analyze mean and std.
+
+    model = live_model.model
+    model.model.transmat_ += 1e-12
+    model.model.startprob_ += 1e-12
+
+    num_steps = len(live_model.class_str)
+    num_classes = len(live_model.class_str)
+
+    # Gaussian is ~ exp(-((x-mu)/sigma)^2), so log Gaussian ~ -((x-mu)/sigma)^2
+    # so, log likelihood of a potential solution is sum over all classifiers of
+    # this.
+    ideal_conf = []
+    for curr_step_ind in range(0, len(live_model.class_str)):
+        print('Processing step:', curr_step_ind)
+        live_model.clear_history()
+        start_time = 0
+        end_time = 1
+        for i in range(len(ideal_conf)):
+            live_model.add_activity_classification(None, ideal_conf[i],
+                                                   i, i+1 - 1e-6)
+
+        X0 = live_model.X
+        if X0 is not None:
+            X0 = X0.copy()
+
+        Xi = class_mean_conf[curr_step_ind]
+
+        if X0 is not None:
+            X = np.vstack([X0, Xi])
+        else:
+            X = np.atleast_2d(Xi)
+
+        X_ = live_model.model.pad_in_hidden_background(X)
+        Z_ = model.model.decode(X_)[1]
+
+        if curr_step_ind >= 1:
+            assert model.inv_map[Z_[-2]] == curr_step_ind - 1
+
+        def err(Xi):
+            X[-1] = Xi
+            X_ = live_model.model.pad_in_hidden_background(X)
+            log_probs = []
+            for step in range(num_steps):
+                Z_[-1] = model.fwd_map[step]
+
+                if step == curr_step_ind:
+                    log_prob0 = model.calc_log_prob_(X_, Z_)
+                else:
+                    log_probs.append(model.calc_log_prob_(X_, Z_))
+
+            log_prob1 = max([1e-14, max(log_probs)])
+            s = log_prob0/log_prob1
+            return -s
+
+        res = minimize(err, Xi, bounds=[(0, 1) for _ in range(num_classes)])
+
+        assert -res.fun  > 1
+        Xi = res.x
+        print(-err(Xi))
+        X[-1] = Xi
+        Z = model.decode(X)[1]
+        assert Z[-1] == curr_step_ind
+        ideal_conf.append(res.x)
+
 
 if False:
     # Verify reading and writing.

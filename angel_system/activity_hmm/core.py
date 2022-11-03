@@ -174,10 +174,10 @@ class ActivityHMMRos:
         # This is the model that enforces steps are done in order without
         # skipping steps.
         self.noskip_model = ActivityHMM(self.dt, class_str, med_class_duration,
-                                 num_steps_can_jump_fwd=0,
-                                 num_steps_can_jump_bck=0,
-                                 class_mean_conf=class_mean_conf,
-                                 class_std_conf=class_std_conf)
+                                        num_steps_can_jump_fwd=0,
+                                        num_steps_can_jump_bck=0,
+                                        class_mean_conf=class_mean_conf,
+                                        class_std_conf=class_std_conf)
 
         self.num_steps_can_jump_fwd = config['hmm']['num_steps_can_jump_fwd']
 
@@ -194,7 +194,15 @@ class ActivityHMMRos:
 
     @property
     def num_steps(self):
+        """Number of steps in the recipe.
+        """
         return self.model.num_steps
+
+    @property
+    def num_activities(self):
+        """Return number of dimensions in classification vector to be recieved.
+        """
+        return self.model.num_activities
 
     def get_hmm_mean_and_std(self):
         """Return the mean and standard deviation of activity classifications.
@@ -239,12 +247,11 @@ class ActivityHMMRos:
         None.
 
         """
-        label_vec = list(label_vec)
-        ind = [label_vec.index(i) for i in self.activity_per_step]
-
         assert end_time > start_time
         t = (end_time + start_time)/2
-        X = np.array([conf_vec[i] for i in ind])
+
+        label_vec = list(label_vec)
+        X = [conf_vec[label_vec.index(i)] for i in range(self.num_activities)]
 
         if self.X is None:
             self.times = np.array([t])
@@ -288,7 +295,7 @@ class ActivityHMMRos:
         None.
 
         """
-        log_prob1, Z, X_, Z_ = self.model.decode(self.X)
+        log_prob1, Z, _, Z_ = self.model.decode(self.X)
         ind = np.where(np.logical_and(Z <= step_ind, Z != 0))[0]
         if len(ind) == 0:
             raise ValueError(f'Found no previous steps <= {step_ind}')
@@ -303,7 +310,7 @@ class ActivityHMMRos:
     def get_current_state(self):
         """Return HMM's most-likely current step.
         """
-        log_prob1, Z, X_, Z_ = self.model.decode(self.X)
+        log_prob1, Z, _, Z_ = self.model.decode(self.X)
         return self.model.class_str[Z[-1]]
 
     def analyze_current_state(self):
@@ -324,7 +331,7 @@ class ActivityHMMRos:
             (not including background) indicating the confidence that the user
             was in that step at some point in the history.
         """
-        log_prob0, state_sequence, X_, state_sequence_ = self.model.decode(self.X)
+        log_prob0, state_sequence, _, state_sequence_ = self.model.decode(self.X)
 
         states = set(state_sequence)
         step_finished_conf = [s in states
@@ -539,8 +546,8 @@ class ActivityHMM(object):
         # original N-length arrays (e.g., class_str).
         not_bckg_mask = ~bckg_mask
 
-        # Mask capturing the elements of X_ that correspond to the elements of
-        # X.
+        # Mask capturing the steps of Z_ that correspond to the visible steps
+        # of Z.
         orig_mask = not_bckg_mask.copy()
         orig_mask[0] = True
 
@@ -553,16 +560,20 @@ class ActivityHMM(object):
                 raise ValueError('\'class_mean_conf\' must be between 0-1')
 
             if np.ndim(class_mean_conf) == 1:
+                num_activities = len(class_mean_conf)
                 class_mean_conf = np.diag(class_mean_conf)
-            elif np.ndim(class_mean_conf) > 2:
+            elif np.ndim(class_mean_conf) == 2:
+                num_activities = class_mean_conf.shape[1]
+            else:
                 raise ValueError('np.ndim(class_mean_conf) must be 1 or 2')
 
-            class_conf_mean_mat = np.zeros((N_, N_))
+            self.num_activities = num_activities
+
+            class_conf_mean_mat = np.zeros((N_, num_activities))
             ki = 0
             for i in range(N_):
                 if orig_mask[i]:
-                    class_conf_mean_mat[i, orig_mask] = class_mean_conf[ki]
-                    class_conf_mean_mat[i, ~orig_mask] = class_conf_mean_mat[i, 0]
+                    class_conf_mean_mat[i] = class_mean_conf[ki]
                     ki += 1
                 else:
                     class_conf_mean_mat[i] = class_conf_mean_mat[0]
@@ -582,13 +593,12 @@ class ActivityHMM(object):
 
             # Full covariance
             model.covariance_type = 'diag'
-            conf_cov_mat = np.zeros((N_, N_))
+            conf_cov_mat = np.zeros((N_, num_activities))
 
             ki = 0
             for i in range(N_):
                 if orig_mask[i]:
-                    conf_cov_mat[i, orig_mask] = class_std_conf2[ki]
-                    conf_cov_mat[i, ~orig_mask] = conf_cov_mat[i, 0]
+                    conf_cov_mat[i] = class_std_conf2[ki]
                     ki += 1
                 else:
                     conf_cov_mat[i] = conf_cov_mat[0]
@@ -662,8 +672,8 @@ class ActivityHMM(object):
         """
         mean = self.model.means_.copy()
         cov = self.model._covars_.copy() - self.cov_eps
-        mean = mean[self.fwd_map][:, self.fwd_map]
-        std = np.sqrt(cov[self.fwd_map][:, self.fwd_map])
+        mean = mean[self.fwd_map]
+        std = np.sqrt(cov[self.fwd_map])
         return mean, std
 
     def sample(self, N):
@@ -679,22 +689,11 @@ class ActivityHMM(object):
         X : (n_samples, num_classes)
             Simulated detector confidences for each timestep (row) and each
             possible step being detected (column).
-        Z : (n_samples,)calc_log_prob_hmm(model, X_, Z_, verbose=False)
+        Z : (n_samples,)calc_log_prob_hmm(model, X, Z_, verbose=False)
             Truth state associated with each time step.
         """
-        X_, Z_ = self.model.sample(N)
-        X_ = np.abs(X_)
-        X = np.zeros((N, len(self.class_str)))
-
-        X[:, 0] = X_[:, 0]
-
-        # Assign the true non-visibile-background confidence to the visible
-        # background confidence.
-        for i in range(N):
-            if self.bckg_mask[Z_[i]]:
-                X[i, 0] = X_[i, Z_[i]]
-
-        X[:, 1:] = X_[:, ~self.bckg_mask]
+        X, Z_ = self.model.sample(N)
+        X = np.abs(X)
 
         Z = np.array([self.inv_map[i] for i in Z_])
 
@@ -705,28 +704,8 @@ class ActivityHMM(object):
 
         times = np.linspace(0, self.dt*(N - 1), N)
 
-        return times, X, Z, X_, Z_
-
-    def pad_in_hidden_background(self, X):
-        """Add in hidden background state values to be consistent with HMM.
-
-        :param X: Confidence array
-        :type X: array of shape (num_classes,) or (N, num_classes)
-        """
-        if X.ndim == 1:
-            X_ = np.zeros((1, len(self.class_str_)))
-            for i in np.where(self.bckg_mask)[0]:
-                X_[:, i] = X[0]
-
-            X_[:, ~self.bckg_mask] = X[1:]
-        else:
-            X_ = np.zeros((len(X), len(self.class_str_)))
-            for i in np.where(self.bckg_mask)[0]:
-                X_[:, i] = X[:, 0]
-
-            X_[:, ~self.bckg_mask] = X[:, 1:]
-
-        return X_
+        # TODO stop return X, it is now redundant.
+        return times, X, Z, X, Z_
 
     def get_model_force_skip_step(self, force_skip_step):
         """Return model that requires we skip a specific step.
@@ -806,28 +785,27 @@ class ActivityHMM(object):
         Z : (n_samples,)
             Truth state associated with each time step.
         """
-        X_ = self.pad_in_hidden_background(X)
-
         if force_skip_step is not None:
             model = self.get_model_force_skip_step(force_skip_step)
         else:
             model = self.model
 
-        log_prob, Z_ = model.decode(X_)
+        log_prob, Z_ = model.decode(X)
 
         Z = np.array([self.inv_map[i] for i in Z_])
 
-        return log_prob, Z, X_, Z_
+        # TODO stop return X, it is now redundant.
+        return log_prob, Z, X, Z_
 
-    def calc_log_prob_(self, X_, Z_, verbose=False):
+    def calc_log_prob_(self, X, Z_, verbose=False):
         """Calculate the log likelihood of a particular solution to an HMM.
 
         Parameters
         ----------
-        X_ : Numpy array (n_samples, num_classes)
+        X : Numpy array (n_samples, num_classes)
             Simulated detector confidences for each timestep (row) and each
             possible step being detected (column).
-        Z_ : Numpy array (n_samples,)
+        Z : Numpy array (n_samples,)
             State associated with each time step..
         verbose : bool, optional
             Verbose logging. The default is False.
@@ -838,38 +816,7 @@ class ActivityHMM(object):
             Log likelihood.
 
         """
-        return calc_log_prob_hmm(self.model, X_, Z_, verbose)
-
-    def predict_proba(self, X):
-        """
-        Parameters
-        ----------
-        X : (n_samples, num_classes)
-            Simulated detector confidences for each timestep (row) and each
-            possible step being detected (column).
-
-        Return
-        ------
-        posteriors : array, shape (n_samples, n_components)
-            State-membership probabilities for each sample from ``X``.
-        """
-        X_ = np.zeros((len(X), len(self.class_str_)))
-
-        for i in np.where(self.bckg_mask)[0]:
-            X_[:, i] = X[:, 0]
-
-        X_[:, ~self.bckg_mask] = X[:, 1:]
-
-        posteriors_ = self.model.predict_proba(X_)
-
-        bckg_mask = self.bckg_mask.copy()
-        bckg_mask[0] = False
-
-        posteriors_[:, 0] = posteriors_[:, 0] + np.sum(posteriors_[:, bckg_mask], axis=1)
-
-        posteriors = posteriors_[:, ~bckg_mask]
-
-        return posteriors
+        return calc_log_prob_hmm(self.model, X, Z_, verbose)
 
     def did_skip_step(self, Z):
         """
@@ -1004,12 +951,12 @@ def get_skip_score(model, model_skip, X, brute_search=False):
     """
     # Solution that doesn't skip.
 
-    log_prob1, Z1, X_, Z1_ = model.decode(X)
-    log_prob1 = model_skip.calc_log_prob_(X_, Z1_)
+    log_prob1, Z1, _, Z1_ = model.decode(X)
+    log_prob1 = model_skip.calc_log_prob_(X, Z1_)
 
     log_prob2, Z2, _, Z2_ = model_skip.decode(X)
 
-    #log_prob2 = model_skip.calc_log_prob_(X_, Z2_)
+    #log_prob2 = model_skip.calc_log_prob_(X, Z2_)
 
     if len(model_skip.did_skip_step(Z2)[0]) == 0:
         # The maximum likelihood solution doesn't skip a step, so we need to
@@ -1088,14 +1035,14 @@ def score_raw_detections(X, Z, plot_results=False):
     return auc
 
 
-def calc_log_prob_hmm(model, X_, Z_, verbose=False):
+def calc_log_prob_hmm(model, X, Z_, verbose=False):
     """Calculate the log likelihood of a particular solution to an HMM.
 
     Parameters
     ----------
     model : hmmlearn.hmm.GaussianHMM
         HMM model.
-    X_ : Numpy array (n_samples, num_classes)
+    X : Numpy array (n_samples, num_classes)
         Simulated detector confidences for each timestep (row) and each
         possible step being detected (column).
     Z_ : Numpy array (n_samples,)
@@ -1109,11 +1056,11 @@ def calc_log_prob_hmm(model, X_, Z_, verbose=False):
         Log likelihood.
 
     """
-    #log_prob0, Z_ = self.model.decode(X_)
+    #log_prob0, Z_ = self.model.decode(X)
 
     # We can't allow multiple possible backgrounds to have a high score.
 
-    log_prob_ = model._compute_log_likelihood(X_)
+    log_prob_ = model._compute_log_likelihood(X)
 
     # We can't allow multiple possible backgrounds to have a high score.
 
@@ -1128,7 +1075,7 @@ def calc_log_prob_hmm(model, X_, Z_, verbose=False):
 
         if verbose:
             print('Log(prob) step %i being in state %i with detector'
-                  'confidence %0.6f:' % (i, Z_[i], X_[i, Z_[i]]),
+                  'confidence %0.6f:' % (i, Z_[i], X[i, Z_[i]]),
                   log_prob_[i, Z_[i]])
 
         if model.transmat_[Z_[i - 1], Z_[i]] == 0:
@@ -1245,8 +1192,6 @@ def load_and_discretize_data(activity_gt: str,
         if label not in labels_:
             labels_.add(label)
             labels.append(label)
-
-    print(f"Labels: {labels}")
 
     # ============================
     # Split by time window
