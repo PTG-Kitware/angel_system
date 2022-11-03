@@ -23,11 +23,14 @@ for _ in range(25):
     conf_vec = np.zeros(len(live_model.model.class_str));
     conf_vec[curr_step] = 1
     print('Sending confidence vector with all zeros except for step', curr_step)
-    live_model.add_activity_classification(live_model.model.class_str,
+    live_model.add_activity_classification(range(live_model.num_steps),
                                            conf_vec, start_time, end_time)
     curr_step += 1
     start_time += 1
     end_time += 1
+
+    ret = live_model.analyze_current_state()
+    times, state_sequence, step_finished_conf = ret
 
     print('\'get_current_state\' yields:',
           live_model.class_str.index(live_model.get_current_state()))

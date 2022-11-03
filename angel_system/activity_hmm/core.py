@@ -180,6 +180,10 @@ class ActivityHMMRos:
                                  class_std_conf=class_std_conf)
 
         self.num_steps_can_jump_fwd = config['hmm']['num_steps_can_jump_fwd']
+
+        if self.num_steps_can_jump_fwd <= 0:
+            raise AssertionError('\'num_steps_can_jump_fwd\' must be >= 1')
+
         self.num_steps_can_jump_bck = config['hmm']['num_steps_can_jump_bck']
         self.model = ActivityHMM(self.dt, self.class_str,
                                  med_class_duration=self.med_class_duration,
@@ -187,6 +191,10 @@ class ActivityHMMRos:
                                  num_steps_can_jump_bck=self.num_steps_can_jump_bck,
                                  class_mean_conf=self.class_mean_conf,
                                  class_std_conf=self.class_std_conf)
+
+    @property
+    def num_steps(self):
+        return self.model.num_steps
 
     def get_hmm_mean_and_std(self):
         """Return the mean and standard deviation of activity classifications.
@@ -213,10 +221,11 @@ class ActivityHMMRos:
 
         Parameters
         ----------
-        label_vec : array-like of str | array-like of int
-            DESCRIPTION.
+        label_vec : array-like of int
+            Activity id (activity_id in recipe) associated with each value in
+            conf_vec.
         conf_vec : array-like of float
-            Classifier's reperoted confidence associated with each class label
+            Classifier's reported confidence associated with each class label
             in 'label_vec'.
         start_time : float
             Time (seconds) of the start of the window that the activity
@@ -230,20 +239,19 @@ class ActivityHMMRos:
         None.
 
         """
+        label_vec = list(label_vec)
+        ind = [label_vec.index(i) for i in self.activity_per_step]
+
         assert end_time > start_time
-        n = int(np.round((end_time - start_time)/self.dt))
-        n = max([n, 1])
-        n += 1
-        times_ = np.linspace(start_time, end_time, n)
-        times_ = (times_[1:] + times_[:-1])/2
-        X = np.tile(np.atleast_2d(conf_vec), (len(times_), 1))
+        t = (end_time + start_time)/2
+        X = np.array([conf_vec[i] for i in ind])
 
         if self.X is None:
-            self.times = times_
-            self.X = np.atleast_2d(X)
+            self.times = np.array([t])
+            self.X = np.atleast_2d(conf_vec)
             return
 
-        DT = times_[0] - self.times[-1]
+        DT = t - self.times[-1]
 
         if DT <= 0:
             raise AssertionError('Set a new classification time starting at '
@@ -251,32 +259,8 @@ class ActivityHMMRos:
                                  'relative to most-recent update for time '
                                  '%0.4f' % (start_time, DT, self.times[-1]))
 
-        if DT > self.dt*1.5:
-            last_time = self.times[-1]
-
-            # If there is a long idle period, at most, let's add in 5 seconds
-            # of buffer.
-            last_time = max([last_time, start_time - 5])
-
-            n = int(np.round((start_time - last_time)/self.dt))
-            n = max([n, 1])
-            n += 1
-            times_fill = np.linspace(last_time, start_time, n)
-            times_fill = (times_fill[1:] + times_fill[:-1])/2
-
-            X_fill = np.zeros((len(times_fill), self.X.shape[1]))
-
-            # These are the mean values for each classifier. Spoofing to these
-            # during blackout periods tells HMM that no state is more likely
-            # than another.
-            mean_vals = np.diag(self.model.model.means_)[self.model.fwd_map]
-            X_fill = np.tile(mean_vals, (len(times_), 1))
-
-            self.times = np.hstack([self.times, times_fill])
-            self.X = np.vstack([self.X, X_fill])
-
-        self.times = np.hstack([self.times, times_])
-        self.X = np.vstack([self.X, X])
+        self.times = np.hstack([self.times, t])
+        self.X = np.vstack([self.X, conf_vec])
 
     def clear_history(self):
         """Erase all history of classifier outputs.
@@ -296,7 +280,8 @@ class ActivityHMMRos:
         ----------
         step_ind : int
             Step to revert with integer index that matches with 'id' field in
-            the recipe file.
+            the recipe file. The actual index reverted to may be earlier than
+            provided if the index is within a region of skipped steps.
 
         Returns
         -------
@@ -304,7 +289,7 @@ class ActivityHMMRos:
 
         """
         log_prob1, Z, X_, Z_ = self.model.decode(self.X)
-        ind = np.where(Z == step_ind)[0]
+        ind = np.where(np.logical_and(Z <= step_ind, Z != 0))[0]
         if len(ind) == 0:
             raise ValueError(f'Found no previous steps <= {step_ind}')
 
@@ -316,6 +301,8 @@ class ActivityHMMRos:
         return s[0] - s[1]
 
     def get_current_state(self):
+        """Return HMM's most-likely current step.
+        """
         log_prob1, Z, X_, Z_ = self.model.decode(self.X)
         return self.model.class_str[Z[-1]]
 
@@ -324,47 +311,27 @@ class ActivityHMMRos:
 
         Returns
         -------
-        Z_can_skip : int
-            Index of most likely current step assuming steps could have been
-            skipped according to 'num_steps_can_jump_fwd' and
-            'num_steps_can_jump_bck'.
-        Z_no_skip : int
-            Index of most likely current step assuming steps that no steps were
-            skipped.
-        skip_score : float
-            Score indicating how much more likely it is that a step was skipped
-            than no steps being skipped.
+        times : Times associated with each state (block of time with associated
+            activity) in the HMM history..
+
+        state_sequence : list of int
+            List of integers (same length as times) encoding the most-likely
+            step, as estimated by the HMM, that the user was in at each time in
+            'times'. Value 0 indicates background, and value 1 indicates the
+            first step of the recipe.
+        step_finished_conf : list of float
+            Array of length equal to the number of steps in the recipe
+            (not including background) indicating the confidence that the user
+            was in that step at some point in the history.
         """
-        log_prob1, Z_no_skip, X_, Z_no_skip_ = self.noskip_model.decode(self.X)
-        log_prob1 = self.model.calc_log_prob_(X_, Z_no_skip_)
+        log_prob0, state_sequence, X_, state_sequence_ = self.model.decode(self.X)
 
-        log_prob2, Z_can_skip, _, Z_can_skip_ = self.model.decode(self.X)
+        states = set(state_sequence)
+        step_finished_conf = [s in states
+                              for s in range(1, self.model.num_steps)]
+        step_finished_conf = np.array(step_finished_conf, dtype=float)
 
-        #log_prob2 = model_skip.calc_log_prob_(X_, Z_can_skip_)
-
-        if len(self.model.did_skip_step(Z_can_skip)[0]) == 0:
-            # The maximum likelihood solution doesn't skip a step, so we need to
-            # explicitly check various assumptions of forced skipped steps.
-
-            skipped_step_check = range(1, len(self.noskip_model.class_str))
-            log_prob2 = []
-            #skipped = []
-            Z2s_ = []
-            for j in skipped_step_check:
-                log_prob2_, Z2_ = self.noskip_model.decode(self.X, force_skip_step=j)[:2]
-                Z2s_.append(Z2_)
-                log_prob2.append(log_prob2_)
-                #skipped.append(model.did_skip_step(Z2_)[0])
-
-            ind = np.argmax(log_prob2)
-            Z_can_skip_ = Z2s_[ind]
-            log_prob2 = log_prob2[ind]
-
-        #score = (log_prob2 - log_prob1)/log_prob2
-
-        skip_score = log_prob2 - log_prob1
-
-        return Z_can_skip, Z_no_skip, skip_score
+        return self.times, state_sequence, step_finished_conf
 
     def save_task_yaml(self, fname, save_weights_inline=False):
         if save_weights_inline:
@@ -712,7 +679,7 @@ class ActivityHMM(object):
         X : (n_samples, num_classes)
             Simulated detector confidences for each timestep (row) and each
             possible step being detected (column).
-        Z : (n_samples,)
+        Z : (n_samples,)calc_log_prob_hmm(model, X_, Z_, verbose=False)
             Truth state associated with each time step.
         """
         X_, Z_ = self.model.sample(N)
@@ -761,6 +728,67 @@ class ActivityHMM(object):
 
         return X_
 
+    def get_model_force_skip_step(self, force_skip_step):
+        """Return model that requires we skip a specific step.
+
+        force_skip_step : None | int
+            Enforce that the solution skips a particular step.
+        """
+        if force_skip_step == 0 or force_skip_step >= len(self.class_str):
+            raise ValueError('\'force_skip_step\' must be an integer '
+                             'between 1 and %i' %
+                             (len(self.class_str) - 1))
+
+        # Make a copy of the model so we can adjust it.
+        model = GaussianHMM(n_components=self.model.n_components,
+                            covariance_type=self.model.covariance_type)
+        model.n_features = self.model.n_features
+        model.startprob_ = self.model.startprob_.copy()
+        model.means_ = self.model.means_.copy()
+        model._covars_ = self.model._covars_.copy()
+        model.transmat_ = self.model.transmat_.copy()
+
+        ind = self.inv_map.index(force_skip_step)
+
+        model.transmat_[ind, ind] = 0
+        model.transmat_[ind] /= sum(model.transmat_[ind])
+
+        if ind == 1:
+            model.startprob_[:] = 0
+            model.startprob_[3] = 0.5
+            model.startprob_[4] = 0.5
+
+        valid = self.valid_trans.copy()
+        tdiag = np.diag(self.model.transmat_)
+        bckg_mask = self.bckg_mask
+        N_ = len(self.class_str_)
+
+        if ind < model.transmat_.shape[1] - 3:
+            # These are the transition probabilities from each ith state
+            # (ith element) into the state we are looking to skip.
+            # model.transmat_[:, ind]
+
+            # We add two to skip the background state immediately after to
+            # the next real step.
+            model.transmat_[:, ind + 2] += model.transmat_[:, ind]
+
+            # Now noone can ever transition into 'force_skip_step'.
+            model.transmat_[:, ind] =  0
+        else:
+            # We are at the second-to-last element (the last element is
+            # background after the last step).
+            N = model.transmat_.shape[1]
+            ind2 = np.where(model.transmat_[:, ind] > 0)[0]
+
+            for i in ind2:
+                # Take the probability allotated to move it into the last-
+                # viable background state ind - 1.
+
+                model.transmat_[i, ind - 1] += model.transmat_[i, ind]
+                model.transmat_[i, ind] =  0
+
+        return model
+
     def decode(self, X, force_skip_step=None):
         """
         Parameters
@@ -781,57 +809,7 @@ class ActivityHMM(object):
         X_ = self.pad_in_hidden_background(X)
 
         if force_skip_step is not None:
-            if force_skip_step == 0 or force_skip_step >= len(self.class_str):
-                raise ValueError('\'force_skip_step\' must be an integer '
-                                 'between 1 and %i' %
-                                 (len(self.class_str) - 1))
-
-            # Make a copy of the model so we can adjust it.
-            model = GaussianHMM(n_components=self.model.n_components,
-                                covariance_type=self.model.covariance_type)
-            model.n_features = self.model.n_features
-            model.startprob_ = self.model.startprob_.copy()
-            model.means_ = self.model.means_.copy()
-            model._covars_ = self.model._covars_.copy()
-            model.transmat_ = self.model.transmat_.copy()
-
-            ind = self.inv_map.index(force_skip_step)
-
-            model.transmat_[ind, ind] = 0
-            model.transmat_[ind] /= sum(model.transmat_[ind])
-
-            if ind == 1:
-                model.startprob_[0] = 1
-                model.startprob_[1] = 0
-
-            valid = self.valid_trans.copy()
-            tdiag = np.diag(self.model.transmat_)
-            bckg_mask = self.bckg_mask
-            N_ = len(self.class_str_)
-
-            if ind < model.transmat_.shape[1] - 3:
-                # These are the transition probabilities from each ith state
-                # (ith element) into the state we are looking to skip.
-                # model.transmat_[:, ind]
-
-                # We add two to skip the background state immediately after to
-                # the next real step.
-                model.transmat_[:, ind + 2] += model.transmat_[:, ind]
-
-                # Now noone can ever transition into 'force_skip_step'.
-                model.transmat_[:, ind] =  0
-            else:
-                # We are at the second-to-last element (the last element is
-                # background after the last step).
-                N = model.transmat_.shape[1]
-                ind2 = np.where(model.transmat_[:, ind] > 0)[0]
-
-                for i in ind2:
-                    # Take the probability allotated to move it into the last-
-                    # viable background state ind - 1.
-
-                    model.transmat_[i, ind - 1] += model.transmat_[i, ind]
-                    model.transmat_[i, ind] =  0
+            model = self.get_model_force_skip_step(force_skip_step)
         else:
             model = self.model
 
@@ -842,43 +820,25 @@ class ActivityHMM(object):
         return log_prob, Z, X_, Z_
 
     def calc_log_prob_(self, X_, Z_, verbose=False):
-        #log_prob0, Z_ = self.model.decode(X_)
+        """Calculate the log likelihood of a particular solution to an HMM.
 
-        # We can't allow multiple possible backgrounds to have a high score.
+        Parameters
+        ----------
+        X_ : Numpy array (n_samples, num_classes)
+            Simulated detector confidences for each timestep (row) and each
+            possible step being detected (column).
+        Z_ : Numpy array (n_samples,)
+            State associated with each time step..
+        verbose : bool, optional
+            Verbose logging. The default is False.
 
+        Returns
+        -------
+        log_prob : float
+            Log likelihood.
 
-        log_prob_ = self.model._compute_log_likelihood(X_)
-
-        # We can't allow multiple possible backgrounds to have a high score.
-
-
-        log_prob = log_prob_[0, Z_[0]] + np.log(self.model.startprob_[Z_[0]])
-
-        if verbose:
-            print('Log(prob) of first state', log_prob)
-
-        for i in range(1, len(Z_)):
-            log_prob += log_prob_[i, Z_[i]]
-
-            if verbose:
-                print('Log(prob) step %i being in state %i with detector'
-                      'confidence %0.6f:' % (i, Z_[i], X_[i, Z_[i]]),
-                      log_prob_[i, Z_[i]])
-
-            if self.model.transmat_[Z_[i - 1], Z_[i]] == 0:
-                print('Cannot move from', Z_[i - 1], 'to', Z_[i])
-                raise Exception()
-
-            # We moved from Z_[i - 1] to Z_[i].
-            log_prob += np.log(self.model.transmat_[Z_[i - 1], Z_[i]])
-
-            if verbose:
-                print('Log(prob) for the transition from step %i being in '
-                      'state %i to step %i being in state %i:' % (i - 1,
-                      Z_[i - 1], i, Z_[i]),
-                      np.log(self.model.transmat_[Z_[i - 1], Z_[i]]))
-
-        return log_prob
+        """
+        return calc_log_prob_hmm(self.model, X_, Z_, verbose)
 
     def predict_proba(self, X):
         """
@@ -1126,6 +1086,65 @@ def score_raw_detections(X, Z, plot_results=False):
         plt.legend(fontsize=20, loc=0)
 
     return auc
+
+
+def calc_log_prob_hmm(model, X_, Z_, verbose=False):
+    """Calculate the log likelihood of a particular solution to an HMM.
+
+    Parameters
+    ----------
+    model : hmmlearn.hmm.GaussianHMM
+        HMM model.
+    X_ : Numpy array (n_samples, num_classes)
+        Simulated detector confidences for each timestep (row) and each
+        possible step being detected (column).
+    Z_ : Numpy array (n_samples,)
+        State associated with each time step..
+    verbose : bool, optional
+        Verbose logging. The default is False.
+
+    Returns
+    -------
+    log_prob : float
+        Log likelihood.
+
+    """
+    #log_prob0, Z_ = self.model.decode(X_)
+
+    # We can't allow multiple possible backgrounds to have a high score.
+
+    log_prob_ = model._compute_log_likelihood(X_)
+
+    # We can't allow multiple possible backgrounds to have a high score.
+
+
+    log_prob = log_prob_[0, Z_[0]] + np.log(model.startprob_[Z_[0]])
+
+    if verbose:
+        print('Log(prob) of first state', log_prob)
+
+    for i in range(1, len(Z_)):
+        log_prob += log_prob_[i, Z_[i]]
+
+        if verbose:
+            print('Log(prob) step %i being in state %i with detector'
+                  'confidence %0.6f:' % (i, Z_[i], X_[i, Z_[i]]),
+                  log_prob_[i, Z_[i]])
+
+        if model.transmat_[Z_[i - 1], Z_[i]] == 0:
+            print('Cannot move from', Z_[i - 1], 'to', Z_[i])
+            raise Exception()
+
+        # We moved from Z_[i - 1] to Z_[i].
+        log_prob += np.log(model.transmat_[Z_[i - 1], Z_[i]])
+
+        if verbose:
+            print('Log(prob) for the transition from step %i being in '
+                  'state %i to step %i being in state %i:' % (i - 1,
+                  Z_[i - 1], i, Z_[i]),
+                  np.log(model.transmat_[Z_[i - 1], Z_[i]]))
+
+    return log_prob
 
 
 def load_and_discretize_data(activity_gt: str,

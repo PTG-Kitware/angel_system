@@ -4,7 +4,9 @@ from threading import (
     Thread,
 )
 import time
+from typing import cast
 from typing import Optional
+from typing import Set
 
 import numpy as np
 import numpy.typing as npt
@@ -63,8 +65,8 @@ class HMMNode(Node):
             .get_parameter_value()
             .string_value
         )
-        self._skip_score_threshold = (
-            self.declare_parameter("skip_score_threshold", 300.0)
+        self._step_complete_threshold = (
+            self.declare_parameter("step_complete_threshold", 0.5)
             .get_parameter_value()
             .double_value
         )
@@ -89,17 +91,20 @@ class HMMNode(Node):
         # as predicted by the HMM.
         # Previous step is the step before the current step.
         # Values will be either None or the step string label.
-        self._previous_step = None
         self._current_step = None
+        self._current_step_id = 0  # HMM ID
+        self._previous_step = None
+        self._previous_step_id = 0  # HMM ID
         # Track the step skips we previously notified the user about to avoid
         # sending duplicate notifications for the same error.
         self._previous_step_skip = None
         self._current_step_skip = None
+        # Track the indices of steps we have emitted skip errors for in order
+        # to not repeatedly emit many errors for the same steps.
+        # This may be removed from if step progress regresses.
+        self._steps_skipped_cache: Set[int] = set()
         # Track the latest activity classification end time sent to the HMM
         self._latest_act_classification_end_time = None
-
-        # HMM's confidence that a step was skipped
-        self._skip_score = 0.0
 
         # Initialize ROS hooks
         self._subscription = self.create_subscription(
@@ -151,6 +156,16 @@ class HMMNode(Node):
         self._keyboard_t.start()
         log.info(f"Starting keyboard threads... done")
 
+    def _clean_skipped_cache(self, current_hmm_step_id: int) -> None:
+        """Clear the error cache any IDs greater than the given."""
+        s = np.asarray(list(self._steps_skipped_cache))
+        to_remove_ids = s[s > current_hmm_step_id]
+        if to_remove_ids.size:
+            self.get_logger().info(f"Clearing step IDs from skipped cache: "
+                                   f"{to_remove_ids.tolist()}")
+        [self._steps_skipped_cache.remove(_id)
+         for _id in to_remove_ids]
+
     def det_callback(self, activity_msg: ActivityDetection):
         """
         Callback function for the activity detection subscriber topic.
@@ -177,8 +192,9 @@ class HMMNode(Node):
 
                 self._latest_act_classification_end_time = source_stamp_end_frame_sec
 
+                act_id_vec = np.arange(len(activity_msg.conf_vec))
                 self._hmm.add_activity_classification(
-                    activity_msg.label_vec,
+                    act_id_vec,
                     activity_msg.conf_vec,
                     source_stamp_start_frame_sec,
                     source_stamp_end_frame_sec,
@@ -234,17 +250,25 @@ class HMMNode(Node):
             message.task_complete_confidence = 0.0
 
         message.completed_steps = steps_complete_vec.tolist()
+        log.debug(f"Steps complete: {message.completed_steps}")
 
         # TODO: Do we need to fill in the other fields
 
         self._task_update_publisher.publish(message)
 
-    def publish_task_error_message(self):
+    def publish_task_error_message(self, skipped_step: str,
+                                   complete_confidence: float):
         """
         Forms and sends a `angel_msgs/AruiUserNotification` message to the
         task errors topic.
+
+        :param skipped_step: Description of the step that was skipped.
+        :param complete_confidence: Float completion confidence of the step
+            that was determined skipped.
         """
         log = self.get_logger()
+        log.info(f"Reporting step skipped error: "
+                 f"(complete_conf={complete_confidence}) {skipped_step}")
 
         # TODO: Using AruiUserNotification for this error is a temporary
         # placeholder. There should be a new message created for this task
@@ -254,12 +278,10 @@ class HMMNode(Node):
         message.context = message.N_CONTEXT_TASK_ERROR
 
         message.title = "Step skip detected"
-        with self._hmm_lock:
-            message.description = (
-                f"Detected skip with confidence {self._skip_score}. "
-                f"Current step: {self._current_step}, "
-                f"previous step: {self._previous_step}."
-            )
+        message.description = (
+            f"Detected skip with confidence {1.0 - complete_confidence}: "
+            f"{skipped_step}."
+        )
 
         self._task_error_publisher.publish(message)
 
@@ -302,41 +324,60 @@ class HMMNode(Node):
                 # Get the HMM prediction
                 start_time = time.time()
                 with self._hmm_lock:
-                    skip_idx, no_skip_idx, self._skip_score = (
+                    # Reminder: `step_finished_conf` includes background class
+                    # at index 0, we need to ignore this.
+                    times, state_seq, step_finished_conf = (
                         self._hmm.analyze_current_state()
                     )
                     log.info(f"HMM computation time: {time.time() - start_time}")
 
-                    step_id = skip_idx[-1]
-                    step = self._hmm.model.class_str[step_id]
+                    hmm_step_id = state_seq[-1]
+                    user_step_id = hmm_step_id - 1  # no user "background" step
+                    step_str = self._hmm.model.class_str[hmm_step_id]
 
-                    # step-associated vector of bools indicating whether a step
-                    # has been completed or not.
-                    steps_complete = np.zeros(self._n_steps, dtype=bool)
-                    # `- {0}` and `- 1` is to offset the HMM background "step".
-                    steps_complete_idxs = np.asarray(list(set(skip_idx) - {0})) - 1
-                    if steps_complete_idxs.size:
-                        steps_complete[steps_complete_idxs] = True
+                    steps_complete = cast(
+                        npt.NDArray[bool],
+                        step_finished_conf >= self._step_complete_threshold
+                    )
+                    # Force steps beyond the current to not be considered
+                    # finished (haven't happened yet). hmm_step_id includes
+                    # addressing background, so `hmm_step_id == user_step_id+1`
+                    steps_complete[user_step_id+1:] = False
 
-                    # Only change steps if we have a new step, and it is not background
-                    if self._current_step != step and step_id != 0:
+                    # Only change steps if we have a new step, and it is not
+                    # background (ID=0).
+                    if self._current_step != step_str and hmm_step_id != 0:
                         self._previous_step = self._current_step
-                        self._current_step = step
+                        self._previous_step_id = self._current_step_id
+                        self._current_step = step_str
+                        self._current_step_id = hmm_step_id
+                        # Handle regression in steps actions
+                        if hmm_step_id < self._previous_step_id:
+                            # Now "later" steps should be removed from the
+                            # skipped cache.
+                            self._clean_skipped_cache(hmm_step_id)
 
-                    log.info(f"Last completed step: {self._current_step}")
-                    log.info(f"Skip score: {self._skip_score}")
+                    log.info(f"Most recently completed step: {self._current_step}")
 
-                    if self._skip_score > self._skip_score_threshold:
-                        # Check if we've already sent a notification for this step
-                        # skip to avoid sending lots of notifications for the same
-                        # error.
-                        if (
-                            self._current_step != self._current_step_skip or
-                            self._previous_step != self._previous_step_skip
-                        ):
-                            self.publish_task_error_message()
-                            self._current_step_skip = self._current_step
-                            self._previous_step_skip = self._previous_step
+                    # Skipped steps are those steps at or before the current
+                    # step that are strictly below the step complete threshold.
+                    steps_skipped = cast(
+                        npt.NDArray[bool],
+                        step_finished_conf < self._step_complete_threshold
+                    )
+                    # Force steps beyond the current to not be considered
+                    # skipped (haven't happened yet).
+                    steps_skipped[user_step_id+1:] = False
+
+                    if steps_skipped.max():
+                        skipped_step_ids = np.nonzero(steps_skipped)[0]
+                        for s_id in skipped_step_ids:
+                            if s_id not in self._steps_skipped_cache:
+                                s_str = self._hmm.model.class_str[s_id+1]
+                                self.publish_task_error_message(
+                                    s_str, step_finished_conf[s_id]
+                                )
+                                self._steps_skipped_cache.add(s_id)
 
                     # Publish a new TaskUpdate message
                     self.publish_task_state_message(steps_complete)
@@ -403,27 +444,29 @@ class HMMNode(Node):
 
             self._latest_act_classification_end_time = end_time
 
-
             # Get the current HMM state
             steps = self._hmm.model.class_str
             if self._current_step is None:
-                curr_step_id = 0
+                curr_step_id = 0  # technically the "background" step, see +1 below
             else:
                 curr_step_id = steps.index(self._current_step)
 
-            # Create confidence vector where all classes are
-            # zero except the new desired step
-            conf_vec = [0.0] * len(steps)
             if forward:
-                # Check if we are at the end of the list
+                # Create confidence vector as pulled from the HMM means
+                # ("ideal" input confidence vector for a step).
+                # Check if we are at the end of the list (current == "done")
                 if curr_step_id == (len(steps) - 1):
                     log.info("Attempting to advance past end of list... ignoring")
                     return
-                conf_vec[curr_step_id + 1] = 1.0
+                log.info(f"Manually progressing forward pass step: "
+                         f"{self._current_step}")
+                # Getting the mean vector for the step *after* the current one.
+                conf_vec = self._hmm.get_hmm_mean_and_std()[0][curr_step_id + 1]
+                label_vec = np.arange(conf_vec.size)
 
                 # Add activity classification to the HMM
                 self._hmm.add_activity_classification(
-                    steps,
+                    label_vec,
                     conf_vec,
                     start_time,
                     end_time
@@ -445,12 +488,14 @@ class HMMNode(Node):
                     self._hmm.times = None
                     self._current_step = None
                     self._previous_step = None
+                    self._steps_skipped_cache.clear()
                     steps_complete = np.zeros(self._n_steps, dtype=bool)
 
                     self.publish_task_state_message(steps_complete)
                     log.info("HMM reset to beginning")
                 else:
                     self._hmm.revert_to_step(new_step_id)
+                    self._clean_skipped_cache(new_step_id)
 
                     # Tell the HMM thread to wake up
                     self._hmm_awake_evt.set()
