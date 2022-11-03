@@ -45,7 +45,7 @@ public class FollowEyeTarget : Singleton<FollowEyeTarget>
                 gameObject.transform.position = eyeGazeProvider.GazeOrigin + eyeGazeProvider.GazeDirection.normalized * dist;
                 //Debug.Log(hitInfo.collider.gameObject.name);
 
-                if (hitInfo.collider.gameObject.name.Contains("TextContainer")) 
+                if (hitInfo.collider.gameObject.name.Contains("TextContainer"))
                     currentHit = EyeTarget.orbMessage;
 
                 else if (hitInfo.collider.gameObject.name.Contains("BodyPlacement"))
@@ -59,7 +59,7 @@ public class FollowEyeTarget : Singleton<FollowEyeTarget>
                 else
                     currentHit = EyeTarget.nothing;
 
-                if (currentHit != EyeTarget.nothing)
+                if (currentHit != EyeTarget.nothing && showRayDebugCube)
                     cube.enabled = true;
             }
             else
