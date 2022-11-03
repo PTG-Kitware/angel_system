@@ -10,7 +10,7 @@ os.chdir('/home/local/KHQ/matt.brown/libraries/angel_system')
 
 # ----------------------------------------------------------------------------
 base_path = os.path.split(os.path.abspath(angel_system.__file__))[0]
-config_fname = base_path + '/../config/tasks/task_steps_config-recipe_coffee.yaml'
+config_fname = base_path + '/../config/tasks/task_steps_config-recipe_coffee_trimmed.yaml'
 
 print(f'Loading HMM with recipe {config_fname}')
 live_model = ActivityHMMRos(config_fname)
@@ -18,12 +18,12 @@ live_model = ActivityHMMRos(config_fname)
 curr_step = 1
 start_time = 0
 end_time = 1
+conf_means = live_model.get_hmm_mean_and_std()[0]
 
 for _ in range(25):
-    conf_vec = np.zeros(len(live_model.model.class_str));
-    conf_vec[curr_step] = 1
+    conf_vec = conf_means[curr_step]
     print('Sending confidence vector with all zeros except for step', curr_step)
-    live_model.add_activity_classification(range(live_model.num_steps),
+    live_model.add_activity_classification(range(live_model.num_activities),
                                            conf_vec, start_time, end_time)
     curr_step += 1
     start_time += 1
