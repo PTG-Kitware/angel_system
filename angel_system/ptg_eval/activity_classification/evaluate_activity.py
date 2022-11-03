@@ -28,10 +28,7 @@ def run_eval(args):
     time_window = args.time_window
     uncertainty_pad = args.uncertainty_pad
 
-    # TODO: For multiple gt/pred pairs, loop over the following 3 sections,
-    #       vertically stacking the `gt_true_mask` and `dets_per_valid_time_w`
-    #       matrices.
-    # TODO: Assert that the labels returned for each pair is equal.
+    # Loop over gt/pred pairs, gathering input data for eval.
     gt_true_mask: Optional[npt.NDArray] = None
     dets_per_valid_time_w: Optional[npt.NDArray] = None
     labels: Optional[List[str]] = None
