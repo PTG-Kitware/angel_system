@@ -99,7 +99,7 @@ $.get( "/ns")
       }
       else {
         el.querySelector('.checkmark').className = 'checkmark_hidden checkmark';
-        colors[index+1] = "rgba(0, 104, 199, 1.0)" // blue
+        colors[index+1] = "rgba(0, 104, 199, 1.0)"; // blue
       }
     });
 
