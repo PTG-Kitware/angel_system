@@ -330,6 +330,8 @@ class HMMNode(Node):
                         self._hmm.analyze_current_state()
                     )
                     log.info(f"HMM computation time: {time.time() - start_time}")
+                    log.debug(f"HMM State Sequence: {state_seq}")
+                    log.debug(f"HMM Steps Finished: {step_finished_conf}")
 
                     hmm_step_id = state_seq[-1]
                     user_step_id = hmm_step_id - 1  # no user "background" step
