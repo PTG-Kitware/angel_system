@@ -94,7 +94,7 @@ class BagConverter(Node):
             .bool_value
         )
         self.extract_annotation_event_data = (
-            self.declare_parameter("extract_annotation_events", True)
+            self.declare_parameter("extract_annotation_event_data", True)
             .get_parameter_value()
             .bool_value
         )
