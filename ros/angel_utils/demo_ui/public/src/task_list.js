@@ -87,20 +87,21 @@ $.get( "/ns")
   });
 
   task_update.subscribe(function(m) {
-    var task_name = m.current_step;
-    var task_idx = m.current_step_id; // -1 at start
-    var previous_name = m.previous_step;
-    var previous_idx = task_list.indexOf(previous_name);
+    var chart = Chart.getChart('activity-conf-chart');
 
-    if( previous_idx > task_idx ) {
-      // We are going backwards, remove checks after current_step
-      for(var i=task_idx+1; i<=previous_idx; i++) {
-        var el = document.getElementById(task_list[i]);
-        el.querySelector('.checkmark').className = 'checkmark_hidden checkmark';
+    completed_steps = m.completed_steps;
+    completed_steps.forEach(function(completed, index){
+      var el = document.getElementById(task_list[index]);
+      // Update checkmarks in task list
+      if(completed) {
+        el.querySelector('.checkmark').className = 'checkmark_visible checkmark';
+        colors[index+1] = "rgba(62, 174, 43, 1.0)"; // green
       }
-    }
-    var el = document.getElementById(task_name);
-    el.querySelector('.checkmark').className = 'checkmark_visible checkmark';
+      else {
+        el.querySelector('.checkmark').className = 'checkmark_hidden checkmark';
+        colors[index+1] = "rgba(0, 104, 199, 1.0)"; // blue
+      }
+    });
 
     // Update task completion chart
     task_complete_chart.data.datasets[0].data = [m.task_complete_confidence];
@@ -109,18 +110,6 @@ $.get( "/ns")
     // Update colors in activity confidence chart
     // This assumes that the task list and activity classifier are
     // aligned. This will not be the case in the future. 
-    var chart = Chart.getChart('activity-conf-chart');
-    var idx = task_idx + 1; // This list includes background as id 0
-
-    if( previous_idx > task_idx ) {
-      // We are going backwards, remove colors after current_step
-      for(var i=idx+1; i<=previous_idx+1; i++) {
-        colors[i] = "rgba(0, 104, 199, 1.0)" // blue
-      }
-    }
-    colors[idx] = "rgba(62, 174, 43, 1.0)"; // green
-    colors[chart.data.labels.indexOf("Background")] = "rgba(0, 104, 199, 1.0)"; // blue
-
     chart.data.datasets[0].backgroundColor = colors;
     chart.update('none'); // don't animate update
   });
