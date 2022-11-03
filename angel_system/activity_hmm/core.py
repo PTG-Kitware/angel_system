@@ -327,7 +327,7 @@ class ActivityHMMRos:
 
         states = set(state_sequence)
         step_finished_conf = [s in states
-                              for s in range(1, self.model.num_steps + 1)]
+                              for s in range(1, self.model.num_steps)]
         step_finished_conf = np.array(step_finished_conf, dtype=float)
 
         return self.times, state_sequence, step_finished_conf
