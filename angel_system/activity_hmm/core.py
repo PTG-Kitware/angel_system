@@ -280,7 +280,8 @@ class ActivityHMMRos:
         ----------
         step_ind : int
             Step to revert with integer index that matches with 'id' field in
-            the recipe file.
+            the recipe file. The actual index reverted to may be earlier than
+            provided if the index is within a region of skipped steps.
 
         Returns
         -------
@@ -288,7 +289,7 @@ class ActivityHMMRos:
 
         """
         log_prob1, Z, X_, Z_ = self.model.decode(self.X)
-        ind = np.where(Z == step_ind)[0]
+        ind = np.where(np.logical_and(Z <= step_ind, Z != 0))[0]
         if len(ind) == 0:
             raise ValueError(f'Found no previous steps <= {step_ind}')
 
