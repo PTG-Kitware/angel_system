@@ -3,6 +3,7 @@ import numpy as np
 from pathlib import Path
 import os
 
+import seaborn as sn
 from sklearn.metrics import PrecisionRecallDisplay, precision_recall_curve, average_precision_score
 from sklearn.metrics import roc_curve, auc
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
@@ -200,19 +201,26 @@ class EvalVisualization:
         """
         Plot a confusion matrix of size (number of labels x number of labels)
         """
+
         log.debug("Plotting confusion matrix")
         plt.rcParams.update({'font.size': 55})
         fig, ax = plt.subplots(figsize=(100, 100))
 
+        n_classes = len(self.labels)
+        label_vec = np.arange(n_classes)
         true_idxs = np.where(self.gt_true_mask==True)[1]
         pred_idxs = np.argmax(self.window_class_scores, axis=1)
 
-        cm = confusion_matrix(true_idxs, pred_idxs, labels=range(len(self.labels)))
-        disp = ConfusionMatrixDisplay(confusion_matrix=cm,
-                                      display_labels=self.labels)
-        disp.plot(ax=ax, xticks_rotation=90)
-        
-        plt.tight_layout()
+        cm = confusion_matrix(true_idxs, pred_idxs,
+                              labels=label_vec,
+                              normalize="true")
+
+        sn.heatmap(cm, annot=True, fmt=".2f", ax=ax)
+        ax.set(
+            title="Confusion Matrix",
+            xlabel="Predicted Label",
+            ylabel="True Label",
+        )
         fig.savefig(f"{self.output_dir}/confusion_mat.png", pad_inches=5)
         plt.close(fig)
 

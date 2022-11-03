@@ -24,6 +24,7 @@ pyarrow = "^9.0.0"  # for feature file support
 pynput = "^1.7.6"
 pytorchvideo = "^0.1.5"
 scikit-learn = "^1.1.2"
+seaborn = "^0.12.1"
 simpleaudio = "^1.0.4"
 smqtk-detection = ">=0.19.0"
 timm = "^0.5.4"
