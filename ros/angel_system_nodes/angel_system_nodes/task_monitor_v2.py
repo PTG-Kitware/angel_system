@@ -4,11 +4,14 @@ from threading import (
     Thread,
 )
 import time
-import yaml
+from typing import Optional
 
+import numpy as np
+import numpy.typing as npt
 from pynput import keyboard
 import rclpy
 from rclpy.node import Node
+import yaml
 
 from angel_msgs.msg import (
     ActivityDetection,
@@ -69,6 +72,10 @@ class HMMNode(Node):
         # Instantiate the HMM module
         self._hmm = ActivityHMMRos(self._config_file)
         log.info(f"HMM node initialized with {self._config_file}")
+
+        # Cache the quantity of "real" task steps configured
+        # (discounting HMM background "step").
+        self._n_steps = len(self._hmm.model.class_str) - 1
 
         # Get the task title from the config
         with open(self._config_file, 'r') as f:
@@ -180,10 +187,17 @@ class HMMNode(Node):
             # Tell the HMM thread to wake up
             self._hmm_awake_evt.set()
 
-    def publish_task_state_message(self):
+    def publish_task_state_message(
+        self,
+        steps_complete_vec: Optional[npt.NDArray[bool]]
+    ) -> None:
         """
         Forms and sends a `angel_msgs/TaskUpdate` message to the
         TaskUpdates topic.
+
+        :param steps_complete_vec: Boolean vector the length of task steps (as
+            reported by `query_task_graph_callback`) that indicates which steps
+            to report as having been completed.
         """
         log = self.get_logger()
 
@@ -218,6 +232,8 @@ class HMMNode(Node):
             message.task_complete_confidence = 1.0
         else:
             message.task_complete_confidence = 0.0
+
+        message.completed_steps = steps_complete_vec.tolist()
 
         # TODO: Do we need to fill in the other fields
 
@@ -294,6 +310,14 @@ class HMMNode(Node):
                     step_id = skip_idx[-1]
                     step = self._hmm.model.class_str[step_id]
 
+                    # step-associated vector of bools indicating whether a step
+                    # has been completed or not.
+                    steps_complete = np.zeros(self._n_steps, dtype=bool)
+                    # `- {0}` and `- 1` is to offset the HMM background "step".
+                    steps_complete_idxs = np.asarray(list(set(skip_idx) - {0})) - 1
+                    if steps_complete_idxs.size:
+                        steps_complete[steps_complete_idxs] = True
+
                     # Only change steps if we have a new step, and it is not background
                     if self._current_step != step and step_id != 0:
                         self._previous_step = self._current_step
@@ -315,7 +339,7 @@ class HMMNode(Node):
                             self._previous_step_skip = self._previous_step
 
                     # Publish a new TaskUpdate message
-                    self.publish_task_state_message()
+                    self.publish_task_state_message(steps_complete)
 
     def hmm_alive(self) -> bool:
         """
@@ -421,8 +445,9 @@ class HMMNode(Node):
                     self._hmm.times = None
                     self._current_step = None
                     self._previous_step = None
+                    steps_complete = np.zeros(self._n_steps, dtype=bool)
 
-                    self.publish_task_state_message()
+                    self.publish_task_state_message(steps_complete)
                     log.info("HMM reset to beginning")
                 else:
                     self._hmm.revert_to_step(new_step_id)
