@@ -62,9 +62,14 @@ Extract activity detections from the new ros bag
         -p extract_depth_images:="False" \
         -p extract_depth_head_pose_data:="False"
 
-Run eval
-########
+Running the evaluation tool
+###########################
 ``$ ptg_eval_activity <optional flags>``
+
+The tool must take in one or more ground-truth / prediction file pairs.
+It is generally expected that we should have such an evaluable pair for a
+single recording.
+Pairs are provided via the ``--gt-pred-pair`` option.
 
 The evaluation tool should be run with a ``--time_window`` option that is
 non-trivially smaller than predicted activity time windows.
@@ -75,8 +80,9 @@ temporal bounds.
 E.g.::
 
     $ poetry run ptg_eval_activity \
-            --activity_gt labels_test_v1.4.csv \
-            --extracted_activity_detections sample_dets.json \
+            --gt-pred-pair truth_1.csv predictions_1.json \
+            --gt-pred-pair truth_2.csv predictions_2.json \
+            --gt-pred-pair truth_3.csv predictions_3.json \
             --time_window 0.1 \
             --uncertainty_pad 0.05 \
             --output_dir ./eval_output/
