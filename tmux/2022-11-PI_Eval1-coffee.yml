@@ -99,7 +99,7 @@ windows:
   - task_monitor: ros2 run angel_system_nodes task_monitor_v2 --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p det_topic:=ActivityDetections
-      -p config_file:=${CONFIG_DIR}/tasks/task_steps_config-recipe_coffee.yaml
+      -p config_file:=${CONFIG_DIR}/tasks/task_steps_config-recipe_coffee_trimmed.yaml
       -p task_state_topic:=TaskUpdates
       -p task_error_topic:=TaskErrors
       -p query_task_graph_topic:=query_task_graph
