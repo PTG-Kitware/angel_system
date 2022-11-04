@@ -80,16 +80,14 @@ def run_eval(args):
     # Metrics
     # ============================
     metrics = EvalMetrics(labels, gt_true_mask, dets_per_valid_time_w, output_dir=output_dir)
-    metrics.precision()
+    metrics.precision_recall()
 
-    log.info(f"Saved metrics to {metrics.output_fn}")
+    log.info(f"Saved metrics to {metrics.output_dir}")
 
     # ============================
     # Plot
     # ============================
     vis = EvalVisualization(labels, gt_true_mask, dets_per_valid_time_w, output_dir=output_dir)
-    vis.plot_pr_curve()
-    vis.plot_roc_curve()
     vis.confusion_mat()
 
     log.info(f"Saved plots to {vis.output_dir}")
