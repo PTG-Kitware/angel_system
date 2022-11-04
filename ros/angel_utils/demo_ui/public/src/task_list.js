@@ -1,6 +1,40 @@
-var task_ctx = document.getElementById("task-complete-chart").getContext('2d');
+var task_step_conf_ctx = document.getElementById("task-step-conf-chart").getContext('2d');
+var task_complete_ctx = document.getElementById("task-complete-chart").getContext('2d');
 
-var task_complete_chart = new Chart(task_ctx, {
+var task_step_conf_chart = new Chart(task_step_conf_ctx, {
+    type: "bar",
+    data: {
+        labels: ["task step confidence"],
+        datasets: [{
+            backgroundColor: "rgba(0, 104, 199, 1.0)",
+            data: [0]
+        }]
+    },
+    options: {
+        scales: {
+            x: {
+                ticks: {
+                    callback: function(val, index) {
+                        return val;
+                    }
+                }
+            },
+            y: {
+                min: 0,
+                max: 1,
+                ticks: {
+                    stepSize: 0.1
+                }
+            }
+        },
+        title: {
+            display: false
+        },
+        maintainAspectRatio: false
+    }
+});
+
+var task_complete_chart = new Chart(task_complete_ctx, {
   type: "bar",
   data: {
     labels: ["task completion"],
@@ -87,11 +121,9 @@ $.get( "/ns")
   });
 
   task_update.subscribe(function(m) {
-    var chart = Chart.getChart('activity-conf-chart');
-
-    completed_steps = m.completed_steps;
+    const completed_steps = m.completed_steps;
     completed_steps.forEach(function(completed, index){
-      var el = document.getElementById(task_list[index]);
+      let el = document.getElementById(task_list[index]);
       // Update checkmarks in task list
       if(completed) {
         el.querySelector('.checkmark').className = 'checkmark_visible checkmark';
@@ -103,15 +135,14 @@ $.get( "/ns")
       }
     });
 
+    // Update task step conf chart with done-color association.
+    task_step_conf_chart.data.datasets[0].data = m.hmm_step_confidence;
+    task_step_conf_chart.data.datasets[0].backgroundColor = colors;
+    task_step_conf_chart.update('none'); // don't animate
+
     // Update task completion chart
     task_complete_chart.data.datasets[0].data = [m.task_complete_confidence];
     task_complete_chart.update('none'); // don't animate
-
-    // Update colors in activity confidence chart
-    // This assumes that the task list and activity classifier are
-    // aligned. This will not be the case in the future. 
-    chart.data.datasets[0].backgroundColor = colors;
-    chart.update('none'); // don't animate update
   });
 
 });
