@@ -363,8 +363,13 @@ class ActivityHMMRos:
 
         #         step_finished_conf[i] = np.exp((log_prob2 - log_prob0)/log_prob0)
 
-        unfiltered_step_conf = step_finished_conf
-        unfiltered_step_conf = np.hstack([0, unfiltered_step_conf])
+        log_prob_ = self.model.model._compute_log_likelihood(self.X[-1:])
+        log_prob_ = log_prob_[:, self.model.fwd_map].ravel()
+        log_prob_ -= log_prob_.max()
+        prob = np.exp(log_prob_)
+        prob /= sum(prob)
+
+        unfiltered_step_conf = prob
 
         return self.times, state_sequence, step_finished_conf, unfiltered_step_conf
 
