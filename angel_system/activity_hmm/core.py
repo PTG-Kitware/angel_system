@@ -336,6 +336,10 @@ class ActivityHMMRos:
             Array of length equal to the number of steps in the recipe
             (not including background) indicating the confidence that the user
             was in that step at some point in the history.
+        unfiltered_step_conf : list of float
+            Array of length equal to the number of steps in the recipe
+            (including background) indicating the confidence that the user
+            is currently in that step. Values range from 0-1.
         """
         log_prob0, state_sequence, _, state_sequence_ = self.model.decode(self.X)
         log_prob0 = self.unconstrained_model.calc_log_prob_(self.X,
@@ -359,7 +363,10 @@ class ActivityHMMRos:
 
         #         step_finished_conf[i] = np.exp((log_prob2 - log_prob0)/log_prob0)
 
-        return self.times, state_sequence, step_finished_conf
+        unfiltered_step_conf = step_finished_conf
+        unfiltered_step_conf = np.hstack([0, unfiltered_step_conf])
+
+        return self.times, state_sequence, step_finished_conf, unfiltered_step_conf
 
     def save_task_yaml(self, fname, save_weights_inline=False):
         if save_weights_inline:
