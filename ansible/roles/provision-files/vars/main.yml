@@ -50,6 +50,12 @@ girder_file_downloads:
     - file_id: 63643e4e11dab8142820af0e
       sha512: 5b9a42e3048c0f5360d7a7f9e11e677e51a2ae3318e60222ee07c0852e464e3572eb1bb5521aaccab38f8f3085609a2a06179e69e435f42dc1ba96d05a3d160a
       dest: "{{ stage_dirs.model_files }}/recipe_coffee_trimmed_mean_std.npy"
+    - file_id: 63657f9c11dab8142820af6b
+      sha512: 78e9bf93fad284a6cf1ffe488b940ec8e807aed13f3bdb5a5c4b83bb649737765b4ac007359a8d68464318e5d624b226918272fe82e0ddb6f29852f4e18f50b0
+      dest: "{{ stage_dirs.model_files }}/recipe_coffee_trimmed_v2_mean_std.npy"
+    - file_id: 63657eb111dab8142820af68
+      sha512: 9a9f9aa836dc3eb6ba187b64bdd72bb0cdce062b086996921827270783b1686bdf079bfdb34eacd5c71cb28366e8e89a4303a71f9ce0d2c27628d78fae939ab3
+      dest: "{{ stage_dirs.model_files }}/recipe_coffee_trimmed_v3_mean_std.npy"
 
 # List of git repositories to check out at a specific ref and then archive.
 # Destination files will be written as GZipped TAR files, so please suffix
