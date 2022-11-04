@@ -5,6 +5,8 @@ import pandas as pd
 import json
 import yaml
 import os
+import scipy
+import time
 
 from angel_system.ptg_eval.common.load_data import time_from_name
 from angel_system.ptg_eval.common.load_data import activities_from_dive_csv
@@ -510,10 +512,12 @@ class ActivityHMM(object):
             fwd_map.append(len(inv_map))
             inv_map.append(i)
             bckg_mask.append(False)
-            bckg_mask.append(True)
-            class_str_.append('background%i' % k)
-            inv_map.append(0)
-            k += 1
+
+            if i < len(class_str[1:]):
+                bckg_mask.append(True)
+                class_str_.append('background%i' % k)
+                inv_map.append(0)
+                k += 1
 
         self.num_steps = len(class_str)
 
@@ -620,25 +624,17 @@ class ActivityHMM(object):
         for i in range(N_):
             # We are currently in state i, which other states are valid
             # transitions.
-            i0 = i
-            i1 = i + 2
+            i0 = (i//2)*2
+            i1 = (i//2)*2 + 2
 
-            if i == (i//2)*2:
-                # i is even, so it is a background state.
-                i0 -= 1
-                i1 += 0
-
+            if i0 == i:
+                # i is even, so this is a background step. Background steps can
+                # only ever move one forward. We don't want to allow hoping
+                # from background to background.
+                pass
+            else:
                 if num_steps_can_jump_fwd > 0:
                     i1 += num_steps_can_jump_fwd*2
-
-                if num_steps_can_jump_bck > 0:
-                    i0 -= 2*num_steps_can_jump_bck
-            else:
-                i0 += 0
-                i1 += 1
-
-                if num_steps_can_jump_fwd > 0:
-                    i1 += num_steps_can_jump_fwd*2 + 1
 
                 if num_steps_can_jump_bck > 0:
                     i0 -= 2*num_steps_can_jump_bck
@@ -675,6 +671,30 @@ class ActivityHMM(object):
         mean = mean[self.fwd_map]
         std = np.sqrt(cov[self.fwd_map])
         return mean, std
+
+    def sample_for_step(self, step_ind, N):
+        """Return simulated classifier associated with the specified step.
+
+        Parameters
+        ----------
+        step_ind : int
+            Recipe step index. Zero encodes background.
+        N : int
+            Number of samples (states) to simulate.
+
+        Return
+        ------
+        X : (n_samples, num_classes)
+            Simulated detector confidences for each timestep (row) and each
+            possible step being detected (column).
+        Z : (n_samples,)calc_log_prob_hmm(model, X, Z_, verbose=False)
+            Truth state associated with each time step.
+        """
+        mean = self.model.means_[self.fwd_map[step_ind]]
+        std = np.sqrt(self.model._covars_[self.fwd_map[step_ind]])
+        n1= scipy.stats.norm(loc=mean, scale=std)
+        random_state = np.uint32(time.time()*100000)
+        return np.array([n1.rvs(random_state=random_state) for _ in range(N)])
 
     def sample(self, N):
         """Return simulated classifier output X and truth state Z.

@@ -29,6 +29,8 @@ os.chdir('/home/local/KHQ/matt.brown/libraries/angel_system')
 
 
 # ----------------------------------------------------------------------------
+config_fname = '/mnt/data2tb/libraries/angel_system/config/tasks/task_steps_config-recipe_coffee_trimmed.yaml'
+
 # Load from real system.
 dt = 0.25
 base_dir = '/mnt/data10tb/ptg/hmm_training_data'
@@ -70,7 +72,7 @@ with open(config_fname, 'r') as stream:
 activity_id_to_step = {}
 for step in config['steps']:
     if isinstance(step['activity_id'], str):
-        a_ids = [float(s) for s in step['activity_id'].split(',')]
+        a_ids = [int(s) for s in step['activity_id'].split(',')]
     else:
         a_ids = [step['activity_id']]
 
@@ -78,7 +80,7 @@ for step in config['steps']:
         activity_id_to_step[i] = step['id']
 
 activity_id_to_step[0] = 0
-steps = sorted(list(activity_id_to_step.keys()))
+steps = sorted(list(set(activity_id_to_step.values())))
 assert steps == list(range(max(steps) + 1))
 
 true_step = [activity_id_to_step[activity_id] for activity_id in activity_ids]
@@ -124,7 +126,7 @@ class_std_conf = np.array(class_std_conf)
 snr = []
 
 
-np.save("/mnt/data2tb/libraries/angel_system/model_files/recipe_coffee_mean_std.npy", [class_mean_conf, class_std_conf])
+np.save(config['activity_mean_and_std_file'], [class_mean_conf, class_std_conf])
 
 # ----------------------------------------------------------------------------
 
@@ -181,18 +183,14 @@ live_model = ActivityHMMRos(config_fname)
 model = live_model.model
 model.model.transmat_ += 1e-12
 model.model.startprob_ += 1e-12
-class_mean_conf = live_model.class_mean_conf
-class_std_conf = live_model.class_std_conf
 
 fract = []
 med_class_duration_ = []
 for curr_step_ind in range(0, len(live_model.class_str) - 1):
     print('Processing step:', curr_step_ind)
-    n1= scipy.stats.norm(loc=class_mean_conf[curr_step_ind],
-                         scale=class_std_conf[curr_step_ind])
 
     N = 1000
-    conf = np.array([n1.rvs() for _ in range(N)])
+    conf = model.sample_for_step(curr_step_ind, N)
 
     log_prob1 = -((conf - class_mean_conf[curr_step_ind])/class_std_conf[curr_step_ind])**2
     log_prob1 = np.sum(log_prob1, axis=1)
@@ -225,6 +223,33 @@ for curr_step_ind in range(0, len(live_model.class_str) - 1):
     fract.append(np.mean(llr > 0))
 
 [(i, med_class_duration_[i]) for i in range(len(med_class_duration_))]
+# ----------------------------------------------------------------------------
+
+
+# ----------------------------------------------------------------------------
+# What happens with a bunch of background in a row.
+config_fname = '/mnt/data2tb/libraries/angel_system/config/tasks/task_steps_config-recipe_coffee_trimmed.yaml'
+live_model = ActivityHMMRos(config_fname)
+
+curr_step = 17
+start_time = 0
+end_time = 1
+for _ in range(1, 500):
+    conf_vec = live_model.model.sample_for_step(curr_step, 1).ravel()
+    label_vec = list(range(live_model.num_activities))
+    live_model.add_activity_classification(label_vec, conf_vec, start_time,
+                                           end_time)
+    start_time += 1
+    end_time += 1
+
+ret = live_model.analyze_current_state()
+times, state_sequence, step_finished_conf = ret
+state_sequence = state_sequence[state_sequence != 0]
+plt.close('all');
+plt.subplot(2, 1, 1)
+plt.plot(state_sequence, '.')
+plt.subplot(2, 1, 2)
+plt.plot(np.diff(state_sequence), '.')
 # ----------------------------------------------------------------------------
 
 
