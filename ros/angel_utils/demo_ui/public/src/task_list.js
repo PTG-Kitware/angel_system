@@ -136,6 +136,7 @@ $.get( "/ns")
     });
 
     // Update task step conf chart with done-color association.
+    task_step_conf_chart.data.labels = [...Array(m.hmm_step_confidence.length).keys()];
     task_step_conf_chart.data.datasets[0].data = m.hmm_step_confidence;
     task_step_conf_chart.data.datasets[0].backgroundColor = colors;
     task_step_conf_chart.update('none'); // don't animate
