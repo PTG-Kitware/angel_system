@@ -324,8 +324,11 @@ class HMMNode(Node):
                 # Get the HMM prediction
                 start_time = time.time()
                 with self._hmm_lock:
-                    # Reminder: `step_finished_conf` includes background class
-                    # at index 0, we need to ignore this.
+                    # REMINDER: state_seq indices refer to HMM step index
+                    # perspective, i.e. 0 == background step.
+                    # REMINDER: `step_finished_conf` DOES NOT include the
+                    # background class at index 0. Index 0 of this vector is
+                    # the true first user step.
                     times, state_seq, step_finished_conf = (
                         self._hmm.analyze_current_state()
                     )
@@ -333,7 +336,20 @@ class HMMNode(Node):
                     log.debug(f"HMM State Sequence: {state_seq}")
                     log.debug(f"HMM Steps Finished: {step_finished_conf}")
 
-                    hmm_step_id = state_seq[-1]
+                    # Get the latest non-zero (non-background) step-ID in the
+                    # state sequence to indicate the current state.
+                    ss_nonzero = np.nonzero(state_seq)[0]
+                    if ss_nonzero.size == 0:
+                        # No non-zero entries yet, nothing to do.
+                        continue
+
+                    # There are non-zero entries. hmm_step_id should never be
+                    # zero.
+                    hmm_step_id = state_seq[ss_nonzero[-1]]
+                    assert hmm_step_id != 0, (
+                        "Should not be able to be set to background ID at "
+                        "this point"
+                    )
                     user_step_id = hmm_step_id - 1  # no user "background" step
                     step_str = self._hmm.model.class_str[hmm_step_id]
 
@@ -348,7 +364,7 @@ class HMMNode(Node):
 
                     # Only change steps if we have a new step, and it is not
                     # background (ID=0).
-                    if self._current_step != step_str and hmm_step_id != 0:
+                    if self._current_step != step_str:
                         self._previous_step = self._current_step
                         self._previous_step_id = self._current_step_id
                         self._current_step = step_str
