@@ -194,6 +194,13 @@ class ActivityHMMRos:
                                  class_mean_conf=self.class_mean_conf,
                                  class_std_conf=self.class_std_conf)
 
+        self.unconstrained_model = ActivityHMM(self.dt, class_str,
+                                               med_class_duration,
+                                               num_steps_can_jump_fwd=self.num_steps,
+                                               num_steps_can_jump_bck=self.num_steps,
+                                               class_mean_conf=class_mean_conf,
+                                               class_std_conf=class_std_conf)
+
     @property
     def num_steps(self):
         """Number of steps in the recipe.
@@ -334,11 +341,26 @@ class ActivityHMMRos:
             was in that step at some point in the history.
         """
         log_prob0, state_sequence, _, state_sequence_ = self.model.decode(self.X)
+        log_prob0 = self.unconstrained_model.calc_log_prob_(self.X,
+                                                            state_sequence_)
+
+        #log_prob1, state_sequence1, _, state_sequence1_ = self.noskip_model.decode(self.X)
 
         states = set(state_sequence)
         step_finished_conf = [s in states
                               for s in range(1, self.model.num_steps)]
         step_finished_conf = np.array(step_finished_conf, dtype=float)
+
+        # for i in range(len(step_finished_conf)):
+        #     if step_finished_conf[i] == 1:
+        #         step = i + 1
+        #         #print('Forcing skip on step', step)
+        #         fksip_model = self.model.get_model_force_skip_step(step)
+        #         log_prob2, state_sequence2_ = fksip_model.decode(self.X)
+        #         log_prob2 = self.unconstrained_model.calc_log_prob_(self.X,
+        #                                                             state_sequence2_)
+
+        #         step_finished_conf[i] = np.exp((log_prob2 - log_prob0)/log_prob0)
 
         return self.times, state_sequence, step_finished_conf
 
@@ -476,6 +498,8 @@ class ActivityHMM(object):
 
         self.class_str = class_str
         self.dt = dt
+        self.num_steps_can_jump_fwd = num_steps_can_jump_fwd
+        self.num_steps_can_jump_bck = num_steps_can_jump_bck
 
         # The first element of 'class_str' should be 'background', which captures
         # all other possible classes not covered by the remaining elements of
@@ -762,29 +786,54 @@ class ActivityHMM(object):
         bckg_mask = self.bckg_mask
         N_ = len(self.class_str_)
 
-        if ind < model.transmat_.shape[1] - 3:
-            # These are the transition probabilities from each ith state
-            # (ith element) into the state we are looking to skip.
-            # model.transmat_[:, ind]
+        orig_mask = ~self.bckg_mask.copy()
+        orig_mask[0] = True
+        tdiag = np.diag(self.model.transmat_[orig_mask][:, orig_mask])
 
-            # We add two to skip the background state immediately after to
-            # the next real step.
-            model.transmat_[:, ind + 2] += model.transmat_[:, ind]
+        # Only valid states are possible.
+        valid = np.zeros_like(self.valid_trans)
+        ki = 0
+        for i in range(len(valid)):
+            # We are currently in state i, which other states are valid
+            # transitions.
+            i0 = (i//2)*2
+            i1 = (i//2)*2 + 2
 
-            # Now noone can ever transition into 'force_skip_step'.
-            model.transmat_[:, ind] =  0
-        else:
-            # We are at the second-to-last element (the last element is
-            # background after the last step).
-            N = model.transmat_.shape[1]
-            ind2 = np.where(model.transmat_[:, ind] > 0)[0]
+            if i0 == i:
+                # i is even, so this is a background step. Background steps can
+                # only ever move one forward. We don't want to allow hoping
+                # from background to background.
+                pass
+            else:
+                if self.num_steps_can_jump_fwd > 0:
+                    i1 += self.num_steps_can_jump_fwd*2
 
-            for i in ind2:
-                # Take the probability allotated to move it into the last-
-                # viable background state ind - 1.
+                if self.num_steps_can_jump_bck > 0:
+                    i0 -= 2*self.num_steps_can_jump_bck
 
-                model.transmat_[i, ind - 1] += model.transmat_[i, ind]
-                model.transmat_[i, ind] =  0
+            for ii in range(i0, i1):
+                if ii < 0 or ii >= len(valid):
+                    continue
+
+                valid[i, ii] = True
+
+        valid[:, ind] = False
+        valid[ind, ind] = True
+
+        #print(valid)
+
+        model.transmat_ = np.zeros_like(self.model.transmat_)
+        ki = 0
+        for i in range(N_):
+            if ~bckg_mask[i]:
+                # specify which indices are valid
+                model.transmat_[i, valid[i]] = (1 - tdiag[ki])/(sum(valid[i]) - 1)
+                model.transmat_[i, i] = tdiag[ki]
+                # np.sum(model.transmat_[i])
+
+                ki += 1
+            else:
+                model.transmat_[i, valid[i]] = 1/(sum(valid[i]))
 
         return model
 
@@ -1099,8 +1148,7 @@ def calc_log_prob_hmm(model, X, Z_, verbose=False):
                   log_prob_[i, Z_[i]])
 
         if model.transmat_[Z_[i - 1], Z_[i]] == 0:
-            print('Cannot move from', Z_[i - 1], 'to', Z_[i])
-            raise Exception()
+            raise AssertionError(f'Cannot move from {Z_[i - 1]} to {Z_[i]}')
 
         # We moved from Z_[i - 1] to Z_[i].
         log_prob += np.log(model.transmat_[Z_[i - 1], Z_[i]])
