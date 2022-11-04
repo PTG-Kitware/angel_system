@@ -71,6 +71,11 @@ class FeedbackGenerator(Node):
         # message
         self.arui_update_message = AruiUpdate()
         self.arui_update_message.header.frame_id = "ARUI Update"
+        # Set the default value for task update current step ID to the "real"
+        # base value of -1
+        # TODO: This is fragile. Dependent on implementation detail of task
+        #       monitor v2.
+        self.arui_update_message.task_update.current_step_id = -1
 
         # lock
         self.lock = Lock()
@@ -155,4 +160,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

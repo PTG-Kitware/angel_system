@@ -10,7 +10,7 @@ activity_labels: "./config/activity_labels/recipe_coffee.yaml"
 # mean and standard deviation should be N x N matrices such that when activity
 # i is actually occuring, the classifier will emit confidence
 # mean[i, j] +/- std[i, j] for activity j.
-activity_mean_and_std_file: "./model_files/recipe_coffee_trimmed_mean_std.npy"
+activity_mean_and_std_file: "./model_files/recipe_coffee_trimmed_v2_mean_std.npy"
 
 # Task title for display purposes.
 title: "Pour-over coffee"
@@ -34,89 +34,69 @@ steps:
       Pour 12 ounces of water into liquid measuring cup
     median_duration_seconds: 5
   - id: 2
-    activity_id: 2, 3
+    activity_id: 2, 3, 4
     description: >-
-      Pour the water from the liquid measuring cup into the electric kettle and turn on kettle
+      Pour the water from the liquid measuring cup into the electric kettle and turn on kettle. Place the dripper on top of the mug.
     median_duration_seconds: 5
   - id: 3
-    activity_id: 4
-    description: >-
-      Place the dripper on top of the mug
-    median_duration_seconds: 5
-  - id: 4
     activity_id: 5, 6
     description: >-
       Take the coffee filter and fold it in half to create a semi-circle. Fold the filter in half again to create a quarter-circle.
     median_duration_seconds: 5
-  - id: 5
+  - id: 4
     activity_id: 7, 8
     description: >-
       Place the folded filter into the dripper such that the the point of the quarter-circle rests in the center of the dripper and spread the filter open to create a cone inside the dripper
     median_duration_seconds: 5
-  - id: 6
+  - id: 5
     activity_id: 9, 10, 11
     description: >-
       Turn on the kitchen scale, place a bowl on the scale, zero the scale
     median_duration_seconds: 5
-  - id: 7
+  - id: 6
     activity_id: 12
     description: >-
       Add coffee beans to the bowl until the scale reads 25 grams
     median_duration_seconds: 5
-  - id: 8
+  - id: 7
     activity_id: 13
     description: >-
       Pour the measured coffee beans into the coffee grinder
     median_duration_seconds: 5
+  - id: 8
+    activity_id: 14, 15
+    description: >-
+      Set timer for 20 seconds. Turn on the timer.
+    median_duration_seconds: 5
   - id: 9
-    activity_id: 14
-    description: >-
-      Set timer for 20 seconds
-    median_duration_seconds: 5
-  - id: 10
-    activity_id: 15
-    description: >-
-      Turn on the timer
-    median_duration_seconds: 5
-  - id: 11
     activity_id: 16, 17
     description: >-
       Grind the coffee beans by pressing and holding down on the black part of the lid. Pour the grounded coffee beans into the filter cone.
     median_duration_seconds: 5
-  - id: 12
+  - id: 10
     activity_id: 18
     description: >-
       Turn on the thermometer
     median_duration_seconds: 5
-  - id: 13
+  - id: 11
     activity_id: 19
     description: >-
       Place the end of the thermometer into the water
     median_duration_seconds: 5
-  - id: 14
+  - id: 12
     activity_id: 20
     description: >-
       Set timer to 30 seconds
     median_duration_seconds: 5
-  - id: 15
+  - id: 13
     activity_id: 21, 22
     description: >-
       Slowly pour the water over the grounds in a circular motion. Do not overfill beyond the top of the paper filter
     median_duration_seconds: 5
-  - id: 16
-    activity_id: 23
+  - id: 14
+    activity_id: 23, 24, 25, 26
     description: >-
-      Allow the rest of the water in the dripper to drain
-    median_duration_seconds: 5
-  - id: 17
-    activity_id: 24, 25
-    description: >-
-      Remove the dripper from the cup and remove the coffee grounds and paper filter from the dripper
-    median_duration_seconds: 5
-  - id: 18
-    activity_id: 26
-    description: >-
-      Discard the coffee grounds and paper filter
+      Allow the rest of the water in the dripper to drain. Remove the dripper from the cup and remove the coffee grounds and paper filter from the dripper. Discard the coffee grounds and paper filter.
     median_duration_seconds: 5
 
 # Hidden markov model configuration parameters

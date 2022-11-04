@@ -77,7 +77,7 @@ class HMMNode(Node):
 
         # Cache the quantity of "real" task steps configured
         # (discounting HMM background "step").
-        self._n_steps = len(self._hmm.model.class_str) - 1
+        self._n_steps = self._hmm.num_steps - 1
 
         # Get the task title from the config
         with open(self._config_file, 'r') as f:
@@ -205,7 +205,8 @@ class HMMNode(Node):
 
     def publish_task_state_message(
         self,
-        steps_complete_vec: Optional[npt.NDArray[bool]]
+        steps_complete_vec: npt.NDArray[bool],
+        hmm_step_conf: npt.NDArray[float],
     ) -> None:
         """
         Forms and sends a `angel_msgs/TaskUpdate` message to the
@@ -214,6 +215,8 @@ class HMMNode(Node):
         :param steps_complete_vec: Boolean vector the length of task steps (as
             reported by `query_task_graph_callback`) that indicates which steps
             to report as having been completed.
+        :param hmm_step_conf: Confidence vector of the HMM that we are in any
+            particular step.
         """
         log = self.get_logger()
 
@@ -226,6 +229,7 @@ class HMMNode(Node):
 
         # Populate steps and current step
         with self._hmm_lock:
+            # TODO: DEPRECATE steps field here. Use query service instead.
             message.steps = self._hmm.model.class_str[1:]  # exclude background
             last_step_id = len(message.steps) - 1
 
@@ -251,6 +255,8 @@ class HMMNode(Node):
 
         message.completed_steps = steps_complete_vec.tolist()
         log.debug(f"Steps complete: {message.completed_steps}")
+        message.hmm_step_confidence = hmm_step_conf.tolist()
+        log.debug(f"HMM step confidence: {message.hmm_step_confidence}")
 
         # TODO: Do we need to fill in the other fields
 
@@ -324,16 +330,35 @@ class HMMNode(Node):
                 # Get the HMM prediction
                 start_time = time.time()
                 with self._hmm_lock:
-                    # Reminder: `step_finished_conf` includes background class
-                    # at index 0, we need to ignore this.
-                    times, state_seq, step_finished_conf = (
+                    # REMINDER: state_seq indices refer to HMM step index
+                    #   perspective, i.e. 0 == background step.
+                    # REMINDER: `step_finished_conf` DOES NOT include the
+                    #   background class at index 0. Index 0 of this vector is
+                    #   the true first user step.
+                    # unfilt_step_conf: ndarray of [0,1] range raw confidences
+                    #   from the HMM. Includes the background class (HMM ID
+                    #   perspective).
+                    times, state_seq, step_finished_conf, unfilt_step_conf = (
                         self._hmm.analyze_current_state()
                     )
                     log.info(f"HMM computation time: {time.time() - start_time}")
                     log.debug(f"HMM State Sequence: {state_seq}")
                     log.debug(f"HMM Steps Finished: {step_finished_conf}")
 
-                    hmm_step_id = state_seq[-1]
+                    # Get the latest non-zero (non-background) step-ID in the
+                    # state sequence to indicate the current state.
+                    ss_nonzero = np.nonzero(state_seq)[0]
+                    if ss_nonzero.size == 0:
+                        # No non-zero entries yet, nothing to do.
+                        continue
+
+                    # There are non-zero entries. hmm_step_id should never be
+                    # zero.
+                    hmm_step_id = state_seq[ss_nonzero[-1]]
+                    assert hmm_step_id != 0, (
+                        "Should not be able to be set to background ID at "
+                        "this point"
+                    )
                     user_step_id = hmm_step_id - 1  # no user "background" step
                     step_str = self._hmm.model.class_str[hmm_step_id]
 
@@ -348,7 +373,7 @@ class HMMNode(Node):
 
                     # Only change steps if we have a new step, and it is not
                     # background (ID=0).
-                    if self._current_step != step_str and hmm_step_id != 0:
+                    if self._current_step != step_str:
                         self._previous_step = self._current_step
                         self._previous_step_id = self._current_step_id
                         self._current_step = step_str
@@ -382,7 +407,10 @@ class HMMNode(Node):
                                 self._steps_skipped_cache.add(s_id)
 
                     # Publish a new TaskUpdate message
-                    self.publish_task_state_message(steps_complete)
+                    self.publish_task_state_message(
+                        steps_complete,
+                        unfilt_step_conf,
+                    )
 
     def hmm_alive(self) -> bool:
         """
@@ -492,8 +520,12 @@ class HMMNode(Node):
                     self._previous_step = None
                     self._steps_skipped_cache.clear()
                     steps_complete = np.zeros(self._n_steps, dtype=bool)
+                    zero_step_conf = np.zeros(self._hmm.num_steps, dtype=float)
 
-                    self.publish_task_state_message(steps_complete)
+                    self.publish_task_state_message(
+                        steps_complete,
+                        zero_step_conf
+                    )
                     log.info("HMM reset to beginning")
                 else:
                     self._hmm.revert_to_step(new_step_id)
