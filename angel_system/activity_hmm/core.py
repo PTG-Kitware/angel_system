@@ -646,14 +646,13 @@ class ActivityHMM(object):
             # We are currently in state i, which other states are valid
             # transitions.
             i0 = (i//2)*2
-            i1 = (i//2)*2 + 2
-
             if i0 == i:
                 # i is even, so this is a background step. Background steps can
                 # only ever move one forward. We don't want to allow hoping
                 # from background to background.
-                pass
+                i1 = (i//2)*2 + 2
             else:
+                i1 = (i//2)*2 + 4
                 if num_steps_can_jump_fwd > 0:
                     i1 += num_steps_can_jump_fwd*2
 
