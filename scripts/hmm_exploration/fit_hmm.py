@@ -13,8 +13,6 @@ from angel_system.activity_hmm.core import ActivityHMM, ActivityHMMRos, \
     get_skip_score, score_raw_detections, load_and_discretize_data
 from angel_system.impls.detect_activities.swinb.swinb_detect_activities import SwinBTransformer
 from angel_system.ptg_eval.common.load_data import time_from_name
-from angel_system.ptg_eval.activity_classification.visualization import EvalVisualization
-from angel_system.ptg_eval.activity_classification.compute_scores import EvalMetrics
 
 try:
     import matplotlib.pyplot as plt
@@ -29,7 +27,7 @@ os.chdir('/home/local/KHQ/matt.brown/libraries/angel_system')
 
 
 # ----------------------------------------------------------------------------
-config_fname = '/mnt/data2tb/libraries/angel_system/config/tasks/task_steps_config-recipe_coffee_trimmed.yaml'
+config_fname = '/mnt/data2tb/libraries/angel_system/config/tasks/task_steps_config-recipe_coffee_trimmed_v3.yaml'
 
 # Load from real system.
 dt = 0.25
@@ -86,6 +84,7 @@ assert steps == list(range(max(steps) + 1))
 true_step = [activity_id_to_step[activity_id] for activity_id in activity_ids]
 # ----------------------------------------------------------------------------
 
+
 # Fit HMM.
 num_classes = max(true_step) + 1
 class_mean_conf = []
@@ -118,20 +117,31 @@ med_class_duration = np.array(med_class_duration)
 class_mean_conf = np.array(class_mean_conf)
 class_std_conf = np.array(class_std_conf)
 
-#plt.imshow(class_mean_conf); plt.colorbar()
-#plt.imshow(class_std_conf); plt.colorbar()
-#plt.imshow(class_mean_conf/class_std_conf); plt.colorbar()
-#plt.imshow(X.T, interpolation='nearest', aspect='auto'); plt.plot(Z, 'r.')
+# ----------------------------------------------------------------------------
+if False:
+    # Fit dummy mean and cov.
+    num_steps = len(steps)
+    num_activities = len(activity_id_to_step)
+    class_mean_conf2 = np.zeros((num_steps, num_activities))
+    class_std_conf = np.ones((num_steps, num_activities))*0.05
 
-snr = []
+    for key in activity_id_to_step:
+        class_mean_conf2[activity_id_to_step[key], key] = 1
 
+    ind = np.argmax(class_mean_conf2*class_mean_conf, axis=1)
+    class_mean_conf2[:] = 0
+    for i, ii in enumerate(ind):
+        class_mean_conf2[i, ii] = 1
+
+    class_mean_conf = class_mean_conf2
+# ----------------------------------------------------------------------------
 
 np.save(config['activity_mean_and_std_file'], [class_mean_conf, class_std_conf])
 
 # ----------------------------------------------------------------------------
 
 # Analyse how quickly we can move to next step.
-config_fname = '/mnt/data2tb/libraries/angel_system/config/tasks/task_steps_config-recipe_coffee.yaml'
+config_fname = '/mnt/data2tb/libraries/angel_system/config/tasks/task_steps_config-recipe_coffee_trimmed_v2.yaml'
 live_model = ActivityHMMRos(config_fname)
 model = live_model.noskip_model
 
