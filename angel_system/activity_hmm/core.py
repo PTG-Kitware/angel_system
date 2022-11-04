@@ -182,11 +182,8 @@ class ActivityHMMRos:
                                         class_std_conf=class_std_conf)
 
         self.num_steps_can_jump_fwd = config['hmm']['num_steps_can_jump_fwd']
-
-        if self.num_steps_can_jump_fwd <= 0:
-            raise AssertionError('\'num_steps_can_jump_fwd\' must be >= 1')
-
         self.num_steps_can_jump_bck = config['hmm']['num_steps_can_jump_bck']
+
         self.model = ActivityHMM(self.dt, self.class_str,
                                  med_class_duration=self.med_class_duration,
                                  num_steps_can_jump_fwd=self.num_steps_can_jump_fwd,
