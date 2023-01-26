@@ -12,9 +12,9 @@ Step 1: Install Pytroch: following the instruction in https://pytorch.org/ to in
 
 Step 2: Following the corresponding structure, clone the code, and run:
 ```
-cd ./angel_system/berkeley
+cd ./angel_system/
 
-python -m pip install.
+python -m pip install -e berkeley
 ```
 
 ### Download the pre-trained model
