@@ -37,7 +37,7 @@ body {
   font-family: "Roboto",sans-serif;
 }
 .body-text {
-  font-size: clamp(1rem,1vw,1.8rem);
+  font-size: clamp(1.1rem,1.1vw,1.9rem);
   font-weight: 300;
   line-height: 1;
 
@@ -53,9 +53,11 @@ body {
   padding: 10px;
   background: var(--light-gray-3);
   position: relative;
+  height: 8%;
+  max-height: 5vh;
 }
 #header img { /* kitware logo */
-  height: 70px;
+  height: 98%;
   width: auto; /* keep aspect ratio */
   float: top;
 }
@@ -68,11 +70,14 @@ body {
   position: relative;
   margin: 0 auto;
 
-  margin-bottom: 5px;
+  margin-bottom: 4px;
   max-width: 20vw;
 
-  overflow-x: hidden;
+  overflow: hidden;
   text-overflow: clip;
+
+  max-height: 15%;
+
 }
 .icon-hex {
   position: relative;
@@ -99,12 +104,12 @@ body {
   /* Paired with hexagon
   clip-path: polygon(15px 0, calc(100% - 15px) 0, 100% 50%, calc(100% - 15px) 100%, 15px 100%, 0% 50%); */
   padding: 0 2rem 0 2rem;
-  width: 80%;
+  width: 75%;
   max-width: 85%;
   
-  font-size: 2rem;
+  font-size: 1.4rem;
   font-weight: 550;
-  line-height: 1.8;
+  line-height: 1.5;
   color: var(--kit-dark-blue);
 }
 
@@ -121,7 +126,7 @@ body {
   padding: 10px;
   width: 99%;
   height: 43%;
-  max-height: 45h;
+  max-height: 45vh;
 
   background-color: var(--kit-blue);
 
@@ -195,10 +200,11 @@ body {
 /* checkmark */
 .checkbox { 
   border: 1.5px solid white; 
-  width: 1.3em; 
-  height: 1.3em; 
+  width: 1.1em; 
+  height: 1.1em; 
 
   display: inline-block;
+  vertical-align: middle;
   margin-right: 8px;
 }
 /* from: https://stackoverflow.com/questions/21968531/how-to-draw-a-checkmark-tick-using-css */
