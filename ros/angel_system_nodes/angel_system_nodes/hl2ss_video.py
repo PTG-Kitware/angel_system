@@ -10,6 +10,7 @@ from rclpy.node import Node
 from sensor_msgs.msg import Image
 
 from angel_system.hl2ss.viewer import hl2ss
+from angel_utils.conversion import hl2ss_stamp_to_ros_time
 
 
 BRIDGE = CvBridge()
@@ -138,8 +139,10 @@ class HL2SSVideoPlayer(Node):
 
             try:
                 image_msg = BRIDGE.cv2_to_imgmsg(data.payload, encoding="bgr8")
-            except TypeError:
-                self.get_logger().warning(f"Type error. Packet received {data}")
+                image_msg.header.stamp = hl2ss_stamp_to_ros_time(data.timestamp)
+                image_msg.header.frame_id = "PVFramesRGB"
+            except TypeError as e:
+                self.get_logger().warning(f"{e}")
 
             self.frame_publisher.publish(image_msg)
 

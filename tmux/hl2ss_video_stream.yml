@@ -56,3 +56,23 @@ windows:
   - rqt_2d_detections: rqt -s rqt_image_view/ImageView
       --args ${ROS_NAMESPACE}/PVFramesRGB
       --ros-args -p _image_transport:=raw
+  # Object detector
+  - object_detector: ros2 run angel_system_nodes object_detector_with_descriptors --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p image_topic:=PVFramesRGB
+      -p descriptor_topic:=ObjectDetections
+      -p min_time_topic:=ObjDetMinTime
+      -p torch_device:=cuda:0
+      -p detection_threshold:=0.05
+      -p object_vocab_list:=${MODEL_DIR}/fasterrcnn_label_list.txt
+      -p model_checkpoint:=${MODEL_DIR}/fasterrcnn_res101_vg.pth
+  - simple_2d_overlay: ros2 run angel_debug Simple2dDetectionOverlay --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p topic_input_images:=PVFramesRGB
+      -p topic_input_det_2d:=ObjectDetections
+      -p topic_output_images:=pv_image_detections_2d
+      -p filter_top_k:=5
+  - compress_image: ros2 run image_transport republish raw compressed --ros-args
+       -r __ns:=${ROS_NAMESPACE}
+       --remap in:=pv_image_detections_2d
+       --remap out/compressed:=pv_image_detections_2d/compressed
