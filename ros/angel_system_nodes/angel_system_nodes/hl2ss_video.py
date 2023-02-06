@@ -17,7 +17,8 @@ BRIDGE = CvBridge()
 
 class HL2SSVideoPlayer(Node):
     """
-    TODO
+    ROS node that demonstrates using the HL2SS client/server to publish
+    RGB images from the HoloLens 2.
     """
 
     def __init__(self):
@@ -25,7 +26,7 @@ class HL2SSVideoPlayer(Node):
 
         # Declare ROS topics
         self._image_topic = (
-            self.declare_parameter("image_topic", "PVFramesRGB")
+            self.declare_parameter("image_topic", "")
             .get_parameter_value()
             .string_value
         )
@@ -36,9 +37,11 @@ class HL2SSVideoPlayer(Node):
         )
 
         log = self.get_logger()
+        if self._image_topic == "":
+            raise ValueError("Please provide the image topic with the `image_topic` parameter")
         if self.ip_addr == "":
-            log.info(f"Please provide HL2 IPv4 address with `ip_addr` parameter")
-            return
+            raise ValueError("Please provide HL2 IPv4 address with the `ip_addr` parameter")
+
         self.port = hl2ss.StreamPort.PERSONAL_VIDEO
 
         log.info(f"Image topic: {self._image_topic}")
@@ -51,6 +54,7 @@ class HL2SSVideoPlayer(Node):
             1
         )
 
+        log.info(f"Connecting to HL2SS server...")
         self.connect_hl2ss()
         log.info(f"Client connected! Starting publishing thread.")
 
@@ -66,7 +70,10 @@ class HL2SSVideoPlayer(Node):
         log.info("Starting publishing thread... Done")
 
 
-    def connect_hl2ss(self):
+    def connect_hl2ss(self) -> None:
+        """
+        Creates the HL2SS PV client and connects it to the server on the headset.
+        """
         # Operating mode
         # 0: video
         # 1: video + camera pose
@@ -106,7 +113,10 @@ class HL2SSVideoPlayer(Node):
         self.hl2ss_pv_client.open()
 
 
-    def shutdown_client(self):
+    def shutdown_client(self) -> None:
+        """
+        Shuts down the frame publishing thread and the HL2SS client.
+        """
         # Stop frame publishing thread
         self._fp_active.clear()  # make RT active flag "False"
         self._fp_thread.join()
@@ -118,11 +128,19 @@ class HL2SSVideoPlayer(Node):
         self.get_logger().info("HL2SS client disconnected")
 
 
-    def publish_frames(self):
+    def publish_frames(self) -> None:
+        """
+        Main thread that gets frames from the HL2SS PV client and publishes
+        them to the image topic.
+        """
         while self._fp_active.wait(0):  # will quickly return false if cleared.
             data = self.hl2ss_pv_client.get_next_packet()
 
-            image_msg = BRIDGE.cv2_to_imgmsg(data.payload, encoding="bgr8")
+            try:
+                image_msg = BRIDGE.cv2_to_imgmsg(data.payload, encoding="bgr8")
+            except TypeError:
+                self.get_logger().warning(f"Type error. Packet received {data}")
+
             self.frame_publisher.publish(image_msg)
 
 
