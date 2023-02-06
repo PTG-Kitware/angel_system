@@ -9,7 +9,7 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 
-from angel_system.viewer import hl2ss
+from angel_system.hl2ss.viewer import hl2ss
 
 
 BRIDGE = CvBridge()
@@ -54,9 +54,9 @@ class HL2SSVideoPlayer(Node):
             1
         )
 
-        log.info(f"Connecting to HL2SS server...")
+        log.info("Connecting to HL2SS server...")
         self.connect_hl2ss()
-        log.info(f"Client connected! Starting publishing thread.")
+        log.info("Client connected! Starting publishing thread.")
 
         # Start the frame publishing thread
         self._fp_active = Event()
@@ -165,4 +165,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
