@@ -34,6 +34,7 @@ setup(
                 'object_detector_with_descriptors = angel_system_nodes.object_detector_with_descriptors:main',
                 'uho_activity_detector = angel_system_nodes.uho_activity_detector:main',
                 'task_monitor_v2 = angel_system_nodes.task_monitor_v2:main',
+                'hl2ss_video = angel_system_nodes.hl2ss_video:main',
             ],
     },
 )
