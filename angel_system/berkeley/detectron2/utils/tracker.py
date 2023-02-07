@@ -461,35 +461,35 @@ class Tracker:
         flag_end = -1
         sub_idx= -1
         if current_idx < self.step_last_frame:
-            # get gt
-            file = '/shared/niudt/detectron2/DEMO_Results/2022-11-05/MC_6/all_activities_6.csv'
-            import pandas as pd
-            ann = pd.read_csv(file, header=None).values
-            c = 0
-            for x in ann:
-                if x[1].split('_')[0] == 'frame':
-                    break
-                c = c + 1
-            ann_list = []
-            for i in range(c, ann.shape[0] - 1, 2):
-                j = i + 1
-
-                # print(ann[i, 9])
-                # print(ann[j, 9])
-                if ann[i, 9] != ann[j, 9]:
-                    print('error' * 50)
-                start_frame = int(ann[i, 2])
-                end_frame = int(ann[j, 2])
-                ann_list.append([start_frame, end_frame, ann[j, 9]])
-            find_flag = 0
-            for _ann in ann_list:
-                if self.current_idx >= _ann[0] and self.current_idx <= _ann[1]:
-                    gt = _ann[2]
-                    find_flag = 1
-                    break
-            if find_flag == 0:
-                gt = 'background'
-            return 'Need more test !', gt
+            # # get gt
+            # file = '/shared/niudt/detectron2/DEMO_Results/2022-11-05/MC_6/all_activities_6.csv'
+            # import pandas as pd
+            # ann = pd.read_csv(file, header=None).values
+            # c = 0
+            # for x in ann:
+            #     if x[1].split('_')[0] == 'frame':
+            #         break
+            #     c = c + 1
+            # ann_list = []
+            # for i in range(c, ann.shape[0] - 1, 2):
+            #     j = i + 1
+            #
+            #     # print(ann[i, 9])
+            #     # print(ann[j, 9])
+            #     if ann[i, 9] != ann[j, 9]:
+            #         print('error' * 50)
+            #     start_frame = int(ann[i, 2])
+            #     end_frame = int(ann[j, 2])
+            #     ann_list.append([start_frame, end_frame, ann[j, 9]])
+            # find_flag = 0
+            # for _ann in ann_list:
+            #     if self.current_idx >= _ann[0] and self.current_idx <= _ann[1]:
+            #         gt = _ann[2]
+            #         find_flag = 1
+            #         break
+            # if find_flag == 0:
+            #     gt = 'background'
+            return 'Need more test !', 'Unknown'
         else:
             current_sub_step = None
             sub_flag = -1
@@ -515,39 +515,39 @@ class Tracker:
             self.update_step_tracker(current_sub_step, flag_start, flag_end, _step[0], sub_idx)
 
             #get gt
-            file = '/shared/niudt/detectron2/DEMO_Results/2022-11-05/MC_6/all_activities_6.csv'
-            import pandas as pd
-            ann = pd.read_csv(file, header=None).values
-            c = 0
-            for x in ann:
-                if x[1].split('_')[0] == 'frame':
-                    break
-                c = c + 1
-            ann_list = []
-            for i in range(c, ann.shape[0] - 1, 2):
-                j = i + 1
-
-                # print(ann[i, 9])
-                # print(ann[j, 9])
-                if ann[i, 9] != ann[j, 9]:
-                    print('error' * 50)
-                start_frame = int(ann[i, 2])
-                end_frame = int(ann[j, 2])
-                ann_list.append([start_frame, end_frame, ann[j, 9]])
-            find_flag = 0
-            for _ann in ann_list:
-                if self.current_idx >= _ann[0] and self.current_idx <= _ann[1]:
-                    gt = _ann[2]
-                    find_flag = 1
-                    break
-            if find_flag == 0:
-                gt = 'background'
-
-
+            # file = '/shared/niudt/detectron2/DEMO_Results/2022-11-05/MC_6/all_activities_6.csv'
+            # import pandas as pd
+            # ann = pd.read_csv(file, header=None).values
+            # c = 0
+            # for x in ann:
+            #     if x[1].split('_')[0] == 'frame':
+            #         break
+            #     c = c + 1
+            # ann_list = []
+            # for i in range(c, ann.shape[0] - 1, 2):
+            #     j = i + 1
+            #
+            #     # print(ann[i, 9])
+            #     # print(ann[j, 9])
+            #     if ann[i, 9] != ann[j, 9]:
+            #         print('error' * 50)
+            #     start_frame = int(ann[i, 2])
+            #     end_frame = int(ann[j, 2])
+            #     ann_list.append([start_frame, end_frame, ann[j, 9]])
+            # find_flag = 0
+            # for _ann in ann_list:
+            #     if self.current_idx >= _ann[0] and self.current_idx <= _ann[1]:
+            #         gt = _ann[2]
+            #         find_flag = 1
+            #         break
+            # if find_flag == 0:
+            #     gt = 'background'
 
 
 
-            return self.step, self.sub_step, self.next_sub_step, gt
+
+
+            return self.step, self.sub_step, self.next_sub_step, 'Unknow'
 
 
 
