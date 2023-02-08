@@ -16,17 +16,31 @@ find_package( ament_cmake REQUIRED )
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
 find_package( rosidl_default_generators REQUIRED )
+find_package( builtin_interfaces REQUIRED )
 find_package( std_msgs REQUIRED )
 
 set( message_files
   # Add .msg files here
+  msg/BBNCasualties.msg
+  msg/BBNCasualtyCurrentlyWorkingOn.msg
+  msg/BBNCurrentErrors.msg
+  msg/BBNCurrentSkill.msg
+  msg/BBNCurrentUserActions.msg
+  msg/BBNCurrentUserState.msg
+  msg/BBNHeader.msg
+  msg/BBNNextStepProgress.msg
+  msg/BBNSkillConfidence.msg
+  msg/BBNSkillConfidenceList.msg
+  msg/BBNSkillsDonePerCasualty.msg
+  msg/BBNSkillsOpenPerCasualty.msg
+  msg/BBNStepState.msg
   msg/BBNUpdate.msg
   )
 set( service_files
   # Add .srv files here
   )
 rosidl_generate_interfaces( ${PROJECT_NAME} ${message_files} ${service_files}
-  DEPENDENCIES std_msgs
+  DEPENDENCIES builtin_interfaces std_msgs
   )
 
 if( BUILD_TESTING )

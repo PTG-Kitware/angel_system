@@ -10,7 +10,7 @@
     <buildtool_depend>ament_cmake</buildtool_depend>
 
     <!-- System package requirements -->
-    <depend>yaml-cpp</depend>
+    <depend>yaml_cpp_vendor</depend>
     <depend>libzmq3-dev</depend>
 
     <depend>rclcpp</depend>
