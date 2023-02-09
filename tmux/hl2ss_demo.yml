@@ -47,7 +47,7 @@ on_project_start: |
 tmux_options: -f <%= ENV["ANGEL_WORKSPACE_DIR"] %>/tmux/tmux.conf
 
 windows:
-  - hl2ss: ros2 run angel_system_nodes hl2ss_video --ros-args
+  - hl2ss: ros2 run angel_system_nodes hl2ss_ros_bridge --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p ip_addr:=${HL2_IP}
       -p image_topic:=PVFramesRGB
