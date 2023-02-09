@@ -793,11 +793,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3df627e66e96cba4ba3272ca40ac6f8e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  skipInitialization: 0
+  skipInitialization: 1
   enableRM: 1
   enablePV: 1
   enableMC: 1
-  enableSI: 0
+  enableSI: 1
   enableRC: 1
   m_material: {fileID: 2100000, guid: 411888bb8bd460d48a06b7cbc0b55fc2, type: 2}
 --- !u!1 &2056321752
