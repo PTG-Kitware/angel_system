@@ -51,6 +51,7 @@ windows:
       -r __ns:=${ROS_NAMESPACE}
       -p ip_addr:=${HL2_IP}
       -p image_topic:=PVFramesRGB
+      -p hand_pose_topic:=HandJointPoseData
 
   # Visualize RGB Images being output from the headset
   - rqt_2d_detections: rqt -s rqt_image_view/ImageView
