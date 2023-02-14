@@ -60,6 +60,10 @@ services:
       - ../model_files:${ANGEL_WORKSPACE_DIR}/model_files
       - ../config:${ANGEL_WORKSPACE_DIR}/config
       - ./workspace_build.sh:${ANGEL_WORKSPACE_DIR}/workspace_build.sh
+      - ./workspace_build_npm_install.sh:${ANGEL_WORKSPACE_DIR}/workspace_build_npm_install.sh
+      - ./workspace_build_pydep_install.sh:${ANGEL_WORKSPACE_DIR}/workspace_build_pydep_install.sh
+      - ./workspace_build_ros.sh:${ANGEL_WORKSPACE_DIR}/workspace_build_ros.sh
+      - ./workspace_build_rosdep_install.sh:${ANGEL_WORKSPACE_DIR}/workspace_build_rosdep_install.sh
       - ./workspace_entrypoint.sh:${ANGEL_WORKSPACE_DIR}/workspace_entrypoint.sh
       - ./workspace_setenv.sh:${ANGEL_WORKSPACE_DIR}/workspace_setenv.sh
       - ../ros_bags:${ANGEL_WORKSPACE_DIR}/ros_bags
