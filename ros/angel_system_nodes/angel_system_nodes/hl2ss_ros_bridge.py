@@ -18,7 +18,7 @@ from angel_msgs.msg import (
     HandJointPose,
     HandJointPosesUpdate,
 )
-from angel_system.hl2ss.viewer import hl2ss
+from angel_system.hl2ss_viewer import hl2ss
 from angel_utils.conversion import hl2ss_stamp_to_ros_time
 
 
