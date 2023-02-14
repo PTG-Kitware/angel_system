@@ -6,5 +6,5 @@
 	url = https://github.com/ros2/rosbag2.git
 	branch = foxy-future
 [submodule "angel_system/hl2ss"]
-	path = angel_system/hl2ss
+	path = hl2ss
 	url = git@github.com:jdibenes/hl2ss.git
