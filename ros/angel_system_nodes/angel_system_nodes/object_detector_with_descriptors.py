@@ -276,37 +276,21 @@ class ObjectDetectorWithDescriptors(Node):
         scores = cls_prob.data
         boxes = rois.data[:, :, 1:5]
 
+        boxes /= im_scales[0]
         # Simply repeat the boxes, once for each class
-        pred_boxes = np.tile(boxes.cpu(), (1, scores.cpu().shape[2]))
-        pred_boxes /= im_scales[0]
-
         scores = scores.squeeze()
-        pred_boxes = pred_boxes.squeeze()
-
-        max_conf = torch.zeros((pred_boxes.shape[0])).to(device=self._torch_device)
-
-        for j in range(1, len(self.classes)):
-            inds = torch.nonzero(scores[:,j]>self._detection_threshold).view(-1).cpu()
-            # if there is det
-            if inds.numel() > 0:
-                cls_scores = scores[:,j][inds]
-                _, order = torch.sort(cls_scores, 0, True)
-                boxs_inds = pred_boxes[inds]
-                if boxs_inds.ndim == 1:
-                    boxs_inds = np.expand_dims(boxs_inds, 0)
-                cls_boxes = (
-                    torch.tensor(boxs_inds[:, j * 4:(j + 1) * 4])
-                    .to(device=self._torch_device)
-                )
-
-                keep = nms(cls_boxes[order, :], cls_scores[order], 0.3)
-                index = inds[order[keep]]
-                max_conf[index] = (
-                    torch.where(scores[index, j] > max_conf[index],
-                                scores[index, j],
-                                max_conf[index])
-                )
-
+        max_conf = torch.zeros((scores.shape[0])).to(device=self._torch_device)
+        inds2 = torch.nonzero(scores >self._detection_threshold, as_tuple=True)
+        cls_scores = scores[inds2]
+        _, order = torch.sort(cls_scores, 0, True)
+        filled_boxs = boxes[:,inds2[0],:].to(device=self._torch_device)
+        if filled_boxs.ndim == 1:
+            filled_boxs = torch.unsqueeze(filled_boxs, 0)
+        elif filled_boxs.ndim > 2:
+            filled_boxs = torch.squeeze(filled_boxs,0)
+        keep = nms(filled_boxs[order,:], cls_scores[order], 0.3)
+        index = inds2[0][order[keep]]
+        max_conf = torch.where(torch.max(scores[index,:]) > max_conf[index], torch.max(scores[index,:]), max_conf[index])
         keep_boxes = (
             torch.where(max_conf >= self._detection_threshold, max_conf, torch.tensor(0.0)
             .to(device=self._torch_device))
@@ -317,7 +301,7 @@ class ObjectDetectorWithDescriptors(Node):
                 objects = torch.argmax(scores[keep_boxes][1:])
                 objects = torch.unsqueeze(objects, 0)
                 box_dets = np.zeros((1, 4))
-                boxes = pred_boxes[keep_boxes.cpu()]
+                boxes = filled_boxes[keep_boxes.cpu()]
                 kind = objects + 1
 
                 bbox = boxes[kind * 4: (kind + 1) * 4]
@@ -334,11 +318,9 @@ class ObjectDetectorWithDescriptors(Node):
             else:
                 objects = torch.argmax(scores[keep_boxes][:,1:], dim=1)
                 box_dets = np.zeros((len(keep_boxes), 4))
-                boxes = pred_boxes[keep_boxes.cpu()]
+                boxes = filled_boxs[keep_boxes.cpu()]
                 for i in range(len(keep_boxes)):
-                    kind = objects[i]+1
-                    bbox = boxes[i, kind * 4: (kind + 1) * 4]
-                    box_dets[i] = bbox
+                    box_dets[i] = boxes[i].cpu()
 
                 scores = scores[keep_boxes][:, 1:]
                 labels = []
