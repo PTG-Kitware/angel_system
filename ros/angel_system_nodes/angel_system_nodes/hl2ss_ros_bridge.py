@@ -108,7 +108,6 @@ class HL2SSROSBridge(Node):
         self._si_thread.start()
         log.info("Starting publishing threads... Done")
 
-
     def connect_hl2ss_pv(self) -> None:
         """
         Creates the HL2SS PV client and connects it to the server on the headset.
@@ -151,7 +150,6 @@ class HL2SSROSBridge(Node):
         )
         self.hl2ss_pv_client.open()
 
-
     def connect_hl2ss_si(self) -> None:
         """
         Creates the HL2SS Spatial Input (SI) client and connects it to the
@@ -161,7 +159,6 @@ class HL2SSROSBridge(Node):
             self.ip_addr, self.si_port, hl2ss.ChunkSize.SPATIAL_INPUT
         )
         self.hl2ss_si_client.open()
-
 
     def shutdown_clients(self) -> None:
         """
@@ -185,7 +182,6 @@ class HL2SSROSBridge(Node):
         self.hl2ss_si_client.close()
         self.get_logger().info("SI client disconnected")
 
-
     def pv_publisher(self) -> None:
         """
         Main thread that gets frames from the HL2SS PV client and publishes
@@ -202,7 +198,6 @@ class HL2SSROSBridge(Node):
                 self.get_logger().warning(f"{e}")
 
             self.frame_publisher.publish(image_msg)
-
 
     def si_publisher(self) -> None:
         """
@@ -227,7 +222,6 @@ class HL2SSROSBridge(Node):
                     si_data, "Right", data.timestamp
                 )
                 self.hand_publisher.publish(hand_msg_right)
-
 
     def create_hand_pose_msg_from_si_data(
         self,
