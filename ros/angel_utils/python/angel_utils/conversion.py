@@ -23,7 +23,7 @@ from smqtk_detection.utils.bbox import AxisAlignedBoundingBox
 
 SEC_TO_NANO = int(1e9)
 NANO_TO_SEC = 1e-9
-HUN_NANO_TO_SEC = 100 * NANO_TO_SEC
+HECTO_NS = 1e7
 
 
 def time_to_int(time_msg: Time) -> int:
@@ -38,13 +38,13 @@ def time_to_int(time_msg: Time) -> int:
 
 def hl2ss_stamp_to_ros_time(timestamp: int) -> Time:
     """
-    Convert the HL2SS timestamp which is an integer in hundreds of ns to a ROS
-    Time message.
+    Convert the HL2SS timestamp which is an integer in hundreds of ns (1e7) to
+    a ROS Time message.
+    :param timestamp: Integer timestamp of the HL2SS packet
+    :return: Time message
     """
-    timestamp_sec = timestamp * HUN_NANO_TO_SEC
-    sec = math.floor(timestamp_sec)
-    nanosec = int((timestamp_sec - sec) * SEC_TO_NANO)
-
+    sec = int(timestamp // HECTO_NS)
+    nanosec = int(timestamp % HECTO_NS)
     return Time(sec=sec, nanosec=nanosec)
 
 
