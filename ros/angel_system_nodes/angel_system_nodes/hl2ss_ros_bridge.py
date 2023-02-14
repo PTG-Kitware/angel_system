@@ -24,6 +24,23 @@ from angel_utils.conversion import hl2ss_stamp_to_ros_time
 
 BRIDGE = CvBridge()
 
+# Encoded stream average bits per second
+# Must be > 0
+# Value copied from hl2ss/viewer/cient_pv.py example
+PV_BITRATE = 5*1024*1024
+
+# List containing joint names that matches the ordering in the HL2SS
+# SI_HandJointKind class
+JOINT_LIST = [
+    "Palm", "Wrist", "ThumbMetacarpal", "ThumbProximal", "ThumbDistal",
+    "ThumbTip", "IndexMetacarpal", "IndexProximal", "IndexIntermediate",
+    "IndexDistal", "IndexTip", "MiddleMetacarpal", "MiddleProximal",
+    "MiddleIntermediate", "MiddleDistal", "MiddleTip", "RingMetacarpal",
+    "RingProximal", "RingIntermediate", "RingDistal", "RingTip",
+    "LittleMetacarpal", "LittleProximal", "LittleIntermediate",
+    "LittleDistal", "LittleTip",
+]
+
 
 class HL2SSROSBridge(Node):
     """
@@ -49,6 +66,21 @@ class HL2SSROSBridge(Node):
             self.declare_parameter("ip_addr", "")
             .get_parameter_value()
             .string_value
+        )
+        self.pv_width = (
+            self.declare_parameter("pv_width", 1280)
+            .get_parameter_value()
+            .integer_value
+        )
+        self.pv_height = (
+            self.declare_parameter("pv_height", 720)
+            .get_parameter_value()
+            .integer_value
+        )
+        self.pv_framerate = (
+            self.declare_parameter("pv_framerate", 30)
+            .get_parameter_value()
+            .integer_value
         )
 
         log = self.get_logger()
@@ -118,22 +150,12 @@ class HL2SSROSBridge(Node):
         # 2: query calibration (single transfer)
         mode = hl2ss.StreamMode.MODE_1
 
-        # Camera parameters
-        width     = 1280
-        height    = 720
-        framerate = 30
-
         # Video encoding profile
         profile = hl2ss.VideoProfile.H265_MAIN
-
-        # Encoded stream average bits per second
-        # Must be > 0
-        bitrate = 5*1024*1024
 
         # Decoded format
         decoded_format = 'bgr24'
 
-        #------------------------------------------------------------------------------
         hl2ss.start_subsystem_pv(self.ip_addr, self.pv_port)
 
         self.hl2ss_pv_client = hl2ss.rx_decoded_pv(
@@ -141,11 +163,11 @@ class HL2SSROSBridge(Node):
             self.pv_port,
             hl2ss.ChunkSize.PERSONAL_VIDEO,
             mode,
-            width,
-            height,
-            framerate,
+            self.pv_width,
+            self.pv_height,
+            self.pv_framerate,
             profile,
-            bitrate,
+            PV_BITRATE,
             decoded_format
         )
         self.hl2ss_pv_client.open()
@@ -233,17 +255,6 @@ class HL2SSROSBridge(Node):
         Extracts the hand joint poses data from the HL2SS SI structure
         and forms a ROS HandJointPosesUpdate message.
         """
-        # List containing joint names that matches the ordering in the HL2SS
-        # SI_HandJointKind class
-        joint_list = [
-            "Palm", "Wrist", "ThumbMetacarpal", "ThumbProximal", "ThumbDistal",
-            "ThumbTip", "IndexMetacarpal", "IndexProximal", "IndexIntermediate",
-            "IndexDistal", "IndexTip", "MiddleMetacarpal", "MiddleProximal",
-            "MiddleIntermediate", "MiddleDistal", "MiddleTip", "RingMetacarpal",
-            "RingProximal", "RingIntermediate", "RingDistal", "RingTip",
-            "LittleMetacarpal", "LittleProximal", "LittleIntermediate",
-            "LittleDistal", "LittleTip",
-        ]
         if hand == "Left":
             hand_data = si_data.get_hand_left()
         elif hand == "Right":
@@ -273,7 +284,7 @@ class HL2SSROSBridge(Node):
 
             # Create the hand joint pose message
             joint_pose_msg = HandJointPose()
-            joint_pose_msg.joint = joint_list[j]
+            joint_pose_msg.joint = JOINT_LIST[j]
             joint_pose_msg.pose = pose_msg
             joint_poses.append(joint_pose_msg)
 
