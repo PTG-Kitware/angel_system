@@ -67,6 +67,7 @@ services:
       - ./workspace_entrypoint.sh:${ANGEL_WORKSPACE_DIR}/workspace_entrypoint.sh
       - ./workspace_setenv.sh:${ANGEL_WORKSPACE_DIR}/workspace_setenv.sh
       - ../ros_bags:${ANGEL_WORKSPACE_DIR}/ros_bags
+      - ../hl2ss:${ANGEL_WORKSPACE_DIR}/hl2ss
       # Build environment things
       - ${WORKSPACE_SHELL_HOST_DIR}/build:${ANGEL_WORKSPACE_DIR}/build
       - ${WORKSPACE_SHELL_HOST_DIR}/install:${ANGEL_WORKSPACE_DIR}/install
