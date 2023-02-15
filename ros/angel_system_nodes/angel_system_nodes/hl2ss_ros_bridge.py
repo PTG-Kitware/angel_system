@@ -283,6 +283,9 @@ class HL2SSROSBridge(Node):
         them to the image topic.
         """
         while self._pv_active.wait(0):  # will quickly return false if cleared.
+            # The data returned from HL2SS is just a numpy array of the
+            # configured resolution. The payload array is in BGR 3-channel
+            # format.
             data = self.hl2ss_pv_client.get_next_packet()
 
             try:
