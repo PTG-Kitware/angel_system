@@ -318,9 +318,7 @@ class ObjectDetectorWithDescriptors(Node):
             else:
                 objects = torch.argmax(scores[keep_boxes][:,1:], dim=1)
                 box_dets = np.zeros((len(keep_boxes), 4))
-                boxes = filled_boxs[keep_boxes].cpu()
-                for i in range(len(keep_boxes)):
-                    box_dets[i] = boxes[i]
+                box_dets = filled_boxs[keep_boxes].cpu().numpy()
 
                 scores = scores[keep_boxes][:, 1:]
                 labels = []
