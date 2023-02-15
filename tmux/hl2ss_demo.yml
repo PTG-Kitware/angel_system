@@ -19,13 +19,8 @@ root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 # Runs on project start, always
 # on_project_start: command
 on_project_start: |
-  # Current DemoUI component assumes "/debug" namespace.
-  #export ROS_NAMESPACE=${ROS_NAMESPACE:-/debug}
-  export ROS_NAMESPACE=/debug
+  export ROS_NAMESPACE=${ROS_NAMESPACE:-/debug}
   export HL2_IP=${HL2_IP:-192.168.86.46}
-  export CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/config
-  export NODE_CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/src/angel_system_nodes/configs
-  export MODEL_DIR=${ANGEL_WORKSPACE_DIR}/model_files
 
 # Run on project start, the first time
 # on_project_first_start: command
