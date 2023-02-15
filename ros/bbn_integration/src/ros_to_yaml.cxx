@@ -12,6 +12,13 @@ namespace bbn_integration {
 
 namespace {
 
+/**
+ * Create substructure that maps a casualty ID to a list of skill names and
+ * confidences from the input consisting of parallel associative vectors.
+ *
+ * ROS2 messages don't support maps, thus the parallel associative vector
+ * input.
+ */
 Node
 create_skill_conf_map( std::vector< uint32_t > const& casualty_ids,
                        std::vector< BBNSkillConfidenceList > const& skills_lists )
