@@ -1,0 +1,64 @@
+#
+# Start up node to communicate with BBN ZMQ Server.
+#
+
+name: task_monitor-debug
+root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
+
+# Optional tmux socket
+# socket_name: foo
+
+# Note that the pre and post options have been deprecated and will be replaced by
+# project hooks.
+
+# Project hooks
+
+# Runs on project start, always
+# on_project_start: command
+on_project_start: |
+  export ROS_NAMESPACE=${ROS_NAMESPACE:-/debug}
+  export CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/src/angel_system_nodes/configs
+
+# Run on project start, the first time
+# on_project_first_start: command
+
+# Run on project start, after the first time
+# on_project_restart: command
+
+# Run on project exit ( detaching from tmux session )
+# on_project_exit: command
+
+# Run on project stop
+# on_project_stop: command
+
+# Runs in each window and pane before window/pane specific commands. Useful for setting up interpreter versions.
+# pre_window: rbenv shell 2.0.0-p247
+
+# Pass command line options to tmux. Useful for specifying a different tmux.conf.
+# tmux_options: -f ~/.tmux.mac.conf
+tmux_options: -f <%= ENV["ANGEL_WORKSPACE_DIR"] %>/tmux/tmux.conf
+
+# Change the command to call tmux.  This can be used by derivatives/wrappers like byobu.
+# tmux_command: byobu
+
+# Specifies (by name or index) which window will be selected on project startup. If not set, the first window is used.
+# startup_window: editor
+
+# Specifies (by index) which pane of the specified window will be selected on project startup. If not set, the first pane is used.
+# startup_pane: 1
+
+# Controls whether the tmux session should be attached to automatically. Defaults to true.
+# attach: false
+
+windows:
+  - bbn_integration_client: ros2 run bbn_integration ZmqIntegrationClient --ros-args 
+      -r __ns:=${ROS_NAMESPACE} 
+      -p topic_update_msg:=bbn_output 
+      -p server_address:="tcp://localhost:5555"
+
+
+# Very simple manual topic publish:
+#   ros2 topic pub --once /debug/bbn_output bbn_integration_msgs/msg/BBNUpdate "{bbn_header: {sender: Kitware}}"
+#
+# Larger example:
+#   ros2 topic pub --once /debug/bbn_output bbn_integration_msgs/msg/BBNUpdate "$(cat src/bbn_integration/example_output.yml)"
