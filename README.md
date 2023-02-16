@@ -3,8 +3,9 @@
 Initial repo for PTG project.
 
 This repo contains:
-* Experimental Unity app (and companion research-mode plugin library) for
-  transmitting appropriate sensor data off of the HoloLens2 platform
+* Experimental Unity app (and companion [HL2SS] plugin) for
+  transmitting appropriate sensor data off of the HoloLens2 platform,
+  and for running the ANGEL ARUI.
 * ROS 2 system for receiving sensor data, processing analytics, and pushing 
   results out. 
 
@@ -22,7 +23,8 @@ Unity - 2020.3.25f1 - https://unity3d.com/get-unity/download/archive
 Visual Studio 2019 - 16.11.8 - https://visualstudio.microsoft.com/vs/older-downloads/  
 Mixed Reality Feature Tool - 1.02111-Preview - https://www.microsoft.com/en-us/download/details.aspx?id=102778  
 HoloLens 2 headset - OS version 20438.1432  
-Anaconda/Miniconda - py3.9
+Anaconda/Miniconda - py3.9  
+HL2SS plugin - 1.0.15 - https://github.com/jdibenes/hl2ss
 
 ## First time build/deploy instructions
 
@@ -242,3 +244,4 @@ References to the lists that rosdep uses to resolve names:
 
 [Infinity 3 USB foot pedal]: https://www.amazon.com/Infinity-Digital-Control-Computer-USB2/dp/B002MY6I7G?th=1
 [guide]: https://catswhisker.xyz/log/2018/8/27/use_vecinfinity_usb_foot_pedal_as_a_keyboard_under_linux/
+[hl2ss]: https://github.com/jdibenes/hl2ss
