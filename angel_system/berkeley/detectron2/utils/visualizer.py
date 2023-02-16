@@ -1293,7 +1293,8 @@ class Visualizer:
 
     def load_color_mapping(self):
         import pandas as pd
-        root = '/shared/niudt/detectron2/detectron2/utils/MC_COLOR.csv'
+        import os
+        root = f'{os.path.dirname(os.path.realpath(__file__))}/MC_COLOR.csv'
         data = pd.read_csv(root, header=None).values
         color_mapping = {}
         for color in data[1:]:
@@ -3799,7 +3800,8 @@ class Visualizer_eval:
 
     def load_color_mapping(self):
         import pandas as pd
-        root = '/shared/niudt/detectron2/detectron2/utils/MC_COLOR.csv'
+        import os
+        root = f'{os.path.dirname(os.path.realpath(__file__))}/MC_COLOR.csv'
         data = pd.read_csv(root, header=None).values
         color_mapping = {}
         for color in data[1:]:
