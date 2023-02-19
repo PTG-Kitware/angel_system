@@ -39,7 +39,8 @@ Examples can be found in "TapTestData.cs".
 The tasklist can be toggled using AngelARUI.Instance.ToggleTasklist();
 
 ** Notifications
-For now, the ARUI supports skip notifications. The notification message can be changed, before build and runtime, in the AngelARUI script. 
+At the moment, the ARUI supports skip notifications and confirmation dialogue. 
+For the skip notification, The notification message can be changed, before build and runtime, in the AngelARUI behavior script in the Editor. 
 
 **** MRTK settings
 For eye-tracking to work, the user has to give permission to the eye-tracking. Also, eye-tracking has to be enabled in the MRTK toolkit.
@@ -74,6 +75,12 @@ One can disable the ARUI debug messages in the unity hierarchy by setting the "S
 - If eye calibration is not ideal, one has to manually go to the hololens2 settings and rerun the eye calibration
 
 **** Changelog
+
+2/19/23: 
+* Fixed issue with task id. If the taskID given in SetTaskID(..) is the same as the current one, the orb will not react anymore.
+* Added confirmation dialogue
+* Added option to mute text to speech for task instructions
+
 10/30/22: 
 * Added dragging signifier to the task list
 * Added Skip notification (message + warning sound)
