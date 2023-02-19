@@ -92,7 +92,7 @@ GameObject:
   - component: {fileID: 6819444889514698825}
   - component: {fileID: 3233306683470874145}
   m_Layer: 5
-  m_Name: Tasklist
+  m_Name: TasklistContainer
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

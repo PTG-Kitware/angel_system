@@ -10,20 +10,28 @@ public enum SoundType
     notification = 0,
     confirmation = 1,
     bell = 2,
-    taskDone=3,
-    moveStart=4,
-    moveEnd=5,
+    taskDone = 3,
+    moveStart = 4,
+    moveEnd = 5,
     select = 6,
     warning = 7,
 }
 
 /// <summary>
-/// Plays user feedback at run-time
+/// Plays localized audio feedback at run-time
 /// </summary>
 public class AudioManager : Singleton<AudioManager>
 {
     private TextToSpeech tTos;
     private Dictionary<SoundType, AudioSource> typeToSound;
+
+    private bool isMute = false;
+    public bool IsMute
+    {
+        get { return isMute; }
+    }
+
+    private AudioSource currentlyPlaying = null;
 
     private List<string> soundTypeToPathMapping = new List<string>()
     {
@@ -63,7 +71,11 @@ public class AudioManager : Singleton<AudioManager>
     /// Speech-To-Text for the task
     /// </summary>
     /// <param name="text"></param>
-    public void PlayText(string text) => StartCoroutine(Play(Orb.Instance.transform.position, text));
+    public void PlayText(string text)
+    {
+        if (!isMute)
+            StartCoroutine(Play(Orb.Instance.transform.position, text));
+    }
     private IEnumerator Play(Vector3 pos, String text)
     {
         tTos.StopSpeaking();
@@ -73,63 +85,54 @@ public class AudioManager : Singleton<AudioManager>
 
         var msg = string.Format(text, tTos.Voice.ToString());
         tTos.StartSpeaking(text);
+        currentlyPlaying = tTos.AudioSource;
+
+        while (tTos.IsSpeaking())
+            yield return new WaitForEndOfFrame();
+
+        currentlyPlaying = null;
     }
 
-    public void StopPlayText() => tTos.StopSpeaking();
-
     /// <summary>
     /// Plays a sound effect from a certain position
     /// </summary>
     /// <param name="pos"></param>
     /// <param name="type"></param>
-    public void PlaySound(Vector3 pos, SoundType type) => StartCoroutine(Play(pos, type));
-
-    /// <summary>
-    /// Plays a sound effect from a certain position
-    /// </summary>
-    /// <param name="pos"></param>
-    /// <param name="type"></param>
-    public void PlaySound(Vector3 pos, AudioClip clip) => StartCoroutine(Play(pos, clip));
+    public void PlaySound(Vector3 pos, SoundType type)
+    {
+            StartCoroutine(Play(pos, type));
+    }
 
     private IEnumerator Play(Vector3 pos, SoundType type)
     {
         if (typeToSound == null) InitIfNeeded();
-        
+
         typeToSound[type].transform.position = pos;
 
         yield return new WaitForEndOfFrame();
 
         typeToSound[type].Play();
+        currentlyPlaying = typeToSound[type];
 
-        while(typeToSound[type].isPlaying)
-        {
-           yield return new WaitForEndOfFrame();
-        }
+        while (typeToSound[type].isPlaying)
+            yield return new WaitForEndOfFrame();
 
         typeToSound[type].transform.position = Vector3.zero;
+        currentlyPlaying = null;
     }
 
-    private IEnumerator Play(Vector3 pos, AudioClip clip)
+    /// <summary>
+    /// Mute audio feedback for task guidance
+    /// </summary>
+    /// <param name="mute"></param>
+    public void MuteAudio(bool mute)
     {
-        if (typeToSound == null) InitIfNeeded();
-        
-        GameObject temp_audio = new GameObject("temp_audio");
-        temp_audio.transform.position = pos;
-
-        AudioSource audioSource = temp_audio.AddComponent<AudioSource>();
-        audioSource.clip = clip;
-
-        yield return new WaitForEndOfFrame();
-
-        audioSource.Play();
-
-        while (audioSource.isPlaying)
+        if (mute == true && currentlyPlaying != null && currentlyPlaying.isPlaying)
         {
-            yield return new WaitForEndOfFrame();
+            currentlyPlaying.Stop();
+            currentlyPlaying = null;
         }
 
-        yield return new WaitForEndOfFrame();
-
-        Destroy(temp_audio);
+        isMute = mute;
     }
 }

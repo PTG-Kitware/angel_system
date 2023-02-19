@@ -34,28 +34,39 @@ public class TestData : MonoBehaviour
 
     private void Start()
     {
-        StartCoroutine(GenerateAtRuntime());
+        StartCoroutine(RunTasksAtRuntime());
     }
 
-    private IEnumerator GenerateAtRuntime()
+    private IEnumerator RunTasksAtRuntime()
     {
-        AngelARUI.Instance.textToSpeechOn = true;
+        AngelARUI.Instance.MuteAudio(false);
+
         yield return new WaitForSeconds(3f);
         AngelARUI.Instance.SetTasks(tasks);
 
-        yield return new WaitForSeconds(2f);
-        currentTask++;
-        AngelARUI.Instance.SetCurrentTaskID(currentTask);
-
-        AngelARUI.Instance.textToSpeechOn = false;
-
-        yield return new WaitForSeconds(2f);
+        yield return new WaitForSeconds(3f);
         currentTask++;
         AngelARUI.Instance.SetCurrentTaskID(currentTask);
 
         yield return new WaitForSeconds(2f);
         currentTask++;
         AngelARUI.Instance.SetCurrentTaskID(currentTask);
+
+        yield return new WaitForSeconds(4f);
+        currentTask++;
+        AngelARUI.Instance.SetCurrentTaskID(currentTask);
+
+        AngelARUI.Instance.MuteAudio(true);
+
+        yield return new WaitForSeconds(2f);
+        currentTask--;
+        AngelARUI.Instance.SetCurrentTaskID(currentTask);
+
+        yield return new WaitForSeconds(3f);
+        currentTask++;
+        AngelARUI.Instance.SetCurrentTaskID(currentTask);
+
+        AngelARUI.Instance.MuteAudio(false);
 
         yield return new WaitForSeconds(3f);
         AngelARUI.Instance.ShowSkipNotification(true);
@@ -63,6 +74,14 @@ public class TestData : MonoBehaviour
         yield return new WaitForSeconds(5f);
         currentTask++;
         AngelARUI.Instance.SetCurrentTaskID(currentTask);
+
+        yield return new WaitForSeconds(2f);
+        AngelARUI.Instance.SetUserIntentCallback(() => { AngelARUI.Instance.LogDebugMessage("The user confirmed the dialogue", true); });
+        AngelARUI.Instance.TryGetUserFeedbackOnUserIntent("Do you need more information about the current task?");
+
+        yield return new WaitForSeconds(10f);
+        AngelARUI.Instance.SetUserIntentCallback(() => { AngelARUI.Instance.LogDebugMessage("The user confirmed the dialogue", true); });
+        AngelARUI.Instance.TryGetUserFeedbackOnUserIntent("Do you need more information about the current task?");
     }
 
 #if UNITY_EDITOR
@@ -75,6 +94,12 @@ public class TestData : MonoBehaviour
         if (Input.GetKeyUp(KeyCode.O))
         {
             AngelARUI.Instance.SetTasks(tasks);
+        }
+
+        if (Input.GetKeyUp(KeyCode.P))
+        {
+            AngelARUI.Instance.SetUserIntentCallback(() => { AngelARUI.Instance.LogDebugMessage("The user confirmed the dialogue", true);  });
+            AngelARUI.Instance.TryGetUserFeedbackOnUserIntent("Do you need more information about the current task?");
         }
 
         if (Input.GetKeyUp(KeyCode.RightArrow))
@@ -109,5 +134,6 @@ public class TestData : MonoBehaviour
             AngelARUI.Instance.ShowSkipNotification(false);
         }
     }
+    
 #endif
 }

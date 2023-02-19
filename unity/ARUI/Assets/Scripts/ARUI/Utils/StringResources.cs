@@ -14,10 +14,11 @@ public static class StringResources
 
     //Prefabs
     public static string POIHalo_path = "Prefabs/ARUI/Halo3D";
-    public static string orb_path = "Prefabs/ARUI/orb";
-    public static string taskList_path = "Prefabs/ARUI/Tasklist";
+    public static string orb_path = "Prefabs/ARUI/Orb";
+    public static string taskList_path = "Prefabs/ARUI/TasklistContainer";
     public static string taskprefab_path = "Prefabs/ARUI/Task";
     public static string eyeTarget_path = "Prefabs/ARUI/EyeTarget";
+    public static string confNotification_path = "Prefabs/ARUI/ConfirmationNotification";
 
     //icons
     public static string idle_orb_path = "Icons/Flat Icons [Free]/Free Flat Gradient Circle Icon";

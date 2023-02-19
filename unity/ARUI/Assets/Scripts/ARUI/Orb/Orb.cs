@@ -6,6 +6,8 @@ using System.Collections;
 using System.Diagnostics.Eventing.Reader;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Events;
+using static UnityEngine.Timeline.TimelineAsset;
 
 /// <summary>
 /// Represents a virtual assistant, guiding the user through a sequence of tasks
@@ -16,12 +18,10 @@ public class Orb : Singleton<Orb>
     private OrbFace face;
     private OrbGrabbable grabbable;
     private OrbMessage messageContainer;
-    private DwellButtonTaskList taskListbutton;
+    private DwellButton taskListbutton;
 
     //Placement behaviors
     private OrbFollowerSolver followSolver;
-    
-    private EyeTrackingTarget eyeEvents;
 
     //Flags
     private bool isLookingAtOrb = false;
@@ -56,7 +56,9 @@ public class Orb : Singleton<Orb>
 
         ////Init tasklist button
         GameObject taskListbtn = transform.GetChild(0).GetChild(2).gameObject;
-        taskListbutton = taskListbtn.AddComponent<DwellButtonTaskList>();
+        taskListbutton = taskListbtn.AddComponent<DwellButton>();
+        taskListbutton.gameObject.name += "FacetasklistButton";
+        taskListbutton.InitializeButton(EyeTarget.orbtasklistButton ,() => TaskListManager.Instance.ToggleTasklist());
         taskListbtn.SetActive(false);
     }
 
@@ -72,6 +74,11 @@ public class Orb : Singleton<Orb>
             face.SetNotificationIconActive(false);
 
         UpdateOrbVisibility();
+
+        if (!taskListbutton.GetIsLookingAtBtn() && TaskListManager.Instance.GetIsTaskListActive())
+            taskListbutton.SetSelected(true);
+        else if (!taskListbutton.GetIsLookingAtBtn() && !TaskListManager.Instance.GetIsTaskListActive())
+            taskListbutton.SetSelected(false);
     }
 
 
@@ -114,7 +121,7 @@ public class Orb : Singleton<Orb>
 
         followSolver.IsPaused = (true);
 
-        while (Utils.InFOV(AngelARUI.Instance.mainCamera, grabbable.transform.position))
+        while (Utils.InFOV(AngelARUI.Instance.ARCamera, grabbable.transform.position))
         {
             yield return new WaitForSeconds(0.1f);
         }
@@ -217,7 +224,7 @@ public class Orb : Singleton<Orb>
     /// Set the task messages the orb communicates, if 'message' is less than 2 char, the message is deactivated
     /// </summary>
     /// <param name="message"></param>
-    public void SetTaskMessage(string message, bool playTextToSpeech)
+    public void SetTaskMessage(string message)
     {
         if (message.Length <= 1)
             messageContainer.SetIsActive(false, false);
@@ -226,8 +233,7 @@ public class Orb : Singleton<Orb>
             messageContainer.SetIsActive(true, true);
             face.SetNotificationIconActive(true);
 
-            if (playTextToSpeech)
-                AudioManager.Instance.PlayText(message);
+            AudioManager.Instance.PlayText(message);
         }
 
         messageContainer.SetTaskMessage(message);
@@ -249,7 +255,7 @@ public class Orb : Singleton<Orb>
     {
         if (messageContainer.GetIsActive() && messageContainer.IsMessageVisible)
         {
-            collider = messageContainer.MessageCollider;
+            collider = messageContainer.GetMessageCollider();
             return true;
         }
         else

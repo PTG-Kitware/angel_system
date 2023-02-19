@@ -26,9 +26,9 @@ public class ObjectIndicator : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        Vector3 poiToCam = transform.position - AngelARUI.Instance.mainCamera.transform.position;
+        Vector3 poiToCam = transform.position - AngelARUI.Instance.ARCamera.transform.position;
 
-        float degangle = Vector3.Angle(AngelARUI.Instance.mainCamera.transform.forward, Vector3.Normalize(poiToCam));
+        float degangle = Vector3.Angle(AngelARUI.Instance.ARCamera.transform.forward, Vector3.Normalize(poiToCam));
         float alpha = Mathf.Max(0.05f,Mathf.Min(1,(1f / 15f) * (degangle-25f)));
         //Debug.Log(degangle + "  " + alpha);
         indicator.ColorInner = new Color(1, 1, 1, alpha);
@@ -37,11 +37,11 @@ public class ObjectIndicator : MonoBehaviour
 
         // on-screen halo faces the user
         if (!isFlat)
-            halo.transform.rotation = Quaternion.LookRotation(AngelARUI.Instance.mainCamera.transform.position - halo.transform.position, Vector3.up);
+            halo.transform.rotation = Quaternion.LookRotation(AngelARUI.Instance.ARCamera.transform.position - halo.transform.position, Vector3.up);
         else
             halo.transform.rotation = Quaternion.LookRotation(Vector3.up, Vector3.right);
 
-        directionalSolverPos.transform.rotation = Quaternion.LookRotation(AngelARUI.Instance.mainCamera.transform.position - halo.transform.position, Vector3.up);
+        directionalSolverPos.transform.rotation = Quaternion.LookRotation(AngelARUI.Instance.ARCamera.transform.position - halo.transform.position, Vector3.up);
 
     }
 

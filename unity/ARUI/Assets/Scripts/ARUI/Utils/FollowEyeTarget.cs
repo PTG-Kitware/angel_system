@@ -12,7 +12,9 @@ public enum EyeTarget
     orbFace = 1,
     orbMessage = 2,
     tasklist = 3,
-    orbtasklistButton =4
+    orbtasklistButton =4,
+    okButton=5,
+    cancelButton=6,
 }
 
 public class FollowEyeTarget : Singleton<FollowEyeTarget>
@@ -41,21 +43,28 @@ public class FollowEyeTarget : Singleton<FollowEyeTarget>
             // Update GameObject to the current eye gaze position at a given distance
             if (hitInfo.collider != null)
             {
-                float dist = (hitInfo.point - AngelARUI.Instance.mainCamera.transform.position).magnitude;
+                float dist = (hitInfo.point - AngelARUI.Instance.ARCamera.transform.position).magnitude;
                 gameObject.transform.position = eyeGazeProvider.GazeOrigin + eyeGazeProvider.GazeDirection.normalized * dist;
                 //Debug.Log(hitInfo.collider.gameObject.name);
+                string goName = hitInfo.collider.gameObject.name.ToLower();
 
-                if (hitInfo.collider.gameObject.name.Contains("TextContainer"))
+                if (goName.Contains("flexibletextcontainer_orb"))
                     currentHit = EyeTarget.orbMessage;
 
-                else if (hitInfo.collider.gameObject.name.Contains("BodyPlacement"))
+                else if (goName.Contains("bodyplacement"))
                     currentHit = EyeTarget.orbFace;
 
-                else if (hitInfo.collider.gameObject.name.Contains("Tasklist"))
+                else if (goName.Contains("tasklistcontainer"))
                     currentHit = EyeTarget.tasklist;
 
-                else if (hitInfo.collider.gameObject.name.Contains("FaceTaskListButton"))
+                else if (goName.Contains("facetasklistbutton"))
                     currentHit = EyeTarget.orbtasklistButton;
+
+                else if (goName.Contains("okbutton"))
+                    currentHit = EyeTarget.okButton;
+
+                else if (goName.Contains("cancelbutton"))
+                    currentHit = EyeTarget.cancelButton;
                 else
                     currentHit = EyeTarget.nothing;
 
