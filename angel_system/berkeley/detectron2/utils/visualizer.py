@@ -1069,31 +1069,6 @@ class Visualizer:
                 boxes=boxes, labels=labels, assigned_colors=assigned_colors
             )
 
-        # Display in largest to smallest order to reduce occlusion.
-        areas = None
-        if boxes is not None:
-            areas = np.prod(boxes[:, 2:] - boxes[:, :2], axis=1)
-        elif masks is not None:
-            areas = np.asarray([x.area() for x in masks])
-
-        if areas is not None:
-            sorted_idxs = np.argsort(-areas).tolist()
-            # Re-order overlapped instances in descending order.
-            boxes = boxes[sorted_idxs] if boxes is not None else None
-            labels = [labels[k] for k in sorted_idxs] if labels is not None else None
-            obj_obj_contact_classes = [obj_obj_contact_classes[k] for k in sorted_idxs] if obj_obj_contact_classes is not None else None
-            obj_obj_contact_scores = [obj_obj_contact_scores[k] for k in sorted_idxs] if obj_obj_contact_scores is not None else None
-
-            obj_hand_contact_classes = [obj_hand_contact_classes[k] for k in sorted_idxs] if obj_hand_contact_classes is not None else None
-            obj_hand_contact_scores = [obj_hand_contact_scores[k] for k in sorted_idxs] if obj_hand_contact_scores is not None else None
-
-            masks = [masks[idx] for idx in sorted_idxs] if masks is not None else None
-            # assigned_colors = [assigned_colors[idx] for idx in sorted_idxs]
-            keypoints = keypoints[sorted_idxs] if keypoints is not None else None
-
-            obj_obj_contact_scores = [_.item() for _ in obj_obj_contact_scores]
-            obj_hand_contact_scores = [_.item() for _ in obj_hand_contact_scores]
-
         # for real-time output
         # print('contact_flag: ', contact_flag)
         # print('Contact_infos: ', Contact_infos)

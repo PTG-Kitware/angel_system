@@ -327,7 +327,8 @@ class Tracker:
             sub_list.append('step ' + str(i+1))
             sub_list.append(_step)
             for sub_step in _step:
-                sub_list.append([sub_step, np.zeros([self.number_frames])])
+                sub_list.append([sub_step, []])
+                #sub_list.append([sub_step, np.zeros([self.number_frames])])
             self.contact_memory.append(sub_list)
 
 
@@ -346,15 +347,19 @@ class Tracker:
         for cate in MC50_CATEGORIES:
             sub_list = []
             sub_list.append(cate['name'])
-            sub_list.append(np.zeros([self.number_frames]))
-            sub_list.append(-1 * np.ones([self.number_frames]))
-            sub_list.append(-1 * np.ones([self.number_frames]))
+            #sub_list.append(np.zeros([self.number_frames]))
+            sub_list.append([])
+            #sub_list.append(-1 * np.ones([self.number_frames]))
+            sub_list.append([])
+            #sub_list.append(-1 * np.ones([self.number_frames]))
+            sub_list.append([])
             self.object_memory.append(sub_list)
 
 
 
 
     def update_contact_memory(self, contact_pairs, current_idx):
+        #print(self.contact_memory)
         for _contact in contact_pairs:
             for _step in self.contact_memory:
                 if _contact in _step[1]:
@@ -364,17 +369,20 @@ class Tracker:
                 else:
                     index = -1
                 if index != -1:
-                    _step[int(index + 2)][1][current_idx - 1] = 1
+                    _step[int(index + 2)][1].append(current_idx - 1)
+                    #_step[int(index + 2)][1][current_idx - 1] = 1
                     break
 
     def update_object_memory(self, obj_list, obj_obj_contact_classes, obj_hand_contact_classes, current_idx):
+        #print("obj mem", self.object_memory)
+        #import pdb; pdb.set_trace()
         for i, obj in enumerate(obj_list):
             for _cate in self.object_memory:
                 if _cate[0] != obj:
                     continue
-                _cate[1][current_idx - 1] = 1
-                _cate[2][current_idx - 1] = obj_obj_contact_classes[i]
-                _cate[3][current_idx - 1] = obj_hand_contact_classes[i]
+                _cate[1].append(current_idx - 1)
+                _cate[2].append(obj_obj_contact_classes[i])
+                _cate[3].append(obj_hand_contact_classes[i])
                 break
 
 
@@ -454,7 +462,8 @@ class Tracker:
                 for sub_step in _step[2:]:
                     start_frame = current_idx - self.step_last_frame
                     stop_frame = current_idx
-                    flag = sub_step[1][start_frame : stop_frame + 1].sum()
+                    #flag = sub_step[1][start_frame : stop_frame + 1].sum()
+                    flag = len([f for f in sub_step[1] if start_frame <= f <= (stop_frame+1)])
                     # if flag > 2/3 * (self.step_last_frame):
                     if sub_step[0] == ['switch', 'hand'] or sub_step[0] == ['used paper filter', 'trash can']:
                         thresh = 3
