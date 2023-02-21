@@ -9,9 +9,10 @@ import torch
 from detectron2.data import MetadataCatalog
 from detectron2.engine.defaults import DefaultPredictor
 from detectron2.utils.video_visualizer import VideoVisualizer
-from detectron2.utils.visualizer import ColorMode, Visualizer, Visualizer_eval
+from detectron2.utils.visualizer import VisualizerUtil, GenericMask, ColorMode, Visualizer, Visualizer_eval
 import numpy as np
 from detectron2.utils.tracker import Tracker
+
 
 
 
@@ -340,7 +341,112 @@ class VisualizationDemo_add_smoothing(object):
 
         return predictions, vis_output
 
-    def run_on_image_smoothing_v2(self, image, current_idx):
+    def unravel_instances(self, instances):
+        util = VisualizerUtil()
+        boxes = instances.pred_boxes if instances.has("pred_boxes") else None #
+        scores = instances.scores if instances.has("scores") else None #
+        classes = instances.pred_classes.tolist() if instances.has("pred_classes") else None #
+        labels = util._create_text_labels(classes, scores, self.metadata.get("thing_classes", None)) #
+        keypoints = instances.pred_keypoints if instances.has("pred_keypoints") else None
+
+        # add contact prediction visualization
+        obj_obj_contact_scores = instances.obj_obj_contact_scores if instances.has("obj_obj_contact_scores") else None
+        obj_obj_contact_classes = instances.obj_obj_contact_classes.tolist() if instances.has("obj_obj_contact_classes") else None
+
+        obj_hand_contact_scores = instances.obj_hand_contact_scores if instances.has(
+            "obj_hand_contact_scores") else None
+        obj_hand_contact_classes = instances.obj_hand_contact_classes.tolist() if instances.has(
+            "obj_hand_contact_classes") else None
+
+        if instances.has("pred_masks"):
+            masks = np.asarray(instances.pred_masks)
+            masks = [GenericMask(x, self.output.height, self.output.width) for x in masks]
+        else:
+            masks = None #
+
+        num_instances = 0
+
+        # Double check we have the right amount of results
+        if boxes is not None:
+            boxes = util._convert_boxes(boxes) #
+            num_instances = len(boxes)
+        if masks is not None:
+            masks = util._convert_masks(masks)
+            if num_instances:
+                assert len(masks) == num_instances
+            else:
+                num_instances = len(masks)
+        if keypoints is not None:
+            if num_instances:
+                assert len(keypoints) == num_instances
+            else:
+                num_instances = len(keypoints)
+            keypoints = util._convert_keypoints(keypoints)
+        if labels is not None:
+            assert len(labels) == num_instances #
+
+        if obj_obj_contact_classes is not None:
+            assert len(obj_obj_contact_classes) == num_instances #
+
+        if obj_obj_contact_scores is not None:
+            assert len(obj_obj_contact_scores) == num_instances #
+
+        if obj_hand_contact_classes is not None:
+            assert len(obj_hand_contact_classes) == num_instances #
+
+        if obj_hand_contact_scores is not None:
+            assert len(obj_hand_contact_scores) == num_instances #
+
+        # post process
+        num_instances, boxes, labels, obj_obj_contact_scores, \
+            obj_obj_contact_classes, obj_hand_contact_scores, obj_hand_contact_classes, \
+            contact_flag, Contact_infos, contact_hand_flag, Contact_hand_infos \
+                = self.postprocess_instances(boxes, labels, obj_obj_contact_scores, obj_obj_contact_classes, obj_hand_contact_scores, obj_hand_contact_classes)
+
+
+        return num_instances, boxes, scores, classes, labels, keypoints, obj_obj_contact_scores, \
+               obj_obj_contact_classes, obj_hand_contact_scores, obj_hand_contact_classes, \
+               masks, contact_flag, Contact_infos, contact_hand_flag, Contact_hand_infos
+
+    def postprocess_instances(self,
+                              boxes, labels, obj_obj_contact_scores,
+                              obj_obj_contact_classes,
+                              obj_hand_contact_scores,
+                              obj_hand_contact_classes,
+                              REMOVE_REPEATED_obj=True,
+                              REMOVE_REPEATED_mutil_states=True,
+                              ADD_CONTACT_STATES=True):
+        util = VisualizerUtil()
+        
+        # post-processing: remove_repeated, remove_multi_states, add_contacts
+        if REMOVE_REPEATED_obj:
+            boxes, labels, obj_obj_contact_scores, obj_obj_contact_classes, obj_hand_contact_scores, obj_hand_contact_classes = util.remove_repeated_obj(boxes, labels, obj_obj_contact_scores, obj_obj_contact_classes, obj_hand_contact_scores, obj_hand_contact_classes)
+        if REMOVE_REPEATED_mutil_states:
+            boxes, labels, obj_obj_contact_scores, obj_obj_contact_classes, obj_hand_contact_scores, obj_hand_contact_classes= util.remove_repeated_states(boxes, labels, obj_obj_contact_scores, obj_obj_contact_classes, obj_hand_contact_scores, obj_hand_contact_classes)
+
+        if ADD_CONTACT_STATES:
+            contact_flag, Contact_infos, contact_hand_flag, Contact_hand_infos = util.find_contact(boxes, labels, obj_obj_contact_scores, obj_obj_contact_classes, obj_hand_contact_scores, obj_hand_contact_classes)
+
+        # Determine how many predictions we have left
+        num_instances = len(labels)
+        assert num_instances == len(obj_obj_contact_scores) == len(obj_obj_contact_classes) == len(obj_hand_contact_scores) == len(obj_hand_contact_classes)
+
+        return num_instances, boxes, labels, obj_obj_contact_scores, \
+               obj_obj_contact_classes, obj_hand_contact_scores, obj_hand_contact_classes, \
+               contact_flag, Contact_infos, contact_hand_flag, Contact_hand_infos
+
+    def update_tracker(self, predictions, current_idx):
+        # tracker.update(predictions=instances, current_idx=current_idx)
+        # re-compile the preditions
+        # tracker.test()
+        self.tracker.update_memory(predictions, current_idx)
+
+
+        step_infos = self.tracker.step_mapping(current_idx=current_idx)
+
+        return step_infos
+
+    def run_on_image_smoothing_v2(self, image, current_idx, draw_output=True):
         # this version will return the contact state, only for integration
         """
         Args:
@@ -353,6 +459,7 @@ class VisualizationDemo_add_smoothing(object):
         """
         vis_output = None
         predictions = self.predictor(image)
+
         # Convert image from OpenCV BGR format to Matplotlib RGB format.
         image = image[:, :, ::-1]
         visualizer = Visualizer(image, self.metadata, instance_mode=self.instance_mode)
@@ -366,20 +473,28 @@ class VisualizationDemo_add_smoothing(object):
                 vis_output = visualizer.draw_sem_seg(
                     predictions["sem_seg"].argmax(dim=0).to(self.cpu_device)
                 )
-            if "instances" in predictions:
+            if "instances" in predictions: #
                 instances = predictions["instances"].to(self.cpu_device)
+                num_instances, boxes, scores, classes, labels, keypoints, obj_obj_contact_scores, \
+                    obj_obj_contact_classes, obj_hand_contact_scores, obj_hand_contact_classes, \
+                    masks, contact_flag, Contact_infos, contact_hand_flag, Contact_hand_infos \
+                         = self.unravel_instances(instances)
 
-                vis_output, decoded_pred = visualizer.draw_instance_predictions_smoothing_v2(predictions=instances, tracker=self.tracker, current_idx = current_idx)
+                decoded_pred = [boxes, labels, obj_obj_contact_classes, obj_obj_contact_scores, obj_hand_contact_classes, obj_hand_contact_scores, Contact_infos, Contact_hand_infos]
+                step_infos = self.update_tracker(decoded_pred, current_idx)
+                
+                if draw_output:
+                    vis_output = visualizer.draw_instance_predictions_smoothing_v2(
+                        num_instances, boxes, labels, keypoints,
+                        obj_obj_contact_scores, obj_obj_contact_classes,
+                        obj_hand_contact_scores, obj_hand_contact_classes,
+                        masks, contact_flag, contact_hand_flag, 
+                        Contact_infos, Contact_hand_infos,
+                        step_infos)
             else:
-                decoded_pre = None
-            # else:
-            #     instances = None
-            #     vis_output = visualizer.draw_instance_predictions_smoothing(predictions=instances, tracker=self.tracker,
-            #                                                                 current_idx=current_idx)
+                decoded_pred = None
 
-
-        # return predictions, vis_output
-        return decoded_pred, vis_output
+        return decoded_pred, step_infos, vis_output
 
     def run_on_image_filter_iou(self, box_info, ori_img, image):
         """

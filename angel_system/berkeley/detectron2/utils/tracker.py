@@ -2,6 +2,7 @@ import os
 import numpy as np
 from .smoothing_tracker_utils import MC50_CATEGORIES as MC50_CATEGORIES
 
+
 class Tracker:
     def __init__(self, number_frames, last_time, fps):
         self.number_frames = number_frames
@@ -160,7 +161,7 @@ class Tracker:
 
         ##############################sub-step 13##############################
         # sub_step = []
-        # sub_step.append('unknow')
+        # sub_step.append('unknown')
         # sub_step.append([['x'], ['x']])
         # sub_steps['step 4'].append(sub_step)
         # del sub_step
@@ -407,22 +408,6 @@ class Tracker:
             if hand_obj_contact == 1 and obj_obj_contact == 0:
                 contact_pairs.append([_obj, 'hand'])
 
-        # for i, _contact in enumerate(Contact_hand_infos):
-        #     if not len(_contact) == 0:
-        #         for j in _contact:
-        #             if not [label_list[i], label_list[j]] in contact_pairs:
-        #                 if label_list[i] == 'hand (left)' or label_list[i] == 'hand (right)':
-        #                     label_list[i] = 'hand'
-        #                 if label_list[j] == 'hand (left)' or label_list[j] == 'hand (right)':
-        #                     label_list[j] = 'hand'
-        #                 if label_list[i] == 'timer (0)' or label_list[i] == 'timer (20)' or label_list[i] == 'timer (30)' or label_list[i] == 'timer':
-        #                     label_list[i] = 'timer'
-        #                 if label_list[j] == 'timer (0)' or label_list[j] == 'timer (20)' or label_list[i] == 'timer (30)' or label_list[i] == 'timer':
-        #                     label_list[j] = 'timer'
-        #                 if not [label_list[i], label_list[j]] in contact_pairs:
-        #                     contact_pairs.append([label_list[i], label_list[j]])
-
-
         self.update_contact_memory(contact_pairs, current_idx=current_idx)
 
 
@@ -436,7 +421,6 @@ class Tracker:
                 # find if this sub-step is the first sub-step of this step
                 if i == 0:
                     flag_start = 1
-
 
                 # find if this sub-step is the last ub-step of this step
                 if i == len(self.step_map[step_name]):
@@ -461,34 +445,6 @@ class Tracker:
         flag_end = -1
         sub_idx= -1
         if current_idx < self.step_last_frame:
-            # # get gt
-            # file = '/shared/niudt/detectron2/DEMO_Results/2022-11-05/MC_6/all_activities_6.csv'
-            # import pandas as pd
-            # ann = pd.read_csv(file, header=None).values
-            # c = 0
-            # for x in ann:
-            #     if x[1].split('_')[0] == 'frame':
-            #         break
-            #     c = c + 1
-            # ann_list = []
-            # for i in range(c, ann.shape[0] - 1, 2):
-            #     j = i + 1
-            #
-            #     # print(ann[i, 9])
-            #     # print(ann[j, 9])
-            #     if ann[i, 9] != ann[j, 9]:
-            #         print('error' * 50)
-            #     start_frame = int(ann[i, 2])
-            #     end_frame = int(ann[j, 2])
-            #     ann_list.append([start_frame, end_frame, ann[j, 9]])
-            # find_flag = 0
-            # for _ann in ann_list:
-            #     if self.current_idx >= _ann[0] and self.current_idx <= _ann[1]:
-            #         gt = _ann[2]
-            #         find_flag = 1
-            #         break
-            # if find_flag == 0:
-            #     gt = 'background'
             return 'Need more test !', 'Unknown'
         else:
             current_sub_step = None
@@ -514,40 +470,7 @@ class Tracker:
 
             self.update_step_tracker(current_sub_step, flag_start, flag_end, _step[0], sub_idx)
 
-            #get gt
-            # file = '/shared/niudt/detectron2/DEMO_Results/2022-11-05/MC_6/all_activities_6.csv'
-            # import pandas as pd
-            # ann = pd.read_csv(file, header=None).values
-            # c = 0
-            # for x in ann:
-            #     if x[1].split('_')[0] == 'frame':
-            #         break
-            #     c = c + 1
-            # ann_list = []
-            # for i in range(c, ann.shape[0] - 1, 2):
-            #     j = i + 1
-            #
-            #     # print(ann[i, 9])
-            #     # print(ann[j, 9])
-            #     if ann[i, 9] != ann[j, 9]:
-            #         print('error' * 50)
-            #     start_frame = int(ann[i, 2])
-            #     end_frame = int(ann[j, 2])
-            #     ann_list.append([start_frame, end_frame, ann[j, 9]])
-            # find_flag = 0
-            # for _ann in ann_list:
-            #     if self.current_idx >= _ann[0] and self.current_idx <= _ann[1]:
-            #         gt = _ann[2]
-            #         find_flag = 1
-            #         break
-            # if find_flag == 0:
-            #     gt = 'background'
-
-
-
-
-
-            return self.step, self.sub_step, self.next_sub_step, 'Unknow'
+            return self.step, self.sub_step, self.next_sub_step, 'Unknown'
 
 
 
@@ -583,14 +506,6 @@ class Tracker:
                         info_['step'] = _step
                         info_['start_frame'] = self.current_idx
                         self.step.append(info_)
-
-                # if flag_start == 1:
-                #     info_ = {}
-                #     info_['step'] = _step
-                #     info_['start_frame'] = self.current_idx
-                #     self.sub_step.append(info_)
-
-
             else:
                 if self.sub_step[-1]['sub-step'] != current_sub_step:
                     if not 'end_frame' in list(self.sub_step[-1].keys()):
@@ -629,21 +544,6 @@ class Tracker:
                     self.sub_step[-1]['end_frame'] = self.current_idx
                     self.step_last_frame = 10
 
-                # # update the sub-step list
-                # if self.step[-1] == -1:
-                #     info_ = {}
-                #     info_['step'] = _step
-                #     info_['start_frame'] = self.current_idx
-                #     self.step.append(info_)
-                # else:
-                #     if self.step[-1]['step'] != _step:
-                #         if not 'end_frame' in list(self.step[-1].keys()):
-                #             self.step[-1]['end_frame'] = self.current_idx
-                #         info_ = {}
-                #         info_['step'] = _step
-                #         info_['start_frame'] = self.current_idx
-                #         self.step.append(info_)
-
         # find next sub-step
         if not current_sub_step == None:
             if not sub_idx == len(self.step_map[_step]) - 1:
@@ -661,18 +561,6 @@ class Tracker:
             else:
                 self.next_sub_step.append(next_sub_step)
 
-
-        # break
-            # else:
-            #     print('errors')
-        #
-        #
-        # if not step_name in self.current_step:
-        #     self.current_step.append(step_name)
-        # if not current_sub_step in self.current_sub_step:
-        #     self.current_sub_step.append(current_sub_step)
-        # if not next_sub_step in self.next_sub_step:
-        #     self.next_sub_step.append(next_sub_step)
 
 
 

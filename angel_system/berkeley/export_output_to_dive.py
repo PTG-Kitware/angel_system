@@ -1,6 +1,7 @@
 from typing import Sequence
 from typing import Tuple
 from rich.progress import track
+from pathlib import Path
 
 import numpy as np
 import numpy.typing as npt
@@ -165,7 +166,9 @@ def Re_order(image_list, image_number):
 data_root = '/run/user/692589645/gvfs/smb-share:server=ptg-nas-01,share=data_working/Cooking/Coffee/coffee_recordings'
 video_name = 'all_activities_24'
 path_root = f'{data_root}/{video_name}/{video_name}/_extracted/images'
-image_output_dir = f'{data_root}/{video_name}/{video_name}/preds/'
+image_output_dir = f'{data_root}/{video_name}/{video_name}/preds_empty/'
+Path(image_output_dir).mkdir(parents=True, exist_ok=True)
+
 batch_size = 500
 # Glob up images
 img_list = os.listdir(path_root)
@@ -187,7 +190,6 @@ logger.info("Arguments: " + str(args))
 
 cfg = setup_cfg(args)
 
-
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 demo = VisualizationDemo_add_smoothing(cfg, number_frames=len(input_list), last_time=2, fps = 30)
@@ -197,15 +199,20 @@ visualized_outputs = []
 
 for img_path in track(input_list, total=len(input_list), show_speed=True):
     idx = idx + 1
+    if idx < 200:
+        continue
     img = read_image(img_path, format="RGB")
 
     frame = img[...,[2, 1, 0]]
 
-    predictions, visualized_output = demo.run_on_image_smoothing_v2(frame, current_idx=idx)
+    predictions, step_infos, visualized_output = demo.run_on_image_smoothing_v2(
+        frame, current_idx=idx, draw_output=False)
+    print("step", step_infos)
 
-    out_fn = image_output_dir + img_path.split('/')[-1]
-    visualized_output.save(out_fn)
-    # visualized_outputs.append(visualized_output)
+    if visualized_output:
+        out_fn = image_output_dir + img_path.split('/')[-1]
+        visualized_output.save(out_fn)
+        # visualized_outputs.append(visualized_output)
 
     if decode_prediction(predictions) != None:
         preds[idx] = decode_prediction(predictions)

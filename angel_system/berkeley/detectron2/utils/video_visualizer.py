@@ -7,7 +7,7 @@ from detectron2.structures import Instances
 from detectron2.utils.visualizer import (
     ColorMode,
     Visualizer,
-    _create_text_labels,
+    VisualizerUtil,
     _PanopticPrediction,
 )
 
@@ -106,7 +106,7 @@ class VideoVisualizer:
                 ]
                 colors = self._assign_colors(detected)
 
-        labels = _create_text_labels(classes, scores, self.metadata.get("thing_classes", None))
+        labels = VisualizerUtil._create_text_labels(classes, scores, self.metadata.get("thing_classes", None))
 
         if self._instance_mode == ColorMode.IMAGE_BW:
             # any() returns uint8 tensor

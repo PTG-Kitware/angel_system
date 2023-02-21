@@ -231,33 +231,6 @@ class _PanopticPrediction:
                 yield mask, sinfo
 
 
-def _create_text_labels(classes, scores, class_names, is_crowd=None):
-    """
-    Args:
-        classes (list[int] or None):
-        scores (list[float] or None):
-        class_names (list[str] or None):
-        is_crowd (list[bool] or None):
-
-    Returns:
-        list[str] or None
-    """
-    labels = None
-    if classes is not None:
-        if class_names is not None and len(class_names) > 0:
-            labels = [class_names[i] for i in classes]
-        else:
-            labels = [str(i) for i in classes]
-    if scores is not None:
-        if labels is None:
-            labels = ["{:.0f}%".format(s * 100) for s in scores]
-        else:
-            labels = ["{} {:.0f}%".format(l, s * 100) for l, s in zip(labels, scores)]
-    if labels is not None and is_crowd is not None:
-        labels = [l + ("|crowd" if crowd else "") for l, crowd in zip(labels, is_crowd)]
-    return labels
-
-
 class VisImage:
     def __init__(self, img, scale=1.0):
         """
@@ -332,6 +305,436 @@ class VisImage:
         return rgb.astype("uint8")
 
 
+class VisualizerUtil:
+    def calculate_area(self, bbox):
+        x0 = bbox[0]
+        y0 = bbox[1]
+        x1 = bbox[2]
+        y1 = bbox[3]
+        area = (x1 - x0) * (y1 - y0)
+        return area
+
+    def _convert_boxes(self, boxes):
+        """
+        Convert different format of boxes to an NxB array, where B = 4 or 5 is the box dimension.
+        """
+        if isinstance(boxes, Boxes) or isinstance(boxes, RotatedBoxes):
+            return boxes.tensor.detach().numpy()
+        else:
+            return np.asarray(boxes)
+
+    def _convert_masks(self, masks_or_polygons):
+        """
+        Convert different format of masks or polygons to a tuple of masks and polygons.
+
+        Returns:
+            list[GenericMask]:
+        """
+
+        m = masks_or_polygons
+        if isinstance(m, PolygonMasks):
+            m = m.polygons
+        if isinstance(m, BitMasks):
+            m = m.tensor.numpy()
+        if isinstance(m, torch.Tensor):
+            m = m.numpy()
+        ret = []
+        for x in m:
+            if isinstance(x, GenericMask):
+                ret.append(x)
+            else:
+                ret.append(GenericMask(x, self.output.height, self.output.width))
+        return ret
+
+    def _convert_keypoints(self, keypoints):
+        if isinstance(keypoints, Keypoints):
+            keypoints = keypoints.tensor
+        keypoints = np.asarray(keypoints)
+        return keypoints
+
+    def _create_text_labels(self, classes, scores, class_names, is_crowd=None):
+        """
+        Args:
+            classes (list[int] or None):
+            scores (list[float] or None):
+            class_names (list[str] or None):
+            is_crowd (list[bool] or None):
+
+        Returns:
+            list[str] or None
+        """
+        labels = None
+        if classes is not None:
+            if class_names is not None and len(class_names) > 0:
+                labels = [class_names[i] for i in classes]
+            else:
+                labels = [str(i) for i in classes]
+        if scores is not None:
+            if labels is None:
+                labels = ["{:.0f}%".format(s * 100) for s in scores]
+            else:
+                labels = ["{} {:.0f}%".format(l, s * 100) for l, s in zip(labels, scores)]
+        if labels is not None and is_crowd is not None:
+            labels = [l + ("|crowd" if crowd else "") for l, crowd in zip(labels, is_crowd)]
+        return labels
+
+
+    def remove_repeated_obj(
+            self,
+            boxes,
+            labels,
+            obj_obj_contact_scores,
+            obj_obj_contact_classes,
+            obj_hand_contact_scores,
+            obj_hand_contact_classes):
+        # print(labels)
+        new_boxes = []
+        new_labels = []
+
+        label_list = []
+        score_list = []
+        new_obj_obj_contact_scores = []
+        new_obj_obj_contact_class = []
+        new_obj_hand_contact_scores = []
+        new_obj_hand_contact_class = []
+
+        for _label in labels:
+            percent = _label.split(' ')[-1]
+            _class = _label[:-(len(percent) +1)]
+            label_list.append(_class)
+            score_list.append(float(percent[:-1]))
+        label_list = np.array(label_list)
+        score_list = np.array(score_list)
+        flag_list = np.zeros(len(labels))
+
+        R_class = ['paper filter bag', 'coffee bag']
+        for i in range(len(labels)):
+            if flag_list[i] == 1:
+                continue
+            C = label_list[i]
+            # S = score_list[i]
+
+            if C in R_class: # remove the special class
+                idx = np.where(label_list == C)[0].tolist()
+                if len(idx) > 1:
+                    area_list = []
+                    for j in idx:
+                        bbox_area = self.calculate_area(boxes[j, :])
+                        area_list.append(bbox_area)
+                    max_idx = area_list.index(max(area_list))
+                else:
+                    max_idx = 0
+                _idx = idx[max_idx]
+                new_boxes.append(boxes[_idx, :])
+                new_labels.append(labels[_idx])
+
+                new_obj_obj_contact_class.append(obj_obj_contact_classes[_idx])
+                new_obj_obj_contact_scores.append(obj_obj_contact_scores[_idx])
+
+                new_obj_hand_contact_class.append(obj_hand_contact_classes[_idx])
+                new_obj_hand_contact_scores.append(obj_hand_contact_scores[_idx])
+
+            else: # remove the repeated objects
+                idx = np.where(label_list == C)[0].tolist()
+                if len(idx) > 1:
+                    S_list = []
+                    for j in idx:
+                        _score = score_list[j]
+                        S_list.append(_score)
+                    max_idx = S_list.index(max(S_list))
+                else:
+                    max_idx = 0
+                _idx = idx[max_idx]
+                new_boxes.append(boxes[_idx, :])
+                new_labels.append(labels[_idx])
+                new_obj_obj_contact_class.append(obj_obj_contact_classes[_idx])
+                new_obj_obj_contact_scores.append(obj_obj_contact_scores[_idx])
+
+                new_obj_hand_contact_class.append(obj_hand_contact_classes[_idx])
+                new_obj_hand_contact_scores.append(obj_hand_contact_scores[_idx])
+            for IDX in idx:
+                flag_list[IDX] = 1
+        new_boxes = np.array(new_boxes)
+        # print(new_labels)
+        return new_boxes, new_labels, new_obj_obj_contact_scores, new_obj_obj_contact_class, new_obj_hand_contact_scores, new_obj_hand_contact_class
+
+    def remove_repeated_states(self,
+            boxes,
+            labels,
+            obj_obj_contact_scores,
+            obj_obj_contact_classes,
+            obj_hand_contact_scores,
+            obj_hand_contact_classes):
+        # print(labels)
+        new_boxes = []
+        new_labels = []
+        label_list = []
+        score_list = []
+        new_obj_obj_contact_scores = []
+        new_obj_obj_contact_class = []
+        new_obj_hand_contact_scores = []
+        new_obj_hand_contact_class = []
+        for _label in labels:
+            percent = _label.split(' ')[-1]
+            _class = _label[:-(len(percent) +1)]
+            label_list.append(_class)
+            score_list.append(float(percent[:-1]))
+        label_list = np.array(label_list)
+        score_list = np.array(score_list)
+        flag_list = np.zeros(len(labels))
+
+        # Multi_States_class = ['kettle', 'kettle (empty)', 'kettle (full)', 'measuring cup (empty)', 'measuring cup (full)', 'filter cone', 'filter cone + mug', 'paper filter + filter cone + mug', 'coffee grounds + paper filter + filter cone + mug', 'water + coffee grounds + filter cone + mug', 'used paper filter + filter cone + mug', 'used paper filter + filter cone', 'container', 'coffee beans + container', 'scale (off)', 'scale (on)', 'container + scale', 'coffee beans + container + scale']
+        States_Pairs = [['kettle',
+                         'kettle (open)'],
+                        ['coffee beans + container', 'coffee beans + container + scale'],
+                        ['coffee grounds + paper filter + filter cone',
+                         'coffee grounds + paper filter + filter cone + mug',
+                         'filter cone', 'filter cone + mug', 'paper filter + filter cone',
+                         'paper filter + filter cone + mug', 'used paper filter + filter cone',
+                         'used paper filter + filter cone + mug', 'water + coffee grounds + paper filter + filter cone + mug'],
+                        ['coffee + mug',
+                         'coffee grounds + paper filter + filter cone + mug',
+                         'filter cone + mug', 'mug', 'paper filter + filter cone + mug',
+                         'used paper filter + filter cone + mug', 'water + coffee grounds + paper filter + filter cone + mug'],
+                        ['container', 'container + scale'],
+                        ['scale (off)', 'scale (on)', 'container + scale', 'coffee beans + container + scale'],
+                        ['paper filter (semi)', 'paper filter (quarter)', 'paper filter'],
+                        ['coffee beans + container', 'coffee beans + container + scale'],
+                        ['timer (else)', 'timer (20)', 'timer (30)'],
+                        ['thermometer (open)', 'thermometer (close)'],
+                        ['grinder (close)', 'grinder (open)']
+                        ]
+
+        for i in range(len(labels)):
+            multi_flag = 0
+            if flag_list[i] == 1:
+                continue
+            C = label_list[i]
+            # S = score_list[i]
+
+            for state_pair in States_Pairs:
+                if C in state_pair: # remove the multi-states class
+                    multi_flag = 1
+                    idx = []
+                    for _state in label_list:
+                        if _state in state_pair:
+                            idx.append(np.where(label_list == _state)[0][0])
+                    # idx = np.where(label_list == C)[0].tolist()
+                    if len(idx) > 1:
+                        S_list = []
+                        for j in idx:
+                            _score = score_list[j]
+                            S_list.append(_score)
+                        max_idx = S_list.index(max(S_list))
+                    else:
+                        max_idx = 0
+                    _idx = idx[max_idx]
+                    new_boxes.append(boxes[_idx, :])
+                    new_labels.append(labels[_idx])
+                    new_obj_obj_contact_class.append(obj_obj_contact_classes[_idx])
+                    new_obj_obj_contact_scores.append(obj_obj_contact_scores[_idx])
+
+                    new_obj_hand_contact_class.append(obj_hand_contact_classes[_idx])
+                    new_obj_hand_contact_scores.append(obj_hand_contact_scores[_idx])
+                    for IDX in idx:
+                        flag_list[IDX] = 1
+
+                    break
+            if multi_flag == 0:
+                if flag_list[i] == 1:
+                    continue
+                new_boxes.append(boxes[i, :])
+                new_labels.append(labels[i])
+                new_obj_obj_contact_class.append(obj_obj_contact_classes[i])
+                new_obj_obj_contact_scores.append(obj_obj_contact_scores[i])
+
+                new_obj_hand_contact_class.append(obj_hand_contact_classes[i])
+                new_obj_hand_contact_scores.append(obj_hand_contact_scores[i])
+
+
+
+
+        new_boxes = np.array(new_boxes)
+        # print(new_labels)
+        return new_boxes, new_labels, new_obj_obj_contact_scores, new_obj_obj_contact_class, new_obj_hand_contact_scores, new_obj_hand_contact_class
+
+    def find_contact(self,
+                     boxes,
+                     labels,
+                     obj_obj_contact_scores,
+                     obj_obj_contact_classes,
+                     obj_hand_contact_scores,
+                     obj_hand_contact_classes
+                     ):
+        thrsh_iou = 0.01
+        contact_flag = np.zeros(len(labels))
+        contact_hand_flag = np.zeros(len(labels))
+
+        CONTACT_PAIRS_v1 = [['measuring cup (empty)', 'water'],
+                         ['measuring cup (full)', 'water'],
+                         ['measuring cup (full)', 'kettle (full)'],
+                         ['measuring cup (full)', 'kettle (empty)'],
+                         ['measuring cup (empty)', 'kettle (full)'],
+                         ['measuring cup (empty)', 'kettle (empty)'],  # step 1
+
+                         ['mug', 'filter cone'], # step 2
+
+                         ['paper filter', 'paper filter bag'],
+                         ['paper filter (semi)', 'filter cone + mug'],
+                         ['paper filter (quarter)', 'filter cone + mug'],
+                         ['paper filter', 'filter cone + mug'], # step 3
+
+                         ['scale (on)', 'container'],
+                         ['scale (off)', 'container'],
+                         ['container + scale', 'coffee bag'],
+                         ['coffee beans + container + scale', 'coffee bag'],
+                         ['coffee beans + container', 'grinder'],
+                         ['container', 'grinder'],
+                         ['paper filter + filter cone + mug', 'grinder'],
+                         ['paper filter + filter cone', 'grinder'],
+                         ['coffee beans + paper filter + filter cone + mug', 'grinder'],
+                         ['coffee beans + paper filter + filter cone', 'grinder'],
+                         ['coffee grounds + paper filter + filter cone', 'grinder'],
+                         ['coffee grounds + paper filter + filter cone + mug', 'grinder'],# step 4
+
+                         ['thermometer', 'kettle (full)'],
+                         ['thermometer', 'kettle (empty)'],
+                         # ['thermometer', 'kettle'], # step 5
+
+                         ['kettle', 'coffee grounds + paper filter + filter cone + mug'],
+                         ['kettle', 'water + coffee grounds + paper filter + filter cone + mug'],
+                         ['kettle', 'used paper filter + filter cone + mug'],  # step 6 ~ 7
+
+                         ['mug', 'used paper filter + filter cone'],
+                         ['used paper filter', 'filter cone'],
+                         ['used paper filter + filter cone', 'paper towel'],
+                         ['used paper filter', 'trash can'],
+                         ['trash can', 'filter cone']# step 8
+                         ]
+        CONTACT_PAIRS = [['measuring cup', 'water'],
+                         ['kettle (open)', 'measuring cup'],# step 1
+
+                            ['mug', 'filter cone'],  # step 2
+
+                            ['paper filter', 'paper filter bag'],
+                            ['paper filter (semi)', 'filter cone + mug'],
+                            ['paper filter (quarter)', 'filter cone + mug'],
+                            ['paper filter', 'filter cone + mug'],  # step 3
+
+                            ['scale (on)', 'container'],
+                            ['scale (off)', 'container'],
+                            ['container + scale', 'coffee bag'],
+                            ['coffee beans + container + scale', 'coffee bag'],
+                            ['coffee beans + container', 'grinder (open)'],
+                            ['container', 'grinder (open)'],
+                            ['paper filter + filter cone + mug', 'grinder (open)'],
+                            ['paper filter + filter cone', 'grinder (open)'],
+                            ['coffee grounds + paper filter + filter cone', 'grinder (open)'],
+                            ['coffee grounds + paper filter + filter cone + mug', 'grinder (open)'],  # step 4
+
+                            ['thermometer (open)', 'kettle (open)'],
+                            # ['thermometer', 'kettle'], # step 5
+
+                            ['kettle', 'coffee grounds + paper filter + filter cone + mug'],
+                            ['kettle', 'water + coffee grounds + paper filter + filter cone + mug'],  # step 6 ~ 7
+
+                            ['mug', 'used paper filter + filter cone'],
+                            # ['hand', 'used paper filter + filter cone'],
+                            # ['hand', 'used paper filter + filter cone + mug'],
+                            ['used paper filter', 'trash can'],
+                            ['trash can', 'filter cone'],
+                            ['hand', 'used paper filter']  # step 8
+                            ]
+
+        # new_boxes = []
+        # new_labels = []
+        label_list = []
+        score_list = []
+        for _label in labels:
+            percent = _label.split(' ')[-1]
+            _class = _label[:-(len(percent) + 1)]
+            label_list.append(_class)
+            score_list.append(float(percent[:-1]))
+        label_list = np.array(label_list)
+        score_list = np.array(score_list)
+
+        # find obj-obj contact
+        Contact_infos = []
+
+        for i in range(len(labels)):
+            _contact_info = []
+            # _contact_info.append()
+            if not i == len(labels) - 1 :
+                a_obj_class = label_list[i]
+                a_obj_bbox = boxes[i,:]
+                a_obj_contact_state = obj_obj_contact_classes[i]
+                for j in range(i + 1, len(labels)):
+                    b_obj_class = label_list[j]
+                    b_obj_bbox = boxes[j, :]
+                    b_obj_contact_state = obj_obj_contact_classes[j]
+                    iou = self.calculate_iou(a_obj_bbox, b_obj_bbox)
+                    if iou >= thrsh_iou:
+                        if (([a_obj_class, b_obj_class]in CONTACT_PAIRS) or \
+                                ([b_obj_class, a_obj_class] in CONTACT_PAIRS)):
+                            if a_obj_contact_state == 1 and b_obj_contact_state == 1:
+                                contact_flag[i] = 1
+                                contact_flag[j] = -1
+                                _contact_info.append(j)
+            Contact_infos.append(_contact_info)
+
+            # find obj-hand contact
+            Contact_hand_infos = []
+
+            for i in range(len(labels)):
+                _contact_hand_info = []
+                if not i == len(labels) - 1:
+                    a_obj_class = label_list[i]
+                    if not 'hand' in a_obj_class:
+                        Contact_hand_infos.append(_contact_hand_info)
+                        continue
+                    a_obj_bbox = boxes[i, :]
+                    a_obj_contact_state = obj_obj_contact_classes[i]
+                    for j in range(len(labels)):
+                        if i == j:
+                            continue
+                        b_obj_class = label_list[j]
+                        b_obj_bbox = boxes[j, :]
+                        b_obj_contact_state = obj_hand_contact_classes[j]
+                        iou = self.calculate_iou(a_obj_bbox, b_obj_bbox)
+                        if iou >= thrsh_iou:
+                            if a_obj_contact_state == 1 and b_obj_contact_state == 1:
+                                contact_hand_flag[i] = 1
+                                contact_hand_flag[j] = -1
+                                _contact_hand_info.append(j)
+                Contact_hand_infos.append(_contact_hand_info)
+
+        return contact_flag, Contact_infos, contact_hand_flag, Contact_hand_infos
+
+
+    def calculate_iou(self, boxA, boxB):
+        # determine the (x, y)-coordinates of the intersection rectangle
+        xA = max(boxA[0], boxB[0])
+        yA = max(boxA[1], boxB[1])
+        xB = min(boxA[2], boxB[2])
+        yB = min(boxA[3], boxB[3])
+
+        # compute the area of intersection rectangle
+        interArea = abs(max((xB - xA, 0)) * max((yB - yA), 0))
+        if interArea == 0:
+            return 0
+        # compute the area of both the prediction and ground-truth
+        # rectangles
+        boxAArea = abs((boxA[2] - boxA[0]) * (boxA[3] - boxA[1]))
+        boxBArea = abs((boxB[2] - boxB[0]) * (boxB[3] - boxB[1]))
+
+        # compute the intersection over union by taking the intersection
+        # area and dividing it by the sum of prediction + ground-truth
+        # areas - the interesection area
+        iou = interArea / float(boxAArea + boxBArea - interArea)
+
+        # return the intersection over union value
+        return iou
+
 class Visualizer:
     """
     Visualizer that draws data about detection/segmentation on images.
@@ -402,6 +805,7 @@ class Visualizer:
         scores = predictions.scores if predictions.has("scores") else None
         classes = predictions.pred_classes.tolist() if predictions.has("pred_classes") else None
         labels = _create_text_labels(classes, scores, self.metadata.get("thing_classes", None))
+        
         keypoints = predictions.pred_keypoints if predictions.has("pred_keypoints") else None
 
         # # add contact prediction visualization
@@ -542,7 +946,19 @@ class Visualizer:
         return self.output
 
 
-    def draw_instance_predictions_smoothing_v2(self, predictions, tracker, current_idx):
+    def draw_instance_predictions_smoothing_v2(
+        self,
+        num_instances,
+        boxes,
+        labels,
+        keypoints,
+        obj_obj_contact_scores,
+        obj_obj_contact_classes,
+        obj_hand_contact_scores,
+        obj_hand_contact_classes,
+        masks, contact_flag, contact_hand_flag,
+        Contact_infos, Contact_hand_infos,
+        step_infos):
         # this version will retrun the contact state prediction, only for integration
         """
         Draw instance-level prediction results on an image.
@@ -555,55 +971,28 @@ class Visualizer:
         Returns:
             output (VisImage): image object with visualizations.
         """
-        boxes = predictions.pred_boxes if predictions.has("pred_boxes") else None
-        scores = predictions.scores if predictions.has("scores") else None
-        classes = predictions.pred_classes.tolist() if predictions.has("pred_classes") else None
-        labels = _create_text_labels(classes, scores, self.metadata.get("thing_classes", None))
-        keypoints = predictions.pred_keypoints if predictions.has("pred_keypoints") else None
-
-        # # add contact prediction visualization
-        # contact_scores = predictions.contact_scores if predictions.has("contact_scores") else None
-        # contact_classes = predictions.contact_classes.tolist() if predictions.has("contact_classes") else None
-
-        # add contact prediction visualization
-        obj_obj_contact_scores = predictions.obj_obj_contact_scores if predictions.has("obj_obj_contact_scores") else None
-        obj_obj_contact_classes = predictions.obj_obj_contact_classes.tolist() if predictions.has("obj_obj_contact_classes") else None
-
-        obj_hand_contact_scores = predictions.obj_hand_contact_scores if predictions.has(
-            "obj_hand_contact_scores") else None
-        obj_hand_contact_classes = predictions.obj_hand_contact_classes.tolist() if predictions.has(
-            "obj_hand_contact_classes") else None
-
-        if predictions.has("pred_masks"):
-            masks = np.asarray(predictions.pred_masks)
-            masks = [GenericMask(x, self.output.height, self.output.width) for x in masks]
-        else:
-            masks = None
-
         if self._instance_mode == ColorMode.SEGMENTATION and self.metadata.get("thing_colors"):
             colors = [
                 self._jitter([x / 255 for x in self.metadata.thing_colors[c]]) for c in classes
             ]
             alpha = 0.8
         else:
-            colors = None
+            colors = None #
             alpha = 0.5
 
         if self._instance_mode == ColorMode.IMAGE_BW:
             self.output.reset_image(
                 self._create_grayscale_image(
-                    (predictions.pred_masks.any(dim=0) > 0).numpy()
-                    if predictions.has("pred_masks")
+                    (masks.any(dim=0) > 0).numpy()
+                    if masks is not None
                     else None
                 )
             )
             alpha = 0.3
 
-        # colors = []
-
-
         self.overlay_instances_MC50_add_smoothing(
             masks=masks,
+            num_instances=num_instances,
             boxes=boxes,
             labels=labels,
             keypoints=keypoints,
@@ -613,14 +1002,18 @@ class Visualizer:
             obj_obj_contact_classes = obj_obj_contact_classes,
             obj_hand_contact_scores=obj_hand_contact_scores,
             obj_hand_contact_classes=obj_hand_contact_classes,
-            tracker=tracker,
-            current_idx=current_idx
+            contact_flag=contact_flag,
+            contact_hand_flag=contact_hand_flag,
+            Contact_infos=Contact_infos,
+            Contact_hand_infos=Contact_hand_infos,
+            step_infos=step_infos
         )
-        return self.output, self.decoded_pred
+        return self.output
 
     def overlay_instances_MC50_add_smoothing(
         self,
         *,
+        num_instances=0,
         boxes=None,
         labels=None,
         masks=None,
@@ -630,9 +1023,12 @@ class Visualizer:
         obj_obj_contact_classes=None,
         obj_hand_contact_scores=None,
         obj_hand_contact_classes=None,
+        contact_flag=None,
+        contact_hand_flag=None,
+        Contact_infos=None,
+        Contact_hand_infos=None,
+        step_infos=None,
         alpha=0.5,
-        tracker = None,
-        current_idx = None,
     ):
         """
         Args:
@@ -662,41 +1058,10 @@ class Visualizer:
         Returns:
             output (VisImage): image object with visualizations.
         """
-        self.decoded_pred = None
         _ASSIGN_COLOR = True
-        num_instances = 0
-        if boxes is not None:
-            boxes = self._convert_boxes(boxes)
-            num_instances = len(boxes)
-        if masks is not None:
-            masks = self._convert_masks(masks)
-            if num_instances:
-                assert len(masks) == num_instances
-            else:
-                num_instances = len(masks)
-        if keypoints is not None:
-            if num_instances:
-                assert len(keypoints) == num_instances
-            else:
-                num_instances = len(keypoints)
-            keypoints = self._convert_keypoints(keypoints)
-        if labels is not None:
-            assert len(labels) == num_instances
-
-        if obj_obj_contact_classes is not None:
-            assert len(obj_obj_contact_classes) == num_instances
-
-        if obj_obj_contact_scores is not None:
-            assert len(obj_obj_contact_scores) == num_instances
-
-        if obj_hand_contact_classes is not None:
-            assert len(obj_hand_contact_classes) == num_instances
-
-        if obj_hand_contact_scores is not None:
-            assert len(obj_hand_contact_scores) == num_instances
-
+        
         if assigned_colors is None:
-            assigned_colors = [random_color(rgb=True, maximum=1) for _ in range(num_instances)]
+            assigned_colors = [random_color(rgb=True, maximum=1) for _ in range(num_instances)] #
         if num_instances == 0:
             return self.output
         if boxes is not None and boxes.shape[1] == 5:
@@ -729,66 +1094,12 @@ class Visualizer:
             obj_obj_contact_scores = [_.item() for _ in obj_obj_contact_scores]
             obj_hand_contact_scores = [_.item() for _ in obj_hand_contact_scores]
 
-        # post-processing: remove_repeated, remove_multi_states, add_contacts
-        REMOVE_REPEATED_obj = True
-        REMOVE_REPEATED_mutil_states = True
-        ADD_CONTACT_STATES = True
-        if REMOVE_REPEATED_obj:
-            boxes, labels, obj_obj_contact_scores, obj_obj_contact_classes, obj_hand_contact_scores, obj_hand_contact_classes = self.remove_repeated_obj(boxes, labels, obj_obj_contact_scores, obj_obj_contact_classes, obj_hand_contact_scores, obj_hand_contact_classes)
-        if REMOVE_REPEATED_mutil_states:
-            boxes, labels, obj_obj_contact_scores, obj_obj_contact_classes, obj_hand_contact_scores, obj_hand_contact_classes= self.remove_repeated_states(boxes, labels, obj_obj_contact_scores, obj_obj_contact_classes, obj_hand_contact_scores, obj_hand_contact_classes)
-
-        num_instances = len(labels)
-        assert num_instances == len(obj_obj_contact_scores) == len(obj_obj_contact_classes) == len(obj_hand_contact_scores) == len(obj_hand_contact_classes)
-
-        if ADD_CONTACT_STATES:
-            contact_flag, Contact_infos, contact_hand_flag, Contact_hand_infos = self.find_contact(boxes, labels, obj_obj_contact_scores, obj_obj_contact_classes, obj_hand_contact_scores, obj_hand_contact_classes)
-
         # for real-time output
         # print('contact_flag: ', contact_flag)
         # print('Contact_infos: ', Contact_infos)
         # print('contact_hand_flag: ', contact_hand_flag)
         # print('Contact_hand_infos: ', Contact_hand_infos)
 
-
-
-        # tracker.update(predictions=instances, current_idx=current_idx)
-        # re-compile the preditions
-        predictions = [boxes, labels, obj_obj_contact_classes, obj_obj_contact_scores, obj_hand_contact_classes, obj_hand_contact_scores, Contact_infos, Contact_hand_infos]
-        # tracker.test()
-        self.decoded_pred = predictions
-
-        tracker.update_memory(predictions,current_idx)
-
-
-        step_infos = tracker.step_mapping(current_idx=current_idx)
-        # print('idx: ', current_idx)
-
-
-
-        # if step_infos[0] != 'Need more test !':
-        #     print('step: ', step_infos[0])
-        #     print('sub-step: ', step_infos[1])
-        #     print('next sub-step: ', step_infos[2])
-        #     print('gt: ', step_infos[3])
-        #     # self.current_action = step_infos[0][-1]
-        #     # if self.current_action == -1:
-        #     #     self.current_action = 'backgound'
-        #     # else:
-        #     #     self.current_action = self.current_action['step']
-        # else:
-        #     print('Need more test !')
-            # self.current_action = 'backgound'
-
-        # if step_infos != 'Need more test !' and step_infos != ([], [], []):
-        #     errors = self.find_errors(step_infos)
-        # else:
-        #     errors = None
-
-        # print(step_infos)
-        # if errors != None:
-        #     print(errors)
-        # print('idx: ', current_idx)
         for i in range(num_instances):
             #remove unwanted cls
             if 'hand' in labels[i]:
@@ -975,7 +1286,6 @@ class Visualizer:
                 rotation=rotation,
             )
 
-        # return self.output
 
     def draw_step(self,
                  step_infos,
@@ -1381,7 +1691,7 @@ class Visualizer:
 
         num_instances = 0
         if boxes is not None:
-            boxes = self._convert_boxes(boxes)
+            boxes = _convert_boxes(boxes)
             num_instances = len(boxes)
         if masks is not None:
             masks = self._convert_masks(masks)
@@ -1489,409 +1799,6 @@ class Visualizer:
 
         return self.output
 
-    def calculate_area(self, bbox):
-        x0 = bbox[0]
-        y0 = bbox[1]
-        x1 = bbox[2]
-        y1 = bbox[3]
-        area = (x1 - x0) * (y1 - y0)
-        return area
-
-
-    def remove_repeated_obj(
-            self,
-            boxes,
-            labels,
-            obj_obj_contact_scores,
-            obj_obj_contact_classes,
-            obj_hand_contact_scores,
-            obj_hand_contact_classes):
-        # print(labels)
-        new_boxes = []
-        new_labels = []
-
-        label_list = []
-        score_list = []
-        new_obj_obj_contact_scores = []
-        new_obj_obj_contact_class = []
-        new_obj_hand_contact_scores = []
-        new_obj_hand_contact_class = []
-
-        for _label in labels:
-            percent = _label.split(' ')[-1]
-            _class = _label[:-(len(percent) +1)]
-            label_list.append(_class)
-            score_list.append(float(percent[:-1]))
-        label_list = np.array(label_list)
-        score_list = np.array(score_list)
-        flag_list = np.zeros(len(labels))
-
-        R_class = ['paper filter bag', 'coffee bag']
-        for i in range(len(labels)):
-            if flag_list[i] == 1:
-                continue
-            C = label_list[i]
-            # S = score_list[i]
-
-            if C in R_class: # remove the special class
-                idx = np.where(label_list == C)[0].tolist()
-                if len(idx) > 1:
-                    area_list = []
-                    for j in idx:
-                        bbox_area = self.calculate_area(boxes[j, :])
-                        area_list.append(bbox_area)
-                    max_idx = area_list.index(max(area_list))
-                else:
-                    max_idx = 0
-                _idx = idx[max_idx]
-                new_boxes.append(boxes[_idx, :])
-                new_labels.append(labels[_idx])
-
-                new_obj_obj_contact_class.append(obj_obj_contact_classes[_idx])
-                new_obj_obj_contact_scores.append(obj_obj_contact_scores[_idx])
-
-                new_obj_hand_contact_class.append(obj_hand_contact_classes[_idx])
-                new_obj_hand_contact_scores.append(obj_hand_contact_scores[_idx])
-
-            else: # remove the repeated objects
-                idx = np.where(label_list == C)[0].tolist()
-                if len(idx) > 1:
-                    S_list = []
-                    for j in idx:
-                        _score = score_list[j]
-                        S_list.append(_score)
-                    max_idx = S_list.index(max(S_list))
-                else:
-                    max_idx = 0
-                _idx = idx[max_idx]
-                new_boxes.append(boxes[_idx, :])
-                new_labels.append(labels[_idx])
-                new_obj_obj_contact_class.append(obj_obj_contact_classes[_idx])
-                new_obj_obj_contact_scores.append(obj_obj_contact_scores[_idx])
-
-                new_obj_hand_contact_class.append(obj_hand_contact_classes[_idx])
-                new_obj_hand_contact_scores.append(obj_hand_contact_scores[_idx])
-            for IDX in idx:
-                flag_list[IDX] = 1
-        new_boxes = np.array(new_boxes)
-        # print(new_labels)
-        return new_boxes, new_labels, new_obj_obj_contact_scores, new_obj_obj_contact_class, new_obj_hand_contact_scores, new_obj_hand_contact_class
-
-    def  remove_repeated_states(self,
-            boxes,
-            labels,
-            obj_obj_contact_scores,
-            obj_obj_contact_classes,
-            obj_hand_contact_scores,
-            obj_hand_contact_classes):
-        # print(labels)
-        new_boxes = []
-        new_labels = []
-        label_list = []
-        score_list = []
-        new_obj_obj_contact_scores = []
-        new_obj_obj_contact_class = []
-        new_obj_hand_contact_scores = []
-        new_obj_hand_contact_class = []
-        for _label in labels:
-            percent = _label.split(' ')[-1]
-            _class = _label[:-(len(percent) +1)]
-            label_list.append(_class)
-            score_list.append(float(percent[:-1]))
-        label_list = np.array(label_list)
-        score_list = np.array(score_list)
-        flag_list = np.zeros(len(labels))
-
-        # Multi_States_class = ['kettle', 'kettle (empty)', 'kettle (full)', 'measuring cup (empty)', 'measuring cup (full)', 'filter cone', 'filter cone + mug', 'paper filter + filter cone + mug', 'coffee grounds + paper filter + filter cone + mug', 'water + coffee grounds + filter cone + mug', 'used paper filter + filter cone + mug', 'used paper filter + filter cone', 'container', 'coffee beans + container', 'scale (off)', 'scale (on)', 'container + scale', 'coffee beans + container + scale']
-        States_Pairs = [['kettle',
-                         'kettle (open)'],
-                        ['coffee beans + container', 'coffee beans + container + scale'],
-                        ['coffee grounds + paper filter + filter cone',
-                         'coffee grounds + paper filter + filter cone + mug',
-                         'filter cone', 'filter cone + mug', 'paper filter + filter cone',
-                         'paper filter + filter cone + mug', 'used paper filter + filter cone',
-                         'used paper filter + filter cone + mug', 'water + coffee grounds + paper filter + filter cone + mug'],
-                        ['coffee + mug',
-                         'coffee grounds + paper filter + filter cone + mug',
-                         'filter cone + mug', 'mug', 'paper filter + filter cone + mug',
-                         'used paper filter + filter cone + mug', 'water + coffee grounds + paper filter + filter cone + mug'],
-                        ['container', 'container + scale'],
-                        ['scale (off)', 'scale (on)', 'container + scale', 'coffee beans + container + scale'],
-                        ['paper filter (semi)', 'paper filter (quarter)', 'paper filter'],
-                        ['coffee beans + container', 'coffee beans + container + scale'],
-                        ['timer (else)', 'timer (20)', 'timer (30)'],
-                        ['thermometer (open)', 'thermometer (close)'],
-                        ['grinder (close)', 'grinder (open)']
-                        ]
-        # States_Pairs = [['kettle',
-        #                  'kettle (empty)',
-        #                  'kettle (full)'],
-        #                 ['measuring cup (empty)',
-        #                  'measuring cup (full)'],
-        #                 ['coffee beans + container', 'coffee beans + container + scale'],
-        #                 ['coffee grounds + paper filter + filter cone',
-        #                  'coffee grounds + paper filter + filter cone + mug',
-        #                  'filter cone', 'filter cone + mug', 'paper filter + filter cone',
-        #                  'paper filter + filter cone + mug', 'used paper filter + filter cone',
-        #                  'used paper filter + filter cone + mug',
-        #                  'water + coffee grounds + paper filter + filter cone + mug'],
-        #                 ['coffee + mug',
-        #                  'coffee grounds + paper filter + filter cone + mug',
-        #                  'filter cone + mug', 'mug', 'paper filter + filter cone + mug',
-        #                  'used paper filter + filter cone + mug',
-        #                  'water + coffee grounds + paper filter + filter cone + mug'],
-        #                 ['container', 'container + scale'],
-        #                 ['scale (off)', 'scale (on)', 'container + scale', 'coffee beans + container + scale'],
-        #
-        #                 ['paper filter (semi)', 'paper filter (quarter)', 'paper filter'],
-        #                 ['coffee beans + container', 'coffee beans + container + scale']
-        #                 ]
-        # # auto_generate states_pairs
-        # States_Pairs = []
-        # for cate in MC50_CATEGORIES:
-        #     name = cate['name']
-        for i in range(len(labels)):
-            multi_flag = 0
-            if flag_list[i] == 1:
-                continue
-            C = label_list[i]
-            # S = score_list[i]
-
-            for state_pair in States_Pairs:
-                if C in state_pair: # remove the multi-states class
-                    multi_flag = 1
-                    idx = []
-                    for _state in label_list:
-                        if _state in state_pair:
-                            idx.append(np.where(label_list == _state)[0][0])
-                    # idx = np.where(label_list == C)[0].tolist()
-                    if len(idx) > 1:
-                        S_list = []
-                        for j in idx:
-                            _score = score_list[j]
-                            S_list.append(_score)
-                        max_idx = S_list.index(max(S_list))
-                    else:
-                        max_idx = 0
-                    _idx = idx[max_idx]
-                    new_boxes.append(boxes[_idx, :])
-                    new_labels.append(labels[_idx])
-                    new_obj_obj_contact_class.append(obj_obj_contact_classes[_idx])
-                    new_obj_obj_contact_scores.append(obj_obj_contact_scores[_idx])
-
-                    new_obj_hand_contact_class.append(obj_hand_contact_classes[_idx])
-                    new_obj_hand_contact_scores.append(obj_hand_contact_scores[_idx])
-                    for IDX in idx:
-                        flag_list[IDX] = 1
-
-                    break
-            if multi_flag == 0:
-                if flag_list[i] == 1:
-                    continue
-                new_boxes.append(boxes[i, :])
-                new_labels.append(labels[i])
-                new_obj_obj_contact_class.append(obj_obj_contact_classes[i])
-                new_obj_obj_contact_scores.append(obj_obj_contact_scores[i])
-
-                new_obj_hand_contact_class.append(obj_hand_contact_classes[i])
-                new_obj_hand_contact_scores.append(obj_hand_contact_scores[i])
-
-
-
-
-        new_boxes = np.array(new_boxes)
-        # print(new_labels)
-        return new_boxes, new_labels, new_obj_obj_contact_scores, new_obj_obj_contact_class, new_obj_hand_contact_scores, new_obj_hand_contact_class
-
-    def calculate_iou(self, boxA, boxB):
-        # determine the (x, y)-coordinates of the intersection rectangle
-        xA = max(boxA[0], boxB[0])
-        yA = max(boxA[1], boxB[1])
-        xB = min(boxA[2], boxB[2])
-        yB = min(boxA[3], boxB[3])
-
-        # compute the area of intersection rectangle
-        interArea = abs(max((xB - xA, 0)) * max((yB - yA), 0))
-        if interArea == 0:
-            return 0
-        # compute the area of both the prediction and ground-truth
-        # rectangles
-        boxAArea = abs((boxA[2] - boxA[0]) * (boxA[3] - boxA[1]))
-        boxBArea = abs((boxB[2] - boxB[0]) * (boxB[3] - boxB[1]))
-
-        # compute the intersection over union by taking the intersection
-        # area and dividing it by the sum of prediction + ground-truth
-        # areas - the interesection area
-        iou = interArea / float(boxAArea + boxBArea - interArea)
-
-        # return the intersection over union value
-        return iou
-
-    def find_contact(self,
-                     boxes,
-                     labels,
-                     obj_obj_contact_scores,
-                     obj_obj_contact_classes,
-                     obj_hand_contact_scores,
-                     obj_hand_contact_classes
-                     ):
-        thrsh_iou = 0.01
-        contact_flag = np.zeros(len(labels))
-        contact_hand_flag = np.zeros(len(labels))
-
-        CONTACT_PAIRS_v1 = [['measuring cup (empty)', 'water'],
-                         ['measuring cup (full)', 'water'],
-                         ['measuring cup (full)', 'kettle (full)'],
-                         ['measuring cup (full)', 'kettle (empty)'],
-                         ['measuring cup (empty)', 'kettle (full)'],
-                         ['measuring cup (empty)', 'kettle (empty)'],  # step 1
-
-                         ['mug', 'filter cone'], # step 2
-
-                         ['paper filter', 'paper filter bag'],
-                         ['paper filter (semi)', 'filter cone + mug'],
-                         ['paper filter (quarter)', 'filter cone + mug'],
-                         ['paper filter', 'filter cone + mug'], # step 3
-
-                         ['scale (on)', 'container'],
-                         ['scale (off)', 'container'],
-                         ['container + scale', 'coffee bag'],
-                         ['coffee beans + container + scale', 'coffee bag'],
-                         ['coffee beans + container', 'grinder'],
-                         ['container', 'grinder'],
-                         ['paper filter + filter cone + mug', 'grinder'],
-                         ['paper filter + filter cone', 'grinder'],
-                         ['coffee beans + paper filter + filter cone + mug', 'grinder'],
-                         ['coffee beans + paper filter + filter cone', 'grinder'],
-                         ['coffee grounds + paper filter + filter cone', 'grinder'],
-                         ['coffee grounds + paper filter + filter cone + mug', 'grinder'],# step 4
-
-                         ['thermometer', 'kettle (full)'],
-                         ['thermometer', 'kettle (empty)'],
-                         # ['thermometer', 'kettle'], # step 5
-
-                         ['kettle', 'coffee grounds + paper filter + filter cone + mug'],
-                         ['kettle', 'water + coffee grounds + paper filter + filter cone + mug'],
-                         ['kettle', 'used paper filter + filter cone + mug'],  # step 6 ~ 7
-
-                         ['mug', 'used paper filter + filter cone'],
-                         ['used paper filter', 'filter cone'],
-                         ['used paper filter + filter cone', 'paper towel'],
-                         ['used paper filter', 'trash can'],
-                         ['trash can', 'filter cone']# step 8
-                         ]
-        CONTACT_PAIRS = [['measuring cup', 'water'],
-                         ['kettle (open)', 'measuring cup'],# step 1
-
-                            ['mug', 'filter cone'],  # step 2
-
-                            ['paper filter', 'paper filter bag'],
-                            ['paper filter (semi)', 'filter cone + mug'],
-                            ['paper filter (quarter)', 'filter cone + mug'],
-                            ['paper filter', 'filter cone + mug'],  # step 3
-
-                            ['scale (on)', 'container'],
-                            ['scale (off)', 'container'],
-                            ['container + scale', 'coffee bag'],
-                            ['coffee beans + container + scale', 'coffee bag'],
-                            ['coffee beans + container', 'grinder (open)'],
-                            ['container', 'grinder (open)'],
-                            ['paper filter + filter cone + mug', 'grinder (open)'],
-                            ['paper filter + filter cone', 'grinder (open)'],
-                            ['coffee grounds + paper filter + filter cone', 'grinder (open)'],
-                            ['coffee grounds + paper filter + filter cone + mug', 'grinder (open)'],  # step 4
-
-                            ['thermometer (open)', 'kettle (open)'],
-                            # ['thermometer', 'kettle'], # step 5
-
-                            ['kettle', 'coffee grounds + paper filter + filter cone + mug'],
-                            ['kettle', 'water + coffee grounds + paper filter + filter cone + mug'],  # step 6 ~ 7
-
-                            ['mug', 'used paper filter + filter cone'],
-                            # ['hand', 'used paper filter + filter cone'],
-                            # ['hand', 'used paper filter + filter cone + mug'],
-                            ['used paper filter', 'trash can'],
-                            ['trash can', 'filter cone'],
-                            ['hand', 'used paper filter']  # step 8
-                            ]
-
-        # new_boxes = []
-        # new_labels = []
-        label_list = []
-        score_list = []
-        for _label in labels:
-            percent = _label.split(' ')[-1]
-            _class = _label[:-(len(percent) + 1)]
-            label_list.append(_class)
-            score_list.append(float(percent[:-1]))
-        label_list = np.array(label_list)
-        score_list = np.array(score_list)
-
-        # find obj-obj contact
-        Contact_infos = []
-
-        for i in range(len(labels)):
-            _contact_info = []
-            # _contact_info.append()
-            if not i == len(labels) - 1 :
-                a_obj_class = label_list[i]
-                a_obj_bbox = boxes[i,:]
-                a_obj_contact_state = obj_obj_contact_classes[i]
-                for j in range(i + 1, len(labels)):
-                    b_obj_class = label_list[j]
-                    b_obj_bbox = boxes[j, :]
-                    b_obj_contact_state = obj_obj_contact_classes[j]
-                    iou = self.calculate_iou(a_obj_bbox, b_obj_bbox)
-                    if iou >= thrsh_iou:
-                        if (([a_obj_class, b_obj_class]in CONTACT_PAIRS) or \
-                                ([b_obj_class, a_obj_class] in CONTACT_PAIRS)):
-                            if a_obj_contact_state == 1 and b_obj_contact_state == 1:
-                                contact_flag[i] = 1
-                                contact_flag[j] = -1
-                                _contact_info.append(j)
-            Contact_infos.append(_contact_info)
-
-            # find obj-hand contact
-            Contact_hand_infos = []
-
-            for i in range(len(labels)):
-                _contact_hand_info = []
-                if not i == len(labels) - 1:
-                    a_obj_class = label_list[i]
-                    if not 'hand' in a_obj_class:
-                        Contact_hand_infos.append(_contact_hand_info)
-                        continue
-                    a_obj_bbox = boxes[i, :]
-                    a_obj_contact_state = obj_obj_contact_classes[i]
-                    for j in range(len(labels)):
-                        if i == j:
-                            continue
-                        b_obj_class = label_list[j]
-                        b_obj_bbox = boxes[j, :]
-                        b_obj_contact_state = obj_hand_contact_classes[j]
-                        iou = self.calculate_iou(a_obj_bbox, b_obj_bbox)
-                        if iou >= thrsh_iou:
-                            if a_obj_contact_state == 1 and b_obj_contact_state == 1:
-                                contact_hand_flag[i] = 1
-                                contact_hand_flag[j] = -1
-                                _contact_hand_info.append(j)
-                Contact_hand_infos.append(_contact_hand_info)
-
-        return contact_flag, Contact_infos, contact_hand_flag, Contact_hand_infos
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     def overlay_instances_MC50(
         self,
@@ -1941,7 +1848,7 @@ class Visualizer:
 
         num_instances = 0
         if boxes is not None:
-            boxes = self._convert_boxes(boxes)
+            boxes = _convert_boxes(boxes)
             num_instances = len(boxes)
         if masks is not None:
             masks = self._convert_masks(masks)
@@ -2203,7 +2110,7 @@ class Visualizer:
 
         num_instances = 0
         if boxes is not None:
-            boxes = self._convert_boxes(boxes)
+            boxes = _convert_boxes(boxes)
             num_instances = len(boxes)
         if masks is not None:
             masks = self._convert_masks(masks)
@@ -2977,38 +2884,6 @@ class Visualizer:
         modified_color = colorsys.hls_to_rgb(polygon_color[0], modified_lightness, polygon_color[2])
         return modified_color
 
-    def _convert_boxes(self, boxes):
-        """
-        Convert different format of boxes to an NxB array, where B = 4 or 5 is the box dimension.
-        """
-        if isinstance(boxes, Boxes) or isinstance(boxes, RotatedBoxes):
-            return boxes.tensor.detach().numpy()
-        else:
-            return np.asarray(boxes)
-
-    def _convert_masks(self, masks_or_polygons):
-        """
-        Convert different format of masks or polygons to a tuple of masks and polygons.
-
-        Returns:
-            list[GenericMask]:
-        """
-
-        m = masks_or_polygons
-        if isinstance(m, PolygonMasks):
-            m = m.polygons
-        if isinstance(m, BitMasks):
-            m = m.tensor.numpy()
-        if isinstance(m, torch.Tensor):
-            m = m.numpy()
-        ret = []
-        for x in m:
-            if isinstance(x, GenericMask):
-                ret.append(x)
-            else:
-                ret.append(GenericMask(x, self.output.height, self.output.width))
-        return ret
-
     def _draw_text_in_mask(self, binary_mask, text, color):
         """
         Find proper places to draw text given a binary mask.
@@ -3298,7 +3173,7 @@ class Visualizer_eval:
         _ASSIGN_COLOR = True
         num_instances = 0
         if boxes is not None:
-            boxes = self._convert_boxes(boxes)
+            boxes = _convert_boxes(boxes)
             num_instances = len(boxes)
         if masks is not None:
             masks = self._convert_masks(masks)
@@ -3389,6 +3264,7 @@ class Visualizer_eval:
         step_infos = tracker.step_mapping(current_idx=current_idx)
         # print('idx: ', current_idx)
         tracker.step_info = step_infos
+        print("tracker", tracker.step_info)
 
         if step_infos[0] != 'Need more test !':
             # print('step: ', step_infos[0])
@@ -3888,7 +3764,7 @@ class Visualizer_eval:
 
         num_instances = 0
         if boxes is not None:
-            boxes = self._convert_boxes(boxes)
+            boxes = _convert_boxes(boxes)
             num_instances = len(boxes)
         if masks is not None:
             masks = self._convert_masks(masks)
@@ -4387,19 +4263,6 @@ class Visualizer_eval:
         return contact_flag, Contact_infos, contact_hand_flag, Contact_hand_infos
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
     def overlay_instances_MC50(
         self,
         *,
@@ -4448,7 +4311,7 @@ class Visualizer_eval:
 
         num_instances = 0
         if boxes is not None:
-            boxes = self._convert_boxes(boxes)
+            boxes = _convert_boxes(boxes)
             num_instances = len(boxes)
         if masks is not None:
             masks = self._convert_masks(masks)
@@ -4710,7 +4573,7 @@ class Visualizer_eval:
 
         num_instances = 0
         if boxes is not None:
-            boxes = self._convert_boxes(boxes)
+            boxes = _convert_boxes(boxes)
             num_instances = len(boxes)
         if masks is not None:
             masks = self._convert_masks(masks)
@@ -5533,12 +5396,6 @@ class Visualizer_eval:
                 # center = centroids[largest_component_id]
                 center = np.median((cc_labels == cid).nonzero(), axis=1)[::-1]
                 self.draw_text(text, center, color=color)
-
-    def _convert_keypoints(self, keypoints):
-        if isinstance(keypoints, Keypoints):
-            keypoints = keypoints.tensor
-        keypoints = np.asarray(keypoints)
-        return keypoints
 
     def get_output(self):
         """
