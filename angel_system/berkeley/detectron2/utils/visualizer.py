@@ -660,6 +660,7 @@ class VisualizerUtil:
 
         # find obj-obj contact
         Contact_infos = []
+        Contact_hand_infos = []
 
         for i in range(len(labels)):
             _contact_info = []
@@ -1579,7 +1580,8 @@ class Visualizer:
     def load_color_mapping(self):
         import pandas as pd
         import os
-        root = f'{os.path.dirname(os.path.realpath(__file__))}/MC_COLOR.csv'
+        root_dir = "angel_system/berkeley/detectron2/utils"
+        root = f'{root_dir}/MC_COLOR.csv'
         data = pd.read_csv(root, header=None).values
         color_mapping = {}
         for color in data[1:]:

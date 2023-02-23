@@ -8,7 +8,7 @@ class Tracker:
         self.number_frames = number_frames
         self.last_time = last_time
         self.fps = fps
-        self.memroy_frame_number = self.last_time * self.fps
+        self.memroy_frame_number = self.last_time * self.fps if self.fps else None
         self.delta_thresh = 5
         self.area_thresh = 10000
         self.edge_thresh = 1/20
@@ -118,7 +118,7 @@ class Tracker:
         sub_steps['step 4'].append(sub_step)
         del sub_step
 
-        ##############################sub-step 9##############################
+        ##############################sub-step 10##############################
         sub_step = []
         sub_step.append('Place a bowl on the scale.')
         sub_step.append([['container', 'scale (off)'],
@@ -126,14 +126,14 @@ class Tracker:
         sub_steps['step 4'].append(sub_step)
         del sub_step
 
-        ##############################sub-step 10##############################
+        ##############################sub-step 11##############################
         sub_step = []
         sub_step.append('Zero out the kitchen scale.')
         sub_step.append([['hand', 'container + scale']])
         sub_steps['step 4'].append(sub_step)
         del sub_step
 
-        ##############################sub-step 11##############################
+        ##############################sub-step 12##############################
         sub_step = []
         sub_step.append('Add coffee beans into the bowl until read 25 grams.')
         sub_step.append([['container + scale', 'coffee bag'],
@@ -142,7 +142,7 @@ class Tracker:
         sub_steps['step 4'].append(sub_step)
         del sub_step
 
-        ##############################sub-step 12##############################
+        ##############################sub-step 13##############################
         sub_step = []
         sub_step.append('Poured the measured beans into the coffee grinder.')
         sub_step.append([['coffee beans + container', 'grinder (open)'],
@@ -150,7 +150,7 @@ class Tracker:
         sub_steps['step 4'].append(sub_step)
         del sub_step
 
-        ##############################sub-step 13##############################
+        ##############################sub-step 14##############################
         sub_step = []
         sub_step.append('Use timer')
         sub_step.append([['hand', 'timer (else)'],
@@ -159,21 +159,14 @@ class Tracker:
         sub_steps['step 4'].append(sub_step)
         del sub_step
 
-        ##############################sub-step 13##############################
-        # sub_step = []
-        # sub_step.append('unknown')
-        # sub_step.append([['x'], ['x']])
-        # sub_steps['step 4'].append(sub_step)
-        # del sub_step
-
-        # ##############################sub-step 14##############################
+        # ##############################sub-step 15##############################
         sub_step = []
         sub_step.append('Grind the coffee beans by pressing and holding down the back part')
         sub_step.append([['hand', 'grinder (close)']])
         sub_steps['step 4'].append(sub_step)
         del sub_step
 
-        ##############################sub-step 13##############################
+        ##############################sub-step 16##############################
         sub_step = []
         sub_step.append('Pour the grinded coffee beans into the filter cone.')
         sub_step.append([['paper filter + filter cone + mug', 'grinder (open)'],
@@ -184,7 +177,7 @@ class Tracker:
         del sub_step
 
         ###################################################step 5###################################################
-        ##############################sub-step 16##############################
+        ##############################sub-step 17##############################
         sub_step = []
         sub_step.append('Turn on the thermometer.')
         sub_step.append([['thermometer (open)', 'hand'],
@@ -192,7 +185,7 @@ class Tracker:
         sub_steps['step 5'].append(sub_step)
         del sub_step
 
-        ##############################sub-step 17##############################
+        ##############################sub-step 18##############################
         sub_step = []
         sub_step.append('Place the end of the thermometer into the water.')
         sub_step.append([['thermometer (open)', 'kettle (open)']])
@@ -230,7 +223,7 @@ class Tracker:
         # del sub_step
 
         ###################################################step 7###################################################
-        #############################sub-step 21##############################
+        #############################sub-step 20##############################
         sub_step = []
         sub_step.append(
             'Slowly pour water into the grounds circular motion.')
@@ -239,14 +232,14 @@ class Tracker:
         del sub_step
 
         ##################################################step 8###################################################
-        #############################sub-step 22##############################
+        #############################sub-step 21##############################
         sub_step = []
         sub_step.append('Remove dripper from cup.')
         sub_step.append([['hand', 'used paper filter + filter cone'],
                          ['hand', 'used paper filter + filter cone + mug']])
         sub_steps['step 8'].append(sub_step)
 
-        ##############################sub-step 23##############################
+        ##############################sub-step 22##############################
         sub_step = []
         sub_step.append('Remove the coffee grounds and paper filter from the dripper.')
         sub_step.append([
@@ -256,7 +249,7 @@ class Tracker:
         sub_steps['step 8'].append(sub_step)
         self.step_map = sub_steps
 
-        #############################sub-step 24##############################
+        #############################sub-step 23##############################
         sub_step = []
         sub_step.append('Discard the coffee grounds and paper filter.')
         sub_step.append([['used paper filter', 'trash can']

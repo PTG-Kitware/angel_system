@@ -1,0 +1,80 @@
+#
+# System configuration to run the ANGEL system for the 2022/11 PI meeting and
+# Evaluation 1.
+#
+# This configuration is for the Coffee task/recipe.
+#
+
+name: berkeley-coffee
+root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
+
+# Optional tmux socket
+# socket_name: foo
+
+# Note that the pre and post options have been deprecated and will be replaced by
+# project hooks.
+
+# Project hooks
+
+# Runs on project start, always
+# on_project_start: command
+on_project_start: |
+  export ROS_NAMESPACE=/debug
+  export HL2_IP=${HL2_IP:-192.168.1.101}
+  export CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/config
+  export NODE_CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/src/angel_system_nodes/configs
+  export MODEL_DIR=${ANGEL_WORKSPACE_DIR}/model_files
+  if [ -z "${PARAM_ROS_BAG_DIR}" ]; then echo "MISSING: PARAM_ROS_BAG_DIR -> Set to path of ROS2 bag directory."; LOCAL_ERROR=1; fi
+  if [ -n "${LOCAL_ERROR}" ]; then exit "${LOCAL_ERROR}"; fi
+
+# Run on project start, the first time
+# on_project_first_start: command
+
+# Run on project start, after the first time
+# on_project_restart: command
+
+# Run on project exit ( detaching from tmux session )
+# on_project_exit: command
+
+# Run on project stop
+# on_project_stop: command
+
+# Runs in each window and pane before window/pane specific commands. Useful for setting up interpreter versions.
+# pre_window: rbenv shell 2.0.0-p247
+
+# Pass command line options to tmux. Useful for specifying a different tmux.conf.
+# tmux_options: -f ~/.tmux.mac.conf
+tmux_options: -f <%= ENV["ANGEL_WORKSPACE_DIR"] %>/tmux/tmux.conf
+
+windows:
+  # DEBUG -- Play data from a recorded bag into the configured namespace
+  #          instead of from the HL2 app.
+  #          DO NOT RUN WITH HoloLens2 USE! -> There will be conflicting data
+  #          on the same topics.
+  - ros2_bag: "#ros2 bag play -l ${PARAM_ROS_BAG_DIR}"
+  # DEBUG -- View images as output from the HL2/Bag
+  - rqt_rgb_frames: rqt -s rqt_image_view/ImageView
+      --args ${ROS_NAMESPACE}/PVFramesRGB
+      --ros-args -p _image_transport:=raw
+
+  - image_converter: ros2 run angel_datahub ImageConverter --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p topic_input_images:=PVFramesNV12
+      -p topic_output_images:=PVFramesRGB
+
+  - compress_image: ros2 run image_transport republish raw compressed --ros-args
+       -r __ns:=${ROS_NAMESPACE}
+       --remap in:=BerkeleyFrames
+       --remap out/compressed:=pv_image_detections_2d/compressed
+
+  - task_monitor: ros2 run angel_system_nodes berkeley_task_monitor --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p image_topic:=PVFramesRGB
+      -p config_file:=${CONFIG_DIR}/tasks/task_steps_berkeley_config-recipe_coffee.yaml
+      -p draw_output:=True
+      -p task_state_topic:=TaskUpdates
+      -p topic_output_images:=BerkeleyFrames
+      -p query_task_graph_topic:=query_task_graph
+
+  - engineering_ui_websocket: ros2 launch rosbridge_server rosbridge_websocket_launch.xml port:=9090
+  - engineering_ui_server: node src/angel_utils/demo_ui/index.js

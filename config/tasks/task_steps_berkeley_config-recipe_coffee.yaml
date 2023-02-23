@@ -1,0 +1,181 @@
+# Schema version.
+version: "1.0"
+
+# Task title for display purposes.
+title: "Pour-over coffee"
+
+# Layout of the steps that define this task.
+steps:
+  # Item format:
+  # - id: Identifying integer for the step.
+  # - activity_id: The ID of an activity classification associated with this
+  #                step. This must reference an ID within the `activity_labels`
+  #                configuration file referenced above.
+  # - description: Human semantic description of this step.
+  # - median_duration_seconds: Median expected time this task will
+  #                            consume in seconds.
+  # - mean_conf: mean value of classifier confidence for true examples.
+  # - std_conf: standard deviation of confidence for both true and false
+  #             examples.
+  - id: 1   # Must start at 1, 0 is reserved for background.
+    activity_id: 1
+    description: >-
+      Measure 12 ounces of cold water
+    median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
+  - id: 2
+    activity_id: 2
+    description: >-
+     Transfer the water to a kettle
+    median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
+  - id: 3
+    activity_id: 3
+    description: >-
+      Turn on the kettle
+    median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
+  - id: 4
+    activity_id: 4
+    description: >-
+      Place the dripper on top of the mug
+    median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
+  - id: 5
+    activity_id: 5
+    description: >-
+      Take the coffee filter and fold it in half into a semicircle.
+    median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
+  - id: 6
+    activity_id: 6
+    description: >-
+      Fold the coffee filter again to create a quarter circle.
+    median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
+  - id: 7
+    activity_id: 7
+    description: >-
+      Place the folder paper into the dripper.
+    median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
+  - id: 8
+    activity_id: 8
+    description: >-
+      Spread the filter open to create a cone inside the dripper.
+    median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
+  - id: 9
+    activity_id: 9
+    description: >-
+      Turn on the kitchen scale.
+    median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
+  - id: 10
+    activity_id: 10
+    description: >-
+      Place a bowl on the scale.
+    median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
+  - id: 11
+    activity_id: 11
+    description: >-
+      Zero out the kitchen scale.
+    median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
+  - id: 12
+    activity_id: 12
+    description: >-
+      Add coffee beans into the bowl until read 25 grams.
+    median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
+  - id: 13
+    activity_id: 13
+    description: >-
+      Poured the measured beans into the coffee grinder.
+    median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
+  - id: 14
+    activity_id: 14
+    description: >-
+      Use timer
+    median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
+  - id: 15
+    activity_id: 15
+    description: >-
+      Grind the coffee beans by pressing and holding down the back part
+    median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
+  - id: 16
+    activity_id: 16
+    description: >-
+      Pour the grinded coffee beans into the filter cone.
+    median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
+  - id: 17
+    activity_id: 17
+    description: >-
+      Turn on the thermometer.
+    median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
+  - id: 18
+    activity_id: 18
+    description: >-
+      Place the end of the thermometer into the water.
+    median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
+  - id: 19
+    activity_id: 19
+    description: >-
+      Pour small amount of water onto the grounds.
+    median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
+  - id: 20
+    activity_id: 20
+    description: >-
+      Slowly pour water into the grounds circular motion.
+    median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
+  - id: 21
+    activity_id: 21
+    description: >-
+      Remove dripper from cup.
+    median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
+  - id: 22
+    activity_id: 22
+    description: >-
+      Remove the coffee grounds and paper filter from the dripper.
+    median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
+  - id: 23
+    activity_id: 23
+    description: >-
+      Discard the coffee grounds and paper filter.
+    median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
+

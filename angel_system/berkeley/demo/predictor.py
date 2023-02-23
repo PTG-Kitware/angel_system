@@ -242,7 +242,7 @@ class VisualizationDemo(object):
                 yield process_predictions(frame, self.predictor(frame))
 
 class VisualizationDemo_add_smoothing(object):
-    def __init__(self, cfg, number_frames, last_time, fps, instance_mode=ColorMode.IMAGE, parallel=False):
+    def __init__(self, cfg, last_time, draw_output=True, number_frames=None, fps=None, instance_mode=ColorMode.IMAGE, parallel=False):
         """
         Args:
             cfg (CfgNode):
@@ -255,6 +255,8 @@ class VisualizationDemo_add_smoothing(object):
         )
         self.cpu_device = torch.device("cpu")
         self.instance_mode = instance_mode
+
+        self.draw_output = draw_output
 
         self.parallel = parallel
         if parallel:
@@ -470,7 +472,7 @@ class VisualizationDemo_add_smoothing(object):
 
         return step_infos
 
-    def run_on_image_smoothing_v2(self, image, current_idx, draw_output=True):
+    def run_on_image_smoothing_v2(self, image, current_idx):
         # this version will return the contact state, only for integration
         """
         Args:
@@ -507,7 +509,7 @@ class VisualizationDemo_add_smoothing(object):
                 decoded_pred = [boxes, labels, obj_obj_contact_classes, obj_obj_contact_scores, obj_hand_contact_classes, obj_hand_contact_scores, Contact_infos, Contact_hand_infos]
                 step_infos = self.update_tracker(decoded_pred, current_idx)
                 
-                if draw_output:
+                if self.draw_output:
                     vis_output = visualizer.draw_instance_predictions_smoothing_v2(
                         num_instances, boxes, labels, keypoints,
                         obj_obj_contact_scores, obj_obj_contact_classes,
