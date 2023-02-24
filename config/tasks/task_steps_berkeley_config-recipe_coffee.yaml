@@ -41,7 +41,7 @@ steps:
   - id: 4
     activity_id: 4
     description: >-
-      Place the dripper on top of the mug
+      Place the Dripper on top of the mug
     median_duration_seconds: 5
     mean_conf: 0.5
     std_conf: 0.2

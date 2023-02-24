@@ -56,12 +56,11 @@ class TaskMonitor(Node):
             .get_parameter_value()
             .string_value
         )
-        self._draw_output = True
-        #(
-        #    self.declare_parameter("draw_output", 1)
-        #    .get_parameter_value()
-        #    .string_value
-        #)
+        self._draw_output = (
+            self.declare_parameter("draw_output", True)
+            .get_parameter_value()
+            .bool_value
+        )
         self._task_state_topic = (
             self.declare_parameter("task_state_topic", "TaskUpdates")
             .get_parameter_value()
@@ -180,11 +179,13 @@ class TaskMonitor(Node):
     def listener_callback(self, image):
         """
         """
+        #import time
+        #time.sleep(2)
         log = self.get_logger()
         self.idx += 1
 
         # Convert ROS img msg to CV2 image
-        bgr_image = BRIDGE.imgmsg_to_cv2(image, desired_encoding="rgb8")
+        bgr_image = BRIDGE.imgmsg_to_cv2(image, desired_encoding="bgr8")
 
         predictions, step_infos, visualized_output = self.demo.run_on_image_smoothing_v2(
             bgr_image, current_idx=self.idx)
@@ -192,7 +193,8 @@ class TaskMonitor(Node):
         # publish visualized output
         if self._draw_output:
             visualized_image = visualized_output.get_image()
-            image_message = BRIDGE.cv2_to_imgmsg(visualized_image, encoding="passthrough")
+            image_message = BRIDGE.cv2_to_imgmsg(visualized_image, encoding="rgb8")
+            
             self._generated_image_publisher.publish(image_message)
 
         # Update current step
@@ -203,25 +205,19 @@ class TaskMonitor(Node):
                 _current_step = 'background'
                 _current_sub_step = 'background'
             else:
-                if 'end_frame' in list(step[-1].keys()):
-                    _current_step =  step[-1]['step'] + ' (finished)'
-                else:
-                    _current_step = step[-1]['step']
+                # TODO: Support different task levels?
+                # Currently, this definition of "sub-steps" best matches up with our "steps" 
                 if 'end_frame' in list(sub_step[-1].keys()):
                     # Sub-step is finished
                     _current_sub_step = sub_step[-1]['sub-step']
                     self._completed_steps[self._steps.index(_current_sub_step)] = True
                     finished_sub_step = True
                     log.info(f"{_current_sub_step} (finished)")
-                   # _current_sub_step = _current_sub_step + ' (finished)'
                 else:
                     _current_sub_step = sub_step[-1]['sub-step']
-                #if '(finished)' in _current_sub_step or '(finished)' in _current_step:
-                #if self._completed_steps[self._steps.index(_current_sub_step)]:
-                #    _current_step = 'background'
-                #    _current_sub_step = 'background'
-                #else:
-                #    _next_sub_step = next_sub_step[-1]
+                    #self._completed_steps[self._steps.index(_current_sub_step)] = True
+                    #finished_sub_step = True
+                    
         else:
             _current_sub_step = None
 
@@ -231,12 +227,11 @@ class TaskMonitor(Node):
         # background (ID=0)
         if _current_sub_step != 'background':
             if finished_sub_step or (_current_sub_step != self._current_step):
-                log.info("Publishing message")
                 # Moving forward
                 self._previous_step = self._current_step
                 self._previous_step_id = self._current_step_id
                 self._current_step = _current_sub_step
-                self._current_step_id = self._steps.index(self._current_step)
+                self._current_step_id = self._steps.index(self._current_step) if _current_sub_step != None else -1
 
                 self.publish_task_state_message()
 
@@ -244,6 +239,7 @@ class TaskMonitor(Node):
         """
         Forms and sends a `angel_msgs/TaskUpdate` message to the TaskUpdates topic.
         """
+        
         log = self.get_logger()
 
         message = TaskUpdate()
@@ -255,8 +251,6 @@ class TaskMonitor(Node):
         # Populate task name and description
         message.task_name = self._task_title
         
-        # Populate task items list
-
         # Populate step list
         if self._current_step is None:
                 message.current_step_id = -1
@@ -306,6 +300,7 @@ class TaskMonitor(Node):
 
                 self._previous_step = self._current_step
                 self._previous_step_id = self._current_step_id
+                self._completed_steps[self._previous_step_id] = True
 
                 self._current_step_id += 1
                 self._current_step = self._steps[self._current_step_id]
@@ -323,6 +318,7 @@ class TaskMonitor(Node):
                 else:
                     self._current_step = self._previous_step
                     self._current_step_id = self._previous_step_id
+                    self._completed_steps[self._current_step_id] = False
 
                     self._previous_step_id = self._current_step_id - 1
                     if self._previous_step_id < 0:

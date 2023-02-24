@@ -487,7 +487,7 @@ class VisualizationDemo_add_smoothing(object):
         predictions = self.predictor(image)
 
         # Convert image from OpenCV BGR format to Matplotlib RGB format.
-        image = image[:, :, ::-1]
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         visualizer = Visualizer(image, self.metadata, instance_mode=self.instance_mode)
         if "panoptic_seg" in predictions:
             panoptic_seg, segments_info = predictions["panoptic_seg"]
@@ -508,7 +508,7 @@ class VisualizationDemo_add_smoothing(object):
 
                 decoded_pred = [boxes, labels, obj_obj_contact_classes, obj_obj_contact_scores, obj_hand_contact_classes, obj_hand_contact_scores, Contact_infos, Contact_hand_infos]
                 step_infos = self.update_tracker(decoded_pred, current_idx)
-                
+                #step_infos = None
                 if self.draw_output:
                     vis_output = visualizer.draw_instance_predictions_smoothing_v2(
                         num_instances, boxes, labels, keypoints,
