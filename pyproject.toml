@@ -34,7 +34,7 @@ transitions = "^0.8.11"
 trimesh = {extras = ["all"], version = "^3.10.2"}
 # For UHO Activity Classifier
 # - see arisia: /data/dawei.du/ptg-activity-recognition/activity_hydra/requirements.txt
-hydra-core = "^1.2.0"
+hydra-core = "==1.1.0"
 python-dotenv = "^0.21.0"
 pytorch-lightning = "^1.7.7"
 # Pinning setup tools to this known version due to torch 1.10.2 tensorboard
