@@ -50,10 +50,16 @@ windows:
   - hl2ss: ros2 run angel_system_nodes hl2ss_ros_bridge --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p ip_addr:=${HL2_IP}
-      -p image_topic:=PVFramesRGB
+      -p image_topic:=PVFramesBGR
       -p hand_pose_topic:=HandJointPoseData
+      -p audio_topic:=HeadsetAudioData
 
-  # Visualize RGB Images being output from the headset
-  - rqt_rgb_images: rqt -s rqt_image_view/ImageView
-      --args ${ROS_NAMESPACE}/PVFramesRGB
+  # Visualize PV Images being output from the headset
+  - rqt_pv_images: rqt -s rqt_image_view/ImageView
+      --args ${ROS_NAMESPACE}/PVFramesBGR
       --ros-args -p _image_transport:=raw
+
+  # Playback headset audio
+  - audio_player: ros2 run angel_system_nodes audio_player --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p audio_topic:=HeadsetAudioData
