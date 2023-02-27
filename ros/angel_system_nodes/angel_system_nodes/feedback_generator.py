@@ -1,8 +1,9 @@
 import uuid
-from threading import Lock
+from threading import RLock
 
 import rclpy
 from rclpy.node import Node
+from std_msgs.msg import Header
 
 from angel_msgs.msg import (
     ActivityDetection,
@@ -28,9 +29,9 @@ class FeedbackGenerator(Node):
 
         self._activity_detector_topic = self.declare_parameter("activity_detector_topic", "ActivityDetections").get_parameter_value().string_value
         self._object_detection_topic = self.declare_parameter("object_detection_topic", "ObjectDetections3d").get_parameter_value().string_value
-        # TODO: task needs to be updated to emit TaskNode
         self._task_monitor_topic = self.declare_parameter("task_monitor_topic", "TaskUpdates").get_parameter_value().string_value
         self._arui_update_topic = self.declare_parameter("arui_update_topic", "AruiUpdates").get_parameter_value().string_value
+        # TODO: add topic input for predicted user intents
 
         # logger
         self.log = self.get_logger()
@@ -69,31 +70,59 @@ class FeedbackGenerator(Node):
         )
 
         # message
-        self.arui_update_message = AruiUpdate()
-        self.arui_update_message.header.frame_id = "ARUI Update"
+        # Stateful message components that are carried through from update to
+        # update. Content here is locked via the `self.lock` below.
+        self._arui_update_header_frame_id = "ARUI Update"
+        self._arui_update_latest_activity = ActivityDetection()
+        self._arui_update_task_update = TaskUpdate()
         # Set the default value for task update current step ID to the "real"
         # base value of -1
         # TODO: This is fragile. Dependent on implementation detail of task
         #       monitor v2.
-        self.arui_update_message.task_update.current_step_id = -1
+        self._arui_update_task_update.current_step_id = -1
 
-        # lock
-        self.lock = Lock()
+        # Lock for stateful ARUI update message parts.
+        # Reentrant to allow for chaining updates with the publish method.
+        self.lock = RLock()
 
         # detection uuids
         self.uuids = dict()
 
-    def publish_update(self):
+    def _make_common_header(self) -> Header:
+        """
+        Make a header sub-message in a common way across usages.
+        """
+        return Header(
+            frame_id=self._arui_update_header_frame_id,
+            stamp=self.get_clock().now().to_msg(),
+        )
+
+    def publish_update(self, object3d_remove=(), object3d_update=(),
+                       notifications=(), intents_for_confirmation=()) -> None:
+        """
+        Central message publishing method.
+
+        Aggregates any stateful storage into a new message instance.
+        Stateless message components should be provided as arguments.
+        """
+        this_header = self._make_common_header()
         with self.lock:
-            self.arui_update_message.header.stamp = self.get_clock().now().to_msg()
             self.log.info(f"Publishing AruiUpdate")
-            self.arui_update_publisher.publish(self.arui_update_message)
+            self.arui_update_publisher.publish(AruiUpdate(
+                header=this_header,
+                object3d_remove=object3d_remove,
+                object3d_update=object3d_update,
+                latest_activity=self._arui_update_latest_activity,
+                # TODO: expertise_level=,
+                task_update=self._arui_update_task_update,
+                notifications=notifications,
+                intents_for_confirmation=intents_for_confirmation,
+            ))
 
     def activity_callback(self, activity):
         with self.lock:
-            self.arui_update_message.latest_activity = activity
-
-        self.publish_update()
+            self._arui_update_latest_activity = activity
+            self.publish_update()
 
     def object_callback(self, object_msg):
         # convert ObjectDetection3dSet to AruiObject3d
@@ -130,17 +159,15 @@ class FeedbackGenerator(Node):
 
             detections.append(detection)
 
-        with self.lock:
-            self.arui_update_message.object3d_update = detections
-
-        self.publish_update()
+        self.publish_update(object3d_update=detections)
 
     def task_callback(self, task):
-        # TODO: Update this to TaskNode type
+        """
+        Update the ARUI message with the given task update.
+        """
         with self.lock:
-            self.arui_update_message.task_update = task
-
-        self.publish_update()
+            self._arui_update_task_update = task
+            self.publish_update()
 
 
 def main():
