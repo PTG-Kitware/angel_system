@@ -32,15 +32,40 @@ BRIDGE = CvBridge()
 PV_BITRATE = 5*1024*1024
 
 # List containing joint names that matches the ordering in the HL2SS
-# SI_HandJointKind class
+# SI_HandJointKind class. Names semantically match the output from the MRTK API
+# though the ordering of the joins is matching that of the windows perception
+# API.
+# MRTK API: https://learn.microsoft.com/en-us/dotnet/api/microsoft.mixedreality.toolkit.utilities.trackedhandjoint?preserve-view=true&view=mixed-reality-toolkit-unity-2020-dotnet-2.8.0
+# Windows Perception API: https://learn.microsoft.com/en-us/uwp/api/windows.perception.people.handjointkind?view=winrt-22621
+# Matching the names of the MRTK API for downstream components to continue to
+# match against.
 JOINT_LIST = [
-    "Palm", "Wrist", "ThumbMetacarpal", "ThumbProximal", "ThumbDistal",
-    "ThumbTip", "IndexMetacarpal", "IndexProximal", "IndexIntermediate",
-    "IndexDistal", "IndexTip", "MiddleMetacarpal", "MiddleProximal",
-    "MiddleIntermediate", "MiddleDistal", "MiddleTip", "RingMetacarpal",
-    "RingProximal", "RingIntermediate", "RingDistal", "RingTip",
-    "LittleMetacarpal", "LittleProximal", "LittleIntermediate",
-    "LittleDistal", "LittleTip",
+    "Palm",
+    "Wrist",
+    "ThumbMetacarpalJoint",
+    "ThumbProximalJoint",
+    "ThumbDistalJoint",
+    "ThumbTip",
+    "IndexMetacarpal",
+    "IndexKnuckle",
+    "IndexMiddleJoint",
+    "IndexDistalJoint",
+    "IndexTip",
+    "MiddleMetacarpal",
+    "MiddleKnuckle",
+    "MiddleMiddleJoint",
+    "MiddleDistalJoint",
+    "MiddleTip",
+    "RingMetacarpal",
+    "RingKnuckle",
+    "RingMiddleJoint",
+    "RingDistalJoint",
+    "RingTip",
+    "PinkyMetacarpal",
+    "PinkyKnuckle",
+    "PinkyMiddleJoint",
+    "PinkyDistalJoint",
+    "PinkyTip",
 ]
 
 
@@ -258,6 +283,9 @@ class HL2SSROSBridge(Node):
         them to the image topic.
         """
         while self._pv_active.wait(0):  # will quickly return false if cleared.
+            # The data returned from HL2SS is just a numpy array of the
+            # configured resolution. The payload array is in BGR 3-channel
+            # format.
             data = self.hl2ss_pv_client.get_next_packet()
 
             try:
