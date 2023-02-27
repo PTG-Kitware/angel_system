@@ -7,11 +7,12 @@ from std_msgs.msg import Header
 
 from angel_msgs.msg import (
     ActivityDetection,
+    AruiObject3d,
+    AruiUpdate,
+    InterpretedAudioUserIntent,
     ObjectDetection3dSet,
     TaskUpdate,
-    AruiUpdate,
-    AruiObject3d,
-    VisionBoundingBox3d
+    VisionBoundingBox3d,
 )
 
 
@@ -27,11 +28,27 @@ class FeedbackGenerator(Node):
     def __init__(self):
         super().__init__(self.__class__.__name__)
 
-        self._activity_detector_topic = self.declare_parameter("activity_detector_topic", "ActivityDetections").get_parameter_value().string_value
-        self._object_detection_topic = self.declare_parameter("object_detection_topic", "ObjectDetections3d").get_parameter_value().string_value
-        self._task_monitor_topic = self.declare_parameter("task_monitor_topic", "TaskUpdates").get_parameter_value().string_value
-        self._arui_update_topic = self.declare_parameter("arui_update_topic", "AruiUpdates").get_parameter_value().string_value
+        self._activity_detector_topic = (
+            self.declare_parameter("activity_detector_topic", "ActivityDetections")
+            .get_parameter_value().string_value
+        )
+        self._object_detection_topic = (
+            self.declare_parameter("object_detection_topic", "ObjectDetections3d")
+            .get_parameter_value().string_value
+        )
+        self._task_monitor_topic = (
+            self.declare_parameter("task_monitor_topic", "TaskUpdates")
+            .get_parameter_value().string_value
+        )
+        self._arui_update_topic = (
+            self.declare_parameter("arui_update_topic", "AruiUpdates")
+            .get_parameter_value().string_value
+        )
         # TODO: add topic input for predicted user intents
+        self._interp_uintent_topic = (
+            self.declare_parameter("interp_user_intent_topic", "UserIntentPredicted")
+            .get_parameter_value().string_value
+        )
 
         # logger
         self.log = self.get_logger()
@@ -39,6 +56,7 @@ class FeedbackGenerator(Node):
         self.log.info(f"Object detection topic: {self._object_detection_topic}")
         self.log.info(f"Task monitor topic: {self._task_monitor_topic}")
         self.log.info(f"AruiUpdate topic: {self._arui_update_topic}")
+        self.log.info(f"Interpreted User Intent topic: {self._interp_uintent_topic}")
 
         # subscribers
         self.activity_subscriber = self.create_subscription(
@@ -59,6 +77,13 @@ class FeedbackGenerator(Node):
             TaskUpdate,
             self._task_monitor_topic,
             self.task_callback,
+            1
+        )
+
+        self.interp_uintent_subscriber = self.create_subscription(
+            InterpretedAudioUserIntent,
+            self._interp_uintent_topic,
+            self.user_intent_callback,
             1
         )
 
@@ -119,12 +144,12 @@ class FeedbackGenerator(Node):
                 intents_for_confirmation=intents_for_confirmation,
             ))
 
-    def activity_callback(self, activity):
+    def activity_callback(self, activity: ActivityDetection) -> None:
         with self.lock:
             self._arui_update_latest_activity = activity
             self.publish_update()
 
-    def object_callback(self, object_msg):
+    def object_callback(self, object_msg: ObjectDetection3dSet) -> None:
         # convert ObjectDetection3dSet to AruiObject3d
         detections = []
         for i in range(object_msg.num_objects):
@@ -145,13 +170,13 @@ class FeedbackGenerator(Node):
             detection.bbox = VisionBoundingBox3d()
 
             # min = sorted[0], max = sorted[-1]
-            xs = sorted([object_msg.right[i].x,  object_msg.left[i].x,  object_msg.top[i].x, object_msg.bottom[i].x])
-            ys = sorted([object_msg.right[i].y,  object_msg.left[i].y,  object_msg.top[i].y, object_msg.bottom[i].y])
-            zs = sorted([object_msg.right[i].z,  object_msg.left[i].z,  object_msg.top[i].z, object_msg.bottom[i].z])
+            xs = sorted([object_msg.right[i].x, object_msg.left[i].x, object_msg.top[i].x, object_msg.bottom[i].x])
+            ys = sorted([object_msg.right[i].y, object_msg.left[i].y, object_msg.top[i].y, object_msg.bottom[i].y])
+            zs = sorted([object_msg.right[i].z, object_msg.left[i].z, object_msg.top[i].z, object_msg.bottom[i].z])
 
-            detection.bbox.size.x = xs[-1] - xs[0] # width
-            detection.bbox.size.y = ys[-1] - ys[0] # height
-            detection.bbox.size.z = zs[-1] - zs[0] # depth
+            detection.bbox.size.x = xs[-1] - xs[0]  # width
+            detection.bbox.size.y = ys[-1] - ys[0]  # height
+            detection.bbox.size.z = zs[-1] - zs[0]  # depth
 
             detection.bbox.center.position.x = xs[0] + (0.5 * detection.bbox.size.x)
             detection.bbox.center.position.y = ys[0] + (0.5 * detection.bbox.size.y)
@@ -161,13 +186,23 @@ class FeedbackGenerator(Node):
 
         self.publish_update(object3d_update=detections)
 
-    def task_callback(self, task):
+    def task_callback(self, task: TaskUpdate) -> None:
         """
         Update the ARUI message with the given task update.
         """
         with self.lock:
             self._arui_update_task_update = task
             self.publish_update()
+
+    def user_intent_callback(self, msg: InterpretedAudioUserIntent) -> None:
+        """
+        Publish an ARUI update message with a *single* predicted user intent.
+
+        TODO: Pending use-case definition for multiple simultaneous user intent
+              inputs as opposed to must handling over multiple input messages,
+              translating into multiple outgoing ARUI Update messages.
+        """
+        self.publish_update(intents_for_confirmation=[msg])
 
 
 def main():
