@@ -2,7 +2,7 @@ _BASE_: "../Base-RCNN-FPN.yaml"
 MODEL:
 #  WEIGHTS: '/shared/niudt/detectron2/tools/PTG_DEMO/MC_1+3+13+25_40000/model_final.pth'
 #  WEIGHTS: './weights/model_final.pth'
-  WEIGHTS: 'angel_system/berkeley/weights/model_final.pth'
+  WEIGHTS: 'model_files/berkeley_model_final.pth'
 #  WEIGHTS: '/shared/niudt/detectron2/tools/PTG_DEMO/MC_1+3+13+14+25/model_final.pth'
 #  WEIGHTS: '/shared/niudt/detectron2/tools/PTG_DEMO/MC_1+3+13+14+25/model_final.pth'
 #  WEIGHTS: '/shared/niudt/detectron2_ori/detectron2/tools/coco-101-rpn/model_final_f96b26.pkl'
