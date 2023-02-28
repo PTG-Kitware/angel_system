@@ -70,6 +70,9 @@ def parse_args():
     Parse input arguments
     """
     parser = argparse.ArgumentParser(description='Generate bbox output from a Fast R-CNN network')
+    parser.add_argument('--root_path', dest='root_path',
+                        help='path to the root data folder',
+                        default='data/coffee_data', type=str)
     parser.add_argument('--dataset', dest='dataset',
                         help='training dataset',
                         default='vg', type=str)
@@ -321,9 +324,9 @@ def get_detections_from_im(fasterRCNN, classes, im_file, image_id, args, conf_th
     else:
         keep_boxes = torch.where(max_conf >= conf_thresh, max_conf, torch.tensor(0.0))
     keep_boxes = torch.squeeze(torch.nonzero(keep_boxes))
-    if len(keep_boxes) < MIN_BOXES:
+    if keep_boxes.nelement() < MIN_BOXES:
         keep_boxes = torch.argsort(max_conf, descending = True)[:MIN_BOXES]
-    elif len(keep_boxes) > MAX_BOXES:
+    elif keep_boxes.nelement() > MAX_BOXES:
         keep_boxes = torch.argsort(max_conf, descending = True)[:MAX_BOXES]
 
     objects = torch.argmax(scores[keep_boxes][:,1:], dim=1)
@@ -376,7 +379,7 @@ def load_model(args):
     if args.net == 'vgg16':
       fasterRCNN = vgg16(classes, pretrained=False, class_agnostic=args.class_agnostic)
     elif args.net == 'res101':
-      fasterRCNN = resnet(classes, 101, pretrained=False, class_agnostic=args.class_agnostic)
+      fasterRCNN = resnet(classes, pretrained=False, class_agnostic=args.class_agnostic)
     elif args.net == 'res50':
       fasterRCNN = resnet(classes, 50, pretrained=False, class_agnostic=args.class_agnostic)
     elif args.net == 'res152':
@@ -412,18 +415,17 @@ def generate_tsv(frame_path, image_ids, args):
         if not os.path.isdir(det_path):
             os.mkdir(det_path)
         image_id = int(image_path.split("/")[-1][:-5])
-        #fpath = '/'.join(fsplit[:-2] + ['det', f'{fsplit[-1].split(".")[0]}.pk'])     
-        #if not os.path.exists(fpath):  
-        sample_info = get_detections_from_im(fasterRCNN, classes, image_path, image_id, args)
-        #    torch.save(sample_info, fpath)
+        fpath = '/'.join(fsplit[:-2] + ['det', f'{fsplit[-1].split(".")[0]}.pk'])
+        if not os.path.exists(fpath):
+            sample_info = get_detections_from_im(fasterRCNN, classes, image_path, image_id, args)
+            torch.save(sample_info, fpath)
     print("All detection features computed and saved.")
 
 if __name__ == '__main__':
     args = parse_args()
-    root_path = "../../datasets/ROS/Data/" #"../../datasets/H2O/"
     for key in ['val', 'train']:
-        frame_path = os.path.join(root_path, 'label_split', 'pose_'+key+'.txt')
+        frame_path = os.path.join(args.root_path, 'Data','label_split', 'all_activities_pose_'+key+'1.txt')
         image_ids = []
         for line in open(frame_path):
             image_ids.append(line[:-1])
-        generate_tsv(root_path, image_ids, args)
+        generate_tsv(args.root_path, image_ids, args)
