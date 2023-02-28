@@ -472,6 +472,7 @@ class VisualizationDemo_add_smoothing(object):
 
         return step_infos
 
+
     def run_on_image_smoothing_v2(self, image, current_idx):
         # this version will return the contact state, only for integration
         """
@@ -488,7 +489,6 @@ class VisualizationDemo_add_smoothing(object):
 
         # Convert image from OpenCV BGR format to Matplotlib RGB format.
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        visualizer = Visualizer(image, self.metadata, instance_mode=self.instance_mode)
         if "panoptic_seg" in predictions:
             panoptic_seg, segments_info = predictions["panoptic_seg"]
             vis_output = visualizer.draw_panoptic_seg_predictions(
@@ -510,6 +510,8 @@ class VisualizationDemo_add_smoothing(object):
                 step_infos = self.update_tracker(decoded_pred, current_idx)
                 #step_infos = None
                 if self.draw_output:
+                    visualizer = Visualizer(image, self.metadata, instance_mode=self.instance_mode)
+        
                     vis_output = visualizer.draw_instance_predictions_smoothing_v2(
                         num_instances, boxes, labels, keypoints,
                         obj_obj_contact_scores, obj_obj_contact_classes,
