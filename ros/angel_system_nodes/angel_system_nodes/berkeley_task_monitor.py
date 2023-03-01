@@ -10,7 +10,7 @@ from rclpy.node import Node
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
 
-from angel_msgs.msg import TaskGraph, TaskUpdate
+from angel_msgs.msg import TaskGraph, TaskUpdate, ObjectDetection2dSet
 from angel_msgs.srv import QueryTaskGraph
 
 from angel_system.berkeley.demo import predictor, model
@@ -63,6 +63,11 @@ class TaskMonitor(Node):
             .get_parameter_value()
             .string_value
         )
+        self._det_topic = (
+            self.declare_parameter("det_topic", "ObjectDetections")
+            .get_parameter_value()
+            .string_value
+        )
         self._draw_output = (
             self.declare_parameter("draw_output", False)
             .get_parameter_value()
@@ -103,6 +108,11 @@ class TaskMonitor(Node):
         self._task_update_publisher = self.create_publisher(
             TaskUpdate,
             self._task_state_topic,
+            1
+        )
+        self._det_publisher = self.create_publisher(
+            ObjectDetection2dSet,
+            self._det_topic,
             1
         )
         self._generated_image_publisher = self.create_publisher(
@@ -194,7 +204,12 @@ class TaskMonitor(Node):
         predictions, step_infos, visualized_output = self.demo.run_on_image_smoothing_v2(
             bgr_image, current_idx=self.idx)
 
-        # publish visualized output
+        # Publish bounding boxes
+        decoded_preds = model.decode_prediction(predictions)
+        if decoded_preds is not None:
+            self.publish_det_message(decoded_preds, image.header)
+
+        # Publish visualized output
         if self._draw_output:
             visualized_image = visualized_output.get_image()
             image_message = BRIDGE.cv2_to_imgmsg(visualized_image, encoding="rgb8")
@@ -239,11 +254,54 @@ class TaskMonitor(Node):
 
                 self.publish_task_state_message()
 
+    def publish_det_message(self, preds, image_header):
+        """
+        Forms and sends a `angel_msgs/ObjectDetection2dSet` message
+        """
+        log = self.get_logger()
+
+        message = ObjectDetection2dSet()
+
+        # Populate message header
+        message.header.stamp = self.get_clock().now().to_msg()
+        message.header.frame_id = image_header.frame_id
+        message.source_stamp = image_header.stamp
+
+        # Load bboxes
+        message.label_vec = []
+        label_confidences = []
+
+        message.left = []
+        message.right = []
+        message.top = []
+        message.bottom = []
+
+        message.label_vec = list(preds.keys())
+        message.num_detections = len(message.label_vec)
+
+        if message.num_detections == 0:
+            return message
+
+        for label, det in preds.items():
+            conf_vec = np.zeros(len(message.label_vec))
+            conf_vec[message.label_vec.index(label)] = det["confidence_score"]
+            label_confidences.append(conf_vec)
+            
+            tl_x, tl_y, br_x, br_y = det["bbox"]
+            message.left.append(tl_x)
+            message.right.append(br_x)
+            message.top.append(tl_y)
+            message.bottom.append(br_y)
+
+        message.label_confidences = np.asarray(label_confidences, dtype=np.float64).ravel().tolist()
+        
+        # Publish
+        self._det_publisher.publish(message)
+
     def publish_task_state_message(self):
         """
         Forms and sends a `angel_msgs/TaskUpdate` message to the TaskUpdates topic.
         """
-        
         log = self.get_logger()
 
         message = TaskUpdate()
