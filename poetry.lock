@@ -116,14 +116,14 @@ python-versions = "*"
 
 [[package]]
 name = "babel"
-version = "2.11.0"
+version = "2.12.1"
 description = "Internationalization utilities"
 category = "dev"
 optional = false
-python-versions = ">=3.6"
+python-versions = ">=3.7"
 
 [package.dependencies]
-pytz = ">=2015.7"
+pytz = {version = ">=2015.7", markers = "python_version < \"3.9\""}
 
 [[package]]
 name = "backcall"
@@ -132,6 +132,28 @@ description = "Specifications for callback functions passed in to an API"
 category = "dev"
 optional = false
 python-versions = "*"
+
+[[package]]
+name = "black"
+version = "22.3.0"
+description = "The uncompromising code formatter."
+category = "main"
+optional = false
+python-versions = ">=3.6.2"
+
+[package.dependencies]
+click = ">=8.0.0"
+mypy-extensions = ">=0.4.3"
+pathspec = ">=0.9.0"
+platformdirs = ">=2"
+tomli = {version = ">=1.1.0", markers = "python_version < \"3.11\""}
+typing-extensions = {version = ">=3.10.0.0", markers = "python_version < \"3.10\""}
+
+[package.extras]
+colorama = ["colorama (>=0.4.3)"]
+d = ["aiohttp (>=3.7.4)"]
+jupyter = ["ipython (>=7.8.0)", "tokenize-rt (>=3.2.0)"]
+uvloop = ["uvloop (>=0.15.2)"]
 
 [[package]]
 name = "certifi"
@@ -156,6 +178,25 @@ description = "The Real First Universal Charset Detector. Open, modern and activ
 category = "main"
 optional = false
 python-versions = "*"
+
+[[package]]
+name = "click"
+version = "8.1.3"
+description = "Composable command line interface toolkit"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+
+[package.dependencies]
+colorama = {version = "*", markers = "platform_system == \"Windows\""}
+
+[[package]]
+name = "cloudpickle"
+version = "2.2.1"
+description = "Extended pickling support for Python objects"
+category = "main"
+optional = false
+python-versions = ">=3.6"
 
 [[package]]
 name = "colorama"
@@ -338,6 +379,14 @@ ssh = ["paramiko"]
 tqdm = ["tqdm"]
 
 [[package]]
+name = "future"
+version = "0.18.3"
+description = "Clean single-source support for Python 3 and 2"
+category = "main"
+optional = false
+python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
+
+[[package]]
 name = "fvcore"
 version = "0.1.5.post20221221"
 description = "Collection of common code shared among different research projects in FAIR computer vision team"
@@ -417,7 +466,7 @@ python-versions = ">=3.5"
 
 [[package]]
 name = "imageio"
-version = "2.25.1"
+version = "2.26.0"
 description = "Library for reading and writing a wide range of image, video, scientific, and volumetric data formats."
 category = "main"
 optional = false
@@ -428,18 +477,17 @@ numpy = "*"
 pillow = ">=8.3.2"
 
 [package.extras]
-all-plugins = ["astropy", "av", "imageio-ffmpeg", "opencv-python", "psutil", "tifffile"]
+all-plugins = ["astropy", "av", "imageio-ffmpeg", "psutil", "tifffile"]
 all-plugins-pypy = ["av", "imageio-ffmpeg", "psutil", "tifffile"]
 build = ["wheel"]
 dev = ["invoke", "pytest", "pytest-cov", "fsspec", "black", "flake8"]
 docs = ["sphinx (<6)", "numpydoc", "pydata-sphinx-theme"]
 ffmpeg = ["imageio-ffmpeg", "psutil"]
 fits = ["astropy"]
-full = ["astropy", "av", "black", "flake8", "fsspec", "gdal", "imageio-ffmpeg", "invoke", "itk", "numpydoc", "opencv-python", "psutil", "pydata-sphinx-theme", "pytest", "pytest-cov", "sphinx (<6)", "tifffile", "wheel"]
+full = ["astropy", "av", "black", "flake8", "fsspec", "gdal", "imageio-ffmpeg", "invoke", "itk", "numpydoc", "psutil", "pydata-sphinx-theme", "pytest", "pytest-cov", "sphinx (<6)", "tifffile", "wheel"]
 gdal = ["gdal"]
 itk = ["itk"]
 linting = ["black", "flake8"]
-opencv = ["opencv-python"]
 pyav = ["av"]
 test = ["invoke", "pytest", "pytest-cov", "fsspec"]
 tifffile = ["tifffile"]
@@ -485,7 +533,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "flake8 (<5)", "pytest-co
 
 [[package]]
 name = "iopath"
-version = "0.1.10"
+version = "0.1.9"
 description = "A library for providing I/O abstraction."
 category = "main"
 optional = false
@@ -494,14 +542,10 @@ python-versions = ">=3.6"
 [package.dependencies]
 portalocker = "*"
 tqdm = "*"
-typing_extensions = "*"
-
-[package.extras]
-aws = ["boto3"]
 
 [[package]]
 name = "ipython"
-version = "8.10.0"
+version = "8.11.0"
 description = "IPython: Productive Interactive Computing"
 category = "dev"
 optional = false
@@ -516,7 +560,7 @@ jedi = ">=0.16"
 matplotlib-inline = "*"
 pexpect = {version = ">4.3", markers = "sys_platform != \"win32\""}
 pickleshare = "*"
-prompt-toolkit = ">=3.0.30,<3.1.0"
+prompt-toolkit = ">=3.0.30,<3.0.37 || >3.0.37,<3.1.0"
 pygments = ">=2.4.0"
 stack-data = "*"
 traitlets = ">=5"
@@ -742,7 +786,7 @@ all = ["netcdf4", "h5py"]
 
 [[package]]
 name = "more-itertools"
-version = "9.0.0"
+version = "9.1.0"
 description = "More routines for operating on iterables, beyond itertools"
 category = "main"
 optional = false
@@ -775,6 +819,14 @@ description = "multidict implementation"
 category = "main"
 optional = false
 python-versions = ">=3.7"
+
+[[package]]
+name = "mypy-extensions"
+version = "1.0.0"
+description = "Type system extensions for programs checked with the mypy type checker."
+category = "main"
+optional = false
+python-versions = ">=3.5"
 
 [[package]]
 name = "networkx"
@@ -810,6 +862,22 @@ python-versions = ">=3.6"
 [package.dependencies]
 antlr4-python3-runtime = "4.8"
 PyYAML = ">=5.1.0"
+
+[[package]]
+name = "opencv-python"
+version = "4.7.0.72"
+description = "Wrapper package for OpenCV python bindings."
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[package.dependencies]
+numpy = [
+    {version = ">=1.21.0", markers = "python_version <= \"3.9\" and platform_system == \"Darwin\" and platform_machine == \"arm64\""},
+    {version = ">=1.19.3", markers = "python_version >= \"3.6\" and platform_system == \"Linux\" and platform_machine == \"aarch64\" or python_version >= \"3.9\""},
+    {version = ">=1.17.0", markers = "python_version >= \"3.7\""},
+    {version = ">=1.17.3", markers = "python_version >= \"3.8\""},
+]
 
 [[package]]
 name = "openpyxl"
@@ -870,6 +938,14 @@ qa = ["flake8 (==3.8.3)", "mypy (==0.782)"]
 testing = ["docopt", "pytest (<6.0.0)"]
 
 [[package]]
+name = "pathspec"
+version = "0.11.0"
+description = "Utility library for gitignore style pattern matching of file paths."
+category = "main"
+optional = false
+python-versions = ">=3.7"
+
+[[package]]
 name = "pexpect"
 version = "4.8.0"
 description = "Pexpect allows easy control of interactive console applications."
@@ -905,6 +981,18 @@ optional = false
 python-versions = ">=3.6"
 
 [[package]]
+name = "platformdirs"
+version = "3.0.0"
+description = "A small Python package for determining appropriate platform-specific dirs, e.g. a \"user data dir\"."
+category = "main"
+optional = false
+python-versions = ">=3.7"
+
+[package.extras]
+docs = ["furo (>=2022.12.7)", "proselint (>=0.13)", "sphinx-autodoc-typehints (>=1.22,!=1.23.4)", "sphinx (>=6.1.3)"]
+test = ["appdirs (==1.4.4)", "covdefaults (>=2.2.2)", "pytest-cov (>=4)", "pytest-mock (>=3.10)", "pytest (>=7.2.1)"]
+
+[[package]]
 name = "portalocker"
 version = "2.7.0"
 description = "Wraps the portalocker recipe for easy usage"
@@ -922,7 +1010,7 @@ tests = ["pytest (>=5.4.1)", "pytest-cov (>=2.8.1)", "pytest-timeout (>=2.1.0)",
 
 [[package]]
 name = "prompt-toolkit"
-version = "3.0.37"
+version = "3.0.38"
 description = "Library for building powerful interactive command lines in Python"
 category = "dev"
 optional = false
@@ -971,6 +1059,18 @@ python-versions = ">=3.7"
 
 [package.dependencies]
 numpy = ">=1.16.6"
+
+[[package]]
+name = "pycocotools"
+version = "2.0.6"
+description = "Official APIs for the MS-COCO dataset"
+category = "main"
+optional = false
+python-versions = ">=3.5"
+
+[package.dependencies]
+matplotlib = ">=2.1.0"
+numpy = "*"
 
 [[package]]
 name = "pycollada"
@@ -1696,7 +1796,7 @@ python-versions = ">=3.6"
 
 [[package]]
 name = "tifffile"
-version = "2023.2.3"
+version = "2023.2.28"
 description = "Read and write TIFF files"
 category = "main"
 optional = false
@@ -1741,7 +1841,7 @@ typing-extensions = "*"
 
 [[package]]
 name = "torchmetrics"
-version = "0.11.1"
+version = "0.11.3"
 description = "PyTorch native Metrics"
 category = "main"
 optional = false
@@ -1754,15 +1854,13 @@ torch = ">=1.8.1"
 typing-extensions = {version = "*", markers = "python_version < \"3.9\""}
 
 [package.extras]
-all = ["pystoi", "pycocotools", "torchvision (>=0.8)", "lpips", "torchvision", "torch-fidelity", "scipy", "pytorch-lightning (>=1.5)", "transformers (>=4.10.0)", "nltk (>=3.6)", "tqdm (>=4.41.0)", "regex (>=2021.9.24)"]
-audio = ["pystoi"]
-detection = ["pycocotools", "torchvision (>=0.8)"]
-docs = ["sphinx-copybutton (>=0.3)", "sphinx-togglebutton (>=0.2)", "sphinx (>=4.0,<5.0)", "sphinx-paramlinks (>=0.5.1)", "pandoc (>=1.0)", "sphinx-autodoc-typehints (>=1.0)", "sphinxcontrib-mockautodoc", "docutils (>=0.16)", "nbsphinx (>=0.8)", "myst-parser", "sphinxcontrib-fulltoc (>=1.0)"]
-image = ["lpips", "torchvision", "torch-fidelity", "scipy"]
-integrate = ["pytorch-lightning (>=1.5)"]
+all = ["pystoi (<=0.3.3)", "torchvision (>=0.8)", "pycocotools (>2.0.0)", "scipy (>1.0.0)", "torch-fidelity (<=0.3.0)", "lpips (<=0.1.4)", "transformers (>=4.10.0)", "nltk (>=3.6)", "regex (>=2021.9.24)", "tqdm (>=4.41.0)"]
+audio = ["pystoi (<=0.3.3)"]
+detection = ["torchvision (>=0.8)", "pycocotools (>2.0.0)"]
+image = ["torchvision (>=0.8)", "scipy (>1.0.0)", "torch-fidelity (<=0.3.0)", "lpips (<=0.1.4)"]
 multimodal = ["transformers (>=4.10.0)"]
-test = ["fire", "types-requests", "rouge-score (>=0.0.4)", "torch-complex", "pytest-timeout", "fast-bss-eval (>=0.1.0)", "types-six", "dython", "pytest-doctestplus (>=0.9.0)", "pycocotools", "pytest-cov (>2.10)", "phmdoctest (>=1.1.1)", "cloudpickle (>=1.3)", "types-tabulate", "coverage (>5.2)", "types-pyyaml", "mypy (==0.982)", "pre-commit (>=1.0)", "scikit-learn (>1.0,<1.1.1)", "requests", "kornia (>=0.6.7)", "pytest-rerunfailures (>=10.0)", "sacrebleu (>=2.0.0)", "pypesq (>1.2)", "netcal", "types-emoji", "bert-score (==0.3.10)", "scikit-image (>0.17.1)", "huggingface-hub (<0.7)", "types-protobuf", "pytest (>=6.0.0,<7.0.0)", "types-setuptools", "jiwer (>=2.3.0)", "check-manifest", "transformers (>4.4.0)", "scipy", "mir-eval (>=0.6)", "pytorch-msssim (==0.2.1)", "pandas", "psutil"]
-text = ["nltk (>=3.6)", "tqdm (>=4.41.0)", "regex (>=2021.9.24)"]
+test = ["pandas (>1.0.0)", "mypy (==0.982)", "torch-complex (<=0.4.3)", "phmdoctest (>=1.1.1)", "pytest-doctestplus (>=0.9.0)", "rouge-score (>0.1.0)", "huggingface-hub (<0.7)", "transformers (>4.4.0)", "cloudpickle (>1.3)", "types-pyyaml", "requests (<=2.28.2)", "psutil (<=5.9.4)", "fire (<=0.5.0)", "types-tabulate", "types-requests", "fast-bss-eval (>=0.1.0)", "types-protobuf", "coverage (>5.2)", "scikit-learn (>1.0)", "pytest (>=6.0.0)", "jiwer (>=2.3.0)", "kornia (>=0.6.7)", "pytest-timeout (<=2.1.0)", "scikit-image (>0.17.1)", "dython (<=0.7.3)", "pytest-rerunfailures (>=10.0)", "types-emoji", "netcal (>1.0.0)", "pytorch-msssim (==0.2.1)", "bert-score (==0.3.13)", "pypesq (>1.2)", "types-setuptools", "scipy (>1.0.0)", "mir-eval (>=0.6)", "pytest-cov (>2.10)", "types-six", "sacrebleu (>=2.0.0)"]
+text = ["nltk (>=3.6)", "regex (>=2021.9.24)", "tqdm (>=4.41.0)"]
 
 [[package]]
 name = "torchvision"
@@ -1968,7 +2066,7 @@ multidict = ">=4.0"
 
 [[package]]
 name = "zipp"
-version = "3.14.0"
+version = "3.15.0"
 description = "Backport of pathlib-compatible object wrapper for zip files"
 category = "main"
 optional = false
@@ -1976,12 +2074,12 @@ python-versions = ">=3.7"
 
 [package.extras]
 docs = ["sphinx (>=3.5)", "jaraco.packaging (>=9)", "rst.linker (>=1.9)", "furo", "sphinx-lint", "jaraco.tidelift (>=1.4)"]
-testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "flake8 (<5)", "pytest-cov", "pytest-enabler (>=1.3)", "jaraco.itertools", "func-timeout", "jaraco.functools", "more-itertools", "pytest-black (>=0.3.7)", "pytest-mypy (>=0.9.1)", "pytest-flake8"]
+testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "flake8 (<5)", "pytest-cov", "pytest-enabler (>=1.3)", "jaraco.itertools", "jaraco.functools", "more-itertools", "big-o", "pytest-black (>=0.3.7)", "pytest-mypy (>=0.9.1)", "pytest-flake8"]
 
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8,<3.10"
-content-hash = "2200051dbe026ac7a7ac86ee931c5b5bbb0b7e2f7be63aa160719dcf17074319"
+content-hash = "cd2a048bb39923a1aba0782b8f7cdd07d62d59e2ed595e0dc710096823f5b2b3"
 
 [metadata.files]
 aiohttp = []
@@ -1996,9 +2094,12 @@ autoprop = []
 av = []
 babel = []
 backcall = []
+black = []
 certifi = []
 chardet = []
 charset-normalizer = []
+click = []
+cloudpickle = []
 colorama = []
 colorlog = []
 contourpy = []
@@ -2014,6 +2115,7 @@ executing = []
 fonttools = []
 frozenlist = []
 fsspec = []
+future = []
 fvcore = []
 glooey = []
 hmmlearn = []
@@ -2044,24 +2146,29 @@ more-itertools = []
 mpmath = []
 msgpack = []
 multidict = []
+mypy-extensions = []
 networkx = []
 numpy = []
 omegaconf = []
+opencv-python = []
 openpyxl = []
 packaging = []
 pandas = []
 parameterized = []
 parso = []
+pathspec = []
 pexpect = []
 pickleshare = []
 pillow = []
 pkgutil-resolve-name = []
+platformdirs = []
 portalocker = []
 prompt-toolkit = []
 psutil = []
 ptyprocess = []
 pure-eval = []
 pyarrow = []
+pycocotools = []
 pycollada = []
 pyglet = []
 pygments = []
