@@ -79,8 +79,6 @@ angel_msgs/TaskUpdate task_update
 # Notifications / Directives
 angel_msgs/AruiUserNotification[] notifications
 
-# Text/Audio feedback
-# - ASSUMING audio feedback in the form of speech-to-text. I don't know yet
-#   what other forms of audio dialogue feedback there are.
-string[] dialogue_text
-string[] dialogue_audio
+# Field encapsulating interpreted user intents that we want confirmed by the user.
+# These likely have some confidence less than
+angel_msgs/InterpretedAudioUserIntent[] intents_for_confirmation

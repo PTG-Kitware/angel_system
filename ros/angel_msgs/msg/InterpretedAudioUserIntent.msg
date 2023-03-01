@@ -1,0 +1,20 @@
+#
+# Message communicating an interpreted User Intent from an audio-based user
+# utterance.
+#
+
+# numerical identifier of this utterance intent deduction
+uint64 id
+
+# Speech-to-text of the user utterance we have interpreted
+string utterance_text
+
+# Canonical user intent that has been interpreted. "Canonical" in this context
+# is to mean that this string may be used as an identifier of this type of
+# user intent.
+string user_intent
+
+# Confidence we think this intent was targetted at the ANGEL system.
+# Should be in the range [0,1] where 1.0 means absolute confidence the target is the ANGEL
+# system and 0.0 is absolute confidence the target IS NOT the ANGEL system.
+float64 confidence

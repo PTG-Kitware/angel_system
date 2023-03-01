@@ -33,10 +33,12 @@ set( message_files
   msg/HandJointPosesUpdate.msg
   msg/HeadsetAudioData.msg
   msg/HeadsetPoseData.msg
+  msg/InterpretedAudioUserIntent.msg
   msg/ObjectDetection2d.msg
   msg/ObjectDetection2dSet.msg
   msg/ObjectDetection3dSet.msg
   msg/SpatialMesh.msg
+  msg/SystemCommands.msg
   msg/TaskGraph.msg
   msg/TaskItem.msg
   msg/TaskNode.msg
