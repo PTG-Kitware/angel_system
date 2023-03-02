@@ -1,9 +1,9 @@
 // Create a listener for error notifications
-$.get( "/ns")
-.done(function( data ){
+$.get( "/topics")
+.done(function( topics ){
     var error_listener = new ROSLIB.Topic({
         ros : ros,
-        name : data.namespace + '/TaskErrors',
+        name : topics.namespace + '/' + topics.task_errors_topic,
         messageType : 'angel_msgs/msg/AruiUserNotification' // find: $ ros2 topic type <>
     });
 
