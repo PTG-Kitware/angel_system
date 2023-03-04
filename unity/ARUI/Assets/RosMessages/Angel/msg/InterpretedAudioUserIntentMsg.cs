@@ -17,8 +17,10 @@ namespace RosMessageTypes.Angel
         //  Message communicating an interpreted User Intent from an audio-based user
         //  utterance.
         // 
-        //  numerical identifier of this utterance intent deduction
-        public ulong id;
+        //  The header primarily encapsulates when this message was emitted.
+        //  The time component of this may be utilized as an identifier for this user
+        //  intent and utterance.
+        public Std.HeaderMsg header;
         //  Speech-to-text of the user utterance we have interpreted
         public string utterance_text;
         //  Canonical user intent that has been interpreted. "Canonical" in this context
@@ -32,15 +34,15 @@ namespace RosMessageTypes.Angel
 
         public InterpretedAudioUserIntentMsg()
         {
-            this.id = 0;
+            this.header = new Std.HeaderMsg();
             this.utterance_text = "";
             this.user_intent = "";
             this.confidence = 0.0;
         }
 
-        public InterpretedAudioUserIntentMsg(ulong id, string utterance_text, string user_intent, double confidence)
+        public InterpretedAudioUserIntentMsg(Std.HeaderMsg header, string utterance_text, string user_intent, double confidence)
         {
-            this.id = id;
+            this.header = header;
             this.utterance_text = utterance_text;
             this.user_intent = user_intent;
             this.confidence = confidence;
@@ -50,7 +52,7 @@ namespace RosMessageTypes.Angel
 
         private InterpretedAudioUserIntentMsg(MessageDeserializer deserializer)
         {
-            deserializer.Read(out this.id);
+            this.header = Std.HeaderMsg.Deserialize(deserializer);
             deserializer.Read(out this.utterance_text);
             deserializer.Read(out this.user_intent);
             deserializer.Read(out this.confidence);
@@ -58,7 +60,7 @@ namespace RosMessageTypes.Angel
 
         public override void SerializeTo(MessageSerializer serializer)
         {
-            serializer.Write(this.id);
+            serializer.Write(this.header);
             serializer.Write(this.utterance_text);
             serializer.Write(this.user_intent);
             serializer.Write(this.confidence);
@@ -67,7 +69,7 @@ namespace RosMessageTypes.Angel
         public override string ToString()
         {
             return "InterpretedAudioUserIntentMsg: " +
-            "\nid: " + id.ToString() +
+            "\nheader: " + header.ToString() +
             "\nutterance_text: " + utterance_text.ToString() +
             "\nuser_intent: " + user_intent.ToString() +
             "\nconfidence: " + confidence.ToString();
