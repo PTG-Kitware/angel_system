@@ -1,6 +1,4 @@
 using DilmerGames.Core.Singletons;
-using System;
-using Unity.Robotics.ROSTCPConnector.MessageGeneration;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -13,8 +11,15 @@ public class AngelARUI : Singleton<AngelARUI>
     }
 
     ///****** Debug Settings
-    private bool showARUIDebugMessages = true;      /// <If true, ARUI debug messages are shown in the unity console and scene Logger (if available)
-    private bool showEyeGazeTarget = false;         /// <If true, the eye gaze target is shown if the eye ray hits UI elements (white small cube)
+    private bool showARUIDebugMessages = true; /// <If true, ARUI debug messages are shown in the unity console and scene Logger (if available)
+    private bool showEyeGazeTarget = true; /// <If true, the eye gaze target is shown if the eye ray hits UI elements (white small cube)
+
+    ///****** Guidance Settings
+    private bool useViewManagement = true; /// <If true, the ARUI avoids placing UI eleements in front of salient regions 
+    public bool IsVMActiv
+    {
+        get { return useViewManagement; }
+    }
 
     [Tooltip("Set a custom Skip Notification Message. Can not be empty.")]
     public string SkipNotificationMessage = "You are skipping the current task:";
@@ -22,7 +27,7 @@ public class AngelARUI : Singleton<AngelARUI>
     ///****** Confirmation Dialogue 
     private UnityAction onUserIntentConfirmedAction = null;     /// <Action invoked if the user accepts the confirmation dialogue
     private ConfirmationDialogue confirmationWindow = null;     /// <Reference to confirmation dialogue
-    private GameObject confirmationWindowPrefab = null;         /// <Confirmation Dialogue prefab
+    private GameObject confirmationWindowPrefab = null;
 
     private void Awake()
     {
@@ -42,12 +47,17 @@ public class AngelARUI : Singleton<AngelARUI>
         orb.transform.parent = transform;
         orb.AddComponent<Orb>();
 
+        //Start View Management, if enabled
+        if (useViewManagement)
+            ARCamera.gameObject.AddComponent<ViewManagement>();
+
         //Instantiate empty tasklist
         GameObject taskListPrefab = Instantiate(Resources.Load(StringResources.taskList_path)) as GameObject;
         taskListPrefab.AddComponent<TaskListManager>();
 
         //Load resources for UI elements
         confirmationWindowPrefab = Resources.Load(StringResources.confNotification_path) as GameObject;
+
     }
 
     #region Task Guidance
@@ -91,6 +101,27 @@ public class AngelARUI : Singleton<AngelARUI>
     /// <param name="mute">if true, the user will hear the tasks, in addition to text.</param>
     public void MuteAudio(bool mute) => AudioManager.Instance.MuteAudio(mute);
 
+    /// <summary>
+    /// Enable or disable view management. enabled by default 
+    /// </summary>
+    /// <param name="enabled"></param>
+    public void SetViewManagement(bool enabled)
+    {
+        if (useViewManagement != enabled)
+        {
+            if (enabled)
+            {
+                ARCamera.gameObject.AddComponent<ViewManagement>();
+                useViewManagement = enabled;
+            }
+            else if (ARCamera.GetComponent<ViewManagement>() != null)
+            {
+                Destroy(ARCamera.GetComponent<ViewManagement>());
+                useViewManagement = enabled;
+            }
+        }
+    }
+
     #endregion
 
     #region Notifications
@@ -120,7 +151,7 @@ public class AngelARUI : Singleton<AngelARUI>
     /// <param name="show">if true, the orb will show a skip notification, if false, the notification will disappear</param>
     public void ShowSkipNotification(bool show)
     {
-        if (TaskListManager.Instance.GetTaskCount() <= 0 || TaskListManager.Instance.IsDone()) return;
+        if (TaskListManager.Instance.GetTaskCount() <= 0 || TaskListManager.Instance.IsDone) return;
 
         if (show)
         {
@@ -168,5 +199,4 @@ public class AngelARUI : Singleton<AngelARUI>
     }
 
     #endregion
-
 }

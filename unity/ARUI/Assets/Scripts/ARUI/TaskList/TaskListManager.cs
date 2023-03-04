@@ -6,7 +6,6 @@ using System;
 using Microsoft.MixedReality.Toolkit;
 using UnityEngine.UI;
 using Shapes;
-using System.Diagnostics.Eventing.Reader;
 
 /// <summary>
 /// Represents the task list in 3D
@@ -60,6 +59,7 @@ public class TaskListManager : Singleton<TaskListManager>
     private Shapes.Line dragHandle;
 
     private bool isDone = false;
+    public bool IsDone { get { return isDone; } }
 
     /// <summary>
     /// Initialize all components of the task list and get all references from the task list prefab
@@ -561,7 +561,5 @@ public class TaskListManager : Singleton<TaskListManager>
 
     public void SetAllTasksDone() => SetCurrentTask(GetTaskCount() + 2);
 
-    public bool IsDone() => isDone;
-    
     #endregion
 }

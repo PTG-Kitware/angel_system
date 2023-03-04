@@ -18,10 +18,14 @@ public static class StringResources
     public static string taskList_path = "Prefabs/ARUI/TasklistContainer";
     public static string taskprefab_path = "Prefabs/ARUI/Task";
     public static string eyeTarget_path = "Prefabs/ARUI/EyeTarget";
+    public static string annotation_path = "Prefabs/ARUI/Annotation";
     public static string confNotification_path = "Prefabs/ARUI/ConfirmationNotification";
 
     //icons
     public static string idle_orb_path = "Icons/Flat Icons [Free]/Free Flat Gradient Circle Icon";
     public static string listening_orb_path = "Icons/Flat Icons [Free]/Free Flat Mic Icon";
+
+    public static string zBufferTexture_path = "Textures/zBuffer";
+    
 
 }

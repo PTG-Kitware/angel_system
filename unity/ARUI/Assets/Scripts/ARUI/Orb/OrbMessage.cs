@@ -3,15 +3,14 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using System.Threading.Tasks;
-using System;
 
 /// <summary>
 /// Represents the message container next to the orb
 /// </summary>
 public class OrbMessage : MonoBehaviour
 {
-    public enum MessageAnchor{
+    public enum MessageAnchor
+    {
         left = 1, //message is left from the orb
         right = 2, //message is right from the orb
     }
@@ -72,7 +71,7 @@ public class OrbMessage : MonoBehaviour
     {
         textContainer = transform.GetChild(1).gameObject.AddComponent<FlexibleTextContainer>();
         textContainer.gameObject.name += "_orb";
-        
+
         TMPro.TextMeshProUGUI[] allText = textContainer.GetAllTextMeshComponents();
 
         progressText = allText[1].gameObject.GetComponent<TMPro.TextMeshProUGUI>();
@@ -105,7 +104,7 @@ public class OrbMessage : MonoBehaviour
 
         notificationMessageRect.sizeDelta = new Vector2(textContainer.TextRect.width / 2, notificationMessageRect.rect.height);
 
-        if (!(isMessageVisible && GetIsActive()) || messageIsLerping ) return;
+        if (!(isMessageVisible && GetIsActive()) || messageIsLerping) return;
 
         // Update messagebox anchor
         if (ChangeMessageBoxToRight(100))
@@ -131,7 +130,7 @@ public class OrbMessage : MonoBehaviour
             StopCoroutine(FadeOutMessage());
             isMessageFading = false;
             textContainer.SetBackgroundColor(activeColorBG);
-            
+
             SetTextAlpha(1f);
         }
     }
@@ -212,7 +211,7 @@ public class OrbMessage : MonoBehaviour
     /// <param name="MessageAnchor">The new anchor</param>
     public void UpdateAnchorLerp(MessageAnchor newMessageAnchor)
     {
-        if (messageIsLerping) return; 
+        if (messageIsLerping) return;
 
         if (newMessageAnchor != currentAnchor)
         {
@@ -253,7 +252,8 @@ public class OrbMessage : MonoBehaviour
         {
             indicator.transform.localPosition = new Vector3(initialIndicatorPos.x, 0, 0);
             indicator.transform.localRotation = Quaternion.identity;
-        } else
+        }
+        else
         {
             indicator.transform.localPosition = new Vector3(-initialIndicatorPos.x, 0, 0);
             indicator.transform.localRotation = Quaternion.Euler(0, 180, 0);
@@ -296,9 +296,9 @@ public class OrbMessage : MonoBehaviour
         while (step < 1)
         {
             if (isLeft)
-                YOffset = -initialYOffset-textContainer.MessageCollider.size.x;
+                YOffset = -initialYOffset - textContainer.MessageCollider.size.x;
 
-            textContainer.transform.localPosition = Vector2.Lerp(textContainer.transform.localPosition, new Vector3(YOffset,0,0), step += Time.deltaTime);
+            textContainer.transform.localPosition = Vector2.Lerp(textContainer.transform.localPosition, new Vector3(YOffset, 0, 0), step += Time.deltaTime);
             step += Time.deltaTime;
             yield return new WaitForEndOfFrame();
         }
@@ -354,9 +354,11 @@ public class OrbMessage : MonoBehaviour
         textContainer.SetText(message);
         progressText.text = TaskListManager.Instance.GetCurrentTaskID() + "/" + TaskListManager.Instance.GetTaskCount();
 
-        if (message.Contains("Done") ){
+        if (message.Contains("Done"))
+        {
             progressText.gameObject.SetActive(false);
-        } else
+        }
+        else
         {
             progressText.gameObject.SetActive(true);
         }

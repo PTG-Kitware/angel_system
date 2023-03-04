@@ -1,87 +1,140 @@
-using DilmerGames.Core.Singletons;
 using Microsoft.MixedReality.Toolkit;
 using Microsoft.MixedReality.Toolkit.Input;
-using Microsoft.MixedReality.Toolkit.UI;
-using System;
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
-public class TestData : MonoBehaviour
+public class TestData : MonoBehaviour, IMixedRealitySpeechHandler
 {
+    //string[,] tasks =
+    //{
+    //    {"0", "Measure 12 ounces of water in the liquid measuring cup"},
+    //    {"1", "Pour the water from the liquid measuring cup into  the electric kettle"},
+    //    {"1", "Turn on the electric kettle by pushing the button underneath the handle"},
+    //    {"1", "Boil the water. The water is done boiling when the button underneath the handle pops up"},
+    //    {"1", "While the water is boiling, assemble the filter cone. Place the dripper on top of a coffee mug"}, //4
+    //    {"0", "Prepare the filter insert by folding the paper filter in half to create a semi-circle, and in half again to create a quarter-circle. Place the paper filter in the dripper and spread open to create a cone."},
+    //    {"1", "Take the coffee filter and fold it in half to create a semi-circle"},
+    //    {"1", "Folder the filter in half again to create a quarter-circle"},
+    //    {"1", "Place the folded filter into the dripper such that the the point of the quarter-circle rests in the center of the dripper"},
+    //    {"1", "Spread the filter open to create a cone inside the dripper"},
+    //    {"0", "Place the dripper on top of the mug"},//10
+    //    {"0","Weigh the coffee beans and grind until the coffee grounds are the consistency of coarse sand, about 20 seconds. Transfer the grounds to the filter cone."},
+    //    {"1","Turn on the kitchen scale"},
+    //     {"0"," Turn on the thermometer"},
+    //     {"1"," Place the end of the thermometer into the water. The temperature should read 195-205 degrees Fahrenheit or between 91-96 degrees Celsius."},
+    //     {"0","Pour the water over the coffee grounds"},
+    //     {"0","Clean up the paper filter and coffee grounds"}, //16
+    //};
+
+    //string[,] tasks =
+    //{
+    //    {"0", "Place the botton bun in the center of the plate."}, //4
+    //    {"0", "Put the cheesy meat patty on top of the botton bun."}, //4
+    //    {"0", "Add the lettuce on top of the cheese." },
+    //    {"0", "Place two red tomatoes on top or next to the lettuce."},
+    //    {"0", "Place the sourdough top bun on top of the vegetables."},
+    //};
+
     string[,] tasks =
     {
-        {"0", "Measure 12 ounces of water in the liquid measuring cup"},
-        {"1", "Pour the water from the liquid measuring cup into  the electric kettle"},
-        {"1", "Turn on the electric kettle by pushing the button underneath the handle"},
-        {"1", "Boil the water. The water is done boiling when the button underneath the handle pops up"},
-        {"1", "While the water is boiling, assemble the filter cone. Place the dripper on top of a coffee mug"}, //4
-        {"0", "Prepare the filter insert by folding the paper filter in half to create a semi-circle, and in half again to create a quarter-circle. Place the paper filter in the dripper and spread open to create a cone."},
-        {"1", "Take the coffee filter and fold it in half to create a semi-circle"},
-        {"1", "Folder the filter in half again to create a quarter-circle"},
-        {"1", "Place the folded filter into the dripper such that the the point of the quarter-circle rests in the center of the dripper"},
-        {"1", "Spread the filter open to create a cone inside the dripper"},
-        {"0", "Place the dripper on top of the mug"},//10
-        {"0","Weigh the coffee beans and grind until the coffee grounds are the consistency of coarse sand, about 20 seconds. Transfer the grounds to the filter cone."},
-        {"1","Turn on the kitchen scale"},
-         {"0"," Turn on the thermometer"},
-         {"1"," Place the end of the thermometer into the water. The temperature should read 195-205 degrees Fahrenheit or between 91-96 degrees Celsius."},
-         {"0","Pour the water over the coffee grounds"},
-         {"0","Clean up the paper filter and coffee grounds"}, //16
+        {"0", "Place tortilla on cutting board."},
+        {"0", "Use a butter knife to scoop about a tablespoon of nut butter from the jar."},
+        {"1", "Spread nut butter onto tortilla, leaving 1/2-inch uncovered at the edges."},
+        {"0", "Clean the knife by wiping with a paper towel."},
+        {"0", "Use the knife to scoop about a tablespoon of jelly from the jar."},
+        {"1", "Spread jelly over the nut butter."}, //4
+        {"1", "Clean the knife by wiping with a paper towel."}, 
+        {"0", "Roll the tortilla from one end to the other into a log shape, about 1.5 inches thick. Roll it tight enough to prevent gaps, but not so tight that the filling leaks."},
+        {"0", "Secure the rolled tortilla by inserting 5 toothpicks about 1 inch apart."},
+        {"0", "Trim the ends of the tortilla roll with the butter knife, leaving 1?2 inch margin between the last toothpick and the end of the roll. Discard ends."},
+        {"0", "Slide floss under the tortilla, perpendicular to the length of the roll.Place the floss halfway between two toothpicks."},
+        {"0", "Cross the two ends of the floss over the top of the tortilla roll." },
+        {"1", "Holding one end of the floss in each hand, pull the floss ends in opposite directions to slice."},
+        {"0", "Continue slicing with floss to create 5 pinwheels."},//12
     };
 
     private int currentTask = 0;
 
     private void Start()
     {
-        StartCoroutine(RunTasksAtRuntime());
+        CoreServices.InputSystem?.RegisterHandler<IMixedRealitySpeechHandler>(this);
+        //StartCoroutine(RunTasksAtRuntime());
     }
 
-    private IEnumerator RunTasksAtRuntime()
+    //private IEnumerator RunTasksAtRuntime()
+    //{
+    //    yield return new WaitForSeconds(1f);
+
+    //    AngelARUI.Instance.SetTasks(tasks);
+
+    //    yield return new WaitForSeconds(3f);
+    //    currentTask++;
+    //    AngelARUI.Instance.SetCurrentTaskID(currentTask);
+
+    //    yield return new WaitForSeconds(2f);
+    //    currentTask++;
+    //    AngelARUI.Instance.SetCurrentTaskID(currentTask);
+
+    //    yield return new WaitForSeconds(4f);
+    //    currentTask++;
+    //    AngelARUI.Instance.SetCurrentTaskID(currentTask);
+
+    //    yield return new WaitForSeconds(2f);
+    //    currentTask--;
+    //    AngelARUI.Instance.SetCurrentTaskID(currentTask);
+
+    //    yield return new WaitForSeconds(3f);
+    //    currentTask++;
+    //    AngelARUI.Instance.SetCurrentTaskID(currentTask);
+
+    //    yield return new WaitForSeconds(3f);
+    //    AngelARUI.Instance.ShowSkipNotification(true);
+
+    //    yield return new WaitForSeconds(3f);
+    //    currentTask++;
+    //    AngelARUI.Instance.SetCurrentTaskID(currentTask);
+
+    //    yield return new WaitForSeconds(2f);
+    //    AngelARUI.Instance.SetUserIntentCallback(() => { AngelARUI.Instance.LogDebugMessage("The user confirmed the dialogue", true); });
+    //    AngelARUI.Instance.TryGetUserFeedbackOnUserIntent("Do you want to go to the next task?");
+
+    //    yield return new WaitForSeconds(10f);
+    //    AngelARUI.Instance.SetUserIntentCallback(() => { AngelARUI.Instance.LogDebugMessage("The user confirmed the dialogue", true); });
+    //    AngelARUI.Instance.TryGetUserFeedbackOnUserIntent("Do you need more information about the current task?");
+
+    //}
+
+    public void OnSpeechKeywordRecognized(SpeechEventData eventData)
     {
-        AngelARUI.Instance.MuteAudio(false);
+        Debug.Log(eventData.Command.Keyword.ToLower());
+        if (eventData.Command.Keyword.ToLower().Equals("step"))
+        {
+            AngelARUI.Instance.SetUserIntentCallback(() => { AngelARUI.Instance.SetCurrentTaskID(currentTask++); });
+            AngelARUI.Instance.TryGetUserFeedbackOnUserIntent("Do you want to go to the next task?");
+        }
 
-        yield return new WaitForSeconds(3f);
-        AngelARUI.Instance.SetTasks(tasks);
+        else if (eventData.Command.Keyword.ToLower().Equals("skip"))
+        {
+            AngelARUI.Instance.ShowSkipNotification(true);
+        }
 
-        yield return new WaitForSeconds(3f);
-        currentTask++;
+        else if (eventData.Command.Keyword.ToLower().Equals("mute"))
+        {
+            AngelARUI.Instance.MuteAudio(!AudioManager.Instance.IsMute);
+        }
+
+        else if (eventData.Command.Keyword.ToLower().Equals("lock"))
+        {
+
+            AngelARUI.Instance.SetViewManagement(!AngelARUI.Instance.IsVMActiv);
+        }
+        else if (eventData.Command.Keyword.ToLower().Equals("back"))
+        {
+            AngelARUI.Instance.SetUserIntentCallback(() => { AngelARUI.Instance.SetCurrentTaskID(currentTask--); });
+            AngelARUI.Instance.TryGetUserFeedbackOnUserIntent("Do you want to go to the previous task?");
+        }
+
         AngelARUI.Instance.SetCurrentTaskID(currentTask);
-
-        yield return new WaitForSeconds(2f);
-        currentTask++;
-        AngelARUI.Instance.SetCurrentTaskID(currentTask);
-
-        yield return new WaitForSeconds(4f);
-        currentTask++;
-        AngelARUI.Instance.SetCurrentTaskID(currentTask);
-
-        AngelARUI.Instance.MuteAudio(true);
-
-        yield return new WaitForSeconds(2f);
-        currentTask--;
-        AngelARUI.Instance.SetCurrentTaskID(currentTask);
-
-        yield return new WaitForSeconds(3f);
-        currentTask++;
-        AngelARUI.Instance.SetCurrentTaskID(currentTask);
-
-        AngelARUI.Instance.MuteAudio(false);
-
-        yield return new WaitForSeconds(3f);
-        AngelARUI.Instance.ShowSkipNotification(true);
-
-        yield return new WaitForSeconds(5f);
-        currentTask++;
-        AngelARUI.Instance.SetCurrentTaskID(currentTask);
-
-        yield return new WaitForSeconds(2f);
-        AngelARUI.Instance.SetUserIntentCallback(() => { AngelARUI.Instance.LogDebugMessage("The user confirmed the dialogue", true); });
-        AngelARUI.Instance.TryGetUserFeedbackOnUserIntent("Do you need more information about the current task?");
-
-        yield return new WaitForSeconds(10f);
-        AngelARUI.Instance.SetUserIntentCallback(() => { AngelARUI.Instance.LogDebugMessage("The user confirmed the dialogue", true); });
-        AngelARUI.Instance.TryGetUserFeedbackOnUserIntent("Do you need more information about the current task?");
     }
 
 #if UNITY_EDITOR
@@ -98,8 +151,9 @@ public class TestData : MonoBehaviour
 
         if (Input.GetKeyUp(KeyCode.P))
         {
-            AngelARUI.Instance.SetUserIntentCallback(() => { AngelARUI.Instance.LogDebugMessage("The user confirmed the dialogue", true);  });
-            AngelARUI.Instance.TryGetUserFeedbackOnUserIntent("Do you need more information about the current task?");
+            int next = currentTask++;
+            AngelARUI.Instance.SetUserIntentCallback(() => { AngelARUI.Instance.SetCurrentTaskID(next); });
+            AngelARUI.Instance.TryGetUserFeedbackOnUserIntent("Do you want to go to the next task?");
         }
 
         if (Input.GetKeyUp(KeyCode.RightArrow))
@@ -113,10 +167,10 @@ public class TestData : MonoBehaviour
             AngelARUI.Instance.SetCurrentTaskID(currentTask);
         }
         
-        if (Input.GetKeyUp(KeyCode.Space))
-        {
-            AngelARUI.Instance.ToggleTasklist();
-        }
+        //if (Input.GetKeyUp(KeyCode.Space))
+        //{
+        //    AngelARUI.Instance.ToggleTasklist();
+        //}
 
         if (Input.GetKeyUp(KeyCode.R))
         {
@@ -133,7 +187,9 @@ public class TestData : MonoBehaviour
         {
             AngelARUI.Instance.ShowSkipNotification(false);
         }
+
     }
-    
+
+
 #endif
 }

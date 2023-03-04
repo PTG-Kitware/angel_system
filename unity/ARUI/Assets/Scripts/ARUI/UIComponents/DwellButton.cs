@@ -1,7 +1,6 @@
 ﻿using Microsoft.MixedReality.Toolkit;
 using System;
 using System.Collections;
-using System.Diagnostics.Eventing.Reader;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -13,7 +12,7 @@ public enum DwellButtonType
 
 public class DwellButton : MonoBehaviour
 {
-    private bool isLookingAtBtn = false;
+    public bool IsLookingAtBtn = false;
 
     private float dwellSeconds = 4f;
     private DwellButtonType type = DwellButtonType.Toggle;
@@ -59,20 +58,20 @@ public class DwellButton : MonoBehaviour
 
     private void CurrentlyLooking(bool looking)
     {
-        if (looking&&!isLookingAtBtn)
+        if (looking&&!IsLookingAtBtn)
         {
-            isLookingAtBtn = true;
+            IsLookingAtBtn = true;
             StartCoroutine(Dwelling());
         }  
 
         if (!looking)
         {
-            isLookingAtBtn = false;
+            IsLookingAtBtn = false;
             StopCoroutine(Dwelling());
             btnBGMat.color = baseColor;
         }
 
-        isLookingAtBtn = looking;
+        IsLookingAtBtn = looking;
     }
     
     private IEnumerator Dwelling()
@@ -85,7 +84,7 @@ public class DwellButton : MonoBehaviour
         float duration = 6.24f/dwellSeconds; //full circle in radians
 
         float elapsed = 0f;
-        while (isLookingAtBtn && elapsed < duration)
+        while (IsLookingAtBtn && elapsed < duration)
         {
             if (CoreServices.InputSystem.EyeGazeProvider.GazeTarget == null)
                 break;
@@ -94,7 +93,7 @@ public class DwellButton : MonoBehaviour
             loadingDisc.AngRadiansEnd = elapsed* dwellSeconds;
             loadingDisc.Color = Color.white;
 
-            if (elapsed>duration && isLookingAtBtn)
+            if (elapsed>duration && IsLookingAtBtn)
                 success = true;
 
             yield return null;
@@ -113,7 +112,7 @@ public class DwellButton : MonoBehaviour
 
     #region Getter and Setter 
 
-    public bool GetIsLookingAtBtn() => isLookingAtBtn;
+    public bool GetIsLookingAtBtn() => IsLookingAtBtn;
 
     public void SetDwellButtonType(DwellButtonType type) => this.type = type;
 

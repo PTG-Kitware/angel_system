@@ -1,13 +1,9 @@
 using DilmerGames.Core.Singletons;
-using Microsoft.MixedReality.Toolkit;
 using Microsoft.MixedReality.Toolkit.Input;
 using System;
 using System.Collections;
-using System.Diagnostics.Eventing.Reader;
-using TMPro;
+using System.Linq;
 using UnityEngine;
-using UnityEngine.Events;
-using static UnityEngine.Timeline.TimelineAsset;
 
 /// <summary>
 /// Represents a virtual assistant, guiding the user through a sequence of tasks
@@ -19,16 +15,21 @@ public class Orb : Singleton<Orb>
     private OrbGrabbable grabbable;
     private OrbMessage messageContainer;
     private DwellButton taskListbutton;
+    private MainMenu mainMenu;
 
     //Placement behaviors
     private OrbFollowerSolver followSolver;
+   
+
+    private BoxCollider faceCollider;
+    public BoxCollider FaceCollider
+    {
+        get { return faceCollider; }
+    }
 
     //Flags
     private bool isLookingAtOrb = false;
-    public bool IsLookingAtOrb
-    {
-        get { return isLookingAtOrb || messageContainer.IsLookingAtMessage; }
-    }
+
     public bool IsDragging
     {
         get { return grabbable.IsDragging; }
@@ -58,8 +59,13 @@ public class Orb : Singleton<Orb>
         GameObject taskListbtn = transform.GetChild(0).GetChild(2).gameObject;
         taskListbutton = taskListbtn.AddComponent<DwellButton>();
         taskListbutton.gameObject.name += "FacetasklistButton";
-        taskListbutton.InitializeButton(EyeTarget.orbtasklistButton ,() => TaskListManager.Instance.ToggleTasklist());
+        taskListbutton.InitializeButton(EyeTarget.orbtasklistButton, () => TaskListManager.Instance.ToggleTasklist());
         taskListbtn.SetActive(false);
+
+        faceCollider = transform.GetChild(0).GetComponent<BoxCollider>();
+
+        mainMenu = GetComponentInChildren<MainMenu>();
+        mainMenu.gameObject.SetActive(false);
     }
 
     private void Update()
@@ -70,45 +76,65 @@ public class Orb : Singleton<Orb>
         else if (!isLookingAtOrb && FollowEyeTarget.Instance.currentHit == EyeTarget.orbFace)
             SetIsLookingAtFace(true);
 
-        if (messageContainer.UserHasNotSeenNewTask && (messageContainer.IsLookingAtMessage || IsLookingAtOrb)) 
+        if (messageContainer.UserHasNotSeenNewTask && IsLookingAtOrb(false)) 
             face.SetNotificationIconActive(false);
 
         UpdateOrbVisibility();
-
-        if (!taskListbutton.GetIsLookingAtBtn() && TaskListManager.Instance.GetIsTaskListActive())
-            taskListbutton.SetSelected(true);
-        else if (!taskListbutton.GetIsLookingAtBtn() && !TaskListManager.Instance.GetIsTaskListActive())
-            taskListbutton.SetSelected(false);
     }
 
 
     #region Visibility, Position Updates and eye/collision event handler
 
     /// <summary>
-    /// luminance-based view management
+    /// View management
     /// Update the visibility of the orb message based on eye gaze collisions with the orb collider 
     /// </summary>
     private void UpdateOrbVisibility()
     {
         if (messageContainer.UserHasNotSeenNewTask) return;
 
-        //Debug.Log(IsLookingAtOrb + ", " + messageContainer.isMessageVisible + ", " + messageContainer.isMessageFading); 
-        if ((IsLookingAtOrb && !messageContainer.IsMessageVisible && !messageContainer.IsMessageFading))
-        { //Set the message visible!
-            messageContainer.SetIsActive(true, false);
-        } else if (!messageContainer.IsLookingAtMessage && !IsLookingAtOrb && followSolver.IsOutOfFOV){
-            messageContainer.SetIsActive(false, false);
-        }
-        else if ((messageContainer.IsLookingAtMessage || IsLookingAtOrb) && messageContainer.IsMessageVisible && messageContainer.IsMessageFading)
-        { //Stop Fading, set the message visible
-            messageContainer.SetFadeOutMessage(false);
-        }
-        else if (!IsLookingAtOrb && messageContainer.IsMessageVisible && !messageContainer.IsMessageFading 
-            && !messageContainer.IsLookingAtMessage && !messageContainer.UserHasNotSeenNewTask && !messageContainer.IsNotificationActive)
-        { //Start Fading
-            messageContainer.SetFadeOutMessage(true);
-        }
+        if (TaskListManager.Instance.GetTaskCount() != 0)
+        {
+            if ((IsLookingAtOrb(false) && !messageContainer.IsMessageVisible && !messageContainer.IsMessageFading))
+            { //Set the message visible!
+                messageContainer.SetIsActive(true, false);
+            }
+            else if (!messageContainer.IsLookingAtMessage && !IsLookingAtOrb(false) && followSolver.IsOutOfFOV)
+            {
+                messageContainer.SetIsActive(false, false);
+            }
+            else if ((messageContainer.IsLookingAtMessage || IsLookingAtOrb(false)) && messageContainer.IsMessageVisible && messageContainer.IsMessageFading)
+            { //Stop Fading, set the message visible
+                messageContainer.SetFadeOutMessage(false);
+            }
+            else if (!IsLookingAtOrb(false) && messageContainer.IsMessageVisible && !messageContainer.IsMessageFading
+                && !messageContainer.IsLookingAtMessage && !messageContainer.UserHasNotSeenNewTask && !messageContainer.IsNotificationActive)
+            { //Start Fading
+                messageContainer.SetFadeOutMessage(true);
+            }
+        } 
+        
+        //else if (TaskListManager.Instance.ShowCookbook())
+        //{
+        //    if (!IsLookingAtOrb(true) && mainMenu.gameObject.activeSelf && !mainMenu.isFading)
+        //    {
+        //        StartCoroutine(LazyMenuFade());
+        //    }
+        //    else if (IsLookingAtOrb(true) && !mainMenu.gameObject.activeSelf)
+        //        mainMenu.gameObject.SetActive(true);
+        //}
+
     }
+
+    //private IEnumerator LazyMenuFade()
+    //{
+    //    mainMenu.isFading = true;
+    //    yield return new WaitForSeconds(1f);
+    //    if (!IsLookingAtOrb(true))
+    //        mainMenu.gameObject.SetActive(false);
+
+    //    mainMenu.isFading = false;
+    //}
 
     /// <summary>
     /// If the user drags the orb, the orb will stay in place until it will be out of FOV
@@ -249,17 +275,13 @@ public class Orb : Singleton<Orb>
     /// <summary>
     /// Access to collider of orb (including task message)
     /// </summary>
-    /// <param name="collider"></param>
-    /// <returns></returns>
-    public bool GetCurrentMessageCollider(ref BoxCollider collider)
+    /// <returns>The box collider of the orb message, if the message is not active, returns null</returns>
+    public BoxCollider GetCurrentMessageCollider()
     {
-        if (messageContainer.GetIsActive() && messageContainer.IsMessageVisible)
-        {
-            collider = messageContainer.GetMessageCollider();
-            return true;
-        }
+        if (messageContainer.GetIsActive())
+            return messageContainer.GetMessageCollider();
         else
-            return false;
+            return null;
     }
 
     /// <summary>
@@ -267,12 +289,16 @@ public class Orb : Singleton<Orb>
     /// </summary>
     /// <param name="isHovering"></param>
     public void SetNearHover(bool isHovering) => face.SetDraggableHandle(isHovering);
-    
+
     /// <summary>
     /// Change the visibility of the tasklist button
     /// </summary>
     /// <param name="isActive"></param>
-    public void SetTaskListButtonActive(bool isActive) => taskListbutton.gameObject.SetActive(isActive);
+    public void SetTaskListButtonActive(bool isActive)
+    {
+        //mainMenu.gameObject.SetActive(!isActive);
+        taskListbutton.gameObject.SetActive(isActive);
+    }
 
     /// <summary>
     /// Update the position behavior of the orb
@@ -284,6 +310,15 @@ public class Orb : Singleton<Orb>
 
         if (isSticky)
             messageContainer.SetIsActive(false, false);
+    }
+
+    public bool IsLookingAtOrb(bool any)
+    {
+        if (any)
+            return isLookingAtOrb || messageContainer.IsLookingAtMessage || taskListbutton.IsLookingAtBtn
+                || FollowEyeTarget.Instance.currentHit == EyeTarget.recipe;
+        else
+            return isLookingAtOrb || messageContainer.IsLookingAtMessage;
     }
 
     #endregion
