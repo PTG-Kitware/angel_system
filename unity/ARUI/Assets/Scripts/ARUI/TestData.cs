@@ -6,6 +6,8 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using RosMessageTypes.Angel;
+
 
 public class TestData : MonoBehaviour
 {
@@ -76,12 +78,14 @@ public class TestData : MonoBehaviour
         AngelARUI.Instance.SetCurrentTaskID(currentTask);
 
         yield return new WaitForSeconds(2f);
-        AngelARUI.Instance.SetUserIntentCallback(() => { AngelARUI.Instance.LogDebugMessage("The user confirmed the dialogue", true); });
-        AngelARUI.Instance.TryGetUserFeedbackOnUserIntent("Do you need more information about the current task?");
+        AngelARUI.Instance.SetUserIntentCallback((intent) => { AngelARUI.Instance.LogDebugMessage("The user confirmed the dialogue", true); });
+        InterpretedAudioUserIntentMsg intentMsg = new InterpretedAudioUserIntentMsg();
+        intentMsg.user_intent = "Do you need more information about the current task?";
+        AngelARUI.Instance.TryGetUserFeedbackOnUserIntent(intentMsg);
 
         yield return new WaitForSeconds(10f);
-        AngelARUI.Instance.SetUserIntentCallback(() => { AngelARUI.Instance.LogDebugMessage("The user confirmed the dialogue", true); });
-        AngelARUI.Instance.TryGetUserFeedbackOnUserIntent("Do you need more information about the current task?");
+        AngelARUI.Instance.SetUserIntentCallback((intent) => { AngelARUI.Instance.LogDebugMessage("The user confirmed the dialogue", true); });
+        AngelARUI.Instance.TryGetUserFeedbackOnUserIntent(intentMsg);
     }
 
 #if UNITY_EDITOR
@@ -98,9 +102,10 @@ public class TestData : MonoBehaviour
 
         if (Input.GetKeyUp(KeyCode.P))
         {
-            AngelARUI.Instance.SetUserIntentCallback(() => { AngelARUI.Instance.LogDebugMessage("The user confirmed the dialogue", true);  });
-            AngelARUI.Instance.TryGetUserFeedbackOnUserIntent("Do you need more information about the current task?");
-        }
+            AngelARUI.Instance.SetUserIntentCallback((intent) => { AngelARUI.Instance.LogDebugMessage("The user confirmed the dialogue", true);  });
+        InterpretedAudioUserIntentMsg intentMsg = new InterpretedAudioUserIntentMsg();
+        intentMsg.user_intent = "Do you need more information about the current task?";
+        AngelARUI.Instance.TryGetUserFeedbackOnUserIntent(intentMsg);        }
 
         if (Input.GetKeyUp(KeyCode.RightArrow))
         {
@@ -112,7 +117,7 @@ public class TestData : MonoBehaviour
             currentTask--;
             AngelARUI.Instance.SetCurrentTaskID(currentTask);
         }
-        
+
         if (Input.GetKeyUp(KeyCode.Space))
         {
             AngelARUI.Instance.ToggleTasklist();
@@ -134,6 +139,6 @@ public class TestData : MonoBehaviour
             AngelARUI.Instance.ShowSkipNotification(false);
         }
     }
-    
+
 #endif
 }
