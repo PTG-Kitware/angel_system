@@ -17,6 +17,7 @@
   <depend>image_transport</depend>
   <depend>cv_bridge</depend>
   <depend>python3-opencv</depend>
+  <depend>python3-pyaudio</depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
