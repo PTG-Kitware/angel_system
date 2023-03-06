@@ -13,7 +13,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import _init_paths
 import os
 import sys
 import numpy as np
@@ -25,7 +24,6 @@ import cv2
 import csv
 import torch
 import base64
-from utils.timer import Timer
 from torch.autograd import Variable
 import torch.nn as nn
 import torch.optim as optim
@@ -35,17 +33,13 @@ import torchvision.datasets as dset
 from torchvision.ops import nms
 # from scipy.misc import imread
 from imageio import imread
-from roi_data_layer.roidb import combined_roidb
-from roi_data_layer.roibatchLoader import roibatchLoader
-from model.utils.config import cfg, cfg_from_file, cfg_from_list, get_output_dir
-from model.rpn.bbox_transform import clip_boxes
-# from model.nms.nms_wrapper import nms
-#from model.roi_layers import nms
-from model.rpn.bbox_transform import bbox_transform_inv
-from model.utils.net_utils import save_net, load_net, vis_detections
-from model.utils.blob import im_list_to_blob
-from model.faster_rcnn.vgg16 import vgg16
-from model.faster_rcnn.resnet import resnet
+from angel_system.fasterrcnn.utils.config import cfg, cfg_from_file, cfg_from_list, get_output_dir
+from angel_system.fasterrcnn.rpn.bbox_transform import clip_boxes
+
+from angel_system.fasterrcnn.rpn.bbox_transform import bbox_transform_inv
+from angel_system.fasterrcnn.utils.net_utils import save_net, load_net, vis_detections
+from angel_system.fasterrcnn.utils.blob import im_list_to_blob
+from angel_system.fasterrcnn.faster_rcnn.resnet import resnet
 import pdb
 
 try:
@@ -70,6 +64,9 @@ def parse_args():
     Parse input arguments
     """
     parser = argparse.ArgumentParser(description='Generate bbox output from a Fast R-CNN network')
+    parser.add_argument('--root_path', dest='root_path',
+                        help='path to the root data folder',
+                        default='data/coffee_data', type=str)
     parser.add_argument('--dataset', dest='dataset',
                         help='training dataset',
                         default='vg', type=str)
@@ -321,9 +318,9 @@ def get_detections_from_im(fasterRCNN, classes, im_file, image_id, args, conf_th
     else:
         keep_boxes = torch.where(max_conf >= conf_thresh, max_conf, torch.tensor(0.0))
     keep_boxes = torch.squeeze(torch.nonzero(keep_boxes))
-    if len(keep_boxes) < MIN_BOXES:
+    if keep_boxes.nelement() < MIN_BOXES:
         keep_boxes = torch.argsort(max_conf, descending = True)[:MIN_BOXES]
-    elif len(keep_boxes) > MAX_BOXES:
+    elif keep_boxes.nelement() > MAX_BOXES:
         keep_boxes = torch.argsort(max_conf, descending = True)[:MAX_BOXES]
 
     objects = torch.argmax(scores[keep_boxes][:,1:], dim=1)
@@ -376,7 +373,7 @@ def load_model(args):
     if args.net == 'vgg16':
       fasterRCNN = vgg16(classes, pretrained=False, class_agnostic=args.class_agnostic)
     elif args.net == 'res101':
-      fasterRCNN = resnet(classes, 101, pretrained=False, class_agnostic=args.class_agnostic)
+      fasterRCNN = resnet(classes, pretrained=False, class_agnostic=args.class_agnostic)
     elif args.net == 'res50':
       fasterRCNN = resnet(classes, 50, pretrained=False, class_agnostic=args.class_agnostic)
     elif args.net == 'res152':
@@ -412,18 +409,17 @@ def generate_tsv(frame_path, image_ids, args):
         if not os.path.isdir(det_path):
             os.mkdir(det_path)
         image_id = int(image_path.split("/")[-1][:-5])
-        #fpath = '/'.join(fsplit[:-2] + ['det', f'{fsplit[-1].split(".")[0]}.pk'])     
-        #if not os.path.exists(fpath):  
-        sample_info = get_detections_from_im(fasterRCNN, classes, image_path, image_id, args)
-        #    torch.save(sample_info, fpath)
+        fpath = '/'.join(fsplit[:-2] + ['det', f'{fsplit[-1].split(".")[0]}.pk'])
+        if not os.path.exists(fpath):
+            sample_info = get_detections_from_im(fasterRCNN, classes, image_path, image_id, args)
+            torch.save(sample_info, fpath)
     print("All detection features computed and saved.")
 
 if __name__ == '__main__':
     args = parse_args()
-    root_path = "../../datasets/ROS/Data/" #"../../datasets/H2O/"
     for key in ['val', 'train']:
-        frame_path = os.path.join(root_path, 'label_split', 'pose_'+key+'.txt')
+        frame_path = os.path.join(args.root_path, 'Data','label_split', 'all_activities_pose_'+key+'1.txt')
         image_ids = []
         for line in open(frame_path):
             image_ids.append(line[:-1])
-        generate_tsv(root_path, image_ids, args)
+        generate_tsv(args.root_path, image_ids, args)
