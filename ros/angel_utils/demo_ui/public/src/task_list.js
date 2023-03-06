@@ -61,14 +61,14 @@ var task_complete_chart = new Chart(task_complete_ctx, {
   }
 });
 
-$.get( "/ns")
-.done(function( data ){
+$.get("/topics")
+.done(function( topics ){
   var colors;
 
   // subscribe to QueryTaskGraph
   var query_task_graph = new ROSLIB.Service({
     ros: ros,
-    name: data.namespace + '/query_task_graph',
+    name: topics.namespace + '/' + topics.query_task_graph_topic,
     serviceType: 'angel_msgs/srv/QueryTaskGraph'
   });
 
@@ -116,7 +116,7 @@ $.get( "/ns")
   // Create a listener for task completion updates
   var task_update = new ROSLIB.Topic({
     ros : ros,
-    name : data.namespace + '/TaskUpdates',
+    name : topics.namespace + '/' + topics.task_updates_topic,
     messageType : 'angel_msgs/msg/TaskUpdate' // find: $ ros2 topic type <>
   });
 

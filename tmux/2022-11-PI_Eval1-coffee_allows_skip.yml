@@ -105,9 +105,14 @@ windows:
       -p query_task_graph_topic:=query_task_graph
       -p step_complete_threshold:=0.5
 
-  # Currently hard-coded to use the /debug ROS namespace.
   - engineering_ui_websocket: ros2 launch rosbridge_server rosbridge_websocket_launch.xml port:=9090
   - engineering_ui_server: node src/angel_utils/demo_ui/index.js
+      --namespace=${ROS_NAMESPACE}
+      --image_topic=pv_image_detections_2d/compressed
+      --query_task_graph_topic=query_task_graph
+      --task_updates_topic=TaskUpdates
+      --activity_detections_topic=ActivityDetections
+      --task_errors_topic=TaskErrors
 
   - feedback_generator: ros2 run angel_system_nodes feedback_generator --ros-args
       -r __ns:=${ROS_NAMESPACE}
