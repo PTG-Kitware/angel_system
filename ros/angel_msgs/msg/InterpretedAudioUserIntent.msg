@@ -3,8 +3,10 @@
 # utterance.
 #
 
-# numerical identifier of this utterance intent deduction
-uint64 id
+# The header primarily encapsulates when this message was emitted.
+# The time component of this may be utilized as an identifier for this user
+# intent and utterance.
+std_msgs/Header header
 
 # Speech-to-text of the user utterance we have interpreted
 string utterance_text
