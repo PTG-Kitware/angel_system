@@ -88,6 +88,13 @@ windows:
       -p top_k:=10
       -p overlapping_mode:=False
 
+  - intent_to_cmd: ros2 run angel_system_nodes intent_to_command --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p explicit_intent_topic:=ExplicitUserIntents
+      -p confirmed_intent_topic:=ConfirmedUserIntents
+      -p sys_cmd_topic:=SystemCommands
+      -p intent_to_cmd_map:=${CONFIG_DIR}/angel_system_cmds/user_intent_to_sys_cmd_v1.yaml
+
   - task_monitor: ros2 run angel_system_nodes task_monitor_v2 --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p det_topic:=ActivityDetections
@@ -96,6 +103,7 @@ windows:
       -p task_error_topic:=TaskErrors
       -p query_task_graph_topic:=query_task_graph
       -p step_complete_threshold:=0.5
+      -p sys_cmd_topic:=SystemCommands
 
   # Currently hard-coded to use the /debug ROS namespace.
   - engineering_ui_websocket: ros2 launch rosbridge_server rosbridge_websocket_launch.xml port:=9090
