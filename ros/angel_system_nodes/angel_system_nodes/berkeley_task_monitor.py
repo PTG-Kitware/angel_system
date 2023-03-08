@@ -50,6 +50,13 @@ class TaskMonitor(Node):
             .get_parameter_value()
             .string_value
         )
+        self._model_config = (
+            self.declare_parameter(
+              "model_config",
+              "angel_system/berkeley/configs/MC50-InstanceSegmentation/mask_rcnn_R_101_FPN_1x_demo.yaml")
+            .get_parameter_value()
+            .string_value
+        )
         self._config_file = (
             self.declare_parameter("config_file",
                                    "config/tasks/task_steps_berkeley_config-recipe_coffee.yaml")
@@ -57,7 +64,7 @@ class TaskMonitor(Node):
             .string_value
         )
         self._draw_output = (
-            self.declare_parameter("draw_output", True)
+            self.declare_parameter("draw_output", False)
             .get_parameter_value()
             .bool_value
         )
@@ -79,6 +86,7 @@ class TaskMonitor(Node):
 
         log = self.get_logger()
         log.info(f"Image topic: {self._image_topic}")
+        log.info(f"Model Config file: {self._model_config}")
         log.info(f"Config file: {self._config_file}")
         log.info(f"draw_output: {self._draw_output}")
         log.info(f"Task state topic: {self._task_state_topic}")
@@ -120,12 +128,10 @@ class TaskMonitor(Node):
         self._completed_steps = np.array(np.zeros(len(self._steps)), dtype=bool)
 
         # Step classifier
-        berkeley_root = "angel_system/berkeley"
         parser = model.get_parser()
 
-        config_file = f"{berkeley_root}/configs/MC50-InstanceSegmentation/mask_rcnn_R_101_FPN_1x_demo.yaml"
         conf_thr = 0.7
-        args = parser.parse_args(f"--config-file {config_file} --confidence-threshold {conf_thr}".split())
+        args = parser.parse_args(f"--config-file {self._model_config} --confidence-threshold {conf_thr}".split())
 
         log.info("Arguments: " + str(args))
 
@@ -179,8 +185,6 @@ class TaskMonitor(Node):
     def listener_callback(self, image):
         """
         """
-        #import time
-        #time.sleep(2)
         log = self.get_logger()
         self.idx += 1
 
