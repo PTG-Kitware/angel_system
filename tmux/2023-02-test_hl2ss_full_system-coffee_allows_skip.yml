@@ -50,6 +50,7 @@ windows:
       -p ip_addr:=${HL2_IP}
       -p image_topic:=PVFramesBGR
       -p hand_pose_topic:=HandJointPoseData
+      -p audio_topic:=HeadsetAudioData
 
   # Visualize Images being output from the headset
   - rqt_pv_images: rqt -s rqt_image_view/ImageView
@@ -106,3 +107,4 @@ windows:
       -p object_detection_topic:=ObjectDetections3d
       -p task_monitor_topic:=TaskUpdates
       -p arui_update_topic:=AruiUpdates
+      -p interp_user_intent_topic:=UserIntentPredicted

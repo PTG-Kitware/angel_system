@@ -64,6 +64,8 @@ uint8 expertise_level
 #
 # Task Graph and State
 #
+# Message representing the current status of the task being performed.
+#
 # NOTE: The task graph may be queried by using the `QueryTaskGraph` service.
 #
 angel_msgs/TaskUpdate task_update
