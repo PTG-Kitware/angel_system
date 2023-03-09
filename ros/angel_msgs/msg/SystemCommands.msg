@@ -9,6 +9,6 @@
 #
 
 # Task Monitor commands
-bool reset_current_task false
-bool previous_step      false
-bool next_step          false
+bool reset_current_task
+bool previous_step
+bool next_step

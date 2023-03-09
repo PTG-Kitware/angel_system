@@ -68,6 +68,8 @@ namespace RosMessageTypes.Angel
         // 
         //  Task Graph and State
         // 
+        //  Message representing the current status of the task being performed.
+        // 
         //  NOTE: The task graph may be queried by using the `QueryTaskGraph` service.
         // 
         public TaskUpdateMsg task_update;
@@ -79,11 +81,9 @@ namespace RosMessageTypes.Angel
         // 
         //  Notifications / Directives
         public AruiUserNotificationMsg[] notifications;
-        //  Text/Audio feedback
-        //  - ASSUMING audio feedback in the form of speech-to-text. I don't know yet
-        //    what other forms of audio dialogue feedback there are.
-        public string[] dialogue_text;
-        public string[] dialogue_audio;
+        //  Field encapsulating interpreted user intents that we want confirmed by the user.
+        //  These likely have some confidence less than
+        public InterpretedAudioUserIntentMsg[] intents_for_confirmation;
 
         public AruiUpdateMsg()
         {
@@ -94,11 +94,10 @@ namespace RosMessageTypes.Angel
             this.expertise_level = 0;
             this.task_update = new TaskUpdateMsg();
             this.notifications = new AruiUserNotificationMsg[0];
-            this.dialogue_text = new string[0];
-            this.dialogue_audio = new string[0];
+            this.intents_for_confirmation = new InterpretedAudioUserIntentMsg[0];
         }
 
-        public AruiUpdateMsg(Std.HeaderMsg header, AruiObject3dMsg[] object3d_remove, AruiObject3dMsg[] object3d_update, ActivityDetectionMsg latest_activity, byte expertise_level, TaskUpdateMsg task_update, AruiUserNotificationMsg[] notifications, string[] dialogue_text, string[] dialogue_audio)
+        public AruiUpdateMsg(Std.HeaderMsg header, AruiObject3dMsg[] object3d_remove, AruiObject3dMsg[] object3d_update, ActivityDetectionMsg latest_activity, byte expertise_level, TaskUpdateMsg task_update, AruiUserNotificationMsg[] notifications, InterpretedAudioUserIntentMsg[] intents_for_confirmation)
         {
             this.header = header;
             this.object3d_remove = object3d_remove;
@@ -107,8 +106,7 @@ namespace RosMessageTypes.Angel
             this.expertise_level = expertise_level;
             this.task_update = task_update;
             this.notifications = notifications;
-            this.dialogue_text = dialogue_text;
-            this.dialogue_audio = dialogue_audio;
+            this.intents_for_confirmation = intents_for_confirmation;
         }
 
         public static AruiUpdateMsg Deserialize(MessageDeserializer deserializer) => new AruiUpdateMsg(deserializer);
@@ -122,8 +120,7 @@ namespace RosMessageTypes.Angel
             deserializer.Read(out this.expertise_level);
             this.task_update = TaskUpdateMsg.Deserialize(deserializer);
             deserializer.Read(out this.notifications, AruiUserNotificationMsg.Deserialize, deserializer.ReadLength());
-            deserializer.Read(out this.dialogue_text, deserializer.ReadLength());
-            deserializer.Read(out this.dialogue_audio, deserializer.ReadLength());
+            deserializer.Read(out this.intents_for_confirmation, InterpretedAudioUserIntentMsg.Deserialize, deserializer.ReadLength());
         }
 
         public override void SerializeTo(MessageSerializer serializer)
@@ -138,10 +135,8 @@ namespace RosMessageTypes.Angel
             serializer.Write(this.task_update);
             serializer.WriteLength(this.notifications);
             serializer.Write(this.notifications);
-            serializer.WriteLength(this.dialogue_text);
-            serializer.Write(this.dialogue_text);
-            serializer.WriteLength(this.dialogue_audio);
-            serializer.Write(this.dialogue_audio);
+            serializer.WriteLength(this.intents_for_confirmation);
+            serializer.Write(this.intents_for_confirmation);
         }
 
         public override string ToString()
@@ -154,8 +149,7 @@ namespace RosMessageTypes.Angel
             "\nexpertise_level: " + expertise_level.ToString() +
             "\ntask_update: " + task_update.ToString() +
             "\nnotifications: " + System.String.Join(", ", notifications.ToList()) +
-            "\ndialogue_text: " + System.String.Join(", ", dialogue_text.ToList()) +
-            "\ndialogue_audio: " + System.String.Join(", ", dialogue_audio.ToList());
+            "\nintents_for_confirmation: " + System.String.Join(", ", intents_for_confirmation.ToList());
         }
 
 #if UNITY_EDITOR

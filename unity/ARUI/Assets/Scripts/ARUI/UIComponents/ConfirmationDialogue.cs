@@ -5,6 +5,17 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
+using RosMessageTypes.Angel;
+
+/// <summary>
+/// Custom one argument version of a UnityEvent to allow passing of
+/// InterpretedAudioUserIntentMsg arguments.
+/// See: https://docs.unity3d.com/ScriptReference/Events.UnityEvent_1.html
+/// </summary>
+[System.Serializable]
+public class InterpretedAudioUserIntentEvent : UnityEvent<InterpretedAudioUserIntentMsg>
+{
+}
 
 public class ConfirmationDialogue : MonoBehaviour
 {
@@ -12,7 +23,8 @@ public class ConfirmationDialogue : MonoBehaviour
 
     private DwellButton okBtn;
 
-    public UnityEvent selectEvent;
+    public InterpretedAudioUserIntentEvent selectEvent;
+    private InterpretedAudioUserIntentMsg userIntent;
 
     private Shapes.Line timerLine;
     private float timeInSeconds = 6f;
@@ -27,7 +39,7 @@ public class ConfirmationDialogue : MonoBehaviour
         okBtn.SetDwellButtonType(DwellButtonType.Select);
         okBtn.gameObject.SetActive(false);
 
-        selectEvent = new UnityEvent();
+        selectEvent = new InterpretedAudioUserIntentEvent();
 
         timerLine = transform.GetComponentInChildren<Shapes.Line>();
         timerLine.enabled = false;
@@ -42,7 +54,7 @@ public class ConfirmationDialogue : MonoBehaviour
     private void Confirmed(bool isConfirmed)
     {
         if (isConfirmed)
-            selectEvent.Invoke();
+            selectEvent.Invoke(userIntent);
         else
             AngelARUI.Instance.LogDebugMessage("The user did not confirm the dialogue", true);
 
@@ -51,11 +63,12 @@ public class ConfirmationDialogue : MonoBehaviour
     }
 
 
-    public void InitializeConfirmationNotification(string msg, UnityAction confirmedEvent)
+    public void InitializeConfirmationNotification(InterpretedAudioUserIntentMsg intentMsg, UnityAction<InterpretedAudioUserIntentMsg> confirmedEvent)
     {
-        if (msg == null || msg.Length == 0) return;
+        if (intentMsg == null || intentMsg.user_intent.Length == 0) return;
 
-        textContainer.SetText(msg);
+        userIntent = intentMsg;
+        textContainer.SetText(intentMsg.user_intent);
         selectEvent.AddListener(confirmedEvent);
     }
 

@@ -7,6 +7,22 @@ using TMPro;
 
 public class hl2ss : MonoBehaviour
 {
+    private Logger _logger = null;
+
+    /// <summary>
+    /// Lazy acquire the ARUI logger object and return the reference to it.
+    /// </summary>
+    /// <returns>Logger instance reference.</returns>
+    private ref Logger logger()
+    {
+        if (this._logger == null)
+        {
+            // TODO: Error handling for null loggerObject?
+            this._logger = GameObject.Find("Logger").GetComponent<Logger>();
+        }
+        return ref this._logger;
+    }
+
 #if WINDOWS_UWP
 
     [DllImport("hl2ss")]
@@ -74,7 +90,7 @@ public class hl2ss : MonoBehaviour
 
     [Tooltip("Enable Microphone stream. Has no effect if InitializeStreams is called from the cpp code.")]
     public bool enableMC = true;
-    
+
     [Tooltip("Enable Spatial Input stream. Allowed only if InitializeStreams is called from the cpp code and must be disabled otherwise.")]
     public bool enableSI = false;
 
@@ -107,6 +123,9 @@ public class hl2ss : MonoBehaviour
         GetLocalIPv4Address(ipaddress, ipaddress.Length);
         string ip = System.Text.Encoding.Unicode.GetString(ipaddress);
         DebugMessage(string.Format("UNITY: Local IP Address is: {0}", ip));
+
+        Logger log = logger();
+        log.LogInfo(string.Format("UNITY: HL2 IP Address is: {0}", ip));
     }
 
     // Update is called once per frame
@@ -186,8 +205,8 @@ public class hl2ss : MonoBehaviour
 
         GameObject go;
         int key = GetKey(data);
-        if (!m_remote_objects.TryGetValue(key, out go)) { return 0; }    
-        
+        if (!m_remote_objects.TryGetValue(key, out go)) { return 0; }
+
         m_remote_objects.Remove(key);
         Destroy(go);
 
@@ -267,7 +286,7 @@ public class hl2ss : MonoBehaviour
     uint MSG_SetActive(uint size, byte[] data)
     {
         if (size < 8) { return 0; }
-        
+
         GameObject go;
         if (!m_remote_objects.TryGetValue(GetKey(data), out go)) { return 0; }
 
