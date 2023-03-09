@@ -16,11 +16,6 @@ class IntentToCommand(Node):
     def __init__(self):
         super().__init__(self.__class__.__name__)
 
-        self._explicit_intent_topic = (
-            self.declare_parameter("explicit_intent_topic", "")
-            .get_parameter_value()
-            .string_value
-        )
         self._confirmed_intent_topic = (
             self.declare_parameter("confirmed_intent_topic", "")
             .get_parameter_value()
@@ -37,10 +32,6 @@ class IntentToCommand(Node):
             .string_value
         )
 
-        if self._explicit_intent_topic == "":
-            raise ValueError(
-                "Please provide the explicit intent topic with the `explicit_intent_topic` parameter"
-            )
         if self._confirmed_intent_topic == "":
             raise ValueError(
                 "Please provide the confirmed intent topic with the `confirmed_intent_topic` parameter"
@@ -55,7 +46,6 @@ class IntentToCommand(Node):
             )
 
         log = self.get_logger()
-        log.info(f"Explicit intent topic: {self._explicit_intent_topic}")
         log.info(f"Confirmed intent topic: {self._confirmed_intent_topic}")
         log.info(f"System command topic: {self._sys_cmd_topic}")
         log.info(f"Intent to cmd map: {self._intent_to_cmd_map_path}")
@@ -65,12 +55,6 @@ class IntentToCommand(Node):
             config = yaml.safe_load(f)
         self._intent_to_cmd_map = config["commands"]
 
-        self._subscription = self.create_subscription(
-            InterpretedAudioUserIntent,
-            self._explicit_intent_topic,
-            self.intent_callback,
-            1
-        )
         self._subscription = self.create_subscription(
             InterpretedAudioUserIntent,
             self._confirmed_intent_topic,
@@ -102,6 +86,9 @@ class IntentToCommand(Node):
 
         sys_cmd_msg = SystemCommands()
 
+        # TODO: This only works currently since we only recognize a few boolean
+        # based commands (next step, previous step). This will break down if
+        # more complex (non-boolean) commands are added.
         try:
             # Set the corresponding sys cmd field to True
             setattr(sys_cmd_msg, sys_cmd, True)
