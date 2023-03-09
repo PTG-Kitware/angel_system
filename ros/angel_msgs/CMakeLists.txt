@@ -33,6 +33,7 @@ set( message_files
   msg/HandJointPosesUpdate.msg
   msg/HeadsetAudioData.msg
   msg/HeadsetPoseData.msg
+  msg/IntentDetection.msg
   msg/InterpretedAudioUserIntent.msg
   msg/ObjectDetection2d.msg
   msg/ObjectDetection2dSet.msg
