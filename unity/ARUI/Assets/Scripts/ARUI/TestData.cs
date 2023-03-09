@@ -103,9 +103,10 @@ public class TestData : MonoBehaviour
         if (Input.GetKeyUp(KeyCode.P))
         {
             AngelARUI.Instance.SetUserIntentCallback((intent) => { AngelARUI.Instance.LogDebugMessage("The user confirmed the dialogue", true);  });
-        InterpretedAudioUserIntentMsg intentMsg = new InterpretedAudioUserIntentMsg();
-        intentMsg.user_intent = "Do you need more information about the current task?";
-        AngelARUI.Instance.TryGetUserFeedbackOnUserIntent(intentMsg);        }
+            InterpretedAudioUserIntentMsg intentMsg = new InterpretedAudioUserIntentMsg();
+            intentMsg.user_intent = "Do you need more information about the current task?";
+            AngelARUI.Instance.TryGetUserFeedbackOnUserIntent(intentMsg);
+        }
 
         if (Input.GetKeyUp(KeyCode.RightArrow))
         {
