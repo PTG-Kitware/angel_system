@@ -10,12 +10,8 @@ Welcome to ANGEL System's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-   activity_annotation_and_gt
-   activity_classification
-   task_classification
-   task_monitor
-   evaluation
-
+   algorithms/index
+   system/index
 
 
 Indices and tables
