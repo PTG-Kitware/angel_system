@@ -59,7 +59,7 @@ public class Orb : Singleton<Orb>
         GameObject taskListbtn = transform.GetChild(0).GetChild(2).gameObject;
         taskListbutton = taskListbtn.AddComponent<DwellButton>();
         taskListbutton.gameObject.name += "FacetasklistButton";
-        taskListbutton.InitializeButton(EyeTarget.orbtasklistButton, () => TaskListManager.Instance.ToggleTasklist());
+        taskListbutton.InitializeButton(EyeTarget.orbtasklistButton, () => TaskListManager.Instance.ToggleTasklist(), false, DwellButtonType.Toggle);
         taskListbtn.SetActive(false);
 
         faceCollider = transform.GetChild(0).GetComponent<BoxCollider>();
@@ -315,7 +315,7 @@ public class Orb : Singleton<Orb>
     public bool IsLookingAtOrb(bool any)
     {
         if (any)
-            return isLookingAtOrb || messageContainer.IsLookingAtMessage || taskListbutton.IsLookingAtBtn
+            return isLookingAtOrb || messageContainer.IsLookingAtMessage || taskListbutton.IsInteractingWithBtn
                 || FollowEyeTarget.Instance.currentHit == EyeTarget.recipe;
         else
             return isLookingAtOrb || messageContainer.IsLookingAtMessage;

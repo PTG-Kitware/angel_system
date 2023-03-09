@@ -153,7 +153,7 @@ public class TestData : MonoBehaviour, IMixedRealitySpeechHandler
         {
             int next = currentTask++;
             AngelARUI.Instance.SetUserIntentCallback(() => { AngelARUI.Instance.SetCurrentTaskID(next); });
-            AngelARUI.Instance.TryGetUserFeedbackOnUserIntent("Do you want to go to the next task?");
+            AngelARUI.Instance.TryGetUserFeedbackOnUserIntent("Do you want to go to the next task? Do you want to go to the next task?\n Do you want to go to the next task");
         }
 
         if (Input.GetKeyUp(KeyCode.RightArrow))

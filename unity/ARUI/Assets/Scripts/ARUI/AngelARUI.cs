@@ -137,7 +137,7 @@ public class AngelARUI : Singleton<AngelARUI>
     /// <param name="msg">message that is shown in the confirmation dialogue</param>
     public void TryGetUserFeedbackOnUserIntent(string msg)
     {
-        if (onUserIntentConfirmedAction == null || confirmationWindow != null) return;
+        if (onUserIntentConfirmedAction == null || confirmationWindow != null || msg==null || msg.Length==0) return;
 
         GameObject window = Instantiate(confirmationWindowPrefab, transform);
         confirmationWindow = window.AddComponent<ConfirmationDialogue>();
