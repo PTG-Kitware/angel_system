@@ -57,5 +57,10 @@ windows:
   - asr: ros2 run angel_system_nodes asr --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p audio_topic:=HeadsetAudioData
+      -p utterance_topic:=Utterances
       -p asr_server_url:=http://communication.cs.columbia.edu:8058/home
       -p tmp_wav_filename:=/tmp/asr.wav
+  - intent_detection: ros2 run angel_system_nodes intent_detector --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p audio_topic:=Utterances
+      -p det_topic:=IntentDetections
