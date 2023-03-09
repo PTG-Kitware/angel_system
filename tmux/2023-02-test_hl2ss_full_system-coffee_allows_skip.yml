@@ -90,7 +90,6 @@ windows:
 
   - intent_to_cmd: ros2 run angel_system_nodes intent_to_command --ros-args
       -r __ns:=${ROS_NAMESPACE}
-      -p explicit_intent_topic:=ExplicitUserIntents
       -p confirmed_intent_topic:=ConfirmedUserIntents
       -p sys_cmd_topic:=SystemCommands
       -p intent_to_cmd_map:=${CONFIG_DIR}/angel_system_cmds/user_intent_to_sys_cmd_v1.yaml
