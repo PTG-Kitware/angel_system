@@ -8,6 +8,12 @@ from angel_msgs.msg import (
 )
 
 
+# Parameter name constants
+PARAM_CONFIRMED_INTENT_TOPIC = "confirmed_intent_topic"
+PARAM_SYS_CMD_TOPIC = "sys_cmd_topic"
+PARAM_INTENT_TO_CMD_MAP = "intent_to_cmd_map"
+
+
 class IntentToCommand(Node):
     """
     ROS node that converts user intent messages to system commands.
@@ -15,40 +21,40 @@ class IntentToCommand(Node):
 
     def __init__(self):
         super().__init__(self.__class__.__name__)
+        self.log = self.get_logger()
 
-        self._confirmed_intent_topic = (
-            self.declare_parameter("confirmed_intent_topic", "")
-            .get_parameter_value()
-            .string_value
+        parameter_names = [
+            PARAM_CONFIRMED_INTENT_TOPIC,
+            PARAM_SYS_CMD_TOPIC,
+            PARAM_INTENT_TO_CMD_MAP,
+        ]
+        set_parameters = self.declare_parameters(
+            namespace="",
+            parameters=[(p,) for p in parameter_names],
         )
-        self._sys_cmd_topic = (
-            self.declare_parameter("sys_cmd_topic", "")
-            .get_parameter_value()
-            .string_value
-        )
-        self._intent_to_cmd_map_path = (
-            self.declare_parameter("intent_to_cmd_map", "")
-            .get_parameter_value()
-            .string_value
-        )
+        # Check for not-set parameters
+        some_not_set = False
+        for p in set_parameters:
+            if p.type_ is rclpy.parameter.Parameter.Type.NOT_SET:
+                some_not_set = True
+                self.log.error(f"Parameter not set: {p.name}")
+        if some_not_set:
+            raise ValueError("Some parameters are not set.")
 
-        if self._confirmed_intent_topic == "":
-            raise ValueError(
-                "Please provide the confirmed intent topic with the `confirmed_intent_topic` parameter"
-            )
-        if self._intent_to_cmd_map_path == "":
-            raise ValueError(
-                "Please provide the intent command map path with the `intent_to_cmd_map` parameter"
-            )
-        if self._sys_cmd_topic == "":
-            raise ValueError(
-                "Please provide the system command topic with the `sys_cmd_topic` parameter"
-            )
+        self._confirmed_intent_topic = self.get_parameter(PARAM_CONFIRMED_INTENT_TOPIC).value
+        self._sys_cmd_topic = self.get_parameter(PARAM_SYS_CMD_TOPIC).value
+        self._intent_to_cmd_map_path = self.get_parameter(PARAM_INTENT_TO_CMD_MAP).value
 
-        log = self.get_logger()
-        log.info(f"Confirmed intent topic: {self._confirmed_intent_topic}")
-        log.info(f"System command topic: {self._sys_cmd_topic}")
-        log.info(f"Intent to cmd map: {self._intent_to_cmd_map_path}")
+        # log inputs for interpreted type and value
+        self.log.info(f"Confirmed intent topic: "
+                      f"({type(self._confirmed_intent_topic).__name__}) "
+                      f"{self._confirmed_intent_topic}")
+        self.log.info(f"System command topic: "
+                      f"({type(self._sys_cmd_topic).__name__}) "
+                      f"{self._sys_cmd_topic}")
+        self.log.info(f"Intent to cmd map: "
+                      f"({type(self._intent_to_cmd_map_path).__name__}) "
+                      f"{self._intent_to_cmd_map_path}")
 
         # Load intent to cmd map (yaml)
         with open(self._intent_to_cmd_map_path, 'r') as f:
@@ -73,12 +79,10 @@ class IntentToCommand(Node):
         to a system command and publishes the command to the system command
         topic.
         """
-        log = self.get_logger()
-
         try:
             sys_cmd = self._intent_to_cmd_map[intent.user_intent]
         except KeyError:
-            log.warning(
+            self.log.warning(
                 f"User intent `{intent.user_intent}` not found in sys cmd map. "
                 f"Available intents are {list(self._intent_to_cmd_map.keys())}"
             )
@@ -93,13 +97,13 @@ class IntentToCommand(Node):
             # Set the corresponding sys cmd field to True
             setattr(sys_cmd_msg, sys_cmd, True)
         except AttributeError:
-            log.warning(
+            self.log.warning(
                 f"No command for {sys_cmd} found. Check intent to command mapping."
             )
             return
 
         # Publish system command message
-        log.info(f"Publishing system command with command {sys_cmd}")
+        self.log.info(f"Publishing system command with command {sys_cmd}")
         self._sys_cmd_publisher.publish(sys_cmd_msg)
 
 
