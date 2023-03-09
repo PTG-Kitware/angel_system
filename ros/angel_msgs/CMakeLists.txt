@@ -43,6 +43,7 @@ set( message_files
   msg/TaskItem.msg
   msg/TaskNode.msg
   msg/TaskUpdate.msg
+  msg/Utterance.msg
   msg/VisionBoundingBox3d.msg
   )
 set( service_files
