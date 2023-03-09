@@ -7,7 +7,11 @@ using UnityEngine;
 using UnityEngine.Events;
 using RosMessageTypes.Angel;
 
-
+/// <summary>
+/// Custom one argument version of a UnityEvent to allow passing of
+/// InterpretedAudioUserIntentMsg arguments.
+/// See: https://docs.unity3d.com/ScriptReference/Events.UnityEvent_1.html
+/// </summary>
 [System.Serializable]
 public class InterpretedAudioUserIntentEvent : UnityEvent<InterpretedAudioUserIntentMsg>
 {
