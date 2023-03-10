@@ -19,7 +19,7 @@ class ASR(Node):
         super().__init__(self.__class__.__name__)
 
         self.declare_parameter("audio_topic", "HeadsetAudioData")
-        self.declare_parameter("utterances_topic", "Utterances")
+        self.declare_parameter("utterances_topic", "utterances_topic")
         self.declare_parameter("asr_server_url", "http://communication.cs.columbia.edu:8058/home")
         self.declare_parameter("tmp_wav_filename", "/tmp/asr.wav")
         
@@ -35,6 +35,8 @@ class ASR(Node):
             self.listener_callback,
             1)
         
+        # TODO(derekahmed): Add internal queueing to reduce publisher queue
+        # size to 1.
         self._publisher = self.create_publisher(
             Utterance,
             self._utterances_topic,
