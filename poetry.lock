@@ -345,11 +345,11 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "fsspec"
-version = "2023.1.0"
+version = "2023.3.0"
 description = "File-system specification"
 category = "main"
 optional = false
-python-versions = ">=3.7"
+python-versions = ">=3.8"
 
 [package.dependencies]
 aiohttp = {version = "<4.0.0a0 || >4.0.0a0,<4.0.0a1 || >4.0.0a1", optional = true, markers = "extra == \"http\""}
@@ -361,7 +361,6 @@ adl = ["adlfs"]
 arrow = ["pyarrow (>=1)"]
 dask = ["dask", "distributed"]
 dropbox = ["dropboxdrivefs", "requests", "dropbox"]
-entrypoints = ["importlib-metadata"]
 fuse = ["fusepy"]
 gcs = ["gcsfs"]
 git = ["pygit2"]
@@ -844,6 +843,28 @@ extra = ["lxml (>=4.6)", "pygraphviz (>=1.10)", "pydot (>=1.4.2)", "sympy (>=1.1
 test = ["pytest (>=7.2)", "pytest-cov (>=4.0)", "codecov (>=2.1)"]
 
 [[package]]
+name = "nltk"
+version = "3.8.1"
+description = "Natural Language Toolkit"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+
+[package.dependencies]
+click = "*"
+joblib = "*"
+regex = ">=2021.8.3"
+tqdm = "*"
+
+[package.extras]
+all = ["scikit-learn", "python-crfsuite", "requests", "numpy", "pyparsing", "twython", "scipy", "matplotlib"]
+corenlp = ["requests"]
+machine_learning = ["numpy", "python-crfsuite", "scikit-learn", "scipy"]
+plot = ["matplotlib"]
+tgrep = ["pyparsing"]
+twitter = ["twython"]
+
+[[package]]
 name = "numpy"
 version = "1.24.2"
 description = "Fundamental package for array computing in Python"
@@ -1312,6 +1333,14 @@ python-versions = "*"
 name = "pyyaml"
 version = "6.0"
 description = "YAML parser and emitter for Python"
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[[package]]
+name = "regex"
+version = "2022.10.31"
+description = "Alternative regular expression module, to replace re."
 category = "main"
 optional = false
 python-versions = ">=3.6"
@@ -1932,7 +1961,7 @@ test = ["pytest"]
 
 [[package]]
 name = "trimesh"
-version = "3.20.1"
+version = "3.20.2"
 description = "Import, export, process, analyze and view triangular meshes."
 category = "main"
 optional = false
@@ -1965,9 +1994,9 @@ xatlas = {version = "*", optional = true, markers = "extra == \"all\""}
 xxhash = {version = "*", optional = true, markers = "extra == \"all\""}
 
 [package.extras]
-all = ["pycollada", "meshio", "networkx", "chardet", "sympy", "python-fcl", "scipy", "shapely", "scikit-image", "psutil", "mapbox-earcut", "glooey", "pillow", "lxml", "jsonschema", "svg.path", "setuptools", "xxhash", "requests", "rtree", "msgpack", "colorlog", "xatlas", "pyglet (<2)"]
-easy = ["jsonschema", "colorlog", "svg.path", "setuptools", "xxhash", "requests", "networkx", "rtree", "sympy", "msgpack", "pycollada", "chardet", "scipy", "shapely", "mapbox-earcut", "pillow", "lxml"]
-test = ["ezdxf", "autopep8", "pytest-cov", "ruff", "pytest", "coveralls", "pyinstrument"]
+all = ["requests", "networkx", "sympy", "pyglet (<2)", "chardet", "psutil", "xxhash", "setuptools", "scipy", "jsonschema", "glooey", "rtree", "msgpack", "meshio", "python-fcl", "lxml", "colorlog", "xatlas", "scikit-image", "svg.path", "shapely", "mapbox-earcut", "pycollada", "pillow"]
+easy = ["rtree", "msgpack", "requests", "networkx", "lxml", "sympy", "mapbox-earcut", "colorlog", "svg.path", "shapely", "xxhash", "setuptools", "chardet", "pycollada", "pillow", "scipy", "jsonschema"]
+test = ["ezdxf", "pyinstrument", "pytest", "pytest-cov", "coveralls", "autopep8", "ruff"]
 
 [[package]]
 name = "typeguard"
@@ -2079,7 +2108,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "flake8 (<5)", "pytest-co
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8,<3.10"
-content-hash = "cd2a048bb39923a1aba0782b8f7cdd07d62d59e2ed595e0dc710096823f5b2b3"
+content-hash = "8fc023f479029a356eaff8735f4832f7032ad8e4c0fc124a856c7ce7fdfa464a"
 
 [metadata.files]
 aiohttp = []
@@ -2148,6 +2177,7 @@ msgpack = []
 multidict = []
 mypy-extensions = []
 networkx = []
+nltk = []
 numpy = []
 omegaconf = []
 opencv-python = []
@@ -2189,6 +2219,7 @@ pytz = []
 pywavelets = []
 pywin32 = []
 pyyaml = []
+regex = []
 requests = []
 rich = []
 rtree = []
