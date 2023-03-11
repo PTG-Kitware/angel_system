@@ -89,14 +89,11 @@ public class OrbFollowerSolver : Solver
     public override void SolverUpdate()
     {
         // Update the collider AABB of the orb based on the position and visibility of the orb message
-        thisControllable.UpdateRectBasedOnSubColliders(Orb.Instance.GetCurrentMessageCollider(), Orb.Instance.FaceCollider);
+        thisControllable.UpdateRectBasedOnSubColliders(Orb.Instance.AllOrbColliders);
         
         if (!(paused || isLookingAtOrbFlag))
         {
             Vector3 goalPosition = WorkingPosition;
-
-            // Update the collider AABB of the orb based on the position and visibility of the orb message
-            thisControllable.UpdateRectBasedOnSubColliders(Orb.Instance.GetCurrentMessageCollider(), Orb.Instance.FaceCollider);
 
             if (!coolDown)
             {

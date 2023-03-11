@@ -2,8 +2,13 @@ using Microsoft.MixedReality.Toolkit;
 using Microsoft.MixedReality.Toolkit.Input;
 using System.Collections;
 using UnityEngine;
+using RosMessageTypes.Angel;
+using Microsoft.MixedReality.Toolkit.UI;
+using static UnityEngine.UIElements.UxmlAttributeDescription;
+using UnityEditor.PackageManager.UI;
 
-public class TestData : MonoBehaviour, IMixedRealitySpeechHandler
+
+public class TestData : MonoBehaviour
 {
     //string[,] tasks =
     //{
@@ -55,107 +60,94 @@ public class TestData : MonoBehaviour, IMixedRealitySpeechHandler
 
     private int currentTask = 0;
 
-    private void Start()
+    private void Start() => StartCoroutine(RunTasksAtRuntime());
+
+    /// <summary>
+    /// Routine to test functions at run-time, if not access to editor is available
+    /// </summary>
+    private IEnumerator RunTasksAtRuntime()
     {
-        CoreServices.InputSystem?.RegisterHandler<IMixedRealitySpeechHandler>(this);
-        //StartCoroutine(RunTasksAtRuntime());
-    }
-
-    //private IEnumerator RunTasksAtRuntime()
-    //{
-    //    yield return new WaitForSeconds(1f);
-
-    //    AngelARUI.Instance.SetTasks(tasks);
-
-    //    yield return new WaitForSeconds(3f);
-    //    currentTask++;
-    //    AngelARUI.Instance.SetCurrentTaskID(currentTask);
-
-    //    yield return new WaitForSeconds(2f);
-    //    currentTask++;
-    //    AngelARUI.Instance.SetCurrentTaskID(currentTask);
-
-    //    yield return new WaitForSeconds(4f);
-    //    currentTask++;
-    //    AngelARUI.Instance.SetCurrentTaskID(currentTask);
-
-    //    yield return new WaitForSeconds(2f);
-    //    currentTask--;
-    //    AngelARUI.Instance.SetCurrentTaskID(currentTask);
-
-    //    yield return new WaitForSeconds(3f);
-    //    currentTask++;
-    //    AngelARUI.Instance.SetCurrentTaskID(currentTask);
-
-    //    yield return new WaitForSeconds(3f);
-    //    AngelARUI.Instance.ShowSkipNotification(true);
-
-    //    yield return new WaitForSeconds(3f);
-    //    currentTask++;
-    //    AngelARUI.Instance.SetCurrentTaskID(currentTask);
-
-    //    yield return new WaitForSeconds(2f);
-    //    AngelARUI.Instance.SetUserIntentCallback(() => { AngelARUI.Instance.LogDebugMessage("The user confirmed the dialogue", true); });
-    //    AngelARUI.Instance.TryGetUserFeedbackOnUserIntent("Do you want to go to the next task?");
-
-    //    yield return new WaitForSeconds(10f);
-    //    AngelARUI.Instance.SetUserIntentCallback(() => { AngelARUI.Instance.LogDebugMessage("The user confirmed the dialogue", true); });
-    //    AngelARUI.Instance.TryGetUserFeedbackOnUserIntent("Do you need more information about the current task?");
-
-    //}
-
-    public void OnSpeechKeywordRecognized(SpeechEventData eventData)
-    {
-        Debug.Log(eventData.Command.Keyword.ToLower());
-        if (eventData.Command.Keyword.ToLower().Equals("step"))
-        {
-            AngelARUI.Instance.SetUserIntentCallback(() => { AngelARUI.Instance.SetCurrentTaskID(currentTask++); });
-            AngelARUI.Instance.TryGetUserFeedbackOnUserIntent("Do you want to go to the next task?");
-        }
-
-        else if (eventData.Command.Keyword.ToLower().Equals("skip"))
-        {
-            AngelARUI.Instance.ShowSkipNotification(true);
-        }
-
-        else if (eventData.Command.Keyword.ToLower().Equals("mute"))
-        {
-            AngelARUI.Instance.MuteAudio(!AudioManager.Instance.IsMute);
-        }
-
-        else if (eventData.Command.Keyword.ToLower().Equals("lock"))
-        {
-
-            AngelARUI.Instance.SetViewManagement(!AngelARUI.Instance.IsVMActiv);
-        }
-        else if (eventData.Command.Keyword.ToLower().Equals("back"))
-        {
-            AngelARUI.Instance.SetUserIntentCallback(() => { AngelARUI.Instance.SetCurrentTaskID(currentTask--); });
-            AngelARUI.Instance.TryGetUserFeedbackOnUserIntent("Do you want to go to the previous task?");
-        }
-
+        yield return new WaitForSeconds(2f);
+        currentTask++;
         AngelARUI.Instance.SetCurrentTaskID(currentTask);
+
+        yield return new WaitForSeconds(4f);
+        currentTask++;
+        AngelARUI.Instance.SetCurrentTaskID(currentTask);
+
+        AngelARUI.Instance.MuteAudio(true);
+
+        yield return new WaitForSeconds(2f);
+        currentTask--;
+        AngelARUI.Instance.SetCurrentTaskID(currentTask);
+
+        yield return new WaitForSeconds(3f);
+        currentTask++;
+        AngelARUI.Instance.SetCurrentTaskID(currentTask);
+
+        AngelARUI.Instance.MuteAudio(false);
+
+        yield return new WaitForSeconds(3f);
+        AngelARUI.Instance.ShowSkipNotification(true);
+
+        yield return new WaitForSeconds(5f);
+        currentTask++;
+        AngelARUI.Instance.SetCurrentTaskID(currentTask);
+
+        yield return new WaitForSeconds(2f);
+
+        int next = currentTask++;
+        //Set message (e.g. "Did you mean '{user intent}'?"
+        InterpretedAudioUserIntentMsg intentMsg = new InterpretedAudioUserIntentMsg();
+        intentMsg.user_intent = "Did you mean 'Go to the next task'?";
+
+        //Set event that should be triggered if user confirms
+        AngelARUI.Instance.SetUserIntentCallback((intent) => { AngelARUI.Instance.SetCurrentTaskID(next); });
+
+        //Show dialogue to user
+        AngelARUI.Instance.TryGetUserFeedbackOnUserIntent(intentMsg);
+
+        yield return new WaitForSeconds(10f);
+
+        next = currentTask--;
+        //Set message (e.g. "Did you mean '{user intent}'?"
+        intentMsg = new InterpretedAudioUserIntentMsg();
+        intentMsg.user_intent = "Did you mean 'Go to the previous task'?";
+
+        //Set event that should be triggered if user confirms
+        AngelARUI.Instance.SetUserIntentCallback((intent) => { AngelARUI.Instance.SetCurrentTaskID(next); });
+
+        //Show dialogue to user
+        AngelARUI.Instance.TryGetUserFeedbackOnUserIntent(intentMsg);
     }
 
 #if UNITY_EDITOR
 
     /// <summary>
-    /// Listen to Keyevents for debugging (only in the editor)
+    /// Listen to Keyevents for debugging (only in the Editor)
     /// </summary>
     public void Update()
     {
+        // Example how to set the recipe (task list in the ARUI) - example data see on top
         if (Input.GetKeyUp(KeyCode.O))
-        {
             AngelARUI.Instance.SetTasks(tasks);
-        }
 
+        // Example how to use the NLI confirmation dialogue
         if (Input.GetKeyUp(KeyCode.P))
         {
             int next = currentTask++;
-            AngelARUI.Instance.SetUserIntentCallback(() => { AngelARUI.Instance.SetCurrentTaskID(next); });
-            AngelARUI.Instance.TryGetUserFeedbackOnUserIntent("Do you want to go to the next task? Do you want to go to the next task?\n Do you want to go to the next task");
+            //1) Set message (e.g. "Did you mean '{user intent}'?"
+            InterpretedAudioUserIntentMsg intentMsg = new InterpretedAudioUserIntentMsg();
+            intentMsg.user_intent = "Did you mean 'Go to the next task'?";
+
+            //2) Set event that should be triggered if user confirms
+            AngelARUI.Instance.SetUserIntentCallback((intent) => { AngelARUI.Instance.SetCurrentTaskID(next); });
+
+            //4) Show dialogue to user
+            AngelARUI.Instance.TryGetUserFeedbackOnUserIntent(intentMsg);
         }
 
+        // Example how to step forward/backward in tasklist. 
         if (Input.GetKeyUp(KeyCode.RightArrow))
         {
             currentTask++;
@@ -166,30 +158,26 @@ public class TestData : MonoBehaviour, IMixedRealitySpeechHandler
             currentTask--;
             AngelARUI.Instance.SetCurrentTaskID(currentTask);
         }
-        
-        //if (Input.GetKeyUp(KeyCode.Space))
-        //{
-        //    AngelARUI.Instance.ToggleTasklist();
-        //}
-
+ 
         if (Input.GetKeyUp(KeyCode.R))
         {
             currentTask = UnityEngine.Random.Range(0, tasks.GetLength(0) + 2);
             AngelARUI.Instance.SetCurrentTaskID(currentTask);
         }
 
+        // Example how to trigger a skip notification. 
         if (Input.GetKeyUp(KeyCode.M))
         {
             AngelARUI.Instance.ShowSkipNotification(true);
         }
 
+        // Example how to disable skip notification (is disable if system sets new task, or if system disables task manually
         if (Input.GetKeyUp(KeyCode.B))
         {
             AngelARUI.Instance.ShowSkipNotification(false);
         }
 
     }
-
 
 #endif
 }

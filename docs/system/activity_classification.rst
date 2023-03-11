@@ -94,7 +94,7 @@ As such this node takes in data from:
     * 2D object detection predictions/descriptors (same message)
 
 This node is set up to perform asynchronous data input and prediction, which is
-centered on the :ref:`InputBuffer` structure.
+centered on the ``InputBuffer`` structure.
 This structure's job is to accumulate sensor data into buffers and manage the
 ability to extract "windows" of data from the buffers such that auxiliary data
 is sparsely associated with an image frame.

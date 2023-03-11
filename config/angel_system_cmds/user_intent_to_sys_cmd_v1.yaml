@@ -1,0 +1,7 @@
+version: "1"
+
+commands:
+  # User intent string -> system command.
+  # System command must be one of the boolean fields in the SystemCommands msg.
+  "Go to previous step": "previous_step"
+  "Go to next step": "next_step"

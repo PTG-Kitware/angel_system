@@ -2,30 +2,32 @@ using DilmerGames.Core.Singletons;
 using Microsoft.MixedReality.Toolkit.Input;
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
 /// <summary>
-/// Represents a virtual assistant, guiding the user through a sequence of tasks
+/// Represents a virtual assistant in the shape of an orb, staying in the FOV of the user and
+/// guiding the user through a sequence of tasks
 /// </summary>
 public class Orb : Singleton<Orb>
 {
-    //Reference to parts of the orb
-    private OrbFace face;
+    ///** Reference to parts of the orb
+    private OrbFace face;                   /// <the orb shape itself
+ 
     private OrbGrabbable grabbable;
     private OrbMessage messageContainer;
     private DwellButton taskListbutton;
+
+    private List<BoxCollider> allOrbColliders;
+    public List<BoxCollider> AllOrbColliders { get { return allOrbColliders; } }
+
     private MainMenu mainMenu;
 
-    //Placement behaviors
+    ///** Placement behaviors - overall, orb stays in the FOV of the user
     private OrbFollowerSolver followSolver;
    
 
-    private BoxCollider faceCollider;
-    public BoxCollider FaceCollider
-    {
-        get { return faceCollider; }
-    }
 
     //Flags
     private bool isLookingAtOrb = false;
@@ -62,10 +64,14 @@ public class Orb : Singleton<Orb>
         taskListbutton.InitializeButton(EyeTarget.orbtasklistButton, () => TaskListManager.Instance.ToggleTasklist(), false, DwellButtonType.Toggle);
         taskListbtn.SetActive(false);
 
-        faceCollider = transform.GetChild(0).GetComponent<BoxCollider>();
-
         mainMenu = GetComponentInChildren<MainMenu>();
         mainMenu.gameObject.SetActive(false);
+
+        BoxCollider taskListBtnCol = transform.GetChild(0).GetComponent<BoxCollider>();
+        // Collect all orb colliders
+        allOrbColliders = new List<BoxCollider>();
+        allOrbColliders.Add(taskListBtnCol);
+        allOrbColliders.Add(taskListbutton.Collider);
     }
 
     private void Update()
@@ -266,6 +272,9 @@ public class Orb : Singleton<Orb>
 
         SetNotificationMessage("");
         face.ChangeColorToDone(message.Contains("Done"));
+
+        if (!allOrbColliders.Contains(messageContainer.GetMessageCollider()))
+            allOrbColliders.Add(messageContainer.GetMessageCollider());
     }
 
     #endregion

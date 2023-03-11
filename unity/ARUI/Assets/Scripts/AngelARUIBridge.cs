@@ -15,6 +15,7 @@ public class AngelARUIBridge : MonoBehaviour
     ROSConnection ros;
     public string aruiUpdateTopicName = "AruiUpdates";
     public string querytaskgraphTopicName = "query_task_graph";
+    public string confirmedUserIntentTopicName = "ConfirmedUserIntents";
 
     private Logger _logger = null;
 
@@ -43,6 +44,12 @@ public class AngelARUIBridge : MonoBehaviour
 
         // Register the QueryTaskGraph service
         ros.RegisterRosService<QueryTaskGraphRequest, QueryTaskGraphResponse>(querytaskgraphTopicName);
+
+        // Create the confirmed user intents publisher
+        ros.RegisterPublisher<InterpretedAudioUserIntentMsg>(confirmedUserIntentTopicName);
+
+        // Register the confirmed user intent callback to publish confirmed intents
+        AngelARUI.Instance.SetUserIntentCallback((intent) => { ros.Publish(confirmedUserIntentTopicName, intent); });
     }
 
     void Update()
@@ -69,6 +76,11 @@ public class AngelARUIBridge : MonoBehaviour
         // TaskUpdate message current step ID is the most recently completed
         // step ID, so set the ARUI current ID to one greater than that.
         AngelARUI.Instance.SetCurrentTaskID(msg.task_update.current_step_id + 1);
+
+        for (int i = 0; i < msg.intents_for_confirmation.Length; i++)
+        {
+            AngelARUI.Instance.TryGetUserFeedbackOnUserIntent(msg.intents_for_confirmation[i]);
+        }
     }
 
     /// <summary>

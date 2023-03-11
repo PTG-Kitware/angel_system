@@ -30,6 +30,7 @@ public class DwellButton : MonoBehaviour, IMixedRealityTouchHandler
     private EyeTarget target;
     private UnityEvent selectEvent;
     private BoxCollider btnCollider;
+    public BoxCollider Collider { get { return btnCollider; } }
     private GameObject btnmesh;
 
     private float dwellSeconds = 4f;

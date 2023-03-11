@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
 
@@ -20,25 +21,18 @@ public static class TransformExtension
     /// </summary>
     /// <param name="t"></param>
     /// <param name="cam"></param>
-    /// <returns></returns>
-    public static Rect RectFromObj(this Transform t, Camera cam, BoxCollider bxcol)
-    {
-        Vector3[] worldCorners = new Vector3[8];
-        var extentPoints = GetScreenCorners(new Transform[1] { t }, cam, new BoxCollider[1] { bxcol }, ref worldCorners);
-
-        return GetGUIRectFromExtents(extentPoints, worldCorners, cam);
-    }
-
-    /// <summary>
-    /// https://forum.unity.com/threads/how-do-i-get-the-oriented-bounding-box-values.538239/
-    /// </summary>
-    /// <param name="t"></param>
-    /// <param name="cam"></param>
     /// <returns>Rect of given collider in </returns>
-    public static Rect RectFromObjs(this Transform t1, Camera cam, BoxCollider[] bxcols, Transform[] transforms)
+    public static Rect RectFromObjs(this Transform t1, Camera cam, List<BoxCollider> bxcols)
     {
-        Vector3[] worldCorners = new Vector3[16];
-        var extentPoints = GetScreenCorners(transforms, cam, bxcols, ref worldCorners);
+        List<BoxCollider> activeColliders = new List<BoxCollider>();
+        foreach (var col in bxcols)
+        {
+            if (col.gameObject.activeInHierarchy)
+                activeColliders.Add(col);
+        }
+
+        Vector3[] worldCorners = new Vector3[activeColliders.Count * 8];
+        var extentPoints = GetScreenCorners(cam, activeColliders, ref worldCorners);
 
         return GetGUIRectFromExtents(extentPoints, worldCorners, cam);
     }
@@ -93,7 +87,7 @@ public static class TransformExtension
         return new Rect(min.x, box_y_min, max.x - min.x, max.y - min.y);
     }
 
-    private static Vector2[] GetScreenCorners(Transform[] tr, Camera cam, BoxCollider[] bxcols, ref Vector3[] worldCorners)
+    private static Vector2[] GetScreenCorners(Camera cam, List<BoxCollider> bxcols, ref Vector3[] worldCorners)
     {
         float scalingValue = 1.0f;
 
@@ -101,7 +95,7 @@ public static class TransformExtension
         int index = 0;
         foreach (var item in bxcols)
         {
-            Transform current = tr[i]; 
+            Transform current = item.transform; 
             worldCorners[index] = current.TransformPoint(item.center + (new Vector3(-item.size.x * scalingValue, -item.size.y * scalingValue, -item.size.z * scalingValue) * 0.5f));
             worldCorners[index + 1] = current.TransformPoint(item.center + (new Vector3(item.size.x * scalingValue, -item.size.y * scalingValue, -item.size.z * scalingValue) * 0.5f));
             worldCorners[index + 2] = current.TransformPoint(item.center + (new Vector3(item.size.x * scalingValue, -item.size.y * scalingValue, item.size.z * scalingValue) * 0.5f));
@@ -115,7 +109,7 @@ public static class TransformExtension
             index += 8;
         }
 
-        Vector2[] corners = new Vector2[bxcols.Length * 8];
+        Vector2[] corners = new Vector2[bxcols.Count * 8];
         for (int j = 0; j < corners.Length; j++)
             corners[j] = cam.WorldToScreenPoint(worldCorners[j]);
 

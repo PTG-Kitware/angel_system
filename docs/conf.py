@@ -18,7 +18,7 @@
 # -- Project information -----------------------------------------------------
 
 project = 'ANGEL System'
-copyright = '2022, Kitware, Inc.'
+copyright = '2023, Kitware, Inc.'
 author = 'Kitware, Inc.'
 
 

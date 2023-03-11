@@ -1,7 +1,18 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.Events;
-using UnityEngine.UIElements;
+using RosMessageTypes.Angel;
+using Microsoft.MixedReality.Toolkit.Utilities.Solvers;
+using System;
+using TMPro;
+
+/// <summary>
+/// Custom one argument version of a UnityEvent to allow passing of
+/// InterpretedAudioUserIntentMsg arguments.
+/// See: https://docs.unity3d.com/ScriptReference/Events.UnityEvent_1.html
+/// </summary>
+[System.Serializable]
+public class InterpretedAudioUserIntentEvent : UnityEvent<InterpretedAudioUserIntentMsg> {}
 
 /// <summary>
 /// Dialogue that asks for user confirmation of a given action. Used for the Natural Language Interface.
@@ -10,29 +21,39 @@ using UnityEngine.UIElements;
 /// </summary>
 public class ConfirmationDialogue : MonoBehaviour
 {
-    private bool init = false;
-    private bool timerStarted = false;
+    private bool init = false;                              /// <true if dialogue was initialized (e.g. message, event)
+    private bool timerStarted = false;                      /// <true if timer started already
 
     private FlexibleTextContainer textContainer;    
-    private DwellButton okBtn;                      /// <Dialogue button
-    public UnityEvent selectEvent;                  /// <Event that will be invoked if the user confirms the dialogue
+    private DwellButton okBtn;                              /// <Dialogue button
+    private Orbital movingBehavior;
+    private bool delayedMoving = false;
 
-    private Shapes.Line time;                       /// <Line that shows the user how much time is left to make a decision
-    private float timeInSeconds = 6f;               /// <How much time the user has to decide (excluding the time the use is loking at the ok button
+    private InterpretedAudioUserIntentEvent selectEvent;     /// <Event that will be invoked if the user confirms the dialogue
+    private InterpretedAudioUserIntentMsg userIntent;
+
+    private Shapes.Line time;                               /// <Line that shows the user how much time is left to make a decision
+    private float timeInSeconds = 6f;                       /// <How much time the user has to decide (excluding the time the use is loking at the ok button
+
 
     private void Awake()
     {
         textContainer = transform.GetChild(1).GetChild(0).gameObject.AddComponent<FlexibleTextContainer>();
+        textContainer.gameObject.AddComponent<VMNonControllable>();
 
         GameObject btn = transform.GetChild(0).gameObject;
         okBtn = btn.AddComponent<DwellButton>();
         okBtn.InitializeButton(EyeTarget.okButton, () => Confirmed(true),true, DwellButtonType.Select);
         okBtn.gameObject.SetActive(false);
 
-        selectEvent = new UnityEvent();
-
         time = transform.GetComponentInChildren<Shapes.Line>();
         time.enabled = false;
+
+        transform.position = AngelARUI.Instance.ARCamera.ViewportToWorldPoint(new Vector3(0.5f, 0.7f, 1f), Camera.MonoOrStereoscopicEye.Left);
+        movingBehavior = gameObject.GetComponent<Orbital>();
+        movingBehavior.enabled = true;
+
+        selectEvent = new InterpretedAudioUserIntentEvent();
     }
 
     /// <summary>
@@ -42,18 +63,37 @@ public class ConfirmationDialogue : MonoBehaviour
     {
         if (init & !timerStarted && textContainer.TextRect.width > 0.001f)
             StartCoroutine(DecreaseTime());
+
+        if (okBtn.IsInteractingWithBtn && movingBehavior.enabled)
+            movingBehavior.enabled = false;
+        else if (!okBtn.IsInteractingWithBtn && !movingBehavior.enabled && !delayedMoving)
+            StartCoroutine(DelayedStartMoving());
+            
+    }
+
+    private IEnumerator DelayedStartMoving()
+    {
+        delayedMoving = true;
+
+        yield return new WaitForSeconds(1f);
+
+        if (!okBtn.IsInteractingWithBtn)
+            movingBehavior.enabled = true;
+
+        delayedMoving = false;
     }
 
     /// <summary>
     /// Initialize the dialgoue components - text and confirmation event
     /// </summary>
-    /// <param name="msg">message that is shown to the user.</param>
+    /// <param name="intentMsg">Contains message that is shown to the user.</param>
     /// <param name="confirmedEvent">confirmation event, invoked when the user is triggering the okay button</param>
-    public void InitializeConfirmationNotification(string msg, UnityAction confirmedEvent)
+    public void InitializeConfirmationNotification(InterpretedAudioUserIntentMsg intentMsg, UnityAction<InterpretedAudioUserIntentMsg> confirmedEvent)
     {
-        if (msg == null || msg.Length == 0) return;
+        if (intentMsg == null || intentMsg.user_intent.Length == 0) return;
 
-        textContainer.SetText(msg);
+        userIntent = intentMsg;
+        textContainer.SetText(intentMsg.user_intent);
         selectEvent.AddListener(confirmedEvent);
         init = true;
     }
@@ -66,7 +106,7 @@ public class ConfirmationDialogue : MonoBehaviour
     private void Confirmed(bool isConfirmed)
     {
         if (isConfirmed)
-            selectEvent.Invoke();
+            selectEvent.Invoke(userIntent);
         else
             AngelARUI.Instance.LogDebugMessage("The user did not confirm the dialogue", true);
 
@@ -74,9 +114,6 @@ public class ConfirmationDialogue : MonoBehaviour
         Destroy(this.gameObject);
     }
 
-    /// <summary>
-    /// Start and decrease the dialogue timer
-    /// </summary>
     private IEnumerator DecreaseTime()
     {
         timerStarted = true;

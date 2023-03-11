@@ -1,6 +1,8 @@
 using DilmerGames.Core.Singletons;
 using UnityEngine;
 using UnityEngine.Events;
+using RosMessageTypes.Angel;
+
 
 public class AngelARUI : Singleton<AngelARUI>
 {
@@ -24,8 +26,8 @@ public class AngelARUI : Singleton<AngelARUI>
     [Tooltip("Set a custom Skip Notification Message. Can not be empty.")]
     public string SkipNotificationMessage = "You are skipping the current task:";
 
-    ///****** Confirmation Dialogue 
-    private UnityAction onUserIntentConfirmedAction = null;     /// <Action invoked if the user accepts the confirmation dialogue
+    ///****** Confirmation Dialogue
+    private UnityAction<InterpretedAudioUserIntentMsg> onUserIntentConfirmedAction = null;     /// <Action invoked if the user accepts the confirmation dialogue
     private ConfirmationDialogue confirmationWindow = null;     /// <Reference to confirmation dialogue
     private GameObject confirmationWindowPrefab = null;
 
@@ -73,7 +75,7 @@ public class AngelARUI : Singleton<AngelARUI>
 
     /// <summary>
     /// Set the current task the user has to do.
-    /// If taskID is >= 0 and < the number of tasks, the orb won't react. 
+    /// If taskID is >= 0 and < the number of tasks, the orb won't react.
     /// If taskID is the same as the current one, the ARUI won't react.
     /// If taskID has subtasks, the orb shows the first subtask as the current task
     /// </summary>
@@ -96,7 +98,7 @@ public class AngelARUI : Singleton<AngelARUI>
     public void ToggleTasklist() => TaskListManager.Instance.ToggleTasklist();
 
     /// <summary>
-    /// Mute voice feedback for task guidance. ONLY influences task guidance. 
+    /// Mute voice feedback for task guidance. ONLY influences task guidance.
     /// </summary>
     /// <param name="mute">if true, the user will hear the tasks, in addition to text.</param>
     public void MuteAudio(bool mute) => AudioManager.Instance.MuteAudio(mute);
@@ -128,24 +130,24 @@ public class AngelARUI : Singleton<AngelARUI>
     /// <summary>
     /// Set the callback function that is invoked if the user confirms the confirmation dialogue
     /// </summary>
-    public void SetUserIntentCallback(UnityAction userIntentCallBack) => onUserIntentConfirmedAction = userIntentCallBack;
+    public void SetUserIntentCallback(UnityAction<InterpretedAudioUserIntentMsg> userIntentCallBack) => onUserIntentConfirmedAction = userIntentCallBack;
 
     /// <summary>
-    /// If confirmation action is set - SetUserIntentCallback(...) - and no confirmation window is active at the moment, the user is shown a 
-    /// timed confirmation window. Recommended text: "Did you mean ...". If the user confirms the dialogue, the onUserIntentConfirmedAction action is invoked. 
+    /// If confirmation action is set - SetUserIntentCallback(...) - and no confirmation window is active at the moment, the user is shown a
+    /// timed confirmation window. Recommended text: "Did you mean {user_intent} ?". If the user confirms the dialogue, the onUserIntentConfirmedAction action is invoked.
     /// </summary>
     /// <param name="msg">message that is shown in the confirmation dialogue</param>
-    public void TryGetUserFeedbackOnUserIntent(string msg)
+    public void TryGetUserFeedbackOnUserIntent(InterpretedAudioUserIntentMsg intentMsg)
     {
-        if (onUserIntentConfirmedAction == null || confirmationWindow != null || msg==null || msg.Length==0) return;
+        if (onUserIntentConfirmedAction == null || confirmationWindow != null || intentMsg == null || intentMsg.user_intent.Length==0) return;
 
         GameObject window = Instantiate(confirmationWindowPrefab, transform);
         confirmationWindow = window.AddComponent<ConfirmationDialogue>();
-        confirmationWindow.InitializeConfirmationNotification(msg, onUserIntentConfirmedAction);
+        confirmationWindow.InitializeConfirmationNotification(intentMsg, onUserIntentConfirmedAction);
     }
 
     /// <summary>
-    /// If given paramter is true, the orb will show message to the user that the system detected an attempt to skip the current task. 
+    /// If given paramter is true, the orb will show message to the user that the system detected an attempt to skip the current task.
     /// The message will disappear if "SetCurrentTaskID(..)" is called, or ShowSkipNotification(false)
     /// </summary>
     /// <param name="show">if true, the orb will show a skip notification, if false, the notification will disappear</param>

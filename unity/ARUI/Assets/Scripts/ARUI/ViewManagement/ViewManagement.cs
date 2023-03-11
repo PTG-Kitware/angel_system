@@ -1,8 +1,8 @@
 using DilmerGames.Core.Singletons;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using static UnityEditor.Progress;
 using Random = UnityEngine.Random;
 
 /// <summary>
@@ -16,9 +16,10 @@ public class ViewManagement : Singleton<ViewManagement>
     private int padding = 20;                                   /// < buffer in pixels
 
     private Dictionary<VMControllable, Rect> vmToRect;          /// < AABB: minx, miny, maxX, maxY - SCREEN SPACE
-    private List<VMNonControllable> allNonControllables;        /// < AABB: minx, miny, maxX, maxY - GUI coordinate system
-    private List<Rect> allEmptyRect;                            /// < AABB: minx, miny, maxX, maxY - GUI coordinate system
+    private List<VMObject> allAABBs;                            /// < AABB: minx, miny, maxX, maxY - GUI coordinate system
+    private List<VMNonControllable> allNonControllableAABB;                  /// < AABB: minx, miny, maxX, maxY - GUI coordinate system
 
+    private List<Rect> allEmptyRect;                            /// < AABB: minx, miny, maxX, maxY - GUI coordinate system
     private int objectsInViewSpace = 0;
 
     ///** For Debugging 
@@ -35,7 +36,7 @@ public class ViewManagement : Singleton<ViewManagement>
         Debug.Log("View Management Initialized, screen: " + AngelARUI.Instance.ARCamera.pixelWidth + "," + AngelARUI.Instance.ARCamera.pixelHeight);
 
         init = true;
-        allNonControllables = new List<VMNonControllable>();
+        allNonControllableAABB = new List<VMNonControllable>();
 
         yield return new WaitForSeconds(2f);
 
@@ -44,7 +45,7 @@ public class ViewManagement : Singleton<ViewManagement>
             debugCappedAABB = null;
             allEmptyRect = null;    
 
-            while (allNonControllables.Count==0)
+            while (allNonControllableAABB.Count==0)
                 yield return new WaitForEndOfFrame();
 
             SpaceManagement.Instance.CreateIntervaltree(0, AngelARUI.Instance.ARCamera.pixelWidth, AngelARUI.Instance.ARCamera.pixelHeight);
@@ -84,9 +85,9 @@ public class ViewManagement : Singleton<ViewManagement>
     {
         debugCappedAABB = new List<int[]>();
 
-        foreach (var vmnc in allNonControllables)
+        foreach (var vmc in allNonControllableAABB)
         {
-            Rect item = vmnc.AABB;
+            Rect item = vmc.AABB;
             if (//item!=null && Vector3.Magnitude(item.transform.position - transform.position) > 0.3f &&
                 item.width!=0 && item.height!=0)
             {
@@ -186,6 +187,28 @@ public class ViewManagement : Singleton<ViewManagement>
     }
 
     /// <summary>
+    /// Add non controllable tracking
+    /// </summary>
+    /// <param name="vmc"></param>
+    public void RegisterNonControllable(VMNonControllable vmc)
+    {
+        if (smIsAlive == false && allNonControllableAABB != null && !allNonControllableAABB.Contains(vmc))
+            allNonControllableAABB.Add(vmc);
+    }
+
+    /// <summary>
+    /// Remove non controallble tracking
+    /// </summary>
+    /// <param name="vmc"></param>
+    public void DeRegisterNonControllable(VMNonControllable vmc)
+    {
+        if (allNonControllableAABB != null)
+            allNonControllableAABB.Remove(vmc);
+    }
+
+    #endregion
+
+    /// <summary>
     /// TODO
     /// </summary>
     /// <param name="prevPointScreen">previous position in screen space of objRectGUI</param>
@@ -224,27 +247,6 @@ public class ViewManagement : Singleton<ViewManagement>
         return new Vector3(newX, newY, 0);
     }
 
-    /// <summary>
-    /// Add non controllable tracking
-    /// </summary>
-    /// <param name="vmc"></param>
-    public void RegisterNonControllable(VMNonControllable vmc)
-    {
-        if (smIsAlive == false && allNonControllables != null && !allNonControllables.Contains(vmc))
-            allNonControllables.Add(vmc);
-    }
-
-    /// <summary>
-    /// Remove non controallble tracking
-    /// </summary>
-    /// <param name="vmc"></param>
-    public void DeRegisterNonControllable(VMNonControllable vmc)
-    {
-        if (allNonControllables != null)
-            allNonControllables.Remove(vmc);
-    }
-
-    #endregion
 
     /// <summary>
     /// Returns best choice of empty rectangle for the given controllable, if no best rectangle is availalbe, return zero
