@@ -29,8 +29,6 @@ public class ViewManagement : Singleton<ViewManagement>
 
     private IEnumerator RunViewManagement()
     {
-        gameObject.AddComponent<SpaceManagement>();
-
         yield return new WaitForSeconds(3f);
 
         Debug.Log("View Management Initialized, screen: " + AngelARUI.Instance.ARCamera.pixelWidth + "," + AngelARUI.Instance.ARCamera.pixelHeight);

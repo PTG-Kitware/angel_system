@@ -2,7 +2,9 @@ using DilmerGames.Core.Singletons;
 using UnityEngine;
 using UnityEngine.Events;
 using RosMessageTypes.Angel;
-
+using System.Diagnostics.Eventing.Reader;
+using System;
+using System.Collections;
 
 public class AngelARUI : Singleton<AngelARUI>
 {
@@ -20,7 +22,7 @@ public class AngelARUI : Singleton<AngelARUI>
     private bool useViewManagement = true; /// <If true, the ARUI avoids placing UI eleements in front of salient regions 
     public bool IsVMActiv
     {
-        get { return useViewManagement; }
+        get { return ViewManagement.Instance!= null && useViewManagement; }
     }
 
     [Tooltip("Set a custom Skip Notification Message. Can not be empty.")]
@@ -51,7 +53,7 @@ public class AngelARUI : Singleton<AngelARUI>
 
         //Start View Management, if enabled
         if (useViewManagement)
-            ARCamera.gameObject.AddComponent<ViewManagement>();
+            StartCoroutine(TryStartVM());
 
         //Instantiate empty tasklist
         GameObject taskListPrefab = Instantiate(Resources.Load(StringResources.taskList_path)) as GameObject;
@@ -166,6 +168,31 @@ public class AngelARUI : Singleton<AngelARUI>
             Orb.Instance.SetNotificationMessage("");
     }
 
+    #endregion
+
+    #region View management
+
+    /// <summary>
+    /// Start view management if dll is available. If dll could not be loaded, view management is turned off.
+    /// </summary>
+    /// <returns></returns>
+    private IEnumerator TryStartVM()
+    {
+        SpaceManagement sm = ARCamera.gameObject.gameObject.AddComponent<SpaceManagement>();
+        yield return new WaitForEndOfFrame();
+
+        bool loaded = sm.CheckIfDllLoaded();
+
+        if (loaded)
+            ARCamera.gameObject.AddComponent<ViewManagement>();
+        else
+        {
+            Destroy(sm);
+            LogDebugMessage("VM could not be loaded. Setting vm disabled.", true);
+        }
+
+        useViewManagement = false;
+    }
     #endregion
 
     #region Logging

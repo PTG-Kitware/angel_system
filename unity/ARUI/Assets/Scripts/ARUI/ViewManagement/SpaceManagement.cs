@@ -45,6 +45,26 @@ public class SpaceManagement : Singleton<SpaceManagement>
     private static extern string get_all_overlapping_rect(ulong treeID, ulong minx, ulong miny, ulong maxx, ulong maxy);
 
     #region Spacemanagement
+
+    /// <summary>
+    /// Check if DLL for spacemanagement is loaded.
+    /// </summary>
+    /// <returns>true if dll is loaded, else false.</returns>
+    public bool CheckIfDllLoaded()
+    {
+        bool loaded = true;
+        try
+        {
+            CreateIntervaltree(99, 12, 12);
+        } catch (DllNotFoundException ex)
+        {
+            loaded = false;
+            AngelARUI.Instance.LogDebugMessage("VM DLL not found: \n"+ex.Message, true);
+        }
+
+        return loaded;
+    }
+
     /// <summary>
     /// Create a 2D interval tree with the given id, width and height.
     /// </summary>
@@ -266,12 +286,16 @@ public class SpaceManagement : Singleton<SpaceManagement>
     /// Free space and delete previous rangetrees
     /// </summary>
     /// <param name="ID">ID of 2D spacetree to be deleted</param>
-    public void DeleteTree(int v) => release_tree(Convert.ToUInt64(v));
+    public void DeleteTree(int ID) => release_tree(Convert.ToUInt64(ID));
 
     private void OnDestroy()
     {
-        DeleteTree(0);
-        DeleteTree(1);
+        try
+        {
+            DeleteTree(99);
+            DeleteTree(0);
+            DeleteTree(1);
+        } catch (DllNotFoundException ex) {} 
     }
     #endregion
 }
