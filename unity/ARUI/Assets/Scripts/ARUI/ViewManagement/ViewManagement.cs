@@ -11,19 +11,20 @@ using Random = UnityEngine.Random;
 /// </summary>
 public class ViewManagement : Singleton<ViewManagement>
 {
-    private bool init = false;
-    private bool smIsAlive = false;                             /// < true if the current data is valid, false if it is processing in the current frame
-    private int padding = 20;                                   /// < buffer in pixels
+    private bool _init = false;
+    private bool _smIsAlive = false;                             /// < true if the current data is valid, false if it is processing in the current frame
+    private int _padding = 20;                                   /// < buffer in pixels
 
-    private Dictionary<VMControllable, Rect> vmToRect;          /// < AABB: minx, miny, maxX, maxY - SCREEN SPACE
-    private List<VMObject> allAABBs;                            /// < AABB: minx, miny, maxX, maxY - GUI coordinate system
-    private List<VMNonControllable> allNonControllableAABB;                  /// < AABB: minx, miny, maxX, maxY - GUI coordinate system
+    private Dictionary<VMControllable, Rect> _vmToRect;          /// < AABB: minx, miny, maxX, maxY - SCREEN SPACE
+    private List<VMNonControllable> _allNonControllableAABB;      /// < AABB: minx, miny, maxX, maxY - GUI coordinate system
 
-    private List<Rect> allEmptyRect;                            /// < AABB: minx, miny, maxX, maxY - GUI coordinate system
-    private int objectsInViewSpace = 0;
+    private List<Rect> _allEmptyRect;                             /// < AABB: minx, miny, maxX, maxY - GUI coordinate system
+    private int _objectsInViewSpace = 0;
+    private int _minPixelSize = 1;
 
     ///** For Debugging 
-    private List<int[]> debugCappedAABB;                         /// < AABB: minx, miny, maxX, maxY - GUI coordinate system
+    private List<int[]> _debugCappedAABB;                         /// < AABB: minx, miny, maxX, maxY - GUI coordinate system
+
 
     private void Start() => StartCoroutine(RunViewManagement());
 
@@ -31,30 +32,30 @@ public class ViewManagement : Singleton<ViewManagement>
     {
         Debug.Log("View Management Initialized, screen: " + AngelARUI.Instance.ARCamera.pixelWidth + "," + AngelARUI.Instance.ARCamera.pixelHeight);
 
-        init = true;
-        allNonControllableAABB = new List<VMNonControllable>();
+        _init = true;
+        _allNonControllableAABB = new List<VMNonControllable>();
 
         while (true)
         {
-            debugCappedAABB = null;
-            allEmptyRect = null;    
+            _debugCappedAABB = null;
+            _allEmptyRect = null;    
 
-            while (allNonControllableAABB.Count==0)
+            while (_allNonControllableAABB.Count==0)
                 yield return new WaitForEndOfFrame();
 
             SpaceManagement.Instance.CreateIntervaltree(0, AngelARUI.Instance.ARCamera.pixelWidth, AngelARUI.Instance.ARCamera.pixelHeight);
             SpaceManagement.Instance.CreateIntervaltree(1, AngelARUI.Instance.ARCamera.pixelWidth, AngelARUI.Instance.ARCamera.pixelHeight);
 
-            objectsInViewSpace = 0;
+            _objectsInViewSpace = 0;
 
             AddAllObjectsToViewSpace();
 
-            smIsAlive = true;
+            _smIsAlive = true;
 
-            vmToRect = GetBestLayout();
+            _vmToRect = GetBestLayout();
 
-            if (objectsInViewSpace != 0)
-                allEmptyRect = SpaceManagement.Instance.GetAllEmptyRect(0);
+            if (_objectsInViewSpace != 0)
+                _allEmptyRect = SpaceManagement.Instance.GetAllEmptyRect(0);
 
             yield return new WaitForSeconds(0.1f);
 
@@ -62,7 +63,7 @@ public class ViewManagement : Singleton<ViewManagement>
             SpaceManagement.Instance.DeleteTree(0);
             SpaceManagement.Instance.DeleteTree(1);
 
-            smIsAlive = false;
+            _smIsAlive = false;
 
             yield return new WaitForSeconds(0.1f);
 
@@ -77,23 +78,22 @@ public class ViewManagement : Singleton<ViewManagement>
     /// </summary>
     private void AddAllObjectsToViewSpace()
     {
-        debugCappedAABB = new List<int[]>();
+        _debugCappedAABB = new List<int[]>();
 
-        foreach (var vmc in allNonControllableAABB)
+        foreach (var vmc in _allNonControllableAABB)
         {
             Rect item = vmc.AABB;
-            if (//item!=null && Vector3.Magnitude(item.transform.position - transform.position) > 0.3f &&
-                item.width!=0 && item.height!=0)
-            {
+            if (item.width> _minPixelSize && item.height> _minPixelSize) { 
+            
                 int[] AABB = Utils.GetCappedGUI(item);
 
-                if (!(AABB[2] < 0 || AABB[3] < 0))
+                if (AABB[2] > _minPixelSize && AABB[3] > _minPixelSize)
                 {
-                    objectsInViewSpace++;
+                    _objectsInViewSpace++;
                     SpaceManagement.Instance.AddFullRectToTree(0, AABB);
                     SpaceManagement.Instance.AddRectToTree(1, AABB);
 
-                    debugCappedAABB.Add(AABB);
+                    _debugCappedAABB.Add(AABB);
                 }
             }
         }
@@ -115,7 +115,7 @@ public class ViewManagement : Singleton<ViewManagement>
             int[] cappedRect = Utils.GetCappedGUI(obj.AABB);
 
             //Get closest
-            if ((cappedRect[2] < 0 || cappedRect[3] < 0))
+            if ((cappedRect[2] <= 0 || cappedRect[3] <= 0))
             {
                 bestLayout.Add(obj, Rect.zero);
                 continue;
@@ -126,7 +126,7 @@ public class ViewManagement : Singleton<ViewManagement>
             if (overlapFull.Count > 1)
             {
                 Vector3 pos = GetClosestEmptyPos(AngelARUI.Instance.ARCamera.WorldToScreenPoint(obj.transform.position),
-                obj.AABB, padding);
+                obj.AABB, _padding);
 
                 Rect newPosRect = new Rect(
                     pos.x - obj.AABB.width / 2,
@@ -136,7 +136,7 @@ public class ViewManagement : Singleton<ViewManagement>
 
                 int[] AABB = Utils.GetCappedGUI(newPosRect);
 
-                if (!(AABB[2] < 0 || AABB[3] < 0))
+                if (AABB[2] > _minPixelSize && AABB[3] > _minPixelSize)
                 {
                     if (vmcInView > 1)
                     {
@@ -186,8 +186,8 @@ public class ViewManagement : Singleton<ViewManagement>
     /// <param name="vmc"></param>
     public void RegisterNonControllable(VMNonControllable vmc)
     {
-        if (smIsAlive == false && allNonControllableAABB != null && !allNonControllableAABB.Contains(vmc))
-            allNonControllableAABB.Add(vmc);
+        if (_smIsAlive == false && _allNonControllableAABB != null && !_allNonControllableAABB.Contains(vmc))
+            _allNonControllableAABB.Add(vmc);
     }
 
     /// <summary>
@@ -196,8 +196,8 @@ public class ViewManagement : Singleton<ViewManagement>
     /// <param name="vmc"></param>
     public void DeRegisterNonControllable(VMNonControllable vmc)
     {
-        if (allNonControllableAABB != null)
-            allNonControllableAABB.Remove(vmc);
+        if (_allNonControllableAABB != null)
+            _allNonControllableAABB.Remove(vmc);
     }
 
     #endregion
@@ -249,35 +249,27 @@ public class ViewManagement : Singleton<ViewManagement>
     /// <returns></returns>
     public Rect GetBestEmptyRect(VMControllable vmC)
     {
-        if (vmToRect != null && vmToRect.ContainsKey(vmC))
-            return vmToRect[vmC];
+        if (_vmToRect != null && _vmToRect.ContainsKey(vmC))
+            return _vmToRect[vmC];
         else
             return Rect.zero;
     }
 
-    private void OnDestroy()
-    {
-        if (SpaceManagement.Instance != null)
-        {
-            SpaceManagement.Instance.DeleteTree(0);
-            SpaceManagement.Instance.DeleteTree(1);
-        }
-    }
-
     #region Debugging
+
 #if (UNITY_EDITOR)
     public bool printVMDebug = true;
 
     void OnGUI()
     {
-        if (!init || allEmptyRect == null || allEmptyRect.Count == 1 || objectsInViewSpace == 0 || !AngelARUI.Instance.IsVMActiv || !printVMDebug) return;
+        if (!_init || _allEmptyRect == null || _allEmptyRect.Count == 1 || _objectsInViewSpace == 0 || !AngelARUI.Instance.IsVMActiv || !printVMDebug) return;
 
         float scale = 1f;
         GUIStyle tintableText = new GUIStyle(GUI.skin.box);
         tintableText.normal.background = Texture2D.whiteTexture; // must be white to tint properly
         tintableText.normal.textColor = Color.white; // whatever you want
 
-        foreach (var vmc in vmToRect.Keys)
+        foreach (var vmc in _vmToRect.Keys)
         {
             Rect rect = vmc.AABB;
             int[] item = Utils.GetCappedGUI(rect);
@@ -290,20 +282,20 @@ public class ViewManagement : Singleton<ViewManagement>
         }
 
         //****Draw all empty recs
-        for (int i = 0; i < allEmptyRect.Count; i++)
+        for (int i = 0; i < _allEmptyRect.Count; i++)
         {
             GUI.backgroundColor = new Color(Random.Range(0f, 1f), Random.Range(0f, 1f), Random.Range(0f, 1f), 0.2f);
-            Rect scaledRect = new Rect(allEmptyRect[i].x * scale, allEmptyRect[i].y * scale, allEmptyRect[i].width * scale, allEmptyRect[i].height * scale);
-            GUI.Box(scaledRect, "Bounding Box : (" + allEmptyRect[i].x
-                                                + "," + allEmptyRect[i].y
-                                                + "," + allEmptyRect[i].width
-                                                + "," + allEmptyRect[i].height, tintableText);
+            Rect scaledRect = new Rect(_allEmptyRect[i].x * scale, _allEmptyRect[i].y * scale, _allEmptyRect[i].width * scale, _allEmptyRect[i].height * scale);
+            GUI.Box(scaledRect, "Bounding Box : (" + _allEmptyRect[i].x
+                                                + "," + _allEmptyRect[i].y
+                                                + "," + _allEmptyRect[i].width
+                                                + "," + _allEmptyRect[i].height, tintableText);
         }
 
         //**** Draw all full recs
-        if (debugCappedAABB != null && debugCappedAABB.Count > 0)
+        if (_debugCappedAABB != null && _debugCappedAABB.Count > 0)
         {
-            foreach (var item in debugCappedAABB)
+            foreach (var item in _debugCappedAABB)
             {
                 GUI.backgroundColor = new Color(255, 0, 0, 0.8f);
                 Rect scaledRect = new Rect(item[0] * scale, item[1] * scale, (item[2] - item[0]) * scale, (item[3] - item[1]) * scale);

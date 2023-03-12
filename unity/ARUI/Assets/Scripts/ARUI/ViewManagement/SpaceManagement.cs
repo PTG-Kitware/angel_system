@@ -286,16 +286,14 @@ public class SpaceManagement : Singleton<SpaceManagement>
     /// Free space and delete previous rangetrees
     /// </summary>
     /// <param name="ID">ID of 2D spacetree to be deleted</param>
-    public void DeleteTree(int ID) => release_tree(Convert.ToUInt64(ID));
-
-    private void OnDestroy()
+    public void DeleteTree(int ID)
     {
         try
         {
-            DeleteTree(99);
-            DeleteTree(0);
-            DeleteTree(1);
-        } catch (DllNotFoundException ex) {} 
+            release_tree(Convert.ToUInt64(ID));
+        }
+        catch (Exception ex) { }
     }
+
     #endregion
 }

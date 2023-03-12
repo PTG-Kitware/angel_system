@@ -15,23 +15,20 @@ public class AngelARUI : Singleton<AngelARUI>
     }
 
     ///****** Debug Settings
-    private bool showARUIDebugMessages = true;          /// <If true, ARUI debug messages are shown in the unity console and scene Logger (if available)
-    private bool showEyeGazeTarget = false;              /// <If true, the eye gaze target is shown if the eye ray hits UI elements (white small cube)
+    private bool _showARUIDebugMessages = true;          /// <If true, ARUI debug messages are shown in the unity console and scene Logger (if available)
+    private bool _showEyeGazeTarget = false;              /// <If true, the eye gaze target is shown if the eye ray hits UI elements (white small cube)
 
     ///****** Guidance Settings
-    private bool useViewManagement = true;              /// <If true, the ARUI avoids placing UI eleements in front of salient regions 
-    public bool IsVMActiv
-    {
-        get { return ViewManagement.Instance!= null && useViewManagement; }
-    }
+    private bool _useViewManagement = true;              /// <If true, the ARUI avoids placing UI eleements in front of salient regions 
+    public bool IsVMActiv => ViewManagement.Instance != null && _useViewManagement;
 
     [Tooltip("Set a custom Skip Notification Message. Can not be empty.")]
     public string SkipNotificationMessage = "You are skipping the current task:";
 
     ///****** Confirmation Dialogue
-    private UnityAction<InterpretedAudioUserIntentMsg> onUserIntentConfirmedAction = null;     /// <Action invoked if the user accepts the confirmation dialogue
-    private ConfirmationDialogue confirmationWindow = null;     /// <Reference to confirmation dialogue
-    private GameObject confirmationWindowPrefab = null;
+    private UnityAction<InterpretedAudioUserIntentMsg> _onUserIntentConfirmedAction = null;     /// <Action invoked if the user accepts the confirmation dialogue
+    private ConfirmationDialogue _confirmationWindow = null;     /// <Reference to confirmation dialogue
+    private GameObject _confirmationWindowPrefab = null;
 
     private void Awake()
     {
@@ -44,7 +41,7 @@ public class AngelARUI : Singleton<AngelARUI>
         //Instantiate eye target wrapper
         GameObject eyeTarget = Instantiate(Resources.Load(StringResources.eyeTarget_path)) as GameObject;
         eyeTarget.AddComponent<FollowEyeTarget>();
-        FollowEyeTarget.Instance.ShowDebugTarget(showEyeGazeTarget);
+        FollowEyeTarget.Instance.ShowDebugTarget(_showEyeGazeTarget);
 
         //Instantiate the main system menu - the orb
         GameObject orb = Instantiate(Resources.Load(StringResources.orb_path)) as GameObject;
@@ -52,7 +49,7 @@ public class AngelARUI : Singleton<AngelARUI>
         orb.AddComponent<Orb>();
 
         //Start View Management, if enabled
-        if (useViewManagement)
+        if (_useViewManagement)
             StartCoroutine(TryStartVM());
 
         //Instantiate empty tasklist
@@ -60,7 +57,7 @@ public class AngelARUI : Singleton<AngelARUI>
         taskListPrefab.AddComponent<TaskListManager>();
 
         //Load resources for UI elements
-        confirmationWindowPrefab = Resources.Load(StringResources.confNotification_path) as GameObject;
+        _confirmationWindowPrefab = Resources.Load(StringResources.confNotification_path) as GameObject;
 
     }
 
@@ -111,7 +108,7 @@ public class AngelARUI : Singleton<AngelARUI>
     /// <summary>
     /// Set the callback function that is invoked if the user confirms the confirmation dialogue
     /// </summary>
-    public void SetUserIntentCallback(UnityAction<InterpretedAudioUserIntentMsg> userIntentCallBack) => onUserIntentConfirmedAction = userIntentCallBack;
+    public void SetUserIntentCallback(UnityAction<InterpretedAudioUserIntentMsg> userIntentCallBack) => _onUserIntentConfirmedAction = userIntentCallBack;
 
     /// <summary>
     /// If confirmation action is set - SetUserIntentCallback(...) - and no confirmation window is active at the moment, the user is shown a
@@ -120,11 +117,11 @@ public class AngelARUI : Singleton<AngelARUI>
     /// <param name="msg">message that is shown in the confirmation dialogue</param>
     public void TryGetUserFeedbackOnUserIntent(InterpretedAudioUserIntentMsg intentMsg)
     {
-        if (onUserIntentConfirmedAction == null || confirmationWindow != null || intentMsg == null || intentMsg.user_intent.Length==0) return;
+        if (_onUserIntentConfirmedAction == null || _confirmationWindow != null || intentMsg == null || intentMsg.user_intent.Length==0) return;
 
-        GameObject window = Instantiate(confirmationWindowPrefab, transform);
-        confirmationWindow = window.AddComponent<ConfirmationDialogue>();
-        confirmationWindow.InitializeConfirmationNotification(intentMsg, onUserIntentConfirmedAction);
+        GameObject window = Instantiate(_confirmationWindowPrefab, transform);
+        _confirmationWindow = window.AddComponent<ConfirmationDialogue>();
+        _confirmationWindow.InitializeConfirmationNotification(intentMsg, _onUserIntentConfirmedAction);
     }
 
     /// <summary>
@@ -157,7 +154,7 @@ public class AngelARUI : Singleton<AngelARUI>
     /// <param name="enabled"></param>
     public void SetViewManagement(bool enabled)
     {
-        if (useViewManagement != enabled)
+        if (_useViewManagement != enabled)
         {
             if (enabled)
             {
@@ -166,7 +163,8 @@ public class AngelARUI : Singleton<AngelARUI>
             else if (ViewManagement.Instance != null)
             {
                 Destroy(ARCamera.gameObject.GetComponent<ViewManagement>());
-                useViewManagement = enabled;
+                Destroy(ARCamera.gameObject.GetComponent<SpaceManagement>());
+                _useViewManagement = false;
 
                 AngelARUI.Instance.LogDebugMessage("View Management is OFF",true);
             }
@@ -195,7 +193,7 @@ public class AngelARUI : Singleton<AngelARUI>
             LogDebugMessage("VM could not be loaded. Setting vm disabled.", true);
         }
 
-        useViewManagement = loaded;
+        _useViewManagement = loaded;
     }
     #endregion
 
@@ -204,7 +202,7 @@ public class AngelARUI : Singleton<AngelARUI>
     /// Set if debug information is shown in the logger window
     /// </summary>
     /// <param name="show">if true, ARUI debug messages are shown in the unity console and scene Logger (if available)</param>
-    public void ShowDebugMessagesInLogger(bool show) => showARUIDebugMessages = show;
+    public void ShowDebugMessagesInLogger(bool show) => _showARUIDebugMessages = show;
 
     /// <summary>
     /// Set if debug information is shown about the users eye gaze
@@ -212,8 +210,8 @@ public class AngelARUI : Singleton<AngelARUI>
     /// <param name="show">if true and the user is looking at a virtual UI element, a debug cube that represents the eye target is shown</param>
     public void ShowDebugEyeGazeTarget(bool show)
     {
-        showEyeGazeTarget = show;
-        FollowEyeTarget.Instance.ShowDebugTarget(showEyeGazeTarget);
+        _showEyeGazeTarget = show;
+        FollowEyeTarget.Instance.ShowDebugTarget(_showEyeGazeTarget);
     }
 
     /// <summary>
@@ -223,7 +221,7 @@ public class AngelARUI : Singleton<AngelARUI>
     /// <param name="showInLogger"></param>
     public void LogDebugMessage(string message, bool showInLogger)
     {
-        if (showARUIDebugMessages)
+        if (_showARUIDebugMessages)
         {
             if (showInLogger && FindObjectOfType<Logger>() != null)
                 Logger.Instance.LogInfo("***ARUI: " + message);
