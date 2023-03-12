@@ -174,7 +174,6 @@ public class OrbMessage : MonoBehaviour
         }
     }
 
-    
     private IEnumerator FadeNewTaskGlow()
     {
         SetFadeOutMessage(false);

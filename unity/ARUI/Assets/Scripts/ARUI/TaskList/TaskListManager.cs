@@ -6,6 +6,7 @@ using System;
 using Microsoft.MixedReality.Toolkit;
 using UnityEngine.UI;
 using Shapes;
+using UnityEngine.Events;
 
 /// <summary>
 /// Represents the task list in 3D
@@ -29,12 +30,13 @@ public class TaskListManager : Singleton<TaskListManager>
     private RectTransform taskContainer;
     private GameObject taskPrefab;
 
-    private int maxNumTasksOnList = 9;  /// Must be >=1 and an odd number
+    private int maxNumTasksOnList = 7;  /// Must be >=1 and an odd number
     private int currentTaskIDInList = -1;
 
     private Shapes.Line progressLine;
     private GameObject topPointsParent;
     private GameObject bottomPointsParent;
+    private VMNonControllable vmnc;
 
     // Eye-gaze based updates
     private bool isLookingAtTaskList = false;
@@ -94,6 +96,9 @@ public class TaskListManager : Singleton<TaskListManager>
 
         obIndicator = GetComponentInChildren<ObjectIndicator>();
         obIndicator.gameObject.SetActive(false);
+
+        vmnc = gameObject.AddComponent<VMNonControllable>();
+        vmnc.enabled = false;
     }
 
     #region Generates tasklist at runtime
@@ -126,6 +131,7 @@ public class TaskListManager : Singleton<TaskListManager>
                     taskToParent.Add(i, lastParent);
             }
 
+            Orb.Instance.ResetToggleBtn();
             StartCoroutine(GenerateTaskListElementsAsync(tasks));
 
             if (tasks.GetLength(0) > maxNumTasksOnList)
@@ -201,12 +207,13 @@ public class TaskListManager : Singleton<TaskListManager>
         if (isLookingAtTaskList && FollowEyeTarget.Instance.currentHit != EyeTarget.tasklist)
         {
             isLookingAtTaskList = false;
-            Orb.Instance.SetSticky(false);
+            //Orb.Instance.SetSticky(false);
         }
         else if (!isLookingAtTaskList && FollowEyeTarget.Instance.currentHit == EyeTarget.tasklist)
         {
             isLookingAtTaskList = true;
-            Orb.Instance.SetSticky(true);
+            Orb.Instance.messageContainer.SetIsActive(false, false);
+            //Orb.Instance.SetSticky(true);
         }
 
         if (isLookingAtTaskList && !isVisible && !isFading)
@@ -220,6 +227,7 @@ public class TaskListManager : Singleton<TaskListManager>
                 currentTasksListElements[i].SetAlpha(1f);
 
             taskContainer.gameObject.SetActive(true);
+            vmnc.enabled = true;
         }
         else if (isLookingAtTaskList && isVisible && isFading)
         {
@@ -242,6 +250,12 @@ public class TaskListManager : Singleton<TaskListManager>
         //    UpdatePosition();
 
         transform.rotation = Quaternion.LookRotation(transform.position - AngelARUI.Instance.ARCamera.transform.position, Vector3.up);
+    }
+
+    public void ToggleTasklist()
+    {
+        if (list != null)
+            SetTaskListActive(!list.activeInHierarchy);
     }
 
     /// <summary>
@@ -319,7 +333,7 @@ public class TaskListManager : Singleton<TaskListManager>
         //Deactivate previous task list elements
         for (int i = 0; i < taskToElement.Count; i++)
         {
-            taskToElement[i].Reset();
+            taskToElement[i].Reset(list.activeInHierarchy);
             taskToElement[i].gameObject.SetActive(false);
             currentTasksListElements.Remove(taskToElement[i]);
         }
@@ -404,26 +418,50 @@ public class TaskListManager : Singleton<TaskListManager>
             yield return new WaitForEndOfFrame();
         }
 
-        if(isFading)
+        if (isFading)
         {
             isFading = false;
             isVisible = false;
 
+            vmnc.enabled = false;
             taskContainer.gameObject.SetActive(false);
+
             taskListCollider.center = closedColliderCenter;
             taskListCollider.size = closedCollidersize;
         }
     }
 
+    private IEnumerator ShowTaskList()
+    {
+        isProcessingOpening = true;
+
+        StartCoroutine(UpdatePosAndRot(false));
+
+        while (isProcessingRepositioning)
+        {
+            yield return new WaitForEndOfFrame();
+        }
+
+        foreach (var elem in currentTasksListElements)
+            elem.SetAlpha(1);
+
+        list.SetActive(true);
+        taskListCollider.enabled = true;
+        
+        AudioManager.Instance.PlaySound(transform.position, SoundType.notification);
+
+        isProcessingOpening = false;
+    }
+    
     #endregion
 
-    public void ToggleTasklist()
-    {
-        if (list!=null)
-            SetTaskListActive(!list.activeInHierarchy);
-    }
-
     #region Pose Update
+
+    public void Reposition()
+    {
+        if (list.activeSelf)
+            UpdatePosition();
+    }
 
     private void UpdateMaxDistance()
     {
@@ -462,7 +500,7 @@ public class TaskListManager : Singleton<TaskListManager>
             Vector3 startPos = transform.position;
 
             float timeElapsed = 0;
-            float lerpDuration = 1;
+            float lerpDuration = 0.4f;
             while (timeElapsed < lerpDuration)
             {
                 // Set our position as a fraction of the distance between the markers.
@@ -475,6 +513,8 @@ public class TaskListManager : Singleton<TaskListManager>
 
             transform.position = targetPos;
             transform.SetYPos(AngelARUI.Instance.ARCamera.transform.position.y);
+
+            StartCoroutine(ShowHalo());
         } 
         else
         {
@@ -486,26 +526,6 @@ public class TaskListManager : Singleton<TaskListManager>
     }
 
     #endregion
-
-    private IEnumerator ShowTaskList()
-    {
-        isProcessingOpening = true;
-
-        StartCoroutine(UpdatePosAndRot(false));
-
-        while (isProcessingRepositioning)
-        {
-            yield return new WaitForEndOfFrame();
-        }
-        
-        list.SetActive(true);
-        taskListCollider.enabled = true;
-
-        AudioManager.Instance.PlaySound(transform.position, SoundType.notification);
-
-        isProcessingOpening = false;
-    }
-
 
     #region Getter and Setter
 
@@ -530,14 +550,13 @@ public class TaskListManager : Singleton<TaskListManager>
         {
             UpdateMaxDistance();
             StartCoroutine(ShowTaskList());
-
             StartCoroutine(ShowHalo());
-            
         }
         else
         {
             list.SetActive(false);
             taskListCollider.enabled = false;
+            vmnc.enabled = false;
 
             AudioManager.Instance.PlaySound(transform.position, SoundType.notification);
         }
@@ -547,7 +566,7 @@ public class TaskListManager : Singleton<TaskListManager>
     {
         obIndicator.gameObject.SetActive(true);
 
-        while (!Utils.InFOV(AngelARUI.Instance.ARCamera,transform.position))
+        while (!Utils.InFOV(AngelARUI.Instance.ARCamera,transform.position) && list.activeSelf)
         {
             yield return new WaitForEndOfFrame();   
         }

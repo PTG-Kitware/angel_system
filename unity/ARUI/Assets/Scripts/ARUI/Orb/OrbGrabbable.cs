@@ -9,42 +9,37 @@ using UnityEngine;
 /// </summary>
 public class OrbGrabbable : MonoBehaviour, IMixedRealityPointerHandler
 {
-    private ObjectManipulator grabbable;
-    private bool isDragging;
+    private ObjectManipulator _grabbable;
+    private bool _isDragging;
     public bool IsDragging
     {
-        get { return isDragging; }
+        get { return _isDragging; }
     }
 
     private void Start()
     {
-        grabbable = gameObject.GetComponent<ObjectManipulator>();
+        _grabbable = gameObject.GetComponent<ObjectManipulator>();
 
-        grabbable.OnHoverEntered.AddListener(delegate { OnHoverStarted(); });
-        grabbable.OnHoverExited.AddListener(delegate { OnHoverExited(); });
+        _grabbable.OnHoverEntered.AddListener(delegate { OnHoverStarted(); });
+        _grabbable.OnHoverExited.AddListener(delegate { OnHoverExited(); });
     }
 
     private void OnHoverStarted() => Orb.Instance.SetNearHover(true);
 
     private void OnHoverExited() => Orb.Instance.SetNearHover(false);
 
+
     public void OnPointerDown(MixedRealityPointerEventData eventData)
     {
-        Orb.Instance.IsDragging =(true);
-        isDragging = true;
+        _isDragging = true;
         AudioManager.Instance.PlaySound(transform.position, SoundType.moveStart);
     }
 
-    public void OnPointerDragged(MixedRealityPointerEventData eventData)
-    {
-        Orb.Instance.IsDragging =(true);
-        isDragging = true;
-    }
+    public void OnPointerDragged(MixedRealityPointerEventData eventData) => _isDragging = true;
 
     public void OnPointerUp(MixedRealityPointerEventData eventData)
     {
-        Orb.Instance.IsDragging = (false);
-        isDragging = false;
+        _isDragging = false;
         AudioManager.Instance.PlaySound(transform.position, SoundType.moveEnd);
     }
 

@@ -15,11 +15,11 @@ public class AngelARUI : Singleton<AngelARUI>
     }
 
     ///****** Debug Settings
-    private bool showARUIDebugMessages = true; /// <If true, ARUI debug messages are shown in the unity console and scene Logger (if available)
-    private bool showEyeGazeTarget = true; /// <If true, the eye gaze target is shown if the eye ray hits UI elements (white small cube)
+    private bool showARUIDebugMessages = true;          /// <If true, ARUI debug messages are shown in the unity console and scene Logger (if available)
+    private bool showEyeGazeTarget = false;              /// <If true, the eye gaze target is shown if the eye ray hits UI elements (white small cube)
 
     ///****** Guidance Settings
-    private bool useViewManagement = true; /// <If true, the ARUI avoids placing UI eleements in front of salient regions 
+    private bool useViewManagement = true;              /// <If true, the ARUI avoids placing UI eleements in front of salient regions 
     public bool IsVMActiv
     {
         get { return ViewManagement.Instance!= null && useViewManagement; }
@@ -105,27 +105,6 @@ public class AngelARUI : Singleton<AngelARUI>
     /// <param name="mute">if true, the user will hear the tasks, in addition to text.</param>
     public void MuteAudio(bool mute) => AudioManager.Instance.MuteAudio(mute);
 
-    /// <summary>
-    /// Enable or disable view management. enabled by default 
-    /// </summary>
-    /// <param name="enabled"></param>
-    public void SetViewManagement(bool enabled)
-    {
-        if (useViewManagement != enabled)
-        {
-            if (enabled)
-            {
-                ARCamera.gameObject.AddComponent<ViewManagement>();
-                useViewManagement = enabled;
-            }
-            else if (ARCamera.GetComponent<ViewManagement>() != null)
-            {
-                Destroy(ARCamera.GetComponent<ViewManagement>());
-                useViewManagement = enabled;
-            }
-        }
-    }
-
     #endregion
 
     #region Notifications
@@ -173,6 +152,28 @@ public class AngelARUI : Singleton<AngelARUI>
     #region View management
 
     /// <summary>
+    /// Enable or disable view management. enabled by default 
+    /// </summary>
+    /// <param name="enabled"></param>
+    public void SetViewManagement(bool enabled)
+    {
+        if (useViewManagement != enabled)
+        {
+            if (enabled)
+            {
+                StartCoroutine(TryStartVM());
+            }
+            else if (ViewManagement.Instance != null)
+            {
+                Destroy(ARCamera.gameObject.GetComponent<ViewManagement>());
+                useViewManagement = enabled;
+
+                AngelARUI.Instance.LogDebugMessage("View Management is OFF",true);
+            }
+        }
+    }
+
+    /// <summary>
     /// Start view management if dll is available. If dll could not be loaded, view management is turned off.
     /// </summary>
     /// <returns></returns>
@@ -184,14 +185,17 @@ public class AngelARUI : Singleton<AngelARUI>
         bool loaded = sm.CheckIfDllLoaded();
 
         if (loaded)
+        {
             ARCamera.gameObject.AddComponent<ViewManagement>();
+            AngelARUI.Instance.LogDebugMessage("View Management is ON", true);
+        }
         else
         {
             Destroy(sm);
             LogDebugMessage("VM could not be loaded. Setting vm disabled.", true);
         }
 
-        useViewManagement = false;
+        useViewManagement = loaded;
     }
     #endregion
 

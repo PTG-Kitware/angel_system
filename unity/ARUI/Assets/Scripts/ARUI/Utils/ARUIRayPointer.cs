@@ -41,41 +41,8 @@ public class ARUIRayPointer : LinePointer
     private bool wasSelectPressed = false;
     private bool wasGrabPressed = false;
 
-    [Header("Obsolete Settings")]
-
-    [SerializeField]
-    [Obsolete("Use lineMaterialSelected instead.")]
-    private BaseMixedRealityLineRenderer lineRendererSelected = null;
-
-    [SerializeField]
-    [Obsolete("Use lineMaterialNoTarget instead.")]
-    private BaseMixedRealityLineRenderer lineRendererNoTarget = null;
-
-    /// <inheritdoc />
     protected override void Start()
     {
-#pragma warning disable 0618
-        if (lineRendererSelected != null && lineMaterialSelected == null)
-        {
-            Debug.LogWarning("Property lineRendererSelected is obsolete. Use lineMaterialSelected instead.");
-
-            if (lineRendererSelected is MixedRealityLineRenderer lineRenderer)
-            {
-                lineMaterialSelected = lineRenderer.LineMaterial;
-            }
-        }
-
-        if (lineRendererNoTarget != null && lineMaterialNoTarget == null)
-        {
-            Debug.LogWarning("Property lineRendererNoTarget is obsolete. Use lineMaterialNoTarget instead.");
-
-            if (lineRendererNoTarget is MixedRealityLineRenderer lineRenderer)
-            {
-                lineMaterialNoTarget = lineRenderer.LineMaterial;
-            }
-        }
-#pragma warning restore 0618
-
         base.Start();
     }
 

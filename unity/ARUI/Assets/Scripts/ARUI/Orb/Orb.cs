@@ -13,38 +13,27 @@ using UnityEngine;
 public class Orb : Singleton<Orb>
 {
     ///** Reference to parts of the orb
-    private OrbFace face;                   /// <the orb shape itself
- 
-    private OrbGrabbable grabbable;
-    private OrbMessage messageContainer;
-    private DwellButton taskListbutton;
+    private OrbFace face;                                   /// <the orb shape itself (part of prefab)
+    private OrbGrabbable grabbable;                         /// <reference to grabbing behavior
+    public OrbMessage messageContainer;                    /// <reference to orb message container (part of prefab)
+    private DwellButton taskListbutton;                     /// <reference to dwell btn above orb ('tasklist button')
+    private MainMenu mainMenu;                              /// <reference to main menu (cookbook) - not used at the moment
 
-    private List<BoxCollider> allOrbColliders;
+    private List<BoxCollider> allOrbColliders;              /// <reference to all collider - will be merged for view management.
     public List<BoxCollider> AllOrbColliders { get { return allOrbColliders; } }
-
-    private MainMenu mainMenu;
 
     ///** Placement behaviors - overall, orb stays in the FOV of the user
     private OrbFollowerSolver followSolver;
-   
 
-
-    //Flags
-    private bool isLookingAtOrb = false;
-
-    public bool IsDragging
-    {
-        get { return grabbable.IsDragging; }
-        set { SetIsDragging(value); }
-    }
-
-    private bool lazyLookAtRunning = false;
-    private bool lazyFollowStarted = false;
+    ///** Flags
+    private bool isLookingAtOrb = false;                    /// <true if the user is currently looking at the orb shape or orb message
+    private bool lazyLookAtRunning = false;                 /// <used for lazy look at disable
+    private bool lazyFollowStarted = false;                 /// <used for lazy following
 
     /// <summary>
     /// Get all orb references from prefab
     /// </summary>
-    void Awake()
+    private void Awake()
     {
         gameObject.name = "Orb";
         face = transform.GetChild(0).GetChild(0).gameObject.AddComponent<OrbFace>();
@@ -61,7 +50,7 @@ public class Orb : Singleton<Orb>
         GameObject taskListbtn = transform.GetChild(0).GetChild(2).gameObject;
         taskListbutton = taskListbtn.AddComponent<DwellButton>();
         taskListbutton.gameObject.name += "FacetasklistButton";
-        taskListbutton.InitializeButton(EyeTarget.orbtasklistButton, () => TaskListManager.Instance.ToggleTasklist(), false, DwellButtonType.Toggle);
+        taskListbutton.InitializeButton(EyeTarget.orbtasklistButton, () => TaskListManager.Instance.ToggleTasklist(), () => TaskListManager.Instance.Reposition(), false, DwellButtonType.Toggle);
         taskListbtn.SetActive(false);
 
         mainMenu = GetComponentInChildren<MainMenu>();
@@ -74,6 +63,9 @@ public class Orb : Singleton<Orb>
         allOrbColliders.Add(taskListbutton.Collider);
     }
 
+    /// <summary>
+    /// Update visibility of orb based on eye evets and task manager.
+    /// </summary>
     private void Update()
     {
         // Update eye tracking flag
@@ -82,7 +74,7 @@ public class Orb : Singleton<Orb>
         else if (!isLookingAtOrb && FollowEyeTarget.Instance.currentHit == EyeTarget.orbFace)
             SetIsLookingAtFace(true);
 
-        if (messageContainer.UserHasNotSeenNewTask && IsLookingAtOrb(false)) 
+        if (messageContainer.UserHasNotSeenNewTask && messageContainer.IsLookingAtMessage)
             face.SetNotificationIconActive(false);
 
         UpdateOrbVisibility();
@@ -97,8 +89,6 @@ public class Orb : Singleton<Orb>
     /// </summary>
     private void UpdateOrbVisibility()
     {
-        if (messageContainer.UserHasNotSeenNewTask) return;
-
         if (TaskListManager.Instance.GetTaskCount() != 0)
         {
             if ((IsLookingAtOrb(false) && !messageContainer.IsMessageVisible && !messageContainer.IsMessageFading))
@@ -119,28 +109,7 @@ public class Orb : Singleton<Orb>
                 messageContainer.SetFadeOutMessage(true);
             }
         } 
-        
-        //else if (TaskListManager.Instance.ShowCookbook())
-        //{
-        //    if (!IsLookingAtOrb(true) && mainMenu.gameObject.activeSelf && !mainMenu.isFading)
-        //    {
-        //        StartCoroutine(LazyMenuFade());
-        //    }
-        //    else if (IsLookingAtOrb(true) && !mainMenu.gameObject.activeSelf)
-        //        mainMenu.gameObject.SetActive(true);
-        //}
-
-    }
-
-    //private IEnumerator LazyMenuFade()
-    //{
-    //    mainMenu.isFading = true;
-    //    yield return new WaitForSeconds(1f);
-    //    if (!IsLookingAtOrb(true))
-    //        mainMenu.gameObject.SetActive(false);
-
-    //    mainMenu.isFading = false;
-    //}
+    } 
 
     /// <summary>
     /// If the user drags the orb, the orb will stay in place until it will be out of FOV
@@ -154,9 +123,7 @@ public class Orb : Singleton<Orb>
         followSolver.IsPaused = (true);
 
         while (Utils.InFOV(AngelARUI.Instance.ARCamera, grabbable.transform.position))
-        {
             yield return new WaitForSeconds(0.1f);
-        }
 
         followSolver.IsPaused = (false);
         lazyFollowStarted = false;
@@ -277,6 +244,8 @@ public class Orb : Singleton<Orb>
             allOrbColliders.Add(messageContainer.GetMessageCollider());
     }
 
+    public void ResetToggleBtn() => taskListbutton.Toggled = false;
+
     #endregion
 
     #region Getter and Setter
@@ -303,11 +272,7 @@ public class Orb : Singleton<Orb>
     /// Change the visibility of the tasklist button
     /// </summary>
     /// <param name="isActive"></param>
-    public void SetTaskListButtonActive(bool isActive)
-    {
-        //mainMenu.gameObject.SetActive(!isActive);
-        taskListbutton.gameObject.SetActive(isActive);
-    }
+    public void SetTaskListButtonActive(bool isActive) => taskListbutton.gameObject.SetActive(isActive);
 
     /// <summary>
     /// Update the position behavior of the orb
@@ -321,6 +286,11 @@ public class Orb : Singleton<Orb>
             messageContainer.SetIsActive(false, false);
     }
 
+    /// <summary>
+    /// Check if user is looking at orb. - includes orb message and task list button if 'any' is true. else only orb face and message
+    /// </summary>
+    /// <param name="any">if true, subobjects of orb are inlcluded, else only face and message</param>
+    /// <returns></returns>
     public bool IsLookingAtOrb(bool any)
     {
         if (any)

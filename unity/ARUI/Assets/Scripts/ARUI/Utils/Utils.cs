@@ -1,14 +1,7 @@
-using Shapes;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
-using UnityEditor.PackageManager;
 using UnityEngine;
-using UnityEngine.UIElements;
-using static UnityEditor.Progress;
-using Random = UnityEngine.Random;
 
 public static class Utils
 {
@@ -59,41 +52,6 @@ public static class Utils
     {
         return new Vector3(rect.x + rect.width / 2,
             rect.y + rect.height / 2, 0.0000001f);
-    }
-
-    public static Vector3 GetWorldPosFromRect(Rect screenRect, GameObject name)
-    {
-        RaycastHit hit;
-        Ray ray = AngelARUI.Instance.ARCamera.ScreenPointToRay(
-            new Vector2(screenRect.x + screenRect.width / 2,
-            AngelARUI.Instance.ARCamera.pixelHeight - screenRect.y - screenRect.height / 2));
-
-        float dist = Vector3.Magnitude(AngelARUI.Instance.ARCamera.transform.position - name.transform.position);
-        return ray.GetPoint(dist);
-
-        //int layerMask = LayerMask.GetMask("VM");
-        //if (Physics.Raycast(ray, out hit, 1000f, layerMask))
-        //{
-        //    RaycastHit hitout;
-        //    bool success = false;
-        //    Vector3 scaledHit = ray.GetPoint(100);
-        //    if (Physics.Raycast(scaledHit, Camera.main.transform.position - scaledHit, out hitout, 2000, layerMask))
-        //    {
-        //        if (hitout.collider.gameObject.name.Equals(name.name))
-        //        {
-        //            Vector3 dir = hit.point - hitout.point;
-        //            Ray ra = new Ray(hitout.point, dir);
-        //            float dist = Vector3.Magnitude(hit.point - hitout.point);
-        //            return ra.GetPoint(dist / 2);
-        //        }
-        //    } else
-        //    {
-
-        //        return ray.GetPoint(dist / 2);
-        //    }
-        //}
-
-
     }
 
     /// <summary>

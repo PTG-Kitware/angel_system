@@ -6,7 +6,7 @@ using UnityEngine;
 using Microsoft.MixedReality.Toolkit;
 using System.Collections;
 using System;
-using UnityEditor.Build;
+
 /// <summary>
 /// Provides a solver for the Orb, using MRTK solver
 /// </summary>
@@ -18,14 +18,14 @@ public class OrbFollowerSolver : Solver
     private float minDistance = 0.6f;
 
     [Tooltip("Max distance from eye to element")]
-    private float maxDistance = 1f;
+    private float maxDistance = 0.7f;
 
     [Tooltip("The element will stay at least this far away from the center of view")]
     private float minViewDegrees = 0f;
 
     [Tooltip("The element will stay at least this close to the center of view")]
-    private float currentMaxViewDegrees = 12f;
-    private float maxViewDegreesRegular = 12f;
+    private float currentMaxViewDegrees = 15f;
+    private float maxViewDegreesRegular = 15f;
     private float maxViewDegreesSticky = 21f;
     private float maxViewDegreesCenter = 5f;
 

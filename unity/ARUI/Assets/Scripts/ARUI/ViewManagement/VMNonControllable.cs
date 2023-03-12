@@ -2,6 +2,7 @@ using Microsoft.MixedReality.Toolkit.Input;
 using Microsoft.MixedReality.Toolkit.UI;
 using Newtonsoft.Json.Bson;
 using System.Collections.Generic;
+using System.Runtime.Remoting.Messaging;
 using UnityEngine;
 
 public class VMNonControllable : VMObject
@@ -26,6 +27,8 @@ public class VMNonControllable : VMObject
 
     private void Update()
     {
+        if (!AngelARUI.Instance.IsVMActiv) return;
+
         if (transform.InFrontOfCamera(AngelARUI.Instance.ARCamera))
         {
             AABB = transform.RectFromObjs(AngelARUI.Instance.ARCamera, new List<BoxCollider> { collider });
@@ -40,11 +43,13 @@ public class VMNonControllable : VMObject
 
     private void OnDestroy()
     {
+        if (!AngelARUI.Instance.IsVMActiv) return;
         ViewManagement.Instance.DeRegisterNonControllable(this);
     }
 
     private void OnDisable()
     {
+        if (!AngelARUI.Instance.IsVMActiv) return;
         ViewManagement.Instance.DeRegisterNonControllable(this);
     }
 }

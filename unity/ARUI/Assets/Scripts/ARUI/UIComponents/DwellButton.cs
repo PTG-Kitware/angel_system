@@ -29,12 +29,20 @@ public class DwellButton : MonoBehaviour, IMixedRealityTouchHandler
 
     private EyeTarget target;
     private UnityEvent selectEvent;
+    private UnityEvent quarterSelectEvent;
     private BoxCollider btnCollider;
     public BoxCollider Collider { get { return btnCollider; } }
     private GameObject btnmesh;
 
     private float dwellSeconds = 4f;
     private DwellButtonType type = DwellButtonType.Toggle;
+    private bool toggled = false;
+    public bool Toggled { 
+        set { 
+            toggled = value; 
+            SetSelected(value);
+        } 
+    }
 
     //*** Btn Dwelling Feedback 
     private Shapes.Disc loadingDisc;
@@ -47,8 +55,7 @@ public class DwellButton : MonoBehaviour, IMixedRealityTouchHandler
     //*** Btn Design
     private Material btnBGMat;
     private Color baseColor = new Color(0.5377358f, 0.5377358f, 0.5377358f,0.24f);
-    private Color touchingColor = new Color(0.65f, 0.65f, 0.65f, 0.4f);
-    private Color activeColor = new Color(0.7f, 0.7f, 0.7f, 0.4f);
+    private Color activeColor = new Color(0.7f, 0.7f, 0.8f, 0.4f);
 
     private void Awake()
     {
@@ -66,15 +73,20 @@ public class DwellButton : MonoBehaviour, IMixedRealityTouchHandler
         mr.material = btnBGMat;
 
         selectEvent = new UnityEvent();
+        quarterSelectEvent = new UnityEvent();
 
         btnCollider = GetComponentInChildren<BoxCollider>(true);
         btnmesh = transform.GetChild(0).gameObject;
     }
 
-    public void InitializeButton(EyeTarget target, UnityAction btnSelectEvent, bool touchable, DwellButtonType type)
+    public void InitializeButton(EyeTarget target, UnityAction btnSelectEvent, UnityAction btnHalfSelect, bool touchable, DwellButtonType type)
     {
         this.target = target;
         selectEvent.AddListener(btnSelectEvent);
+
+        if (btnHalfSelect != null)
+            quarterSelectEvent.AddListener(btnHalfSelect);
+
         this.touchable = touchable;
         this.type = type;
 
@@ -112,8 +124,9 @@ public class DwellButton : MonoBehaviour, IMixedRealityTouchHandler
     {
         AudioManager.Instance.PlaySound(transform.position, SoundType.confirmation);
 
-        btnBGMat.color = touchingColor;
-            
+        btnBGMat.color = activeColor;
+
+        bool halfEventEvoked = false;
         bool success = false;
         float duration = 6.24f/dwellSeconds; //full circle in radians
 
@@ -127,6 +140,12 @@ public class DwellButton : MonoBehaviour, IMixedRealityTouchHandler
             loadingDisc.AngRadiansEnd = elapsed* dwellSeconds;
             loadingDisc.Color = Color.white;
 
+            if (!halfEventEvoked && isLookingAtBtn && quarterSelectEvent != null && elapsed > (duration / 4))
+            {
+                halfEventEvoked = true;
+                quarterSelectEvent.Invoke();
+            }
+                
             if (elapsed>duration && isLookingAtBtn)
                 success = true;
 
@@ -136,12 +155,19 @@ public class DwellButton : MonoBehaviour, IMixedRealityTouchHandler
         if (success)
         {
             selectEvent.Invoke();
-            SetSelected(true);
+            if (type == DwellButtonType.Toggle)
+            {
+                toggled = !toggled;
+                SetSelected(toggled);
+            }
         } else
         {
-            SetSelected(false);
-            if (!isTouchingBtn)
-                btnBGMat.color = baseColor;
+            btnBGMat.color = baseColor;
+
+            if (type != DwellButtonType.Toggle || (type == DwellButtonType.Toggle && !toggled))
+                SetSelected(false);
+            else if (type == DwellButtonType.Toggle && toggled)
+                SetSelected(true);
         }
     }
 
@@ -149,7 +175,7 @@ public class DwellButton : MonoBehaviour, IMixedRealityTouchHandler
     {
         if (!touchable) return;
         isTouchingBtn = true;
-        btnBGMat.color = touchingColor;
+        btnBGMat.color = activeColor;
         pushConfiromationDisc.enabled = true;
     }
 
@@ -182,11 +208,13 @@ public class DwellButton : MonoBehaviour, IMixedRealityTouchHandler
         {
             loadingDisc.AngRadiansEnd = 6.24f;
             loadingDisc.Color = new Color(0.8f, 0.8f, 0.8f);
+            btnBGMat.color = activeColor;
         }
         else
         {
             loadingDisc.AngRadiansEnd = startingAngle;
             loadingDisc.Color = Color.white;
+            btnBGMat.color = baseColor;
         }
     }
 }

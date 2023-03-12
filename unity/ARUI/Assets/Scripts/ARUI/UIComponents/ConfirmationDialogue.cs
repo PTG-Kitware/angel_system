@@ -43,7 +43,7 @@ public class ConfirmationDialogue : MonoBehaviour
 
         GameObject btn = transform.GetChild(0).gameObject;
         okBtn = btn.AddComponent<DwellButton>();
-        okBtn.InitializeButton(EyeTarget.okButton, () => Confirmed(true),true, DwellButtonType.Select);
+        okBtn.InitializeButton(EyeTarget.okButton, () => Confirmed(true), null, true, DwellButtonType.Select);
         okBtn.gameObject.SetActive(false);
 
         time = transform.GetComponentInChildren<Shapes.Line>();
@@ -116,6 +116,8 @@ public class ConfirmationDialogue : MonoBehaviour
 
     private IEnumerator DecreaseTime()
     {
+        AudioManager.Instance.PlaySound(transform.position, SoundType.select);
+
         timerStarted = true;
 
         okBtn.gameObject.SetActive(true);

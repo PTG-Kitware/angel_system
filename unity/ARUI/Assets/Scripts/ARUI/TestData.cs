@@ -1,11 +1,6 @@
-using Microsoft.MixedReality.Toolkit;
-using Microsoft.MixedReality.Toolkit.Input;
 using System.Collections;
 using UnityEngine;
 using RosMessageTypes.Angel;
-using Microsoft.MixedReality.Toolkit.UI;
-using static UnityEngine.UIElements.UxmlAttributeDescription;
-using UnityEditor.PackageManager.UI;
 
 
 public class TestData : MonoBehaviour
@@ -67,11 +62,22 @@ public class TestData : MonoBehaviour
     /// </summary>
     private IEnumerator RunTasksAtRuntime()
     {
-        yield return new WaitForSeconds(2f);
+        AngelARUI.Instance.SetTasks(tasks);
+
+        yield return new WaitForSeconds(3f);
+
         currentTask++;
         AngelARUI.Instance.SetCurrentTaskID(currentTask);
 
+        yield return new WaitForSeconds(1f);
+
+        AngelARUI.Instance.SetViewManagement(false);
+
         yield return new WaitForSeconds(4f);
+        currentTask++;
+        AngelARUI.Instance.SetCurrentTaskID(currentTask);
+        currentTask++;
+        AngelARUI.Instance.SetCurrentTaskID(currentTask);
         currentTask++;
         AngelARUI.Instance.SetCurrentTaskID(currentTask);
 
@@ -81,11 +87,22 @@ public class TestData : MonoBehaviour
         currentTask--;
         AngelARUI.Instance.SetCurrentTaskID(currentTask);
 
+        AngelARUI.Instance.SetViewManagement(true);
+
         yield return new WaitForSeconds(3f);
         currentTask++;
         AngelARUI.Instance.SetCurrentTaskID(currentTask);
 
+        yield return new WaitForSeconds(1f);
+        currentTask++;
+        AngelARUI.Instance.SetCurrentTaskID(currentTask);
+
         AngelARUI.Instance.MuteAudio(false);
+
+        yield return new WaitForSeconds(1f);
+
+        currentTask++;
+        AngelARUI.Instance.SetCurrentTaskID(currentTask);
 
         yield return new WaitForSeconds(3f);
         AngelARUI.Instance.ShowSkipNotification(true);
@@ -96,7 +113,7 @@ public class TestData : MonoBehaviour
 
         yield return new WaitForSeconds(2f);
 
-        int next = currentTask++;
+        int next = currentTask+1;
         //Set message (e.g. "Did you mean '{user intent}'?"
         InterpretedAudioUserIntentMsg intentMsg = new InterpretedAudioUserIntentMsg();
         intentMsg.user_intent = "Did you mean 'Go to the next task'?";
@@ -109,7 +126,7 @@ public class TestData : MonoBehaviour
 
         yield return new WaitForSeconds(10f);
 
-        next = currentTask--;
+        next = currentTask-1;
         //Set message (e.g. "Did you mean '{user intent}'?"
         intentMsg = new InterpretedAudioUserIntentMsg();
         intentMsg.user_intent = "Did you mean 'Go to the previous task'?";
@@ -177,6 +194,19 @@ public class TestData : MonoBehaviour
             AngelARUI.Instance.ShowSkipNotification(false);
         }
 
+        if (Input.GetKeyUp(KeyCode.V))
+        {
+            AngelARUI.Instance.SetViewManagement(!AngelARUI.Instance.IsVMActiv);
+        }
+
+        if (Input.GetKeyUp(KeyCode.D))
+        {
+            AngelARUI.Instance.ShowDebugEyeGazeTarget(false);
+        }
+        if (Input.GetKeyUp(KeyCode.S))
+        {
+            AngelARUI.Instance.ShowDebugEyeGazeTarget(true);
+        }
     }
 
 #endif

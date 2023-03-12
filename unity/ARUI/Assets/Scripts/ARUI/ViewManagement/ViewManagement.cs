@@ -29,14 +29,10 @@ public class ViewManagement : Singleton<ViewManagement>
 
     private IEnumerator RunViewManagement()
     {
-        yield return new WaitForSeconds(3f);
-
         Debug.Log("View Management Initialized, screen: " + AngelARUI.Instance.ARCamera.pixelWidth + "," + AngelARUI.Instance.ARCamera.pixelHeight);
 
         init = true;
         allNonControllableAABB = new List<VMNonControllable>();
-
-        yield return new WaitForSeconds(2f);
 
         while (true)
         {
