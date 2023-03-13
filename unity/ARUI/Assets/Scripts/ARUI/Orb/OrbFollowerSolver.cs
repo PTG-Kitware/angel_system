@@ -12,22 +12,27 @@ using System;
 /// </summary>
 public class OrbFollowerSolver : Solver
 {
+    private VMControllable thisControllable;
+
     [Tooltip("Min distance from eye to position element around, i.e. the sphere radius")]
     private float minDistance = 0.6f;
-    
+
     [Tooltip("Max distance from eye to element")]
-    private float maxDistance = 1f;
+    private float maxDistance = 0.7f;
 
     [Tooltip("The element will stay at least this far away from the center of view")]
     private float minViewDegrees = 0f;
 
     [Tooltip("The element will stay at least this close to the center of view")]
-    private float currentMaxViewDegrees = 12f;
-    private float maxViewDegreesRegular = 12f;
+    private float currentMaxViewDegrees = 15f;
+    private float maxViewDegreesRegular = 15f;
     private float maxViewDegreesSticky = 21f;
     private float maxViewDegreesCenter = 5f;
 
     private float regularMoveLerp = 0.7f;
+
+    private bool coolDown = false;
+    private Vector3 coolDownTarget = Vector3.zero;
 
     private bool paused = false;
     public bool IsPaused
@@ -48,6 +53,8 @@ public class OrbFollowerSolver : Solver
         get { return outOfFOV; }
     }
 
+    public bool vmIsOn = false;
+
     /// <summary>
     /// Position to the view direction, or the movement direction, or the direction of the view cone.
     /// </summary>
@@ -59,32 +66,49 @@ public class OrbFollowerSolver : Solver
     {
         base.Start();
 
+        thisControllable = GetComponent<VMControllable>();
+        if (thisControllable == null)
+            thisControllable = gameObject.AddComponent<VMControllable>();
+
         MoveLerpTime = regularMoveLerp;
         RotateLerpTime = 0.1f;
         Smoothing = true;
+
+        vmIsOn =  AngelARUI.Instance.IsVMActiv;
     }
 
     private void LateUpdate()
     {
-        if (isLookingAtOrbFlag && !Orb.Instance.IsLookingAtOrb && !lazyEyeDisableProcessing)
+        if (isLookingAtOrbFlag && !Orb.Instance.IsLookingAtOrb(true) && !lazyEyeDisableProcessing)
             StartCoroutine(LazyDisableIsLooking());
-        else if (!isLookingAtOrbFlag && Orb.Instance.IsLookingAtOrb)
+        else if (!isLookingAtOrbFlag && Orb.Instance.IsLookingAtOrb(true))
             isLookingAtOrbFlag = true;
-
     }
+
 
     public override void SolverUpdate()
     {
+        // Update the collider AABB of the orb based on the position and visibility of the orb message
+        thisControllable.UpdateRectBasedOnSubColliders(Orb.Instance.AllOrbColliders);
+        
         if (!(paused || isLookingAtOrbFlag))
         {
             Vector3 goalPosition = WorkingPosition;
 
-            //update maxDistance based on spatial map
-            float dist = Utils.GetCameraToPosDist(transform.position);
-            if (dist != -1)
-                maxDistance = Mathf.Max(minDistance, Mathf.Min(dist - 0.05f, 1.0f));
+            if (!coolDown)
+            {
+                //update maxDistance based on spatial map
+                float dist = Utils.GetCameraToPosDist(transform.position);
+                if (dist != -1)
+                    maxDistance = Mathf.Max(minDistance, Mathf.Min(dist - 0.05f, 1.0f));
 
-            GetDesiredPos(ref goalPosition);
+                bool moving = GetDesiredPos(ref goalPosition);
+                if (moving)
+                    StartCoroutine(CoolDown());
+            }
+            else
+                goalPosition = coolDownTarget;
+
             GoalPosition = goalPosition;
             transform.rotation = Quaternion.LookRotation(goalPosition - ReferencePoint, Vector3.up);
         }
@@ -94,15 +118,45 @@ public class OrbFollowerSolver : Solver
             transform.rotation = Quaternion.LookRotation(transform.position - ReferencePoint, Vector3.up);
             outOfFOV = false;
         }
-          
     }
 
-    /// <summary>
-    /// Position update for solver
-    /// </summary>
-    /// <param name="desiredPos">the reference to the position the orb should be</param>
-    /// <returns></returns>
-    private void GetDesiredPos(ref Vector3 desiredPos)
+    public IEnumerator CoolDown()
+    {
+        coolDown = true;
+
+        float dist = Vector3.Magnitude(transform.position - coolDownTarget);
+        while (dist > 0.01f)
+        {
+            yield return new WaitForEndOfFrame();
+
+            //update maxDistance based on spatial map
+            float distance = Utils.GetCameraToPosDist(transform.position);
+            if (distance != -1)
+                maxDistance = Mathf.Max(minDistance, Mathf.Min(distance - 0.05f, 1.0f));
+
+            if (vmIsOn)
+            {
+                Rect getBest = ViewManagement.Instance.GetBestEmptyRect(thisControllable);
+                if (getBest != Rect.zero)
+                {
+                    float depth = Mathf.Min(maxDistance, (transform.position - AngelARUI.Instance.ARCamera.transform.position).magnitude);
+                    depth = Mathf.Max(depth, minDistance);
+
+                    coolDownTarget = AngelARUI.Instance.ARCamera.ScreenToWorldPoint(Utils.GetRectPivot(getBest) + new Vector3(0, 0, depth));
+
+                    yield return new WaitForSeconds(0.2f);
+                }
+
+            }
+
+            dist = Vector3.Magnitude(transform.position - coolDownTarget);
+
+        }
+
+        coolDown = false;
+    }
+
+    private bool GetDesiredPos(ref Vector3 desiredPos)
     {
         // Determine reference locations and directions
         Vector3 direction = SolverReferenceDirection;
@@ -128,7 +182,7 @@ public class OrbFollowerSolver : Solver
         float currentAngleClamped = Mathf.Clamp(currentAngle, minViewDegrees, currentMaxViewDegrees * verticalAspectScale);
 
         if (isSticky || stayCenter)
-            currentAngleClamped = currentMaxViewDegrees * verticalAspectScale; 
+            currentAngleClamped = currentMaxViewDegrees * verticalAspectScale;
 
         // Clamp distance too, if desired
         float clampedDistance = Mathf.Clamp(elementDist, minDistance, maxDistance);
@@ -145,10 +199,28 @@ public class OrbFollowerSolver : Solver
             desiredPos = ReferencePoint + clampedDistance * elementDir;
         }
 
+        if (AngelARUI.Instance.IsVMActiv)
+        {
+            Rect getBest = ViewManagement.Instance.GetBestEmptyRect(thisControllable);
+            if (getBest != Rect.zero)
+            {
+                float depth = Mathf.Min(maxDistance, (transform.position - AngelARUI.Instance.ARCamera.transform.position).magnitude);
+                depth = Mathf.Max(depth, minDistance);
+
+                coolDownTarget = AngelARUI.Instance.ARCamera.ScreenToWorldPoint(Utils.GetRectPivot(getBest) + new Vector3(0, 0, depth));
+
+                desiredPos = coolDownTarget;
+                return true;
+            }
+            
+        }
+
         if (currentAngle > 21 * verticalAspectScale)
             outOfFOV = true;
         else
             outOfFOV = false;
+
+        return false;
     }
 
     private IEnumerator LazyDisableIsLooking()
@@ -156,7 +228,7 @@ public class OrbFollowerSolver : Solver
         lazyEyeDisableProcessing = true;
         yield return new WaitForSeconds(1f);
 
-        if (!Orb.Instance.IsLookingAtOrb)
+        if (!Orb.Instance.IsLookingAtOrb(true))
             isLookingAtOrbFlag = false;
 
         lazyEyeDisableProcessing = false;
@@ -225,7 +297,7 @@ public class OrbFollowerSolver : Solver
         int counter = 0;
         while (this.isSticky == false && counter < stepNum)
         {
-            currentMaxViewDegrees = start+ (stepSize*stepNum);
+            currentMaxViewDegrees = start + (stepSize * stepNum);
             counter++;
             yield return new WaitForSeconds(0.1f);
         }

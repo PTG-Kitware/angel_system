@@ -1,9 +1,11 @@
 ﻿using Microsoft.MixedReality.Toolkit;
+using Microsoft.MixedReality.Toolkit.Input;
 using System;
 using System.Collections;
 using System.Diagnostics.Eventing.Reader;
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.EventSystems;
 
 public enum DwellButtonType
 {
@@ -11,81 +13,125 @@ public enum DwellButtonType
     Select =1
 }
 
-public class DwellButton : MonoBehaviour
+/// <summary>
+/// Button that can be triggered using touch or eye-gaze dwelling
+/// </summary>
+public class DwellButton : MonoBehaviour, IMixedRealityTouchHandler
 {
+    public bool IsInteractingWithBtn = false;
+    public float Width { get { return btnCollider.size.y; } }
+
     private bool isLookingAtBtn = false;
+    public bool GetIsLookingAtBtn{ get { return isLookingAtBtn; } }
+
+    private bool isTouchingBtn = false;
+    private bool touchable = false;
+
+    private EyeTarget target;
+    private UnityEvent selectEvent;
+    private UnityEvent quarterSelectEvent;
+    private BoxCollider btnCollider;
+    public BoxCollider Collider { get { return btnCollider; } }
+    private GameObject btnmesh;
 
     private float dwellSeconds = 4f;
     private DwellButtonType type = DwellButtonType.Toggle;
-    private Shapes.Disc loadingDisc;
+    private bool toggled = false;
+    public bool Toggled { 
+        set { 
+            toggled = value; 
+            SetSelected(value);
+        } 
+    }
 
+    //*** Btn Dwelling Feedback 
+    private Shapes.Disc loadingDisc;
     private float startingAngle;
 
-    /***Btn Design***/
+    //*** Btn Push Feedback
+    private Shapes.Disc pushConfiromationDisc;
+    private float thickness; 
+
+    //*** Btn Design
     private Material btnBGMat;
-    private Color baseColor;
+    private Color baseColor = new Color(0.5377358f, 0.5377358f, 0.5377358f,0.24f);
+    private Color activeColor = new Color(0.7f, 0.7f, 0.8f, 0.4f);
 
-    public EyeTarget thisTarget;
-    public UnityEvent selectEvent;
-
-    private BoxCollider btnCollider;
-    public float Width { get { return btnCollider.size.y; } }
-
-    public void Awake()
+    private void Awake()
     {
-        Shapes.Disc disc = GetComponentInChildren<Shapes.Disc>(true);
-        loadingDisc = disc;
+        Shapes.Disc[] discs = GetComponentsInChildren<Shapes.Disc>(true);
+        loadingDisc = discs[0];
+        pushConfiromationDisc = discs[1];
+        pushConfiromationDisc.enabled = false;
+        thickness = pushConfiromationDisc.Thickness;
 
         startingAngle = loadingDisc.AngRadiansStart;
 
-        btnBGMat = GetComponentInChildren<MeshRenderer>().material;
-        baseColor = btnBGMat.color;
+        MeshRenderer mr = GetComponentInChildren<MeshRenderer>();
+        btnBGMat = new Material(mr.material);
+        btnBGMat.color = baseColor;
+        mr.material = btnBGMat;
 
         selectEvent = new UnityEvent();
+        quarterSelectEvent = new UnityEvent();
 
         btnCollider = GetComponentInChildren<BoxCollider>(true);
+        btnmesh = transform.GetChild(0).gameObject;
     }
 
-    public void InitializeButton(EyeTarget target, UnityAction btnSelectEvent)
+    public void InitializeButton(EyeTarget target, UnityAction btnSelectEvent, UnityAction btnHalfSelect, bool touchable, DwellButtonType type)
     {
-        thisTarget = target;
+        this.target = target;
         selectEvent.AddListener(btnSelectEvent);
+
+        if (btnHalfSelect != null)
+            quarterSelectEvent.AddListener(btnHalfSelect);
+
+        this.touchable = touchable;
+        this.type = type;
+
+        if (touchable)
+            gameObject.AddComponent<NearInteractionTouchable>();
     }
 
     private void Update()
     {
-        CurrentlyLooking(FollowEyeTarget.Instance.currentHit == thisTarget);
+        UpdateCurrentlyLooking();
+        IsInteractingWithBtn = isTouchingBtn || isLookingAtBtn;
     }
 
-    private void CurrentlyLooking(bool looking)
+    private void UpdateCurrentlyLooking()
     {
-        if (looking&&!isLookingAtBtn)
+        bool currentLooking = FollowEyeTarget.Instance.currentHit == target;
+
+        if (currentLooking && !isLookingAtBtn && !isTouchingBtn)
         {
             isLookingAtBtn = true;
             StartCoroutine(Dwelling());
         }  
 
-        if (!looking)
+        if (!currentLooking || isTouchingBtn)
         {
             isLookingAtBtn = false;
             StopCoroutine(Dwelling());
             btnBGMat.color = baseColor;
         }
 
-        isLookingAtBtn = looking;
+        isLookingAtBtn = currentLooking;
     }
     
     private IEnumerator Dwelling()
     {
         AudioManager.Instance.PlaySound(transform.position, SoundType.confirmation);
 
-        btnBGMat.color = baseColor - new Color(0.2f, 0.2f, 0.2f, 1);
-            
+        btnBGMat.color = activeColor;
+
+        bool halfEventEvoked = false;
         bool success = false;
         float duration = 6.24f/dwellSeconds; //full circle in radians
 
         float elapsed = 0f;
-        while (isLookingAtBtn && elapsed < duration)
+        while (!isTouchingBtn && isLookingAtBtn && elapsed < duration)
         {
             if (CoreServices.InputSystem.EyeGazeProvider.GazeTarget == null)
                 break;
@@ -94,6 +140,12 @@ public class DwellButton : MonoBehaviour
             loadingDisc.AngRadiansEnd = elapsed* dwellSeconds;
             loadingDisc.Color = Color.white;
 
+            if (!halfEventEvoked && isLookingAtBtn && quarterSelectEvent != null && elapsed > (duration / 4))
+            {
+                halfEventEvoked = true;
+                quarterSelectEvent.Invoke();
+            }
+                
             if (elapsed>duration && isLookingAtBtn)
                 success = true;
 
@@ -101,36 +153,68 @@ public class DwellButton : MonoBehaviour
         }
 
         if (success)
+        {
             selectEvent.Invoke();
+            if (type == DwellButtonType.Toggle)
+            {
+                toggled = !toggled;
+                SetSelected(toggled);
+            }
+        } else
+        {
+            btnBGMat.color = baseColor;
 
-        if (type.Equals(DwellButtonType.Toggle))
-            loadingDisc.AngRadiansEnd = startingAngle;
-        else
-            loadingDisc.AngRadiansEnd = 0;
-
-        btnBGMat.color = baseColor;
+            if (type != DwellButtonType.Toggle || (type == DwellButtonType.Toggle && !toggled))
+                SetSelected(false);
+            else if (type == DwellButtonType.Toggle && toggled)
+                SetSelected(true);
+        }
     }
 
-    #region Getter and Setter 
+    public void OnTouchStarted(HandTrackingInputEventData eventData)
+    {
+        if (!touchable) return;
+        isTouchingBtn = true;
+        btnBGMat.color = activeColor;
+        pushConfiromationDisc.enabled = true;
+    }
 
-    public bool GetIsLookingAtBtn() => isLookingAtBtn;
+    public void OnTouchCompleted(HandTrackingInputEventData eventData)
+    {
+        if (!touchable) return;
+        isTouchingBtn = false;
 
-    public void SetDwellButtonType(DwellButtonType type) => this.type = type;
+        btnBGMat.color = baseColor;
+        btnmesh.transform.localPosition = Vector3.zero;
+        pushConfiromationDisc.enabled = false;
+    }
 
-    internal void SetSelected(bool selected)
+    public void OnTouchUpdated(HandTrackingInputEventData eventData) 
+    {
+        if (!touchable) return;
+        btnmesh.transform.position = eventData.InputData;
+
+        if (btnmesh.transform.localPosition.z > pushConfiromationDisc.transform.localPosition.z)
+            pushConfiromationDisc.Color = Color.cyan;
+        else pushConfiromationDisc.Color = Color.white;
+
+        if (btnmesh.transform.localPosition.z > pushConfiromationDisc.transform.localPosition.z+0.01f)
+            selectEvent.Invoke();
+    }
+
+    private void SetSelected(bool selected)
     {
         if (selected)
         {
             loadingDisc.AngRadiansEnd = 6.24f;
             loadingDisc.Color = new Color(0.8f, 0.8f, 0.8f);
-        } else
+            btnBGMat.color = activeColor;
+        }
+        else
         {
             loadingDisc.AngRadiansEnd = startingAngle;
             loadingDisc.Color = Color.white;
+            btnBGMat.color = baseColor;
         }
     }
-
-    #endregion
-
-
 }

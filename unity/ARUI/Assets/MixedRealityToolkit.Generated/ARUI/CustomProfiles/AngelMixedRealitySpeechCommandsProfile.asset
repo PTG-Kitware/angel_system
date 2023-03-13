@@ -37,10 +37,3 @@ MonoBehaviour:
       id: 15
       description: Toggle Profiler
       axisConstraint: 0
-  - localizationKey: 
-    keyword: Show Tasks
-    keyCode: 0
-    action:
-      id: 16
-      description: Show Tasks
-      axisConstraint: 2
