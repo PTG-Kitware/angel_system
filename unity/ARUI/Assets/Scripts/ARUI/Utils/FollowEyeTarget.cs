@@ -4,7 +4,7 @@ using Microsoft.MixedReality.Toolkit;
 using UnityEngine;
 using DilmerGames.Core.Singletons;
 using System;
-using System.Diagnostics.Eventing.Reader;
+using UnityEngine.UIElements;
 
 public enum EyeTarget
 {
@@ -13,13 +13,16 @@ public enum EyeTarget
     orbMessage = 2,
     tasklist = 3,
     orbtasklistButton =4,
-    okButton=5,
-    cancelButton=6,
+    detectedObj=5,
+    recipe=6,
+    okButton = 7,
+    cancelButton = 8,
 }
 
 public class FollowEyeTarget : Singleton<FollowEyeTarget>
 {
     public EyeTarget currentHit = EyeTarget.nothing;
+    public GameObject currentHitObj;
     private MeshRenderer cube;
 
     private bool showRayDebugCube = false;
@@ -37,7 +40,7 @@ public class FollowEyeTarget : Singleton<FollowEyeTarget>
             Ray rayToCenter = new Ray(eyeGazeProvider.GazeOrigin, eyeGazeProvider.GazeDirection);
             RaycastHit hitInfo;
 
-            int layerMask = 1 << 5; //Ignore everything except layer 5, which is the UI
+            int layerMask = LayerMask.GetMask("UI", "VM"); 
             UnityEngine.Physics.Raycast(rayToCenter, out hitInfo, 100f, layerMask);
 
             // Update GameObject to the current eye gaze position at a given distance
@@ -63,23 +66,31 @@ public class FollowEyeTarget : Singleton<FollowEyeTarget>
                 else if (goName.Contains("okbutton"))
                     currentHit = EyeTarget.okButton;
 
-                else if (goName.Contains("cancelbutton"))
-                    currentHit = EyeTarget.cancelButton;
+                else if (goName.Contains("mainmenucard"))
+                    currentHit = EyeTarget.recipe;
+
                 else
                     currentHit = EyeTarget.nothing;
 
-                if (currentHit != EyeTarget.nothing && showRayDebugCube)
-                    cube.enabled = true;
+                if (currentHit != EyeTarget.nothing) {
+                    currentHitObj = hitInfo.collider.gameObject;
+                    if (showRayDebugCube)
+                        cube.enabled = true;
+
+                } else if (currentHit == EyeTarget.nothing)
+                    currentHitObj = null;
             }
             else
             {
                 // If no target is hit, show the object at a default distance along the gaze ray.
                 gameObject.transform.position = eyeGazeProvider.GazeOrigin + eyeGazeProvider.GazeDirection.normalized * 2.0f;
                 currentHit = EyeTarget.nothing;
+                currentHitObj = null;
             }
         } else
         {
             currentHit = EyeTarget.nothing;
+            currentHitObj = null;
         }
     }
 

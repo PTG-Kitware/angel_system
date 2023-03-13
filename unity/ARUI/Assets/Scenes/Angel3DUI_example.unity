@@ -345,11 +345,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 81980225b99f44f3195a30bcc5317c16, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  mainCamera: {fileID: 0}
-  showARUIDebugMessages: 0
-  showEyeGazeTarget: 1
   SkipNotificationMessage: 'You are skipping the current task:'
-  textToSpeechOn: 0
 --- !u!1001 &1200407600
 PrefabInstance:
   m_ObjectHideFlags: 0
