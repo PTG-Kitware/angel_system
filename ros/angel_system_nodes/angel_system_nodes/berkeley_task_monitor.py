@@ -158,9 +158,9 @@ class TaskMonitor(Node):
 
         # Represents the current state of the task
         self._current_step = None
-        self._current_step_id = 0
+        self._current_step_id = -1
         self._previous_step = None
-        self._previous_step_id = 0
+        self._previous_step_id = -1
 
         # Control thread access to advancing the task step
         self._task_lock = threading.RLock()
@@ -226,31 +226,34 @@ class TaskMonitor(Node):
             else:
                 # TODO: Support different task levels?
                 # Currently, this definition of "sub-steps" best matches up with our "steps" 
+                _current_sub_step = sub_step[-1]['sub-step']
+                _current_sub_step_id = self._steps.index(_current_sub_step)
                 if 'end_frame' in list(sub_step[-1].keys()):
                     # Sub-step is finished
-                    _current_sub_step = sub_step[-1]['sub-step']
-                    self._completed_steps[self._steps.index(_current_sub_step)] = True
+                    self._completed_steps[_current_sub_step_id] = True
                     finished_sub_step = True
-                    log.info(f"{_current_sub_step} (finished)")
-                else:
-                    _current_sub_step = sub_step[-1]['sub-step']
-                    #self._completed_steps[self._steps.index(_current_sub_step)] = True
-                    #finished_sub_step = True
+                    #log.info(f"{_current_sub_step} (finished)")
                     
         else:
             _current_sub_step = None
+            _current_sub_step_id = -1
 
-        log.info(f"current sub-step: {_current_sub_step}")
+        #log.info(f"current sub-step: {_current_sub_step}")
 
         # Only change steps if we have a new step or a step finished, and it is not
         # background (ID=0)
-        if _current_sub_step != 'background':
-            if finished_sub_step or (_current_sub_step != self._current_step):
+        if _current_sub_step and _current_sub_step != 'background':
+            if finished_sub_step and (_current_sub_step != self._current_step):
                 # Moving forward
                 self._previous_step = self._current_step
                 self._previous_step_id = self._current_step_id
                 self._current_step = _current_sub_step
-                self._current_step_id = self._steps.index(self._current_step) if _current_sub_step != None else -1
+                self._current_step_id = _current_sub_step_id
+ 
+                log.info(f"Current step is now: {self._current_step}")
+                log.info(f"Current step id is now: {self._current_step_id}")
+                log.info(f"Previous step is now: {self._previous_step}")
+                log.info(f"Previous step id is now: {self._previous_step_id}")
 
                 self.publish_task_state_message()
 
@@ -315,11 +318,12 @@ class TaskMonitor(Node):
         
         # Populate step list
         if self._current_step is None:
-                message.current_step_id = -1
-                message.current_step = "None"
+            message.current_step_id = -1
+            message.current_step = "None"
         else:
+            message.current_step_id = self._current_step_id
             message.current_step = self._current_step
-
+            
         if self._previous_step is None:
             message.previous_step = "N/A"
         else:
@@ -391,7 +395,9 @@ class TaskMonitor(Node):
                 # TODO: how to move demo to previous step?
 
             log.info(f"Current step is now: {self._current_step}")
+            log.info(f"Current step id is now: {self._current_step_id}")
             log.info(f"Previous step is now: {self._previous_step}")
+            log.info(f"Previous step id is now: {self._previous_step_id}")
 
             self.publish_task_state_message()
 
