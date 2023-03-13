@@ -45,6 +45,9 @@ on_project_start: |
 tmux_options: -f <%= ENV["ANGEL_WORKSPACE_DIR"] %>/tmux/tmux.conf
 
 windows:
+  - datahub: ros2 run ros_tcp_endpoint default_server_endpoint --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p ROS_IP:=0.0.0.0
   - hl2ss_bridge: ros2 run angel_system_nodes hl2ss_ros_bridge --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p ip_addr:=${HL2_IP}
@@ -87,6 +90,18 @@ windows:
       -p model_checkpoint:=${MODEL_DIR}/uho_checkpoint_20221022.ckpt
       -p top_k:=10
       -p overlapping_mode:=False
+  # Audio nodes
+  - asr: ros2 run angel_system_nodes asr --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p audio_topic:=HeadsetAudioData
+      -p utterances_topic:=UtterancesTopic
+      -p asr_server_url:=http://communication.cs.columbia.edu:8058/home
+      -p tmp_wav_filename:=/tmp/asr.wav
+  - intent_detection: ros2 run angel_system_nodes intent_detector --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p utterances_topic:=UtterancesTopic
+      -p expect_user_intent_topic:=ConfirmedUserIntents
+      -p interp_user_intent_topic:=UserIntentPredicted
 
   - intent_to_cmd: ros2 run angel_system_nodes intent_to_command --ros-args
       -r __ns:=${ROS_NAMESPACE}
@@ -107,6 +122,12 @@ windows:
   # Currently hard-coded to use the /debug ROS namespace.
   - engineering_ui_websocket: ros2 launch rosbridge_server rosbridge_websocket_launch.xml port:=9090
   - engineering_ui_server: node src/angel_utils/demo_ui/index.js
+      --namespace=${ROS_NAMESPACE}
+      --image_topic=pv_image_detections_2d/compressed
+      --query_task_graph_topic=query_task_graph
+      --task_updates_topic=TaskUpdates
+      --activity_detections_topic=ActivityDetections
+      --task_errors_topic=TaskErrors
 
   - feedback_generator: ros2 run angel_system_nodes feedback_generator --ros-args
       -r __ns:=${ROS_NAMESPACE}
