@@ -49,7 +49,7 @@ class ASR(Node):
         self.t = threading.Thread()
 
         self.audio_stream_duration = 0.0
-        self.segmentation_duration = 30.0
+        self.segmentation_duration = 8.0
 
         self.prev_timestamp = None
 

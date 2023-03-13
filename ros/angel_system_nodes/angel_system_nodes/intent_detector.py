@@ -12,8 +12,8 @@ from angel_msgs.msg import InterpretedAudioUserIntent, Utterance
 
 # Please refer to labels defined in
 # https://docs.google.com/document/d/1uuvSL5de3LVM9c0tKpRKYazDxckffRHf7IAcabSw9UA .
-NEXT_STEP_KEYPHRASES = ['skip', 'next step']
-PREV_STEP_KEYPHRASES = ['prev step', 'last step', 'go back']
+NEXT_STEP_KEYPHRASES = ['skip', 'next step', 'next']
+PREV_STEP_KEYPHRASES = ['previous', 'prev step', 'last step', 'go back']
 OVERRIDE_KEYPHRASES = ['angel', 'angel system']
 
 # TODO(derekahmed): Please figure out how to keep this sync-ed with
@@ -108,6 +108,7 @@ class IntentDetector(Node):
         else:
             intent_msg.user_intent = LABELS[2]
             intent_msg.confidence = 0.5
+            return
         
         if self.contains_phrase(lower_utterance, OVERRIDE_KEYPHRASES):
             intent_msg.confidence = 1.0
