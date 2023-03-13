@@ -59,23 +59,6 @@ public static class Utils
     /// GUI coordinate system = origin is top left
     /// </summary>
     /// <param name="item"> Rectangle in GUI coordinate system </param>
-    /// <returns>Rectangle in GUI</returns>
-    public static Rect GUIGetCappedGUI(Rect GUIRect)
-    {
-        int xmincap = Mathf.Max(0, (int)GUIRect.x);
-        int ymincap = Mathf.Max(0, (int)GUIRect.y);
-
-        int xmaxcap = Mathf.Min(AngelARUI.Instance.ARCamera.pixelWidth, (int)GUIRect.x + (int)GUIRect.width);
-        int ymaxcap = Mathf.Min(AngelARUI.Instance.ARCamera.pixelHeight, (int)GUIRect.y + (int)GUIRect.height);
-
-        return new Rect(xmincap, ymincap, xmaxcap- xmincap, ymaxcap- ymincap);
-    }
-
-    /// <summary>
-    /// Cap the values of the rectangle to the screen (no negative values, not greated than screen size) in GUI coordinate system
-    /// GUI coordinate system = origin is top left
-    /// </summary>
-    /// <param name="item"> Rectangle in GUI coordinate system </param>
     /// <returns></returns>
     public static int[] GetCappedGUI(Rect GUIRect)
     {
@@ -106,13 +89,6 @@ public static class Utils
 
         return new int[] { xmincap, ymincap, xmaxcap, ymaxcap };
     }
-
-    public static Rect GUItoScreenRect(Rect item)
-    {
-        int[] screen = GetCappedScreen(item);
-        return new Rect(screen[0], screen[1], screen[2]- screen[0], screen[3]- screen[1]);
-    }
-
 
     #endregion
 

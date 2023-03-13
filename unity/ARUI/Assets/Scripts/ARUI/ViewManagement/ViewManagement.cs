@@ -87,7 +87,7 @@ public class ViewManagement : Singleton<ViewManagement>
             
                 int[] AABB = Utils.GetCappedGUI(item);
 
-                if (AABB[2] > _minPixelSize && AABB[3] > _minPixelSize)
+                if ((AABB[2] - AABB[0]) > _minPixelSize && (AABB[3] - AABB[1]) > _minPixelSize)
                 {
                     _objectsInViewSpace++;
                     SpaceManagement.Instance.AddFullRectToTree(0, AABB);
@@ -115,7 +115,7 @@ public class ViewManagement : Singleton<ViewManagement>
             int[] cappedRect = Utils.GetCappedGUI(obj.AABB);
 
             //Get closest
-            if ((cappedRect[2] <= 0 || cappedRect[3] <= 0))
+            if ((cappedRect[2] - cappedRect[0]) <= 0 || (cappedRect[3] - cappedRect[1]) <= 0)
             {
                 bestLayout.Add(obj, Rect.zero);
                 continue;
@@ -136,8 +136,8 @@ public class ViewManagement : Singleton<ViewManagement>
 
                 int[] AABB = Utils.GetCappedGUI(newPosRect);
 
-                if (AABB[2] > _minPixelSize && AABB[3] > _minPixelSize)
-                {
+                if ((AABB[2] - AABB[0]) > _minPixelSize && (AABB[3] - AABB[1]) > _minPixelSize)
+                    {
                     if (vmcInView > 1)
                     {
                         SpaceManagement.Instance.AddFullRectToTree(0, AABB);
