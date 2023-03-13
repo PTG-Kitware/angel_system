@@ -202,6 +202,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   aruiUpdateTopicName: AruiUpdates
   querytaskgraphTopicName: query_task_graph
+  confirmedUserIntentTopicName: ConfirmedUserIntents
 --- !u!4 &800067503
 Transform:
   m_ObjectHideFlags: 0
@@ -290,7 +291,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 83d9acc7968244a8886f3af591305bcb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  activeProfile: {fileID: 11400000, guid: b494d57e6bd51194c82b93eaaaf15910, type: 2}
+  activeProfile: {fileID: 11400000, guid: 50d0edc25d4a85646b41ca01eeeae346, type: 2}
 --- !u!4 &841493425
 Transform:
   m_ObjectHideFlags: 0
@@ -395,11 +396,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 81980225b99f44f3195a30bcc5317c16, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  mainCamera: {fileID: 0}
-  showARUIDebugMessages: 1
-  showEyeGazeTarget: 0
   SkipNotificationMessage: 'You are skipping the current task:'
-  textToSpeechOn: 0
 --- !u!4 &1332611133
 Transform:
   m_ObjectHideFlags: 0
@@ -632,8 +629,8 @@ GameObject:
   - component: {fileID: 1827482208}
   - component: {fileID: 1827482207}
   - component: {fileID: 1827482206}
-  - component: {fileID: 1827482205}
   - component: {fileID: 1827482211}
+  - component: {fileID: 1827482205}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -747,8 +744,8 @@ Camera:
   m_GameObject: {fileID: 1827482203}
   m_Enabled: 1
   serializedVersion: 2
-  m_ClearFlags: 1
-  m_BackGroundColor: {r: 0, g: 0, b: 0, a: 1}
+  m_ClearFlags: 2
+  m_BackGroundColor: {r: 0, g: 0, b: 0, a: 0}
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
   m_FOVAxisMode: 0
@@ -799,6 +796,7 @@ MonoBehaviour:
   enableMC: 1
   enableSI: 1
   enableRC: 1
+  enableSM: 1
   m_material: {fileID: 2100000, guid: 411888bb8bd460d48a06b7cbc0b55fc2, type: 2}
 --- !u!1 &2056321752
 GameObject:

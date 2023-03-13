@@ -16,7 +16,7 @@ public class InterpretedAudioUserIntentEvent : UnityEvent<InterpretedAudioUserIn
 
 /// <summary>
 /// Dialogue that asks for user confirmation of a given action. Used for the Natural Language Interface.
-/// The user has timeInSeconds seconds to decide if the given action should be executed. Confirmation can be done by 
+/// The user has timeInSeconds seconds to decide if the given action should be executed. Confirmation can be done by
 /// looking at the button or touching it.
 /// </summary>
 public class ConfirmationDialogue : MonoBehaviour
@@ -24,7 +24,7 @@ public class ConfirmationDialogue : MonoBehaviour
     private bool init = false;                              /// <true if dialogue was initialized (e.g. message, event)
     private bool timerStarted = false;                      /// <true if timer started already
 
-    private FlexibleTextContainer textContainer;    
+    private FlexibleTextContainer textContainer;
     private DwellButton okBtn;                              /// <Dialogue button
     private Orbital movingBehavior;
     private bool delayedMoving = false;
@@ -68,7 +68,7 @@ public class ConfirmationDialogue : MonoBehaviour
             movingBehavior.enabled = false;
         else if (!okBtn.IsInteractingWithBtn && !movingBehavior.enabled && !delayedMoving)
             StartCoroutine(DelayedStartMoving());
-            
+
     }
 
     private IEnumerator DelayedStartMoving()
@@ -93,7 +93,7 @@ public class ConfirmationDialogue : MonoBehaviour
         if (intentMsg == null || intentMsg.user_intent.Length == 0) return;
 
         userIntent = intentMsg;
-        textContainer.SetText(intentMsg.user_intent);
+        textContainer.SetText("Did you mean " + "`" + intentMsg.user_intent + "`?");
         selectEvent.AddListener(confirmedEvent);
         init = true;
     }
