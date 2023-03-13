@@ -4,7 +4,7 @@ import yaml
 import threading
 import numpy as np
 
-from pynput import keyboard
+#from pynput import keyboard
 from rclpy.node import Node
 
 from cv_bridge import CvBridge
@@ -18,9 +18,10 @@ from angel_system.berkeley.demo import predictor, model
 
 BRIDGE = CvBridge()
 
+"""
 KEY_LEFT_SQBRACKET = keyboard.KeyCode.from_char("[")
 KEY_RIGHT_SQBRACKET = keyboard.KeyCode.from_char("]")
-
+"""
 
 class TaskMonitor(Node):
     """
@@ -166,11 +167,13 @@ class TaskMonitor(Node):
         self._task_lock = threading.RLock()
 
         # Start the keyboard monitoring thread
+        """
         log.info(f"Starting keyboard threads")
         self._keyboard_t = threading.Thread(target=self.monitor_keypress)
         self._keyboard_t.daemon = True
         self._keyboard_t.start()
         log.info(f"Starting keyboard threads... done")
+        """
 
         # Publish task update to indicate the initial state
         self.publish_task_state_message()
