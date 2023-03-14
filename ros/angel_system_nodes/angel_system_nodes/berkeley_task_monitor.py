@@ -4,7 +4,7 @@ import yaml
 import threading
 import numpy as np
 
-#from pynput import keyboard
+from pynput import keyboard
 from rclpy.node import Node
 
 from cv_bridge import CvBridge
@@ -18,10 +18,8 @@ from angel_system.berkeley.demo import predictor, model
 
 BRIDGE = CvBridge()
 
-"""
 KEY_LEFT_SQBRACKET = keyboard.KeyCode.from_char("[")
 KEY_RIGHT_SQBRACKET = keyboard.KeyCode.from_char("]")
-"""
 
 class TaskMonitor(Node):
     """
@@ -167,13 +165,11 @@ class TaskMonitor(Node):
         self._task_lock = threading.RLock()
 
         # Start the keyboard monitoring thread
-        """
         log.info(f"Starting keyboard threads")
         self._keyboard_t = threading.Thread(target=self.monitor_keypress)
         self._keyboard_t.daemon = True
         self._keyboard_t.start()
         log.info(f"Starting keyboard threads... done")
-        """
 
         # Publish task update to indicate the initial state
         self.publish_task_state_message()
@@ -216,7 +212,6 @@ class TaskMonitor(Node):
         if self._draw_output:
             visualized_image = visualized_output.get_image()
             image_message = BRIDGE.cv2_to_imgmsg(visualized_image, encoding="rgb8")
-            
             self._generated_image_publisher.publish(image_message)
 
         # Update current step
@@ -236,7 +231,7 @@ class TaskMonitor(Node):
                     self._completed_steps[_current_sub_step_id] = True
                     finished_sub_step = True
                     #log.info(f"{_current_sub_step} (finished)")
-                    
+
         else:
             _current_sub_step = None
             _current_sub_step_id = -1
@@ -292,7 +287,7 @@ class TaskMonitor(Node):
             conf_vec = np.zeros(len(message.label_vec))
             conf_vec[message.label_vec.index(label)] = det["confidence_score"]
             label_confidences.append(conf_vec)
-            
+
             tl_x, tl_y, br_x, br_y = det["bbox"]
             message.left.append(tl_x)
             message.right.append(br_x)
@@ -300,7 +295,7 @@ class TaskMonitor(Node):
             message.bottom.append(br_y)
 
         message.label_confidences = np.asarray(label_confidences, dtype=np.float64).ravel().tolist()
-        
+
         # Publish
         self._det_publisher.publish(message)
 
@@ -318,7 +313,7 @@ class TaskMonitor(Node):
 
         # Populate task name and description
         message.task_name = self._task_title
-        
+
         # Populate step list
         if self._current_step is None:
             message.current_step_id = -1
@@ -326,7 +321,7 @@ class TaskMonitor(Node):
         else:
             message.current_step_id = self._current_step_id
             message.current_step = self._current_step
-            
+
         if self._previous_step is None:
             message.previous_step = "N/A"
         else:
@@ -394,7 +389,7 @@ class TaskMonitor(Node):
                         self._previous_step = None
                     else:
                         self._previous_step = self._steps[self._previous_step_id]
-                
+
                 # TODO: how to move demo to previous step?
 
             log.info(f"Current step is now: {self._current_step}")

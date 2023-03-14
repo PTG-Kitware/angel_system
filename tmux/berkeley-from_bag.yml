@@ -20,12 +20,12 @@ root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 # on_project_start: command
 on_project_start: |
   export ROS_NAMESPACE=/debug
-  export HL2_IP=${HL2_IP:-192.168.1.3}
+  export HL2_IP=${HL2_IP:-192.168.1.101}
   export CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/config
   export NODE_CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/src/angel_system_nodes/configs
   export MODEL_DIR=${ANGEL_WORKSPACE_DIR}/model_files
-  #if [ -z "${PARAM_ROS_BAG_DIR}" ]; then echo "MISSING: PARAM_ROS_BAG_DIR -> Set to path of ROS2 bag directory."; LOCAL_ERROR=1; fi
-  #if [ -n "${LOCAL_ERROR}" ]; then exit "${LOCAL_ERROR}"; fi
+  if [ -z "${PARAM_ROS_BAG_DIR}" ]; then echo "MISSING: PARAM_ROS_BAG_DIR -> Set to path of ROS2 bag directory."; LOCAL_ERROR=1; fi
+  if [ -n "${LOCAL_ERROR}" ]; then exit "${LOCAL_ERROR}"; fi
 
 # Run on project start, the first time
 # on_project_first_start: command
