@@ -6,6 +6,9 @@
 namespace angel_utils {
 
 /// \brief Keep track of the rate at which something is cycling.
+///
+/// The python sibling of this utility is located [here](ros/angel_utils/python/angel_utils/rate_tracker.py).
+/// Changes to this API and implementation should be reflected there.
 class RateTracker
 {
 public:
