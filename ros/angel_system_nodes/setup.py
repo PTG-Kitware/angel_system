@@ -32,6 +32,7 @@ setup(
                 'feedback_generator = angel_system_nodes.feedback_generator:main',
                 'annotation_event_monitor = angel_system_nodes.annotation_event_monitor:main',
                 'object_detector_with_descriptors = angel_system_nodes.object_detector_with_descriptors:main',
+                'obejct_detector_with_descriptors_v2 = angel_system_nodes.object_detector_with_descriptors_v2:main',
                 'uho_activity_detector = angel_system_nodes.uho_activity_detector:main',
                 'task_monitor_v2 = angel_system_nodes.task_monitor_v2:main',
                 'hl2ss_ros_bridge = angel_system_nodes.hl2ss_ros_bridge:main',
