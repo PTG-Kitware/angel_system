@@ -1,0 +1,138 @@
+#
+# System configuration to run the ANGEL system for the 2022/11 PI meeting and
+# Evaluation 1.
+#
+# This configuration is for the Coffee task/recipe.
+#
+
+name: 2023-02-hl2ss_full_system-coffee_allows_skip
+root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
+
+# Optional tmux socket
+# socket_name: foo
+
+# Note that the pre and post options have been deprecated and will be replaced by
+# project hooks.
+
+# Project hooks
+
+# Runs on project start, always
+# on_project_start: command
+on_project_start: |
+  export ROS_NAMESPACE=${ROS_NAMESPACE:-/debug}
+  export HL2_IP=${HL2_IP:-192.168.1.3}
+  export CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/config
+  export NODE_CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/src/angel_system_nodes/configs
+  export MODEL_DIR=${ANGEL_WORKSPACE_DIR}/model_files
+# Run on project start, the first time
+# on_project_first_start: command
+
+# Run on project start, after the first time
+# on_project_restart: command
+
+# Run on project exit ( detaching from tmux session )
+# on_project_exit: command
+
+# Run on project stop
+# on_project_stop: command
+
+# Runs in each window and pane before window/pane specific commands. Useful for setting up interpreter versions.
+# pre_window: rbenv shell 2.0.0-p247
+
+# Pass command line options to tmux. Useful for specifying a different tmux.conf.
+# tmux_options: -f ~/.tmux.mac.conf
+tmux_options: -f <%= ENV["ANGEL_WORKSPACE_DIR"] %>/tmux/tmux.conf
+
+windows:
+  - datahub: ros2 run ros_tcp_endpoint default_server_endpoint --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p ROS_IP:=0.0.0.0
+  - hl2ss_bridge: ros2 run angel_system_nodes hl2ss_ros_bridge --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p ip_addr:=${HL2_IP}
+      -p image_topic:=PVFramesBGR
+      -p hand_pose_topic:=HandJointPoseData
+      -p audio_topic:=HeadsetAudioData
+
+  # Visualize Images being output from the headset
+  - rqt_pv_images: rqt -s rqt_image_view/ImageView
+      --args ${ROS_NAMESPACE}/PVFramesBGR
+      --ros-args -p _image_transport:=raw
+
+  - object_detector: ros2 run angel_system_nodes object_detector_with_descriptors --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p image_topic:=PVFramesBGR
+      -p descriptor_topic:=ObjectDetections
+      -p min_time_topic:=ObjDetMinTime
+      -p torch_device:=cuda:0
+      -p detection_threshold:=0.05
+      -p object_vocab_list:=${MODEL_DIR}/fasterrcnn_label_list.txt
+      -p model_checkpoint:=${MODEL_DIR}/fasterrcnn_res101_vg.pth
+#  - simple_2d_overlay: ros2 run angel_debug Simple2dDetectionOverlay --ros-args
+#      -r __ns:=${ROS_NAMESPACE}
+#      -p topic_input_images:=PVFramesBGR
+#      -p topic_input_det_2d:=ObjectDetections
+#      -p topic_output_images:=pv_image_detections_2d
+#      -p filter_top_k:=5
+
+  - activity_classifier: ros2 run angel_system_nodes uho_activity_detector --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p image_topic:=PVFramesBGR
+      -p hand_pose_topic:=HandJointPoseData
+      -p obj_det_topic:=ObjectDetections
+      -p torch_device:=cuda:1
+      -p det_topic:=ActivityDetections
+      -p min_time_topic:=ObjDetMinTime
+      -p frames_per_det:=32
+      -p object_dets_per_window:=2
+      -p buffer_max_size_seconds:=2.0
+      -p model_checkpoint:=${MODEL_DIR}/uho_checkpoint_20221022.ckpt
+      -p top_k:=10
+      -p overlapping_mode:=False
+  # Audio nodes
+  - asr: ros2 run angel_system_nodes asr --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p audio_topic:=HeadsetAudioData
+      -p utterances_topic:=UtterancesTopic
+      -p asr_server_url:=http://communication.cs.columbia.edu:8058/home
+      -p tmp_wav_filename:=/tmp/asr.wav
+  - intent_detection: ros2 run angel_system_nodes intent_detector --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p utterances_topic:=UtterancesTopic
+      -p expect_user_intent_topic:=ConfirmedUserIntents
+      -p interp_user_intent_topic:=UserIntentPredicted
+
+  - intent_to_cmd: ros2 run angel_system_nodes intent_to_command --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p confirmed_intent_topic:=ConfirmedUserIntents
+      -p sys_cmd_topic:=SystemCommands
+      -p intent_to_cmd_map:=${CONFIG_DIR}/angel_system_cmds/user_intent_to_sys_cmd_v1.yaml
+
+  - task_monitor: ros2 run angel_system_nodes task_monitor_v2 --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p det_topic:=ActivityDetections
+      -p config_file:=${CONFIG_DIR}/tasks/task_steps_config-recipe_coffee_trimmed_v3_allows_skip.yaml
+      -p task_state_topic:=TaskUpdates
+      -p task_error_topic:=TaskErrors
+      -p query_task_graph_topic:=query_task_graph
+      -p step_complete_threshold:=0.5
+      -p sys_cmd_topic:=SystemCommands
+
+  # Currently hard-coded to use the /debug ROS namespace.
+  - engineering_ui_websocket: ros2 launch rosbridge_server rosbridge_websocket_launch.xml port:=9090
+  - engineering_ui_server: node src/angel_utils/demo_ui/index.js
+      --namespace=${ROS_NAMESPACE}
+      --image_topic=pv_image_detections_2d/compressed
+      --query_task_graph_topic=query_task_graph
+      --task_updates_topic=TaskUpdates
+      --activity_detections_topic=ActivityDetections
+      --task_errors_topic=TaskErrors
+
+  - feedback_generator: ros2 run angel_system_nodes feedback_generator --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p activity_detector_topic:=ActivityDetections
+      -p object_detection_topic:=ObjectDetections3d
+      -p task_monitor_topic:=TaskUpdates
+      -p arui_update_topic:=AruiUpdates
+      -p interp_user_intent_topic:=UserIntentPredicted
+
