@@ -15,10 +15,10 @@ class _ROIPool(Function):
         ctx.output_size = _pair(output_size)
         ctx.spatial_scale = spatial_scale
         ctx.input_shape = input.size()
-        output, argmax = roi_pool(
-            input, roi, (output_size[0], output_size[1]), spatial_scale
+        output = roi_pool(
+            input, roi, output_size, spatial_scale
         )
-        ctx.save_for_backward(input, roi, argmax)
+        #ctx.save_for_backward(input, roi, argmax)
         return output
 
     @staticmethod
@@ -44,7 +44,7 @@ class _ROIPool(Function):
         return grad_input, None, None, None
 
 
-roi_pool = _ROIPool.apply
+_roi_pool = _ROIPool.apply
 
 
 class ROIPool(nn.Module):
@@ -54,7 +54,7 @@ class ROIPool(nn.Module):
         self.spatial_scale = spatial_scale
 
     def forward(self, input, rois):
-        return roi_pool(input, rois, self.output_size, self.spatial_scale)
+        return _roi_pool(input, rois, self.output_size, self.spatial_scale)
 
     def __repr__(self):
         tmpstr = self.__class__.__name__ + "("

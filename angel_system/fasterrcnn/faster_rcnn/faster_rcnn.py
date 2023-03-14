@@ -74,8 +74,7 @@ class _fasterRCNN(nn.Module):
         rois = Variable(rois)
 
         # do roi pooling based on predicted rois
-        pooled_feat = self.RCNN_roi_align(base_feat, rois.view(-1, 5))
-
+        pooled_feat = self.RCNN_roi_pool(base_feat, rois.view(-1,5))
         # feed pooled features to top model
         pooled_feat = self._head_to_tail(pooled_feat)
 
