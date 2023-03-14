@@ -55,10 +55,8 @@ DEFINE_PARAM_NAME( PARAM_FILTER_TOP_K, "filter_top_k" );
 static constexpr size_t const TENe9 = 1000000000;
 // Factor of image max dim to determine line thickness, round result.
 static constexpr double const LINE_FACTOR = 0.0015;
-
+// Max length of the bounding box label displayed before wrapping the tezt
 static constexpr int const MAX_LINE_LEN = 15;
-
-
 
 /// Convert a header instance into a single-value time component to be used as
 /// and order-able key.
@@ -326,17 +324,12 @@ Simple2dDetectionOverlay
   // Find top k results
   std::vector<std::string> top_k_labels;
   std::vector<double> top_k_dets;
-
-  std::vector<float> left;
-  std::vector<float> top;
-  std::vector<float> right;
-  std::vector<float> bottom;
+  std::vector<size_t> indices(all_dets.size());
+  std::iota(indices.begin(), indices.end(), 0);
 
   if( filter_top_k != -1 )
   {
     RCLCPP_DEBUG( log, "Top k: %d", filter_top_k );
-    std::vector<size_t> indices(all_dets.size());
-    std::iota(indices.begin(), indices.end(), 0);
 
     int k = std::min((int)all_dets.size(), filter_top_k);
     std::partial_sort(indices.begin(), indices.begin() + k, indices.end(),
@@ -348,31 +341,22 @@ Simple2dDetectionOverlay
     {
       top_k_labels.push_back(all_labels[indices[idx]]);
       top_k_dets.push_back(all_dets[indices[idx]]);
-
-      left.push_back(det_set->left[indices[idx]]);
-      top.push_back(det_set->top[indices[idx]]);
-      right.push_back(det_set->right[indices[idx]]);
-      bottom.push_back(det_set->bottom[indices[idx]]);
     }
   }
   else
   {
     top_k_labels = all_labels;
     top_k_dets = all_dets;
-
-    left = det_set->left;
-    top = det_set->top;
-    right = det_set->right;
-    bottom = det_set->bottom;
   }
 
   // Draw the stuff
   for( size_t i = 0; i < top_k_dets.size(); ++i )
   {
-    cv::Point pt_ul = { (int) round( left[ i ] ),
-                        (int) round( top[ i ] ) },
-              pt_br = { (int) round( right[ i ] ),
-                        (int) round( bottom[ i ] ) };
+    auto idx = indices.at(i);
+    cv::Point pt_ul = { (int) round( det_set->left[ idx ] ),
+                        (int) round( det_set->top[ idx ] ) },
+              pt_br = { (int) round( det_set->right[ idx ] ),
+                        (int) round( det_set->bottom[ idx ] ) };
     cv::rectangle( img_ptr->image, pt_ul, pt_br,
                    COLOR_BOX, line_thickness, cv::LINE_8 );
 
