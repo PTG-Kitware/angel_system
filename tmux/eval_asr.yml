@@ -1,5 +1,5 @@
 #
-# Used to create ROS bags for all topics published from the HL2.
+# Used to evaluate ASR and intent detection for a specified ROS bag of data.
 # This configuration should be run by itself (e.g. not in combination with
 # another tmuxinator launch).
 #
@@ -57,9 +57,9 @@ windows:
   - asr: ros2 run angel_system_nodes asr --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p audio_topic:=HeadsetAudioData
-      -p utterance_topic:=utterances_topic
+      -p utterances_topic:=utterances_topic
       -p asr_server_url:=http://communication.cs.columbia.edu:8058/home
-      -p tmp_wav_filename:=/tmp/asr.wav
+      -p asr_req_segment_duration:=30
   - intent_detection: ros2 run angel_system_nodes intent_detector --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p utterances_topic:=utterances_topic
