@@ -1,12 +1,5 @@
-import json
-import time
-
-from cv_bridge import CvBridge
-import cv2
-import numpy as np
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import Header
 
 from angel_msgs.msg import InterpretedAudioUserIntent, Utterance
 
