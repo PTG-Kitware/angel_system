@@ -13,6 +13,7 @@ from angel_msgs.msg import ObjectDetection2dSet
 from angel_system.fasterrcnn.faster_rcnn.resnet import resnet
 from angel_system.fasterrcnn.processing_utils import _get_image_blob
 from angel_utils.conversion import time_to_int
+from angel_utils import RateTracker
 
 
 BRIDGE = CvBridge()
@@ -104,6 +105,9 @@ class ObjectDetectorWithDescriptors(Node):
                 self.classes.append(obj.split(',')[0].lower().strip())
 
         log.info("Ready to detect")
+        self.anchors = [4, 8, 16, 32]
+        self._detection_rate_tracker = RateTracker()
+
 
     def get_model(self) -> torch.nn.Module:
         """
@@ -112,7 +116,7 @@ class ObjectDetectorWithDescriptors(Node):
         """
         model = self._model
         if model is None:
-            model = resnet(self.classes, pretrained=False, class_agnostic=False)
+            model = resnet(self.classes, pretrained=False, class_agnostic=False, anchors=self.anchors, pool="align")
             model.create_architecture()
 
             checkpoint = torch.load(self._model_checkpoint)
@@ -218,6 +222,10 @@ class ObjectDetectorWithDescriptors(Node):
 
         # Publish detection set message
         self._publisher.publish(msg)
+        self._detection_rate_tracker.tick()
+        self.get_logger().debug(f"Published audio message (hz: "
+                                f"{self._detection_rate_tracker.get_rate_avg()})",
+                                throttle_duration_sec=1)
         log.info("Published detection set message")
 
     def preprocess_image(self, im_in):
@@ -351,7 +359,6 @@ class ObjectDetectorWithDescriptors(Node):
             )
         else:
             sample_info = dict(boxes=None, objects=None, feats=None, labels=None, scores=None)
-
         return sample_info
 
 

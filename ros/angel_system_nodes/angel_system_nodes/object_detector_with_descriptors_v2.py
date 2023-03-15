@@ -107,7 +107,7 @@ class ObjectDetectorWithDescriptors_v2(Node):
             for obj in f.readlines():
                 self.classes.append(obj.split(',')[0].lower().strip())
         self._detection_rate_tracker = RateTracker()
-
+        self.anchors = [8, 16, 32]
         log.info("Ready to detect")
 
     def get_model(self) -> torch.nn.Module:
@@ -117,7 +117,7 @@ class ObjectDetectorWithDescriptors_v2(Node):
         """
         model = self._model
         if model is None:
-            model = resnet(self.classes, pretrained=False, class_agnostic=False)
+            model = resnet(self.classes, pretrained=False, class_agnostic=False, anchors=self.anchors, pool="pool")
             model.create_architecture()
 
             checkpoint = torch.load(self._model_checkpoint)
@@ -372,7 +372,6 @@ class ObjectDetectorWithDescriptors_v2(Node):
             )
         else:
             sample_info = dict(boxes=None, objects=None, feats=None, labels=None, scores=None)
-
         return sample_info
 
 

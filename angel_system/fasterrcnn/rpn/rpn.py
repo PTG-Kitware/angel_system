@@ -16,11 +16,14 @@ import time
 
 class _RPN(nn.Module):
     """ region proposal network """
-    def __init__(self, din):
+    def __init__(self, din, anchors):
         super(_RPN, self).__init__()
-        
+        if anchors is not None:
+            self.anchor_scales = anchors
+        else:
+            self.anchor_scales = cfg.ANCHOR_SCALES
+
         self.din = din  # get depth of input feature map, e.g., 512
-        self.anchor_scales = cfg.ANCHOR_SCALES
         self.anchor_ratios = cfg.ANCHOR_RATIOS
         self.feat_stride = cfg.FEAT_STRIDE[0]
 

@@ -60,7 +60,7 @@ windows:
       --args ${ROS_NAMESPACE}/FramesBGR
       --ros-args -p _image_transport:=raw
 
-  - object_detector: ros2 run angel_system_nodes object_detector_with_descriptors_v3 --ros-args
+  - object_detector: ros2 run angel_system_nodes object_detector_with_descriptors_v2 --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p image_topic:=FramesBGR
       -p descriptor_topic:=ObjectDetections

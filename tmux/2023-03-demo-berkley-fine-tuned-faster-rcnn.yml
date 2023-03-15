@@ -56,6 +56,9 @@ windows:
       -r __ns:=${ROS_NAMESPACE}
       -p ROS_IP:=0.0.0.0
   # Visualize Images being output from the headset
+
+  - image_publisher: ros2 run angel_system_nodes image_publisher
+
   - rqt_pv_images: rqt -s rqt_image_view/ImageView
       --args ${ROS_NAMESPACE}/FramesBGR
       --ros-args -p _image_transport:=raw
