@@ -12,8 +12,8 @@ from angel_msgs.msg import InterpretedAudioUserIntent, Utterance
 
 # Please refer to labels defined in
 # https://docs.google.com/document/d/1uuvSL5de3LVM9c0tKpRKYazDxckffRHf7IAcabSw9UA .
-NEXT_STEP_KEYPHRASES = ['skip', 'next step']
-PREV_STEP_KEYPHRASES = ['previous step', 'last step', 'go back']
+NEXT_STEP_KEYPHRASES = ['skip', 'next', 'next step']
+PREV_STEP_KEYPHRASES = ['previous', 'previous step', 'last step', 'go back']
 OVERRIDE_KEYPHRASES = ['angel', 'angel system']
 
 # TODO(derekahmed): Please figure out how to keep this sync-ed with
