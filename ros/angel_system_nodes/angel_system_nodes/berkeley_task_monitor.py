@@ -227,11 +227,9 @@ class TaskMonitor(Node):
                 _current_sub_step = sub_step[-1]['sub-step']
                 _current_sub_step_id = self._steps.index(_current_sub_step)
                 if 'end_frame' in list(sub_step[-1].keys()):
-                    with self._task_lock:
-                        # Sub-step is finished
-                        self._completed_steps[_current_sub_step_id] = True
-                        finished_sub_step = True
-                        #log.info(f"{_current_sub_step} (finished)")
+                    # Sub-step is finished
+                    finished_sub_step = True
+                    #log.info(f"{_current_sub_step} (finished)")
         else:
             _current_sub_step = None
             _current_sub_step_id = -1
@@ -247,6 +245,8 @@ class TaskMonitor(Node):
                 self._previous_step_id = self._current_step_id
                 self._current_step = _current_sub_step
                 self._current_step_id = _current_sub_step_id
+                with self._task_lock:
+                    self._completed_steps[self._current_step_id] = True
  
                 log.info(f"Current step is now: {self._current_step}")
                 log.info(f"Current step id is now: {self._current_step_id}")
