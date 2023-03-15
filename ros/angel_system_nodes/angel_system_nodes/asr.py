@@ -1,20 +1,15 @@
 import pyaudio
-import rclpy
-from rclpy.node import Node
 import requests
-import simpleaudio as sa
 import tempfile
 import threading
 import time
 import wave
 
 from angel_msgs.msg import HeadsetAudioData, Utterance
-
-import nltk
 from nltk.tokenize import sent_tokenize
-
-
-nltk.download('punkt')
+import rclpy
+from rclpy.node import Node
+import simpleaudio as sa
 
 
 AUDIO_TOPIC = "audio_topic"
