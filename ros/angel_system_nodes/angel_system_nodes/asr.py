@@ -5,11 +5,12 @@ import threading
 import time
 import wave
 
-from angel_msgs.msg import HeadsetAudioData, Utterance
 from nltk.tokenize import sent_tokenize
 import rclpy
 from rclpy.node import Node
 import simpleaudio as sa
+
+from angel_msgs.msg import HeadsetAudioData, Utterance
 
 
 AUDIO_TOPIC = "audio_topic"
@@ -150,7 +151,6 @@ class ASR(Node):
             self.log.info("Complete ASR text is:\n" + f"\"{response.text}\"")
             for sentence in sent_tokenize(response.text):
                 utterance_msg = Utterance()
-                utterance_msg.speaker = "user"
                 utterance_msg.value = sentence
                 self.log.info("Publishing message: " + f"\"{sentence}\"")
                 self._publisher.publish(utterance_msg)
