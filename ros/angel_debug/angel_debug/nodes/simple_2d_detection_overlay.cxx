@@ -55,6 +55,8 @@ DEFINE_PARAM_NAME( PARAM_FILTER_TOP_K, "filter_top_k" );
 static constexpr size_t const TENe9 = 1000000000;
 // Factor of image max dim to determine line thickness, round result.
 static constexpr double const LINE_FACTOR = 0.0015;
+// Max length of the bounding box label displayed before wrapping the tezt
+static constexpr int const MAX_LINE_LEN = 15;
 
 /// Convert a header instance into a single-value time component to be used as
 /// and order-able key.
@@ -322,17 +324,20 @@ Simple2dDetectionOverlay
   // Find top k results
   std::vector<std::string> top_k_labels;
   std::vector<double> top_k_dets;
+  std::vector<size_t> indices(all_dets.size());
+  std::iota(indices.begin(), indices.end(), 0);
+
   if( filter_top_k != -1 )
   {
     RCLCPP_DEBUG( log, "Top k: %d", filter_top_k );
-    std::vector<size_t> indices(all_dets.size());
-    std::iota(indices.begin(), indices.end(), 0);
-    std::partial_sort(indices.begin(), indices.begin() + filter_top_k, indices.end(),
+
+    int k = std::min((int)all_dets.size(), filter_top_k);
+    std::partial_sort(indices.begin(), indices.begin() + k, indices.end(),
                       [&](size_t A, size_t B) {
                         return all_dets[A] > all_dets[B];
                       });
 
-    for( int idx = 0; idx < filter_top_k; ++idx )
+    for( int idx = 0; idx < k; ++idx )
     {
       top_k_labels.push_back(all_labels[indices[idx]]);
       top_k_dets.push_back(all_dets[indices[idx]]);
@@ -347,15 +352,26 @@ Simple2dDetectionOverlay
   // Draw the stuff
   for( size_t i = 0; i < top_k_dets.size(); ++i )
   {
-    cv::Point pt_ul = { (int) round( det_set->left[ i ] ),
-                        (int) round( det_set->top[ i ] ) },
-              pt_br = { (int) round( det_set->right[ i ] ),
-                        (int) round( det_set->bottom[ i ] ) };
+    auto idx = indices.at(i);
+    cv::Point pt_ul = { (int) round( det_set->left[ idx ] ),
+                        (int) round( det_set->top[ idx ] ) },
+              pt_br = { (int) round( det_set->right[ idx ] ),
+                        (int) round( det_set->bottom[ idx ] ) };
     cv::rectangle( img_ptr->image, pt_ul, pt_br,
                    COLOR_BOX, line_thickness, cv::LINE_8 );
-    cv::putText( img_ptr->image, top_k_labels[i], pt_ul,
-                 cv::FONT_HERSHEY_COMPLEX, line_thickness, COLOR_TEXT,
-                 line_thickness );
+
+    std::string line = top_k_labels[i];
+    int line_len = line.length();
+    for (int i=0; i<line_len; i+=MAX_LINE_LEN)
+    {
+      std::string split_line = line.substr(
+        i, std::min(MAX_LINE_LEN, line_len-i));
+      cv::Point line_loc = {pt_ul.x, pt_ul.y+ i*(line_thickness+1)};
+      cv::putText( img_ptr->image, split_line, line_loc,
+                cv::FONT_HERSHEY_COMPLEX, line_thickness, COLOR_TEXT,
+                line_thickness );
+    }
+    
   }
 
   // TODO Use image-transport
