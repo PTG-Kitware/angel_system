@@ -10,7 +10,6 @@ from detectron2.utils.file_io import PathManager
 from .builtin_meta import _get_coco_instances_meta
 from .lvis_v0_5_categories import LVIS_CATEGORIES as LVIS_V0_5_CATEGORIES
 from .MC50_categories import MC50_CATEGORIES as MC50_CATEGORIES
-from .MC50_category_image_count import MC50_CATEGORY_IMAGE_COUNT as MC50_CATEGORY_IMAGE_COUNT
 
 """
 This file contains functions to parse LVIS-format annotations into dicts in the
@@ -32,8 +31,18 @@ def register_MC50_instances(name, metadata, json_file, image_root):
         json_file (str): path to the json instance annotation file.
         image_root (str or path-like): directory which contains all the images.
     """
-    image_root = '/shared/niudt/detectron2/fine_tuning/coco_format_ann/2022-11-06/inference_hannah/images'
-    json_file = '/shared/niudt/detectron2/fine_tuning/coco_format_ann/2022-11-06/inference_hannah/fine-tuning.json'
+    task = 'M1_hands_M2'
+    if task == 'coffee':
+        image_root = '/angel_workspace/angel_system/berkeley/2022-11-05_whole/ft_file/images'
+        #image_root = '/shared/niudt/detectron2/fine_tuning/coco_format_ann/2022-11-06/inference_hannah/images'
+        json_file = '/angel_workspace/angel_system/berkeley/2022-11-05_whole/ft_file/fine-tuning.json'
+        #json_file = '/shared/niudt/detectron2/fine_tuning/coco_format_ann/2022-11-06/inference_hannah/fine-tuning.json'
+    
+    if task == 'M1_hands_M2':
+        data_root = '/media/hannah.defazio/Padlock_DT/Data/notpublic/PTG/Release_v0.5'
+        image_root = data_root
+        json_file = '{data_root}/M1_hands_and_M2_train.mscoco.json'
+        
     DatasetCatalog.register(name, lambda: load_MC50_json(json_file, image_root, name))
     MetadataCatalog.get(name).set(
         json_file=json_file, image_root=image_root, evaluator_type="lvis", **metadata
@@ -243,7 +252,7 @@ def _get_MC50_instances_meta_v1():
     MC50_categories = sorted(MC50_CATEGORIES, key=lambda x: x["id"])
     # thing_classes = [k["synonyms"][0] for k in lvis_categories]
     thing_classes = [k["name"] for k in MC50_categories]
-    meta = {"thing_classes": thing_classes, "class_image_count": MC50_CATEGORY_IMAGE_COUNT}
+    meta = {"thing_classes": thing_classes, "class_image_count": MC50_CATEGORIES}
     return meta
 
 

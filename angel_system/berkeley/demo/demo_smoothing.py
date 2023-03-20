@@ -13,7 +13,6 @@ import tqdm
 from detectron2.config import get_cfg
 from detectron2.data.detection_utils import read_image
 from detectron2.utils.logger import setup_logger
-from detectron2.utils.smoothing_tracker_utils import MC50_CATEGORIES as MC50_CATEGORIES
 from detectron2.utils.tracker import Tracker
 
 from predictor import VisualizationDemo, VisualizationDemo_add_smoothing
