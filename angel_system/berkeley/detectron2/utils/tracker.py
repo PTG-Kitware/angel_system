@@ -1,12 +1,12 @@
 import os
 import numpy as np
 
-from angel_system.berkeley import coffee_activity_objects
-from detectron2.data.datasets.MC50_categories import MC50_CATEGORIES as MC50_CATEGORIES
+from angel_system.berkeley.utils.data.objects import coffee_activity_objects
 
 
 class Tracker:
-    def __init__(self, number_frames, last_time, fps):
+    def __init__(self, metadata, number_frames, last_time, fps):
+        self.metadata = metadata
         self.number_frames = number_frames
         self.last_time = last_time
         self.fps = fps
@@ -55,7 +55,7 @@ class Tracker:
     def map_classes(self, tensor):
         name_list = []
         for t in tensor:
-            name = MC50_CATEGORIES[int(t.item() - 1)]['name']
+            name = self.metadata['class_image_count'][int(t.item() - 1)]['name']
             name_list.append(name)
         return name_list
 
@@ -64,7 +64,7 @@ class Tracker:
 
         :return:
         """
-        for cate in MC50_CATEGORIES:
+        for cate in self.metadata['class_image_count']:
             sub_list = []
             sub_list.append(cate['name'])
             #sub_list.append(np.zeros([self.number_frames]))

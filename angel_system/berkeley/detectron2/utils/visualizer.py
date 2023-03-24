@@ -16,8 +16,7 @@ from PIL import Image
 from detectron2.data import MetadataCatalog
 from detectron2.structures import BitMasks, Boxes, BoxMode, Keypoints, PolygonMasks, RotatedBoxes
 from detectron2.utils.file_io import PathManager
-from detectron2.data.datasets.MC50_categories import MC50_CATEGORIES
-from angel_system.berkeley import coffee_activity_objects
+from angel_system.berkeley.utils.data.objects import coffee_activity_objects
 
 from .colormap import random_color
 
@@ -1508,7 +1507,7 @@ class Visualizer:
     def load_color_mapping(self):
         import pandas as pd
         import os
-        root_dir = "angel_system/berkeley/detectron2/utils"
+        root_dir = "/angel_workspace/angel_system/berkeley/detectron2/utils"
         root = f'{root_dir}/MC_COLOR.csv'
         data = pd.read_csv(root, header=None).values
         color_mapping = {}

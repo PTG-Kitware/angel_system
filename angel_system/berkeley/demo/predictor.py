@@ -265,7 +265,6 @@ class VisualizationDemo_add_smoothing(object):
         else:
             self.predictor = DefaultPredictor(cfg)
 
-
         self.tracker = Tracker(number_frames=number_frames, last_time=last_time, fps = fps)
 
     def run_on_image(self, image):
