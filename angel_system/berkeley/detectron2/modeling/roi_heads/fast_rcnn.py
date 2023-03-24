@@ -193,12 +193,12 @@ def fast_rcnn_inference_single_image_plus_contact(
     scores = scores[filter_mask]
 
     # modify if deliver cls-based contact
-    obj_obj_scores = obj_obj_scores.repeat(42, 1, 1)
+    obj_obj_scores = obj_obj_scores.repeat(num_bbox_reg_classes, 1, 1)
     obj_obj_scores = obj_obj_scores.permute(1, 0, 2)
     obj_obj_scores = obj_obj_scores[filter_mask]
 
     # modify if deliver cls-based contact
-    obj_hand_scores = obj_hand_scores.repeat(42, 1, 1)
+    obj_hand_scores = obj_hand_scores.repeat(num_bbox_reg_classes, 1, 1)
     obj_hand_scores = obj_hand_scores.permute(1, 0, 2)
     obj_hand_scores = obj_hand_scores[filter_mask]
 
@@ -459,7 +459,7 @@ def fast_rcnn_inference_single_image_contact(
     scores = scores[filter_mask]
 
     # modify if deliver cls-based contact
-    contact_scores = contact_scores.repeat(42, 1, 1)
+    contact_scores = contact_scores.repeat(num_bbox_reg_classes, 1, 1)
     contact_scores = contact_scores.permute(1, 0, 2)
     contact_scores = contact_scores[filter_mask]
 
