@@ -501,6 +501,29 @@ contact_pairs_details = [[['measuring cup', 'water'],
 
 
 
+States_Pairs = [['kettle',
+                    'kettle (open)'],
+                ['coffee beans + container', 'coffee beans + container + scale'],
+                ['coffee grounds + paper filter + filter cone',
+                    'coffee grounds + paper filter + filter cone + mug',
+                    'filter cone', 'filter cone + mug', 'paper filter + filter cone',
+                    'paper filter + filter cone + mug', 'used paper filter + filter cone',
+                    'used paper filter + filter cone + mug', 'water + coffee grounds + paper filter + filter cone + mug'],
+                ['coffee + mug',
+                    'coffee grounds + paper filter + filter cone + mug',
+                    'filter cone + mug', 'mug', 'paper filter + filter cone + mug',
+                    'used paper filter + filter cone + mug', 'water + coffee grounds + paper filter + filter cone + mug'],
+                ['container', 'container + scale'],
+                ['scale (off)', 'scale (on)', 'container + scale', 'coffee beans + container + scale'],
+                ['paper filter (semi)', 'paper filter (quarter)', 'paper filter'],
+                ['coffee beans + container', 'coffee beans + container + scale'],
+                ['timer (else)', 'timer (20)', 'timer (30)'],
+                ['thermometer (open)', 'thermometer (close)'],
+                ['grinder (close)', 'grinder (open)']
+                ]
+
+
+
 CONTACT_PAIRS_v1 = [['measuring cup (empty)', 'water'],
                          ['measuring cup (full)', 'water'],
                          ['measuring cup (full)', 'kettle (full)'],
