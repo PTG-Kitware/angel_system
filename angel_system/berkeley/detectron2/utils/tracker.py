@@ -1,7 +1,7 @@
 import os
 import numpy as np
 
-from angel_system.berkeley.utils.data.objects import coffee_activity_objects
+from angel_system.berkeley.utils.data.objects import coffee_activity_objects as activity_objects # Coffee specific
 
 
 class Tracker:
@@ -36,11 +36,11 @@ class Tracker:
         self.step_info = []
 
     def initiate_step_mapping(self):
-        self.step_map = coffee_activity_objects.sub_steps
+        self.step_map = activity_objects.sub_steps
 
 
     def inititae_contact_memory(self):
-        contact_pairs_details = coffee_activity_objects.contact_pairs_details
+        contact_pairs_details = activity_objects.contact_pairs_details
 
         for i, _step in enumerate(contact_pairs_details):
             sub_list = []
@@ -185,7 +185,7 @@ class Tracker:
                     #flag = sub_step[1][start_frame : stop_frame + 1].sum()
                     flag = len([f for f in sub_step[1] if start_frame <= f <= (stop_frame+1)])
                     # if flag > 2/3 * (self.step_last_frame):
-                    if sub_step[0] == ['switch', 'hand'] or sub_step[0] == ['used paper filter', 'trash can']:
+                    if sub_step[0] == ['switch', 'hand'] or sub_step[0] == ['used paper filter', 'trash can']: # Coffee specific
                         thresh = 3
                     else:
                         thresh = 6

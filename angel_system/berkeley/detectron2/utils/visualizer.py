@@ -16,7 +16,7 @@ from PIL import Image
 from detectron2.data import MetadataCatalog
 from detectron2.structures import BitMasks, Boxes, BoxMode, Keypoints, PolygonMasks, RotatedBoxes
 from detectron2.utils.file_io import PathManager
-from angel_system.berkeley.utils.data.objects import coffee_activity_objects
+from angel_system.berkeley.utils.data.objects import coffee_activity_objects as activity_objects # Coffee specific
 
 from .colormap import random_color
 
@@ -483,27 +483,7 @@ class VisualizerUtil:
         score_list = np.array(score_list)
         flag_list = np.zeros(len(labels))
 
-        # Multi_States_class = ['kettle', 'kettle (empty)', 'kettle (full)', 'measuring cup (empty)', 'measuring cup (full)', 'filter cone', 'filter cone + mug', 'paper filter + filter cone + mug', 'coffee grounds + paper filter + filter cone + mug', 'water + coffee grounds + filter cone + mug', 'used paper filter + filter cone + mug', 'used paper filter + filter cone', 'container', 'coffee beans + container', 'scale (off)', 'scale (on)', 'container + scale', 'coffee beans + container + scale']
-        States_Pairs = [['kettle',
-                         'kettle (open)'],
-                        ['coffee beans + container', 'coffee beans + container + scale'],
-                        ['coffee grounds + paper filter + filter cone',
-                         'coffee grounds + paper filter + filter cone + mug',
-                         'filter cone', 'filter cone + mug', 'paper filter + filter cone',
-                         'paper filter + filter cone + mug', 'used paper filter + filter cone',
-                         'used paper filter + filter cone + mug', 'water + coffee grounds + paper filter + filter cone + mug'],
-                        ['coffee + mug',
-                         'coffee grounds + paper filter + filter cone + mug',
-                         'filter cone + mug', 'mug', 'paper filter + filter cone + mug',
-                         'used paper filter + filter cone + mug', 'water + coffee grounds + paper filter + filter cone + mug'],
-                        ['container', 'container + scale'],
-                        ['scale (off)', 'scale (on)', 'container + scale', 'coffee beans + container + scale'],
-                        ['paper filter (semi)', 'paper filter (quarter)', 'paper filter'],
-                        ['coffee beans + container', 'coffee beans + container + scale'],
-                        ['timer (else)', 'timer (20)', 'timer (30)'],
-                        ['thermometer (open)', 'thermometer (close)'],
-                        ['grinder (close)', 'grinder (open)']
-                        ]
+        States_Pairs = activity_objects.States_Pairs
 
         for i in range(len(labels)):
             multi_flag = 0
@@ -570,8 +550,8 @@ class VisualizerUtil:
         contact_flag = np.zeros(len(labels))
         contact_hand_flag = np.zeros(len(labels))
 
-        CONTACT_PAIRS_v1 = coffee_activity_objects.CONTACT_PAIRS_v1
-        CONTACT_PAIRS = coffee_activity_objects.CONTACT_PAIRS
+        CONTACT_PAIRS_v1 = activity_objects.CONTACT_PAIRS_v1
+        CONTACT_PAIRS = activity_objects.CONTACT_PAIRS
 
         # new_boxes = []
         # new_labels = []
@@ -4026,81 +4006,7 @@ class Visualizer_eval:
         contact_flag = np.zeros(len(labels))
         contact_hand_flag = np.zeros(len(labels))
 
-        CONTACT_PAIRS_v1 = [['measuring cup (empty)', 'water'],
-                         ['measuring cup (full)', 'water'],
-                         ['measuring cup (full)', 'kettle (full)'],
-                         ['measuring cup (full)', 'kettle (empty)'],
-                         ['measuring cup (empty)', 'kettle (full)'],
-                         ['measuring cup (empty)', 'kettle (empty)'],  # step 1
-
-                         ['mug', 'filter cone'], # step 2
-
-                         ['paper filter', 'paper filter bag'],
-                         ['paper filter (semi)', 'filter cone + mug'],
-                         ['paper filter (quarter)', 'filter cone + mug'],
-                         ['paper filter', 'filter cone + mug'], # step 3
-
-                         ['scale (on)', 'container'],
-                         ['scale (off)', 'container'],
-                         ['container + scale', 'coffee bag'],
-                         ['coffee beans + container + scale', 'coffee bag'],
-                         ['coffee beans + container', 'grinder'],
-                         ['container', 'grinder'],
-                         ['paper filter + filter cone + mug', 'grinder'],
-                         ['paper filter + filter cone', 'grinder'],
-                         ['coffee beans + paper filter + filter cone + mug', 'grinder'],
-                         ['coffee beans + paper filter + filter cone', 'grinder'],
-                         ['coffee grounds + paper filter + filter cone', 'grinder'],
-                         ['coffee grounds + paper filter + filter cone + mug', 'grinder'],# step 4
-
-                         ['thermometer', 'kettle (full)'],
-                         ['thermometer', 'kettle (empty)'],
-                         # ['thermometer', 'kettle'], # step 5
-
-                         ['kettle', 'coffee grounds + paper filter + filter cone + mug'],
-                         ['kettle', 'water + coffee grounds + paper filter + filter cone + mug'],
-                         ['kettle', 'used paper filter + filter cone + mug'],  # step 6 ~ 7
-
-                         ['mug', 'used paper filter + filter cone'],
-                         ['used paper filter', 'filter cone'],
-                         ['used paper filter + filter cone', 'paper towel'],
-                         ['used paper filter', 'trash can'],
-                         ['trash can', 'filter cone']# step 8
-                         ]
-        CONTACT_PAIRS = [['measuring cup', 'water'],
-                         ['kettle (open)', 'measuring cup'],# step 1
-
-                            ['mug', 'filter cone'],  # step 2
-
-                            ['paper filter', 'paper filter bag'],
-                            ['paper filter (semi)', 'filter cone + mug'],
-                            ['paper filter (quarter)', 'filter cone + mug'],
-                            ['paper filter', 'filter cone + mug'],  # step 3
-
-                            ['scale (on)', 'container'],
-                            ['scale (off)', 'container'],
-                            ['container + scale', 'coffee bag'],
-                            ['coffee beans + container + scale', 'coffee bag'],
-                            ['coffee beans + container', 'grinder (open)'],
-                            ['container', 'grinder (open)'],
-                            ['paper filter + filter cone + mug', 'grinder (open)'],
-                            ['paper filter + filter cone', 'grinder (open)'],
-                            ['coffee grounds + paper filter + filter cone', 'grinder (open)'],
-                            ['coffee grounds + paper filter + filter cone + mug', 'grinder (open)'],  # step 4
-
-                            ['thermometer (open)', 'kettle (open)'],
-                            # ['thermometer', 'kettle'], # step 5
-
-                            ['kettle', 'coffee grounds + paper filter + filter cone + mug'],
-                            ['kettle', 'water + coffee grounds + paper filter + filter cone + mug'],  # step 6 ~ 7
-
-                            ['mug', 'used paper filter + filter cone'],
-                            # ['hand', 'used paper filter + filter cone'],
-                            # ['hand', 'used paper filter + filter cone + mug'],
-                            ['used paper filter', 'trash can'],
-                            ['trash can', 'filter cone'],
-                            ['hand', 'used paper filter']  # step 8
-                            ]
+        CONTACT_PAIRS = activity_objects.CONTACT_PAIRS
 
         # new_boxes = []
         # new_labels = []
