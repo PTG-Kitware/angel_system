@@ -1,12 +1,10 @@
 import os
 import numpy as np
 
-from angel_system.berkeley.utils.data.objects import coffee_activity_objects as activity_objects # Coffee specific
-
 
 class Tracker:
     def __init__(self, metadata, number_frames, last_time, fps):
-        self.metadata = metadata
+        self.metadata = metadata.as_dict()
         self.number_frames = number_frames
         self.last_time = last_time
         self.fps = fps
@@ -36,11 +34,11 @@ class Tracker:
         self.step_info = []
 
     def initiate_step_mapping(self):
-        self.step_map = activity_objects.sub_steps
+        self.step_map = self.metadata['sub_steps']
 
 
     def inititae_contact_memory(self):
-        contact_pairs_details = activity_objects.contact_pairs_details
+        contact_pairs_details = self.metadata['contact_pairs_details']
 
         for i, _step in enumerate(contact_pairs_details):
             sub_list = []

@@ -1,5 +1,5 @@
 import os
-from .MC50 import get_MC50_instances_meta, register_MC50_instances
+from .MC50 import register_MC50_instances
 
 
 cooking_data_root = '/angel_workspace/angel_system/berkeley/'
@@ -25,7 +25,18 @@ def _get_cooking_instances_meta_v1(dataset_name):
     MC50_categories = sorted(MC50_CATEGORIES, key=lambda x: x["id"])
     # thing_classes = [k["synonyms"][0] for k in lvis_categories]
     thing_classes = [k["name"] for k in MC50_categories]
-    meta = {"thing_classes": thing_classes, "class_image_count": MC50_CATEGORIES}
+
+    if dataset_name == 'COFFEE':
+        from angel_system.berkeley.utils.data.objects import coffee_activity_objects as cooking_activity_objects
+
+    meta = {
+        "thing_classes": thing_classes,
+        "class_image_count": MC50_CATEGORIES,
+        "sub_steps": cooking_activity_objects.sub_steps,
+        "contact_pairs_details": cooking_activity_objects.contact_pairs_details,
+        "CONTACT_PAIRS": cooking_activity_objects.CONTACT_PAIRS,
+        "States_Pairs": cooking_activity_objects.States_Pairs
+    }
     return meta
 
 def register_all_kitware_cooking_data():

@@ -16,7 +16,6 @@ from PIL import Image
 from detectron2.data import MetadataCatalog
 from detectron2.structures import BitMasks, Boxes, BoxMode, Keypoints, PolygonMasks, RotatedBoxes
 from detectron2.utils.file_io import PathManager
-from angel_system.berkeley.utils.data.objects import coffee_activity_objects as activity_objects # Coffee specific
 
 from .colormap import random_color
 
@@ -306,6 +305,9 @@ class VisImage:
 
 
 class VisualizerUtil:
+    def __init__(self, metadata=None):
+        self.metadata = metadata.as_dict()
+
     def calculate_area(self, bbox):
         x0 = bbox[0]
         y0 = bbox[1]
@@ -483,7 +485,7 @@ class VisualizerUtil:
         score_list = np.array(score_list)
         flag_list = np.zeros(len(labels))
 
-        States_Pairs = activity_objects.States_Pairs
+        States_Pairs = self.metadata['States_Pairs']
 
         for i in range(len(labels)):
             multi_flag = 0
@@ -550,8 +552,7 @@ class VisualizerUtil:
         contact_flag = np.zeros(len(labels))
         contact_hand_flag = np.zeros(len(labels))
 
-        CONTACT_PAIRS_v1 = activity_objects.CONTACT_PAIRS_v1
-        CONTACT_PAIRS = activity_objects.CONTACT_PAIRS
+        CONTACT_PAIRS = self.metadata['CONTACT_PAIRS']
 
         # new_boxes = []
         # new_labels = []
@@ -4006,7 +4007,7 @@ class Visualizer_eval:
         contact_flag = np.zeros(len(labels))
         contact_hand_flag = np.zeros(len(labels))
 
-        CONTACT_PAIRS = activity_objects.CONTACT_PAIRS
+        CONTACT_PAIRS = self.metadata['CONTACT_PAIRS']
 
         # new_boxes = []
         # new_labels = []

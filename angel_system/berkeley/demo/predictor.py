@@ -343,7 +343,7 @@ class VisualizationDemo_add_smoothing(object):
         return predictions, vis_output
 
     def unravel_instances(self, instances):
-        util = VisualizerUtil()
+        util = VisualizerUtil(metadata=self.metadata)
         boxes = instances.pred_boxes if instances.has("pred_boxes") else None #
         scores = instances.scores if instances.has("scores") else None #
         classes = instances.pred_classes.tolist() if instances.has("pred_classes") else None #
@@ -416,7 +416,7 @@ class VisualizationDemo_add_smoothing(object):
                               REMOVE_REPEATED_obj=True,
                               REMOVE_REPEATED_mutil_states=True,
                               ADD_CONTACT_STATES=True):
-        util = VisualizerUtil()
+        util = VisualizerUtil(metadata=self.metadata)
 
         # Display in largest to smallest order to reduce occlusion.
         areas = None
