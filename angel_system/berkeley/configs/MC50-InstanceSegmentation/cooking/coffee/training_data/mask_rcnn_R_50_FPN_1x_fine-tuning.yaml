@@ -1,11 +1,12 @@
 _BASE_: "../Base-RCNN-FPN.yaml"
 MODEL:
 #  WEIGHTS: '/shared/niudt/detectron2/tools/PTG_DEMO/MC_1+3+13+25_40000/model_final.pth'
-#  WEIGHTS: './weights/model_final.pth'
-  WEIGHTS: '/angel_workspace/model_files/berkeley_model_r50_final.pth'
+#  WEIGHTS: '/shared/niudt/detectron2_ori/detectron2/tools/output_base_important/model_final.pth'
 #  WEIGHTS: '/shared/niudt/detectron2/tools/PTG_DEMO/MC_1+3+13+14+25/model_final.pth'
 #  WEIGHTS: '/shared/niudt/detectron2/tools/PTG_DEMO/MC_1+3+13+14+25/model_final.pth'
 #  WEIGHTS: '/shared/niudt/detectron2_ori/detectron2/tools/coco-101-rpn/model_final_f96b26.pkl'
+#WEIGHTS: '/angel_workspace/model_files/model_final_571f7c.pkl'
+  WEIGHTS: "detectron2://ImageNetPretrained/MSRA/R-50.pkl"
   MASK_ON: False
   RESNETS:
     DEPTH: 50
@@ -16,8 +17,8 @@ MODEL:
 INPUT:
   MIN_SIZE_TRAIN: (640, 672, 704, 736, 768, 800)
 DATASETS:
-  TRAIN: ("COFFEE_train",)
-  TEST: ("COFFEE_train",)
+  TRAIN: ("COFFEE_UCB_train",)
+  TEST: ("COFFEE_UCB_val",)
 TEST:
   DETECTIONS_PER_IMAGE: 300  # LVIS allows up to 300
 #SOLVER:
@@ -27,11 +28,10 @@ DATALOADER:
   SAMPLER_TRAIN: "RepeatFactorTrainingSampler"
   REPEAT_THRESHOLD: 0.001
 
-#OUTPUT_DIR: './PTG_DEMO/11-5/whole'
-OUTPUT_DIR: 'angel_system/berkeley//PTG_DEMO/11-5/whole'
+OUTPUT_DIR: '/angel_workspace/model_files/training/berkeley/resnet50'
 
 SOLVER:
-  TOTAL_IMAGE_NUMBER: 1462
+  TOTAL_IMAGE_NUMBER: 1040
   IMS_PER_BATCH: 1
   BASE_LR: 0.001
   STEPS: (34000, 41000)
@@ -41,4 +41,5 @@ SOLVER:
 
 VISUALIZER:
   CAM: False
+
 
