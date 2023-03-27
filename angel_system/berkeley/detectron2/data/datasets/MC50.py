@@ -78,6 +78,9 @@ def load_MC50_json(json_file, image_root, dataset_name=None, meta=None, extra_an
             if 'BBN' in dataset_name:
                 from .bbn_medical import _get_bbn_instances_meta_v1
                 meta = _get_bbn_instances_meta_v1(dataset_name)
+            if 'KITWARE_COOKING' in dataset_name:
+                from .kitware_cooking import _get_cooking_instances_meta_v1
+                meta = _get_cooking_instances_meta_v1(dataset_name)
         MetadataCatalog.get(dataset_name).set(**meta)
 
     # sort indices for reproducible results
@@ -240,7 +243,7 @@ def _get_lvis_instances_meta_v0_5():
 
 def _get_MC50_instances_meta_v1():
     from detectron2.data.datasets.kitware_cooking import ALL_COOOKING_CATEGORIES
-    MC50_CATEGORIES = ALL_COOOKING_CATEGORIES['COFFEE']
+    MC50_CATEGORIES = ALL_COOOKING_CATEGORIES['KITWARE_COOKING_COFFEE']
     # assert len(LVIS_V1_CATEGORIES) == 20
     cat_ids = [k["id"] for k in MC50_CATEGORIES]
     assert min(cat_ids) == 1 and max(cat_ids) == len(
