@@ -82,6 +82,8 @@ public:
       topic_update_msg, 1,
       std::bind( &ZmqIntegrationClient::handle_bbn_update, this, _1 )
       );
+
+    RCLCPP_INFO( this->get_logger(), "Node initialization complete!" );
   }
 
   /// Destructor
@@ -124,6 +126,7 @@ public:
 
     // Should return the number of bytes sent. If return does not have a value,
     // then the zmq_send function returned code EAGAIN (11) "Try again".
+    RCLCPP_INFO( log, "Sending ROS update message as YAML..." );
     auto send_ret = m_zmq_socket.send(
                       zmq::buffer( yaml_translation ),
                       zmq::send_flags::none
@@ -133,6 +136,7 @@ public:
       RCLCPP_WARN( log, "Failed to send YAML message via ZMQ socket." );
       return;
     }
+    RCLCPP_INFO( log, "Sending ROS update message as YAML... Done" );
 
     // Recv should return the number of bytes received. Like before, if we
     // don't
@@ -144,7 +148,7 @@ public:
       RCLCPP_WARN( log, "Failed to receive server reply via ZMQ socket." );
       return;
     }
-    RCLCPP_INFO( log, "Received reply from server: " + reply_msg.to_string() );
+    RCLCPP_INFO( log, "Received reply from server: \"" + reply_msg.to_string() + "\"" );
   }
 };
 
