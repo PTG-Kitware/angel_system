@@ -1,0 +1,132 @@
+# ROS Message example reflecting the BBN Integration yaml example, but in the
+# appropriate format for the ROS2 message side of formatting, which is not
+# exactly 1-to-1 due to the lack of dictionary/map support.
+#
+# See associated comments in the BBN source YAML for section meanings.
+
+########
+# 1. BASIC HEADER STUFF (required)
+########
+bbn_header:
+  sender: Kitware
+  sender_software_version: 1.0
+  closest_hololens_dataframe_timestamp: 444.444  # nonsensical example TS
+  # Other valuers are either constant or autofilled.
+
+########
+# 2a. CASUALTY COUNT / WORK STATIONS
+# HARD CODED FOR DEMO 1 (required)
+########
+casualties:
+  populated: true
+  count: 1
+  confidence: 1.0
+
+#########
+## 2b. HARD CODED FOR DEMO 1 (required)
+#########
+skills_open_per_casualty:
+  populated: true
+  casualty_ids:
+    - 1
+  skill_confidences:
+    - list:
+      - label: M1
+        confidence: 1.0
+      - label: M2
+        confidence: 1.0
+      - label: R18
+        confidence: 0.5
+      - label: M5
+        confidence: 0.0
+      - label: M3
+        confidence: 0.0
+
+########
+# 2c. WHICH OF THESE SKILLS ARE DONE (optional/required?)
+# THIS WILL CHANGE AS TREATMENT PROGRESSES
+########
+skills_done_per_casualty:
+  populated: true
+  casualty_ids:
+    - 1
+  skill_confidences:
+    - list:
+      - label: M1
+        confidence: 1.0
+      - label: M2
+        confidence: 1.0
+      - label: R18
+        confidence: 0.5
+      - label: M5
+        confidence: 0.0
+      - label: M4
+        confidence: 0.0
+
+########
+# 2d. WHAT IS THE CURRENT SKILL STEP ACTIVITY? (required)
+# MAY CHANGE EVERY FEW SECONDS
+########
+current_user_actions:
+  populated: true  # false if there have been no skills or casualties
+  casualty_currently_working_on:
+    casualty:     1    # HARD CODED FOR DEMO 1
+    confidence:   1.0  # HARD CODED FOR DEMO 1
+  current_skill:
+    number:       R18  # WHICH SKILL?
+    confidence:   1.0  # confidence of which skill (0-1.0)
+  steps: # STATE OF EACH STEP
+    - number: 1
+      name: "Identify gunshot wound or penetrating trauma to chest"
+      state:  1  # implied
+      confidence:  0.65
+    - number: 2
+      name:   "With gloved hand, cover and seal wound site."
+      state:  0  # done
+      confidence:  0.99
+    - number: 3
+      name:   "Open vented chest seal package."
+      state:  0  # done
+      confidence:  0.98
+    - number: 4
+      name:   "Wipe blood and body fluids from wound site."
+      state:  2  # current
+      confidence:  0.46
+    - number: 5
+      name:   "Peel away chest seal backer."
+      state:  3  # unobserved
+      confidence:  0.99
+    - number: 6
+      name:   "Place chest seal with circle of vents over wound site and seal to chest."
+      state:  3  # unobserved
+      confidence:  0.99
+    - number: 7
+      name:   "Look for exit wound, if found repeat process."
+      state:  3  # unobserved
+      confidence:  0.5
+
+#######
+# 3. MEASURE OF PROGRESS TOWARDS NEXT STEP (optional)
+#######
+next_step_progress:
+  populated: false  # set to true if you're populating this
+  velocity:  0 # TA1 arbitrary score (0-1) of progress from the current step to the next step
+
+######
+# 4. DO WE BELIEVE THERE ARE ANY ERRORS?  (optional)
+# This assumes a common error dictionary that will be described elsewhere
+###### 
+current_errors:
+   populated: false  # set to true when we get here and is being used. will happen per skill.
+   errors:  # will start by leaving this empty. will populate it later.
+     - Error number 1
+     - Some other error
+     - more to come
+
+
+######
+# 5. TA1 needs to consult with me about this.  (future)
+######
+current_user_state: # TBD need help from this part of the community
+   populated: false  # set to true when defined and you are using this. 
+   # will start by leaving this empty. will populate it later. 
