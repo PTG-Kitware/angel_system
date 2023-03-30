@@ -23,6 +23,9 @@ class ObjectDetectorWithDescriptors(Node):
     """
     ROS node that subscribes to `Image` messages and publishes detections and
     descriptors for those images in the form of `ObjectDetectionSet2d` messages.
+
+    This original version is intended to support performing inference with the
+    pretrained model(s).
     """
 
     def __init__(self):

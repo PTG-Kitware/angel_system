@@ -28,6 +28,11 @@ class ObjectDetectorWithDescriptors_v3(Node):
     """
     ROS node that subscribes to `Image` messages and publishes detections and
     descriptors for those images in the form of `ObjectDetectionSet2d` messages.
+
+    This version is equivalent to v2 except for an attempt to optimize the
+    post-processing method to remove python for-loops and make use of tensor
+    operations instead. This has tested to be ever so slightly faster than v2,
+    but not in a way that addresses the primary bottlenecks.
     """
 
     def __init__(self):
