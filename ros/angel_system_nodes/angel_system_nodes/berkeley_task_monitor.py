@@ -12,6 +12,7 @@ from sensor_msgs.msg import Image
 
 from angel_msgs.msg import TaskGraph, TaskUpdate, ObjectDetection2dSet
 from angel_msgs.srv import QueryTaskGraph
+from angel_utils import RateTracker
 
 from angel_system.berkeley.demo import predictor, model
 
@@ -170,6 +171,7 @@ class TaskMonitor(Node):
         self._keyboard_t.daemon = True
         self._keyboard_t.start()
         log.info(f"Starting keyboard threads... done")
+        self._task_monitor_tracker = RateTracker()
 
         # Publish task update to indicate the initial state
         self.publish_task_state_message()
@@ -298,6 +300,10 @@ class TaskMonitor(Node):
 
         # Publish
         self._det_publisher.publish(message)
+        self._task_monitor_tracker.tick()
+        self.get_logger().info(f"Published det] message (hz: "
+                               f"{self._task_monitor_tracker.get_rate_avg()})",
+                               throttle_duration_sec=1)
 
     def publish_task_state_message(self):
         """

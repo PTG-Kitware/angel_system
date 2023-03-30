@@ -21,6 +21,8 @@ setup(
     entry_points={
             'console_scripts': [
                 'video_listener = angel_system_nodes.video_subscriber:main',
+                'asr = angel_system_nodes.asr:main',
+                'intent_detector = angel_system_nodes.intent_detector:main',
                 'audio_player = angel_system_nodes.audio_player:main',
                 'frame_publisher = angel_system_nodes.ros_publisher:main',
                 'generate_images = angel_system_nodes.generate_images:main',
@@ -32,6 +34,7 @@ setup(
                 'feedback_generator = angel_system_nodes.feedback_generator:main',
                 'annotation_event_monitor = angel_system_nodes.annotation_event_monitor:main',
                 'object_detector_with_descriptors = angel_system_nodes.object_detector_with_descriptors:main',
+                'object_detector_with_descriptors_v2 = angel_system_nodes.object_detector_with_descriptors_v2:main',
                 'uho_activity_detector = angel_system_nodes.uho_activity_detector:main',
                 'task_monitor_v2 = angel_system_nodes.task_monitor_v2:main',
                 'hl2ss_ros_bridge = angel_system_nodes.hl2ss_ros_bridge:main',
@@ -40,3 +43,4 @@ setup(
             ],
     },
 )
+1

@@ -218,13 +218,13 @@ def resnet152(pretrained=False):
   return model
 
 class resnet(_fasterRCNN):
-  def __init__(self, classes, pretrained=False, class_agnostic=False):
+  def __init__(self, classes, pretrained=False, class_agnostic=False, anchors=None, pool='align'):
     self.model_path = '/angel_workspace/model_files/resnet101_caffe.pth'
     self.dout_base_model = 1024
     self.pretrained = pretrained
     self.class_agnostic = class_agnostic
 
-    _fasterRCNN.__init__(self, classes, class_agnostic)
+    _fasterRCNN.__init__(self, classes, class_agnostic, anchors, pool)
 
   def _init_modules(self):
     resnet = resnet101()

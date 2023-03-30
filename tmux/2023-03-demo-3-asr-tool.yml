@@ -20,11 +20,10 @@ root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 # on_project_start: command
 on_project_start: |
   export ROS_NAMESPACE=${ROS_NAMESPACE:-/debug}
-  export HL2_IP=${HL2_IP:-192.168.1.101}
+  export HL2_IP=${HL2_IP:-192.168.1.3}
   export CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/config
   export NODE_CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/src/angel_system_nodes/configs
   export MODEL_DIR=${ANGEL_WORKSPACE_DIR}/model_files
-
 # Run on project start, the first time
 # on_project_first_start: command
 
@@ -69,12 +68,18 @@ windows:
       -p detection_threshold:=0.05
       -p object_vocab_list:=${MODEL_DIR}/fasterrcnn_label_list.txt
       -p model_checkpoint:=${MODEL_DIR}/fasterrcnn_res101_vg.pth
-#  - simple_2d_overlay: ros2 run angel_debug Simple2dDetectionOverlay --ros-args
-#      -r __ns:=${ROS_NAMESPACE}
-#      -p topic_input_images:=PVFramesBGR
-#      -p topic_input_det_2d:=ObjectDetections
-#      -p topic_output_images:=pv_image_detections_2d
-#      -p filter_top_k:=5
+
+  - simple_2d_overlay: ros2 run angel_debug Simple2dDetectionOverlay --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p topic_input_images:=PVFramesBGR
+      -p topic_input_det_2d:=ObjectDetections
+      -p topic_output_images:=pv_image_detections_2d
+      -p filter_top_k:=5
+
+  - compress_image: ros2 run image_transport republish raw compressed --ros-args
+       -r __ns:=${ROS_NAMESPACE}
+       --remap in:=pv_image_detections_2d
+       --remap out/compressed:=pv_image_detections_2d/compressed
 
   - activity_classifier: ros2 run angel_system_nodes uho_activity_detector --ros-args
       -r __ns:=${ROS_NAMESPACE}
@@ -136,3 +141,4 @@ windows:
       -p task_monitor_topic:=TaskUpdates
       -p arui_update_topic:=AruiUpdates
       -p interp_user_intent_topic:=UserIntentPredicted
+

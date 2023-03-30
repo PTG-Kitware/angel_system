@@ -300,10 +300,11 @@ class HL2SSROSBridge(Node):
                 self.get_logger().warning(f"{e}")
 
             self.ros_frame_publisher.publish(image_msg)
-
+            
             self._pv_rate_tracker.tick()
             self.get_logger().debug(f"Published image message (hz: "
-                                    f"{self._pv_rate_tracker.get_rate_avg()})")
+                                    f"{self._pv_rate_tracker.get_rate_avg()})",
+                                    throttle_duration_sec=1)
 
     def si_publisher(self) -> None:
         """
@@ -331,7 +332,8 @@ class HL2SSROSBridge(Node):
 
             self._si_rate_tracker.tick()
             self.get_logger().debug(f"Published hand pose message (hz: "
-                                    f"{self._si_rate_tracker.get_rate_avg()})")
+                                    f"{self._si_rate_tracker.get_rate_avg()})",
+                                    throttle_duration_sec=1)
 
     def audio_publisher(self) -> None:
         """
@@ -364,7 +366,8 @@ class HL2SSROSBridge(Node):
 
             self._audio_rate_tracker.tick()
             self.get_logger().debug(f"Published audio message (hz: "
-                                    f"{self._audio_rate_tracker.get_rate_avg()})")
+                                    f"{self._audio_rate_tracker.get_rate_avg()})",
+                                    throttle_duration_sec=1)
 
     def create_hand_pose_msg_from_si_data(
         self,

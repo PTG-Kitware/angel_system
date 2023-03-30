@@ -12,20 +12,24 @@ from torchvision.ops import nms
 from angel_msgs.msg import ObjectDetection2dSet
 from angel_system.fasterrcnn.faster_rcnn.resnet import resnet
 from angel_system.fasterrcnn.processing_utils import _get_image_blob
-from angel_utils.conversion import time_to_int
+from angel_system.fasterrcnn.rpn.bbox_transform import clip_boxes
+from angel_system.fasterrcnn.rpn.bbox_transform import bbox_transform_inv
+
 from angel_utils import RateTracker
+from angel_utils.conversion import time_to_int
 
 
 BRIDGE = CvBridge()
 
 
-class ObjectDetectorWithDescriptors(Node):
+class ObjectDetectorWithDescriptors_v2(Node):
     """
     ROS node that subscribes to `Image` messages and publishes detections and
     descriptors for those images in the form of `ObjectDetectionSet2d` messages.
 
-    This original version is intended to support performing inference with the
-    pretrained model(s).
+    This version adds support for being able to perform inferencing with the
+    newly trained models which were trained with a slightly different
+    architecture and parameters than the pretrained model used previously.
     """
 
     def __init__(self):
@@ -52,19 +56,19 @@ class ObjectDetectorWithDescriptors(Node):
             .string_value
         )
         self._detection_threshold = (
-            self.declare_parameter("detection_threshold", 0.05)
+            self.declare_parameter("detection_threshold", 0.5)
             .get_parameter_value()
             .double_value
         )
         self._object_vocabulary = (
             self.declare_parameter("object_vocab_list",
-                                   "/angel_workspace/model_files/fasterrcnn_label_list.txt")
+                                   "/angel_workspace/model_files/fasterrcnn_fine_tuned_label_list.txt")
             .get_parameter_value()
             .string_value
         )
         self._model_checkpoint = (
             self.declare_parameter("model_checkpoint",
-                                   "/angel_workspace/model_files/fasterrcnn_res101_vg.pth")
+                                   "/angel_workspace/model_files/faster_rcnn_res101_vg_tourniquet.pth")
             .get_parameter_value()
             .string_value
         )
@@ -106,11 +110,9 @@ class ObjectDetectorWithDescriptors(Node):
         with open(self._object_vocabulary) as f:
             for obj in f.readlines():
                 self.classes.append(obj.split(',')[0].lower().strip())
-
-        log.info("Ready to detect")
-        self.anchors = [4, 8, 16, 32]
         self._detection_rate_tracker = RateTracker()
-
+        self.anchors = [8, 16, 32]
+        log.info("Ready to detect")
 
     def get_model(self) -> torch.nn.Module:
         """
@@ -119,7 +121,7 @@ class ObjectDetectorWithDescriptors(Node):
         """
         model = self._model
         if model is None:
-            model = resnet(self.classes, pretrained=False, class_agnostic=False, anchors=self.anchors, pool="align")
+            model = resnet(self.classes, pretrained=False, class_agnostic=False, anchors=self.anchors, pool="pool")
             model.create_architecture()
 
             checkpoint = torch.load(self._model_checkpoint)
@@ -138,6 +140,7 @@ class ObjectDetectorWithDescriptors(Node):
     def receive_min_time(self, msg: Time) -> None:
         """
         Set a minimum time for frame processing.
+
         If the given time is older than an already set minimum time, ignore
         this message.
         """
@@ -150,6 +153,7 @@ class ObjectDetectorWithDescriptors(Node):
         """
         Get the minimum time (in nanoseconds) that new images must be more
         recent than to be considered for processing.
+
         We should only process frames whose associated timestamp is greater
         than this (in nanoseconds).
         """
@@ -161,6 +165,7 @@ class ObjectDetectorWithDescriptors(Node):
         Callback function for the image subscriber. Performs image preprocessing,
         model inference, output postprocessing, and detection set publishing for
         each image received.
+
         This callback may return early if we receive an image that is before
         a received min processing time.
         """
@@ -185,13 +190,14 @@ class ObjectDetectorWithDescriptors(Node):
         with torch.no_grad():
             (
                 rois, cls_prob,
-                _, _, _, _, _, _,
+                bbox_pred, _, _, _, _, _,
                 pooled_feat
             ) = model(im_data, im_info, gt_boxes, num_boxes, pool_feat=True)
 
         # Postprocess model output
         detection_info = self.postprocess_detections(
             rois, cls_prob,
+            bbox_pred, im_info,
             pooled_feat, im_scales
         )
 
@@ -272,7 +278,7 @@ class ObjectDetectorWithDescriptors(Node):
 
         return im_data, im_info, gt_boxes, num_boxes, im_scales
 
-    def postprocess_detections(self, rois, cls_prob, pooled_feat, im_scales):
+    def postprocess_detections(self, rois, cls_prob, bbox_pred, im_info, pooled_feat, im_scales):
         """
         Form the model outputs into a dictionary containing the bounding boxes,
         object indices, labels, features, and probability scores.
@@ -281,21 +287,27 @@ class ObjectDetectorWithDescriptors(Node):
         """
         scores = cls_prob.data
         boxes = rois.data[:, :, 1:5]
+        box_deltas = bbox_pred.data
+        box_deltas = box_deltas.view(-1, 4) * torch.FloatTensor((0.1, 0.1, 0.2, 0.2)).cuda() \
+                           + torch.FloatTensor((0.0, 0.0, 0.0, 0.0)).cuda()
+        box_deltas = box_deltas.view(1, -1, 4 * len(self.classes))
+        pred_boxes = bbox_transform_inv(boxes, box_deltas, 1)
+        pred_boxes = clip_boxes(pred_boxes, im_info.data, 1)
 
-        # Simply repeat the boxes, once for each class
-        pred_boxes = np.tile(boxes.cpu(), (1, scores.cpu().shape[2]))
         pred_boxes /= im_scales[0]
-
         scores = scores.squeeze()
         pred_boxes = pred_boxes.squeeze()
 
         max_conf = torch.zeros((pred_boxes.shape[0])).to(device=self._torch_device)
 
         for j in range(1, len(self.classes)):
+
             inds = torch.nonzero(scores[:,j]>self._detection_threshold).view(-1).cpu()
+
             # if there is det
             if inds.numel() > 0:
                 cls_scores = scores[:,j][inds]
+
                 _, order = torch.sort(cls_scores, 0, True)
                 boxs_inds = pred_boxes[inds]
                 if boxs_inds.ndim == 1:
@@ -304,8 +316,11 @@ class ObjectDetectorWithDescriptors(Node):
                     torch.tensor(boxs_inds[:, j * 4:(j + 1) * 4])
                     .to(device=self._torch_device)
                 )
-
+                cls_dets = torch.cat((cls_boxes, cls_scores.unsqueeze(1)), 1)
+                cls_dets = cls_dets[order]
                 keep = nms(cls_boxes[order, :], cls_scores[order], 0.3)
+
+                cls_dets = cls_dets[keep.view(-1).long()]
                 index = inds[order[keep]]
                 max_conf[index] = (
                     torch.where(scores[index, j] > max_conf[index],
@@ -327,7 +342,7 @@ class ObjectDetectorWithDescriptors(Node):
                 kind = objects + 1
 
                 bbox = boxes[kind * 4: (kind + 1) * 4]
-                box_dets[0] = bbox
+                box_dets[0] = bbox.cpu()
 
                 scores = scores[keep_boxes][1:]
                 scores = torch.unsqueeze(scores, 0)
@@ -341,15 +356,14 @@ class ObjectDetectorWithDescriptors(Node):
                 objects = torch.argmax(scores[keep_boxes][:,1:], dim=1)
                 box_dets = np.zeros((len(keep_boxes), 4))
                 boxes = pred_boxes[keep_boxes.cpu()]
-                for i in range(len(keep_boxes)):
-                    kind = objects[i]+1
-                    bbox = boxes[i, kind * 4: (kind + 1) * 4]
-                    box_dets[i] = bbox
+                labels = np.zeros((len(keep_boxes)))
 
+                for i in range(len(keep_boxes)):
+                    kind = objects[i] + 1
+                    bbox = boxes[i, kind * 4: (kind + 1) * 4]
+                    box_dets[i] = bbox.cpu()
+                    labels[i] = objects[i]+1
                 scores = scores[keep_boxes][:, 1:]
-                labels = []
-                for i in objects:
-                    labels.append(self.classes[i + 1])
 
                 feats = pooled_feat[keep_boxes].cpu().detach().numpy()
 
@@ -368,7 +382,7 @@ class ObjectDetectorWithDescriptors(Node):
 def main():
     rclpy.init()
 
-    node = ObjectDetectorWithDescriptors()
+    node = ObjectDetectorWithDescriptors_v2()
     rclpy.spin(node)
 
     # Destroy the node explicitly
