@@ -32,6 +32,9 @@ from angel_msgs.msg import (
 from sensor_msgs.msg import Image
 from angel_utils.conversion import convert_nv12_to_rgb
 
+from cv_bridge import CvBridge
+# Instantiate CvBridge
+bridge = CvBridge()
 
 def get_rosbag_options(path, serialization_format="cdr"):
     """
@@ -509,11 +512,14 @@ class BagConverter(Node):
         Converts the PV images to RGB and saves them to disk.
         Converts the depth images to 16-bit grayscale and saves them to disk.
         """
-        if msg.encoding == "nv12" and self.extract_images:
+        if msg.encoding in ["nv12", "rgb8", "bgr8"] and self.extract_images:
             self.num_image_msgs += 1
 
-            # Convert NV12 image to RGB
-            rgb_image = convert_nv12_to_rgb(msg.data, msg.height, msg.width)
+            if msg.encoding == "nv12":
+                # Convert NV12 image to RGB
+                rgb_image = convert_nv12_to_rgb(msg.data, msg.height, msg.width)
+            else:
+                rgb_image = bridge.imgmsg_to_cv2(msg, msg.encoding)
 
             # Save image to disk
             timestamp_str = (
