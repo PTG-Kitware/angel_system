@@ -9,6 +9,7 @@ import kwimage
 import kwcoco
 import cv2
 import glob
+import numpy as np
 import pandas as pd
 import ubelt as ub
 import pickle
@@ -29,7 +30,7 @@ from dataloaders.load_bbn_medical_data import bbn_activity_data_loader # M2 spec
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 
-def load_model(config, conf_thr=0.7):
+def load_model(config, conf_thr=0.6):
     # Load model
     root_dir = '/angel_workspace'
     berkeley_configs_dir = f"{root_dir}/angel_system/berkeley/configs"
@@ -68,7 +69,7 @@ def run_obj_detector_no_contact(demo, videos_dir, split):
 
         video_images = glob.glob(f'{video_folder}/_extracted/images/*.png')
         input_list = Re_order(video_images, len(video_images))
-        for image_fn in ub.ProgIter(input_list, desc='images'):
+        for image_fn in ub.ProgIter(input_list, desc=f'images in {video_name}'):
             image = read_image(image_fn, format='RGB')
             h, w, c = image.shape
 
@@ -94,6 +95,75 @@ def run_obj_detector_no_contact(demo, videos_dir, split):
 
             idx += 1
 
+    return preds
+
+
+def replace_compound_label(preds, obj, detected_classes, obj_hand_contact_state=False, obj_obj_contact_state=False):
+    """
+    Check if some subset of obj is in `detected_classes`
+
+    Designed to catch and correct incorrect compound classes
+    Ex: obj is "mug + filter cone + filter" but we detected "mug + filter cone"
+    """
+
+    compound_objs = [x.strip() for x in obj.split('+')]
+    detected_objs = [[y.strip() for y in x.split('+')]for x in detected_classes]
+
+    replaced_classes = []
+    for detected_class, objs in zip(detected_classes, detected_objs):
+        for obj_ in objs:
+            if obj_ in compound_objs:
+                replaced_classes.append(detected_class)
+                continue
+    print('replaced', replaced_classes)
+
+    if replaced_classes == []:
+        # Case 0, We didn't detect any of the objects
+        replaced = None
+    elif len(replaced_classes) == 1:
+        # Case 1, we detected a subset of the compound as one detection
+        replaced = replaced_classes[0]
+        print(f'replaced {replaced} with {obj}')
+
+        preds[obj] = preds.pop(replaced)
+        preds[obj]['obj_hand_contact_state'] = obj_hand_contact_state
+        preds[obj]['obj_obj_contact_state'] = obj_obj_contact_state
+    else:
+        # Case 2, the compound was detected as separate boxes
+        replaced = replaced_classes
+        print(f'Combining {replaced} detections into compound \"{obj}\"')
+
+        new_bbox = None
+        new_conf = None
+        for det_obj in replaced:
+            bbox = preds[det_obj]['bbox']
+            conf = preds[det_obj]['confidence_score']
+
+            if not new_bbox:
+                new_bbox = bbox
+            else:
+                # Find mix of bboxes
+                # TODO: first double check these are close enough that it makes sense to combine?
+                new_tlx, new_tly, new_brx, new_bry = new_bbox
+                tlx, tly, brx, bry = bbox
+
+                new_bbox = [min(new_tlx, tlx), min(new_tly, tly),
+                            max(new_brx, brx), max(new_bry, bry)]
+
+            new_conf = conf if not new_conf else \
+                       (new_conf + conf) / 2 # average???
+
+            # remove old preds
+            preds.pop(det_obj)
+
+        new_pred = {
+            'confidence_score': new_conf,
+            'bbox': new_bbox,
+            'obj_obj_contact_state': obj_obj_contact_state,
+            'obj_hand_contact_state': obj_hand_contact_state
+        }
+        preds[obj] = new_pred
+    
     return preds
 
 
@@ -124,11 +194,11 @@ def update_contacts(preds, step_map, videos_dir):
                 
                 for object_pair in objects:
                     for time_stamp in matching_preds.keys():
-                        detected_classes = preds[video_name][time_stamp].keys()
+                        detected_classes = list(preds[video_name][time_stamp].keys())
                         
+                        # Mark obj/hand contact
                         if 'hand' in object_pair[0].lower() or 'hand' in object_pair[1].lower():
-                            # Mark obj/hand contact
-                            hand_labels = [h for h in detected_classes if 'hand' in h]
+                            hand_labels = [h for h in detected_classes if 'hand' in h.lower()]
                             # Determine what the hand label is in the video, if any
                             # Fixes case where hand label has distinguishing information
                             # ex: hand(right) vs hand (left)
@@ -144,17 +214,29 @@ def update_contacts(preds, step_map, videos_dir):
 
                             for obj in object_pair:
                                 if obj == 'hand' and hand_label is not None:
-                                    print(hand_label)
+                                    #print(f'Marking {hand_label} hand/obj as true')
                                     preds[video_name][time_stamp][hand_label]['obj_hand_contact_state'] = True
                                 elif obj in detected_classes:
                                     preds[video_name][time_stamp][obj]['obj_hand_contact_state'] = True
-
+                                elif '+' in obj:
+                                    # We might be missing part of a compound label
+                                    # Let's try to fix that
+                                    preds[video_name][time_stamp] = replace_compound_label(preds[video_name][time_stamp], obj, detected_classes,
+                                                                                           obj_hand_contact_state=True)
+                        
+                        # Mark obj/obj contact
                         else:
-                            # Mark obj/obj contact
                             for obj in object_pair:
                                 if obj in detected_classes:
                                     preds[video_name][time_stamp][obj]['obj_obj_contact_state'] = True
-                           
+                                elif '+' in obj:
+                                    # We might be missing part of a compound label
+                                    # Let's try to fix that
+                                    preds[video_name][time_stamp] = replace_compound_label(preds[video_name][time_stamp], obj, detected_classes,
+                                                                                           obj_obj_contact_state=True)
+                                    
+                                            
+
     print("Updated contact metadata in predictions")
     return preds
 
@@ -239,10 +321,11 @@ def main():
         os.makedirs('temp')
 
     for split in ['train', 'val']:#
-        preds_no_contact = run_obj_detector_no_contact(demo, videos_dir, split=training_split[split])
+        #preds_no_contact = run_obj_detector_no_contact(demo, videos_dir, split=training_split[split])
         
-        fh = open(f'temp/{split}_preds_no_contact.pickle', 'wb')
-        pickle.dump(preds_no_contact, fh)
+        fh = open(f'temp/{split}_preds_no_contact.pickle', 'rb')
+        preds_no_contact = pickle.load(fh)
+        #pickle.dump(preds_no_contact, fh)
         fh.close()
         
         preds_with_contact = update_contacts(preds_no_contact, metadata['original_sub_steps'], videos_dir)
