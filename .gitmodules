@@ -7,4 +7,4 @@
 	branch = foxy-future
 [submodule "angel_system/hl2ss"]
 	path = hl2ss
-	url = git@github.com:jdibenes/hl2ss.git
+	url = git@github.com:VIDA-NYU/hl2ss.git
