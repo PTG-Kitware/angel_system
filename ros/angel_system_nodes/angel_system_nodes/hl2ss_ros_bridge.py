@@ -293,14 +293,14 @@ class HL2SSROSBridge(Node):
             data = self.hl2ss_pv_client.get_next_packet()
 
             try:
-                image_msg = BRIDGE.cv2_to_imgmsg(data.payload, encoding="bgr8")
+                image_msg = BRIDGE.cv2_to_imgmsg(data.payload.image, encoding="bgr8")
                 image_msg.header.stamp = hl2ss_stamp_to_ros_time(data.timestamp)
                 image_msg.header.frame_id = "PVFramesBGR"
             except TypeError as e:
                 self.get_logger().warning(f"{e}")
 
             self.ros_frame_publisher.publish(image_msg)
-            
+
             self._pv_rate_tracker.tick()
             self.get_logger().debug(f"Published image message (hz: "
                                     f"{self._pv_rate_tracker.get_rate_avg()})",
