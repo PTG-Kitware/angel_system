@@ -84,6 +84,9 @@ class RedisROSBridge(Node):
                       f"({type(self._url).__name__}) "
                       f"{self._url}")
 
+        # Define stream IDs
+        self._pv_sid = "main"
+
         # Create frame publisher
         self.ros_frame_publisher = self.create_publisher(
             Image,
@@ -106,12 +109,12 @@ class RedisROSBridge(Node):
 
     def shutdown_clients(self) -> None:
         """
-        Shuts down the frame publishing thread and the HL2SS client.
+        Shuts down the frame publishing thread.
         """
         # Stop frame publishing thread
         self._pv_active.clear()  # make RT active flag "False"
         self._pv_thread.join()
-        self.get_logger().info("PV thread closed")
+        self.log.info("PV thread closed")
 
     def pv_publisher(self) -> None:
         """
@@ -119,7 +122,7 @@ class RedisROSBridge(Node):
         Images are published directly in the `publish_image` method.
         """
         self.publish_images(
-            sid="main",
+            sid=self._pv_sid
         )
 
     @async2sync
@@ -135,7 +138,7 @@ class RedisROSBridge(Node):
                 # read the data
                 data = await ws.recv()
                 if not data:
-                    print("No data yet :(")
+                    self.log.warning("No data yet :(")
                     continue
                 d = holoframe.load(data)
 
@@ -144,14 +147,14 @@ class RedisROSBridge(Node):
                     image_msg.header.stamp = hl2ss_stamp_to_ros_time(d["time"])
                     image_msg.header.frame_id = "PVFramesBGR"
                 except TypeError as e:
-                    self.get_logger().warning(f"{e}")
+                    self.log.warning(f"{e}")
 
                 self.ros_frame_publisher.publish(image_msg)
 
                 self._pv_rate_tracker.tick()
-                self.get_logger().info(f"Published image message (hz: "
-                                        f"{self._pv_rate_tracker.get_rate_avg()})",
-                                        throttle_duration_sec=1)
+                self.log.debug(f"Published image message (hz: "
+                               f"{self._pv_rate_tracker.get_rate_avg()})",
+                               throttle_duration_sec=1)
 
 
 def main():
