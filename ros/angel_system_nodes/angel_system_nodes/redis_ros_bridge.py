@@ -21,6 +21,7 @@ from angel_msgs.msg import (
     HandJointPosesUpdate,
     HeadsetAudioData,
 )
+from angel_system.hl2ss_viewer import hl2ss
 import angel_system.hl2ss_viewer.BBN_redis_frame_load as holoframe
 from angel_utils import RateTracker
 from angel_utils.conversion import hl2ss_stamp_to_ros_time
@@ -30,7 +31,45 @@ BRIDGE = CvBridge()
 
 
 PARAM_PV_IMAGES_TOPIC = "image_topic"
+PARAM_HAND_POSE_TOPIC = "hand_pose_topic"
 PARAM_URL = "url"
+
+# List containing joint names that matches the ordering in the HL2SS
+# SI_HandJointKind class. Names semantically match the output from the MRTK API
+# though the ordering of the joins is matching that of the windows perception
+# API.
+# MRTK API: https://learn.microsoft.com/en-us/dotnet/api/microsoft.mixedreality.toolkit.utilities.trackedhandjoint?preserve-view=true&view=mixed-reality-toolkit-unity-2020-dotnet-2.8.0
+# Windows Perception API: https://learn.microsoft.com/en-us/uwp/api/windows.perception.people.handjointkind?view=winrt-22621
+# Matching the names of the MRTK API for downstream components to continue to
+# match against.
+JOINT_LIST = [
+    "Palm",
+    "Wrist",
+    "ThumbMetacarpalJoint",
+    "ThumbProximalJoint",
+    "ThumbDistalJoint",
+    "ThumbTip",
+    "IndexMetacarpal",
+    "IndexKnuckle",
+    "IndexMiddleJoint",
+    "IndexDistalJoint",
+    "IndexTip",
+    "MiddleMetacarpal",
+    "MiddleKnuckle",
+    "MiddleMiddleJoint",
+    "MiddleDistalJoint",
+    "MiddleTip",
+    "RingMetacarpal",
+    "RingKnuckle",
+    "RingMiddleJoint",
+    "RingDistalJoint",
+    "RingTip",
+    "PinkyMetacarpal",
+    "PinkyKnuckle",
+    "PinkyMiddleJoint",
+    "PinkyDistalJoint",
+    "PinkyTip",
+]
 
 
 class async2sync:
@@ -59,6 +98,7 @@ class RedisROSBridge(Node):
         self.log = self.get_logger()
 
         parameter_names = [
+            PARAM_HAND_POSE_TOPIC,
             PARAM_PV_IMAGES_TOPIC,
             PARAM_URL,
         ]
@@ -76,21 +116,33 @@ class RedisROSBridge(Node):
             raise ValueError("Some parameters are not set.")
 
         self._image_topic = self.get_parameter(PARAM_PV_IMAGES_TOPIC).value
+        self._hand_pose_topic = self.get_parameter(PARAM_HAND_POSE_TOPIC).value
         self._url = self.get_parameter(PARAM_URL).value
         self.log.info(f"PV Images topic: "
                       f"({type(self._image_topic).__name__}) "
                       f"{self._image_topic}")
+        self.log.info(f"Hand pose topic: "
+                      f"({type(self._hand_pose_topic).__name__}) "
+                      f"{self._hand_pose_topic}")
         self.log.info(f"URL: "
                       f"({type(self._url).__name__}) "
                       f"{self._url}")
 
         # Define stream IDs
+        self._audio_sid = "mic0"
         self._pv_sid = "main"
+        self._si_sid = "si"
 
         # Create frame publisher
         self.ros_frame_publisher = self.create_publisher(
             Image,
             self._image_topic,
+            1
+        )
+        # Create the hand joint pose publisher
+        self.ros_hand_publisher = self.create_publisher(
+            HandJointPosesUpdate,
+            self._hand_pose_topic,
             1
         )
 
@@ -105,16 +157,30 @@ class RedisROSBridge(Node):
         )
         self._pv_thread.daemon = True
         self._pv_thread.start()
+        # Start the hand tracking data thread
+        self._si_active = Event()
+        self._si_active.set()
+        self._si_rate_tracker = RateTracker()
+        self._si_thread = Thread(
+            target=self.si_publisher,
+            name="publish_si"
+        )
+        self._si_thread.daemon = True
+        self._si_thread.start()
         self.log.info("Starting publishing threads... Done")
 
     def shutdown_clients(self) -> None:
         """
-        Shuts down the frame publishing thread.
+        Shuts down the publishing threads.
         """
         # Stop frame publishing thread
-        self._pv_active.clear()  # make RT active flag "False"
+        self._pv_active.clear()
         self._pv_thread.join()
         self.log.info("PV thread closed")
+        # Stop SI publishing thread
+        self._si_active.clear()
+        self._si_thread.join()
+        self.log.info("SI thread closed")
 
     def pv_publisher(self) -> None:
         """
@@ -123,6 +189,18 @@ class RedisROSBridge(Node):
         """
         self.publish_images(
             sid=self._pv_sid
+        )
+
+    def si_publisher(self) -> None:
+        """
+        Thread the gets spatial input packets from the HL2SS SI client, converts
+        the SI data to ROS messages, and publishes them.
+
+        Currently only publishes hand tracking data. However, eye gaze data and
+        head pose data is also available in the SI data packet.
+        """
+        self.publish_si_data(
+            sid=self._si_sid
         )
 
     @async2sync
@@ -156,6 +234,92 @@ class RedisROSBridge(Node):
                                f"{self._pv_rate_tracker.get_rate_avg()})",
                                throttle_duration_sec=1)
 
+    @async2sync
+    async def publish_si_data(
+        self,
+        sid: str,
+    ):
+        async with websockets.connect(
+            f'ws://{self._url}/data/{sid}/pull?header=0&latest=1',
+            max_size=None
+        ) as ws:
+            while self._si_active.wait(0):
+                # read the data
+                data = await ws.recv()
+                if not data:
+                    self.log.warning("No data yet :(")
+                    continue
+                d = holoframe.load(data)
+                si_data = hl2ss.unpack_si(d['data'])
+
+                # Publish the hand tracking data if it is valid
+                if si_data.is_valid_hand_left():
+                    hand_msg_left = self.create_hand_pose_msg_from_si_data(
+                        si_data, "Left", d["time"]
+                    )
+                    self.ros_hand_publisher.publish(hand_msg_left)
+                if si_data.is_valid_hand_right():
+                    hand_msg_right = self.create_hand_pose_msg_from_si_data(
+                        si_data, "Right", d["time"]
+                    )
+                    self.ros_hand_publisher.publish(hand_msg_right)
+
+                self._si_rate_tracker.tick()
+                self.log.debug(f"Published hand pose message (hz: "
+                               f"{self._si_rate_tracker.get_rate_avg()})",
+                               throttle_duration_sec=1)
+
+    def create_hand_pose_msg_from_si_data(
+        self,
+        si_data: hl2ss.unpack_si,
+        hand: str,
+        timestamp: int
+    ) -> HandJointPosesUpdate:
+        """
+        Extracts the hand joint poses data from the HL2SS SI structure
+        and forms a ROS HandJointPosesUpdate message.
+        """
+        if hand == "Left":
+            hand_data = si_data.get_hand_left()
+        elif hand == "Right":
+            hand_data = si_data.get_hand_right()
+
+        joint_poses = []
+        for j in range(0, hl2ss.SI_HandJointKind.TOTAL):
+            pose = hand_data.get_joint_pose(j)
+
+            # Extract the position
+            position = Point()
+            position.x = float(pose.position[0])
+            position.y = float(pose.position[1])
+            position.z = float(pose.position[2])
+
+            # Extract the orientation
+            orientation = Quaternion()
+            orientation.x = float(pose.orientation[0])
+            orientation.y = float(pose.orientation[1])
+            orientation.z = float(pose.orientation[2])
+            orientation.w = float(pose.orientation[3])
+
+            # Form the geometry pose message
+            pose_msg = Pose()
+            pose_msg.position = position
+            pose_msg.orientation = orientation
+
+            # Create the hand joint pose message
+            joint_pose_msg = HandJointPose()
+            joint_pose_msg.joint = JOINT_LIST[j]
+            joint_pose_msg.pose = pose_msg
+            joint_poses.append(joint_pose_msg)
+
+        # Create the top level hand joint poses update message
+        hand_msg = HandJointPosesUpdate()
+        hand_msg.header.stamp = hl2ss_stamp_to_ros_time(timestamp)
+        hand_msg.header.frame_id = "HandJointPosesUpdate"
+        hand_msg.hand = hand
+        hand_msg.joints = joint_poses
+
+        return hand_msg
 
 def main():
     rclpy.init()
