@@ -2,11 +2,37 @@ import subprocess
 
 
 class TmuxController():
+    """
+    Handles creating tmuxinator sessions and stopping them.
+    Tmuxinator sessions are started detached.
+    """
 
     def __init__(self, config_name: str):
         self.config_name = config_name
-        self.tmux_p = None
         self.tmux_active = False
+
+        # Make sure that there is not already a tmux session active
+        if self.is_tmux_session_running():
+            print("Stopping all active tmux sessions")
+            self.stop_all_tmux_sessions()
+
+    def is_tmux_session_running(self) -> bool:
+        """
+        Returns whether or not there is an active tmux session.
+        """
+        p = subprocess.Popen(
+            ["tmux", "ls"], stderr=subprocess.PIPE, stdout=subprocess.PIPE
+        )
+        std_out, std_err = p.communicate()
+        return len(std_out) > 0
+
+    def stop_all_tmux_sessions(self) -> bool:
+        """
+        Stops all active tmux sessions.
+        """
+        subprocess.Popen(
+            ["tmux", "kill-server"], stderr=subprocess.PIPE, stdout=subprocess.PIPE
+        )
 
     def start(self):
         """
