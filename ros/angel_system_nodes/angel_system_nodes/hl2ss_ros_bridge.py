@@ -294,10 +294,11 @@ class HL2SSROSBridge(Node):
 
             try:
                 image_msg = BRIDGE.cv2_to_imgmsg(data.payload.image, encoding="bgr8")
-                image_msg.header.stamp = hl2ss_stamp_to_ros_time(data.timestamp)
+                image_msg.header.stamp = self.get_clock().now().to_msg()
                 image_msg.header.frame_id = "PVFramesBGR"
             except TypeError as e:
                 self.get_logger().warning(f"{e}")
+                return
 
             self.ros_frame_publisher.publish(image_msg)
 
@@ -354,7 +355,7 @@ class HL2SSROSBridge(Node):
             sample_duration = (1.0 / sample_rate) * sample_len
 
             audio_msg = HeadsetAudioData()
-            audio_msg.header.stamp = hl2ss_stamp_to_ros_time(data.timestamp)
+            audio_msg.header.stamp = self.get_clock().now().to_msg()
             audio_msg.header.frame_id = "AudioData"
 
             audio_msg.channels = n_channels
@@ -383,6 +384,10 @@ class HL2SSROSBridge(Node):
             hand_data = si_data.get_hand_left()
         elif hand == "Right":
             hand_data = si_data.get_hand_right()
+        else:
+            self.get_logger().warning(f"Could not process hand message with "
+                                      f"handedness: {hand}")
+            return
 
         joint_poses = []
         for j in range(0, hl2ss.SI_HandJointKind.TOTAL):
@@ -414,7 +419,7 @@ class HL2SSROSBridge(Node):
 
         # Create the top level hand joint poses update message
         hand_msg = HandJointPosesUpdate()
-        hand_msg.header.stamp = hl2ss_stamp_to_ros_time(timestamp)
+        hand_msg.header.stamp = self.get_clock().now().to_msg()
         hand_msg.header.frame_id = "HandJointPosesUpdate"
         hand_msg.hand = hand
         hand_msg.joints = joint_poses
