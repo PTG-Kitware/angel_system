@@ -164,6 +164,17 @@ optional = false
 python-versions = ">=3.6"
 
 [[package]]
+name = "cffi"
+version = "1.15.1"
+description = "Foreign Function Interface for Python calling C code."
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+pycparser = "*"
+
+[[package]]
 name = "chardet"
 version = "5.1.0"
 description = "Universal encoding detector for Python 3"
@@ -345,7 +356,7 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "fsspec"
-version = "2023.3.0"
+version = "2023.4.0"
 description = "File-system specification"
 category = "main"
 optional = false
@@ -360,7 +371,9 @@ abfs = ["adlfs"]
 adl = ["adlfs"]
 arrow = ["pyarrow (>=1)"]
 dask = ["dask", "distributed"]
+devel = ["pytest", "pytest-cov"]
 dropbox = ["dropboxdrivefs", "requests", "dropbox"]
+full = ["adlfs", "aiohttp (!=4.0.0a0,!=4.0.0a1)", "dask", "distributed", "dropbox", "dropboxdrivefs", "fusepy", "gcsfs", "libarchive-c", "ocifs", "panel", "paramiko", "pyarrow (>=1)", "pygit2", "requests", "s3fs", "smbprotocol", "tqdm"]
 fuse = ["fusepy"]
 gcs = ["gcsfs"]
 git = ["pygit2"]
@@ -804,14 +817,6 @@ develop = ["pytest (>=4.6)", "pycodestyle", "pytest-cov", "codecov", "wheel"]
 tests = ["pytest (>=4.6)"]
 
 [[package]]
-name = "msgpack"
-version = "1.0.4"
-description = "MessagePack serializer"
-category = "main"
-optional = false
-python-versions = "*"
-
-[[package]]
 name = "multidict"
 version = "6.0.4"
 description = "multidict implementation"
@@ -1109,6 +1114,14 @@ prettyprint = ["lxml"]
 validation = ["lxml"]
 
 [[package]]
+name = "pycparser"
+version = "2.21"
+description = "C parser in Python"
+category = "main"
+optional = false
+python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
+
+[[package]]
 name = "pyglet"
 version = "1.5.27"
 description = "Cross-platform windowing and multimedia library"
@@ -1336,6 +1349,17 @@ description = "YAML parser and emitter for Python"
 category = "main"
 optional = false
 python-versions = ">=3.6"
+
+[[package]]
+name = "pyzmq"
+version = "25.0.0"
+description = "Python bindings for 0MQ"
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[package.dependencies]
+cffi = {version = "*", markers = "implementation_name == \"pypy\""}
 
 [[package]]
 name = "regex"
@@ -1961,7 +1985,7 @@ test = ["pytest"]
 
 [[package]]
 name = "trimesh"
-version = "3.20.2"
+version = "3.21.4"
 description = "Import, export, process, analyze and view triangular meshes."
 category = "main"
 optional = false
@@ -1975,7 +1999,6 @@ jsonschema = {version = "*", optional = true, markers = "extra == \"all\""}
 lxml = {version = "*", optional = true, markers = "extra == \"all\""}
 mapbox-earcut = {version = "*", optional = true, markers = "extra == \"all\""}
 meshio = {version = "*", optional = true, markers = "extra == \"all\""}
-msgpack = {version = "*", optional = true, markers = "extra == \"all\""}
 networkx = {version = "*", optional = true, markers = "extra == \"all\""}
 numpy = "*"
 pillow = {version = "*", optional = true, markers = "extra == \"all\""}
@@ -1994,9 +2017,9 @@ xatlas = {version = "*", optional = true, markers = "extra == \"all\""}
 xxhash = {version = "*", optional = true, markers = "extra == \"all\""}
 
 [package.extras]
-all = ["requests", "networkx", "sympy", "pyglet (<2)", "chardet", "psutil", "xxhash", "setuptools", "scipy", "jsonschema", "glooey", "rtree", "msgpack", "meshio", "python-fcl", "lxml", "colorlog", "xatlas", "scikit-image", "svg.path", "shapely", "mapbox-earcut", "pycollada", "pillow"]
-easy = ["rtree", "msgpack", "requests", "networkx", "lxml", "sympy", "mapbox-earcut", "colorlog", "svg.path", "shapely", "xxhash", "setuptools", "chardet", "pycollada", "pillow", "scipy", "jsonschema"]
-test = ["ezdxf", "pyinstrument", "pytest", "pytest-cov", "coveralls", "autopep8", "ruff"]
+all = ["networkx", "setuptools", "chardet", "meshio", "psutil", "lxml", "pillow", "xatlas", "rtree", "mapbox-earcut", "sympy", "python-fcl", "xxhash", "requests", "shapely", "pycollada", "svg.path", "colorlog", "jsonschema", "glooey", "pyglet (<2)", "scipy", "scikit-image"]
+easy = ["mapbox-earcut", "sympy", "networkx", "setuptools", "chardet", "xxhash", "lxml", "requests", "shapely", "pycollada", "svg.path", "colorlog", "pillow", "jsonschema", "scipy", "rtree"]
+test = ["pyinstrument", "ruff", "ezdxf", "coveralls", "autopep8", "pytest", "pytest-cov"]
 
 [[package]]
 name = "typeguard"
@@ -2108,7 +2131,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "flake8 (<5)", "pytest-co
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8,<3.10"
-content-hash = "8fc023f479029a356eaff8735f4832f7032ad8e4c0fc124a856c7ce7fdfa464a"
+content-hash = "c309f0e6b7672e9103d1843493af7ec24f5b61d8ecb39647b5f5ffb29bddcfec"
 
 [metadata.files]
 aiohttp = []
@@ -2125,6 +2148,7 @@ babel = []
 backcall = []
 black = []
 certifi = []
+cffi = []
 chardet = []
 charset-normalizer = []
 click = []
@@ -2173,7 +2197,6 @@ mdurl = []
 meshio = []
 more-itertools = []
 mpmath = []
-msgpack = []
 multidict = []
 mypy-extensions = []
 networkx = []
@@ -2200,6 +2223,7 @@ pure-eval = []
 pyarrow = []
 pycocotools = []
 pycollada = []
+pycparser = []
 pyglet = []
 pygments = []
 pynput = []
@@ -2219,6 +2243,7 @@ pytz = []
 pywavelets = []
 pywin32 = []
 pyyaml = []
+pyzmq = []
 regex = []
 requests = []
 rich = []
