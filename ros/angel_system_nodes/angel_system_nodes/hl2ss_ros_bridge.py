@@ -24,7 +24,7 @@ from angel_msgs.msg import (
     HandJointPosesUpdate,
     HeadsetAudioData,
     HeadsetPoseData,
-    SpatialMesh
+    SpatialMesh,
 )
 from angel_system.hl2ss_viewer import hl2ss
 from angel_utils import declare_and_get_parameters, RateTracker
