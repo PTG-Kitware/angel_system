@@ -230,10 +230,8 @@ class TaskMonitor(Node):
                 _current_sub_step_id = self._steps.index(_current_sub_step)
                 if 'end_frame' in list(sub_step[-1].keys()):
                     # Sub-step is finished
-                    self._completed_steps[_current_sub_step_id] = True
                     finished_sub_step = True
                     #log.info(f"{_current_sub_step} (finished)")
-
         else:
             _current_sub_step = None
             _current_sub_step_id = -1
@@ -249,6 +247,8 @@ class TaskMonitor(Node):
                 self._previous_step_id = self._current_step_id
                 self._current_step = _current_sub_step
                 self._current_step_id = _current_sub_step_id
+                with self._task_lock:
+                    self._completed_steps[self._current_step_id] = True
  
                 log.info(f"Current step is now: {self._current_step}")
                 log.info(f"Current step id is now: {self._current_step_id}")
@@ -362,39 +362,39 @@ class TaskMonitor(Node):
 
         with self._task_lock:
             if forward:
-                if (self._current_step_id + 1) >= len(self._steps):
+                if (self._current_step_id + 1) > (len(self._steps)-1):
                     log.warn(f"Tried to trigger on invalid state")
                     return
 
                 log.info(f"Proceeding to next step.")
-
-                self._previous_step = self._current_step
-                self._previous_step_id = self._current_step_id
-                self._completed_steps[self._previous_step_id] = True
-
                 self._current_step_id += 1
                 self._current_step = self._steps[self._current_step_id]
+                self._completed_steps[self._current_step_id] = True
+
+                if self._current_step_id == 0:
+                    self.previous_step = None
+                    self.previous_step_id = -1
+                else:
+                    self._previous_step_id = self._current_step_id - 1
+                    self._previous_step = self._steps[self._previous_step_id]
 
                 # TODO: how to move demo to next step?
             else:
-                log.info(f"Proceeding to previous step")
-                if (self._current_step_id - 1) < 0:
+                if (self._current_step_id - 1) < -1:
                     log.warn(f"Tried to set machine to invalid state")
                     return
 
-                if self._current_step_id == 0:
-                    self._current_step = None
-                    self._previous_step = None
-                else:
-                    self._current_step = self._previous_step
-                    self._current_step_id = self._previous_step_id
-                    self._completed_steps[self._current_step_id] = False
+                log.info(f"Proceeding to previous step")
+                self._completed_steps[self._current_step_id] = False
+                self._current_step_id -= 1
+                self._current_step = self._steps[self._current_step_id]
 
+                if self._current_step_id <= 0:
+                    self._previous_step = None
+                    self._previous_step_id = -1
+                else:
                     self._previous_step_id = self._current_step_id - 1
-                    if self._previous_step_id < 0:
-                        self._previous_step = None
-                    else:
-                        self._previous_step = self._steps[self._previous_step_id]
+                    self._previous_step = self._steps[self._previous_step_id]
 
                 # TODO: how to move demo to previous step?
 
