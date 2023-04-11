@@ -1,3 +1,4 @@
+import time
 from threading import (
     Event,
     Thread
@@ -14,11 +15,16 @@ import numpy as np
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
+from shape_msgs.msg import (
+    Mesh,
+    MeshTriangle,
+)
 
 from angel_msgs.msg import (
     HandJointPose,
     HandJointPosesUpdate,
     HeadsetAudioData,
+    SpatialMesh
 )
 from angel_system.hl2ss_viewer import hl2ss
 from angel_utils import RateTracker
@@ -68,6 +74,15 @@ JOINT_LIST = [
     "PinkyTip",
 ]
 
+PARAM_PV_IMAGES_TOPIC = "image_topic"
+PARAM_HAND_POSE_TOPIC = "hand_pose_topic"
+PARAM_AUDIO_TOPIC = "audio_topic"
+PARAM_SM_TOPIC = "sm_topic"
+PARAM_IP_ADDR = "ip_addr"
+PARAM_PV_WIDTH = "pv_width"
+PARAM_PV_HEIGHT = "pv_height"
+PARAM_PV_FRAMERATE = "pv_framerate"
+
 
 class HL2SSROSBridge(Node):
     """
@@ -77,63 +92,69 @@ class HL2SSROSBridge(Node):
 
     def __init__(self):
         super().__init__(self.__class__.__name__)
+        self.log = self.get_logger()
 
-        # Declare ROS topics
-        self._image_topic = (
-            self.declare_parameter("image_topic", "")
-            .get_parameter_value()
-            .string_value
+        parameter_names = [
+            PARAM_PV_IMAGES_TOPIC,
+            PARAM_HAND_POSE_TOPIC,
+            PARAM_AUDIO_TOPIC,
+            PARAM_SM_TOPIC,
+            PARAM_IP_ADDR,
+            PARAM_PV_WIDTH,
+            PARAM_PV_HEIGHT,
+            PARAM_PV_FRAMERATE,
+        ]
+        set_parameters = self.declare_parameters(
+            namespace="",
+            parameters=[(p,) for p in parameter_names],
         )
-        self._hand_pose_topic = (
-            self.declare_parameter("hand_pose_topic", "")
-            .get_parameter_value()
-            .string_value
-        )
-        self._audio_topic = (
-            self.declare_parameter("audio_topic", "")
-            .get_parameter_value()
-            .string_value
-        )
-        self.ip_addr = (
-            self.declare_parameter("ip_addr", "")
-            .get_parameter_value()
-            .string_value
-        )
-        self.pv_width = (
-            self.declare_parameter("pv_width", 1280)
-            .get_parameter_value()
-            .integer_value
-        )
-        self.pv_height = (
-            self.declare_parameter("pv_height", 720)
-            .get_parameter_value()
-            .integer_value
-        )
-        self.pv_framerate = (
-            self.declare_parameter("pv_framerate", 30)
-            .get_parameter_value()
-            .integer_value
-        )
+        # Check for not-set parameters
+        some_not_set = False
+        for p in set_parameters:
+            if p.type_ is rclpy.parameter.Parameter.Type.NOT_SET:
+                some_not_set = True
+                self.log.error(f"Parameter not set: {p.name}")
+        if some_not_set:
+            raise ValueError("Some parameters are not set.")
 
-        log = self.get_logger()
-        if self._image_topic == "":
-            raise ValueError("Please provide the image topic with the `image_topic` parameter")
-        if self._hand_pose_topic == "":
-            raise ValueError("Please provide the hand pose topic with the `hand_pose_topic` parameter")
-        if self._audio_topic == "":
-            raise ValueError("Please provide the audio topic with the `audio_topic` parameter")
-        if self.ip_addr == "":
-            raise ValueError("Please provide HL2 IPv4 address with the `ip_addr` parameter")
-
-
-        log.info(f"Image topic: {self._image_topic}")
-        log.info(f"Hand pose topic: {self._hand_pose_topic}")
-        log.info(f"HL2 IP: {self.ip_addr}")
+        self._image_topic = self.get_parameter(PARAM_PV_IMAGES_TOPIC).value
+        self._hand_pose_topic = self.get_parameter(PARAM_HAND_POSE_TOPIC).value
+        self._audio_topic = self.get_parameter(PARAM_AUDIO_TOPIC).value
+        self._sm_topic = self.get_parameter(PARAM_SM_TOPIC).value
+        self.ip_addr = self.get_parameter(PARAM_IP_ADDR).value
+        self.pv_width = self.get_parameter(PARAM_PV_WIDTH).value
+        self.pv_height = self.get_parameter(PARAM_PV_HEIGHT).value
+        self.pv_framerate = self.get_parameter(PARAM_PV_FRAMERATE).value
+        self.log.info(f"PV Images topic: "
+                      f"({type(self._image_topic).__name__}) "
+                      f"{self._image_topic}")
+        self.log.info(f"Hand pose topic: "
+                      f"({type(self._hand_pose_topic).__name__}) "
+                      f"{self._hand_pose_topic}")
+        self.log.info(f"Audio topic: "
+                      f"({type(self._audio_topic).__name__}) "
+                      f"{self._audio_topic}")
+        self.log.info(f"Spatial Mesh topic: "
+                      f"({type(self._sm_topic).__name__}) "
+                      f"{self._sm_topic}")
+        self.log.info(f"HL2 IP address: "
+                      f"({type(self.ip_addr).__name__}) "
+                      f"{self.ip_addr}")
+        self.log.info(f"PV Width: "
+                      f"({type(self.pv_width).__name__}) "
+                      f"{self.pv_width}")
+        self.log.info(f"PV Height: "
+                      f"({type(self.pv_height).__name__}) "
+                      f"{self.pv_height}")
+        self.log.info(f"PV Framerate: "
+                      f"({type(self.pv_framerate).__name__}) "
+                      f"{self.pv_framerate}")
 
         # Define HL2SS server ports
         self.pv_port = hl2ss.StreamPort.PERSONAL_VIDEO
         self.si_port = hl2ss.StreamPort.SPATIAL_INPUT
         self.audio_port = hl2ss.StreamPort.MICROPHONE
+        self.sm_port = hl2ss.IPCPort.SPATIAL_MAPPING
 
         # Create frame publisher
         self.ros_frame_publisher = self.create_publisher(
@@ -153,16 +174,24 @@ class HL2SSROSBridge(Node):
             self._audio_topic,
             1
         )
+        # Create the spatial map publisher
+        self.ros_sm_publisher = self.create_publisher(
+            SpatialMesh,
+            self._sm_topic,
+            1
+        )
 
-        log.info("Connecting to HL2SS servers...")
+        self.log.info("Connecting to HL2SS servers...")
         self.connect_hl2ss_pv()
-        log.info("PV client connected!")
+        self.log.info("PV client connected!")
         self.connect_hl2ss_si()
-        log.info("SI client connected!")
+        self.log.info("SI client connected!")
         self.connect_hl2ss_audio()
-        log.info("Audio client connected!")
+        self.log.info("Audio client connected!")
+        self.connect_hl2ss_sm()
+        self.log.info("SM client connected!")
 
-        log.info("Starting publishing threads...")
+        self.log.info("Starting publishing threads...")
         # Start the frame publishing thread
         self._pv_active = Event()
         self._pv_active.set()
@@ -193,7 +222,17 @@ class HL2SSROSBridge(Node):
         )
         self._audio_thread.daemon = True
         self._audio_thread.start()
-        log.info("Starting publishing threads... Done")
+        # Start the spatial mapping thread
+        self._sm_active = Event()
+        self._sm_active.set()
+        self._sm_rate_tracker = RateTracker()
+        self._sm_thread = Thread(
+            target=self.sm_publisher,
+            name="publish_sm"
+        )
+        self._sm_thread.daemon = True
+        self._sm_thread.start()
+        self.log.info("Starting publishing threads... Done")
 
     def connect_hl2ss_pv(self) -> None:
         """
@@ -250,6 +289,16 @@ class HL2SSROSBridge(Node):
         )
         self.hl2ss_audio_client.open()
 
+    def connect_hl2ss_sm(self) -> None:
+        """
+        Creates the HL2SS Spatial Mapping (SM) client and connects it to the
+        server on the headset.
+        """
+        self.hl2ss_sm_client = hl2ss.ipc_sm(
+            self.ip_addr, self.sm_port
+        )
+        self.hl2ss_sm_client.open()
+
     def shutdown_clients(self) -> None:
         """
         Shuts down the frame publishing thread and the HL2SS client.
@@ -257,28 +306,36 @@ class HL2SSROSBridge(Node):
         # Stop frame publishing thread
         self._pv_active.clear()  # make RT active flag "False"
         self._pv_thread.join()
-        self.get_logger().info("PV thread closed")
+        self.log.info("PV thread closed")
 
         # Stop SI publishing thread
         self._si_active.clear()
         self._si_thread.join()
-        self.get_logger().info("SI thread closed")
+        self.log.info("SI thread closed")
 
         # Stop audio publishing thread
         self._audio_active.clear()
         self._audio_thread.join()
-        self.get_logger().info("Audio thread closed")
+        self.log.info("Audio thread closed")
+
+        # Stop SM publishing thread
+        self._sm_active.clear()
+        self._sm_thread.join()
+        self.log.info("SM thread closed")
 
         # Close client connections
         self.hl2ss_pv_client.close()
         hl2ss.stop_subsystem_pv(self.ip_addr, self.pv_port)
-        self.get_logger().info("PV client disconnected")
+        self.log.info("PV client disconnected")
 
         self.hl2ss_si_client.close()
-        self.get_logger().info("SI client disconnected")
+        self.log.info("SI client disconnected")
 
         self.hl2ss_audio_client.close()
-        self.get_logger().info("Audio client disconnected")
+        self.log.info("Audio client disconnected")
+
+        self.hl2ss_sm_client.close()
+        self.log.info("SM client disconnected")
 
     def pv_publisher(self) -> None:
         """
@@ -296,13 +353,13 @@ class HL2SSROSBridge(Node):
                 image_msg.header.stamp = self.get_clock().now().to_msg()
                 image_msg.header.frame_id = "PVFramesBGR"
             except TypeError as e:
-                self.get_logger().warning(f"{e}")
+                self.log.warning(f"{e}")
                 return
 
             self.ros_frame_publisher.publish(image_msg)
 
             self._pv_rate_tracker.tick()
-            self.get_logger().debug(f"Published image message (hz: "
+            self.log.debug(f"Published image message (hz: "
                                     f"{self._pv_rate_tracker.get_rate_avg()})",
                                     throttle_duration_sec=1)
 
@@ -321,17 +378,17 @@ class HL2SSROSBridge(Node):
             # Publish the hand tracking data if it is valid
             if si_data.is_valid_hand_left():
                 hand_msg_left = self.create_hand_pose_msg_from_si_data(
-                    si_data, "Left", data.timestamp
+                    si_data, "Left"
                 )
                 self.ros_hand_publisher.publish(hand_msg_left)
             if si_data.is_valid_hand_right():
                 hand_msg_right = self.create_hand_pose_msg_from_si_data(
-                    si_data, "Right", data.timestamp
+                    si_data, "Right"
                 )
                 self.ros_hand_publisher.publish(hand_msg_right)
 
             self._si_rate_tracker.tick()
-            self.get_logger().debug(f"Published hand pose message (hz: "
+            self.log.debug(f"Published hand pose message (hz: "
                                     f"{self._si_rate_tracker.get_rate_avg()})",
                                     throttle_duration_sec=1)
 
@@ -365,15 +422,95 @@ class HL2SSROSBridge(Node):
             self.ros_audio_publisher.publish(audio_msg)
 
             self._audio_rate_tracker.tick()
-            self.get_logger().debug(f"Published audio message (hz: "
+            self.log.debug(f"Published audio message (hz: "
                                     f"{self._audio_rate_tracker.get_rate_avg()})",
                                     throttle_duration_sec=1)
+
+    def sm_publisher(self) -> None:
+        """
+        Thread that is responsible for fetching the spatial map data from HL2SS,
+        converting the meshes to SpatialMesh ROS messages, and publishing them.
+
+        Spatial meshes are retrieved every 5 seconds.
+        """
+        # Maximum triangles per cubic meter
+        tpcm = 1000
+
+        # Data format
+        vpf = hl2ss.SM_VertexPositionFormat.R32G32B32A32Float
+        tif = hl2ss.SM_TriangleIndexFormat.R32Uint
+        vnf = hl2ss.SM_VertexNormalFormat.R32G32B32A32Float
+
+        # Include normals
+        normals = True
+
+        # Maximum number of active threads (on the HoloLens) to compute meshes
+        n_threads = 2
+
+        center  = [0.0, 0.0, 0.0] # Position of the box
+        extents = [8.0, 8.0, 8.0] # Dimensions of the box
+
+        # Initialize observer and bounding volume
+        self.hl2ss_sm_client.create_observer()
+        volumes = hl2ss.sm_bounding_volume()
+        volumes.add_box(center, extents)
+        self.hl2ss_sm_client.set_volumes(volumes)
+
+        while self._sm_active.wait(0):  # will quickly return false if cleared.
+            ids = self.hl2ss_sm_client.get_observed_surfaces()
+            tasks = hl2ss.sm_mesh_task()
+            for i in ids:
+                tasks.add_task(i, tpcm, vpf, tif, vnf, normals)
+
+            meshes = self.hl2ss_sm_client.get_meshes(tasks, n_threads)
+            self.log.debug(f"Received {len(meshes)} meshes")
+            for index, mesh in meshes.items():
+                id_hex = ids[index].hex()
+
+                if (mesh is None):
+                    self.log.warning(f'Task {index}: surface id {id_hex} compute mesh failed')
+                    continue
+
+                mesh.unpack(vpf, tif, vnf)
+
+                self.log.debug(
+                    f'Task {index}: surface id {id_hex} has {mesh.vertex_positions.shape[0]}'
+                    f' vertices {mesh.triangle_indices.shape[0]}'
+                    f' triangles {mesh.vertex_normals.shape[0]} normals'
+                )
+
+                mesh.vertex_positions[:, 0:3] = mesh.vertex_positions[:, 0:3] * mesh.vertex_position_scale
+                mesh.vertex_positions = mesh.vertex_positions @ mesh.pose
+                mesh.vertex_normals = mesh.vertex_normals @ mesh.pose
+
+                # Create the spatial mesh message for this mesh
+                spatial_mesh_msg = SpatialMesh()
+                spatial_mesh_msg.mesh_id = id_hex
+                spatial_mesh_msg.removal = False  # Is this field even used?
+
+                mesh_shape = Mesh()
+                for ind in mesh.triangle_indices:
+                    m_tri = MeshTriangle()
+                    m_tri.vertex_indices = ind
+                    mesh_shape.triangles.append(m_tri)
+                for v in mesh.vertex_positions:
+                    m_v = Point()
+                    m_v.x = float(v[0])
+                    m_v.y = float(v[1])
+                    m_v.z = float(v[2])
+                    mesh_shape.vertices.append(m_v)
+
+                spatial_mesh_msg.mesh = mesh_shape
+
+                # Publish!
+                self.ros_sm_publisher.publish(spatial_mesh_msg)
+
+            time.sleep(5)
 
     def create_hand_pose_msg_from_si_data(
         self,
         si_data: hl2ss.unpack_si,
         hand: str,
-        timestamp: int
     ) -> HandJointPosesUpdate:
         """
         Extracts the hand joint poses data from the HL2SS SI structure
@@ -434,7 +571,7 @@ def main():
     try:
         rclpy.spin(hl2ss_ros_bridge)
     except KeyboardInterrupt:
-        hl2ss_ros_bridge.get_logger().info("Keyboard interrupt, shutting down.\n")
+        hl2ss_ros_bridge.log.info("Keyboard interrupt, shutting down.\n")
         hl2ss_ros_bridge.shutdown_clients()
 
     # Destroy the node explicitly
