@@ -18,19 +18,21 @@ class TmuxController():
 
     def is_tmux_session_running(self) -> bool:
         """
-        Returns whether or not there is an active tmux session.
+        Returns whether or not there is an active tmux session. The stdout
+        string from "tmux ls" is used to determine if tmux is running or not.
+        If tmux is NOT running, this string is empty. If tmux is running, the
+        stdout string is not empty.
         """
-        p = subprocess.Popen(
+        p = subprocess.run(
             ["tmux", "ls"], stderr=subprocess.PIPE, stdout=subprocess.PIPE
         )
-        std_out, std_err = p.communicate()
-        return len(std_out) > 0
+        return len(p.stdout) > 0
 
     def stop_all_tmux_sessions(self) -> bool:
         """
         Stops all active tmux sessions.
         """
-        subprocess.Popen(
+        subprocess.run(
             ["tmux", "kill-server"], stderr=subprocess.PIPE, stdout=subprocess.PIPE
         )
 
@@ -39,7 +41,7 @@ class TmuxController():
         Start the tmux configuration.
         """
         if not self.tmux_active:
-            subprocess.Popen(
+            subprocess.run(
                 ['tmuxinator', 'start',  self.config_name, "--no-attach"],
             )
             print(f"{self.config_name} session started")
@@ -53,7 +55,7 @@ class TmuxController():
         Stop the tmux configuration.
         """
         if self.tmux_active:
-            subprocess.Popen(
+            subprocess.run(
                 ['tmuxinator', 'stop',  self.config_name],
             )
             print(f"{self.config_name} session stopped")
