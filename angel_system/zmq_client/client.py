@@ -86,13 +86,20 @@ def talk_to_server(address:str, name:str, tmux_ctrl:TmuxController) -> None:
             response = socket.recv_string()                       # receive message
             print(f"{name}: Received message: {response}")
 
-            if response == "start":
-                # Start the tmux configuration
-                tmux_ctrl.start()
-
+            if "started" in response:
+                # Starting a new skill, so extract the skill name and tell the
+                # tmux controller to start it.
+                skill = response.replace("skill ", "").replace(" started", "")
+                tmux_ctrl.start(skill)
+            elif "done" in response:
+                # Stopping a skill, so extract the skill name and tell the tmux
+                # controller to stop it.
+                skill = response.replace("skill ", "").replace(" done", "")
+                tmux_ctrl.stop(skill)
             elif response == "stop":
-                # Stop the tmux configuration
-                tmux_ctrl.stop()
+                # Stop all tmux configurations
+                print("Stopping all tmux sessions")
+                tmux_ctrl.stop_all_tmux_sessions()
 
             return_message = generate_response(response)          # validate the message and form response
             socket.send_string(f"{name}:{return_message}",flags=zmq.DONTWAIT)  # send the response to the server
@@ -114,18 +121,28 @@ if __name__ == "__main__":
         "--name",
         type=str,
         default="default",
+        help="Identifier for this client",
     )
     parser.add_argument(
-        "--tmux_config",
+        "--skill-config",
         type=str,
-        default="hl2ss_demo",
+        nargs=2,
+        metavar=("SKILL_NAME", "CONFIG_NAME"),
+        help="Mapping from skill to tmuxinator configuration",
+        action="append",
     )
     args = parser.parse_args()
 
     address = args.address
     name = args.name
-    tmux_cfg = args.tmux_config
+    skill_cfg = args.skill_config
 
-    tmux_ctrl = TmuxController(tmux_cfg)
+    if skill_cfg is None:
+        print("Please provide skill to config map with `--skill-config` argument")
+    else:
+        skill_cfg_map = {}
+        for s in skill_cfg:
+            skill_cfg_map[s[0]] = s[1]
 
-    talk_to_server(address, name, tmux_ctrl)
+        tmux_ctrl = TmuxController(skill_cfg_map)
+        talk_to_server(address, name, tmux_ctrl)
