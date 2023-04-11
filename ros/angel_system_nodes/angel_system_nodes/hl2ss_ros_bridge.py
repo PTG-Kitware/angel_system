@@ -22,7 +22,6 @@ from angel_msgs.msg import (
 )
 from angel_system.hl2ss_viewer import hl2ss
 from angel_utils import RateTracker
-from angel_utils.conversion import hl2ss_stamp_to_ros_time
 
 
 BRIDGE = CvBridge()
