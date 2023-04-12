@@ -5,6 +5,6 @@
 	path = ros/rosbag2
 	url = https://github.com/ros2/rosbag2.git
 	branch = foxy-future
-[submodule "angel_system/hl2ss"]
+[submodule "hl2ss"]
 	path = hl2ss
-	url = git@github.com:VIDA-NYU/hl2ss.git
+	url = https://github.com/VIDA-NYU/hl2ss.git
