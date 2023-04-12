@@ -16,18 +16,16 @@ namespace RosMessageTypes.Angel
         // 
         //  Represents an utterance from ASR.
         // 
-        public string speaker;
+        //  Utterance value.
         public string value;
 
         public UtteranceMsg()
         {
-            this.speaker = "";
             this.value = "";
         }
 
-        public UtteranceMsg(string speaker, string value)
+        public UtteranceMsg(string value)
         {
-            this.speaker = speaker;
             this.value = value;
         }
 
@@ -35,20 +33,17 @@ namespace RosMessageTypes.Angel
 
         private UtteranceMsg(MessageDeserializer deserializer)
         {
-            deserializer.Read(out this.speaker);
             deserializer.Read(out this.value);
         }
 
         public override void SerializeTo(MessageSerializer serializer)
         {
-            serializer.Write(this.speaker);
             serializer.Write(this.value);
         }
 
         public override string ToString()
         {
             return "UtteranceMsg: " +
-            "\nspeaker: " + speaker.ToString() +
             "\nvalue: " + value.ToString();
         }
 

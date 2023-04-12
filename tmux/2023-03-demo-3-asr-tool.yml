@@ -101,7 +101,7 @@ windows:
       -p audio_topic:=HeadsetAudioData
       -p utterances_topic:=UtterancesTopic
       -p asr_server_url:=http://communication.cs.columbia.edu:8058/home
-      -p tmp_wav_filename:=/tmp/asr.wav
+      -p asr_req_segment_duration:=8.0
   - intent_detection: ros2 run angel_system_nodes intent_detector --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p utterances_topic:=UtterancesTopic
@@ -141,4 +141,3 @@ windows:
       -p task_monitor_topic:=TaskUpdates
       -p arui_update_topic:=AruiUpdates
       -p interp_user_intent_topic:=UserIntentPredicted
-

@@ -1,27 +1,19 @@
-import json
-import time
-
-from cv_bridge import CvBridge
-import cv2
-import numpy as np
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import Header
 
 from angel_msgs.msg import InterpretedAudioUserIntent, Utterance
 
 # Please refer to labels defined in
 # https://docs.google.com/document/d/1uuvSL5de3LVM9c0tKpRKYazDxckffRHf7IAcabSw9UA .
-NEXT_STEP_KEYPHRASES = ['skip', 'next step', 'next']
-PREV_STEP_KEYPHRASES = ['previous', 'prev step', 'last step', 'go back']
+NEXT_STEP_KEYPHRASES = ['skip', 'next', 'next step']
+PREV_STEP_KEYPHRASES = ['previous', 'previous step', 'last step', 'go back']
 OVERRIDE_KEYPHRASES = ['angel', 'angel system']
 
 # TODO(derekahmed): Please figure out how to keep this sync-ed with
 # config/angel_system_cmds/user_intent_to_sys_cmd_v1.yaml.
 LABELS = [
     "Go to next step",
-    "Go to previous step",
-    "Other"
+    "Go to previous step"
 ]
 
 
@@ -32,7 +24,7 @@ PARAM_INTERP_USER_INTENT_TOPIC = "interp_user_intent_topic"
 class IntentDetector(Node):
     '''
     As of Q12023, intent detection is derived heuristically. This will be shifted
-    to a model-based approach in the neat-future.
+    to a model-based approach in the near-future.
     '''
 
     def __init__(self):
@@ -106,16 +98,15 @@ class IntentDetector(Node):
             intent_msg.user_intent = LABELS[1]
             intent_msg.confidence = 0.5
         else:
-            intent_msg.user_intent = LABELS[2]
-            intent_msg.confidence = 0.5
+            log.info(f"Detected no intents for \"{msg.value}\":")
             return
-        
+
         if self.contains_phrase(lower_utterance, OVERRIDE_KEYPHRASES):
             intent_msg.confidence = 1.0
             self._expected_publisher.publish(intent_msg)
         else:
             self._interp_publisher.publish(intent_msg)
-        
+
         log.info(f"Detected intents for \"{msg.value}\":\n" +
             f"\"{intent_msg.user_intent}\": {intent_msg.confidence}")
 
