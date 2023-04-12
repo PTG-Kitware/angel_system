@@ -40,6 +40,8 @@ pytorch-lightning = "^1.7.7"
 # Pinning setup tools to this known version due to torch 1.10.2 tensorboard
 # functionality assuming `distutils.version.LooseVersion` functionality.
 setuptools = "59.5.0"
+# For BBN Redis comms
+websockets = "^11.0"
 
 # For Berkeley classifier
 cloudpickle = "^2.2.1"

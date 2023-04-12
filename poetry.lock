@@ -1363,11 +1363,11 @@ cffi = {version = "*", markers = "implementation_name == \"pypy\""}
 
 [[package]]
 name = "regex"
-version = "2022.10.31"
+version = "2023.3.23"
 description = "Alternative regular expression module, to replace re."
 category = "main"
 optional = false
-python-versions = ">=3.6"
+python-versions = ">=3.8"
 
 [[package]]
 name = "requests"
@@ -2078,6 +2078,14 @@ optional = false
 python-versions = "*"
 
 [[package]]
+name = "websockets"
+version = "11.0"
+description = "An implementation of the WebSocket Protocol (RFC 6455 & 7692)"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+
+[[package]]
 name = "xatlas"
 version = "0.0.7"
 description = "Python bindings for xatlas"
@@ -2295,6 +2303,7 @@ typing-extensions = []
 urllib3 = []
 vecrec = []
 wcwidth = []
+websockets = []
 xatlas = []
 xxhash = []
 yacs = []
