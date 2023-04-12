@@ -208,10 +208,9 @@ class RedisROSBridge(Node):
         self,
         sid: str,
     ):
-        async with websockets.connect(
-            f'ws://{self._url}/data/{sid}/pull?header=0&latest=1',
-            max_size=None
-        ) as ws:
+        connection_str = f'ws://{self._url}/data/{sid}/pull?header=0&latest=1'
+        self.log.info(f"Connecting websocket to URL: {connection_str}")
+        async with websockets.connect(connection_str, max_size=None) as ws:
             while self._pv_active.wait(0):
                 # read the data
                 data = await ws.recv()
@@ -230,19 +229,18 @@ class RedisROSBridge(Node):
                 self.ros_frame_publisher.publish(image_msg)
 
                 self._pv_rate_tracker.tick()
-                self.log.debug(f"Published image message (hz: "
-                               f"{self._pv_rate_tracker.get_rate_avg()})",
-                               throttle_duration_sec=1)
+                self.log.info(f"Published image message (hz: "
+                              f"{self._pv_rate_tracker.get_rate_avg()})",
+                              throttle_duration_sec=1)
 
     @async2sync
     async def publish_si_data(
         self,
         sid: str,
     ):
-        async with websockets.connect(
-            f'ws://{self._url}/data/{sid}/pull?header=0&latest=1',
-            max_size=None
-        ) as ws:
+        connection_str = f'ws://{self._url}/data/{sid}/pull?header=0&latest=1'
+        self.log.info(f"Connecting websocket to URL: {connection_str}")
+        async with websockets.connect(connection_str, max_size=None) as ws:
             while self._si_active.wait(0):
                 # read the data
                 data = await ws.recv()
@@ -265,9 +263,9 @@ class RedisROSBridge(Node):
                     self.ros_hand_publisher.publish(hand_msg_right)
 
                 self._si_rate_tracker.tick()
-                self.log.debug(f"Published hand pose message (hz: "
-                               f"{self._si_rate_tracker.get_rate_avg()})",
-                               throttle_duration_sec=1)
+                self.log.info(f"Published hand pose message (hz: "
+                              f"{self._si_rate_tracker.get_rate_avg()})",
+                              throttle_duration_sec=1)
 
     def create_hand_pose_msg_from_si_data(
         self,
