@@ -10,7 +10,7 @@
 bbn_header:
   sender: Kitware
   sender_software_version: 1.0
-  closest_hololens_dataframe_timestamp: 444.444  # nonsensical example TS
+  closest_hololens_dataframe_timestamp: 445.444  # nonsensical example TS
   # Other valuers are either constant or autofilled.
 
 ########
