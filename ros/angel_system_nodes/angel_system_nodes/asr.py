@@ -136,24 +136,31 @@ class ASR(Node):
     def asr_server_request_thread(self, audio_data, num_channels, sample_rate):
         with self.asr_server_lock:
 
-            temp_file = tempfile.NamedTemporaryFile(suffix='.wav', delete=False)
+            temp_file = tempfile.NamedTemporaryFile(suffix='.wav', delete=True)
             self.log.info(f"Writing audio to temporary file: {temp_file.name}")
-            wf = wave.open(temp_file, 'wb')
-            wf.setnchannels(num_channels)
+            wav_write = wave.open(temp_file, 'wb')
+            wav_write.setnchannels(num_channels)
             # TODO (derekahmed) We should figure out how this value was derived
             # and make this a constant accordingly.
-            wf.setsampwidth(4) # Derived from audio_player.py
-            wf.setframerate(sample_rate)
-            wf.writeframes(audio_data)
-            with open(temp_file.name, 'rb') as f:
-                response = requests.post(self._asr_server_url, files={'audio_data': f})
+            wav_write.setsampwidth(4) # Derived from audio_player.py
+            wav_write.setframerate(sample_rate)
+            wav_write.writeframes(audio_data)
 
-            self.log.info("Complete ASR text is:\n" + f"\"{response.text}\"")
-            for sentence in sent_tokenize(response.text):
-                utterance_msg = Utterance()
-                utterance_msg.value = sentence
-                self.log.info("Publishing message: " + f"\"{sentence}\"")
-                self._publisher.publish(utterance_msg)
+            with open(temp_file.name, 'rb') as temp_file:
+                response = requests.post(self._asr_server_url,
+                                         files={'audio_data': temp_file})
+            temp_file.close()
+            
+            if not response.ok:
+                self.log.error("ASR Server Response contains an error.")
+                return
+            if response:
+                self.log.info("Complete ASR text is:\n" + f"\"{response.text}\"")
+                for sentence in sent_tokenize(response.text):
+                    utterance_msg = Utterance()
+                    utterance_msg.value = sentence
+                    self.log.info("Publishing message: " + f"\"{sentence}\"")
+                    self._publisher.publish(utterance_msg)
 
 
 def main():
