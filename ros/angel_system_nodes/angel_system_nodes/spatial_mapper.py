@@ -80,6 +80,7 @@ class SpatialMapSubscriber(Node):
 
         self.poses = []
 
+        '''
         # setup the image size query client and make sure the service is running
         self.image_size_client = self.create_client(QueryImageSize, 'query_image_size')
         while not self.image_size_client.wait_for_service(timeout_sec=1.0):
@@ -94,11 +95,11 @@ class SpatialMapSubscriber(Node):
 
             time.sleep(1)
             r = self.send_image_size_request()
-
         log.info(f"Received valid image dimensions. Current size: {r.image_width}x{r.image_height}")
-        self.image_height = r.image_height
-        self.image_width = r.image_width
+        '''
 
+        self.image_height = 720
+        self.image_width = 1280
 
     def send_image_size_request(self):
         """
@@ -109,7 +110,6 @@ class SpatialMapSubscriber(Node):
         future = self.image_size_client.call_async(req)
         rclpy.spin_until_future_complete(self, future)
         return future.result()
-
 
     def spatial_map_callback(self, msg):
         log = self.get_logger()
@@ -128,12 +128,10 @@ class SpatialMapSubscriber(Node):
 
         #self.scene.show()
 
-
     def headset_pose_callback(self, pose):
         log = self.get_logger()
         log.debug(f"pose stamp: {pose.header.stamp}")
         self.poses.append(pose)
-
 
     def detection_callback(self, detection):
         log = self.get_logger()
@@ -247,13 +245,21 @@ class SpatialMapSubscriber(Node):
             log.info(f"Drawing box for {object_type}")
             vs = np.array([corners_world_pos[0], corners_world_pos[1],
                            corners_world_pos[2], corners_world_pos[3]])
-            el = trimesh.path.entities.Line([0, 1, 2, 3, 0])
-            path = trimesh.path.Path3D(entities=[el], vertices=vs)
-            self.scene.add_geometry(path)
+            print(vs)
+            try:
+                el = trimesh.path.entities.Line([0, 1, 2, 3, 0])
+                path = trimesh.path.Path3D(entities=[el], vertices=vs)
+                self.scene.add_geometry(path)
+            except OverflowError:
+                pass
 
             # draw the image edges
-            bounds_screen_pos = [[image_min_vertex0, image_min_vertex1], [image_min_vertex0, image_max_vertex1],
-                                 [image_max_vertex0, image_max_vertex1], [image_max_vertex0, image_min_vertex1]]
+            bounds_screen_pos = [
+                                 [image_min_vertex0, image_min_vertex1],
+                                 [image_min_vertex0, image_max_vertex1],
+                                 [image_max_vertex0, image_max_vertex1],
+                                 [image_max_vertex0, image_min_vertex1]
+                                ]
             image_corners_world_pos = []
             for p in bounds_screen_pos:
                 scaled_point = self.scale_pixel_coordinates(p)
@@ -286,7 +292,11 @@ class SpatialMapSubscriber(Node):
             vs = np.array([image_corners_world_pos[0], image_corners_world_pos[1],
                            image_corners_world_pos[2], image_corners_world_pos[3]])
             el = trimesh.path.entities.Line([0, 1, 2, 3, 0])
-            path = trimesh.path.Path3D(entities=[el], vertices=vs, colors=np.array([255, 0, 255, 255]).reshape(1, 4))
+            path = trimesh.path.Path3D(
+                entities=[el],
+                vertices=vs,
+                colors=np.array([255, 0, 255, 255]).reshape(1, 4)
+            )
             self.scene.add_geometry(path)
 
             # since we were able to find this object's 3D position,
@@ -317,14 +327,6 @@ class SpatialMapSubscriber(Node):
         # uncomment this to visualize the scene
         #self.scene.show()
 
-
-    def show_plot(self):
-        try:
-            self.scene.show()
-        except:
-            pass
-
-
     def cast_ray(self, origin, direction):
         intersection_points = []
         for key, m in self.meshes.items():
@@ -340,11 +342,9 @@ class SpatialMapSubscriber(Node):
 
         return intersection_points
 
-
     def get_world_position(self, world_matrix, point):
-        point_matrix = np.array([[point[0]], [point[1]], [point[2]], [1]])
-        return np.matmul(world_matrix, point_matrix)[:3]
-
+        point_matrix = np.array([point[0], point[1], point[2], 1])
+        return np.matmul(point_matrix, world_matrix)[:3]
 
     def convert_1d_4x4_to_2d_matrix(self, matrix_1d):
         matrix_2d = [[], [], [], []]
@@ -354,7 +354,6 @@ class SpatialMapSubscriber(Node):
                 matrix_2d[row].append(matrix_1d[idx])
 
         return matrix_2d
-
 
     def convert_pixel_coord_to_world_coord(self, world_matrix_2d,
                                            projection_matrix, p, camera_origin):
@@ -428,7 +427,6 @@ class SpatialMapSubscriber(Node):
             log.info(str(e))
 
         return closest_point
-
 
     def scale_pixel_coordinates(self, p):
         """
