@@ -1,9 +1,4 @@
-import queue
-import socket
-import struct
-import sys
 import time
-import threading
 
 import numpy as np
 import rclpy
@@ -36,10 +31,18 @@ class SpatialMapSubscriber(Node):
     def __init__(self):
         super().__init__(self.__class__.__name__)
 
-        self._spatial_map_topic = self.declare_parameter("spatial_map_topic", "SpatialMapData").get_parameter_value().string_value
-        self._det_topic = self.declare_parameter("det_topic", "ObjectDetections").get_parameter_value().string_value
-        self._headset_pose_topic = self.declare_parameter("headset_pose_topic", "HeadsetPoseData").get_parameter_value().string_value
-        self._det_3d_topic = self.declare_parameter("det_3d_topic", "ObjectDetections3d").get_parameter_value().string_value
+        self._spatial_map_topic = self.declare_parameter(
+            "spatial_map_topic", "SpatialMapData"
+        ).get_parameter_value().string_value
+        self._det_topic = self.declare_parameter(
+            "det_topic", "ObjectDetections"
+        ).get_parameter_value().string_value
+        self._headset_pose_topic = self.declare_parameter(
+            "headset_pose_topic", "HeadsetPoseData"
+        ).get_parameter_value().string_value
+        self._det_3d_topic = self.declare_parameter(
+            "det_3d_topic", "ObjectDetections3d"
+        ).get_parameter_value().string_value
 
         log = self.get_logger()
         log.info(f"Spatial map topic: {self._spatial_map_topic}")
@@ -112,8 +115,6 @@ class SpatialMapSubscriber(Node):
         return future.result()
 
     def spatial_map_callback(self, msg):
-        log = self.get_logger()
-
         # extract the vertices into np arrays
         vertices = np.array([[v.x, v.y, v.z] for v in msg.mesh.vertices])
 
@@ -160,8 +161,8 @@ class SpatialMapSubscriber(Node):
                 self.poses = self.poses[i:]
                 break
 
-        if world_matrix_1d == None or projection_matrix_1d == None:
-            log.info(f"Did not get world or projection matrix.")
+        if world_matrix_1d is None or projection_matrix_1d is None:
+            log.info("Did not get world or projection matrix.")
             return
 
         # get world matrix from detection
@@ -237,7 +238,7 @@ class SpatialMapSubscriber(Node):
                                                                    p, camera_origin)
                 log.info(f"point 3d: {point_3d}")
                 if point_3d is None:
-                    log.info(f"No point found!")
+                    log.info("No point found!")
                     #self.scene.show()
                     return
                 corners_world_pos.append(point_3d)
@@ -329,7 +330,7 @@ class SpatialMapSubscriber(Node):
 
     def cast_ray(self, origin, direction):
         intersection_points = []
-        for key, m in self.meshes.items():
+        for _, m in self.meshes.items():
             ray_intersector = trimesh.ray.ray_triangle.RayMeshIntersector(m)
             try:
                 intersection = ray_intersector.intersects_location(origin, direction)
@@ -390,7 +391,11 @@ class SpatialMapSubscriber(Node):
 
         vs = np.array([camera_origin[0], direction[0]])
         el = trimesh.path.entities.Line([0, 1])
-        path = trimesh.path.Path3D(entities=[el], vertices=vs, colors=np.array([255, 255, 0, 255]).reshape(1, 4))
+        path = trimesh.path.Path3D(
+            entities=[el],
+            vertices=vs,
+            colors=np.array([255, 255, 0, 255]).reshape(1, 4)
+        )
         self.scene.add_geometry(path)
 
         #self.scene.show()
@@ -432,8 +437,6 @@ class SpatialMapSubscriber(Node):
         """
         Adapted from https://github.com/VulcanTechnologies/HoloLensCameraStream
         """
-        log = self.get_logger()
-
         scaled_point = p
 
         half_width = self.image_width / 2.0
