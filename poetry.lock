@@ -1985,7 +1985,7 @@ test = ["pytest"]
 
 [[package]]
 name = "trimesh"
-version = "3.21.4"
+version = "3.21.5"
 description = "Import, export, process, analyze and view triangular meshes."
 category = "main"
 optional = false
@@ -2017,9 +2017,9 @@ xatlas = {version = "*", optional = true, markers = "extra == \"all\""}
 xxhash = {version = "*", optional = true, markers = "extra == \"all\""}
 
 [package.extras]
-all = ["networkx", "setuptools", "chardet", "meshio", "psutil", "lxml", "pillow", "xatlas", "rtree", "mapbox-earcut", "sympy", "python-fcl", "xxhash", "requests", "shapely", "pycollada", "svg.path", "colorlog", "jsonschema", "glooey", "pyglet (<2)", "scipy", "scikit-image"]
-easy = ["mapbox-earcut", "sympy", "networkx", "setuptools", "chardet", "xxhash", "lxml", "requests", "shapely", "pycollada", "svg.path", "colorlog", "pillow", "jsonschema", "scipy", "rtree"]
-test = ["pyinstrument", "ruff", "ezdxf", "coveralls", "autopep8", "pytest", "pytest-cov"]
+all = ["colorlog", "glooey", "pycollada", "xxhash", "svg.path", "scipy", "scikit-image", "pyglet (<2)", "rtree", "python-fcl", "sympy", "jsonschema", "setuptools", "psutil", "mapbox-earcut", "lxml", "pillow", "networkx", "shapely", "meshio", "xatlas", "chardet", "requests"]
+easy = ["rtree", "colorlog", "sympy", "jsonschema", "setuptools", "pycollada", "lxml", "mapbox-earcut", "xxhash", "pillow", "networkx", "shapely", "svg.path", "scipy", "chardet", "requests"]
+test = ["ruff", "pytest", "pytest-cov", "coveralls", "autopep8", "pyinstrument", "ezdxf"]
 
 [[package]]
 name = "typeguard"
@@ -2139,7 +2139,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "flake8 (<5)", "pytest-co
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8,<3.10"
-content-hash = "c309f0e6b7672e9103d1843493af7ec24f5b61d8ecb39647b5f5ffb29bddcfec"
+content-hash = "1072e04b232df382e30646fac39e480b326f582376687c40a62947b5374a85c7"
 
 [metadata.files]
 aiohttp = []
