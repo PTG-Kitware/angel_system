@@ -53,6 +53,9 @@ black = "22.3.0"
 # For Columbia ASR
 nltk = "^3.8.1"
 
+# For BBN ZMQ client
+pyzmq = "==25.0.0"
+
 [tool.poetry.dev-dependencies]
 ipython = "^8.0.1"
 # Docs
