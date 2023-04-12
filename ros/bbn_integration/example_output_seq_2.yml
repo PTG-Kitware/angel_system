@@ -115,7 +115,7 @@ next_step_progress:
 ######
 # 4. DO WE BELIEVE THERE ARE ANY ERRORS?  (optional)
 # This assumes a common error dictionary that will be described elsewhere
-###### 
+######
 current_errors:
    populated: false  # set to true when we get here and is being used. will happen per skill.
    errors:  # will start by leaving this empty. will populate it later.
@@ -128,5 +128,5 @@ current_errors:
 # 5. TA1 needs to consult with me about this.  (future)
 ######
 current_user_state: # TBD need help from this part of the community
-   populated: false  # set to true when defined and you are using this. 
-   # will start by leaving this empty. will populate it later. 
+   populated: false  # set to true when defined and you are using this.
+   # will start by leaving this empty. will populate it later.
