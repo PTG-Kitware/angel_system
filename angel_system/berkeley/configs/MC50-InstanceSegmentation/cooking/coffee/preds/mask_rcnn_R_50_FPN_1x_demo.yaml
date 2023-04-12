@@ -1,6 +1,7 @@
 _BASE_: "/angel_workspace/angel_system/berkeley/configs/Base-RCNN-FPN.yaml"
 MODEL:
-  WEIGHTS: "/angel_workspace/model_files/ucb_coffee_preds_with_contact_r50.pth"
+#  WEIGHTS: "/angel_workspace/model_files/ucb_coffee_preds_with_contact_r50.pth"
+  WEIGHTS: "/angel_workspace/model_files/berkeley_model_r50_with_contact_hl_hands.pth"
   MASK_ON: False
   RESNETS:
     DEPTH: 50

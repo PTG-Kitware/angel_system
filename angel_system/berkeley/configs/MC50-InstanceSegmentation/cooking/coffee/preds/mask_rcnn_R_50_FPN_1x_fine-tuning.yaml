@@ -21,7 +21,7 @@ DATALOADER:
   SAMPLER_TRAIN: "RepeatFactorTrainingSampler"
   REPEAT_THRESHOLD: 0.001
 
-OUTPUT_DIR: '/Padlock_DT/training/berkeley/with_contact/resnet50'
+OUTPUT_DIR: '/Padlock_DT/training/berkeley/with_contact/resnet50_all_objects_only'
 
 SOLVER:
   TOTAL_IMAGE_NUMBER: 1040

@@ -1,4 +1,4 @@
-_BASE_: "../Base-RCNN-FPN.yaml"
+_BASE_: "/angel_workspace/angel_system/berkeley/configs/Base-RCNN-FPN.yaml"
 MODEL:
   WEIGHTS: "/angel_workspace/model_files/bbn_M1_hands_M2_no_contact_r50.pth"
   MASK_ON: False
