@@ -283,6 +283,16 @@ class HL2SSROSBridge(Node):
 
         hl2ss.start_subsystem_pv(self.ip_addr, self.pv_port)
 
+        # Get the camera parameters for this configuration
+        pv_cam_params = hl2ss.download_calibration_pv(
+            self.ip_addr,
+            self.pv_port,
+            self.pv_width,
+            self.pv_height,
+            self.pv_framerate
+        )
+        self.camera_intrinsics = [float(x) for x in pv_cam_params.intrinsics.flatten()]
+
         self.hl2ss_pv_client = hl2ss.rx_decoded_pv(
             self.ip_addr,
             self.pv_port,
@@ -406,6 +416,7 @@ class HL2SSROSBridge(Node):
             headset_pose_msg = HeadsetPoseData()
             headset_pose_msg.header = image_msg.header  # same timestamp/frame_id as image
             headset_pose_msg.world_matrix = world_matrix
+            headset_pose_msg.projection_matrix = self.camera_intrinsics
             self.ros_head_pose_publisher.publish(headset_pose_msg)
 
             self._pv_rate_tracker.tick()
