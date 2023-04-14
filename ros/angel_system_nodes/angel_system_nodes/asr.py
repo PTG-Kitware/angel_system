@@ -18,6 +18,9 @@ UTTERANCES_TOPIC = "utterances_topic"
 ASR_SERVER_URL = "asr_server_url"
 ASR_REQ_SEGMENT_SECONDS_DURATION = "asr_req_segment_duration"
 
+# TODO (derekahmed) We should figure out how this value was derived
+# and make this a constant accordingly.
+WAV_SAMPLE_WIDTH = 4  # Derived from audio_player.py
 
 class ASR(Node):
 
@@ -140,9 +143,8 @@ class ASR(Node):
             self.log.info(f"Writing audio to temporary file: {temp_file.name}")
             wav_write = wave.open(temp_file, 'wb')
             wav_write.setnchannels(num_channels)
-            # TODO (derekahmed) We should figure out how this value was derived
-            # and make this a constant accordingly.
-            wav_write.setsampwidth(4) # Derived from audio_player.py
+            
+            wav_write.setsampwidth(WAV_SAMPLE_WIDTH) 
             wav_write.setframerate(sample_rate)
             wav_write.writeframes(audio_data)
 
