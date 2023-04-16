@@ -52,11 +52,11 @@ tmux_options: -f <%= ENV["ANGEL_WORKSPACE_DIR"] %>/tmux/tmux.conf
 # attach: false
 
 windows:
-  # - ros_bag_play: ros2 bag play <<PATH_TO_BAG_FILE>>
-  - ros_bag_play: ros2 bag play /angel_workspace/ros_bags/rosbag2_2023_03_01-17_28_00/rosbag2_2023_03_01-17_28_00_0.db3
   - vad: ros2 run angel_system_nodes voice_activity_detector --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p input_audio_topic:=HeadsetAudioData
       -p output_voice_activity_topic:=DetectedVoiceData
       -p vad_server_url:=http://communication.cs.columbia.edu:8058/vad
-      -p interval_unit_sec_duration:=1
+      -p interval_unit_sec_duration:=4
+  # - ros_bag_play: ros2 bag play <<PATH_TO_BAG_FILE>>
+  - ros_bag_play: ros2 bag play /angel_workspace/ros_bags/rosbag2_2023_03_01-17_28_00/rosbag2_2023_03_01-17_28_00_0.db3
