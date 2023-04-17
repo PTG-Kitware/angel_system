@@ -1,3 +1,4 @@
+import json
 import pyaudio
 import requests
 import tempfile
@@ -151,7 +152,6 @@ class VoiceActivityDetector(Node):
                 req_n_channels = msg.channels
                 req_sample_rate = msg.sample_rate
                 self.log.info(f"Stream has {self.audio_stream_duration}s with {len(req_data)} floats on {req_n_channels} channels")
-                # self.log.info(f"{req_duration} vs {(1 / (req_sample_rate)) * (len(req_data) / (4 * req_n_channels))}")
 
                 # Start the VAD server request thread.
                 self.request_thread = threading.Thread(target=self.vad_server_request_thread,
@@ -167,16 +167,13 @@ class VoiceActivityDetector(Node):
                                   audio_duration):
         self.log.info(f"Saving audio data ({len(audio_data)}B) ")
         with self.vad_server_lock:
-            # TODO(derekahmed) DELETE ME.
             temp_file =\
                 self._create_temp_audio_file(audio_data, sample_rate,
                                              num_channels,
                                              prefix=f"main-{self.n_intervals}_")
 
             # Experiment with a dummy split.
-            # TODO change me
-            voice_active_segments =\
-                self.vad_server_request(temp_file, audio_duration < 7)
+            voice_active_segments = self.vad_server_request(temp_file)
             split_timestamp = self.max_utterance_sec_length
             if voice_active_segments:
                 # Take the ("next") first segment. If the detected voice
@@ -219,18 +216,14 @@ class VoiceActivityDetector(Node):
             if not self.debug_mode:
                 temp_file.close()
     
-    def vad_server_request(self, file, 
-                         return_empty=False):
-        '''
-        Assumes there will only be two splits
-        TODO(derekahmed) return_empty was a hack that should be removed to test functionality.
-        '''
-        # with open(file.name, 'rb') as f:
-        #     response = requests.post(self._vad_server_url,
-        #                             files={'audio_data': f})
-        if return_empty:
-            return []
-        return [[0.0, 6.0], [6.0, 8.0]]
+    def vad_server_request(self, file):
+        with open(file.name, 'rb') as f:
+            response = requests.post(self._vad_server_url,
+                                    files={'audio_data': f})
+            
+            segments = json.loads(response.content)['segments']
+            self.log.info(f"Received response: {segments}")
+            return segments
     
     def _handle_publication(self, audio_data, split_timestamp,
                      sample_byte_length, num_channels, sample_rate):
@@ -249,7 +242,7 @@ class VoiceActivityDetector(Node):
                     prefix=f"split-{self.debugging_n_chunks}-")
             self.debugging_n_chunks += 1
 
-        # TODO: publish me
+        # TODO(derekahmed): publish me
 
     def _create_temp_audio_file(self, audio_data, sample_rate, num_channels,
                                 prefix=None):
@@ -270,9 +263,10 @@ class VoiceActivityDetector(Node):
         Maps a timestamp to corresponding index in a bytearray of audio data.
         This mapping requires the sample frequency, the number of Bytes per
         sample, and the number of channels are inherently necessary.
+
+        Each sample holds `sample_byte_length` Bytes with `num_channels`
+        interleaved.
         '''
-        # Each sample holds `sample_byte_length` Bytes with `num_channels`
-        # interleaved.
         return int((seconds_timestamp * sample_rate)\
             * sample_byte_length * num_channels)
 
