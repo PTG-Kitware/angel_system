@@ -1,6 +1,7 @@
 import json
 import pyaudio
 import requests
+import struct
 import tempfile
 import threading
 import time
@@ -108,7 +109,7 @@ class VoiceActivityDetector(Node):
         
         self.debug_mode = True
         # Used to keep track of number of vocal activity detection splits.
-        self.debug_split_counter = 0
+        self.split_counter = 0
 
         # TODO(derekahmed): Add internal buffering to reduce subscriber queue
         # size to 1.
@@ -129,6 +130,7 @@ class VoiceActivityDetector(Node):
         self.request_thread = threading.Thread()
         self.prev_timestamp = None
         self.accumulated_audio = bytearray()
+        self.accumulated_timestamps = []
         self.accumulated_audio_duration = 0.0
         self.intracadence_duration = 0.0
         self.n_cadence_steps = 0
@@ -162,6 +164,7 @@ class VoiceActivityDetector(Node):
 
             if message_order_valid:
                 self.accumulated_audio.extend(msg.data)
+                self.accumulated_timestamps.append(msg.header.stamp)
                 self.accumulated_audio_duration += msg.sample_duration
                 self.intracadence_duration += msg.sample_duration
             else:
@@ -230,17 +233,26 @@ class VoiceActivityDetector(Node):
                 return
 
             # Update the accumulated audio stream to remove any split data.
-            split_idx = self._time_to_byte_index(split_timestamp,
-                    self.bytes_per_sample, num_channels, sample_rate)
-            with self.audio_stream_lock:
-                old_duration = self.accumulated_audio_duration
-                self.accumulated_audio = self.accumulated_audio[split_idx:]
-                self.accumulated_audio_duration -= split_timestamp
-                self.log.info(f"Audio data chopped from {old_duration} " +\
-                            f"-> {self.accumulated_audio_duration}s...")
-
+            self._split_audio(split_timestamp, num_channels, sample_rate)
             if not self.debug_mode:
                 temp_file.close()
+
+    def _split_audio(self, split_timestamp, num_channels, sample_rate):
+        '''
+        Split the accumulated audio given a timestamp for the split.
+        Also updates the accumulated timestamps
+        '''
+        split_idx = self._time_to_index(split_timestamp, sample_rate)
+        split_byte_idx = self._time_to_byte_index(split_timestamp,
+                    self.bytes_per_sample, num_channels, sample_rate)
+        with self.audio_stream_lock:
+            old_duration = self.accumulated_audio_duration
+            self.accumulated_audio = self.accumulated_audio[split_byte_idx:]
+            self.accumulated_timestamps =\
+                self.accumulated_timestamps[split_idx:]
+            self.accumulated_audio_duration -= split_timestamp
+            self.log.info(f"Audio data chopped from {old_duration} " +\
+                                    f"-> {self.accumulated_audio_duration}s...")
     
     def vad_server_request(self, file):
         '''
@@ -256,25 +268,36 @@ class VoiceActivityDetector(Node):
     
     def _handle_publication(self, audio_data, split_timestamp,
                      sample_byte_length, num_channels, sample_rate):
-        '''
-        TODO(derekahmed): Should publish messages for each split but here
-        we will do temporary file saving instead.
-        '''
-        with self.audio_stream_lock:
-            split_idx = self._time_to_byte_index(split_timestamp,
+        
+        # Obtain the audio "prefix" with detected voice activity (before split).
+        audio_prefix = None
+        split_byte_idx = self._time_to_byte_index(split_timestamp,
                 sample_byte_length, num_channels, sample_rate)
-            split_data = audio_data[:split_idx]
-            self.log.info("Writing VOCAL ACTIVITY DETECTED prefix of " +\
+        with self.audio_stream_lock:
+            audio_prefix = audio_data[:split_byte_idx]
+            self.log.info(f"Split @ {split_timestamp}s: ({split_byte_idx})")            
+            if self.debug_mode:
+                self.log.info("Writing VOCAL ACTIVITY DETECTED prefix of " +\
                           "currently accumulated audio data to \"split\" " +\
                           "temporary file.")
-            self.log.info(f"Split @ {split_timestamp}s: ({split_idx})")
-            if self.debug_mode:
                 self._create_temp_audio_file(
-                    split_data, sample_rate, num_channels,
-                    prefix=f"split-{self.debug_split_counter}-")
-            self.debug_split_counter += 1
+                    audio_prefix, sample_rate, num_channels,
+                    prefix=f"split-{self.split_counter}-")
+        self.split_counter += 1
 
-        # TODO(derekahmed): publish me
+        # Publish the audio "prefix" with detected voice activity
+        # (before split).
+        audio_msg = HeadsetAudioData()
+        audio_msg.header.stamp = self.accumulated_timestamps[0]
+        audio_msg.header.frame_id = "AudioData"
+        audio_msg.channels = num_channels
+        audio_msg.sample_rate = sample_rate
+        n_samples = split_byte_idx / (num_channels * sample_byte_length)
+        audio_msg.sample_duration = n_samples * sample_rate
+        audio_msg.data = struct.unpack(
+            'f' * int(split_byte_idx / sample_byte_length), audio_prefix)
+        self._publisher.publish(audio_msg)
+        self.log.info(f"Buffer of {int(split_byte_idx / sample_byte_length)} float32 was published")
 
     def _create_temp_audio_file(self, audio_data, sample_rate, num_channels,
                                 prefix=None):
@@ -324,8 +347,14 @@ class VoiceActivityDetector(Node):
         This mapping requires the sample frequency, the number of Bytes per
         sample, and the number of channels are inherently necessary.
         '''
-        return int(seconds_timestamp * sample_rate *\
-                   sample_byte_length * num_channels)
+        return self._time_to_index(seconds_timestamp, sample_rate) *\
+                   sample_byte_length * num_channels
+
+    def _time_to_index(self, seconds_timestamp, sample_rate):
+        '''
+        Maps a timestamp to corresponding index in a float32[] of audio data.
+        '''
+        return int(seconds_timestamp * sample_rate)
 
 def main():
     rclpy.init()
