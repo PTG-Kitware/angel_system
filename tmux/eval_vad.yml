@@ -56,7 +56,7 @@ windows:
       -r __ns:=${ROS_NAMESPACE}
       -p input_audio_topic:=HeadsetAudioData
       -p output_voice_activity_topic:=DetectedVoiceData
-      -p vad_server_url:=http://communication.cs.columbia.edu:8058/vad
+      -p vad_server_url:=http://communication.cs.columbia.edu:55667/vad
       -p vad_cadence:=2
       -p vad_margin:=0.25
       -p max_accumulation_length:=10

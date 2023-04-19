@@ -59,7 +59,7 @@ windows:
       -r __ns:=${ROS_NAMESPACE}
       -p input_audio_topic:=HeadsetAudioData
       -p output_voice_activity_topic:=DetectedVoiceData
-      -p vad_server_url:=http://communication.cs.columbia.edu:8058/vad
+      -p vad_server_url:=http://communication.cs.columbia.edu:55667/vad
       -p vad_cadence:=2
       -p vad_margin:=0.25
       -p max_accumulation_length:=10
@@ -67,7 +67,7 @@ windows:
       -r __ns:=${ROS_NAMESPACE}
       -p audio_topic:=DetectedVoiceData
       -p utterances_topic:=utterances_topic
-      -p asr_server_url:=http://communication.cs.columbia.edu:8058/asr
+      -p asr_server_url:=http://communication.cs.columbia.edu:55667/asr
       -p asr_req_segment_duration:=30
   - intent_detection: ros2 run angel_system_nodes intent_detector --ros-args
       -r __ns:=${ROS_NAMESPACE}
