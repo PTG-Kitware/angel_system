@@ -34,6 +34,7 @@ set( message_files
   msg/HeadsetAudioData.msg
   msg/HeadsetPoseData.msg
   msg/InterpretedAudioUserIntent.msg
+  msg/InterpretedAudioUserEmotion.msg
   msg/ObjectDetection2d.msg
   msg/ObjectDetection2dSet.msg
   msg/ObjectDetection3dSet.msg
