@@ -107,7 +107,7 @@ class VoiceActivityDetector(Node):
         self.num_channels = -1
         self.bytes_per_sample = FLOAT32_BYTE_LENGTH
         
-        self.debug_mode = True
+        self.debug_mode = False # Set this field to turn on debugging.
         # Used to keep track of number of vocal activity detection splits.
         self.split_counter = 0
 
