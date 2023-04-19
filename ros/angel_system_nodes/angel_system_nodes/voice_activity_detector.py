@@ -200,13 +200,9 @@ class VoiceActivityDetector(Node):
                                   audio_duration):
         with self.vad_server_lock:
 
-            # TODO(derekahmed): delete this. This is just for debugging.
-            if self.debug_mode:
-                temp_file = self._create_temp_audio_file(
-                    audio_data, sample_rate, num_channels,
-                    prefix=f"main-{self.n_cadence_steps}_")
-
-            
+            temp_file = self._create_temp_audio_file(
+                audio_data, sample_rate, num_channels,
+                prefix=f"main-{self.n_cadence_steps}_")
             voice_active_segments = self.vad_server_request(temp_file)
             split_timestamp = self._max_accumulation_sec_length
             if voice_active_segments:
