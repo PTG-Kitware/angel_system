@@ -77,19 +77,18 @@ python-versions = ">=3.6"
 
 [[package]]
 name = "attrs"
-version = "22.2.0"
+version = "23.1.0"
 description = "Classes Without Boilerplate"
 category = "main"
 optional = false
-python-versions = ">=3.6"
+python-versions = ">=3.7"
 
 [package.extras]
-cov = ["attrs", "coverage-enable-subprocess", "coverage[toml] (>=5.3)"]
-dev = ["attrs"]
-docs = ["furo", "sphinx", "myst-parser", "zope.interface", "sphinx-notfound-page", "sphinxcontrib-towncrier", "towncrier"]
-tests = ["attrs", "zope.interface"]
-tests-no-zope = ["hypothesis", "pympler", "pytest (>=4.3.0)", "pytest-xdist", "cloudpickle", "mypy (>=0.971,<0.990)", "pytest-mypy-plugins"]
-tests_no_zope = ["hypothesis", "pympler", "pytest (>=4.3.0)", "pytest-xdist", "cloudpickle", "mypy (>=0.971,<0.990)", "pytest-mypy-plugins"]
+cov = ["attrs", "coverage[toml] (>=5.3)"]
+dev = ["attrs", "pre-commit"]
+docs = ["furo", "myst-parser", "sphinx", "sphinx-notfound-page", "sphinxcontrib-towncrier", "towncrier", "zope-interface"]
+tests = ["attrs", "zope-interface"]
+tests-no-zope = ["cloudpickle", "hypothesis", "mypy (>=1.1.1)", "pympler", "pytest-mypy-plugins", "pytest-xdist", "pytest (>=4.3.0)"]
 
 [[package]]
 name = "autoprop"
@@ -184,11 +183,11 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "charset-normalizer"
-version = "3.0.1"
+version = "3.1.0"
 description = "The Real First Universal Charset Detector. Open, modern and actively maintained alternative to Chardet."
 category = "main"
 optional = false
-python-versions = "*"
+python-versions = ">=3.7.0"
 
 [[package]]
 name = "click"
@@ -259,7 +258,7 @@ python-versions = ">=3.6"
 
 [[package]]
 name = "cython"
-version = "0.29.33"
+version = "0.29.34"
 description = "The Cython compiler for writing C extensions for the Python language."
 category = "main"
 optional = false
@@ -275,11 +274,11 @@ python-versions = ">=3.5"
 
 [[package]]
 name = "docutils"
-version = "0.19"
+version = "0.18.1"
 description = "Docutils -- Python Documentation Utilities"
 category = "dev"
 optional = false
-python-versions = ">=3.7"
+python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 
 [[package]]
 name = "easydict"
@@ -326,14 +325,14 @@ tests = ["asttokens", "pytest", "littleutils", "rich"]
 
 [[package]]
 name = "fonttools"
-version = "4.38.0"
+version = "4.39.3"
 description = "Tools to manipulate font files"
 category = "main"
 optional = false
-python-versions = ">=3.7"
+python-versions = ">=3.8"
 
 [package.extras]
-all = ["fs (>=2.2.0,<3)", "lxml (>=4.0,<5)", "zopfli (>=0.1.4)", "lz4 (>=1.7.4.2)", "matplotlib", "sympy", "skia-pathops (>=0.5.0)", "uharfbuzz (>=0.23.0)", "brotlicffi (>=0.8.0)", "scipy", "brotli (>=1.0.1)", "munkres", "unicodedata2 (>=14.0.0)", "xattr"]
+all = ["fs (>=2.2.0,<3)", "lxml (>=4.0,<5)", "zopfli (>=0.1.4)", "lz4 (>=1.7.4.2)", "matplotlib", "sympy", "skia-pathops (>=0.5.0)", "uharfbuzz (>=0.23.0)", "brotlicffi (>=0.8.0)", "scipy", "brotli (>=1.0.1)", "munkres", "unicodedata2 (>=15.0.0)", "xattr"]
 graphite = ["lz4 (>=1.7.4.2)"]
 interpolatable = ["scipy", "munkres"]
 lxml = ["lxml (>=4.0,<5)"]
@@ -343,7 +342,7 @@ repacker = ["uharfbuzz (>=0.23.0)"]
 symfont = ["sympy"]
 type1 = ["xattr"]
 ufo = ["fs (>=2.2.0,<3)"]
-unicode = ["unicodedata2 (>=14.0.0)"]
+unicode = ["unicodedata2 (>=15.0.0)"]
 woff = ["zopfli (>=0.1.4)", "brotlicffi (>=0.8.0)", "brotli (>=1.0.1)"]
 
 [[package]]
@@ -440,7 +439,7 @@ tests = ["pytest", "pytest-cov", "coveralls"]
 
 [[package]]
 name = "hmmlearn"
-version = "0.2.8"
+version = "0.3.0"
 description = "Hidden Markov Models in Python with scikit-learn like API"
 category = "main"
 optional = false
@@ -448,7 +447,7 @@ python-versions = ">=3.6"
 
 [package.dependencies]
 numpy = ">=1.10"
-scikit-learn = ">=0.16"
+scikit-learn = ">=0.16,<0.22.0 || >0.22.0"
 scipy = ">=0.19"
 
 [package.extras]
@@ -478,7 +477,7 @@ python-versions = ">=3.5"
 
 [[package]]
 name = "imageio"
-version = "2.26.0"
+version = "2.28.0"
 description = "Library for reading and writing a wide range of image, video, scientific, and volumetric data formats."
 category = "main"
 optional = false
@@ -514,9 +513,9 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 
 [[package]]
 name = "importlib-metadata"
-version = "6.0.0"
+version = "6.6.0"
 description = "Read metadata from Python packages"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.7"
 
@@ -557,7 +556,7 @@ tqdm = "*"
 
 [[package]]
 name = "ipython"
-version = "8.11.0"
+version = "8.12.0"
 description = "IPython: Productive Interactive Computing"
 category = "dev"
 optional = false
@@ -576,6 +575,7 @@ prompt-toolkit = ">=3.0.30,<3.0.37 || >3.0.37,<3.1.0"
 pygments = ">=2.4.0"
 stack-data = "*"
 traitlets = ">=5"
+typing-extensions = {version = "*", markers = "python_version < \"3.10\""}
 
 [package.extras]
 all = ["black", "ipykernel", "setuptools (>=18.5)", "sphinx (>=1.3)", "sphinx-rtd-theme", "docrepr", "matplotlib", "stack-data", "pytest (<7)", "typing-extensions", "pytest (<7.1)", "pytest-asyncio", "testpath", "nbconvert", "nbformat", "ipywidgets", "notebook", "ipyparallel", "qtconsole", "curio", "matplotlib (!=3.2.0)", "numpy (>=1.21)", "pandas", "trio"]
@@ -656,7 +656,7 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "lightning-utilities"
-version = "0.7.1"
+version = "0.8.0"
 description = "PyTorch Lightning Sample project."
 category = "main"
 optional = false
@@ -743,7 +743,7 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "matplotlib"
-version = "3.7.0"
+version = "3.7.1"
 description = "Python plotting package"
 category = "main"
 optional = false
@@ -806,7 +806,7 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "mpmath"
-version = "1.2.1"
+version = "1.3.0"
 description = "Python library for arbitrary-precision floating-point arithmetic"
 category = "main"
 optional = false
@@ -814,6 +814,8 @@ python-versions = "*"
 
 [package.extras]
 develop = ["pytest (>=4.6)", "pycodestyle", "pytest-cov", "codecov", "wheel"]
+docs = ["sphinx"]
+gmpy = ["gmpy2 (>=2.1.0a4)"]
 tests = ["pytest (>=4.6)"]
 
 [[package]]
@@ -834,7 +836,7 @@ python-versions = ">=3.5"
 
 [[package]]
 name = "networkx"
-version = "3.0"
+version = "3.1"
 description = "Python package for creating and manipulating graphs and networks"
 category = "main"
 optional = false
@@ -842,8 +844,8 @@ python-versions = ">=3.8"
 
 [package.extras]
 default = ["numpy (>=1.20)", "scipy (>=1.8)", "matplotlib (>=3.4)", "pandas (>=1.3)"]
-developer = ["pre-commit (>=2.20)", "mypy (>=0.991)"]
-doc = ["sphinx (==5.2.3)", "pydata-sphinx-theme (>=0.11)", "sphinx-gallery (>=0.11)", "numpydoc (>=1.5)", "pillow (>=9.2)", "nb2plots (>=0.6)", "texext (>=0.6.7)"]
+developer = ["pre-commit (>=3.2)", "mypy (>=1.1)"]
+doc = ["sphinx (>=6.1)", "pydata-sphinx-theme (>=0.13)", "sphinx-gallery (>=0.12)", "numpydoc (>=1.5)", "pillow (>=9.4)", "nb2plots (>=0.6)", "texext (>=0.6.7)"]
 extra = ["lxml (>=4.6)", "pygraphviz (>=1.10)", "pydot (>=1.4.2)", "sympy (>=1.10)"]
 test = ["pytest (>=7.2)", "pytest-cov (>=4.0)", "codecov (>=2.1)"]
 
@@ -871,7 +873,7 @@ twitter = ["twython"]
 
 [[package]]
 name = "numpy"
-version = "1.24.2"
+version = "1.24.3"
 description = "Fundamental package for array computing in Python"
 category = "main"
 optional = false
@@ -907,7 +909,7 @@ numpy = [
 
 [[package]]
 name = "openpyxl"
-version = "3.1.1"
+version = "3.1.2"
 description = "A Python library to read/write Excel 2010 xlsx/xlsm files"
 category = "main"
 optional = false
@@ -918,7 +920,7 @@ et-xmlfile = "*"
 
 [[package]]
 name = "packaging"
-version = "23.0"
+version = "23.1"
 description = "Core utilities for Python packages"
 category = "main"
 optional = false
@@ -942,11 +944,11 @@ test = ["hypothesis (>=5.5.3)", "pytest (>=6.0)", "pytest-xdist (>=1.31)"]
 
 [[package]]
 name = "parameterized"
-version = "0.8.1"
+version = "0.9.0"
 description = "Parameterized testing with any Python test framework"
 category = "main"
 optional = false
-python-versions = "*"
+python-versions = ">=3.7"
 
 [package.extras]
 dev = ["jinja2"]
@@ -965,7 +967,7 @@ testing = ["docopt", "pytest (<6.0.0)"]
 
 [[package]]
 name = "pathspec"
-version = "0.11.0"
+version = "0.11.1"
 description = "Utility library for gitignore style pattern matching of file paths."
 category = "main"
 optional = false
@@ -1008,15 +1010,15 @@ python-versions = ">=3.6"
 
 [[package]]
 name = "platformdirs"
-version = "3.0.0"
+version = "3.3.0"
 description = "A small Python package for determining appropriate platform-specific dirs, e.g. a \"user data dir\"."
 category = "main"
 optional = false
 python-versions = ">=3.7"
 
 [package.extras]
-docs = ["furo (>=2022.12.7)", "proselint (>=0.13)", "sphinx-autodoc-typehints (>=1.22,!=1.23.4)", "sphinx (>=6.1.3)"]
-test = ["appdirs (==1.4.4)", "covdefaults (>=2.2.2)", "pytest-cov (>=4)", "pytest-mock (>=3.10)", "pytest (>=7.2.1)"]
+docs = ["furo (>=2023.3.27)", "proselint (>=0.13)", "sphinx-autodoc-typehints (>=1.23,!=1.23.4)", "sphinx (>=6.1.3)"]
+test = ["appdirs (==1.4.4)", "covdefaults (>=2.3)", "pytest-cov (>=4)", "pytest-mock (>=3.10)", "pytest (>=7.3.1)"]
 
 [[package]]
 name = "portalocker"
@@ -1047,7 +1049,7 @@ wcwidth = "*"
 
 [[package]]
 name = "psutil"
-version = "5.9.4"
+version = "5.9.5"
 description = "Cross-platform lib for process and system monitoring in Python."
 category = "main"
 optional = false
@@ -1131,11 +1133,11 @@ python-versions = "*"
 
 [[package]]
 name = "pygments"
-version = "2.14.0"
+version = "2.15.1"
 description = "Pygments is a syntax highlighting package written in Python."
 category = "main"
 optional = false
-python-versions = ">=3.6"
+python-versions = ">=3.7"
 
 [package.extras]
 plugins = ["importlib-metadata"]
@@ -1157,7 +1159,7 @@ six = "*"
 
 [[package]]
 name = "pyobjc-core"
-version = "9.0.1"
+version = "9.1.1"
 description = "Python<->ObjC Interoperability Module"
 category = "main"
 optional = false
@@ -1165,39 +1167,39 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "pyobjc-framework-applicationservices"
-version = "9.0.1"
+version = "9.1.1"
 description = "Wrappers for the framework ApplicationServices on macOS"
 category = "main"
 optional = false
 python-versions = ">=3.7"
 
 [package.dependencies]
-pyobjc-core = ">=9.0.1"
-pyobjc-framework-Cocoa = ">=9.0.1"
-pyobjc-framework-Quartz = ">=9.0.1"
+pyobjc-core = ">=9.1.1"
+pyobjc-framework-Cocoa = ">=9.1.1"
+pyobjc-framework-Quartz = ">=9.1.1"
 
 [[package]]
 name = "pyobjc-framework-cocoa"
-version = "9.0.1"
+version = "9.1.1"
 description = "Wrappers for the Cocoa frameworks on macOS"
 category = "main"
 optional = false
 python-versions = ">=3.7"
 
 [package.dependencies]
-pyobjc-core = ">=9.0.1"
+pyobjc-core = ">=9.1.1"
 
 [[package]]
 name = "pyobjc-framework-quartz"
-version = "9.0.1"
+version = "9.1.1"
 description = "Wrappers for the Quartz frameworks on macOS"
 category = "main"
 optional = false
 python-versions = ">=3.7"
 
 [package.dependencies]
-pyobjc-core = ">=9.0.1"
-pyobjc-framework-Cocoa = ">=9.0.1"
+pyobjc-core = ">=9.1.1"
+pyobjc-framework-Cocoa = ">=9.1.1"
 
 [[package]]
 name = "pyparsing"
@@ -1265,7 +1267,7 @@ six = ">=1.10.0"
 
 [[package]]
 name = "pytorch-lightning"
-version = "1.9.3"
+version = "1.9.5"
 description = "PyTorch Lightning is the lightweight PyTorch wrapper for ML researchers. Scale your models. Write less boilerplate."
 category = "main"
 optional = false
@@ -1283,17 +1285,17 @@ tqdm = ">=4.57.0"
 typing-extensions = ">=4.0.0"
 
 [package.extras]
-all = ["matplotlib (>3.1)", "omegaconf (>=2.0.5)", "hydra-core (>=1.0.5)", "jsonargparse[signatures] (>=4.18.0)", "rich (>=10.14.0,!=10.15.0.a)", "tensorboardX (>=2.2)", "colossalai (>=0.2.0)", "fairscale (>=0.4.5)", "deepspeed (>=0.6.0)", "horovod (>=0.21.2,!=0.24.0)", "torchvision (>=0.11.1)", "gym[classic_control] (>=0.17.0)", "ipython[all] (<8.7.1)", "hivemind (==1.1.5)"]
+all = ["matplotlib (>3.1)", "omegaconf (>=2.0.5)", "hydra-core (>=1.0.5)", "jsonargparse[signatures] (>=4.18.0)", "rich (>=10.14.0,!=10.15.0.a)", "tensorboardX (>=2.2)", "colossalai (>=0.2.0)", "fairscale (>=0.4.5)", "deepspeed (>=0.6.0)", "horovod (>=0.21.2,!=0.24.0)", "torchvision (>=0.11.1)", "gym[classic_control] (>=0.17.0)", "ipython[all] (<8.7.1)", "torchmetrics (>=0.10.0)", "hivemind (==1.1.5)"]
 colossalai = ["colossalai (>=0.2.0)"]
 deepspeed = ["deepspeed (>=0.6.0)"]
-dev = ["matplotlib (>3.1)", "omegaconf (>=2.0.5)", "hydra-core (>=1.0.5)", "jsonargparse[signatures] (>=4.18.0)", "rich (>=10.14.0,!=10.15.0.a)", "tensorboardX (>=2.2)", "colossalai (>=0.2.0)", "fairscale (>=0.4.5)", "deepspeed (>=0.6.0)", "horovod (>=0.21.2,!=0.24.0)", "torchvision (>=0.11.1)", "gym[classic_control] (>=0.17.0)", "ipython[all] (<8.7.1)", "coverage (==6.5.0)", "codecov (==2.1.12)", "pytest (==7.2.0)", "pytest-cov (==4.0.0)", "pytest-forked (==1.4.0)", "pytest-rerunfailures (==10.3)", "pre-commit (==2.20.0)", "cloudpickle (>=1.3)", "scikit-learn (>0.22.1)", "onnxruntime (<1.14.0)", "psutil (<5.9.5)", "pandas (>1.0)", "fastapi (<0.87.0)", "uvicorn (<0.19.1)", "tensorboard (>=2.9.1)", "protobuf (<=3.20.1)", "hivemind (==1.1.5)"]
-examples = ["torchvision (>=0.11.1)", "gym[classic_control] (>=0.17.0)", "ipython[all] (<8.7.1)"]
+dev = ["matplotlib (>3.1)", "omegaconf (>=2.0.5)", "hydra-core (>=1.0.5)", "jsonargparse[signatures] (>=4.18.0)", "rich (>=10.14.0,!=10.15.0.a)", "tensorboardX (>=2.2)", "colossalai (>=0.2.0)", "fairscale (>=0.4.5)", "deepspeed (>=0.6.0)", "horovod (>=0.21.2,!=0.24.0)", "torchvision (>=0.11.1)", "gym[classic_control] (>=0.17.0)", "ipython[all] (<8.7.1)", "torchmetrics (>=0.10.0)", "coverage (==6.5.0)", "codecov (==2.1.12)", "pytest (==7.2.0)", "pytest-cov (==4.0.0)", "pytest-forked (==1.4.0)", "pytest-rerunfailures (==10.3)", "pre-commit (==2.20.0)", "cloudpickle (>=1.3)", "scikit-learn (>0.22.1)", "onnx (<1.14.0)", "onnxruntime (<1.14.0)", "psutil (<5.9.5)", "pandas (>1.0)", "fastapi (<0.87.0)", "uvicorn (<0.19.1)", "tensorboard (>=2.9.1)", "protobuf (<=3.20.1)", "hivemind (==1.1.5)"]
+examples = ["torchvision (>=0.11.1)", "gym[classic_control] (>=0.17.0)", "ipython[all] (<8.7.1)", "torchmetrics (>=0.10.0)"]
 extra = ["matplotlib (>3.1)", "omegaconf (>=2.0.5)", "hydra-core (>=1.0.5)", "jsonargparse[signatures] (>=4.18.0)", "rich (>=10.14.0,!=10.15.0.a)", "tensorboardX (>=2.2)"]
 fairscale = ["fairscale (>=0.4.5)"]
 hivemind = ["hivemind (==1.1.5)"]
 horovod = ["horovod (>=0.21.2,!=0.24.0)"]
 strategies = ["colossalai (>=0.2.0)", "fairscale (>=0.4.5)", "deepspeed (>=0.6.0)", "horovod (>=0.21.2,!=0.24.0)", "hivemind (==1.1.5)"]
-test = ["coverage (==6.5.0)", "codecov (==2.1.12)", "pytest (==7.2.0)", "pytest-cov (==4.0.0)", "pytest-forked (==1.4.0)", "pytest-rerunfailures (==10.3)", "pre-commit (==2.20.0)", "cloudpickle (>=1.3)", "scikit-learn (>0.22.1)", "onnxruntime (<1.14.0)", "psutil (<5.9.5)", "pandas (>1.0)", "fastapi (<0.87.0)", "uvicorn (<0.19.1)", "tensorboard (>=2.9.1)", "protobuf (<=3.20.1)"]
+test = ["coverage (==6.5.0)", "codecov (==2.1.12)", "pytest (==7.2.0)", "pytest-cov (==4.0.0)", "pytest-forked (==1.4.0)", "pytest-rerunfailures (==10.3)", "pre-commit (==2.20.0)", "cloudpickle (>=1.3)", "scikit-learn (>0.22.1)", "onnx (<1.14.0)", "onnxruntime (<1.14.0)", "psutil (<5.9.5)", "pandas (>1.0)", "fastapi (<0.87.0)", "uvicorn (<0.19.1)", "tensorboard (>=2.9.1)", "protobuf (<=3.20.1)"]
 
 [[package]]
 name = "pytorchvideo"
@@ -1317,7 +1319,7 @@ test = ["coverage", "pytest", "opencv-python", "decord"]
 
 [[package]]
 name = "pytz"
-version = "2022.7.1"
+version = "2023.3"
 description = "World timezone definitions, modern and historical"
 category = "main"
 optional = false
@@ -1336,7 +1338,7 @@ numpy = ">=1.17.3"
 
 [[package]]
 name = "pywin32"
-version = "305"
+version = "306"
 description = "Python for Window Extensions"
 category = "main"
 optional = false
@@ -1389,15 +1391,15 @@ use_chardet_on_py3 = ["chardet (>=3.0.2,<6)"]
 
 [[package]]
 name = "rich"
-version = "13.3.1"
+version = "13.3.4"
 description = "Render rich text, tables, progress bars, syntax highlighting, markdown and more to the terminal"
 category = "main"
 optional = false
 python-versions = ">=3.7.0"
 
 [package.dependencies]
-markdown-it-py = ">=2.1.0,<3.0.0"
-pygments = ">=2.14.0,<3.0.0"
+markdown-it-py = ">=2.2.0,<3.0.0"
+pygments = ">=2.13.0,<3.0.0"
 typing-extensions = {version = ">=4.0.0,<5.0", markers = "python_version < \"3.9\""}
 
 [package.extras]
@@ -1437,7 +1439,7 @@ test = ["asv", "codecov", "flake8", "matplotlib (>=3.0.3)", "pooch (>=1.3.0)", "
 
 [[package]]
 name = "scikit-learn"
-version = "1.2.1"
+version = "1.2.2"
 description = "A set of python modules for machine learning and data mining"
 category = "main"
 optional = false
@@ -1523,14 +1525,14 @@ test = ["pytest", "pytest-cov"]
 
 [[package]]
 name = "signature-dispatch"
-version = "1.0.0"
+version = "1.0.1"
 description = "Execute the first function that matches the given arguments."
 category = "main"
 optional = false
-python-versions = "~=3.6"
+python-versions = "~=3.7"
 
 [package.dependencies]
-typeguard = "*"
+typeguard = ">=3.0,<4.0"
 
 [package.extras]
 doc = ["sphinx", "sphinx-rtd-theme", "autoclasstoc"]
@@ -1651,7 +1653,7 @@ python-versions = "*"
 
 [[package]]
 name = "sphinx"
-version = "6.1.3"
+version = "6.2.1"
 description = "Python documentation generator"
 category = "dev"
 optional = false
@@ -1661,7 +1663,7 @@ python-versions = ">=3.8"
 alabaster = ">=0.7,<0.8"
 babel = ">=2.9"
 colorama = {version = ">=0.4.5", markers = "sys_platform == \"win32\""}
-docutils = ">=0.18,<0.20"
+docutils = ">=0.18.1,<0.20"
 imagesize = ">=1.3"
 importlib-metadata = {version = ">=4.8", markers = "python_version < \"3.10\""}
 Jinja2 = ">=3.0"
@@ -1679,7 +1681,7 @@ sphinxcontrib-serializinghtml = ">=1.1.5"
 [package.extras]
 docs = ["sphinxcontrib-websupport"]
 lint = ["flake8 (>=3.5.0)", "flake8-simplify", "isort", "ruff", "mypy (>=0.990)", "sphinx-lint", "docutils-stubs", "types-requests"]
-test = ["pytest (>=4.6)", "html5lib", "cython"]
+test = ["pytest (>=4.6)", "html5lib", "cython", "filelock"]
 
 [[package]]
 name = "sphinx-prompt"
@@ -1696,17 +1698,19 @@ Sphinx = ">=6.0.0,<7.0.0"
 
 [[package]]
 name = "sphinx-rtd-theme"
-version = "0.5.1"
+version = "1.2.0"
 description = "Read the Docs theme for Sphinx"
 category = "dev"
 optional = false
-python-versions = "*"
+python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,>=2.7"
 
 [package.dependencies]
-sphinx = "*"
+docutils = "<0.19"
+sphinx = ">=1.6,<7"
+sphinxcontrib-jquery = {version = ">=2.0.0,<3.0.0 || >3.0.0", markers = "python_version > \"3\""}
 
 [package.extras]
-dev = ["transifex-client", "sphinxcontrib-httpdomain", "bump2version"]
+dev = ["transifex-client", "sphinxcontrib-httpdomain", "bump2version", "wheel"]
 
 [[package]]
 name = "sphinxcontrib-applehelp"
@@ -1743,6 +1747,17 @@ python-versions = ">=3.8"
 [package.extras]
 lint = ["flake8", "mypy", "docutils-stubs"]
 test = ["pytest", "html5lib"]
+
+[[package]]
+name = "sphinxcontrib-jquery"
+version = "4.1"
+description = "Extension to include jQuery on newer Sphinx releases"
+category = "dev"
+optional = false
+python-versions = ">=2.7"
+
+[package.dependencies]
+Sphinx = ">=1.8"
 
 [[package]]
 name = "sphinxcontrib-jsmath"
@@ -1830,7 +1845,7 @@ widechars = ["wcwidth"]
 
 [[package]]
 name = "termcolor"
-version = "2.2.0"
+version = "2.3.0"
 description = "ANSI color formatting for output in terminal"
 category = "main"
 optional = false
@@ -1849,7 +1864,7 @@ python-versions = ">=3.6"
 
 [[package]]
 name = "tifffile"
-version = "2023.2.28"
+version = "2023.4.12"
 description = "Read and write TIFF files"
 category = "main"
 optional = false
@@ -1894,7 +1909,7 @@ typing-extensions = "*"
 
 [[package]]
 name = "torchmetrics"
-version = "0.11.3"
+version = "0.11.4"
 description = "PyTorch native Metrics"
 category = "main"
 optional = false
@@ -1907,13 +1922,13 @@ torch = ">=1.8.1"
 typing-extensions = {version = "*", markers = "python_version < \"3.9\""}
 
 [package.extras]
-all = ["pystoi (<=0.3.3)", "torchvision (>=0.8)", "pycocotools (>2.0.0)", "scipy (>1.0.0)", "torch-fidelity (<=0.3.0)", "lpips (<=0.1.4)", "transformers (>=4.10.0)", "nltk (>=3.6)", "regex (>=2021.9.24)", "tqdm (>=4.41.0)"]
+all = ["pystoi (<=0.3.3)", "pycocotools (>2.0.0)", "torchvision (>=0.8)", "lpips (<=0.1.4)", "torch-fidelity (<=0.3.0)", "scipy (>1.0.0)", "transformers (>=4.10.0)", "tqdm (>=4.41.0)", "nltk (>=3.6)", "regex (>=2021.9.24)"]
 audio = ["pystoi (<=0.3.3)"]
-detection = ["torchvision (>=0.8)", "pycocotools (>2.0.0)"]
-image = ["torchvision (>=0.8)", "scipy (>1.0.0)", "torch-fidelity (<=0.3.0)", "lpips (<=0.1.4)"]
+detection = ["pycocotools (>2.0.0)", "torchvision (>=0.8)"]
+image = ["lpips (<=0.1.4)", "torch-fidelity (<=0.3.0)", "torchvision (>=0.8)", "scipy (>1.0.0)"]
 multimodal = ["transformers (>=4.10.0)"]
-test = ["pandas (>1.0.0)", "mypy (==0.982)", "torch-complex (<=0.4.3)", "phmdoctest (>=1.1.1)", "pytest-doctestplus (>=0.9.0)", "rouge-score (>0.1.0)", "huggingface-hub (<0.7)", "transformers (>4.4.0)", "cloudpickle (>1.3)", "types-pyyaml", "requests (<=2.28.2)", "psutil (<=5.9.4)", "fire (<=0.5.0)", "types-tabulate", "types-requests", "fast-bss-eval (>=0.1.0)", "types-protobuf", "coverage (>5.2)", "scikit-learn (>1.0)", "pytest (>=6.0.0)", "jiwer (>=2.3.0)", "kornia (>=0.6.7)", "pytest-timeout (<=2.1.0)", "scikit-image (>0.17.1)", "dython (<=0.7.3)", "pytest-rerunfailures (>=10.0)", "types-emoji", "netcal (>1.0.0)", "pytorch-msssim (==0.2.1)", "bert-score (==0.3.13)", "pypesq (>1.2)", "types-setuptools", "scipy (>1.0.0)", "mir-eval (>=0.6)", "pytest-cov (>2.10)", "types-six", "sacrebleu (>=2.0.0)"]
-text = ["nltk (>=3.6)", "regex (>=2021.9.24)", "tqdm (>=4.41.0)"]
+test = ["phmdoctest (>=1.1.1)", "bert-score (==0.3.13)", "types-setuptools", "scipy (>1.0.0)", "fast-bss-eval (>=0.1.0)", "mir-eval (>=0.6)", "pytorch-msssim (==0.2.1)", "types-emoji", "types-tabulate", "types-protobuf", "types-requests", "pytest-timeout (<=2.1.0)", "rouge-score (>0.1.0)", "fire (<=0.5.0)", "cloudpickle (>1.3)", "kornia (>=0.6.7)", "scikit-image (>0.17.1)", "huggingface-hub (<0.7)", "types-six", "requests (<=2.28.2)", "pytest-cov (>2.10)", "coverage (>5.2)", "pytest-doctestplus (>=0.9.0)", "dython (<=0.7.3)", "sacrebleu (>=2.0.0)", "pytest (>=6.0.0)", "netcal (>1.0.0)", "psutil (<=5.9.4)", "jiwer (>=2.3.0)", "transformers (>4.4.0)", "scikit-learn (>1.0)", "mypy (==0.982)", "pandas (>1.0.0)", "pypesq (>1.2)", "torch-complex (<=0.4.3)", "pytest-rerunfailures (>=10.0)", "types-pyyaml"]
+text = ["tqdm (>=4.41.0)", "nltk (>=3.6)", "regex (>=2021.9.24)"]
 
 [[package]]
 name = "torchvision"
@@ -1933,19 +1948,19 @@ scipy = ["scipy"]
 
 [[package]]
 name = "tornado"
-version = "6.2"
+version = "6.3.1"
 description = "Tornado is a Python web framework and asynchronous networking library, originally developed at FriendFeed."
 category = "dev"
 optional = false
-python-versions = ">= 3.7"
+python-versions = ">= 3.8"
 
 [[package]]
 name = "tqdm"
-version = "4.64.1"
+version = "4.65.0"
 description = "Fast, Extensible Progress Meter"
 category = "main"
 optional = false
-python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,>=2.7"
+python-versions = ">=3.7"
 
 [package.dependencies]
 colorama = {version = "*", markers = "platform_system == \"Windows\""}
@@ -2023,15 +2038,19 @@ test = ["ruff", "pytest", "pytest-cov", "coveralls", "autopep8", "pyinstrument",
 
 [[package]]
 name = "typeguard"
-version = "2.13.3"
+version = "3.0.2"
 description = "Run-time type checker for Python"
 category = "main"
 optional = false
-python-versions = ">=3.5.3"
+python-versions = ">=3.7.4"
+
+[package.dependencies]
+importlib-metadata = {version = ">=3.6", markers = "python_version < \"3.10\""}
+typing-extensions = {version = ">=4.4.0", markers = "python_version < \"3.11\""}
 
 [package.extras]
-doc = ["sphinx-rtd-theme", "sphinx-autodoc-typehints (>=1.2.0)"]
-test = ["pytest", "typing-extensions", "mypy"]
+doc = ["packaging", "sphinx-rtd-theme", "sphinx-autodoc-typehints (>=1.2.0)"]
+test = ["pytest (>=7)", "mypy (>=0.991)"]
 
 [[package]]
 name = "typing-extensions"
@@ -2043,7 +2062,7 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "urllib3"
-version = "1.26.14"
+version = "1.26.15"
 description = "HTTP library with thread-safe connection pooling, file post, and more."
 category = "main"
 optional = false
@@ -2053,6 +2072,17 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*"
 brotli = ["brotlicffi (>=0.8.0)", "brotli (>=1.0.9)", "brotlipy (>=0.6.0)"]
 secure = ["pyOpenSSL (>=0.14)", "cryptography (>=1.3.4)", "idna (>=2.0.0)", "certifi", "urllib3-secure-extra", "ipaddress"]
 socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
+
+[[package]]
+name = "vadersentiment"
+version = "3.3.2"
+description = "VADER Sentiment Analysis. VADER (Valence Aware Dictionary and sEntiment Reasoner) is a lexicon and rule-based sentiment analysis tool that is specifically attuned to sentiments expressed in social media, and works well on texts from other domains."
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+requests = "*"
 
 [[package]]
 name = "vecrec"
@@ -2079,7 +2109,7 @@ python-versions = "*"
 
 [[package]]
 name = "websockets"
-version = "11.0"
+version = "11.0.2"
 description = "An implementation of the WebSocket Protocol (RFC 6455 & 7692)"
 category = "main"
 optional = false
@@ -2114,7 +2144,7 @@ PyYAML = "*"
 
 [[package]]
 name = "yarl"
-version = "1.8.2"
+version = "1.9.2"
 description = "Yet another URL library"
 category = "main"
 optional = false
@@ -2139,7 +2169,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "flake8 (<5)", "pytest-co
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8,<3.10"
-content-hash = "1072e04b232df382e30646fac39e480b326f582376687c40a62947b5374a85c7"
+content-hash = "c3dadc340a5322eac59c18f4c69323215294a4162a3192c6d9be55616908b754"
 
 [metadata.files]
 aiohttp = []
@@ -2278,6 +2308,7 @@ sphinx-rtd-theme = []
 sphinxcontrib-applehelp = []
 sphinxcontrib-devhelp = []
 sphinxcontrib-htmlhelp = []
+sphinxcontrib-jquery = []
 sphinxcontrib-jsmath = []
 sphinxcontrib-qthelp = []
 sphinxcontrib-serializinghtml = []
@@ -2301,6 +2332,7 @@ trimesh = []
 typeguard = []
 typing-extensions = []
 urllib3 = []
+vadersentiment = []
 vecrec = []
 wcwidth = []
 websockets = []
