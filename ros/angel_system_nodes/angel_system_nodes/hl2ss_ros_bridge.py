@@ -25,6 +25,7 @@ from angel_msgs.msg import (
     HeadsetAudioData,
     HeadsetPoseData,
     SpatialMesh,
+    SpatialMeshes,
 )
 from angel_system.hl2ss_viewer import hl2ss
 from angel_utils import declare_and_get_parameters, RateTracker
@@ -178,7 +179,7 @@ class HL2SSROSBridge(Node):
         if self._sm_topic != DISABLE_TOPIC_STR:
             # Create the spatial map publisher
             self.ros_sm_publisher = self.create_publisher(
-                SpatialMesh,
+                SpatialMeshes,
                 self._sm_topic,
                 1
             )
@@ -466,6 +467,10 @@ class HL2SSROSBridge(Node):
 
             meshes = self.hl2ss_sm_client.get_meshes(tasks, n_threads)
             log.debug(f"Received {len(meshes)} meshes")
+
+            # Create the spatial mesh message for this mesh
+            spatial_meshes_msg = SpatialMeshes()
+
             for index, mesh in meshes.items():
                 id_hex = ids[index].hex()
 
@@ -504,10 +509,12 @@ class HL2SSROSBridge(Node):
                     m_v.z = float(v[2])
                     mesh_shape.vertices.append(m_v)
 
+                # Add this mesh to the group of meshes
                 spatial_mesh_msg.mesh = mesh_shape
+                spatial_meshes_msg.meshes.append(spatial_mesh_msg)
 
-                # Publish!
-                self.ros_sm_publisher.publish(spatial_mesh_msg)
+            # Publish!
+            self.ros_sm_publisher.publish(spatial_meshes_msg)
 
             time.sleep(self.sm_freq)
 
