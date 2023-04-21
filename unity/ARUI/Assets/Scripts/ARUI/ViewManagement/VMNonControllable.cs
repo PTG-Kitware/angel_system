@@ -2,7 +2,7 @@ using Microsoft.MixedReality.Toolkit.Input;
 using Microsoft.MixedReality.Toolkit.UI;
 using Newtonsoft.Json.Bson;
 using System.Collections.Generic;
-using System.Runtime.Remoting.Messaging;
+//using System.Runtime.Remoting.Messaging;
 using UnityEngine;
 
 public class VMNonControllable : VMObject
