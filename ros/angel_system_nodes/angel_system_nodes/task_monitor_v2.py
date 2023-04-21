@@ -8,9 +8,9 @@ from typing import cast
 from typing import Optional
 from typing import Set
 
+from builtin_interfaces.msg import Time
 import numpy as np
 import numpy.typing as npt
-from pynput import keyboard
 import rclpy
 from rclpy.node import Node
 import yaml
@@ -24,11 +24,7 @@ from angel_msgs.msg import (
 )
 from angel_msgs.srv import QueryTaskGraph
 from angel_system.activity_hmm.core import ActivityHMMRos
-from angel_utils.conversion import time_to_int
-
-
-KEY_LEFT_SQBRACKET = keyboard.KeyCode.from_char("[")
-KEY_RIGHT_SQBRACKET = keyboard.KeyCode.from_char("]")
+from angel_utils.conversion import time_to_int, nano_to_ros_time
 
 
 class HMMNode(Node):
@@ -70,6 +66,11 @@ class HMMNode(Node):
             self.declare_parameter("step_complete_threshold", 0.5)
             .get_parameter_value()
             .double_value
+        )
+        self._enable_manual_progression = (
+            self.declare_parameter("enable_manual_progression", True)
+            .get_parameter_value()
+            .bool_value
         )
         self._sys_cmd_topic = (
             self.declare_parameter("sys_cmd_topic", "")
@@ -114,6 +115,7 @@ class HMMNode(Node):
         # This may be removed from if step progress regresses.
         self._steps_skipped_cache: Set[int] = set()
         # Track the latest activity classification end time sent to the HMM
+        # Time is in integer nanoseconds (seconds * 1e9).
         self._latest_act_classification_end_time = None
 
         # Initialize ROS hooks
@@ -165,12 +167,17 @@ class HMMNode(Node):
 
         log.info(f"Starting HMM threads... done")
 
-        # Start the keyboard monitoring thread
-        log.info(f"Starting keyboard threads")
-        self._keyboard_t = Thread(target=self.monitor_keypress)
-        self._keyboard_t.daemon = True
-        self._keyboard_t.start()
-        log.info(f"Starting keyboard threads... done")
+        if self._enable_manual_progression:
+            # Intentional delayed import to enable use without a running X-server.
+            from pynput import keyboard
+            # Store module for local use.
+            self._keyboard = keyboard
+            # Start the keyboard monitoring thread
+            log.info(f"Starting keyboard threads")
+            self._keyboard_t = Thread(target=self.monitor_keypress)
+            self._keyboard_t.daemon = True
+            self._keyboard_t.start()
+            log.info(f"Starting keyboard threads... done")
 
     def _clean_skipped_cache(self, current_hmm_step_id: int) -> None:
         """Clear the error cache any IDs greater than the given."""
@@ -242,6 +249,13 @@ class HMMNode(Node):
         message.header.stamp = self.get_clock().now().to_msg()
         message.header.frame_id = "Task message"
         message.task_name = self._task_title
+        if self._latest_act_classification_end_time is not None:
+            message.latest_sensor_input_time = nano_to_ros_time(
+                self._latest_act_classification_end_time
+            )
+        else:
+            # Fill in a default time of 0.0 seconds.
+            message.latest_sensor_input_time = Time(0, 0)
 
         # Populate steps and current step
         with self._hmm_lock:
@@ -253,6 +267,7 @@ class HMMNode(Node):
                 message.current_step_id = -1
                 message.current_step = "None"
             else:
+                # Getting the index of the step in the list-of-strings
                 steps_list_id = message.steps.index(
                     self._current_step
                 )
@@ -456,7 +471,7 @@ class HMMNode(Node):
                  f"to proceed to the next step. Press the left-bracket key, `[`, "
                  f"to go back to the previous step.")
         # Collect events until released
-        with keyboard.Listener(on_press=self.on_press) as listener:
+        with self._keyboard.Listener(on_press=self.on_press) as listener:
             listener.join()
 
 
@@ -549,9 +564,9 @@ class HMMNode(Node):
         the task monitor advances to the next step. If the left arrow is
         pressed, the task monitor advances to the previous step.
         """
-        if key == KEY_RIGHT_SQBRACKET:
+        if key == self._keyboard.KeyCode.from_char("]"):
             forward = True
-        elif key == KEY_LEFT_SQBRACKET:
+        elif key == self._keyboard.KeyCode.from_char("["):
             forward = False
         else:
             return  # ignore

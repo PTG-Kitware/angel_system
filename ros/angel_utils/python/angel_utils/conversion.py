@@ -36,6 +36,19 @@ def time_to_int(time_msg: Time) -> int:
     return (time_msg.sec * SEC_TO_NANO) + time_msg.nanosec
 
 
+def nano_to_ros_time(timestamp: int) -> Time:
+    """
+    Convert an integer representing time in nanoseconds to ROS2 Time message
+    instance.
+
+    :param timestamp: Input time in nanoseconds (ns).
+    :return: ROS2 Time message representing the input time.
+    """
+    sec = timestamp // SEC_TO_NANO
+    nanosec = timestamp % SEC_TO_NANO
+    return Time(sec=sec, nanosec=nanosec)
+
+
 def hl2ss_stamp_to_ros_time(timestamp: int) -> Time:
     """
     Convert the HL2SS timestamp which is an integer in hundreds of ns (1e7) to
