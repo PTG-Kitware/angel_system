@@ -139,11 +139,10 @@ class BerkeleyObjectDetector(Node):
             message.bottom.append(br_y)
 
             # Add obj-obj and obj-hand info
-            message.obj_obj_contact_state.append(det["obj_obj_contact_sate"])
-            message.obj_hand_contact_state.append(det["obj_hand_contact_sate"])
-            # TODO add contact info confidences from decoded preds
-            message.obj_obj_contact_conf.append(0.0)
-            message.obj_hand_contact_conf.append(0.0)
+            message.obj_obj_contact_state.append(det["obj_obj_contact_state"])
+            message.obj_obj_contact_conf.append(det["obj_obj_contact_conf"])
+            message.obj_hand_contact_state.append(det["obj_hand_contact_state"])
+            message.obj_hand_contact_conf.append(det["obj_hand_contact_conf"])
 
         message.label_confidences = np.asarray(label_confidences, dtype=np.float64).ravel().tolist()
 
