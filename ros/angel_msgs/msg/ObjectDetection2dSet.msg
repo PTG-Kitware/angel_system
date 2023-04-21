@@ -44,3 +44,10 @@ int32 descriptor_dim
 # Flattened descriptor vector. The length of this list should be equal to
 # num_detections * descriptor_dims.
 float64[] descriptors
+
+# Optional fields for Berkeley object detector.
+# Each of these vectors is expected to be of length num_detections.
+bool[] obj_obj_contact_state
+float32[] obj_obj_contact_conf
+bool[] obj_hand_contact_state
+float32[] obj_hand_contact_conf
