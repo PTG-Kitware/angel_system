@@ -23,7 +23,7 @@ from detectron2.data.detection_utils import read_image
 from angel_system.berkeley.demo import predictor, model
 from detectron2.utils.visualizer import Visualizer
 
-from angel_system.berkeley.utils.data.dataloaders.common import Re_order, time_from_name
+from angel_system.berkeley.utils.data.dataloaders.common import Re_order, time_from_name, preds_to_kwcoco
 
 from dataloaders.load_kitware_coffee_data import coffee_activity_data_loader # Coffee specific
 from dataloaders.load_bbn_medical_data import bbn_activity_data_loader # M2 specific
@@ -43,6 +43,7 @@ def load_model(config, conf_thr=0.4):
     print("Arguments: " + str(args))
 
     cfg = model.setup_cfg(args)
+    print(f'Model: {cfg.MODEL.WEIGHTS}')
 
     demo = predictor.VisualizationDemo_add_smoothing(
         cfg,
@@ -53,7 +54,7 @@ def load_model(config, conf_thr=0.4):
     print(f'Loaded {model_config}')
     return demo
 
-def run_obj_detector_no_contact(demo, videos_dir, split):
+def run_obj_detector(demo, videos_dir, split, no_contact=False, add_hl_hands=True):
     """
     Run object detector trained without contact information 
     on all the videos associated with the task and clear any 
@@ -84,10 +85,11 @@ def run_obj_detector_no_contact(demo, videos_dir, split):
             if decoded_preds is not None:
                 preds[video_name][time_stamp] = decoded_preds
                 
-                for class_ in preds[video_name][time_stamp].keys():
-                    # Clear contact states
-                    preds[video_name][time_stamp][class_]['obj_obj_contact_state'] = False
-                    preds[video_name][time_stamp][class_]['obj_hand_contact_state'] = False
+                if no_contact:
+                    for class_ in preds[video_name][time_stamp].keys():
+                        # Clear contact states
+                        preds[video_name][time_stamp][class_]['obj_obj_contact_state'] = False
+                        preds[video_name][time_stamp][class_]['obj_hand_contact_state'] = False
                     
                 # Image metadata needed later
                 preds[video_name][time_stamp]['meta'] = {
@@ -96,25 +98,28 @@ def run_obj_detector_no_contact(demo, videos_dir, split):
                     'frame_idx': frame
                 }
 
-                # Add HL hand bounding boxes if we have them
-                all_hands = all_hand_pose_2d_image_space[time_stamp] if time_stamp in all_hand_pose_2d_image_space.keys() else [] 
-                if all_hands != []:
-                    for joints in all_hands:
-                        keys = list(joints['joints'].keys())
-                        hand_label = joints['hand']
+                if add_hl_hands:
+                    # Add HL hand bounding boxes if we have them
+                    all_hands = all_hand_pose_2d_image_space[time_stamp] if time_stamp in all_hand_pose_2d_image_space.keys() else [] 
+                    if all_hands != []:
+                        for joints in all_hands:
+                            keys = list(joints['joints'].keys())
+                            hand_label = joints['hand']
 
-                        all_x_values = [joints['joints'][k]['projected'][0] for k in keys]
-                        all_y_values = [joints['joints'][k]['projected'][1] for k in keys]
+                            all_x_values = [joints['joints'][k]['projected'][0] for k in keys]
+                            all_y_values = [joints['joints'][k]['projected'][1] for k in keys]
 
-                        hand_bbox = [min(all_x_values), min(all_y_values), 
-                                     max(all_x_values), max(all_y_values)] # tlbr
-                        
-                        preds[video_name][time_stamp][hand_label] = {
-                            "confidence_score": 1,
-                            "bbox": hand_bbox,
-                            "obj_obj_contact_state": False,
-                            "obj_hand_contact_state": False
-                        }
+                            hand_bbox = [min(all_x_values), min(all_y_values), 
+                                        max(all_x_values), max(all_y_values)] # tlbr
+                            
+                            preds[video_name][time_stamp][hand_label] = {
+                                "confidence_score": 1,
+                                "bbox": hand_bbox,
+                                "obj_obj_contact_state": False,
+                                "obj_obj_contact_conf": 0,
+                                "obj_hand_contact_state": False,
+                                "obj_hand_contact_conf": 0,
+                            }
 
             idx += 1
 
@@ -257,7 +262,7 @@ def find_closest_hands(object_pair, detected_classes, preds):
     return hand_label
 
 
-def update_contacts(preds, step_map, videos_dir):
+def update_preds(preds, step_map, videos_dir, no_contact=False):
     """
     Add the contact information back into the detections
     based on when the activities occurred and the contacts
@@ -269,12 +274,14 @@ def update_contacts(preds, step_map, videos_dir):
         gt_activity = coffee_activity_data_loader(video=video_name) # Coffee specific
         #gt_activity = bbn_activity_data_loader(videos_dir=videos_dir, video=video_name)
 
+        step_map['background'] = [['background', []]] # Add background to loop
+
         for step, substeps in step_map.items():
             for sub_step in substeps:
                 sub_step_str = sub_step[0].lower().strip().strip('.')
                 objects = sub_step[1]
 
-                matching_gts = gt_activity[sub_step_str]
+                matching_gts = gt_activity[sub_step_str] if sub_step_str in gt_activity.keys() else {}
                 
                 matching_preds = {}
                 for matching_gt in matching_gts:
@@ -282,14 +289,29 @@ def update_contacts(preds, step_map, videos_dir):
                                     if matching_gt['start'] <= ts <= matching_gt['end']}
                     matching_preds.update(matching_pred)
                 
-                
-                
                 for time_stamp in matching_preds.keys():
+                    detected_classes = list(preds[video_name][time_stamp].keys())
+                    preds[video_name][time_stamp]["meta"]["activity_gt"] = sub_step_str
+                    
+                    if not no_contact:
+                        # Keep original detections
+                        continue
+                    
+                    if sub_step_str == 'background':
+                        # Remove any detections from background frames
+                        for class_ in detected_classes:
+                            if class_ != 'meta':
+                                del preds[video_name][time_stamp][class_]
+
+                        activity_only_preds[video_name][time_stamp] = preds[video_name][time_stamp]
+                        print('background frame ')
+                        continue
+
                     found = []
                     for object_pair in objects:
+                        # Determine if we found the objects relevant to the activity
                         found_items = 0
-                        detected_classes = list(preds[video_name][time_stamp].keys())
-
+                        
                         obj_hand_contact_state = True if 'hand' in object_pair[0].lower() or 'hand' in object_pair[1].lower() else False
                         obj_obj_contact_state = not obj_hand_contact_state
 
@@ -308,7 +330,8 @@ def update_contacts(preds, step_map, videos_dir):
                                 # We might be missing part of a compound label
                                 # Let's try to fix that
                                 preds[video_name][time_stamp], replaced = replace_compound_label(preds[video_name][time_stamp], obj, detected_classes,
-                                                                  obj_hand_contact_state, obj_obj_contact_state)                  
+                                                                  obj_hand_contact_state, obj_obj_contact_state)
+                                detected_classes = list(preds[video_name][time_stamp].keys())               
                                 if replaced is not None:
                                     found_items += 1
                         
@@ -320,64 +343,14 @@ def update_contacts(preds, step_map, videos_dir):
                     if all(found):
                         print('Got all objects needed')
                         activity_only_preds[video_name][time_stamp] = preds[video_name][time_stamp]
-        
+                    
+    preds = activity_only_preds if no_contact else preds
     print("Updated contact metadata in predictions")
-    return activity_only_preds
-
-# Save
-def preds_to_kwcoco(metadata, preds, save_fn='result-with-contact.mscoco.json'):
-    """
-    Save the predicitions in the json file
-    format used by the detector training
-    """
-    dset = kwcoco.CocoDataset()
-
-    for class_ in metadata['thing_classes']:
-        dset.add_category(name=class_)
-
-    for video_name, predictions in preds.items():
-        dset.add_video(name=video_name)
-        vid = dset.index.name_to_video[video_name]['id']
-
-        for time_stamp in sorted(predictions.keys()):
-            dets = predictions[time_stamp]
-            fn = dets['meta']['file_name']
-            
-            dset.add_image(file_name=fn, video_id=vid, frame_index=dets['meta']['frame_idx'],
-                           width=dets['meta']['im_size']['width'], height=dets['meta']['im_size']['height'])
-            img = dset.index.file_name_to_img[fn]
-
-            del dets['meta']
-
-            for class_, det in dets.items():
-                cat = dset.index.name_to_cat[class_]
-                
-                xywh = kwimage.Boxes([det['bbox']], 'tlbr').toformat('xywh').data[0].tolist()
-
-                ann = {
-                    'area': xywh[2] * xywh[3],
-                    'image_id': img['id'],
-                    'category_id': cat['id'],
-                    'segmentation': [],
-                    'bbox': xywh,
-                    'confidence': det['confidence_score'],
-                    'obj-obj_contact_state': det['obj_obj_contact_state'],
-                    'obj-hand_contact_state': det['obj_hand_contact_state']
-                }
-                dset.add_annotation(**ann)
-                
-    dset.fpath = save_fn
-    dset.dump(dset.fpath, newlines=True)
-    print(f'Saved predictions with contact info to {save_fn}')
-
-    return dset
-
-
-
+    return preds
 
 def main():
-    demo = load_model(config='MC50-InstanceSegmentation/cooking/coffee/training_data/mask_rcnn_R_101_FPN_1x_demo.yaml') # Coffee specific
-    #demo = load_model(config='MC50-InstanceSegmentation/mask_rcnn_R_50_FPN_1x_BBN_M1_hands_M2_demo.yaml') # M2 specific
+    demo = load_model(config='MC50-InstanceSegmentation/cooking/coffee/preds/mask_rcnn_R_50_FPN_1x_demo.yaml')
+    #demo = load_model(config='MC50-InstanceSegmentation/cooking/coffee/training_data/mask_rcnn_R_101_FPN_1x_demo.yaml') # Coffee specific
     metadata = demo.metadata.as_dict()
 
     """
@@ -398,25 +371,34 @@ def main():
 
     training_split = {
         'train': [f'all_activities_{x}' for x in [2, 10, 25, 28, 35]],
-        'val': [f'all_activities_{x}' for x in [24, 45]]
+        'val': [f'all_activities_{x}' for x in [24, 45]],
+        'test': [f'all_activities_{x}' for x in [41, 42, 43]],
     } # Coffee specific
 
     if not os.path.exists('temp'):
         os.makedirs('temp')
 
-    for split in ['train', 'val']:#
-        preds_no_contact = run_obj_detector_no_contact(demo, videos_dir, split=training_split[split])
+    no_contact = False
+
+    for split in ['test']:#['train', 'val']:
+        # Raw detector output
+        preds_no_contact = run_obj_detector(demo, videos_dir, 
+                                            split=training_split[split], 
+                                            no_contact=no_contact, 
+                                            add_hl_hands=False)
 
         with open(f'temp/{split}_preds_no_contact.pickle', 'wb') as fh:
             #preds_no_contact = pickle.load(fh)
             pickle.dump(preds_no_contact, fh)
         
-        preds_with_contact = update_contacts(preds_no_contact, metadata['original_sub_steps'], videos_dir)
+        # Update contact info based on gt
+        preds_with_contact = update_preds(preds_no_contact, metadata['original_sub_steps'], videos_dir, no_contact)
+        
         
         with open(f'temp/{split}_preds_with_contact.pickle', 'wb') as fh:
             pickle.dump(preds_with_contact, fh)
-        
-        dset = preds_to_kwcoco(metadata, preds_with_contact, save_fn=f'coffee_preds_with_all_objects_{split}.mscoco.json')
+            
+        dset = preds_to_kwcoco(metadata, preds_with_contact, save_fn=f'coffee_preds_{split}.mscoco.json')
 
     # TODO: train on save_fn + save model
 
