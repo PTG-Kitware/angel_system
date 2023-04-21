@@ -38,6 +38,7 @@ set( message_files
   msg/ObjectDetection2dSet.msg
   msg/ObjectDetection3dSet.msg
   msg/SpatialMesh.msg
+  msg/SpatialMeshes.msg
   msg/SystemCommands.msg
   msg/TaskGraph.msg
   msg/TaskItem.msg
