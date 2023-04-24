@@ -339,7 +339,7 @@ class HL2SSROSBridge(Node):
                 image_msg.header.frame_id = "PVFramesBGR"
             except TypeError as e:
                 log.warning(f"{e}")
-                return
+                continue
 
             # Publish the image msg
             self.ros_frame_publisher.publish(image_msg)
