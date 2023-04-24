@@ -10,6 +10,7 @@ from torch.autograd import Variable
 from torchvision.ops import nms
 
 from angel_msgs.msg import ObjectDetection2dSet
+from angel_msgs.srv import QueryImageSize
 from angel_system.fasterrcnn.faster_rcnn.resnet import resnet
 from angel_system.fasterrcnn.processing_utils import _get_image_blob
 from angel_utils.conversion import time_to_int
@@ -68,6 +69,12 @@ class ObjectDetectorWithDescriptors(Node):
             .get_parameter_value()
             .string_value
         )
+        self._query_image_size_topic = (
+            self.declare_parameter("image_size_service",
+                                   "query_image_size")
+            .get_parameter_value()
+            .string_value
+        )
 
         log = self.get_logger()
         log.info(f"Image topic: {self._image_topic}")
@@ -76,6 +83,9 @@ class ObjectDetectorWithDescriptors(Node):
 
         self._model = None
         self._model_device = None
+
+        self._image_width = -1
+        self._image_height = -1
 
         self._subscription = self.create_subscription(
             Image,
@@ -87,6 +97,11 @@ class ObjectDetectorWithDescriptors(Node):
             ObjectDetection2dSet,
             self._desc_topic,
             1
+        )
+        self._img_size_service = self.create_service(
+            QueryImageSize,
+            self._query_image_size_topic,
+            self.query_image_size_callback
         )
 
         # Be able to receive a notification that there is a minimum time
@@ -111,6 +126,15 @@ class ObjectDetectorWithDescriptors(Node):
         self.anchors = [4, 8, 16, 32]
         self._detection_rate_tracker = RateTracker()
 
+
+    def query_image_size_callback(self, request, response):
+        """
+        Populate the `QueryImageSize` response with the current image size
+        and return it.
+        """
+        response.image_width = self._image_width
+        response.image_height = self._image_height
+        return response
 
     def get_model(self) -> torch.nn.Module:
         """
@@ -174,6 +198,10 @@ class ObjectDetectorWithDescriptors(Node):
             log.warn(f"Skipping frame with time {img_time_ns} ns <= min time "
                      f"{min_time} ns")
             return
+
+        # Update the current image dimensions
+        self._image_width = image.width
+        self._image_height = image.height
 
         log.info(f"Starting detection for frame time {img_time_ns} ns")
 
