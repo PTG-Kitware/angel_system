@@ -1,3 +1,4 @@
+import math
 import queue
 from threading import (
     Event,
@@ -21,8 +22,8 @@ from angel_msgs.srv import QueryImageSize
 from angel_utils.conversion import to_confidence_matrix
 from geometry_msgs.msg import Point
 
-import trimesh
-import trimesh.viewer
+import open3d as o3d
+
 
 # NOTE: These values were extracted from the projection matrix provided by the
 # Unity main camera with the Windows MR plugin (now deprecated).
@@ -37,7 +38,6 @@ PARAM_SM_TOPIC = "sm_topic"
 PARAM_DET_TOPIC = "det_topic"
 PARAM_HEAD_POSE_TOPIC = "headset_pose_topic"
 PARAM_DET_3D_TOPIC = "det_3d_topic"
-PARAM_DRAW_SCENE = "draw_scene"
 
 
 class SpatialMapSubscriber(Node):
@@ -51,7 +51,6 @@ class SpatialMapSubscriber(Node):
             PARAM_DET_TOPIC,
             PARAM_HEAD_POSE_TOPIC,
             PARAM_DET_3D_TOPIC,
-            PARAM_DRAW_SCENE,
         ]
         set_parameters = self.declare_parameters(
             namespace="",
@@ -70,7 +69,6 @@ class SpatialMapSubscriber(Node):
         self._det_topic = self.get_parameter(PARAM_DET_TOPIC).value
         self._headset_pose_topic = self.get_parameter(PARAM_HEAD_POSE_TOPIC).value
         self._det_3d_topic = self.get_parameter(PARAM_DET_3D_TOPIC).value
-        self._draw_scene = self.get_parameter(PARAM_DRAW_SCENE).value
         self.log.info(f"Spatial map topic: "
                       f"({type(self._spatial_map_topic).__name__}) "
                       f"{self._spatial_map_topic}")
@@ -83,70 +81,59 @@ class SpatialMapSubscriber(Node):
         self.log.info(f"Output detection topic: "
                       f"({type(self._det_3d_topic).__name__}) "
                       f"{self._det_3d_topic}")
-        self.log.info(f"Draw scene: "
-                      f"({type(self._draw_scene).__name__}) "
-                      f"{self._draw_scene}")
+
+        self.o3d_scene = o3d.t.geometry.RaycastingScene()
 
         # Create ROS pubs/subs
-        self._sm_cb_group = MutuallyExclusiveCallbackGroup()
         self._spatial_mesh_subscription = self.create_subscription(
             SpatialMeshes,
             self._spatial_map_topic,
             self.spatial_map_callback,
             1,
-            callback_group=self._sm_cb_group,
         )
-        self._det_cb_group = MutuallyExclusiveCallbackGroup()
         self._detection_subscription = self.create_subscription(
             ObjectDetection2dSet,
             self._det_topic,
             self.detection_callback,
             1,
-            callback_group=self._det_cb_group,
         )
-        self._headset_pose_cb_group = MutuallyExclusiveCallbackGroup()
         self._headset_pose_subscription = self.create_subscription(
             HeadsetPoseData,
             self._headset_pose_topic,
             self.headset_pose_callback,
             1,
-            callback_group=self._headset_pose_cb_group,
         )
-        self._det_3d_cb_group = MutuallyExclusiveCallbackGroup()
         self._object_3d_publisher = self.create_publisher(
             ObjectDetection3dSet,
             self._det_3d_topic,
             1,
-            callback_group=self._det_3d_cb_group,
         )
 
-        self.prev_time = -1
-        self.meshes = {}
         self.poses = []
         self.dets = queue.Queue()
 
         self.mesh_l = Lock()
 
-        if self._draw_scene:
-            self.scene = trimesh.Scene()
-
-        '''
-        # setup the image size query client and make sure the service is running
+        """
+        # Setup the image size query client and make sure the service is running
         self.image_size_client = self.create_client(QueryImageSize, 'query_image_size')
         while not self.image_size_client.wait_for_service(timeout_sec=1.0):
-            log.info("Waiting for image size service...")
+            self.log.info("Waiting for image size service...")
 
-        # send image size queries unti we get a valid response
+        # Send image size queries unti we get a valid response
         r = self.send_image_size_request()
-        log.info(f"Image size response {r}")
+        self.log.info(f"Image size response {r}")
         while (r.image_width <= 0 or r.image_height <= 0):
-            log.warn("Invalid image dimensions."
+            self.log.warn("Invalid image dimensions."
                      + " Make sure the image converter node is running and receiving frames")
 
             time.sleep(1)
             r = self.send_image_size_request()
-        log.info(f"Received valid image dimensions. Current size: {r.image_width}x{r.image_height}")
-        '''
+        self.log.info(f"Received valid image dimensions. Current size: {r.image_width}x{r.image_height}")
+        self.image_height = r.image_height
+        self.image_width = r.image_width
+
+        """
 
         self.image_height = 720
         self.image_width = 1280
@@ -203,7 +190,6 @@ class SpatialMapSubscriber(Node):
                         # image frame detections out of order
                         self.poses = self.poses[i:]
                         break
-                self.log.info("found matrix")
 
                 if world_matrix_1d is None or projection_matrix_1d is None:
                     self.log.info("Did not get world or projection matrix.")
@@ -218,37 +204,6 @@ class SpatialMapSubscriber(Node):
                                                         np.array([0.0, 0.0, 0.0])).reshape((1, 3))
                 self.log.debug(f"origin {camera_origin}")
 
-                if self._draw_scene:
-                    # compute the x, y, and z axes for this image
-                    x_dir = self.get_world_position(world_matrix_2d,
-                                                    np.array([1.0, 0.0, 0.0])).flatten()
-
-                    y_dir = self.get_world_position(world_matrix_2d,
-                                                    np.array([0.0, 1.0, 0.0])).flatten()
-
-                    z_dir = self.get_world_position(world_matrix_2d,
-                                                    np.array([0.0, 0.0, 1.0])).flatten()
-
-                    # plot the x, y, and z axes on the scene
-                    vs = np.array([camera_origin[0], x_dir])
-                    el = trimesh.path.entities.Line([0, 1])
-                    path = trimesh.path.Path3D(entities=[el], vertices=vs,
-                                               colors=np.array([255, 0, 0, 255]).reshape(1, 4))
-                    self.scene.add_geometry(path)
-
-                    vs = np.array([camera_origin[0], y_dir])
-                    el = trimesh.path.entities.Line([0, 1])
-                    path = trimesh.path.Path3D(entities=[el], vertices=vs,
-                                               colors=np.array([0, 255, 0, 255]).reshape(1, 4))
-                    self.scene.add_geometry(path)
-
-                    vs = np.array([camera_origin[0], z_dir])
-                    el = trimesh.path.entities.Line([0, 1])
-                    path = trimesh.path.Path3D(entities=[el], vertices=vs,
-                                               colors=np.array([0, 0, 255, 255]).reshape(1, 4))
-                    self.scene.add_geometry(path)
-                    #self.scene.show()
-
                 # get projection matrix from detection
                 projection_matrix_2d = self.convert_1d_4x4_to_2d_matrix(projection_matrix_1d)
 
@@ -262,17 +217,12 @@ class SpatialMapSubscriber(Node):
                 det_conf_mat = to_confidence_matrix(detection)
                 for i in range(detection.num_detections):
                     object_type = sorted(zip(det_conf_mat[i], detection.label_vec))[-1][1]
-                    self.log.info(f"object type {object_type}")
 
                     # get pixel positions of detected object box and form into box corners
                     min_vertex0 = detection.left[i]
                     min_vertex1 = detection.top[i]
                     max_vertex0 = detection.right[i]
                     max_vertex1 = detection.bottom[i]
-                    image_min_vertex0 = 0
-                    image_min_vertex1 = 0
-                    image_max_vertex0 = self.image_width
-                    image_max_vertex1 = self.image_height
 
                     corners_screen_pos = [[min_vertex0, min_vertex1], [min_vertex0, max_vertex1],
                                           [max_vertex0, max_vertex1], [max_vertex0, min_vertex1]]
@@ -288,7 +238,6 @@ class SpatialMapSubscriber(Node):
                         if point_3d is None:
                             self.log.debug("No point found!")
                             all_points_found = False
-                            #self.scene.show()
                             break
 
                         corners_world_pos.append(point_3d)
@@ -296,63 +245,6 @@ class SpatialMapSubscriber(Node):
                     if not all_points_found:
                         # Skip this detection, not all 3D points found
                         continue
-
-                    if self._draw_scene:
-                        self.log.debug(f"Drawing box for {object_type}")
-                        vs = np.array([corners_world_pos[0], corners_world_pos[1],
-                                       corners_world_pos[2], corners_world_pos[3]])
-                        try:
-                            el = trimesh.path.entities.Line([0, 1, 2, 3, 0])
-                            path = trimesh.path.Path3D(entities=[el], vertices=vs)
-                            self.scene.add_geometry(path)
-                        except OverflowError:
-                            pass
-
-                        # Draw the image edges
-                        bounds_screen_pos = [
-                                             [image_min_vertex0, image_min_vertex1],
-                                             [image_min_vertex0, image_max_vertex1],
-                                             [image_max_vertex0, image_max_vertex1],
-                                             [image_max_vertex0, image_min_vertex1]
-                                            ]
-                        image_corners_world_pos = []
-                        for p in bounds_screen_pos:
-                            scaled_point = self.scale_pixel_coordinates(p)
-
-                            # see note with these constants for why we are not using the
-                            # focal length values from the projection matrix
-                            focal_length_x = FOCAL_LENGTH_X
-                            focal_length_y = FOCAL_LENGTH_Y
-
-                            center_x = projection_matrix_2d[0][2]
-                            center_y = projection_matrix_2d[1][2]
-
-                            norm_factor = projection_matrix_2d[2][2]
-                            center_x = center_x / norm_factor # 0
-                            center_y = center_y / norm_factor # 0
-
-                            # convert to camera space
-                            # NOTE: The negative sign in the z-direction is to convert
-                            # between the left-handed Unity coordinates and the right-handed
-                            # trimesh scene coordinates.
-                            dir_ray = np.array([(scaled_point[0] - center_x) / focal_length_x,
-                                                (scaled_point[1] - center_y) / focal_length_y,
-                                                -1.0 / norm_factor]).reshape((1, 3))
-
-                            # project camera space onto world position
-                            direction = self.get_world_position(world_matrix_2d, dir_ray[0]).reshape((1, 3))
-
-                            image_corners_world_pos.append(direction[0])
-
-                        vs = np.array([image_corners_world_pos[0], image_corners_world_pos[1],
-                                       image_corners_world_pos[2], image_corners_world_pos[3]])
-                        el = trimesh.path.entities.Line([0, 1, 2, 3, 0])
-                        path = trimesh.path.Path3D(
-                            entities=[el],
-                            vertices=vs,
-                            colors=np.array([255, 0, 255, 255]).reshape(1, 4)
-                        )
-                        self.scene.add_geometry(path)
 
                     # Since we were able to find this object's 3D position,
                     # add it to 3d detection message
@@ -380,9 +272,6 @@ class SpatialMapSubscriber(Node):
                 self._object_3d_publisher.publish(det_3d_set_msg)
                 self.log.info(f"Published 3d detections with {det_3d_set_msg.num_objects} dets")
 
-                if self._draw_scene:
-                    self.scene.show()
-
         log.info("Runtime function end.")
 
     def send_image_size_request(self):
@@ -396,9 +285,13 @@ class SpatialMapSubscriber(Node):
         return future.result()
 
     def spatial_map_callback(self, msg):
+        """
+        Callback function for the spatial meshes subscriber. Extracts the
+        meshes and adds them to the Open3d scene.
+        """
         with self.mesh_l:
             # Clear the old meshes
-            self.meshes = {}
+            self.o3d_scene = o3d.t.geometry.RaycastingScene()
 
             for m in msg.meshes:
                 # extract the vertices into np arrays
@@ -409,16 +302,21 @@ class SpatialMapSubscriber(Node):
                                        t.vertex_indices[1],
                                        t.vertex_indices[2]] for t in m.mesh.triangles])
 
-                mesh = trimesh.Trimesh(vertices=vertices, faces=triangles)
-                self.meshes[m.mesh_id] = mesh
+                open3d_mesh = o3d.geometry.TriangleMesh()
+                open3d_mesh.vertices = o3d.utility.Vector3dVector(vertices)
+                open3d_mesh.triangles = o3d.utility.Vector3iVector(triangles)
+
+                self.o3d_scene.add_triangles(
+                    o3d.t.geometry.TriangleMesh.from_legacy(open3d_mesh)
+                )
 
         self.log.info("Received updated meshes")
 
-        if self._draw_scene:
-            self.scene.add_geometry(mesh)
-            #self.scene.show()
-
     def headset_pose_callback(self, pose):
+        """
+        Callback function for headset post messages. Appends the pose msg to
+        list of stored poses.
+        """
         self.log.debug(f"pose stamp: {pose.header.stamp}")
         self.poses.append(pose)
 
@@ -438,20 +336,33 @@ class SpatialMapSubscriber(Node):
         self._rt_awake_evt.set()
 
     def cast_ray(self, origin, direction):
+        """
+        Casts a ray from the given `origin` point in the direction of `direction`.
+
+        Returns the closest intersecting point, if there is an intersection
+        with any of the meshes in the scene, otherwise returns None.
+        """
         with self.mesh_l:
-            intersection_points = []
-            for _, m in self.meshes.items():
-                ray_intersector = trimesh.ray.ray_triangle.RayMeshIntersector(m)
-                try:
-                    intersection = ray_intersector.intersects_location(origin, direction)
-                except:
-                    continue
+            origin_np = np.array(origin).squeeze()
+            dir_np = np.array(direction).squeeze()
 
-                if (len(intersection[0])) != 0:
-                    for i in intersection[0]:
-                        intersection_points.append(i)
+            # Define the ray
+            rays = o3d.core.Tensor([[origin[0][0], origin[0][1], origin[0][2],
+                                    direction[0][0], direction[0][1], direction[0][2]]],
+                                   dtype=o3d.core.Dtype.Float32)
 
-        return intersection_points
+            # Cast ray and get the intersection distance
+            ans = self.o3d_scene.cast_rays(rays)
+            distance = ans["t_hit"][0].numpy()
+
+            if distance != math.inf:
+                # Compute intersection point from distance and direction ray
+                intersecting_point = origin_np + distance * dir_np
+            else:
+                # Infinite distance returned if no intersection
+                intersecting_point = None
+
+            return intersecting_point
 
     def get_world_position(self, world_matrix, point):
         point_matrix = np.array([point[0], point[1], point[2], 1])
@@ -469,6 +380,11 @@ class SpatialMapSubscriber(Node):
     def convert_pixel_coord_to_world_coord(self, world_matrix_2d,
                                            projection_matrix, p, camera_origin):
         """
+        Converts a point, p, in pixel coordinates to its 3d world position using
+        the camera to world matrix, camera project matrix, and camera origin.
+
+        If no world point is found, None is returned.
+
         Adapted from https://github.com/VulcanTechnologies/HoloLensCameraStream
         """
         scaled_point = self.scale_pixel_coordinates(p)
@@ -488,7 +404,7 @@ class SpatialMapSubscriber(Node):
         # convert coords to camera space
         # NOTE: The negative sign in the z-direction is to convert
         # between the left-handed Unity coordinates and the right-handed
-        # trimesh scene coordinates.
+        # scene coordinates.
         dir_ray = np.array([(scaled_point[0] - center_x) / focal_length_x,
                             (scaled_point[1] - center_y) / focal_length_y,
                             -1.0 / norm_factor]).reshape((1, 3))
@@ -497,54 +413,10 @@ class SpatialMapSubscriber(Node):
         # project camera space onto world position
         direction = self.get_world_position(world_matrix_2d, dir_ray[0]).reshape((1, 3))
 
-        if self._draw_scene:
-            vs = np.array([camera_origin[0], direction[0]])
-            el = trimesh.path.entities.Line([0, 1])
-            path = trimesh.path.Path3D(
-                entities=[el],
-                vertices=vs,
-                colors=np.array([255, 255, 0, 255]).reshape(1, 4)
-            )
-            self.scene.add_geometry(path)
-            #self.scene.show()
-
         self.log.debug(f"direction: {direction}")
         self.log.debug(f"origin : {camera_origin}")
 
-        self.log.info("casting ray")
-        intersecting_points = self.cast_ray(camera_origin, direction - camera_origin)
-        if intersecting_points is None:
-            self.log.info("No intersecting meshes found!")
-            return None
-        self.log.info("casting ray done")
-
-        self.log.info("processing points")
-        closest_point = None
-        try:
-            self.log.debug(f"Points found {intersecting_points}")
-
-            # if there is more than one point found, use the closest one to the camera
-            min_distance = -1
-            for point in intersecting_points:
-                # calculate distance between this point and the camera
-                distance = ((camera_origin[0][0] - point[0]) ** 2 +
-                            (camera_origin[0][1] - point[1]) ** 2 +
-                            (camera_origin[0][2] - point[2]) ** 2) ** 0.5
-                self.log.debug(f"Point {p}: distance = {distance}")
-                if min_distance == -1:
-                    min_distance = distance
-                    closest_point = point
-                elif distance < min_distance:
-                    min_distance = distance
-                    closest_point = point
-
-            #closest_point[2] = -closest_point[2]
-            self.log.debug(f"Closest point = {closest_point}")
-        except Exception as e:
-            self.log.info(str(e))
-
-        self.log.info("processing points done")
-        return closest_point
+        return self.cast_ray(camera_origin, direction - camera_origin)
 
     def scale_pixel_coordinates(self, p):
         """
@@ -577,28 +449,11 @@ def main():
 
     spatial_mapper = SpatialMapSubscriber()
 
-    # If things are going wrong, set this False to debug in a serialized setup.
-    do_multithreading = True
-
-    if do_multithreading:
-        # Don't really want to use *all* available threads...
-        # 5 threads because:
-        # - 3 known subscribers which have their own groups
-        # - 1 for default group
-        # - 1 for publishers
-        executor = MultiThreadedExecutor(num_threads=5)
-        executor.add_node(spatial_mapper)
-        try:
-            executor.spin()
-        except KeyboardInterrupt:
-            spatial_mapper.stop_runtime()
-            spatial_mapper.get_logger().info("Keyboard interrupt, shutting down.\n")
-    else:
-        try:
-            rclpy.spin(spatial_mapper)
-        except KeyboardInterrupt:
-            spatial_mapper.stop_runtime()
-            spatial_mapper.get_logger().info("Keyboard interrupt, shutting down.\n")
+    try:
+        rclpy.spin(spatial_mapper)
+    except KeyboardInterrupt:
+        spatial_mapper.stop_runtime()
+        spatial_mapper.get_logger().info("Keyboard interrupt, shutting down.\n")
 
     # Destroy the node explicitly
     # (optional - otherwise it will be done automatically
