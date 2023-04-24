@@ -82,7 +82,48 @@ class SpatialMapSubscriber(Node):
                       f"({type(self._det_3d_topic).__name__}) "
                       f"{self._det_3d_topic}")
 
+        # Spatial meshes are added to this scene
         self.o3d_scene = o3d.t.geometry.RaycastingScene()
+
+        self.poses = []
+        self.dets = queue.Queue()
+        self.mesh_l = Lock()
+
+        # Setup the image size query client and make sure the service is running
+        self.image_size_client = self.create_client(QueryImageSize, 'query_image_size')
+        while not self.image_size_client.wait_for_service(timeout_sec=1.0):
+            self.log.info("Waiting for image size service...")
+
+        # Send image size queries unti we get a valid response
+        r = self.send_image_size_request()
+        self.log.info(f"Image size response {r}")
+        while (r.image_width <= 0 or r.image_height <= 0):
+            self.log.warn("Invalid image dimensions."
+                     + " Make sure the image converter node is running and receiving frames")
+
+            time.sleep(1)
+            r = self.send_image_size_request()
+        self.log.info(f"Received valid image dimensions. Current size: {r.image_width}x{r.image_height}")
+        self.image_height = r.image_height
+        self.image_width = r.image_width
+
+        # Start the runtime thread
+        self.log.info("Starting mapper thread...")
+        # switch for runtime loop
+        self._rt_active = Event()
+        self._rt_active.set()
+        # seconds to occasionally time out of the wait condition for the loop
+        # to check if it is supposed to still be alive.
+        self._rt_active_heartbeat = 0.1  # TODO: Parameterize?
+        # Event to notify runtime it should try processing now.
+        self._rt_awake_evt = Event()
+        self._rt_thread = Thread(
+            target=self.thread_mapper_runtime,
+            name="mapper_runtime"
+        )
+        self._rt_thread.daemon = True
+        self._rt_thread.start()
+        self.log.info("Starting mapper thread... Done")
 
         # Create ROS pubs/subs
         self._spatial_mesh_subscription = self.create_subscription(
@@ -108,53 +149,6 @@ class SpatialMapSubscriber(Node):
             self._det_3d_topic,
             1,
         )
-
-        self.poses = []
-        self.dets = queue.Queue()
-
-        self.mesh_l = Lock()
-
-        """
-        # Setup the image size query client and make sure the service is running
-        self.image_size_client = self.create_client(QueryImageSize, 'query_image_size')
-        while not self.image_size_client.wait_for_service(timeout_sec=1.0):
-            self.log.info("Waiting for image size service...")
-
-        # Send image size queries unti we get a valid response
-        r = self.send_image_size_request()
-        self.log.info(f"Image size response {r}")
-        while (r.image_width <= 0 or r.image_height <= 0):
-            self.log.warn("Invalid image dimensions."
-                     + " Make sure the image converter node is running and receiving frames")
-
-            time.sleep(1)
-            r = self.send_image_size_request()
-        self.log.info(f"Received valid image dimensions. Current size: {r.image_width}x{r.image_height}")
-        self.image_height = r.image_height
-        self.image_width = r.image_width
-
-        """
-
-        self.image_height = 720
-        self.image_width = 1280
-
-        # Start the runtime thread
-        self.log.info("Starting mapper thread...")
-        # switch for runtime loop
-        self._rt_active = Event()
-        self._rt_active.set()
-        # seconds to occasionally time out of the wait condition for the loop
-        # to check if it is supposed to still be alive.
-        self._rt_active_heartbeat = 0.1  # TODO: Parameterize?
-        # Event to notify runtime it should try processing now.
-        self._rt_awake_evt = Event()
-        self._rt_thread = Thread(
-            target=self.thread_mapper_runtime,
-            name="mapper_runtime"
-        )
-        self._rt_thread.daemon = True
-        self._rt_thread.start()
-        self.log.info("Starting mapper thread... Done")
 
     def thread_mapper_runtime(self):
         """
