@@ -93,7 +93,7 @@ class HL2SSROSBridge(Node):
 
     def __init__(self):
         super().__init__(self.__class__.__name__)
-        self.log = self.get_logger()
+        log = self.get_logger()
 
         parameter_names = [
             PARAM_PV_IMAGES_TOPIC,
@@ -115,7 +115,7 @@ class HL2SSROSBridge(Node):
         for p in set_parameters:
             if p.type_ is rclpy.parameter.Parameter.Type.NOT_SET:
                 some_not_set = True
-                self.log.error(f"Parameter not set: {p.name}")
+                log.error(f"Parameter not set: {p.name}")
         if some_not_set:
             raise ValueError("Some parameters are not set.")
 
@@ -128,31 +128,31 @@ class HL2SSROSBridge(Node):
         self.pv_height = self.get_parameter(PARAM_PV_HEIGHT).value
         self.pv_framerate = self.get_parameter(PARAM_PV_FRAMERATE).value
         self.sm_freq = self.get_parameter(PARAM_SM_FREQ).value
-        self.log.info(f"PV Images topic: "
+        log.info(f"PV Images topic: "
                       f"({type(self._image_topic).__name__}) "
                       f"{self._image_topic}")
-        self.log.info(f"Hand pose topic: "
+        log.info(f"Hand pose topic: "
                       f"({type(self._hand_pose_topic).__name__}) "
                       f"{self._hand_pose_topic}")
-        self.log.info(f"Audio topic: "
+        log.info(f"Audio topic: "
                       f"({type(self._audio_topic).__name__}) "
                       f"{self._audio_topic}")
-        self.log.info(f"Spatial Mesh topic: "
+        log.info(f"Spatial Mesh topic: "
                       f"({type(self._sm_topic).__name__}) "
                       f"{self._sm_topic}")
-        self.log.info(f"HL2 IP address: "
+        log.info(f"HL2 IP address: "
                       f"({type(self.ip_addr).__name__}) "
                       f"{self.ip_addr}")
-        self.log.info(f"PV Width: "
+        log.info(f"PV Width: "
                       f"({type(self.pv_width).__name__}) "
                       f"{self.pv_width}")
-        self.log.info(f"PV Height: "
+        log.info(f"PV Height: "
                       f"({type(self.pv_height).__name__}) "
                       f"{self.pv_height}")
-        self.log.info(f"PV Framerate: "
+        log.info(f"PV Framerate: "
                       f"({type(self.pv_framerate).__name__}) "
                       f"{self.pv_framerate}")
-        self.log.info(f"Spatial map update frequency: "
+        log.info(f"Spatial map update frequency: "
                       f"({type(self.sm_freq).__name__}) "
                       f"{self.sm_freq}")
 
@@ -187,17 +187,17 @@ class HL2SSROSBridge(Node):
             1
         )
 
-        self.log.info("Connecting to HL2SS servers...")
+        log.info("Connecting to HL2SS servers...")
         self.connect_hl2ss_pv()
-        self.log.info("PV client connected!")
+        log.info("PV client connected!")
         self.connect_hl2ss_si()
-        self.log.info("SI client connected!")
+        log.info("SI client connected!")
         self.connect_hl2ss_audio()
-        self.log.info("Audio client connected!")
+        log.info("Audio client connected!")
         self.connect_hl2ss_sm()
-        self.log.info("SM client connected!")
+        log.info("SM client connected!")
 
-        self.log.info("Starting publishing threads...")
+        log.info("Starting publishing threads...")
         # Start the frame publishing thread
         self._pv_active = Event()
         self._pv_active.set()
@@ -238,7 +238,7 @@ class HL2SSROSBridge(Node):
         )
         self._sm_thread.daemon = True
         self._sm_thread.start()
-        self.log.info("Starting publishing threads... Done")
+        log.info("Starting publishing threads... Done")
 
     def connect_hl2ss_pv(self) -> None:
         """
@@ -309,45 +309,49 @@ class HL2SSROSBridge(Node):
         """
         Shuts down the frame publishing thread and the HL2SS client.
         """
+        log = self.get_logger()
+
         # Stop frame publishing thread
         self._pv_active.clear()  # make RT active flag "False"
         self._pv_thread.join()
-        self.log.info("PV thread closed")
+        log.info("PV thread closed")
 
         # Stop SI publishing thread
         self._si_active.clear()
         self._si_thread.join()
-        self.log.info("SI thread closed")
+        log.info("SI thread closed")
 
         # Stop audio publishing thread
         self._audio_active.clear()
         self._audio_thread.join()
-        self.log.info("Audio thread closed")
+        log.info("Audio thread closed")
 
         # Stop SM publishing thread
         self._sm_active.clear()
         self._sm_thread.join()
-        self.log.info("SM thread closed")
+        log.info("SM thread closed")
 
         # Close client connections
         self.hl2ss_pv_client.close()
         hl2ss.stop_subsystem_pv(self.ip_addr, self.pv_port)
-        self.log.info("PV client disconnected")
+        log.info("PV client disconnected")
 
         self.hl2ss_si_client.close()
-        self.log.info("SI client disconnected")
+        log.info("SI client disconnected")
 
         self.hl2ss_audio_client.close()
-        self.log.info("Audio client disconnected")
+        log.info("Audio client disconnected")
 
         self.hl2ss_sm_client.close()
-        self.log.info("SM client disconnected")
+        log.info("SM client disconnected")
 
     def pv_publisher(self) -> None:
         """
         Main thread that gets frames from the HL2SS PV client and publishes
         them to the image topic.
         """
+        log = self.get_logger()
+
         while self._pv_active.wait(0):  # will quickly return false if cleared.
             # The data returned from HL2SS is just a numpy array of the
             # configured resolution. The payload array is in BGR 3-channel
@@ -359,13 +363,13 @@ class HL2SSROSBridge(Node):
                 image_msg.header.stamp = self.get_clock().now().to_msg()
                 image_msg.header.frame_id = "PVFramesBGR"
             except TypeError as e:
-                self.log.warning(f"{e}")
+                log.warning(f"{e}")
                 return
 
             self.ros_frame_publisher.publish(image_msg)
 
             self._pv_rate_tracker.tick()
-            self.log.debug(f"Published image message (hz: "
+            log.debug(f"Published image message (hz: "
                                     f"{self._pv_rate_tracker.get_rate_avg()})",
                                     throttle_duration_sec=1)
 
@@ -377,6 +381,8 @@ class HL2SSROSBridge(Node):
         Currently only publishes hand tracking data. However, eye gaze data and
         head pose data is also available in the SI data packet.
         """
+        log = self.get_logger()
+
         while self._si_active.wait(0):  # will quickly return false if cleared.
             data = self.hl2ss_si_client.get_next_packet()
             si_data = hl2ss.unpack_si(data.payload)
@@ -394,7 +400,7 @@ class HL2SSROSBridge(Node):
                 self.ros_hand_publisher.publish(hand_msg_right)
 
             self._si_rate_tracker.tick()
-            self.log.debug(f"Published hand pose message (hz: "
+            log.debug(f"Published hand pose message (hz: "
                                     f"{self._si_rate_tracker.get_rate_avg()})",
                                     throttle_duration_sec=1)
 
@@ -403,6 +409,8 @@ class HL2SSROSBridge(Node):
         Thread the gets audio packets from the HL2SS audio client, converts
         the data to ROS HeadsetAudioData messages, and publishes them.
         """
+        log = self.get_logger()
+
         while self._audio_active.wait(0):  # will quickly return false if cleared.
             data = self.hl2ss_audio_client.get_next_packet()
 
@@ -428,7 +436,7 @@ class HL2SSROSBridge(Node):
             self.ros_audio_publisher.publish(audio_msg)
 
             self._audio_rate_tracker.tick()
-            self.log.debug(f"Published audio message (hz: "
+            log.debug(f"Published audio message (hz: "
                                     f"{self._audio_rate_tracker.get_rate_avg()})",
                                     throttle_duration_sec=1)
 
@@ -439,6 +447,8 @@ class HL2SSROSBridge(Node):
 
         Spatial meshes are retrieved every 5 seconds.
         """
+        log = self.get_logger()
+
         # Maximum triangles per cubic meter
         tpcm = 1000
 
@@ -469,17 +479,17 @@ class HL2SSROSBridge(Node):
                 tasks.add_task(i, tpcm, vpf, tif, vnf, normals)
 
             meshes = self.hl2ss_sm_client.get_meshes(tasks, n_threads)
-            self.log.debug(f"Received {len(meshes)} meshes")
+            log.debug(f"Received {len(meshes)} meshes")
             for index, mesh in meshes.items():
                 id_hex = ids[index].hex()
 
                 if (mesh is None):
-                    self.log.warning(f'Task {index}: surface id {id_hex} compute mesh failed')
+                    log.warning(f'Task {index}: surface id {id_hex} compute mesh failed')
                     continue
 
                 mesh.unpack(vpf, tif, vnf)
 
-                self.log.debug(
+                log.debug(
                     f'Task {index}: surface id {id_hex} has {mesh.vertex_positions.shape[0]}'
                     f' vertices {mesh.triangle_indices.shape[0]}'
                     f' triangles {mesh.vertex_normals.shape[0]} normals'
@@ -522,12 +532,14 @@ class HL2SSROSBridge(Node):
         Extracts the hand joint poses data from the HL2SS SI structure
         and forms a ROS HandJointPosesUpdate message.
         """
+        log = self.get_logger()
+
         if hand == "Left":
             hand_data = si_data.get_hand_left()
         elif hand == "Right":
             hand_data = si_data.get_hand_right()
         else:
-            self.get_logger().warning(f"Could not process hand message with "
+            log.warning(f"Could not process hand message with "
                                       f"handedness: {hand}")
             return
 
@@ -577,7 +589,7 @@ def main():
     try:
         rclpy.spin(hl2ss_ros_bridge)
     except KeyboardInterrupt:
-        hl2ss_ros_bridge.log.info("Keyboard interrupt, shutting down.\n")
+        hl2ss_ros_bridge.get_logger().info("Keyboard interrupt, shutting down.\n")
         hl2ss_ros_bridge.shutdown_clients()
 
     # Destroy the node explicitly
