@@ -82,6 +82,7 @@ PARAM_IP_ADDR = "ip_addr"
 PARAM_PV_WIDTH = "pv_width"
 PARAM_PV_HEIGHT = "pv_height"
 PARAM_PV_FRAMERATE = "pv_framerate"
+PARAM_SM_FREQ = "sm_freq"
 
 
 class HL2SSROSBridge(Node):
@@ -103,6 +104,7 @@ class HL2SSROSBridge(Node):
             PARAM_PV_WIDTH,
             PARAM_PV_HEIGHT,
             PARAM_PV_FRAMERATE,
+            PARAM_SM_FREQ,
         ]
         set_parameters = self.declare_parameters(
             namespace="",
@@ -125,6 +127,7 @@ class HL2SSROSBridge(Node):
         self.pv_width = self.get_parameter(PARAM_PV_WIDTH).value
         self.pv_height = self.get_parameter(PARAM_PV_HEIGHT).value
         self.pv_framerate = self.get_parameter(PARAM_PV_FRAMERATE).value
+        self.sm_freq = self.get_parameter(PARAM_SM_FREQ).value
         self.log.info(f"PV Images topic: "
                       f"({type(self._image_topic).__name__}) "
                       f"{self._image_topic}")
@@ -149,6 +152,9 @@ class HL2SSROSBridge(Node):
         self.log.info(f"PV Framerate: "
                       f"({type(self.pv_framerate).__name__}) "
                       f"{self.pv_framerate}")
+        self.log.info(f"Spatial map update frequency: "
+                      f"({type(self.sm_freq).__name__}) "
+                      f"{self.sm_freq}")
 
         # Define HL2SS server ports
         self.pv_port = hl2ss.StreamPort.PERSONAL_VIDEO
@@ -505,7 +511,7 @@ class HL2SSROSBridge(Node):
                 # Publish!
                 self.ros_sm_publisher.publish(spatial_mesh_msg)
 
-            time.sleep(5)
+            time.sleep(self.sm_freq)
 
     def create_hand_pose_msg_from_si_data(
         self,
