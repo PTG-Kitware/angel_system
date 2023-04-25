@@ -5,7 +5,6 @@ from threading import (
 )
 
 from cv_bridge import CvBridge
-import cv2
 from geometry_msgs.msg import (
     Point,
     Pose,
@@ -266,7 +265,6 @@ class HL2SSROSBridge(Node):
                     "Warning! Image topic is not configured, so head pose data will not be published."
                 )
 
-
     def connect_hl2ss_pv(self) -> None:
         """
         Creates the HL2SS PV client and connects it to the server on the headset.
@@ -525,7 +523,7 @@ class HL2SSROSBridge(Node):
             for index, mesh in meshes.items():
                 id_hex = ids[index].hex()
 
-                if (mesh is None):
+                if mesh is None:
                     log.warning(f'Task {index}: surface id {id_hex} compute mesh failed')
                     continue
 
@@ -537,7 +535,9 @@ class HL2SSROSBridge(Node):
                     f' triangles {mesh.vertex_normals.shape[0]} normals'
                 )
 
-                mesh.vertex_positions[:, 0:3] = mesh.vertex_positions[:, 0:3] * mesh.vertex_position_scale
+                mesh.vertex_positions[:, 0:3] = (
+                    mesh.vertex_positions[:, 0:3] * mesh.vertex_position_scale
+                )
                 mesh.vertex_positions = mesh.vertex_positions @ mesh.pose
                 mesh.vertex_normals = mesh.vertex_normals @ mesh.pose
 
