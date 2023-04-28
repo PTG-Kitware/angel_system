@@ -38,8 +38,17 @@ class TranslateTaskUpdateForBBN(Node):
 
     Certain elements of the BBN Update output are currently hard-coded for demo
     purposes:
-        * There is one casualty and its ID is 1
-        *
+        * There is one casualty and its ID is 1. Various elements that refer to
+          which casualty is being worked on are coded to refer to ID 1 with a
+          confidence of `1.0`.
+        * Current skill confidence is coded to be `1.0` as the current ANGEL
+          system does not yet support juggling multiple tasks.
+        * Next-step progress is coded to be disabled as the current ANGEL
+          system does not yet have this measurement functionality.
+        * Current-errors is coded to be disabled as it's schema is not yet
+          defined by BBN.
+        * Current user state is coded to be disabled as it's schema is not yet
+          defined by BBN.
 
     This node will need to build up state as Task Update messages for different
     tasks ("skills" in BBN parlance) are output.
@@ -202,9 +211,14 @@ class TranslateTaskUpdateForBBN(Node):
 
         # Update internal state if needed
         if msg.task_name not in self._task_to_step_list:
-            self._update_task_graph(msg)
+            if not self._update_task_graph(msg):
+                # Could not get the task graph for the current task update message.
+                # Cannot proceed with populating the BBN Update message.
+                # The above method outputs a warning to the logger, so just
+                # returning early.
+                return
         self._task_in_progress_state[msg.task_name] = self._task_is_in_progress(msg)
-        self._task_completed_state[msg.task_name] = current_task_complete = self._task_is_complete(msg)
+        self._task_completed_state[msg.task_name] = self._task_is_complete(msg)
 
         current_task_steps = self._task_to_step_list[msg.task_name]
         assert len(current_task_steps) == len(msg.completed_steps), \
