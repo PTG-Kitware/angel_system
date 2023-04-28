@@ -58,8 +58,10 @@ public class TaskListElement : MonoBehaviour
     /// <summary>
     /// Reset all values
     /// </summary>
-    public void Reset()
+    public void Reset(bool visible)
     {
+        if (visible)
+            currentAlpha = 1f;
         textCanvas.text = taskMessage;
         checkBox.gameObject.SetActive(false);
         checkBoxCurrent.gameObject.SetActive(false);

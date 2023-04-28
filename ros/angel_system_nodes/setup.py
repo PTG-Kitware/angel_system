@@ -34,6 +34,9 @@ setup(
                 'object_detector_with_descriptors = angel_system_nodes.object_detector_with_descriptors:main',
                 'uho_activity_detector = angel_system_nodes.uho_activity_detector:main',
                 'task_monitor_v2 = angel_system_nodes.task_monitor_v2:main',
+                'hl2ss_ros_bridge = angel_system_nodes.hl2ss_ros_bridge:main',
+                'berkeley_task_monitor = angel_system_nodes.berkeley_task_monitor:main',
+                'intent_to_command = angel_system_nodes.intent_to_command:main',
             ],
     },
 )

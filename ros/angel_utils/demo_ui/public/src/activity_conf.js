@@ -38,12 +38,12 @@ var chart = new Chart(ctx, {
   }
 });
 
-$.get( "/ns")
-.done(function( data ){
+$.get( "/topics")
+.done(function( topics ){
   // Create a listener for activity detections
   var activity_listener = new ROSLIB.Topic({
     ros : ros,
-    name : data.namespace + '/ActivityDetections',
+    name : topics.namespace + '/' + topics.activity_detections_topic,
     messageType : 'angel_msgs/ActivityDetection'
   });
 

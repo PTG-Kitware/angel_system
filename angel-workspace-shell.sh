@@ -82,9 +82,19 @@ log "[INFO] Creating local xauth file: $XAUTH_FILEPATH"
 touch "$XAUTH_FILEPATH"
 xauth nlist "$DISPLAY" | sed -e 's/^..../ffff/' | xauth -f "$XAUTH_FILEPATH" nmerge -
 
+# Print some status stuff from the ENV file we are using
+#
+# Encapsulating the source in a nested bash instance to not pollute the
+# current env with the contents of the file.
+ENV_FILE="${SCRIPT_DIR}/docker/.env"
+bash -c "\
+source \"${ENV_FILE}\";
+>&2 echo \"[INFO] Using container tag: \${PTG_TAG}\"
+"
+
 set +e
 docker-compose \
-  --env-file "$SCRIPT_DIR"/docker/.env \
+  --env-file "$ENV_FILE" \
   -f "$SCRIPT_DIR"/docker/docker-compose.yml \
   run --rm \
   "$SERVICE_NAME" "${passthrough_args[@]}"

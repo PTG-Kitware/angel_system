@@ -1,8 +1,16 @@
 using System;
+using System.Collections.Generic;
+using System.Reflection;
 using UnityEngine;
 
 public static class TransformExtension
 {
+    /// <summary>
+    /// Check if position of given transform is in front of given camera cam
+    /// </summary>
+    /// <param name="t"></param>
+    /// <param name="cam"></param>
+    /// <returns>true if t is in front of camera, else false</returns>
     public static bool InFrontOfCamera(this Transform t, Camera cam)
     {
         return Vector3.Dot(cam.transform.forward, t.position - cam.transform.position) > 0;
@@ -13,39 +21,32 @@ public static class TransformExtension
     /// </summary>
     /// <param name="t"></param>
     /// <param name="cam"></param>
-    /// <returns></returns>
-    public static Rect RectFromObj(this Transform t, Camera cam, BoxCollider bxcol)
+    /// <returns>Rect of given collider in </returns>
+    public static Rect RectFromObjs(this Transform t1, Camera cam, List<BoxCollider> bxcols)
     {
-        Vector3[] worldCorners = new Vector3[8];
-        var extentPoints = GetCorners(t, cam, bxcol, ref worldCorners);
-
-        Vector2 min = extentPoints[0];
-        Vector2 max = extentPoints[0];
-
-        int inFOVCount = 0;
-        for (int i = 0; i < extentPoints.Length; i++)
+        List<BoxCollider> activeColliders = new List<BoxCollider>();
+        foreach (var col in bxcols)
         {
-            if (inFOVCount==0 && Utils.InFOV(cam, worldCorners[i])) {
-                inFOVCount++;
-            }
-            min = Vector2.Min(min, extentPoints[i]);
-            max = Vector2.Max(max, extentPoints[i]);
+            if (col.gameObject.activeInHierarchy)
+                activeColliders.Add(col);
         }
 
-        if (inFOVCount == 0)
-            return Rect.zero;
+        Vector3[] worldCorners = new Vector3[activeColliders.Count * 8];
+        var extentPoints = GetScreenCorners(cam, activeColliders, ref worldCorners);
 
-        float box_y_min = cam.pixelHeight - max.y;
-        //return new Rect(min.x, box_y_min, max.x - min.x, max.y - min.y);
-
-        return new Rect(min.x, box_y_min, max.x - min.x, max.y - min.y);
-
+        return GetGUIRectFromExtents(extentPoints, worldCorners, cam);
     }
 
     public static Rect RectFromHands(this Transform t, Camera cam, Bounds bounds)
     {
-        var extentPoints = GetCorners(t, cam,bounds);
+        var extentPoints = GetScreenCorners(t, cam, bounds);
 
+        return GetGUIRectFromExtents(extentPoints, cam);
+
+    }
+
+    private static Rect GetGUIRectFromExtents(Vector2[] extentPoints, Camera cam)
+    {
         Vector2 min = extentPoints[0];
         Vector2 max = extentPoints[0];
         foreach (Vector2 v in extentPoints)
@@ -54,93 +55,68 @@ public static class TransformExtension
             max = Vector2.Max(max, v);
         }
 
-        //gui to screen
+        //screen to GUI
         float box_y_min = cam.pixelHeight - max.y;
         return new Rect(min.x, box_y_min, max.x - min.x, max.y - min.y);
-
     }
 
-    ////https://stackoverflow.com/questions/65417634/draw-bounding-rectangle-screen-space-around-a-game-object-with-a-renderer-wor
-    //private static Rect RendererBoundsInScreenSpace(Bounds bounds)
-    //{
-    //    // This is the space occupied by the object's visuals
-    //    // in WORLD space.
-    //    Bounds bigBounds = bounds;
-
-    //    Vector3[] screenSpaceCorners = new Vector3[8];
-
-    //    Camera theCamera = Camera.main;
-
-    //    float scaleValue = 0.9f;
-
-    //    // For each of the 8 corners of our renderer's world space bounding box,
-    //    // convert those corners into screen space.
-    //    screenSpaceCorners[0] = theCamera.WorldToScreenPoint(new Vector3(bigBounds.center.x + bigBounds.extents.x*scaleValue, bigBounds.center.y + bigBounds.extents.y * scaleValue, bigBounds.center.z + bigBounds.extents.z * scaleValue));
-    //    screenSpaceCorners[1] = theCamera.WorldToScreenPoint(new Vector3(bigBounds.center.x + bigBounds.extents.x * scaleValue, bigBounds.center.y + bigBounds.extents.y * scaleValue, bigBounds.center.z - bigBounds.extents.z * scaleValue));
-    //    screenSpaceCorners[2] = theCamera.WorldToScreenPoint(new Vector3(bigBounds.center.x + bigBounds.extents.x * scaleValue, bigBounds.center.y - bigBounds.extents.y * scaleValue, bigBounds.center.z + bigBounds.extents.z * scaleValue));
-    //    screenSpaceCorners[3] = theCamera.WorldToScreenPoint(new Vector3(bigBounds.center.x + bigBounds.extents.x * scaleValue, bigBounds.center.y - bigBounds.extents.y * scaleValue, bigBounds.center.z - bigBounds.extents.z * scaleValue));
-    //    screenSpaceCorners[4] = theCamera.WorldToScreenPoint(new Vector3(bigBounds.center.x - bigBounds.extents.x * scaleValue, bigBounds.center.y + bigBounds.extents.y * scaleValue, bigBounds.center.z + bigBounds.extents.z * scaleValue));
-    //    screenSpaceCorners[5] = theCamera.WorldToScreenPoint(new Vector3(bigBounds.center.x - bigBounds.extents.x * scaleValue, bigBounds.center.y + bigBounds.extents.y * scaleValue, bigBounds.center.z - bigBounds.extents.z * scaleValue));
-    //    screenSpaceCorners[6] = theCamera.WorldToScreenPoint(new Vector3(bigBounds.center.x - bigBounds.extents.x * scaleValue, bigBounds.center.y - bigBounds.extents.y * scaleValue, bigBounds.center.z + bigBounds.extents.z * scaleValue));
-    //    screenSpaceCorners[7] = theCamera.WorldToScreenPoint(new Vector3(bigBounds.center.x - bigBounds.extents.x * scaleValue, bigBounds.center.y - bigBounds.extents.y * scaleValue, bigBounds.center.z - bigBounds.extents.z * scaleValue));
-
-    //    // Now find the min/max X & Y of these screen space corners.
-    //    float min_x = screenSpaceCorners[0].x;
-    //    float min_y = screenSpaceCorners[0].y;
-    //    float max_x = screenSpaceCorners[0].x;
-    //    float max_y = screenSpaceCorners[0].y;
-
-    //    for (int i = 1; i < 8; i++)
-    //    {
-    //        if (screenSpaceCorners[i].x < min_x)
-    //        {
-    //            min_x = screenSpaceCorners[i].x;
-    //        }
-    //        if (screenSpaceCorners[i].y < min_y)
-    //        {
-    //            min_y = screenSpaceCorners[i].y;
-    //        }
-    //        if (screenSpaceCorners[i].x > max_x)
-    //        {
-    //            max_x = screenSpaceCorners[i].x;
-    //        }
-    //        if (screenSpaceCorners[i].y > max_y)
-    //        {
-    //            max_y = screenSpaceCorners[i].y;
-    //        }
-    //    }
-
-    //    return Rect.MinMaxRect(min_x, min_y, max_x, max_y);
-
-    //}
-
-    private static Vector2[] GetCorners(Transform t, Camera cam, BoxCollider bxcol, ref Vector3[] worldCorners)
+    private static Rect GetGUIRectFromExtents(Vector2[] extentPoints, Vector3[] worldCorners, Camera cam)
     {
-        float scalingValue = 0.9f;
+        //screen coordinate - Screen space is 0,0 at bottom left.
+        Vector2 min = extentPoints[0];
+        Vector2 max = extentPoints[0];
 
-        worldCorners[0] = t.TransformPoint(bxcol.center + (new Vector3(-bxcol.size.x * scalingValue, -bxcol.size.y * scalingValue, -bxcol.size.z * scalingValue) * 0.5f));
-        worldCorners[1] = t.TransformPoint(bxcol.center + (new Vector3(bxcol.size.x * scalingValue, -bxcol.size.y * scalingValue, -bxcol.size.z * scalingValue) * 0.5f));
-        worldCorners[2] = t.TransformPoint(bxcol.center + (new Vector3(bxcol.size.x * scalingValue, -bxcol.size.y * scalingValue, bxcol.size.z * scalingValue) * 0.5f));
-        worldCorners[3] = t.TransformPoint(bxcol.center + (new Vector3(-bxcol.size.x * scalingValue, -bxcol.size.y * scalingValue, bxcol.size.z * scalingValue) * 0.5f));
-        worldCorners[4] = t.TransformPoint(bxcol.center + (new Vector3(-bxcol.size.x * scalingValue, bxcol.size.y * scalingValue, -bxcol.size.z * scalingValue) * 0.5f));
-        worldCorners[5] = t.TransformPoint(bxcol.center + (new Vector3(bxcol.size.x * scalingValue, bxcol.size.y * scalingValue, -bxcol.size.z * scalingValue) * 0.5f));
-        worldCorners[6] = t.TransformPoint(bxcol.center + (new Vector3(bxcol.size.x * scalingValue, bxcol.size.y * scalingValue, bxcol.size.z * scalingValue) * 0.5f));
-        worldCorners[7] = t.TransformPoint(bxcol.center + (new Vector3(-bxcol.size.x * scalingValue, bxcol.size.y * scalingValue, bxcol.size.z * scalingValue) * 0.5f));
-        return new Vector2[]
+        int inFOVCount = 0;
+        for (int i = 0; i < extentPoints.Length; i++)
         {
-                cam.WorldToScreenPoint(worldCorners[0]),
-                cam.WorldToScreenPoint(worldCorners[1]),
-                cam.WorldToScreenPoint(worldCorners[2]),
-                cam.WorldToScreenPoint(worldCorners[3]),
-                cam.WorldToScreenPoint(worldCorners[4]),
-                cam.WorldToScreenPoint(worldCorners[5]),
-                cam.WorldToScreenPoint(worldCorners[6]),
-                cam.WorldToScreenPoint(worldCorners[7])
-        };
+            if (inFOVCount == 0 && Utils.InFOV(cam, worldCorners[i]))
+                inFOVCount++;
+
+            min = Vector2.Min(min, extentPoints[i]);
+            max = Vector2.Max(max, extentPoints[i]);
+        }
+
+        //from screen to GUI
+        float box_y_min = cam.pixelHeight - max.y;
+
+        if (inFOVCount == 0 ||
+            min.x <= 0 && box_y_min <= 0 && max.x >= AngelARUI.Instance.ARCamera.pixelWidth && max.y >= AngelARUI.Instance.ARCamera.pixelHeight)
+            return Rect.zero;
+
+        //GUI coordinates
+        return new Rect(min.x, box_y_min, max.x - min.x, max.y - min.y);
     }
 
+    private static Vector2[] GetScreenCorners(Camera cam, List<BoxCollider> bxcols, ref Vector3[] worldCorners)
+    {
+        float scalingValue = 1.0f;
 
-    private static Vector2[] GetCorners(Transform t, Camera cam, Bounds bxcol)
+        int i=0;
+        int index = 0;
+        foreach (var item in bxcols)
+        {
+            Transform current = item.transform; 
+            worldCorners[index] = current.TransformPoint(item.center + (new Vector3(-item.size.x * scalingValue, -item.size.y * scalingValue, -item.size.z * scalingValue) * 0.5f));
+            worldCorners[index + 1] = current.TransformPoint(item.center + (new Vector3(item.size.x * scalingValue, -item.size.y * scalingValue, -item.size.z * scalingValue) * 0.5f));
+            worldCorners[index + 2] = current.TransformPoint(item.center + (new Vector3(item.size.x * scalingValue, -item.size.y * scalingValue, item.size.z * scalingValue) * 0.5f));
+            worldCorners[index + 3] = current.TransformPoint(item.center + (new Vector3(-item.size.x * scalingValue, -item.size.y * scalingValue, item.size.z * scalingValue) * 0.5f));
+            worldCorners[index + 4] = current.TransformPoint(item.center + (new Vector3(-item.size.x * scalingValue, item.size.y * scalingValue, -item.size.z * scalingValue) * 0.5f));
+            worldCorners[index + 5] = current.TransformPoint(item.center + (new Vector3(item.size.x * scalingValue, item.size.y * scalingValue, -item.size.z * scalingValue) * 0.5f));
+            worldCorners[index + 6] = current.TransformPoint(item.center + (new Vector3(item.size.x * scalingValue, item.size.y * scalingValue, item.size.z * scalingValue) * 0.5f));
+            worldCorners[index + 7] = current.TransformPoint(item.center + (new Vector3(-item.size.x * scalingValue, item.size.y * scalingValue, item.size.z * scalingValue) * 0.5f));
+
+            i += 1;
+            index += 8;
+        }
+
+        Vector2[] corners = new Vector2[bxcols.Count * 8];
+        for (int j = 0; j < corners.Length; j++)
+            corners[j] = cam.WorldToScreenPoint(worldCorners[j]);
+
+        return corners;
+    }
+
+    private static Vector2[] GetScreenCorners(Transform t, Camera cam, Bounds bxcol)
     {
         return new Vector2[]
         {
@@ -152,10 +128,7 @@ public static class TransformExtension
                 cam.WorldToScreenPoint(t.TransformPoint(bxcol.center + new Vector3(bxcol.size.x, bxcol.size.y, -bxcol.size.z) * 0.5f)),
                 cam.WorldToScreenPoint(t.TransformPoint(bxcol.center + new Vector3(bxcol.size.x, bxcol.size.y, bxcol.size.z) * 0.5f)),
                 cam.WorldToScreenPoint(t.TransformPoint(bxcol.center + new Vector3(-bxcol.size.x, bxcol.size.y, bxcol.size.z) * 0.5f))
-
         };
-
-        
     }
 
 

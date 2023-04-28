@@ -64,6 +64,8 @@ uint8 expertise_level
 #
 # Task Graph and State
 #
+# Message representing the current status of the task being performed.
+#
 # NOTE: The task graph may be queried by using the `QueryTaskGraph` service.
 #
 angel_msgs/TaskUpdate task_update
@@ -79,8 +81,6 @@ angel_msgs/TaskUpdate task_update
 # Notifications / Directives
 angel_msgs/AruiUserNotification[] notifications
 
-# Text/Audio feedback
-# - ASSUMING audio feedback in the form of speech-to-text. I don't know yet
-#   what other forms of audio dialogue feedback there are.
-string[] dialogue_text
-string[] dialogue_audio
+# Field encapsulating interpreted user intents that we want confirmed by the user.
+# These likely have some confidence less than
+angel_msgs/InterpretedAudioUserIntent[] intents_for_confirmation

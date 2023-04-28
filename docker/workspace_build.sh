@@ -1,11 +1,14 @@
 #!/bin/bash
 #
-# Standard workspace build.
+# All-in-one workspace build.
 #
-# This script is expecting to be run inside the container workspace root.
+# This script is expecting to be run inside the container workspace root by a
+# user in a TTY session. This will run all of the standard build steps using
+# the same component scripts as in the Dockerfile build.
 # Standard advice is to perform builds before sourcing install setup scripts.
 #
-# Additional parameters are passed on to `colcon build`.
+# Additional parameters are passed on to the underlying ROS workspace
+# `colcon build` invocation.
 #
 # For additional debugging of build products, try adding:
 #   --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo
@@ -13,28 +16,31 @@
 set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# This script will be installed into the directory that houses the `ros` source
-# directory, i.e. the location that `colcon build` should be run from.
-cd "$SCRIPT_DIR"
-
-# When running this manually, it should be in the use-case of manually
-# re-building due to debugging, developing, or similar use-case. In that
-# use-case, it is likely useful to attempt to requery for rosdep installs
-# updates. During a container image build, we want to skip this as this will
-# have already occurred / is cached in an earlier layer. The container build is
-# NOT a tty shell, so that is our conditional hinge.
-if tty -s
+# We expect this to only be run manually, thus if we're not in a TTY session
+if ! tty -s
 then
-  apt-get -y update
-  rosdep install -i --from-path "${ANGEL_WORKSPACE_DIR}" --rosdistro "${ROS_DISTRO}" -y
+  echo "ERROR: Not running in a TTY. Are you sure you meant to run this?"
+  exit 1
 fi
 
-# Activate the base ROS context and build our local workspace.
-# shellcheck disable=SC1090
-source "/opt/ros/${ROS_DISTRO}/setup.bash"
-colcon build --continue-on-error --merge-install "$@"
 
-# Build web resources for Demo/Engineering UI
-pushd "${ANGEL_WORKSPACE_DIR}"/src/angel_utils/demo_ui
-npm install
-popd
+# We don't want to auto apt update every single time, so only do it once on
+# first invocation of this script. The /tmp directory is not expected to be
+# mounted to the host filesystem, so it should be "fresh" every instantiation
+# of a container.
+ANGEL_APT_UPDATED="/tmp/ANGEL_APT_UPDATED"
+if ! [[ -f "${ANGEL_APT_UPDATED}" ]]
+then
+  apt-get -y update
+  touch "$ANGEL_APT_UPDATED"
+fi
+
+# Always run this as file edits through normal development may change
+# behavior, so we want to react to that.
+"$SCRIPT_DIR"/workspace_build_rosdep_install.sh
+
+"$SCRIPT_DIR"/workspace_build_pydep_install.sh
+
+"$SCRIPT_DIR"/workspace_build_ros.sh "$@"
+
+"$SCRIPT_DIR"/workspace_build_npm_install.sh

@@ -18,6 +18,7 @@ import yaml
 from angel_msgs.msg import (
     ActivityDetection,
     AruiUserNotification,
+    SystemCommands,
     TaskUpdate,
     TaskGraph,
 )
@@ -70,6 +71,15 @@ class HMMNode(Node):
             .get_parameter_value()
             .double_value
         )
+        self._sys_cmd_topic = (
+            self.declare_parameter("sys_cmd_topic", "")
+            .get_parameter_value()
+            .string_value
+        )
+        if self._sys_cmd_topic == "":
+            raise ValueError(
+                "Please provide the system command topic with the `sys_cmd_topic` parameter"
+            )
 
         # Instantiate the HMM module
         self._hmm = ActivityHMMRos(self._config_file)
@@ -111,6 +121,12 @@ class HMMNode(Node):
             ActivityDetection,
             self._det_topic,
             self.det_callback,
+            1
+        )
+        self._sys_cmd_subscription = self.create_subscription(
+            SystemCommands,
+            self._sys_cmd_topic,
+            self.sys_cmd_callback,
             1
         )
         self._task_update_publisher = self.create_publisher(
@@ -443,19 +459,12 @@ class HMMNode(Node):
         with keyboard.Listener(on_press=self.on_press) as listener:
             listener.join()
 
-    def on_press(self, key):
+
+    def advance_step(self, forward: bool) -> None:
         """
-        Callback function for keypress events. If the right arrow is pressed,
-        the task monitor advances to the next step. If the left arrow is
-        pressed, the task monitor advances to the previous step.
+        Handles advancing the HMM forward and backwards.
         """
         log = self.get_logger()
-        if key == KEY_RIGHT_SQBRACKET:
-            forward = True
-        elif key == KEY_LEFT_SQBRACKET:
-            forward = False
-        else:
-            return  # ignore
 
         with self._hmm_lock:
             if self._latest_act_classification_end_time is None:
@@ -533,6 +542,37 @@ class HMMNode(Node):
 
                     # Tell the HMM thread to wake up
                     self._hmm_awake_evt.set()
+
+    def on_press(self, key):
+        """
+        Callback function for keypress events. If the right arrow is pressed,
+        the task monitor advances to the next step. If the left arrow is
+        pressed, the task monitor advances to the previous step.
+        """
+        if key == KEY_RIGHT_SQBRACKET:
+            forward = True
+        elif key == KEY_LEFT_SQBRACKET:
+            forward = False
+        else:
+            return  # ignore
+
+        self.advance_step(forward)
+
+    def sys_cmd_callback(self, cmd: SystemCommands):
+        """
+        Callback function for SystemCommands messages. Executes the provided
+        system command.
+
+        Currently only examines the next_step and previous_step system commands.
+        """
+        if cmd.next_step:
+            forward = True
+        elif cmd.previous_step:
+            forward = False
+        else:
+            return  # ignore
+
+        self.advance_step(forward)
 
 
 def main():

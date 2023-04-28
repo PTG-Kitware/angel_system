@@ -3,6 +3,7 @@ Various conversion functions into and out of angel_msg types.
 """
 import array
 import itertools
+import math
 from typing import Dict
 from typing import Hashable
 from typing import Iterable
@@ -21,6 +22,8 @@ from smqtk_detection.utils.bbox import AxisAlignedBoundingBox
 
 
 SEC_TO_NANO = int(1e9)
+NANO_TO_SEC = 1e-9
+HECTO_NS = 1e7
 
 
 def time_to_int(time_msg: Time) -> int:
@@ -31,6 +34,18 @@ def time_to_int(time_msg: Time) -> int:
     :return: Integer nanoseconds
     """
     return (time_msg.sec * SEC_TO_NANO) + time_msg.nanosec
+
+
+def hl2ss_stamp_to_ros_time(timestamp: int) -> Time:
+    """
+    Convert the HL2SS timestamp which is an integer in hundreds of ns (1e7) to
+    a ROS Time message.
+    :param timestamp: Integer timestamp of the HL2SS packet
+    :return: Time message
+    """
+    sec = int(timestamp // HECTO_NS)
+    nanosec = int(timestamp % HECTO_NS)
+    return Time(sec=sec, nanosec=nanosec)
 
 
 def from_detect_image_objects_result(

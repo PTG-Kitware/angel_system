@@ -2,40 +2,29 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 /// <summary>
 /// Represents the message container next to the orb
 /// </summary>
 public class OrbMessage : MonoBehaviour
 {
-    public enum MessageAnchor{
+    public enum MessageAnchor
+    {
         left = 1, //message is left from the orb
         right = 2, //message is right from the orb
     }
 
     private MessageAnchor currentAnchor = MessageAnchor.right;
-    private int maxCharCountPerLine = 70;
-
-    //***Flexible Textbox for taskmessage
-    private RectTransform HGroupTaskMessage;
-    private TMPro.TextMeshProUGUI textTask;
-    private RectTransform textTaskRect;
-    private Material taskBackgroundMat;
-    private BoxCollider taskMessageCollider;
-    public BoxCollider MessageCollider
-    {
-        get { return taskMessageCollider; }
-    }
-
-    //Task text visuals
-    private Color32 glowColor = Color.white;
-    private float maxglowAlpha = 0.3f;
-    private Color activeColorBG = new Color(0.06f, 0.06f, 0.06f, 0.5f);
-    private Color activeColorText = Color.white;
 
     //***Flexible Textbox for Notification Message
     private RectTransform notificationMessageRect;
     private TMPro.TextMeshProUGUI textNotification;
+
+    private Color activeColorBG = new Color(0.06f, 0.06f, 0.06f, 0.5f);
+    private Color32 glowColor = Color.white;
+    private float maxglowAlpha = 0.3f;
+    private Color activeColorText = Color.white;
 
     //Flags
     private bool isNotificationActive = false;
@@ -71,7 +60,7 @@ public class OrbMessage : MonoBehaviour
 
     private bool messageIsLerping = false;
 
-    private GameObject textContainer;
+    private FlexibleTextContainer textContainer;
     private GameObject indicator;
     private Vector3 initialIndicatorPos;
     private float initialmessageYOffset;
@@ -80,29 +69,18 @@ public class OrbMessage : MonoBehaviour
 
     private void Start()
     {
-        HorizontalLayoutGroup temp = gameObject.GetComponentInChildren<HorizontalLayoutGroup>();
+        textContainer = transform.GetChild(1).gameObject.AddComponent<FlexibleTextContainer>();
+        textContainer.gameObject.name += "_orb";
 
-        //init task message group
-        HGroupTaskMessage = temp.gameObject.GetComponent<RectTransform>();
-        TMPro.TextMeshProUGUI[] allText = HGroupTaskMessage.gameObject.GetComponentsInChildren<TMPro.TextMeshProUGUI>();
-        textTask = allText[0];
-        textTask.text = "";
-        textTaskRect = textTask.gameObject.GetComponent<RectTransform>();
-        progressText = textTask.transform.GetChild(0).gameObject.GetComponent<TMPro.TextMeshProUGUI>();
+        TMPro.TextMeshProUGUI[] allText = textContainer.GetAllTextMeshComponents();
+
+        progressText = allText[1].gameObject.GetComponent<TMPro.TextMeshProUGUI>();
         progressText.text = "";
 
-        Image bkgr = HGroupTaskMessage.GetComponentInChildren<Image>();
-        taskBackgroundMat = new Material(bkgr.material);
-        bkgr.material = taskBackgroundMat;
-        glowColor = bkgr.material.GetColor("_InnerGlowColor");
-        bkgr.material.SetColor("_InnerGlowColor", new Color(glowColor.r, glowColor.g, glowColor.b, 0));
-
-        textContainer = transform.GetChild(1).gameObject;
         initialmessageYOffset = textContainer.transform.position.x;
-        taskMessageCollider = textContainer.GetComponent<BoxCollider>();
 
         //init notification message group
-        notificationMessageRect = textTask.transform.GetChild(1).gameObject.GetComponent<RectTransform>();
+        notificationMessageRect = allText[2].gameObject.GetComponent<RectTransform>();
         textNotification = notificationMessageRect.gameObject.GetComponent<TMPro.TextMeshProUGUI>();
         textNotification.text = "";
         notificationMessageRect.gameObject.SetActive(false);
@@ -110,6 +88,8 @@ public class OrbMessage : MonoBehaviour
         //message direction indicator
         indicator = gameObject.GetComponentInChildren<Shapes.Polyline>().gameObject;
         initialIndicatorPos = indicator.transform.position;
+
+        glowColor = textContainer.GetGlowColor();
 
         SetIsActive(false, false);
     }
@@ -122,13 +102,9 @@ public class OrbMessage : MonoBehaviour
         else if (!isLookingAtMessage && FollowEyeTarget.Instance.currentHit == EyeTarget.orbMessage)
             isLookingAtMessage = true;
 
-        // Update collider of messagebox
-        taskMessageCollider.size = new Vector3(HGroupTaskMessage.rect.width, taskMessageCollider.size.y, taskMessageCollider.size.z);
-        taskMessageCollider.center = new Vector3(HGroupTaskMessage.rect.width / 2, 0, 0);
+        notificationMessageRect.sizeDelta = new Vector2(textContainer.TextRect.width / 2, notificationMessageRect.rect.height);
 
-        notificationMessageRect.sizeDelta = new Vector2(HGroupTaskMessage.rect.width/2, notificationMessageRect.rect.height);
-
-        if (!(isMessageVisible && GetIsActive()) || messageIsLerping ) return;
+        if (!(isMessageVisible && GetIsActive()) || messageIsLerping) return;
 
         // Update messagebox anchor
         if (ChangeMessageBoxToRight(100))
@@ -153,7 +129,8 @@ public class OrbMessage : MonoBehaviour
         {
             StopCoroutine(FadeOutMessage());
             isMessageFading = false;
-            taskBackgroundMat.color = activeColorBG;
+            textContainer.SetBackgroundColor(activeColorBG);
+
             SetTextAlpha(1f);
         }
     }
@@ -182,7 +159,7 @@ public class OrbMessage : MonoBehaviour
             if (shade < 0)
                 shade = 0;
 
-            taskBackgroundMat.color = new Color(shade, shade, shade, shade);
+            textContainer.SetBackgroundColor(new Color(shade, shade, shade, shade));
             SetTextAlpha(alpha);
 
             yield return new WaitForEndOfFrame();
@@ -197,14 +174,13 @@ public class OrbMessage : MonoBehaviour
         }
     }
 
-    
     private IEnumerator FadeNewTaskGlow()
     {
         SetFadeOutMessage(false);
 
         userHasNotSeenNewTask = true;
 
-        taskBackgroundMat.SetColor("_InnerGlowColor", new Color(glowColor.r, glowColor.g, glowColor.b, maxglowAlpha));
+        textContainer.SetGlowColor(new Color(glowColor.r, glowColor.g, glowColor.b, maxglowAlpha));
 
         while (!isLookingAtMessage)
         {
@@ -216,11 +192,11 @@ public class OrbMessage : MonoBehaviour
         while (current > 0)
         {
             current -= step;
-            taskBackgroundMat.SetColor("_InnerGlowColor", new Color(glowColor.r, glowColor.g, glowColor.b, current));
+            textContainer.SetGlowColor(new Color(glowColor.r, glowColor.g, glowColor.b, current));
             yield return new WaitForSeconds(0.1f);
         }
 
-        taskBackgroundMat.SetColor("_InnerGlowColor", new Color(glowColor.r, glowColor.g, glowColor.b, 0f));
+        textContainer.SetGlowColor(new Color(glowColor.r, glowColor.g, glowColor.b, 0f));
         userHasNotSeenNewTask = false;
     }
 
@@ -234,7 +210,7 @@ public class OrbMessage : MonoBehaviour
     /// <param name="MessageAnchor">The new anchor</param>
     public void UpdateAnchorLerp(MessageAnchor newMessageAnchor)
     {
-        if (messageIsLerping) return; 
+        if (messageIsLerping) return;
 
         if (newMessageAnchor != currentAnchor)
         {
@@ -251,8 +227,7 @@ public class OrbMessage : MonoBehaviour
     /// </summary>
     private void UpdateAnchorInstant()
     {
-        taskMessageCollider.center = new Vector3(HGroupTaskMessage.rect.width / 2, 0, 0);
-        taskMessageCollider.size = new Vector3(HGroupTaskMessage.rect.width, taskMessageCollider.size.y, taskMessageCollider.size.z);
+        textContainer.UpdateAnchorInstant();
 
         bool isLeft = false;
         if (ChangeMessageBoxToLeft(0))
@@ -276,7 +251,8 @@ public class OrbMessage : MonoBehaviour
         {
             indicator.transform.localPosition = new Vector3(initialIndicatorPos.x, 0, 0);
             indicator.transform.localRotation = Quaternion.identity;
-        } else
+        }
+        else
         {
             indicator.transform.localPosition = new Vector3(-initialIndicatorPos.x, 0, 0);
             indicator.transform.localRotation = Quaternion.Euler(0, 180, 0);
@@ -290,7 +266,7 @@ public class OrbMessage : MonoBehaviour
     /// <returns></returns>
     private bool ChangeMessageBoxToRight(float offsetPaddingInPixel)
     {
-        return (AngelARUI.Instance.mainCamera.WorldToScreenPoint(transform.position).x < ((AngelARUI.Instance.mainCamera.pixelWidth * 0.5f) - offsetPaddingInPixel));
+        return (AngelARUI.Instance.ARCamera.WorldToScreenPoint(transform.position).x < ((AngelARUI.Instance.ARCamera.pixelWidth * 0.5f) - offsetPaddingInPixel));
     }
 
     /// <summary>
@@ -298,7 +274,7 @@ public class OrbMessage : MonoBehaviour
     /// </summary>
     private bool ChangeMessageBoxToLeft(float offsetPaddingInPixel)
     {
-        return (AngelARUI.Instance.mainCamera.WorldToScreenPoint(transform.position).x > ((AngelARUI.Instance.mainCamera.pixelWidth * 0.5f) + offsetPaddingInPixel));
+        return (AngelARUI.Instance.ARCamera.WorldToScreenPoint(transform.position).x > ((AngelARUI.Instance.ARCamera.pixelWidth * 0.5f) + offsetPaddingInPixel));
     }
 
     /// <summary>
@@ -319,9 +295,9 @@ public class OrbMessage : MonoBehaviour
         while (step < 1)
         {
             if (isLeft)
-                YOffset = -initialYOffset-taskMessageCollider.size.x;
+                YOffset = -initialYOffset - textContainer.MessageCollider.size.x;
 
-            textContainer.transform.localPosition = Vector2.Lerp(textContainer.transform.localPosition, new Vector3(YOffset,0,0), step += Time.deltaTime);
+            textContainer.transform.localPosition = Vector2.Lerp(textContainer.transform.localPosition, new Vector3(YOffset, 0, 0), step += Time.deltaTime);
             step += Time.deltaTime;
             yield return new WaitForEndOfFrame();
         }
@@ -336,7 +312,9 @@ public class OrbMessage : MonoBehaviour
     /// Returns true if the message box container gameObject is currently active, else false
     /// </summary>
     /// <returns></returns>
-    public bool GetIsActive() => textContainer.activeSelf;
+    public bool GetIsActive() => textContainer.gameObject.activeSelf;
+
+    public BoxCollider GetMessageCollider() => textContainer.MessageCollider;
 
     /// <summary>
     /// Actives or disactivates the messagebox of the orb in the hierarchy
@@ -344,13 +322,13 @@ public class OrbMessage : MonoBehaviour
     /// <param name="active"></param>
     public void SetIsActive(bool active, bool newTask)
     {
-        textContainer.SetActive(active);
+        textContainer.gameObject.SetActive(active);
         indicator.SetActive(active);
 
         if (active)
         {
             UpdateAnchorInstant();
-            taskBackgroundMat.color = activeColorBG;
+            textContainer.SetBackgroundColor(activeColorBG);
             SetTextAlpha(1f);
         }
         else
@@ -372,12 +350,14 @@ public class OrbMessage : MonoBehaviour
     /// <param name="message"></param>
     public void SetTaskMessage(string message)
     {
-        this.textTask.text = Utils.SplitTextIntoLines(message, maxCharCountPerLine);
+        textContainer.SetText(message);
         progressText.text = TaskListManager.Instance.GetCurrentTaskID() + "/" + TaskListManager.Instance.GetTaskCount();
 
-        if (message.Contains("Done") ){
+        if (message.Contains("Done"))
+        {
             progressText.gameObject.SetActive(false);
-        } else
+        }
+        else
         {
             progressText.gameObject.SetActive(true);
         }
@@ -389,7 +369,7 @@ public class OrbMessage : MonoBehaviour
     /// <param name="message"></param>
     public void SetNotificationMessage(string message)
     {
-        textNotification.text = Utils.SplitTextIntoLines(message, maxCharCountPerLine);
+        textNotification.text = Utils.SplitTextIntoLines(message, textContainer.MaxCharCountPerLine);
     }
 
     /// <summary>
@@ -405,7 +385,7 @@ public class OrbMessage : MonoBehaviour
             textNotification.text = "";
 
         if (isActive)
-            notificationMessageRect.transform.SetLocalYPos(textTaskRect.rect.height / 2);
+            notificationMessageRect.transform.SetLocalYPos(textContainer.TextRect.height / 2);
     }
 
     /// <summary>
@@ -415,9 +395,10 @@ public class OrbMessage : MonoBehaviour
     private void SetTextAlpha(float alpha)
     {
         if (alpha == 0)
-            textTask.color = new Color(0, 0, 0, 0);
+            textContainer.SetTextColor(new Color(0, 0, 0, 0));
         else
-            textTask.color = new Color(activeColorText.r, activeColorText.g, activeColorText.b, alpha);
+            textContainer.SetTextColor(new Color(activeColorText.r, activeColorText.g, activeColorText.b, alpha));
     }
+
     #endregion
 }

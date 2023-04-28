@@ -1,0 +1,41 @@
+_BASE_: "../Base-RCNN-FPN.yaml"
+MODEL:
+#  WEIGHTS: '/shared/niudt/detectron2/tools/PTG_DEMO/MC_1+3+13+25_40000/model_final.pth'
+  WEIGHTS: '/shared/niudt/detectron2/tools/PTG_DEMO/11-5/train_Alex/model_final.pth'
+#  WEIGHTS: '/shared/niudt/detectron2/tools/PTG_DEMO/MC_1+3+13+14+25/model_final.pth'
+#  WEIGHTS: '/shared/niudt/detectron2/tools/PTG_DEMO/MC_1+3+13+14+25/model_final.pth'
+#  WEIGHTS: '/shared/niudt/detectron2_ori/detectron2/tools/coco-101-rpn/model_final_f96b26.pkl'
+  MASK_ON: False
+  RESNETS:
+    DEPTH: 101
+  ROI_HEADS:
+#    NUM_CLASSES: 1203
+    NUM_CLASSES: 42
+    SCORE_THRESH_TEST: 0.0001
+INPUT:
+  MIN_SIZE_TRAIN: (640, 672, 704, 736, 768, 800)
+DATASETS:
+  TRAIN: ("MC50_train",)
+  TEST: ("MC50_val",)
+TEST:
+  DETECTIONS_PER_IMAGE: 300  # LVIS allows up to 300
+#SOLVER:
+#  STEPS: (120000, 160000)
+#  MAX_ITER: 180000  # 180000 * 16 / 100000 ~ 28.8 epochs
+DATALOADER:
+  SAMPLER_TRAIN: "RepeatFactorTrainingSampler"
+  REPEAT_THRESHOLD: 0.001
+
+OUTPUT_DIR: './PTG_DEMO/11-6/inf_hannah'
+
+SOLVER:
+  TOTAL_IMAGE_NUMBER: 904
+  IMS_PER_BATCH: 1
+  BASE_LR: 0.001
+  STEPS: (34000, 41000)
+  MAX_ITER: 64000 # 500 * 1 / 10 ~ 500 epochs
+  CHECKPOINT_PERIOD: 1000
+  EPOCH: 50
+
+VISUALIZER:
+  CAM: False
