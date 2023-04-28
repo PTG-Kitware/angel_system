@@ -84,6 +84,9 @@ PARAM_PV_HEIGHT = "pv_height"
 PARAM_PV_FRAMERATE = "pv_framerate"
 PARAM_SM_FREQ = "sm_freq"
 
+# Pass string for any of the ROS topic params to disable that stream
+DISABLE_TOPIC_STR = "disable"
+
 
 class HL2SSROSBridge(Node):
     """
@@ -163,82 +166,85 @@ class HL2SSROSBridge(Node):
         self.sm_port = hl2ss.IPCPort.SPATIAL_MAPPING
 
         # Create frame publisher
-        self.ros_frame_publisher = self.create_publisher(
-            Image,
-            self._image_topic,
-            1
-        )
+        if self._image_topic != DISABLE_TOPIC_STR:
+            self.ros_frame_publisher = self.create_publisher(
+                Image,
+                self._image_topic,
+                1
+            )
+            self.connect_hl2ss_pv()
+            log.info("PV client connected!")
+
+            # Start the frame publishing thread
+            self._pv_active = Event()
+            self._pv_active.set()
+            self._pv_rate_tracker = RateTracker()
+            self._pv_thread = Thread(
+                target=self.pv_publisher,
+                name="publish_pv"
+            )
+            self._pv_thread.daemon = True
+            self._pv_thread.start()
         # Create the hand joint pose publisher
-        self.ros_hand_publisher = self.create_publisher(
-            HandJointPosesUpdate,
-            self._hand_pose_topic,
-            1
-        )
+        if self._hand_pose_topic != DISABLE_TOPIC_STR:
+            self.ros_hand_publisher = self.create_publisher(
+                HandJointPosesUpdate,
+                self._hand_pose_topic,
+                1
+            )
+            self.connect_hl2ss_si()
+            log.info("SI client connected!")
+
+            # Start the hand tracking data thread
+            self._si_active = Event()
+            self._si_active.set()
+            self._si_rate_tracker = RateTracker()
+            self._si_thread = Thread(
+                target=self.si_publisher,
+                name="publish_si"
+            )
+            self._si_thread.daemon = True
+            self._si_thread.start()
         # Create the audio publisher
-        self.ros_audio_publisher = self.create_publisher(
-            HeadsetAudioData,
-            self._audio_topic,
-            1
-        )
+        if self._audio_topic != DISABLE_TOPIC_STR:
+            self.ros_audio_publisher = self.create_publisher(
+                HeadsetAudioData,
+                self._audio_topic,
+                1
+            )
+            self.connect_hl2ss_audio()
+            log.info("Audio client connected!")
+
+            # Start the audio data thread
+            self._audio_active = Event()
+            self._audio_active.set()
+            self._audio_rate_tracker = RateTracker()
+            self._audio_thread = Thread(
+                target=self.audio_publisher,
+                name="publish_audio"
+            )
+            self._audio_thread.daemon = True
+            self._audio_thread.start()
         # Create the spatial map publisher
-        self.ros_sm_publisher = self.create_publisher(
-            SpatialMesh,
-            self._sm_topic,
-            1
-        )
+        if self._sm_topic != DISABLE_TOPIC_STR:
+            self.ros_sm_publisher = self.create_publisher(
+                SpatialMesh,
+                self._sm_topic,
+                1
+            )
+            self.connect_hl2ss_sm()
+            log.info("SM client connected!")
 
-        log.info("Connecting to HL2SS servers...")
-        self.connect_hl2ss_pv()
-        log.info("PV client connected!")
-        self.connect_hl2ss_si()
-        log.info("SI client connected!")
-        self.connect_hl2ss_audio()
-        log.info("Audio client connected!")
-        self.connect_hl2ss_sm()
-        log.info("SM client connected!")
-
-        log.info("Starting publishing threads...")
-        # Start the frame publishing thread
-        self._pv_active = Event()
-        self._pv_active.set()
-        self._pv_rate_tracker = RateTracker()
-        self._pv_thread = Thread(
-            target=self.pv_publisher,
-            name="publish_pv"
-        )
-        self._pv_thread.daemon = True
-        self._pv_thread.start()
-        # Start the hand tracking data thread
-        self._si_active = Event()
-        self._si_active.set()
-        self._si_rate_tracker = RateTracker()
-        self._si_thread = Thread(
-            target=self.si_publisher,
-            name="publish_si"
-        )
-        self._si_thread.daemon = True
-        self._si_thread.start()
-        # Start the audio data thread
-        self._audio_active = Event()
-        self._audio_active.set()
-        self._audio_rate_tracker = RateTracker()
-        self._audio_thread = Thread(
-            target=self.audio_publisher,
-            name="publish_audio"
-        )
-        self._audio_thread.daemon = True
-        self._audio_thread.start()
-        # Start the spatial mapping thread
-        self._sm_active = Event()
-        self._sm_active.set()
-        self._sm_rate_tracker = RateTracker()
-        self._sm_thread = Thread(
-            target=self.sm_publisher,
-            name="publish_sm"
-        )
-        self._sm_thread.daemon = True
-        self._sm_thread.start()
-        log.info("Starting publishing threads... Done")
+            # Start the spatial mapping thread
+            self._sm_active = Event()
+            self._sm_active.set()
+            self._sm_rate_tracker = RateTracker()
+            self._sm_thread = Thread(
+                target=self.sm_publisher,
+                name="publish_sm"
+            )
+            self._sm_thread.daemon = True
+            self._sm_thread.start()
 
     def connect_hl2ss_pv(self) -> None:
         """
@@ -311,39 +317,43 @@ class HL2SSROSBridge(Node):
         """
         log = self.get_logger()
 
-        # Stop frame publishing thread
-        self._pv_active.clear()  # make RT active flag "False"
-        self._pv_thread.join()
-        log.info("PV thread closed")
+        if self._image_topic != DISABLE_TOPIC_STR:
+            # Stop frame publishing thread
+            self._pv_active.clear()  # make RT active flag "False"
+            self._pv_thread.join()
+            log.info("PV thread closed")
 
-        # Stop SI publishing thread
-        self._si_active.clear()
-        self._si_thread.join()
-        log.info("SI thread closed")
+            # Close client connections
+            self.hl2ss_pv_client.close()
+            hl2ss.stop_subsystem_pv(self.ip_addr, self.pv_port)
+            log.info("PV client disconnected")
 
-        # Stop audio publishing thread
-        self._audio_active.clear()
-        self._audio_thread.join()
-        log.info("Audio thread closed")
+        if self._hand_pose_topic != DISABLE_TOPIC_STR:
+            # Stop SI publishing thread
+            self._si_active.clear()
+            self._si_thread.join()
+            log.info("SI thread closed")
 
-        # Stop SM publishing thread
-        self._sm_active.clear()
-        self._sm_thread.join()
-        log.info("SM thread closed")
+            self.hl2ss_si_client.close()
+            log.info("SI client disconnected")
 
-        # Close client connections
-        self.hl2ss_pv_client.close()
-        hl2ss.stop_subsystem_pv(self.ip_addr, self.pv_port)
-        log.info("PV client disconnected")
+        if self._audio_topic != DISABLE_TOPIC_STR:
+            # Stop audio publishing thread
+            self._audio_active.clear()
+            self._audio_thread.join()
+            log.info("Audio thread closed")
 
-        self.hl2ss_si_client.close()
-        log.info("SI client disconnected")
+            self.hl2ss_audio_client.close()
+            log.info("Audio client disconnected")
 
-        self.hl2ss_audio_client.close()
-        log.info("Audio client disconnected")
+        if self._sm_topic != DISABLE_TOPIC_STR:
+            # Stop SM publishing thread
+            self._sm_active.clear()
+            self._sm_thread.join()
+            log.info("SM thread closed")
 
-        self.hl2ss_sm_client.close()
-        log.info("SM client disconnected")
+            self.hl2ss_sm_client.close()
+            log.info("SM client disconnected")
 
     def pv_publisher(self) -> None:
         """
