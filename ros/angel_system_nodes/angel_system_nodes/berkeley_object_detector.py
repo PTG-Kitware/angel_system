@@ -43,11 +43,21 @@ class BerkeleyObjectDetector(Node):
             .get_parameter_value()
             .string_value
         )
+        self._det_conf_thresh = (
+            self.declare_parameter("det_conf_threshold", 0.7)
+            .value
+        )
+        self._cuda_device_id = (
+            self.declare_parameter("cuda_device_id", 0)
+            .value
+        )
 
         log = self.get_logger()
         log.info(f"Image topic: {self._image_topic}")
         log.info(f"Model Config file: {self._model_config}")
         log.info(f"Detections topic: {self._det_topic}")
+        log.info(f"Detection confidence threshold: {self._det_conf_thresh}")
+        log.info(f"CUDA Device ID: {self._cuda_device_id}")
 
         # Initialize ROS hooks
         self._subscription = self.create_subscription(
@@ -72,7 +82,7 @@ class BerkeleyObjectDetector(Node):
         log.info("Arguments: " + str(args))
         cfg = model.setup_cfg(args)
 
-        os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+        os.environ['CUDA_VISIBLE_DEVICES'] = f'{self._cuda_device_id}'
         self.demo = predictor.VisualizationDemo_add_smoothing(
             cfg,
             last_time=2,
