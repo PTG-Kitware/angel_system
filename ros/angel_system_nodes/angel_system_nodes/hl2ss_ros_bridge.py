@@ -5,7 +5,6 @@ from threading import (
 )
 
 from cv_bridge import CvBridge
-import cv2
 from geometry_msgs.msg import (
     Point,
     Pose,
@@ -24,6 +23,7 @@ from angel_msgs.msg import (
     HandJointPose,
     HandJointPosesUpdate,
     HeadsetAudioData,
+    HeadsetPoseData,
     SpatialMesh
 )
 from angel_system.hl2ss_viewer import hl2ss
@@ -78,6 +78,7 @@ PARAM_PV_IMAGES_TOPIC = "image_topic"
 PARAM_HAND_POSE_TOPIC = "hand_pose_topic"
 PARAM_AUDIO_TOPIC = "audio_topic"
 PARAM_SM_TOPIC = "sm_topic"
+PARAM_HEAD_POSE_TOPIC = "head_pose_topic"
 PARAM_IP_ADDR = "ip_addr"
 PARAM_PV_WIDTH = "pv_width"
 PARAM_PV_HEIGHT = "pv_height"
@@ -103,6 +104,7 @@ class HL2SSROSBridge(Node):
             PARAM_HAND_POSE_TOPIC,
             PARAM_AUDIO_TOPIC,
             PARAM_SM_TOPIC,
+            PARAM_HEAD_POSE_TOPIC,
             PARAM_IP_ADDR,
             PARAM_PV_WIDTH,
             PARAM_PV_HEIGHT,
@@ -126,6 +128,7 @@ class HL2SSROSBridge(Node):
         self._hand_pose_topic = self.get_parameter(PARAM_HAND_POSE_TOPIC).value
         self._audio_topic = self.get_parameter(PARAM_AUDIO_TOPIC).value
         self._sm_topic = self.get_parameter(PARAM_SM_TOPIC).value
+        self._head_pose_topic = self.get_parameter(PARAM_HEAD_POSE_TOPIC).value
         self.ip_addr = self.get_parameter(PARAM_IP_ADDR).value
         self.pv_width = self.get_parameter(PARAM_PV_WIDTH).value
         self.pv_height = self.get_parameter(PARAM_PV_HEIGHT).value
@@ -143,6 +146,9 @@ class HL2SSROSBridge(Node):
         log.info(f"Spatial Mesh topic: "
                       f"({type(self._sm_topic).__name__}) "
                       f"{self._sm_topic}")
+        log.info(f"Head pose topic: "
+                      f"({type(self._head_pose_topic).__name__}) "
+                      f"{self._head_pose_topic}")
         log.info(f"HL2 IP address: "
                       f"({type(self.ip_addr).__name__}) "
                       f"{self.ip_addr}")
@@ -165,8 +171,8 @@ class HL2SSROSBridge(Node):
         self.audio_port = hl2ss.StreamPort.MICROPHONE
         self.sm_port = hl2ss.IPCPort.SPATIAL_MAPPING
 
-        # Create frame publisher
         if self._image_topic != DISABLE_TOPIC_STR:
+            # Create frame publisher
             self.ros_frame_publisher = self.create_publisher(
                 Image,
                 self._image_topic,
@@ -185,8 +191,8 @@ class HL2SSROSBridge(Node):
             )
             self._pv_thread.daemon = True
             self._pv_thread.start()
-        # Create the hand joint pose publisher
         if self._hand_pose_topic != DISABLE_TOPIC_STR:
+            # Create the hand joint pose publisher
             self.ros_hand_publisher = self.create_publisher(
                 HandJointPosesUpdate,
                 self._hand_pose_topic,
@@ -205,8 +211,8 @@ class HL2SSROSBridge(Node):
             )
             self._si_thread.daemon = True
             self._si_thread.start()
-        # Create the audio publisher
         if self._audio_topic != DISABLE_TOPIC_STR:
+            # Create the audio publisher
             self.ros_audio_publisher = self.create_publisher(
                 HeadsetAudioData,
                 self._audio_topic,
@@ -225,8 +231,8 @@ class HL2SSROSBridge(Node):
             )
             self._audio_thread.daemon = True
             self._audio_thread.start()
-        # Create the spatial map publisher
         if self._sm_topic != DISABLE_TOPIC_STR:
+            # Create the spatial map publisher
             self.ros_sm_publisher = self.create_publisher(
                 SpatialMesh,
                 self._sm_topic,
@@ -245,6 +251,19 @@ class HL2SSROSBridge(Node):
             )
             self._sm_thread.daemon = True
             self._sm_thread.start()
+        if self._head_pose_topic != DISABLE_TOPIC_STR:
+            self.ros_head_pose_publisher = self.create_publisher(
+                HeadsetPoseData,
+                self._head_pose_topic,
+                1
+            )
+
+            # Check to make sure image topic is valid, otherwise the image thread
+            # will not be running, which is where head pose data is fetched.
+            if self._image_topic == DISABLE_TOPIC_STR:
+                log.warn(
+                    "Warning! Image topic is not configured, so head pose data will not be published."
+                )
 
     def connect_hl2ss_pv(self) -> None:
         """
@@ -263,6 +282,16 @@ class HL2SSROSBridge(Node):
         decoded_format = 'bgr24'
 
         hl2ss.start_subsystem_pv(self.ip_addr, self.pv_port)
+
+        # Get the camera parameters for this configuration
+        pv_cam_params = hl2ss.download_calibration_pv(
+            self.ip_addr,
+            self.pv_port,
+            self.pv_width,
+            self.pv_height,
+            self.pv_framerate
+        )
+        self.camera_intrinsics = [float(x) for x in pv_cam_params.intrinsics.flatten()]
 
         self.hl2ss_pv_client = hl2ss.rx_decoded_pv(
             self.ip_addr,
@@ -358,7 +387,9 @@ class HL2SSROSBridge(Node):
     def pv_publisher(self) -> None:
         """
         Main thread that gets frames from the HL2SS PV client and publishes
-        them to the image topic.
+        them to the image topic. For each image message published, a corresponding
+        HeadsetPoseData message is published with the same header info and the world
+        matrix for that image.
         """
         log = self.get_logger()
 
@@ -376,7 +407,17 @@ class HL2SSROSBridge(Node):
                 log.warning(f"{e}")
                 return
 
+            # Publish the image msg
             self.ros_frame_publisher.publish(image_msg)
+
+            # Publish the corresponding headset pose msg
+            world_matrix = [float(x) for x in data.pose.flatten()]
+
+            headset_pose_msg = HeadsetPoseData()
+            headset_pose_msg.header = image_msg.header  # same timestamp/frame_id as image
+            headset_pose_msg.world_matrix = world_matrix
+            headset_pose_msg.projection_matrix = self.camera_intrinsics
+            self.ros_head_pose_publisher.publish(headset_pose_msg)
 
             self._pv_rate_tracker.tick()
             log.debug(f"Published image message (hz: "
@@ -493,7 +534,7 @@ class HL2SSROSBridge(Node):
             for index, mesh in meshes.items():
                 id_hex = ids[index].hex()
 
-                if (mesh is None):
+                if mesh is None:
                     log.warning(f'Task {index}: surface id {id_hex} compute mesh failed')
                     continue
 
@@ -505,7 +546,9 @@ class HL2SSROSBridge(Node):
                     f' triangles {mesh.vertex_normals.shape[0]} normals'
                 )
 
-                mesh.vertex_positions[:, 0:3] = mesh.vertex_positions[:, 0:3] * mesh.vertex_position_scale
+                mesh.vertex_positions[:, 0:3] = (
+                    mesh.vertex_positions[:, 0:3] * mesh.vertex_position_scale
+                )
                 mesh.vertex_positions = mesh.vertex_positions @ mesh.pose
                 mesh.vertex_normals = mesh.vertex_normals @ mesh.pose
 
