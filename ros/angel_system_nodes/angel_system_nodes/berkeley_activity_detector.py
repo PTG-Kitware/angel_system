@@ -12,10 +12,10 @@ PARAM_ACT_TOPIC = "act_topic"
 PARAM_CLASSIFIER_FILE = "classifier_file"
 
 
-class BerkeleyActivityDetector(Node):
+class ActivityFromObjectDetectionsClassifier(Node):
     """
-    ROS node that uses HL2SS client/server library to convert HL2SS data to
-    ROS messages used throughout the ANGEL system.
+    ROS node that publishes `ActivityDetection` messages using a classifier and
+    `ObjectDetection2dSet` messages.
     """
 
     def __init__(self):
@@ -107,17 +107,17 @@ class BerkeleyActivityDetector(Node):
 def main():
     rclpy.init()
 
-    activity_detector = BerkeleyActivityDetector()
+    activity_classifier = ActivityFromObjectDetectionsClassifier()
 
     try:
-        rclpy.spin(activity_detector)
+        rclpy.spin(activity_classifier)
     except KeyboardInterrupt:
         activity_detector.get_logger().info("Keyboard interrupt, shutting down.\n")
 
     # Destroy the node explicitly
     # (optional - otherwise it will be done automatically
     # when the garbage collector destroys the node object)
-    activity_detector.destroy_node()
+    activity_classifier.destroy_node()
 
     rclpy.shutdown()
 
