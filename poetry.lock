@@ -2447,6 +2447,25 @@ lint = ["flake8", "mypy", "docutils-stubs"]
 test = ["pytest"]
 
 [[package]]
+name = "spyder-kernels"
+version = "2.4.3"
+description = "Jupyter kernels for Spyder's console"
+category = "dev"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+cloudpickle = "*"
+ipykernel = {version = ">=6.16.1,<7", markers = "python_version >= \"3\""}
+ipython = {version = ">=7.31.1,<8.8.0 || >8.8.0,<8.9.0 || >8.9.0,<8.10.0 || >8.10.0,<9", markers = "python_version >= \"3\""}
+jupyter-client = {version = ">=7.4.9,<9", markers = "python_version >= \"3\""}
+pyzmq = {version = ">=22.1.0", markers = "python_version >= \"3\""}
+wurlitzer = {version = ">=1.0.3", markers = "platform_system != \"Windows\""}
+
+[package.extras]
+test = ["codecov", "cython", "dask", "flaky", "matplotlib", "mock", "numpy", "pandas", "pytest", "pytest-cov", "scipy", "xarray", "pillow", "django"]
+
+[[package]]
 name = "stack-data"
 version = "0.6.2"
 description = "Extract data from python stack frames and tracebacks for informative displays"
@@ -2837,6 +2856,14 @@ optional = false
 python-versions = ">=3.7"
 
 [[package]]
+name = "wurlitzer"
+version = "3.0.3"
+description = "Capture C-level output in context managers"
+category = "dev"
+optional = false
+python-versions = ">=3.5"
+
+[[package]]
 name = "xatlas"
 version = "0.0.7"
 description = "Python bindings for xatlas"
@@ -2890,7 +2917,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "flake8 (<5)", "pytest-co
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8,<3.10"
-content-hash = "aa7d24021d156e3641f4f4afef4116f353a58f8d4576d96744265bc7e7897ebd"
+content-hash = "02979662b8fe4de9d4569e1d5dcb9d49d8a203337f14c27f8fa2ca66aaf22686"
 
 [metadata.files]
 aiohttp = []
@@ -3076,6 +3103,7 @@ sphinxcontrib-htmlhelp = []
 sphinxcontrib-jsmath = []
 sphinxcontrib-qthelp = []
 sphinxcontrib-serializinghtml = []
+spyder-kernels = []
 stack-data = []
 "svg.path" = []
 sympy = []
@@ -3106,6 +3134,7 @@ webencodings = []
 websocket-client = []
 websockets = []
 widgetsnbextension = []
+wurlitzer = []
 xatlas = []
 xxhash = []
 yacs = []
