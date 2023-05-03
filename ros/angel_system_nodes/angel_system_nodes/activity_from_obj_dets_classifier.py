@@ -112,7 +112,7 @@ def main():
     try:
         rclpy.spin(activity_classifier)
     except KeyboardInterrupt:
-        activity_detector.get_logger().info("Keyboard interrupt, shutting down.\n")
+        activity_classifier.get_logger().info("Keyboard interrupt, shutting down.\n")
 
     # Destroy the node explicitly
     # (optional - otherwise it will be done automatically

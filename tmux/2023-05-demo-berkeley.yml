@@ -71,7 +71,7 @@ windows:
       -p model_config:=angel_system/berkeley/configs/MC50-InstanceSegmentation/mask_rcnn_R_101_FPN_1x_demo.yaml
       -p cuda_device_id:=0
 
-  - activity_classifier: ros2 run angel_system_nodes berkeley_activity_detector --ros-args
+  - activity_classifier: ros2 run angel_system_nodes activity_from_obj_dets_classifier --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p det_topic:=ObjectDetections2d
       -p act_topic:=ActivityDetections
