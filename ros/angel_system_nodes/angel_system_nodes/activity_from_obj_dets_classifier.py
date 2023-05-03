@@ -69,6 +69,12 @@ class ActivityFromObjectDetectionsClassifier(Node):
         # Would load the angel_system/sklearn module here from the classifier file
         self.classifier = None
 
+        # Tracks the timestamps of the messages published from this node
+        # The very first message published will have a start time equal to the time
+        # this node was initialized. After the first message, the source stamp
+        # start time will be set to the end time of the previous message.
+        self._source_stamp_start_frame = self.get_clock().now().to_msg()
+
     def det_callback(self, msg: ObjectDetection2dSet) -> None:
         """
         Callback function for `ObjectDetection2dSet` messages. Runs the classifier,
@@ -93,7 +99,7 @@ class ActivityFromObjectDetectionsClassifier(Node):
         activity_det_msg.header.frame_id = "ActivityDetection"
 
         # Set the activity det start/end frame time to this frame's source stamp
-        activity_det_msg.source_stamp_start_frame = msg.source_stamp
+        activity_det_msg.source_stamp_start_frame = self._source_stamp_start_frame
         activity_det_msg.source_stamp_end_frame = msg.source_stamp
 
         activity_det_msg.label_vec = list(label_conf_dict.keys())
@@ -102,6 +108,8 @@ class ActivityFromObjectDetectionsClassifier(Node):
         self._activity_publisher.publish(activity_det_msg)
         log.info("Publish activity detection msg")
 
+        # Update start time for next message to be published
+        self._source_stamp_start_frame = msg.source_stamp
 
 
 def main():
