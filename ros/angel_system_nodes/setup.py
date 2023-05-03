@@ -41,7 +41,8 @@ setup(
                 'berkeley_task_monitor = angel_system_nodes.berkeley_task_monitor:main',
                 'intent_to_command = angel_system_nodes.intent_to_command:main',
                 'redis_ros_bridge = angel_system_nodes.redis_ros_bridge:main',
-                'berkeley_object_detector= angel_system_nodes.berkeley_object_detector:main',
+                'berkeley_object_detector = angel_system_nodes.berkeley_object_detector:main',
+                'activity_from_obj_dets_classifier = angel_system_nodes.activity_from_obj_dets_classifier:main',
             ],
     },
 )
