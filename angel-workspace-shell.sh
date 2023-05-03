@@ -78,9 +78,14 @@ XAUTH_DIR="${SCRIPT_DIR}/.container_xauth"
 # Exporting to be used in replacement in docker-compose file.
 XAUTH_FILEPATH="$(mktemp "${XAUTH_DIR}/local-XXXXXX.xauth")"
 export XAUTH_FILEPATH
-log "[INFO] Creating local xauth file: $XAUTH_FILEPATH"
-touch "$XAUTH_FILEPATH"
-xauth nlist "$DISPLAY" | sed -e 's/^..../ffff/' | xauth -f "$XAUTH_FILEPATH" nmerge -
+
+# Conditionally gather if jupyter is available in the current
+# environment and parameterize mounting it's runtime dir
+if [[ -n "$(which jupyter)" ]]
+then
+  jupyter_rt_dir="$(jupyter --runtime-dir)"
+  export JUPYTER_MOUNT_PARAM=(-v "${jupyter_rt_dir}:/root/.local/share/jupyter/runtime")
+fi
 
 # Print some status stuff from the ENV file we are using
 #
@@ -97,6 +102,7 @@ docker-compose \
   --env-file "$ENV_FILE" \
   -f "$SCRIPT_DIR"/docker/docker-compose.yml \
   run --rm \
+  "${JUPYTER_MOUNT_PARAM[@]}" \
   "$SERVICE_NAME" "${passthrough_args[@]}"
 DC_RUN_RET_CODE="$?"
 set -e
