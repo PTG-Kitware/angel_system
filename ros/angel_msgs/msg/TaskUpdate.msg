@@ -11,6 +11,9 @@ string task_name
 # Task description
 string task_description
 
+# Timestamp of the latest input that has gone into this task update estimation.
+builtin_interfaces/Time latest_sensor_input_time
+
 # The index of the step currently in progress.
 # A value of `-1` indicates that no step has been started yet.
 int8 current_step_id
