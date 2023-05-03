@@ -1,8 +1,10 @@
 #
-# System configuration to run the ANGEL system for the May demo meeting.
+# System configuration to run the ANGEL system for the BBN system.
+#
+# This configuration is for the M2 tourniquet task.
 #
 
-name: 2023-05-demo-berkeley
+name: 2023-05-BBN-M2-Tourniquet
 root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 
 # Optional tmux socket
@@ -16,12 +18,12 @@ root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 # Runs on project start, always
 # on_project_start: command
 on_project_start: |
-  export ROS_NAMESPACE=${ROS_NAMESPACE:-/debug}
-  export HL2_IP=${HL2_IP:-192.168.1.101}
+  export ROS_NAMESPACE=${ROS_NAMESPACE:-/kitware}
+  export HL2SS_API_URL=${HL2SS_API_URL:-localhost:8000}
+  export BBN_OUTPUT_URL=${BBN_OUTPUT_URL:-tcp://localhost:5555}
   export CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/config
   export NODE_CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/src/angel_system_nodes/configs
   export MODEL_DIR=${ANGEL_WORKSPACE_DIR}/model_files
-
 # Run on project start, the first time
 # on_project_first_start: command
 
@@ -42,33 +44,20 @@ on_project_start: |
 tmux_options: -f <%= ENV["ANGEL_WORKSPACE_DIR"] %>/tmux/tmux.conf
 
 windows:
-  - datahub: ros2 run ros_tcp_endpoint default_server_endpoint --ros-args
+  # Connection with the HL2 app via HL2SS sensor data streaming and the
+  # ROS-TCP-Endpoint
+  - sensor_input: ros2 run angel_system_nodes redis_ros_bridge --ros-args
       -r __ns:=${ROS_NAMESPACE}
-      -p ROS_IP:=0.0.0.0
-  - hl2ss_bridge: ros2 run angel_system_nodes hl2ss_ros_bridge --ros-args
-      -r __ns:=${ROS_NAMESPACE}
-      -p ip_addr:=${HL2_IP}
+      -p url:=${HL2SS_API_URL}
       -p image_topic:=PVFramesBGR
       -p hand_pose_topic:=HandJointPoseData
-      -p audio_topic:=HeadsetAudioData
-      -p sm_topic:=SpatialMapData
-      -p head_pose_topic:=HeadsetPoseData
-      -p pv_width:=1280
-      -p pv_height:=720
-      -p pv_framerate:=30
-      -p sm_freq:=5
-
-  # Visualize Images being output from the headset
-  - rqt_pv_images: rqt -s rqt_image_view/ImageView
-      --args ${ROS_NAMESPACE}/PVFramesBGR
-      --ros-args -p _image_transport:=raw
 
   - object_detector: ros2 run angel_system_nodes berkeley_object_detector --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p image_topic:=PVFramesBGR
-      -p det_topic:=ObjectDetections2d
+      -p descriptor_topic:=ObjectDetections2d
       -p det_conf_threshold:=0.7
-      -p model_config:=angel_system/berkeley/configs/MC50-InstanceSegmentation/mask_rcnn_R_101_FPN_1x_demo.yaml
+      -p model_config:=${ANGEL_WORKSPACE_DIR}/angel_system/berkeley/configs/MC50-InstanceSegmentation/mask_rcnn_R_101_FPN_1x_demo.yaml
       -p cuda_device_id:=0
 
   - activity_classifier: ros2 run angel_system_nodes activity_from_obj_dets_classifier --ros-args
@@ -86,16 +75,7 @@ windows:
       -p query_task_graph_topic:=query_task_graph
       -p step_complete_threshold:=0.5
       -p sys_cmd_topic:=SystemCommands
-
-  # Currently hard-coded to use the /debug ROS namespace.
-  - engineering_ui_websocket: ros2 launch rosbridge_server rosbridge_websocket_launch.xml port:=9090
-  - engineering_ui_server: node src/angel_utils/demo_ui/index.js
-      --namespace=${ROS_NAMESPACE}
-      --image_topic=pv_image_detections_2d/compressed
-      --query_task_graph_topic=query_task_graph
-      --task_updates_topic=TaskUpdates
-      --activity_detections_topic=ActivityDetections
-      --task_errors_topic=TaskErrors
+      -p enable_manual_progression:=false
 
   - feedback_generator: ros2 run angel_system_nodes feedback_generator --ros-args
       -r __ns:=${ROS_NAMESPACE}
@@ -104,3 +84,16 @@ windows:
       -p task_monitor_topic:=TaskUpdates
       -p arui_update_topic:=AruiUpdates
       -p interp_user_intent_topic:=UserIntentPredicted
+
+  - BBN Interface:
+      layout: even-vertical
+      panes:
+        - task-converter: ros2 run bbn_integration_py task_to_bbn_update --ros-args 
+            -r __ns:=${ROS_NAMESPACE}
+            -p task_update_topic:=TaskUpdates
+            -p bbn_update_topic:=BBNUpdates
+            -p task_graph_srv_topic:=query_task_graph
+        - zmq-publisher: ros2 run bbn_integration ZmqIntegrationClient --ros-args
+            -r __ns:=${ROS_NAMESPACE}
+            -p topic_update_msg:=BBNUpdates
+            -p server_address:=${BBN_OUTPUT_URL}
