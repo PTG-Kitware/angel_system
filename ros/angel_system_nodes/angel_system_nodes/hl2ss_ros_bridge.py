@@ -27,7 +27,7 @@ from angel_msgs.msg import (
     SpatialMesh
 )
 from angel_system.hl2ss_viewer import hl2ss
-from angel_utils import RateTracker
+from angel_utils import declare_and_get_parameters, RateTracker
 
 
 BRIDGE = CvBridge()
@@ -99,71 +99,32 @@ class HL2SSROSBridge(Node):
         super().__init__(self.__class__.__name__)
         log = self.get_logger()
 
-        parameter_names = [
-            PARAM_PV_IMAGES_TOPIC,
-            PARAM_HAND_POSE_TOPIC,
-            PARAM_AUDIO_TOPIC,
-            PARAM_SM_TOPIC,
-            PARAM_HEAD_POSE_TOPIC,
-            PARAM_IP_ADDR,
-            PARAM_PV_WIDTH,
-            PARAM_PV_HEIGHT,
-            PARAM_PV_FRAMERATE,
-            PARAM_SM_FREQ,
-        ]
-        set_parameters = self.declare_parameters(
-            namespace="",
-            parameters=[(p,) for p in parameter_names],
+        param_values = declare_and_get_parameters(
+            self,
+            [
+                (PARAM_PV_IMAGES_TOPIC,),
+                (PARAM_HAND_POSE_TOPIC,),
+                (PARAM_AUDIO_TOPIC,),
+                (PARAM_SM_TOPIC,),
+                (PARAM_HEAD_POSE_TOPIC,),
+                (PARAM_IP_ADDR,),
+                (PARAM_PV_WIDTH,),
+                (PARAM_PV_HEIGHT,),
+                (PARAM_PV_FRAMERATE,),
+                (PARAM_SM_FREQ,),
+            ]
         )
-        # Check for not-set parameters
-        some_not_set = False
-        for p in set_parameters:
-            if p.type_ is rclpy.parameter.Parameter.Type.NOT_SET:
-                some_not_set = True
-                log.error(f"Parameter not set: {p.name}")
-        if some_not_set:
-            raise ValueError("Some parameters are not set.")
 
-        self._image_topic = self.get_parameter(PARAM_PV_IMAGES_TOPIC).value
-        self._hand_pose_topic = self.get_parameter(PARAM_HAND_POSE_TOPIC).value
-        self._audio_topic = self.get_parameter(PARAM_AUDIO_TOPIC).value
-        self._sm_topic = self.get_parameter(PARAM_SM_TOPIC).value
-        self._head_pose_topic = self.get_parameter(PARAM_HEAD_POSE_TOPIC).value
-        self.ip_addr = self.get_parameter(PARAM_IP_ADDR).value
-        self.pv_width = self.get_parameter(PARAM_PV_WIDTH).value
-        self.pv_height = self.get_parameter(PARAM_PV_HEIGHT).value
-        self.pv_framerate = self.get_parameter(PARAM_PV_FRAMERATE).value
-        self.sm_freq = self.get_parameter(PARAM_SM_FREQ).value
-        log.info(f"PV Images topic: "
-                      f"({type(self._image_topic).__name__}) "
-                      f"{self._image_topic}")
-        log.info(f"Hand pose topic: "
-                      f"({type(self._hand_pose_topic).__name__}) "
-                      f"{self._hand_pose_topic}")
-        log.info(f"Audio topic: "
-                      f"({type(self._audio_topic).__name__}) "
-                      f"{self._audio_topic}")
-        log.info(f"Spatial Mesh topic: "
-                      f"({type(self._sm_topic).__name__}) "
-                      f"{self._sm_topic}")
-        log.info(f"Head pose topic: "
-                      f"({type(self._head_pose_topic).__name__}) "
-                      f"{self._head_pose_topic}")
-        log.info(f"HL2 IP address: "
-                      f"({type(self.ip_addr).__name__}) "
-                      f"{self.ip_addr}")
-        log.info(f"PV Width: "
-                      f"({type(self.pv_width).__name__}) "
-                      f"{self.pv_width}")
-        log.info(f"PV Height: "
-                      f"({type(self.pv_height).__name__}) "
-                      f"{self.pv_height}")
-        log.info(f"PV Framerate: "
-                      f"({type(self.pv_framerate).__name__}) "
-                      f"{self.pv_framerate}")
-        log.info(f"Spatial map update frequency: "
-                      f"({type(self.sm_freq).__name__}) "
-                      f"{self.sm_freq}")
+        self._image_topic = param_values[PARAM_PV_IMAGES_TOPIC]
+        self._hand_pose_topic = param_values[PARAM_HAND_POSE_TOPIC]
+        self._audio_topic = param_values[PARAM_AUDIO_TOPIC]
+        self._sm_topic = param_values[PARAM_SM_TOPIC]
+        self._head_pose_topic = param_values[PARAM_HEAD_POSE_TOPIC]
+        self.ip_addr = param_values[PARAM_IP_ADDR]
+        self.pv_width = param_values[PARAM_PV_WIDTH]
+        self.pv_height = param_values[PARAM_PV_HEIGHT]
+        self.pv_framerate = param_values[PARAM_PV_FRAMERATE]
+        self.sm_freq = param_values[PARAM_SM_FREQ]
 
         # Define HL2SS server ports
         self.pv_port = hl2ss.StreamPort.PERSONAL_VIDEO
