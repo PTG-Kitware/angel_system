@@ -65,6 +65,8 @@ Sphinx = "*"
 sphinx-rtd-theme = "*"
 sphinx-prompt = "*"
 livereload = "*"
+# Jupyter dev support
+jupyter = "^1.0"
 
 [tool.poetry.scripts]
 # Evaluation
