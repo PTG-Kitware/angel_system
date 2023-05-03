@@ -119,7 +119,10 @@ def get_model_zoo_configs() -> List[str]:
     # Remove stale symlink/directory from a previous build.
     if path.exists(source_configs_dir):
         if path.islink(destination):
-            os.unlink(destination)
+            # Only unlink if the path doesn't already resolve to the source
+            # configs dir.
+            if path.realpath(destination) != source_configs_dir:
+                os.unlink(destination)
         elif path.isdir(destination):
             shutil.rmtree(destination)
 
