@@ -11,6 +11,7 @@ from std_msgs.msg import Header
 
 from angel_msgs.msg import TaskUpdate
 from angel_msgs.srv import QueryTaskGraph
+from angel_utils import declare_and_get_parameters
 from bbn_integration_msgs.msg import (
     BBNCasualties,
     BBNCasualtyCurrentlyWorkingOn,
@@ -65,11 +66,12 @@ class TranslateTaskUpdateForBBN(Node):
         super().__init__(self.__class__.__name__)
         log = self.get_logger()
 
-        parameter_values = self._declare_get_parameters([
-            ("task_update_topic",),
-            ("bbn_update_topic",),
-            ("task_graph_srv_topic",)
-        ])
+        parameter_values = declare_and_get_parameters(
+            self,
+            [("task_update_topic",),
+             ("bbn_update_topic",),
+             ("task_graph_srv_topic",)]
+        )
         self._input_task_update_topic = parameter_values["task_update_topic"]
         self._output_bbn_update_topic = parameter_values["bbn_update_topic"]
         self._task_graph_service_topic = parameter_values["task_graph_srv_topic"]
@@ -107,40 +109,6 @@ class TranslateTaskUpdateForBBN(Node):
         while not self._task_graph_client.wait_for_service(timeout_sec=1.0):
             log.info("Waiting for task graph service...")
         log.info("Task graph service available!")
-
-    def _declare_get_parameters(
-        self,
-        name_default_tuples: Sequence[Union[Tuple[str], Tuple[str, Any]]]
-    ) -> Dict[str, Any]:
-        """
-        Declare note parameters, get their values and return them in a tuple.
-
-        Logs parameters declared and parsed to the info channel.
-
-        TODO: Port this more generalized form to the utilities package,
-              replacing `self` with an input node instance.
-        """
-        log = self.get_logger()
-        parameters = self.declare_parameters(
-            namespace="",
-            parameters=name_default_tuples,
-        )
-        # Check for not-set parameters
-        some_not_set = False
-        for p in parameters:
-            if p.type_ is rclpy.parameter.Parameter.Type.NOT_SET:
-                some_not_set = True
-                log.error(f"Parameter not set: {p.name}")
-        if some_not_set:
-            raise ValueError("Some input parameters are not set.")
-
-        # Log parameters
-        log = self.get_logger()
-        log.info("Input parameters:")
-        for p in parameters:
-            log.info(f"- {p.name} = ({p.type_}) {p.value}")
-
-        return {p.name: p.value for p in parameters}
 
     def _task_is_in_progress(self, msg: TaskUpdate) -> bool:
         """
