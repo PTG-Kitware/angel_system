@@ -75,7 +75,7 @@ windows:
         - detector: ros2 run angel_system_nodes berkeley_object_detector --ros-args
             -r __ns:=${ROS_NAMESPACE}
             -p image_topic:=PVFramesBGR
-            -p descriptor_topic:=ObjectDetections2d
+            -p det_topic:=ObjectDetections2d
             -p det_conf_threshold:=0.7
             -p model_config:=angel_system/berkeley/configs/MC50-InstanceSegmentation/mask_rcnn_R_101_FPN_1x_demo.yaml
             -p cuda_device_id:=0
