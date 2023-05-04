@@ -23,8 +23,9 @@ from angel_msgs.msg import (
 )
 from angel_system.hl2ss_viewer import hl2ss
 import angel_system.hl2ss_viewer.BBN_redis_frame_load as holoframe
-from angel_utils import RateTracker
+from angel_utils import declare_and_get_parameters, RateTracker
 from angel_utils.conversion import hl2ss_stamp_to_ros_time
+from angel_utils.hand import JOINT_LIST
 
 
 BRIDGE = CvBridge()
@@ -33,43 +34,6 @@ BRIDGE = CvBridge()
 PARAM_PV_IMAGES_TOPIC = "image_topic"
 PARAM_HAND_POSE_TOPIC = "hand_pose_topic"
 PARAM_URL = "url"
-
-# List containing joint names that matches the ordering in the HL2SS
-# SI_HandJointKind class. Names semantically match the output from the MRTK API
-# though the ordering of the joins is matching that of the windows perception
-# API.
-# MRTK API: https://learn.microsoft.com/en-us/dotnet/api/microsoft.mixedreality.toolkit.utilities.trackedhandjoint?preserve-view=true&view=mixed-reality-toolkit-unity-2020-dotnet-2.8.0
-# Windows Perception API: https://learn.microsoft.com/en-us/uwp/api/windows.perception.people.handjointkind?view=winrt-22621
-# Matching the names of the MRTK API for downstream components to continue to
-# match against.
-JOINT_LIST = [
-    "Palm",
-    "Wrist",
-    "ThumbMetacarpalJoint",
-    "ThumbProximalJoint",
-    "ThumbDistalJoint",
-    "ThumbTip",
-    "IndexMetacarpal",
-    "IndexKnuckle",
-    "IndexMiddleJoint",
-    "IndexDistalJoint",
-    "IndexTip",
-    "MiddleMetacarpal",
-    "MiddleKnuckle",
-    "MiddleMiddleJoint",
-    "MiddleDistalJoint",
-    "MiddleTip",
-    "RingMetacarpal",
-    "RingKnuckle",
-    "RingMiddleJoint",
-    "RingDistalJoint",
-    "RingTip",
-    "PinkyMetacarpal",
-    "PinkyKnuckle",
-    "PinkyMiddleJoint",
-    "PinkyDistalJoint",
-    "PinkyTip",
-]
 
 
 class async2sync:
@@ -97,36 +61,18 @@ class RedisROSBridge(Node):
         super().__init__(self.__class__.__name__)
         self.log = self.get_logger()
 
-        parameter_names = [
-            PARAM_HAND_POSE_TOPIC,
-            PARAM_PV_IMAGES_TOPIC,
-            PARAM_URL,
-        ]
-        set_parameters = self.declare_parameters(
-            namespace="",
-            parameters=[(p,) for p in parameter_names],
+        param_values = declare_and_get_parameters(
+            self,
+            [
+                (PARAM_HAND_POSE_TOPIC,),
+                (PARAM_PV_IMAGES_TOPIC,),
+                (PARAM_URL,),
+            ]
         )
-        # Check for not-set parameters
-        some_not_set = False
-        for p in set_parameters:
-            if p.type_ is rclpy.parameter.Parameter.Type.NOT_SET:
-                some_not_set = True
-                self.log.error(f"Parameter not set: {p.name}")
-        if some_not_set:
-            raise ValueError("Some parameters are not set.")
 
-        self._image_topic = self.get_parameter(PARAM_PV_IMAGES_TOPIC).value
-        self._hand_pose_topic = self.get_parameter(PARAM_HAND_POSE_TOPIC).value
-        self._url = self.get_parameter(PARAM_URL).value
-        self.log.info(f"PV Images topic: "
-                      f"({type(self._image_topic).__name__}) "
-                      f"{self._image_topic}")
-        self.log.info(f"Hand pose topic: "
-                      f"({type(self._hand_pose_topic).__name__}) "
-                      f"{self._hand_pose_topic}")
-        self.log.info(f"URL: "
-                      f"({type(self._url).__name__}) "
-                      f"{self._url}")
+        self._image_topic = param_values[PARAM_PV_IMAGES_TOPIC]
+        self._hand_pose_topic = param_values[PARAM_HAND_POSE_TOPIC]
+        self._url = param_values[PARAM_URL]
 
         # Define stream IDs
         self._audio_sid = "mic0"
