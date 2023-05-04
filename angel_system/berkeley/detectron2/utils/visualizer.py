@@ -409,7 +409,7 @@ class VisualizerUtil:
         score_list = np.array(score_list)
         flag_list = np.zeros(len(labels))
 
-        R_class = ['paper filter bag', 'coffee bag']
+        R_class = []
         for i in range(len(labels)):
             if flag_list[i] == 1:
                 continue
@@ -1550,29 +1550,6 @@ class Visualizer:
         # # color_mapping['cheese'] = [255/255, 215/255, 0/255]
         # # color_mapping['ham'] = [238/255, 180/255, 180/255]
         # # color_mapping['lettuce'] = [0/255, 255/255, 127/255]
-        # # color_mapping['mug'] = [100/255, 149/255, 237/255]
-        # color_mapping['coffee bag'] = [139/255, 115/255, 85/255]
-        # color_mapping['coffee grounds'] = [139/255, 69/255, 19/255]
-        # color_mapping['filter cone (empty)'] = [205/255, 201/255, 201/255]
-        # color_mapping['filter cone + paper filter (full)'] = [205/255, 192/255, 176/255]
-        # color_mapping['grinder'] = [138/255, 43/255, 226/255]
-        # color_mapping['kettle'] = [54/255, 54/255, 54/255]
-        # color_mapping['measuring cup'] = [209/255, 238/255, 238/255]
-        # color_mapping['mug'] = [100/255, 149/255, 237/255]
-        # color_mapping['mug + coffee'] = [139/255, 115/255, 85/255]
-        # color_mapping['mug + filter cone (empty)'] = [110/255, 123/255, 139/255]
-        # color_mapping['mug + filter cone + paper filter (empty)'] = [255/255, 131/255, 250/255]
-        # color_mapping['mug + filter cone + paper filter (full)'] = [238/255, 58/255, 140/255]
-        # color_mapping['paper filter (full)'] = [205/255, 149/255, 12/255]
-        # color_mapping['paper filter (quarter)'] = [255/255, 185/255, 15/255]
-        # color_mapping['paper filter (semi)'] = [238/255, 173/255, 14/255]
-        # color_mapping['paper towel'] = [255/255, 255/255, 224/255]
-        # color_mapping['scale'] = [34/255, 139/255, 34/255]
-        # color_mapping['thermometer'] = [0/255, 255/255, 255/255]
-        # color_mapping['timer'] = [188/255, 238/255, 104/255]
-        # color_mapping['water'] = [176/255, 196/255, 222/255]
-
-
 
         num_instances = 0
         if boxes is not None:
@@ -1981,7 +1958,7 @@ class Visualizer:
         Returns:
             output (VisImage): image object with visualizations.
         """
-        _ASSIGN_COLOR = True
+        _ASSIGN_COLOR = False
         color_mapping = {}
         color_mapping['plate'] = [250 / 255, 250 / 255, 250 / 255]
         color_mapping['tomato'] = [255 / 255, 0 / 255, 0 / 255]
@@ -3055,7 +3032,7 @@ class Visualizer_eval:
         Returns:
             output (VisImage): image object with visualizations.
         """
-        _ASSIGN_COLOR = True
+        _ASSIGN_COLOR = False
         num_instances = 0
         if boxes is not None:
             boxes = _convert_boxes(boxes)
@@ -3612,7 +3589,7 @@ class Visualizer_eval:
         Returns:
             output (VisImage): image object with visualizations.
         """
-        _ASSIGN_COLOR = True
+        _ASSIGN_COLOR = False
         # color_mapping = {}
         # # color_mapping['plate'] = [250/255, 250/255, 250/255]
         # # color_mapping['tomato'] = [255/255, 0/255, 0/255]
@@ -3623,29 +3600,6 @@ class Visualizer_eval:
         # # color_mapping['cheese'] = [255/255, 215/255, 0/255]
         # # color_mapping['ham'] = [238/255, 180/255, 180/255]
         # # color_mapping['lettuce'] = [0/255, 255/255, 127/255]
-        # # color_mapping['mug'] = [100/255, 149/255, 237/255]
-        # color_mapping['coffee bag'] = [139/255, 115/255, 85/255]
-        # color_mapping['coffee grounds'] = [139/255, 69/255, 19/255]
-        # color_mapping['filter cone (empty)'] = [205/255, 201/255, 201/255]
-        # color_mapping['filter cone + paper filter (full)'] = [205/255, 192/255, 176/255]
-        # color_mapping['grinder'] = [138/255, 43/255, 226/255]
-        # color_mapping['kettle'] = [54/255, 54/255, 54/255]
-        # color_mapping['measuring cup'] = [209/255, 238/255, 238/255]
-        # color_mapping['mug'] = [100/255, 149/255, 237/255]
-        # color_mapping['mug + coffee'] = [139/255, 115/255, 85/255]
-        # color_mapping['mug + filter cone (empty)'] = [110/255, 123/255, 139/255]
-        # color_mapping['mug + filter cone + paper filter (empty)'] = [255/255, 131/255, 250/255]
-        # color_mapping['mug + filter cone + paper filter (full)'] = [238/255, 58/255, 140/255]
-        # color_mapping['paper filter (full)'] = [205/255, 149/255, 12/255]
-        # color_mapping['paper filter (quarter)'] = [255/255, 185/255, 15/255]
-        # color_mapping['paper filter (semi)'] = [238/255, 173/255, 14/255]
-        # color_mapping['paper towel'] = [255/255, 255/255, 224/255]
-        # color_mapping['scale'] = [34/255, 139/255, 34/255]
-        # color_mapping['thermometer'] = [0/255, 255/255, 255/255]
-        # color_mapping['timer'] = [188/255, 238/255, 104/255]
-        # color_mapping['water'] = [176/255, 196/255, 222/255]
-
-
 
         num_instances = 0
         if boxes is not None:
@@ -3794,7 +3748,7 @@ class Visualizer_eval:
         score_list = np.array(score_list)
         flag_list = np.zeros(len(labels))
 
-        R_class = ['paper filter bag', 'coffee bag']
+        R_class = []
         for i in range(len(labels)):
             if flag_list[i] == 1:
                 continue
@@ -3870,50 +3824,7 @@ class Visualizer_eval:
         score_list = np.array(score_list)
         flag_list = np.zeros(len(labels))
 
-        # Multi_States_class = ['kettle', 'kettle (empty)', 'kettle (full)', 'measuring cup (empty)', 'measuring cup (full)', 'filter cone', 'filter cone + mug', 'paper filter + filter cone + mug', 'coffee grounds + paper filter + filter cone + mug', 'water + coffee grounds + filter cone + mug', 'used paper filter + filter cone + mug', 'used paper filter + filter cone', 'container', 'coffee beans + container', 'scale (off)', 'scale (on)', 'container + scale', 'coffee beans + container + scale']
-        States_Pairs = [['kettle',
-                         'kettle (open)'],
-                        ['coffee beans + container', 'coffee beans + container + scale'],
-                        ['coffee grounds + paper filter + filter cone',
-                         'coffee grounds + paper filter + filter cone + mug',
-                         'filter cone', 'filter cone + mug', 'paper filter + filter cone',
-                         'paper filter + filter cone + mug', 'used paper filter + filter cone',
-                         'used paper filter + filter cone + mug', 'water + coffee grounds + paper filter + filter cone + mug'],
-                        ['coffee + mug',
-                         'coffee grounds + paper filter + filter cone + mug',
-                         'filter cone + mug', 'mug', 'paper filter + filter cone + mug',
-                         'used paper filter + filter cone + mug', 'water + coffee grounds + paper filter + filter cone + mug'],
-                        ['container', 'container + scale'],
-                        ['scale (off)', 'scale (on)', 'container + scale', 'coffee beans + container + scale'],
-                        ['paper filter (semi)', 'paper filter (quarter)', 'paper filter'],
-                        ['coffee beans + container', 'coffee beans + container + scale'],
-                        ['timer (else)', 'timer (20)', 'timer (30)'],
-                        ['thermometer (open)', 'thermometer (close)'],
-                        ['grinder (close)', 'grinder (open)']
-                        ]
-        # States_Pairs = [['kettle',
-        #                  'kettle (empty)',
-        #                  'kettle (full)'],
-        #                 ['measuring cup (empty)',
-        #                  'measuring cup (full)'],
-        #                 ['coffee beans + container', 'coffee beans + container + scale'],
-        #                 ['coffee grounds + paper filter + filter cone',
-        #                  'coffee grounds + paper filter + filter cone + mug',
-        #                  'filter cone', 'filter cone + mug', 'paper filter + filter cone',
-        #                  'paper filter + filter cone + mug', 'used paper filter + filter cone',
-        #                  'used paper filter + filter cone + mug',
-        #                  'water + coffee grounds + paper filter + filter cone + mug'],
-        #                 ['coffee + mug',
-        #                  'coffee grounds + paper filter + filter cone + mug',
-        #                  'filter cone + mug', 'mug', 'paper filter + filter cone + mug',
-        #                  'used paper filter + filter cone + mug',
-        #                  'water + coffee grounds + paper filter + filter cone + mug'],
-        #                 ['container', 'container + scale'],
-        #                 ['scale (off)', 'scale (on)', 'container + scale', 'coffee beans + container + scale'],
-        #
-        #                 ['paper filter (semi)', 'paper filter (quarter)', 'paper filter'],
-        #                 ['coffee beans + container', 'coffee beans + container + scale']
-        #                 ]
+        States_Pairs = self.metadata['States_Pairs']
         # # auto_generate states_pairs
         # States_Pairs = []
         # for cate in MC50_CATEGORIES:
