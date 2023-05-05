@@ -58,8 +58,7 @@ class ActivityFromObjectDetectionsClassifier(Node):
                       f"{self._classifier_file}")
 
         # Load in model.
-        fname = '/angel_workspace/model_files/recipe_m2_apply_tourniquet_v0.052.pkl'
-        with open(fname, 'rb') as of:
+        with open(self._classifier_file, 'rb') as of:
             ret = pickle.load(of)
             self.label_to_ind, self.feat_ver, self.clf, self.act_str_list = ret
 

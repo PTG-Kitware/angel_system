@@ -115,7 +115,7 @@ windows:
       -r __ns:=${ROS_NAMESPACE}
       -p det_topic:=ObjectDetections2d
       -p act_topic:=ActivityDetections
-      -p classifier_file:=s.txt
+      -p classifier_file:=${MODEL_DIR}/recipe_m2_apply_tourniquet_v0.052.pkl
 
   - task_monitor: ros2 run angel_system_nodes task_monitor_v2 --ros-args
       -r __ns:=${ROS_NAMESPACE}
