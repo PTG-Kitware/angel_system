@@ -1,4 +1,4 @@
-_BASE_: "../Base-RCNN-FPN.yaml"
+_BASE_: "/angel_workspace/angel_system/berkeley/configs/Base-RCNN-FPN.yaml"
 MODEL:
 #  WEIGHTS: '/shared/niudt/detectron2/tools/PTG_DEMO/MC_1+3+13+25_40000/model_final.pth'
 #  WEIGHTS: './weights/model_final.pth'
