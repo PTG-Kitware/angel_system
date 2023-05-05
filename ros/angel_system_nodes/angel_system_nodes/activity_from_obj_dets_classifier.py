@@ -1,9 +1,13 @@
 import rclpy
 from rclpy.node import Node
+import pickle
 
 from angel_msgs.msg import (
     ObjectDetection2dSet,
     ActivityDetection,
+)
+from angel_system.impls.detect_activities.detections_to_activities.utils import (
+        obj_det2d_set_to_feature
 )
 
 
@@ -53,6 +57,12 @@ class ActivityFromObjectDetectionsClassifier(Node):
                       f"({type(self._classifier_file).__name__}) "
                       f"{self._classifier_file}")
 
+        # Load in model.
+        fname = '/angel_workspace/model_files/recipe_m2_apply_tourniquet_v0.052.pkl'
+        with open(fname, 'rb') as of:
+            ret = pickle.load(of)
+            self.label_to_ind, self.feat_ver, self.clf, self.act_str_list = ret
+
         # Create activity det publisher
         self._det_subscriber = self.create_subscription(
             ObjectDetection2dSet,
@@ -83,16 +93,23 @@ class ActivityFromObjectDetectionsClassifier(Node):
         """
         log = self.get_logger()
 
+        feature_vec = obj_det2d_set_to_feature(msg.label_vec, msg.left,
+                                               msg.right, msg.top, msg.bottom,
+                                               msg.label_confidences,
+                                               msg.descriptors,
+                                               msg.obj_obj_contact_state,
+                                               msg.obj_obj_contact_conf,
+                                               msg.obj_hand_contact_state,
+                                               msg.obj_hand_contact_conf,
+                                               self.label_to_ind,
+                                               self.feat_ver)
+
+        conf = self.clf.predict_proba(feature_vec.reshape(1, -1)).ravel()
+
         # TODO: Call stub activity classifier function. It is expected that this
         # function will return a dictionary mapping activity labels to confidences.
         #label_conf_dict = self.classifier.classify(msg)
-        label_conf_dict = {
-            "activity1": 0.99,
-            "activity2": 0.74,
-            "activity3": 0.3,
-            "activity4": 0.1,
-
-        }
+        label_conf_dict = {self.act_str_list[i]: conf[i] for i in range(len(conf))}
 
         activity_det_msg = ActivityDetection()
         activity_det_msg.header.stamp = self.get_clock().now().to_msg()
