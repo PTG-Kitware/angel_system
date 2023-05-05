@@ -1,12 +1,13 @@
-_BASE_: "/angel_workspace/angel_system/berkeley/configs/Base-RCNN-FPN.yaml"
+_BASE_: "/home/local/KHQ/hannah.defazio/angel_system/angel_system/berkeley/configs/Base-RCNN-FPN.yaml"
 MODEL:
-  WEIGHTS: "/angel_workspace/model_files/bbn_M1_hands_M2_no_contact_r50.pth"
+  WEIGHTS: "/data/ptg/medical/bbn/training/M2_Tourniquet/stage1/resnet101/model_final.pth"
   MASK_ON: False
   RESNETS:
-    DEPTH: 50
+    DEPTH: 101
   ROI_HEADS:
     NUM_CLASSES: 5
     SCORE_THRESH_TEST: 0.0001
+    NAME: StandardROIHeads_PLUS_CONTACT
 INPUT:
   MIN_SIZE_TRAIN: (640, 672, 704, 736, 768, 800)
 DATASETS:
@@ -21,10 +22,10 @@ DATALOADER:
   SAMPLER_TRAIN: "RepeatFactorTrainingSampler"
   REPEAT_THRESHOLD: 0.001
 
-OUTPUT_DIR: '/Padlock_DT/training/bbn_M1_hands_M2/resnet50'
+OUTPUT_DIR: '/data/ptg/training/M2_Tourniquet/stage1/resnet101'
 
 SOLVER:
-  TOTAL_IMAGE_NUMBER: 5873
+  TOTAL_IMAGE_NUMBER: 6064
   IMS_PER_BATCH: 1
   BASE_LR: 0.001
   STEPS: (34000, 41000)
