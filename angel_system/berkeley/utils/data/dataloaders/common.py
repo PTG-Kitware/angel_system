@@ -1,9 +1,12 @@
 import re
 import os
 import kwcoco
+import textwrap
+
 import numpy as np
 import ubelt as ub
 
+from pathlib import Path
 from detectron2.data.detection_utils import read_image
 
 
@@ -73,6 +76,7 @@ def coffee_activity_data_loader(video='all_activities_11'):
     gt_dir = f'{root_dir}/Labels'
 
     gt_activity_fn = f'{gt_dir}/{video}.feather'
+    print(f"Loaded ground truth from {gt_activity_fn}")
 
     gt = pd.read_feather(gt_activity_fn) # Keys: class, start_frame,  end_frame, exploded_ros_bag_path
     gt_activity = {}
@@ -83,8 +87,8 @@ def coffee_activity_data_loader(video='all_activities_11'):
         start_frame, start_time = time_from_name(row["start_frame"])
         end_frame, end_time = time_from_name(row["end_frame"])
         gt_activity[class_label].append({
-            'start': start_time,
-            'end': end_time
+            'start': start_frame,#start_time,
+            'end': end_frame#end_time
         })
     print(f"Loaded ground truth from {gt_activity_fn}")
 
@@ -101,7 +105,8 @@ def coffee_activity_data_loader(video='all_activities_11'):
 
 
 # Save
-def preds_to_kwcoco(metadata, preds, save_fn='result-with-contact.mscoco.json'):
+def preds_to_kwcoco(metadata, preds, save_dir, save_fn='result-with-contact.mscoco.json',
+                    using_step_labels=False, using_inter_steps=False, using_before_finished_task=False):
     """
     Save the predicitions in the json file
     format used by the detector training
@@ -110,7 +115,20 @@ def preds_to_kwcoco(metadata, preds, save_fn='result-with-contact.mscoco.json'):
     dset = kwcoco.CocoDataset()
 
     for class_ in metadata['thing_classes']:
-        dset.add_category(name=class_)
+        if not using_step_labels and not using_inter_steps:
+            # add original classes from model
+            dset.add_category(name=class_)
+
+        if using_step_labels:
+            for i in range(1, 9):
+                dset.add_category(name=f'{class_} (step {i})')
+
+                if using_inter_steps:
+                    if i != 8:
+                        dset.add_category(name=f'{class_} (step {i+0.5})')
+        if using_before_finished_task:
+            dset.add_category(name=f'{class_} (before)')
+            dset.add_category(name=f'{class_} (finished)')
 
     for video_name, predictions in preds.items():
         dset.add_video(name=video_name)
@@ -148,16 +166,21 @@ def preds_to_kwcoco(metadata, preds, save_fn='result-with-contact.mscoco.json'):
                 }
                 dset.add_annotation(**ann)
                 
-    dset.fpath = save_fn
+    dset.fpath = f'{save_dir}/{save_fn}' if save_dir != '' else save_fn
     dset.dump(dset.fpath, newlines=True)
-    print(f'Saved predictions to {save_fn}')
+    print(f'Saved predictions to {dset.fpath}')
 
     return dset
 
-def visualize_kwcoco(videos_dir, video_id, dset=None):
+def visualize_kwcoco(dset=None, save_dir=''):
     import matplotlib.pyplot as plt
     from PIL import Image
     import matplotlib.patches as patches
+    
+    red_patch = patches.Patch(color='r', label='obj')
+    green_patch = patches.Patch(color='g', label='obj-obj contact')
+    blue_patch = patches.Patch(color='b', label='obj-hand contact')
+    
     empty_ims = 0
     if type(dset) == str:
         print(f'Loaded dset from file: {dset}')
@@ -167,17 +190,22 @@ def visualize_kwcoco(videos_dir, video_id, dset=None):
     gid_to_aids = dset.index.gid_to_aids
     gids = ub.argsort(ub.map_vals(len, gid_to_aids))
 
-    for gid in sorted(gids): 
-        img_video_id = dset.imgs[gid]["video_id"]
-        if img_video_id != video_id:
-            continue
+    for gid in sorted(gids):
+        im = dset.imgs[gid]
 
-        gt = dset.imgs[gid]['activity_gt']
-
+        img_video_id = im["video_id"]
+        #if img_video_id != 7:
+        #    continue
+        
+        fn = im['file_name'].split('/')[-1]
+        gt = im['activity_gt']# if hasattr(im, 'activity_gt') else ''
+        if not gt:
+            gt = ''
+        
         fig, ax = plt.subplots()
-        plt.title(gt)
+        plt.title("\n".join(textwrap.wrap(gt, 55)))
 
-        image = read_image(videos_dir + dset.imgs[gid]['file_name'], format='RGB')
+        image = read_image(im['file_name'], format='RGB') # now assuming absolute path
         ax.imshow(image)
         
         aids = gid_to_aids[gid]
@@ -193,12 +221,19 @@ def visualize_kwcoco(videos_dir, video_id, dset=None):
             if ann['obj-hand_contact_state']:
                 color = 'b'
             rect = patches.Rectangle((box[0], box[1]), box[2], box[3], 
-                                     linewidth=1, edgecolor=color, facecolor='none',
-                                     label=label)
+                                     linewidth=1, edgecolor=color, facecolor='none')
 
             ax.add_patch(rect)
             ax.annotate(label, (box[0], box[1]), color='black')
-        plt.show()
+        
+        plt.legend(handles=[red_patch, green_patch, blue_patch], loc='lower left')
+        
+        video_dir = f'{save_dir}/video_{img_video_id}/images/'
+        Path(video_dir).mkdir(parents=True, exist_ok=True)
+        
+        plt.savefig(f'{video_dir}/{fn}', )
+        plt.close(fig) # needed to remove the plot because savefig doesn't clear it
+    plt.close('all')
 
 
 def main():
@@ -208,13 +243,30 @@ def main():
     #visualize_kwcoco(ros_bags_dir, 1, f'{ros_bags_dir}/coffee_contact_preds_with_background_all_objs_only_train.mscoco.json')
 
 
-    data_root = '/data/ptg/medical/bbn/Release_v0.5/v0.52'
-    ros_bags_dir = f'{data_root}/M2_Tourniquet/Data/'
-    #ros_bags_dir = f'{data_root}/M2_Tourniquet/YoloModel/'
-    kw = f'{ros_bags_dir}/M2_preds_with_all_objects_train.mscoco.json'
-    #kw = f'{ros_bags_dir}/M2_YoloModel_LO_train.mscoco.json'
-    #kw = f'{ros_bags_dir}/train.mscoco.json'
-    visualize_kwcoco(ros_bags_dir, 1 , kw)
+    ptg_root = '/data/ptg/medical/bbn/'
+    
+    #kw = 'M2_RESULTS_preds_test.mscoco.json'
+    kw = 'm2_with_lab_cleaned_fixed_data_with_inter_and_before_finished_steps_stage2_val.mscoco.json'
+    #kw = 'RESULTS_m2_with_lab_cleaned_fixed_data_with_steps_results_val.mscoco.json'
+    #kw = 'M2_with_lab_cleaned_fixed_data_with_steps_stage2_train_contact.mscoco.json'
+    #kw = 'RESULTS_M2_preds_cleaned_data_with_steps_results_test.mscoco.json'
+
+    n = kw[:-12].split('_')
+    name = '_'.join(n[:-1])
+    split = n[-1]
+    if split == 'contact':
+        split = 'train_contact'
+    if split == 'activity':
+        split = 'train_activity'
+
+    stage = 'stage2'
+    stage_dir = f'{ptg_root}/annotations/M2_Tourniquet/{stage}'
+    exp = 'm2_with_lab_cleaned_fixed_data_with_inter_and_before_finished_steps'
+    save_dir = f'{stage_dir}/{exp}/visualization/{split}'
+
+    Path(save_dir).mkdir(parents=True, exist_ok=True)
+    
+    visualize_kwcoco(f'{stage_dir}/{exp}/{kw}', save_dir)
 
 
 if __name__ == '__main__':
