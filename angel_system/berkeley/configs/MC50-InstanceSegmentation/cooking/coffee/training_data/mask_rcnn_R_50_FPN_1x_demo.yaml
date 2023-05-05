@@ -1,4 +1,4 @@
-_BASE_: "../Base-RCNN-FPN.yaml"
+_BASE_: "/angel_workspace/angel_system/berkeley/configs/Base-RCNN-FPN.yaml"
 MODEL:
 #  WEIGHTS: '/shared/niudt/detectron2/tools/PTG_DEMO/MC_1+3+13+25_40000/model_final.pth'
 #  WEIGHTS: './weights/model_final.pth'
@@ -16,8 +16,8 @@ MODEL:
 INPUT:
   MIN_SIZE_TRAIN: (640, 672, 704, 736, 768, 800)
 DATASETS:
-  TRAIN: ("COFFEE_train",)
-  TEST: ("COFFEE_train",)
+  TRAIN: ("COFFEE_UCB_train",)
+  TEST: ("COFFEE_UCB_val",)
 TEST:
   DETECTIONS_PER_IMAGE: 300  # LVIS allows up to 300
 #SOLVER:
