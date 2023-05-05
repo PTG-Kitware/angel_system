@@ -100,6 +100,60 @@ def coffee_activity_data_loader(video='all_activities_11'):
     return gt_activity
 
 
+# Save
+def preds_to_kwcoco(metadata, preds, save_fn='result-with-contact.mscoco.json'):
+    """
+    Save the predicitions in the json file
+    format used by the detector training
+    """
+    import kwimage
+    dset = kwcoco.CocoDataset()
+
+    for class_ in metadata['thing_classes']:
+        dset.add_category(name=class_)
+
+    for video_name, predictions in preds.items():
+        dset.add_video(name=video_name)
+        vid = dset.index.name_to_video[video_name]['id']
+
+        for time_stamp in sorted(predictions.keys()):
+            dets = predictions[time_stamp]
+            fn = dets['meta']['file_name']
+
+            activity_gt = dets['meta']['activity_gt'] if 'activity_gt' in dets['meta'].keys() else None
+            
+            dset.add_image(file_name=fn, video_id=vid, frame_index=dets['meta']['frame_idx'],
+                           width=dets['meta']['im_size']['width'], height=dets['meta']['im_size']['height'],
+                           activity_gt=activity_gt)
+            img = dset.index.file_name_to_img[fn]
+
+            del dets['meta']
+
+            for class_, det in dets.items():
+                cat = dset.index.name_to_cat[class_]
+                
+                xywh = kwimage.Boxes([det['bbox']], 'tlbr').toformat('xywh').data[0].tolist()
+
+                ann = {
+                    'area': xywh[2] * xywh[3],
+                    'image_id': img['id'],
+                    'category_id': cat['id'],
+                    'segmentation': [],
+                    'bbox': xywh,
+                    'confidence': det['confidence_score'],
+                    'obj-obj_contact_state': det['obj_obj_contact_state'],
+                    'obj-obj_contact_conf': det['obj_obj_contact_conf'],
+                    'obj-hand_contact_state': det['obj_hand_contact_state'],
+                    'obj-hand_contact_conf': det['obj_hand_contact_conf']
+                }
+                dset.add_annotation(**ann)
+                
+    dset.fpath = save_fn
+    dset.dump(dset.fpath, newlines=True)
+    print(f'Saved predictions to {save_fn}')
+
+    return dset
+
 def visualize_kwcoco(videos_dir, video_id, dset=None):
     import matplotlib.pyplot as plt
     from PIL import Image
@@ -116,7 +170,7 @@ def visualize_kwcoco(videos_dir, video_id, dset=None):
     gid_to_aids = dset.index.gid_to_aids
     gids = ub.argsort(ub.map_vals(len, gid_to_aids))
 
-    for gid in gids: 
+    for gid in sorted(gids): 
         img_video_id = dset.imgs[gid]["video_id"]
         if img_video_id != video_id:
             continue
@@ -149,3 +203,14 @@ def visualize_kwcoco(videos_dir, video_id, dset=None):
             ax.add_patch(rect)
             ax.annotate(label, (box[0], box[1]), color='black')
         plt.show()
+
+
+def main():
+    coffee_root = '/Padlock_DT/Coffee'
+    ros_bags_dir = f'{coffee_root}/coffee_recordings/extracted/'
+
+    visualize_kwcoco(ros_bags_dir, 1, f'{ros_bags_dir}/coffee_contact_preds_with_background_all_objs_only_train.mscoco.json')
+
+
+if __name__ == '__main__':
+    main()
