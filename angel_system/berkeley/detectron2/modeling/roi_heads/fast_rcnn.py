@@ -16,7 +16,6 @@ __all__ = ["fast_rcnn_inference", "FastRCNNOutputLayers", "FastRCNNOutputLayers_
 
 
 logger = logging.getLogger(__name__)
-
 """
 Shape shorthand in this module:
 
@@ -1548,6 +1547,7 @@ class FastRCNNOutputLayers_CONTACT(nn.Module):
         Returns:
             Dict[str, Tensor]: dict of losses
         """
+        
         obj_obj_contact_pred, obj_hand_contact_pred = predictions
 
         # # parse classification outputs
@@ -1557,15 +1557,24 @@ class FastRCNNOutputLayers_CONTACT(nn.Module):
         # _log_classification_stats(scores, gt_classes)
 
         # parse contact outputs
-        gt_obj_obj_contact_state = (
-            cat([p.gt_obj_obj_contact_state for p in proposals], dim=0) if len(proposals) else torch.empty(0)
-        )
+        try:
+            gt_obj_obj_contact_state = (
+                cat([p.gt_obj_obj_contact_state for p in proposals], dim=0) if len(proposals) else torch.empty(0)
+            )
+        except:
+            #logger.info('error =================================')
+            #print('proposal', proposals)
+            gt_obj_obj_contact_state = torch.empty(0)
+            #import pdb; pdb.set_trace()
         _log_contact_state_stats(obj_obj_contact_pred, gt_obj_obj_contact_state)
 
         # parse contact outputs
-        gt_obj_hand_contact_state = (
-            cat([p.gt_obj_hand_contact_state for p in proposals], dim=0) if len(proposals) else torch.empty(0)
-        )
+        try:
+            gt_obj_hand_contact_state = (
+                cat([p.gt_obj_hand_contact_state for p in proposals], dim=0) if len(proposals) else torch.empty(0)
+            )
+        except:
+            gt_obj_hand_contact_state = torch.empty(0)
         _log_contact_state_stats(obj_hand_contact_pred, gt_obj_hand_contact_state)
 
         # # parse box regression outputs
