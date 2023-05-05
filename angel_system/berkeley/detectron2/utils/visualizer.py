@@ -986,8 +986,8 @@ class Visualizer:
 
         for i in range(num_instances):
             #remove unwanted cls
-            if 'hand' in labels[i]:
-                continue
+            #if 'hand' in labels[i]:
+            #    continue
             color = assigned_colors[i]
             if _ASSIGN_COLOR:
                 len_score = len(labels[i].split(' ')[-1])
@@ -1799,8 +1799,8 @@ class Visualizer:
 
             #remove unwanted cls
 
-            if 'hand' in labels[i]:
-                continue
+            #if 'hand' in labels[i]:
+            #    continue
             color = assigned_colors[i]
             if _ASSIGN_COLOR:
                 len_score = len(labels[i].split(' ')[-1])
@@ -4122,8 +4122,8 @@ class Visualizer_eval:
 
             #remove unwanted cls
 
-            if 'hand' in labels[i]:
-                continue
+            #if 'hand' in labels[i]:
+            #    continue
             color = assigned_colors[i]
             if _ASSIGN_COLOR:
                 len_score = len(labels[i].split(' ')[-1])
