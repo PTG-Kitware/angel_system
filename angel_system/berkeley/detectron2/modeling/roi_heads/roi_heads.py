@@ -527,7 +527,7 @@ class Res5ROIHeads(ROIHeads):
 
 
 @ROI_HEADS_REGISTRY.register()
-class StandardROIHeads(ROIHeads):
+class StandardROIHeads_PLUS_CONTACT(ROIHeads):
     """
     It's "standard" in a sense that there is no ROI transform sharing
     or feature sharing between tasks.
@@ -1018,7 +1018,7 @@ class StandardROIHeads(ROIHeads):
 
 
 @ROI_HEADS_REGISTRY.register()
-class StandardROIHeads_PLUS_CONTACT(ROIHeads):
+class StandardROIHeads(ROIHeads):
     """
     It's "standard" in a sense that there is no ROI transform sharing
     or feature sharing between tasks.

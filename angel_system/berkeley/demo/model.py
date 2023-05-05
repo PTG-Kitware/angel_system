@@ -145,7 +145,7 @@ def decode_prediction(predictions):
                 else:
                     pre['obj_hand_contact_state'] = False
                 pre["obj_hand_contact_conf"] = obj_hand_contact_scores[i]
-            
+
             pres[cls_name] = pre
 
         return pres

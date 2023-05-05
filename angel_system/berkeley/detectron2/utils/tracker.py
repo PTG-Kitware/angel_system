@@ -53,7 +53,7 @@ class Tracker:
     def map_classes(self, tensor):
         name_list = []
         for t in tensor:
-            name = self.metadata['class_image_count'][int(t.item() - 1)]['name']
+            name = self.metadata['thing_classes'][int(t.item() - 1)]
             name_list.append(name)
         return name_list
 
@@ -62,9 +62,9 @@ class Tracker:
 
         :return:
         """
-        for cate in self.metadata['class_image_count']:
+        for cate in self.metadata['thing_classes']:
             sub_list = []
-            sub_list.append(cate['name'])
+            sub_list.append(cate)
             #sub_list.append(np.zeros([self.number_frames]))
             sub_list.append([])
             #sub_list.append(-1 * np.ones([self.number_frames]))

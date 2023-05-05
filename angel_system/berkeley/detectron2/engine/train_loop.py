@@ -258,10 +258,10 @@ class SimpleTrainer(TrainerBase):
         new = []
         num_para = 0
         temp = self.optimizer.param_groups[0]
-        for paras in temp['params']:
-            num_para += 1
-            if num_para < 115:
-                paras.requires_grad = False
+        #for paras in temp['params']:
+        #    num_para += 1
+        #    if num_para < 115:
+        #        paras.requires_grad = True
 
 
 

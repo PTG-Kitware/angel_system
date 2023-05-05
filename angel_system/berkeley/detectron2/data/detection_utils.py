@@ -11,6 +11,8 @@ from typing import List, Union
 import pycocotools.mask as mask_util
 import torch
 from PIL import Image
+from PIL import ImageFile
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 from detectron2.structures import (
     BitMasks,

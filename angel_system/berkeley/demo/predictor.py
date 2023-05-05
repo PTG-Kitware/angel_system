@@ -242,7 +242,7 @@ class VisualizationDemo(object):
                 yield process_predictions(frame, self.predictor(frame))
 
 class VisualizationDemo_add_smoothing(object):
-    def __init__(self, cfg, last_time, draw_output=True, number_frames=None, fps=None, instance_mode=ColorMode.IMAGE, parallel=False):
+    def __init__(self, cfg, last_time, draw_output=True, tracking=True, number_frames=None, fps=None, instance_mode=ColorMode.IMAGE, parallel=False):
         """
         Args:
             cfg (CfgNode):
@@ -265,7 +265,9 @@ class VisualizationDemo_add_smoothing(object):
         else:
             self.predictor = DefaultPredictor(cfg)
 
-        self.tracker = Tracker(number_frames=number_frames, last_time=last_time, fps = fps)
+        self.tracking = tracking
+        if self.tracking:
+            self.tracker = Tracker(number_frames=number_frames, last_time=last_time, fps = fps)
 
     def run_on_image(self, image):
         """
@@ -484,6 +486,8 @@ class VisualizationDemo_add_smoothing(object):
             vis_output (VisImage): the visualized image output.
         """
         vis_output = None
+        step_infos = None
+
         predictions = self.predictor(image)
 
         # Convert image from OpenCV BGR format to Matplotlib RGB format.
@@ -506,8 +510,10 @@ class VisualizationDemo_add_smoothing(object):
                          = self.unravel_instances(instances)
 
                 decoded_pred = [boxes, labels, obj_obj_contact_classes, obj_obj_contact_scores, obj_hand_contact_classes, obj_hand_contact_scores, Contact_infos, Contact_hand_infos]
-                step_infos = self.update_tracker(decoded_pred, current_idx)
-                #step_infos = None
+
+                if self.tracking:
+                    step_infos = self.update_tracker(decoded_pred, current_idx)
+                
                 if self.draw_output:
                     visualizer = Visualizer(image, self.metadata, instance_mode=self.instance_mode)
         
