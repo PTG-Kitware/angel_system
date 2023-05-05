@@ -158,15 +158,12 @@ def visualize_kwcoco(videos_dir, video_id, dset=None):
     import matplotlib.pyplot as plt
     from PIL import Image
     import matplotlib.patches as patches
-
+    empty_ims = 0
     if type(dset) == str:
         print(f'Loaded dset from file: {dset}')
         dset = kwcoco.CocoDataset(dset)
         print(dset)
 
-    gt_activity = coffee_activity_data_loader(video='all_activities_2')
-  
-        
     gid_to_aids = dset.index.gid_to_aids
     gids = ub.argsort(ub.map_vals(len, gid_to_aids))
 
@@ -174,16 +171,15 @@ def visualize_kwcoco(videos_dir, video_id, dset=None):
         img_video_id = dset.imgs[gid]["video_id"]
         if img_video_id != video_id:
             continue
+
+        gt = dset.imgs[gid]['activity_gt']
+
         fig, ax = plt.subplots()
-
-        image = read_image(videos_dir + dset.imgs[gid]['file_name'], format='RGB')
-        # Convert image from OpenCV BGR format to Matplotlib RGB format.
-        #image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        ax.imshow(image)
-
-        gt = find_matching_gt_activity(gt_activity, dset.imgs[gid]['file_name'])
         plt.title(gt)
 
+        image = read_image(videos_dir + dset.imgs[gid]['file_name'], format='RGB')
+        ax.imshow(image)
+        
         aids = gid_to_aids[gid]
         anns = ub.dict_subset(dset.anns, aids)
 
@@ -206,10 +202,19 @@ def visualize_kwcoco(videos_dir, video_id, dset=None):
 
 
 def main():
-    coffee_root = '/Padlock_DT/Coffee'
-    ros_bags_dir = f'{coffee_root}/coffee_recordings/extracted/'
+    #coffee_root = '/Padlock_DT/Coffee'
+    #ros_bags_dir = f'{coffee_root}/coffee_recordings/extracted/'
 
-    visualize_kwcoco(ros_bags_dir, 1, f'{ros_bags_dir}/coffee_contact_preds_with_background_all_objs_only_train.mscoco.json')
+    #visualize_kwcoco(ros_bags_dir, 1, f'{ros_bags_dir}/coffee_contact_preds_with_background_all_objs_only_train.mscoco.json')
+
+
+    data_root = '/data/ptg/medical/bbn/Release_v0.5/v0.52'
+    ros_bags_dir = f'{data_root}/M2_Tourniquet/Data/'
+    #ros_bags_dir = f'{data_root}/M2_Tourniquet/YoloModel/'
+    kw = f'{ros_bags_dir}/M2_preds_with_all_objects_train.mscoco.json'
+    #kw = f'{ros_bags_dir}/M2_YoloModel_LO_train.mscoco.json'
+    #kw = f'{ros_bags_dir}/train.mscoco.json'
+    visualize_kwcoco(ros_bags_dir, 1 , kw)
 
 
 if __name__ == '__main__':
