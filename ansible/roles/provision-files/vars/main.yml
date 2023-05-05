@@ -62,6 +62,9 @@ girder_file_downloads:
     - file_id: 640b6cc67b0dfcc98f66b743
       sha512: 1a9a96f201d4472d3c946e3a9a7af1e0e232abf5a2868ebf8b3184dba3b23d858e619ab24e28dd9f1921d908387e3a3986eccfb136d3c38bc9ca85b7cae78e2e
       dest: "{{ stage_dirs.model_files }}/berkeley_model_r50_final.pth"
+    - file_id: 6455411e58fefcae81a9efc5
+      sha512: e3d44527b572cb95f1869ec33214cbaf9c721aae18f14bc9db73ea8ed5c9c9d6c52975ebc0884acd3402e8ec66fcfd6168ff5744c5a9e31069049d23a97c5fce
+      dest: "{{ stage_dirs.model_files }}/recipe_m2_apply_tourniquet_v0.052.pkl"
 
 # List of git repositories to check out at a specific ref and then archive.
 # Destination files will be written as GZipped TAR files, so please suffix
