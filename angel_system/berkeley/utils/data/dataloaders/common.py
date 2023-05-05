@@ -194,8 +194,8 @@ def visualize_kwcoco(dset=None, save_dir=''):
         im = dset.imgs[gid]
 
         img_video_id = im["video_id"]
-        #if img_video_id != 7:
-        #    continue
+        if img_video_id == 3:
+            continue
         
         fn = im['file_name'].split('/')[-1]
         gt = im['activity_gt']# if hasattr(im, 'activity_gt') else ''
@@ -244,12 +244,10 @@ def main():
 
 
     ptg_root = '/data/ptg/medical/bbn/'
-    
-    #kw = 'M2_RESULTS_preds_test.mscoco.json'
-    kw = 'm2_with_lab_cleaned_fixed_data_with_inter_and_before_finished_steps_stage2_val.mscoco.json'
-    #kw = 'RESULTS_m2_with_lab_cleaned_fixed_data_with_steps_results_val.mscoco.json'
-    #kw = 'M2_with_lab_cleaned_fixed_data_with_steps_stage2_train_contact.mscoco.json'
-    #kw = 'RESULTS_M2_preds_cleaned_data_with_steps_results_test.mscoco.json'
+   
+    kw = 'm2_with_lab_cleaned_fixed_data_with_inter_and_before_finished_steps_results_train_activity.mscoco.json'
+    #kw = 'kitware_test_results_test.mscoco.json'
+    #kw = 'm2_with_lab_cleaned_fixed_data_with_inter_and_before_finished_steps_results_train_activity.mscoco.json'
 
     n = kw[:-12].split('_')
     name = '_'.join(n[:-1])
@@ -259,13 +257,15 @@ def main():
     if split == 'activity':
         split = 'train_activity'
 
-    stage = 'stage2'
+    stage = 'results'
     stage_dir = f'{ptg_root}/annotations/M2_Tourniquet/{stage}'
     exp = 'm2_with_lab_cleaned_fixed_data_with_inter_and_before_finished_steps'
     save_dir = f'{stage_dir}/{exp}/visualization/{split}'
-
+    
+    save_dir = 'visualization'
     Path(save_dir).mkdir(parents=True, exist_ok=True)
     
+    #visualize_kwcoco('kitware_test_results_test.mscoco.json', save_dir)
     visualize_kwcoco(f'{stage_dir}/{exp}/{kw}', save_dir)
 
 
