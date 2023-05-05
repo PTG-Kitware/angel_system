@@ -14,9 +14,9 @@ import pandas as pd
 import numpy as np
 
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0, 1, 2, 3'
 
-root_dir = '/Padlock_DT/Release_v0.5/v0.52'
+root_dir = '/data/ptg/medical/bbn/Release_v0.5/v0.52'
 #root_dir = '/media/hannah.defazio/Padlock_DT/Data/notpublic/PTG/Release_v0.5'
 
 
@@ -25,7 +25,7 @@ def bbn_activity_data_loader(videos_dir, video):
     subfolder = video #f"M{skill_num}-{session}" #f"R{skill_num}-{session}"
     skill_second_fn = f'{videos_dir}/{subfolder}/{subfolder}.skill_labels_by_second.txt'
 
-    if os.path.isfile(f"{videos_dir}/{subfolder}/THIS_DATA_SET_WAS_EXCLUDED"):
+    if os.path.isfile(f"{videos_dir}/{subfolder}/THIS_DATA_SET_WAS_EXCLUDED") or not os.path.exists(skill_second_fn):
         print(f"{subfolder} has no data")
         return {}
 
@@ -37,12 +37,12 @@ def bbn_activity_data_loader(videos_dir, video):
         # start time, end time, class
         second_data = line.split("\t")
 
-        class_label = second_data[2].rstrip()
+        class_label = second_data[2].lower().strip().strip('.')
         if class_label not in gt_activity.keys():
             gt_activity[class_label] = []
         gt_activity[class_label].append({
-            'start': second_data[0],
-            'end': second_data[1]
+            'start': float(second_data[0]),
+            'end': float(second_data[1])
         })
 
     skill_second_f.close()
@@ -70,6 +70,8 @@ def bbn_medical_data_loader(skill, valid_classes='all', split='train', filter_re
     bboxes_dir = f'{data_dir}/LabeledObjects/{split}'
 
     for ann_fn in glob.glob(f'{bboxes_dir}/*.txt'):
+        print(ann_fn)
+
         try:
             image_fn = ann_fn[:-3] + 'png'
             assert os.path.exists(image_fn)
@@ -77,7 +79,7 @@ def bbn_medical_data_loader(skill, valid_classes='all', split='train', filter_re
             image_fn = ann_fn[:-3] + 'jpg'
             assert os.path.exists(image_fn)
 
-        image_name = image_fn[len(root_dir)+1:]
+        image_name = image_fn[len(data_dir)+1:]
 
         image = cv2.imread(image_fn)
         im_h, im_w, c = image.shape
@@ -95,11 +97,12 @@ def bbn_medical_data_loader(skill, valid_classes='all', split='train', filter_re
             if cat not in valid_classes:
                 continue
 
-            if filter_repeated_objs and cat in used_classes:
-                print(f'{image_name} has repeated objects, ignoring')
-                # Ignore this image
-                del data[image_name]
-                break
+            if cat != 'hand':
+                if filter_repeated_objs and cat in used_classes:
+                    print(f'{image_name} has repeated {cat} objects, ignoring')
+                    # Ignore this image
+                    del data[image_name]
+                    break
 
             used_classes.append(cat)
 
@@ -108,9 +111,13 @@ def bbn_medical_data_loader(skill, valid_classes='all', split='train', filter_re
             y = float(d[2]) * im_h
             w = float(d[3]) * im_w
             h = float(d[4]) * im_h
+            
+            x = x - (0.5 * w)
+            y = y - (0.5 * h)
 
             # tl_x, tl_y, br_x, br_y
-            bbox = [x-(0.5*w), y-(0.5*h), x+w, y+h]
+            bbox = [x, y, (x+w), (y+h)]
+            #bbox = [x-(0.5*w), y-(0.5*h), x+w, y+h]
 
             data[image_name].append({
                 'area': w*h,
@@ -125,7 +132,7 @@ def bbn_medical_data_loader(skill, valid_classes='all', split='train', filter_re
 
 def data_loader(split):
     # Load gt bboxes for task
-    task_classes, task_bboxes = bbn_medical_data_loader('M2_Tourniquet', split=split, filter_repeated_objs=True)
+    task_classes, task_bboxes = bbn_medical_data_loader('M2_Tourniquet', split=split)
 
     # Combine task and person annotations
     #gt_bboxes = {**person_bboxes, **task_bboxes}
@@ -177,12 +184,12 @@ def print_class_freq(dset):
         class_ = {
             'id': cat['id'],
             'name': cat['name'],
-            'instances_count': freq,
-            'def': '',
-            'synonyms': [],
-            'image_count': freq,
-            'frequency': '',
-            'synset': ''
+            #'instances_count': freq,
+            #'def': '',
+            #'synonyms': [],
+            #'image_count': freq,
+            #'frequency': '',
+            #'synset': ''
         }
 
         stats.append(class_)
@@ -193,7 +200,7 @@ def main():
     for split in ['train', 'test']:
         classes, gt_bboxes = data_loader(split)
 
-        out = f'{root_dir}/M2_YoloModel_LO_{split}.mscoco.json'
+        out = f'{root_dir}/M2_Tourniquet/YoloModel/M2_YoloModel_LO_{split}.mscoco.json'
         save_as_kwcoco(classes, gt_bboxes, save_fn=out)
 
     # TODO: train on out kwcoco file + save

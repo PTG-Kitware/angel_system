@@ -7,7 +7,8 @@ from pathlib import Path
 
 def bbn_video_extract_images(skill):
     #bbn_root = '/media/hannah.defazio/Padlock_DT/Data/notpublic/PTG/Release_v0.5'
-    bbn_root = '/media/hannah.defazio/Padlock_DT5/Data/notpublic/PTG/Release_v0.5/v0.52'
+    bbn_root = '/data/ptg/medical/bbn/Release_v0.5/v0.52/'
+    #bbn_root = '/media/hannah.defazio/Padlock_DT5/Data/notpublic/PTG/Release_v0.5/v0.52'
     skill_dir = f'{bbn_root}/{skill}/Data'
     print(skill_dir)
 
