@@ -47,7 +47,7 @@ steps:
   - id: 3
     activity_id: 3
     description: >-
-      In between steps 1 and 2.
+      In between step 1 and step 2.
     median_duration_seconds: 5
     mean_conf: 0.5
     std_conf: 0.2
@@ -63,7 +63,7 @@ steps:
   - id: 5
     activity_id: 5
     description: >-
-      In between steps 2 and 3.
+      In between step 2 and step 3.
     median_duration_seconds: 5
     mean_conf: 0.5
     std_conf: 0.2
@@ -79,7 +79,7 @@ steps:
   - id: 7
     activity_id: 7
     description: >-
-      In between steps 3 and 4.
+      In between step 3 and step 4.
     median_duration_seconds: 5
     mean_conf: 0.5
     std_conf: 0.2
@@ -95,7 +95,7 @@ steps:
   - id: 9
     activity_id: 9
     description: >-
-      In between steps 4 and 5.
+      In between step 4 and step 5.
     median_duration_seconds: 5
     mean_conf: 0.5
     std_conf: 0.2
@@ -111,7 +111,7 @@ steps:
   - id: 11
     activity_id: 11
     description: >-
-      In between steps 5 and 6.
+      In between step 5 and step 6.
     median_duration_seconds: 5
     mean_conf: 0.5
     std_conf: 0.2
@@ -127,7 +127,7 @@ steps:
   - id: 13
     activity_id: 13
     description: >-
-      In between steps 6 and 7.
+      In between step 6 and step 7.
     median_duration_seconds: 5
     mean_conf: 0.5
     std_conf: 0.2
@@ -143,7 +143,7 @@ steps:
   - id: 15
     activity_id: 15
     description: >-
-      In between steps 7 and 8.
+      In between step 7 and step 8.
     median_duration_seconds: 5
     mean_conf: 0.5
     std_conf: 0.2
