@@ -1,4 +1,4 @@
-_BASE_: "/angel_workspace/angel_system/berkeley/configs/Base-RCNN-FPN.yaml"
+_BASE_: "/home/local/KHQ/hannah.defazio/angel_system/angel_system/berkeley/configs/Base-RCNN-FPN.yaml"
 MODEL:
   WEIGHTS: "detectron2://ImageNetPretrained/MSRA/R-50.pkl"
   MASK_ON: False
@@ -7,32 +7,30 @@ MODEL:
   ROI_HEADS:
     NUM_CLASSES: 5
     SCORE_THRESH_TEST: 0.0001
+    NAME: StandardROIHeads_PLUS_CONTACT
 INPUT:
   MIN_SIZE_TRAIN: (640, 672, 704, 736, 768, 800)
 DATASETS:
-  TRAIN: ("BBN_M2_YoloModel_train",)
-  TEST: ("BBN_M2_YoloModel_val",)
+  TRAIN: ("BBN_M2_train",)
+  TEST: ("BBN_M2_val",)
 TEST:
   DETECTIONS_PER_IMAGE: 300  # LVIS allows up to 300
-#SOLVER:
-#  STEPS: (120000, 160000)
-#  MAX_ITER: 180000  # 180000 * 16 / 100000 ~ 28.8 epochs
 DATALOADER:
   SAMPLER_TRAIN: "RepeatFactorTrainingSampler"
-  REPEAT_THRESHOLD: 0.001
+  REPEAT_THRESHOLD: 0.5
+  FILTER_EMPTY_ANNOTATIONS: True
 
-OUTPUT_DIR: '/Padlock_DT/training/bbn_M1_hands_M2/resnet50'
+OUTPUT_DIR: '/data/ptg/medical/bbn/training/M2_Tourniquet/stage2/m2_with_lab_cleaned_data/resnet50'
 
 SOLVER:
-  TOTAL_IMAGE_NUMBER: 5873
-  IMS_PER_BATCH: 1
+  TOTAL_IMAGE_NUMBER: 5002 ############
+  IMS_PER_BATCH: 21
   BASE_LR: 0.001
   STEPS: (34000, 41000)
-  MAX_ITER: 64000 # 500 * 1 / 10 ~ 500 epochs
+# MAX_ITER: 64000 # 500 * 1 / 10 ~ 500 epochs
   CHECKPOINT_PERIOD: 1000
   EPOCH: 50
 
 VISUALIZER:
   CAM: False
-
 
