@@ -1,7 +1,10 @@
 _BASE_: "/angel_workspace/angel_system/berkeley/configs/Base-RCNN-FPN.yaml"
 MODEL:
 #  WEIGHTS: "/angel_workspace/model_files/ucb_coffee_preds_with_contact_r50.pth"
-  WEIGHTS: "/angel_workspace/model_files/berkeley_model_r50_with_contact_hl_hands.pth"
+#  WEIGHTS: "/angel_workspace/model_files/berkeley_model_r50_with_contact_hl_hands.pth"
+#  WEIGHTS: "/angel_workspace/model_files/berkeley_r50_activity_objs_only_hl_hands.pth"
+#  WEIGHTS: "/Padlock_DT/training/berkeley/with_contact/include_empty_anns/resnet50_all_objects_only/model_final.pth"
+  WEIGHTS: "/Padlock_DT/training/berkeley/with_contact/resnet50_all_objects_only_repeat_10/model_final.pth"
   MASK_ON: False
   RESNETS:
     DEPTH: 50
@@ -20,9 +23,9 @@ TEST:
 #  MAX_ITER: 180000  # 180000 * 16 / 100000 ~ 28.8 epochs
 DATALOADER:
   SAMPLER_TRAIN: "RepeatFactorTrainingSampler"
-  REPEAT_THRESHOLD: 0.001
+  REPEAT_THRESHOLD: 0.1
 
-OUTPUT_DIR: '/Padlock_DT/training/berkeley/with_contact/resnet50'
+OUTPUT_DIR: '/Padlock_DT/'
 
 SOLVER:
   TOTAL_IMAGE_NUMBER: 1040
