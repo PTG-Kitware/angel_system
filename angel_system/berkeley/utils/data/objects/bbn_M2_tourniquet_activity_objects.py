@@ -8,6 +8,18 @@ sub_steps['step 6'] = []
 sub_steps['step 7'] = []
 sub_steps['step 8'] = []
 
+"""
+sub_steps['step 1.5'] = []
+sub_steps['step 2.5'] = []
+sub_steps['step 3.5'] = []
+sub_steps['step 4.5'] = []
+sub_steps['step 5.5'] = []
+sub_steps['step 6.5'] = []
+sub_steps['step 7.5'] = []
+
+sub_steps['before'] = []
+sub_steps['after'] = []
+"""
 ###################################################step 1###################################################
 ##############################sub-step 1##############################
 sub_step = []
@@ -85,6 +97,84 @@ sub_step.append([['hand', 'tourniquet_pen'], # right or left hand???
                  ['tourniquet_pen', 'tourniquet_label']])
 sub_steps['step 8'].append(sub_step)
 del sub_step
+
+"""
+###################################################step 1.5###################################################
+##############################sub-step 1##############################
+sub_step = []
+sub_step.append('In between steps 1 and 2.')
+sub_step.append([['hand', 'tourniquet_tourniquet']])
+sub_steps['step 1.5'].append(sub_step)
+del sub_step
+
+###################################################step 2.5###################################################
+##############################sub-step 1##############################
+sub_step = []
+sub_step.append('In between steps 2 and 3.')
+sub_step.append([['hand', 'tourniquet_tourniquet']])
+sub_steps['step 2.5'].append(sub_step)
+del sub_step
+
+###################################################step 3.5###################################################
+##############################sub-step 1##############################
+sub_step = []
+sub_step.append('In between steps 3 and 4.')
+sub_step.append([['hand', 'tourniquet_tourniquet']])
+sub_steps['step 3.5'].append(sub_step)
+del sub_step
+
+###################################################step 4.5###################################################
+##############################sub-step 1##############################
+sub_step = []
+sub_step.append('In between steps 4 and 5.')
+sub_step.append([['hand', 'tourniquet_tourniquet']])
+sub_steps['step 4.5'].append(sub_step)
+del sub_step
+
+###################################################step 5.5###################################################
+##############################sub-step 1##############################
+sub_step = []
+sub_step.append('In between steps 5 and 6.')
+sub_step.append([['hand', 'tourniquet_tourniquet']])
+sub_steps['step 5.5'].append(sub_step)
+del sub_step
+
+###################################################step 6.5###################################################
+##############################sub-step 1##############################
+sub_step = []
+sub_step.append('In between steps 6 and 7.')
+sub_step.append([['hand', 'tourniquet_tourniquet']])
+sub_steps['step 6.5'].append(sub_step)
+del sub_step
+
+###################################################step 8.5###################################################
+##############################sub-step 1##############################
+sub_step = []
+sub_step.append('In between steps 7 and 8.')
+sub_step.append([['hand', 'tourniquet_tourniquet']])
+sub_steps['step 7.5'].append(sub_step)
+del sub_step
+
+###################################################before###################################################
+##############################sub-step 1##############################
+sub_step = []
+sub_step.append('Not started.')
+sub_step.append([['hand', 'tourniquet_tourniquet']])
+sub_steps['before'].append(sub_step)
+del sub_step
+
+###################################################finished###################################################
+##############################sub-step 1##############################
+sub_step = []
+sub_step.append('Finished.')
+sub_step.append([['hand', 'tourniquet_tourniquet']])
+sub_steps['finished'].append(sub_step)
+del sub_step
+"""
+
+
+
+
 
 
 CONTACT_PAIRS = contact_pairs_details = [

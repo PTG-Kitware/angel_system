@@ -16,38 +16,78 @@ import numpy as np
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '0, 1, 2, 3'
 
-root_dir = '/data/ptg/medical/bbn/Release_v0.5/v0.52'
+root_dir = '/data/ptg/medical/bbn/data/Release_v0.5/v0.52'
 #root_dir = '/media/hannah.defazio/Padlock_DT/Data/notpublic/PTG/Release_v0.5'
 
 
-def bbn_activity_data_loader(videos_dir, video):
+def bbn_activity_data_loader(videos_dir, video, step_map=None,
+                             lab_data=False, add_inter_steps=False, add_before_finished_task=False):
     # Load ground truth activity 
-    subfolder = video #f"M{skill_num}-{session}" #f"R{skill_num}-{session}"
-    skill_second_fn = f'{videos_dir}/{subfolder}/{subfolder}.skill_labels_by_second.txt'
+    if lab_data:
+        skill_fn = glob.glob(f'{videos_dir}/{video}/*_skills_frame.txt')
+        skill_fn = skill_fn[0]
+    else:
+        skill_fn = f'{videos_dir}/{video}/{video}.skill_labels_by_frame.txt'
 
-    if os.path.isfile(f"{videos_dir}/{subfolder}/THIS_DATA_SET_WAS_EXCLUDED") or not os.path.exists(skill_second_fn):
-        print(f"{subfolder} has no data")
+
+    if os.path.isfile(f"{videos_dir}/{video}/THIS_DATA_SET_WAS_EXCLUDED") or not os.path.exists(skill_fn):
+        print(f"{video} has no data")
         return {}
 
-    skill_second_f = open(skill_second_fn)
-    second_lines = skill_second_f.readlines()
+    skill_f = open(skill_fn)
+    lines = skill_f.readlines()
 
     gt_activity = {}
-    for line in second_lines:
+    for line in lines:
         # start time, end time, class
-        second_data = line.split("\t")
+        data = line.split("\t")
 
-        class_label = second_data[2].lower().strip().strip('.')
+        class_label = data[2].lower().strip().strip('.')
         if class_label not in gt_activity.keys():
             gt_activity[class_label] = []
+        try:
+            start = int(data[0])
+            end = int(data[1])
+        except:
+            continue
+
         gt_activity[class_label].append({
-            'start': float(second_data[0]),
-            'end': float(second_data[1])
+            'start': start,
+            'end': end
         })
 
-    skill_second_f.close()
+    skill_f.close()
+    
+    # Add in more time frames if applicable
+    steps = list(step_map.keys()) if step_map else {}
+    if add_inter_steps:
+        print('Adding in-between steps')
+        for i, step in enumerate(steps[:-1]):
+            sub_step_str = step_map[step][0][0].lower().strip().strip('.').strip()
+            next_sub_step_str = step_map[steps[i+1]][0][0].lower().strip().strip('.').strip()
+            try:
+                start = gt_activity[sub_step_str][0]['end']
+                end = gt_activity[next_sub_step_str][0]['start']
+            except:
+                continue
 
-    print(f"Loaded ground truth from {skill_second_fn}")
+            gt_activity[f'In between {step} and {steps[i+1]}'.lower()] =  [{ 'start': start, 'end': end }]
+
+    if add_before_finished_task:
+        print('Adding before and finished')
+        # before task
+        sub_step_str = step_map['step 1'][0][0].lower().strip().strip('.').strip()
+        end = gt_activity[sub_step_str][0]['start'] # when the first step starts
+        gt_activity['Not started'.lower()] = [{ 'start': 0, 'end': end }]
+            
+        # after task
+        sub_step_str = step_map['step 8'][0][0].lower().strip().strip('.').strip()
+        start = gt_activity[sub_step_str][0]['end'] # when the last step ends
+        end = len(glob.glob(f'{videos_dir}/{video}/_extracted/images/*.png')) - 1
+        gt_activity['Finished'.lower()] = [{ 'start': start, 'end': end }]
+    print(video)
+    print('gt', gt_activity)
+    print(f"Loaded ground truth from {skill_fn}")
 
     return gt_activity
 
