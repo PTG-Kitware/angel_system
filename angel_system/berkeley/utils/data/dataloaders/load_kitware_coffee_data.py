@@ -18,9 +18,11 @@ def coffee_activity_data_loader(video='all_activities_11'):
         class_label = row["class"].lower().strip().strip('.')
         if class_label not in gt_activity.keys():
             gt_activity[class_label] = []
+        start_frame, start_time = time_from_name(row["start_frame"])
+        end_frame, end_time = time_from_name(row["end_frame"])
         gt_activity[class_label].append({
-            'start': time_from_name(row["start_frame"]),
-            'end': time_from_name(row["end_frame"])
+            'start': start_time,
+            'end': end_time
         })
     print(f"Loaded ground truth from {gt_activity_fn}")
 

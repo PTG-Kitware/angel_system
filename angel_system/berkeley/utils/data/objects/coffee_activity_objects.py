@@ -426,17 +426,15 @@ original_sub_steps['step 8'].append(sub_step)
 ##############################sub-step 22##############################
 sub_step = []
 sub_step.append('Remove the coffee grounds and paper filter from the dripper')
-sub_step.append([
-                # ['hand', 'used paper filter + filter cone'],
-                    # ['filter cone', 'used paper filter'],
-                    ['hand', 'used paper filter']])
+sub_step.append([['hand', 'used paper filter + filter cone'],
+                 ['hand', 'used paper filter']])
 original_sub_steps['step 8'].append(sub_step)
 
 #############################sub-step 23##############################
 sub_step = []
 sub_step.append('Discard the coffee grounds and paper filter')
-sub_step.append([['used paper filter', 'trash can']
-                    # , ['hand', 'used paper filter']
+sub_step.append([['used paper filter', 'trash can'],
+                 ['hand', 'used paper filter']
                     ])
 original_sub_steps['step 8'].append(sub_step)
 
