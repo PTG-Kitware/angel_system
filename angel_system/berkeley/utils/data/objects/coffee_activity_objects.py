@@ -286,7 +286,8 @@ del sub_step
 # #############################sub-step 7##############################
 sub_step = []
 sub_step.append('Place the folded filter into the dripper such that the the point of the quarter-circle rests in the center of the dripper')
-sub_step.append([['paper filter (quarter)', 'filter cone + mug']])
+sub_step.append([['hand', 'paper filter (quarter)'],
+                 ['paper filter (quarter)', 'filter cone + mug']])
 original_sub_steps['step 3'].append(sub_step)
 del sub_step
 
@@ -310,7 +311,7 @@ del sub_step
 sub_step = []
 sub_step.append('Place a bowl on the scale')
 sub_step.append([['container', 'scale (off)'],
-                    ['container', 'scale (on)']])
+                 ['container', 'scale (on)']])
 original_sub_steps['step 4'].append(sub_step)
 del sub_step
 
