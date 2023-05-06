@@ -1,9 +1,11 @@
+from pathlib import Path
 from typing import Any
 from typing import Dict
 from typing import List
 from typing import Sequence
 from typing import Tuple
 from typing import Union
+import yaml
 
 import rclpy
 from rclpy.node import Node
@@ -68,16 +70,43 @@ class TranslateTaskUpdateForBBN(Node):
 
         parameter_values = declare_and_get_parameters(
             self,
-            [("task_update_topic",),
-             ("bbn_update_topic",),
-             ("task_graph_srv_topic",)]
+            [
+                ("task_update_topic",),
+                ("bbn_update_topic",),
+                ("task_graph_srv_topic",),
+                ("config",),
+            ]
         )
         self._input_task_update_topic = parameter_values["task_update_topic"]
         self._output_bbn_update_topic = parameter_values["bbn_update_topic"]
         self._task_graph_service_topic = parameter_values["task_graph_srv_topic"]
+        self._step_mapping_config_path = Path(parameter_values["config"])
 
-        # TODO: Setup state tracking variables.
+        with open(self._step_mapping_config_path) as f:
+            self._config = yaml.load(f, yaml.CSafeLoader)
+
+        # Mapping of different task names to a list of (sequential) task steps
+        # for BBN consumption steps, each of which also relating which KW task
+        # steps relate to the BBN step.
+        self._bbn_step_mapping: Dict[str, List[Dict]] = self._config['bbn_to_kw_steps']
+
+        # Mapping, for different task names, of KW task step index to BBN task
+        # step index. Not all KW task step indices may be represented here
+        # because there may be gaps in representation on the BBN side.
+        self._kw_step_to_bbn_idx: Dict[str, Dict[int, int]] = {}
+        for task_name, bbn_steps in self._bbn_step_mapping.items():
+            self._kw_step_to_bbn_idx[task_name] = local_kw_to_bbn =  {}
+            bbn_step_list = []
+            for bbn_i, bbn_to_kw in enumerate(bbn_steps):
+                bbn_step_list.append(bbn_to_kw['text'])
+                for kw_i in bbn_to_kw['kw_task_ids']:
+                    local_kw_to_bbn[kw_i] = bbn_i
+            # Fill in a step list into self._task_to_step_list since we are
+            # being provided with one for output.
+            self._task_to_step_list[task_name] = bbn_step_list
+
         # State capture of task name to the list of task steps.
+        # Pre-initialize with
         self._task_to_step_list: Dict[str, List[str]] = {}
         # Track whether a task by name is considered in progress or not with a
         # confidence value in the [0,1] range.
@@ -110,9 +139,12 @@ class TranslateTaskUpdateForBBN(Node):
             log.info("Waiting for task graph service...")
         log.info("Task graph service available!")
 
-    def _task_is_in_progress(self, msg: TaskUpdate) -> bool:
+    def _task_is_in_progress(self, msg: TaskUpdate) -> float:
         """
         Determine if the given task actively in progress.
+
+        Confidence value returned is a floating point in the [0,1] range where
+        0 is no confidence and 1 is complete confidence.
 
         :param msg: TaskUpdate message to base the decision from.
         :return: If the task is judged as actively in progress or not.
@@ -124,10 +156,10 @@ class TranslateTaskUpdateForBBN(Node):
                f"Current step ID should have been something >= -1, instead " \
                f"was [{current_step_id}]."
         if msg.current_step_id == -1:
-            return False
-        return True
+            return 0.0
+        return 1.0
 
-    def _task_is_complete(self, msg: TaskUpdate) -> bool:
+    def _task_is_complete(self, msg: TaskUpdate) -> float:
         """
         Determine if the given task is complete.
 
@@ -135,7 +167,7 @@ class TranslateTaskUpdateForBBN(Node):
         :return: If the task is judged as complete or not.
         """
         # Simple logic that checks that the last step is marked completed
-        return msg.completed_steps[-1]
+        return float(msg.completed_steps[-1])
 
     def _update_task_graph(self, msg: TaskUpdate) -> bool:
         """
@@ -177,31 +209,41 @@ class TranslateTaskUpdateForBBN(Node):
             latest_sensor_input_time.sec + (latest_sensor_input_time.nanosec * 1e-9)
         )
 
-        # Update internal state if needed
-        if msg.task_name not in self._task_to_step_list:
+        # Check if we have the KW Task-monitor reporting steps list, otherwise
+        # attempt to query the task-graph service (probably provided by the
+        # task-monitor) for it.
+        task_name = msg.task_name
+        if task_name not in self._task_to_step_list:
             if not self._update_task_graph(msg):
                 # Could not get the task graph for the current task update message.
                 # Cannot proceed with populating the BBN Update message.
                 # The above method outputs a warning to the logger, so just
                 # returning early.
                 return
-        self._task_in_progress_state[msg.task_name] = self._task_is_in_progress(msg)
-        self._task_completed_state[msg.task_name] = self._task_is_complete(msg)
 
-        current_task_steps = self._task_to_step_list[msg.task_name]
-        assert len(current_task_steps) == len(msg.completed_steps), \
+        self._task_in_progress_state[task_name] = self._task_is_in_progress(msg)
+        self._task_completed_state[task_name] = self._task_is_complete(msg)
+
+        current_kw_task_steps = self._task_to_step_list[task_name]
+        assert len(current_kw_task_steps) == len(msg.completed_steps), \
                "Misalignment between state of task steps, steps completed " \
                "bools, and step "
 
         # Determine the current user task step state list
         #
         # A step is DONE if it is marked as complete in msg.completed_steps
-        # A step is IMPLIED if it is NOT marked as complete and the current step is beyond the step
+        # A step is IMPLIED if it is NOT marked as complete and the current step is beyond this step
         # A step is CURRENT for the msg.current_step_id if it is not marked completed in msg.completed_steps
-        # A step is UNOBSERVED if it is after the current step ID
+        # A step is UNOBSERVED if it is not marked as complete and after the current step ID
+        #
         current_step_id = msg.current_step_id
         task_step_state_list = []
-        for step_i, (step_name, step_completed) in enumerate(zip(current_task_steps, msg.completed_steps)):
+        # Equivalent to check `in` against `_bbn_step_mapping` or  `_kw_step_to_bbn_idx`.
+        mapping_in_effect = task_name in self._kw_step_to_bbn_idx
+        for step_i, (step_name, step_completed) in enumerate(zip(current_kw_task_steps, msg.completed_steps)):
+            # Getting the state first while `step_i` and `current_step_id` are
+            # still relative to each other (below may translate `step_i` into
+            # something else).
             if step_completed:
                 state = BBNStepState.STATE_DONE
             # The following imply step not completed condition
@@ -211,6 +253,18 @@ class TranslateTaskUpdateForBBN(Node):
                 state = BBNStepState.STATE_CURRENT
             else:  # current_step_id < step_i
                 state = BBNStepState.STATE_UNOBSERVED
+
+            # If the current task has configured translations, adjust the
+            # `step_i` and `step_name`, or even skip this KW task step if it
+            # does not map to something.
+            if mapping_in_effect:
+                if step_i in self._kw_step_to_bbn_idx[task_name]:
+                    step_i = self._kw_step_to_bbn_idx[task_name][step_i]
+                    step_name = self._bbn_step_mapping[task_name][step_i]['text']
+                else:
+                    # Current KW step has no mapping into BBN steps, skipping
+                    # this step.
+                    continue
 
             task_step_state_list.append(BBNStepState(
                 number=step_i,
@@ -272,11 +326,11 @@ class TranslateTaskUpdateForBBN(Node):
                 ]
             ),
             current_user_actions=BBNCurrentUserActions(
-                populated=True if msg.task_name in self._task_to_step_list else False,
+                populated=True if task_step_state_list else False,
                 # Hard coded for Demo 1
                 casualty_currently_working_on=BBNCasualtyCurrentlyWorkingOn(),
                 current_skill=BBNCurrentSkill(
-                    number=msg.task_name,
+                    number=task_name,
                     # No support in ANGEL for multitask juggling, so only one
                     # concurrent task is possible --> current task is
                     # definitely the current task.
