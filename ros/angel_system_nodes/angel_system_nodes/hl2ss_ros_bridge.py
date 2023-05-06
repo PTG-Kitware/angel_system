@@ -96,6 +96,25 @@ class HL2SSROSBridge(Node):
         self.audio_port = hl2ss.StreamPort.MICROPHONE
         self.sm_port = hl2ss.IPCPort.SPATIAL_MAPPING
 
+        self._head_pose_topic_enabled = False
+        if self._head_pose_topic != DISABLE_TOPIC_STR:
+            self._head_pose_topic_enabled = True
+            # Establishing head-pose publisher before starting the _pv_thread
+            # to avoid a race condition (this publisher can be used in that
+            # thread
+            log.info("Creating head pose publisher")
+            self.ros_head_pose_publisher = self.create_publisher(
+                HeadsetPoseData,
+                self._head_pose_topic,
+                1
+            )
+
+            # Check to make sure image topic is valid, otherwise the image thread
+            # will not be running, which is where head pose data is fetched.
+            if self._image_topic == DISABLE_TOPIC_STR:
+                log.warn(
+                    "Warning! Image topic is not configured, so head pose data will not be published."
+                )
         if self._image_topic != DISABLE_TOPIC_STR:
             # Create frame publisher
             self.ros_frame_publisher = self.create_publisher(
@@ -176,19 +195,8 @@ class HL2SSROSBridge(Node):
             )
             self._sm_thread.daemon = True
             self._sm_thread.start()
-        if self._head_pose_topic != DISABLE_TOPIC_STR:
-            self.ros_head_pose_publisher = self.create_publisher(
-                HeadsetPoseData,
-                self._head_pose_topic,
-                1
-            )
 
-            # Check to make sure image topic is valid, otherwise the image thread
-            # will not be running, which is where head pose data is fetched.
-            if self._image_topic == DISABLE_TOPIC_STR:
-                log.warn(
-                    "Warning! Image topic is not configured, so head pose data will not be published."
-                )
+        log.info("Initialization complete.")
 
     def connect_hl2ss_pv(self) -> None:
         """
@@ -338,11 +346,13 @@ class HL2SSROSBridge(Node):
             # Publish the corresponding headset pose msg
             world_matrix = [float(x) for x in data.pose.flatten()]
 
-            headset_pose_msg = HeadsetPoseData()
-            headset_pose_msg.header = image_msg.header  # same timestamp/frame_id as image
-            headset_pose_msg.world_matrix = world_matrix
-            headset_pose_msg.projection_matrix = self.camera_intrinsics
-            self.ros_head_pose_publisher.publish(headset_pose_msg)
+            # Cannot publish head poses if it was not enabled.
+            if self._head_pose_topic_enabled:
+                headset_pose_msg = HeadsetPoseData()
+                headset_pose_msg.header = image_msg.header  # same timestamp/frame_id as image
+                headset_pose_msg.world_matrix = world_matrix
+                headset_pose_msg.projection_matrix = self.camera_intrinsics
+                self.ros_head_pose_publisher.publish(headset_pose_msg)
 
             self._pv_rate_tracker.tick()
             log.debug(f"Published image message (hz: "
