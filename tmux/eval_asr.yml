@@ -70,7 +70,7 @@ windows:
       -p user_intent_topic:=interp_user_intent_topic
       -p user_emotion_topic:=user_emotion_topic
       -p model_mode:=vader
-  # - question_answerer: ros2 run angel_system_nodes question_answerer --ros-args
-  #     -r __ns:=${ROS_NAMESPACE}
-  #     -p input_detected_emotion_topic:=user_emotion_topic
-  #     -p output_response_topic:=system_text_response_topic
+  - question_answerer: ros2 run angel_system_nodes qa --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p user_emotion_topic:=user_emotion_topic
+      -p system_text_response_topic:=system_text_response_topic
