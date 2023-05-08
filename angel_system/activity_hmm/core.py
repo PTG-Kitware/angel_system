@@ -189,25 +189,6 @@ class ActivityHMMRos:
         self.num_steps_can_jump_fwd = config["hmm"]["num_steps_can_jump_fwd"]
         self.num_steps_can_jump_bck = config["hmm"]["num_steps_can_jump_bck"]
 
-        self.model = ActivityHMM(
-            self.dt,
-            self.class_str,
-            med_class_duration=self.med_class_duration,
-            num_steps_can_jump_fwd=self.num_steps_can_jump_fwd,
-            num_steps_can_jump_bck=self.num_steps_can_jump_bck,
-            class_mean_conf=self.class_mean_conf,
-            class_std_conf=self.class_std_conf,
-        )
-
-        self.unconstrained_model = ActivityHMM(
-            self.dt,
-            class_str,
-            med_class_duration,
-            num_steps_can_jump_fwd=self.num_steps,
-            num_steps_can_jump_bck=self.num_steps,
-            class_mean_conf=class_mean_conf,
-            class_std_conf=class_std_conf,
-        )
         self.set_hmm_mean_and_std(class_mean_conf, class_std_conf)
 
     @property

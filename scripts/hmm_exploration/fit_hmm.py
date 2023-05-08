@@ -34,66 +34,72 @@ os.chdir("/home/local/KHQ/matt.brown/libraries/angel_system")
 
 
 # ----------------------------------------------------------------------------
-config_fname = "/mnt/data2tb/libraries/angel_system/config/tasks/task_steps_config-recipe_coffee_trimmed_v3.yaml"
+config_fname = '/angel_system/config/tasks/task_steps_config-recipe_m2_apply_tourniquet_v0.052.yaml'
 
-# Load from real system.
-dt = 0.25
-base_dir = "/mnt/data10tb/ptg/hmm_training_data"
-gt = []
-for sdir in os.listdir(base_dir):
-    activity_gt = glob.glob("%s/%s/*.csv" % (base_dir, sdir))[0]
-    extracted_activity_detections = glob.glob("%s/%s/*.json" % (base_dir, sdir))[0]
-    gt.append(
-        [
-            sdir,
-            load_and_discretize_data(
-                activity_gt, extracted_activity_detections, dt, 0.5
-            ),
-        ]
-    )
+if False:
+    # Old way.
+    # Load from real system.
+    dt = 0.25
+    base_dir = '/mnt/data10tb/ptg/hmm_training_data'
+    gt = []
+    for sdir in os.listdir(base_dir):
+        activity_gt = glob.glob('%s/%s/*.csv' % (base_dir, sdir))[0]
+        extracted_activity_detections = glob.glob('%s/%s/*.json' % (base_dir, sdir))[0]
+        gt.append([sdir, load_and_discretize_data(activity_gt,
+                                                  extracted_activity_detections,
+                                                  dt, 0.5)])
 
 
-# For the purpose of fitting mean and std outside of the HMM, we can just
-# append everything together.
+    # For the purpose of fitting mean and std outside of the HMM, we can just
+    # append everything together.
 
-X = []
-activity_ids = []
-time_windows = []
-valid = []
-for gt_ in gt:
-    time_windowsi, class_str, Xi, activity_idsi, validi = gt_[1]
-    time_windows.append(time_windowsi)
-    X.append(Xi)
-    activity_ids.append(activity_idsi)
-    valid.append(validi)
+    X = []
+    activity_ids = []
+    time_windows = []
+    valid = []
+    for gt_ in gt:
+        time_windowsi, class_str, Xi, activity_idsi, validi = gt_[1]
+        time_windows.append(time_windowsi)
+        X.append(Xi)
+        activity_ids.append(activity_idsi)
+        valid.append(validi)
 
-time_windows = np.vstack(time_windows)
-X = np.vstack(X)
-valid = np.hstack(valid)
-activity_ids = np.hstack(activity_ids)
+    time_windows = np.vstack(time_windows)
+    X = np.vstack(X)
+    valid = np.hstack(valid)
+    activity_ids = np.hstack(activity_ids)
 
-# ----------------------------------------------------------------------------
-# What was loaded is activity_id ground truth, but we want step ground truth.
+    # ------------------------------------------------------------------------
+    # What was loaded is activity_id ground truth, but we want step ground truth.
 
-# Map activities to steps
-with open(config_fname, "r") as stream:
-    config = yaml.safe_load(stream)
+    # Map activities to steps
+    with open(config_fname, 'r') as stream:
+        config = yaml.safe_load(stream)
 
-activity_id_to_step = {}
-for step in config["steps"]:
-    if isinstance(step["activity_id"], str):
-        a_ids = [int(s) for s in step["activity_id"].split(",")]
-    else:
-        a_ids = [step["activity_id"]]
+    activity_id_to_step = {}
+    for step in config['steps']:
+        if isinstance(step['activity_id'], str):
+            a_ids = [int(s) for s in step['activity_id'].split(',')]
+        else:
+            a_ids = [step['activity_id']]
 
-    for i in a_ids:
-        activity_id_to_step[i] = step["id"]
+        for i in a_ids:
+            activity_id_to_step[i] = step['id']
 
-activity_id_to_step[0] = 0
-steps = sorted(list(set(activity_id_to_step.values())))
-assert steps == list(range(max(steps) + 1))
+    activity_id_to_step[0] = 0
+    steps = sorted(list(set(activity_id_to_step.values())))
+    assert steps == list(range(max(steps) + 1))
 
-true_step = [activity_id_to_step[activity_id] for activity_id in activity_ids]
+    true_step = [activity_id_to_step[activity_id] for activity_id in activity_ids]
+    # ------------------------------------------------------------------------
+else:
+    fname = '/angel_workspace/ros_bags/activity_hmm_training_data.pkl'
+    with open(fname, 'rb') as of:
+        X, true_step = pickle.load(of)
+
+    valid = np.ones(len(activity_ids), dtype=bool)
+
+
 # ----------------------------------------------------------------------------
 
 
@@ -121,9 +127,12 @@ for i in range(num_classes):
     wins = np.array(list(zip(indl, indr))).T
 
     # During (seconds) of each instance.
-    twins = time_windows[wins[1], 1] - time_windows[wins[0], 0]
+    try:
+        twins = time_windows[wins[1], 1] - time_windows[wins[0], 0]
 
-    med_class_duration.append(np.mean(twins))
+        med_class_duration.append(np.mean(twins))
+    except NameError:
+        med_class_duration.append(1)
 
 med_class_duration = np.array(med_class_duration)
 class_mean_conf = np.array(class_mean_conf)
