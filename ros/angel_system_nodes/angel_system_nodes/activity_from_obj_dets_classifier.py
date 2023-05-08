@@ -85,7 +85,7 @@ class ActivityFromObjectDetectionsClassifier(Node):
         # The very first message published will have a start time equal to the time
         # this node was initialized. After the first message, the source stamp
         # start time will be set to the end time of the previous message.
-        self._source_stamp_start_frame = Time(sec=0, nanosec=0)
+        self._source_stamp_start_frame = None
 
     def det_callback(self, msg: ObjectDetection2dSet) -> None:
         """
@@ -94,6 +94,11 @@ class ActivityFromObjectDetectionsClassifier(Node):
         and publish the `ActivityDetection` message.
         """
         log = self.get_logger()
+
+        # Set the activity det start/end frame time to this frame's source stamp
+        if self._source_stamp_start_frame is None:
+            self._source_stamp_start_frame = msg.source_stamp
+            return
 
         feature_vec = obj_det2d_set_to_feature(msg.label_vec, msg.left,
                                                msg.right, msg.top, msg.bottom,
@@ -115,7 +120,8 @@ class ActivityFromObjectDetectionsClassifier(Node):
         activity_det_msg.header.stamp = self.get_clock().now().to_msg()
         activity_det_msg.header.frame_id = "ActivityDetection"
 
-        # Set the activity det start/end frame time to this frame's source stamp
+        # Set the activity det start/end frame time to the previously recieved
+        # frame (start) and the current frame (end).
         activity_det_msg.source_stamp_start_frame = self._source_stamp_start_frame
         activity_det_msg.source_stamp_end_frame = msg.source_stamp
 
