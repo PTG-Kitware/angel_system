@@ -76,12 +76,12 @@ class BerkeleyObjectDetector(Node):
         # Step classifier
         parser = model.get_parser()
 
-        conf_thr = 0.7
         args = parser.parse_args(
-            f"--config-file {self._model_config} --confidence-threshold {conf_thr}".split()
+                f"--config-file {self._model_config} --confidence-threshold {self._det_conf_thresh}".split()
         )
         log.info("Arguments: " + str(args))
         cfg = model.setup_cfg(args)
+        self.get_logger().info(f'cfg: {cfg}')
 
         os.environ['CUDA_VISIBLE_DEVICES'] = f'{self._cuda_device_id}'
         self.demo = predictor.VisualizationDemo_add_smoothing(
@@ -140,6 +140,7 @@ class BerkeleyObjectDetector(Node):
 
         if message.num_detections == 0:
             self.get_logger().info("No detections, nothing to publish")
+            self._det_publisher.publish(message)
             return
 
         for label, det in preds.items():
