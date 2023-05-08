@@ -13,7 +13,7 @@ activity_labels: "./config/activity_labels/recipe_tourniquet.yaml"
 activity_mean_and_std_file: "./model_files/recipe_m2_apply_tourniquet.npy"
 
 # Task title for display purposes.
-title: "M2 Apply tourniquet"
+title: "M2"
 
 # Layout of the steps that define this task.
 steps:

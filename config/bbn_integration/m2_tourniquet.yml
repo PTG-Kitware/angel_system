@@ -1,0 +1,31 @@
+# Configuration for mapping task monitor steps list output into a publishable
+# step list.
+#
+# We expect that the user of this config will access the task list service from
+# the task monitor. TaskMonitor step IDs refer to 0-based indices from that
+# list.
+
+# This configuration is intended to align with the task-monitor configuration
+#     config/tasks/task_steps_config-recipe_m2_apply_tourniquet_v0.052.yaml
+
+# List BBN output task steps, each referencing which Kitware task-monitor steps
+# it relates to.
+# BBN task step IDs are equivalent to their vector index.
+bbn_to_kw_steps:
+  M2:
+    - text: Place tourniquet over affected extremity 2-3 inches above wound site.
+      kw_task_ids: [ 1 ]
+    - text: Pull tourniquet tight.
+      kw_task_ids: [ 3 ]
+    - text: Apply strap to strap body.
+      kw_task_ids: [ 5 ]
+    - text: Turn windless clock wise or counter clockwise until hemorrhage is controlled.
+      kw_task_ids: [ 7 ]
+    - text: Lock windless into the windless keeper.
+      kw_task_ids: [ 9 ]
+    - text: Pull remaining strap over the windless keeper.
+      kw_task_ids: [ 11 ]
+    - text: Secure strap and windless keeper with keeper securing device.
+      kw_task_ids: [ 13 ]
+    - text: Mark time on securing device strap with permanent marker.
+      kw_task_ids: [ 15 ]

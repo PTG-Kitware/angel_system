@@ -77,14 +77,6 @@ windows:
       -p sys_cmd_topic:=SystemCommands
       -p enable_manual_progression:=false
 
-  - feedback_generator: ros2 run angel_system_nodes feedback_generator --ros-args
-      -r __ns:=${ROS_NAMESPACE}
-      -p activity_detector_topic:=ActivityDetections
-      -p object_detection_topic:=ObjectDetections3d
-      -p task_monitor_topic:=TaskUpdates
-      -p arui_update_topic:=AruiUpdates
-      -p interp_user_intent_topic:=UserIntentPredicted
-
   - BBN Interface:
       layout: even-vertical
       panes:
@@ -93,6 +85,7 @@ windows:
             -p task_update_topic:=TaskUpdates
             -p bbn_update_topic:=BBNUpdates
             -p task_graph_srv_topic:=query_task_graph
+            -p config:=${CONFIG_DIR}/bbn_integration/m2_tourniquet.yml
         - zmq-publisher: ros2 run bbn_integration ZmqIntegrationClient --ros-args
             -r __ns:=${ROS_NAMESPACE}
             -p topic_update_msg:=BBNUpdates
