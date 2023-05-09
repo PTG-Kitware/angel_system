@@ -77,7 +77,7 @@ windows:
             -p image_topic:=PVFramesBGR
             -p det_topic:=ObjectDetections2d
             -p det_conf_threshold:=0.4
-            -p model_config:=${ANGEL_WORKSPACE_DIR}/angel_system/berkeley/configs/MC50-InstanceSegmentation/medical/M2/stage2/mask_rcnn_R_50_FPN_1x_BBN_M2_labels_with_inter_and_before_finished_steps_demo.yaml
+            -p model_config:=${ANGEL_WORKSPACE_DIR}/angel_system/berkeley/configs/MC50-InstanceSegmentation/medical/M2/stage2/tourniquet_stage2_interstitial.yaml
             -p cuda_device_id:=0
         - simple_2d_overlay: ros2 run angel_debug Simple2dDetectionOverlay --ros-args
             -r __ns:=${ROS_NAMESPACE}
