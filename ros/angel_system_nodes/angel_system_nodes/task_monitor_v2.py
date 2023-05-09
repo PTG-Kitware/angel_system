@@ -115,7 +115,7 @@ class HMMNode(Node):
         # This may be removed from if step progress regresses.
         self._steps_skipped_cache: Set[int] = set()
         # Track the latest activity classification end time sent to the HMM
-        # Time is in integer nanoseconds (seconds * 1e9).
+        # Time is in floating-point seconds up to nanosecond precision.
         self._latest_act_classification_end_time = None
 
         # Initialize ROS hooks
@@ -196,12 +196,13 @@ class HMMNode(Node):
         TaskUpdate message.
         """
         if self.hmm_alive():
+            # time_to_int returns ns, converting to float seconds
             source_stamp_start_frame_sec = time_to_int(
                 activity_msg.source_stamp_start_frame
-            ) * 1e-9  # time_to_int returns ns
+            ) * 1e-9
             source_stamp_end_frame_sec = time_to_int(
                 activity_msg.source_stamp_end_frame
-            ) * 1e-9  # time_to_int returns ns
+            ) * 1e-9
 
             # Add activity classification to the HMM
             with self._hmm_lock:
@@ -251,7 +252,7 @@ class HMMNode(Node):
         message.task_name = self._task_title
         if self._latest_act_classification_end_time is not None:
             message.latest_sensor_input_time = nano_to_ros_time(
-                self._latest_act_classification_end_time
+                int(self._latest_act_classification_end_time * 1e9)
             )
         else:
             # Fill in a default time of 0.0 seconds.
@@ -328,6 +329,7 @@ class HMMNode(Node):
         and return it.
         """
         log = self.get_logger()
+        log.info("Received request for the current task graph")
         task_g = TaskGraph()
 
         with self._hmm_lock:
@@ -338,6 +340,7 @@ class HMMNode(Node):
         response.task_graph = task_g
 
         response.task_title = self._task_title
+        log.info("Received request for the current task graph -- Done")
         return response
 
     def thread_run_hmm(self):

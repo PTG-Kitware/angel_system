@@ -1,4 +1,5 @@
 import os
+import time
 
 import numpy as np
 import rclpy
@@ -75,18 +76,19 @@ class BerkeleyObjectDetector(Node):
         # Step classifier
         parser = model.get_parser()
 
-        conf_thr = 0.7
         args = parser.parse_args(
-            f"--config-file {self._model_config} --confidence-threshold {conf_thr}".split()
+                f"--config-file {self._model_config} --confidence-threshold {self._det_conf_thresh}".split()
         )
         log.info("Arguments: " + str(args))
         cfg = model.setup_cfg(args)
+        self.get_logger().info(f'cfg: {cfg}')
 
         os.environ['CUDA_VISIBLE_DEVICES'] = f'{self._cuda_device_id}'
         self.demo = predictor.VisualizationDemo_add_smoothing(
             cfg,
             last_time=2,
-            draw_output=False
+            draw_output=False,
+            tracking=False,
         )
 
         self.img_idx = 0
@@ -103,12 +105,14 @@ class BerkeleyObjectDetector(Node):
         # Convert ROS img msg to CV2 image
         bgr_image = BRIDGE.imgmsg_to_cv2(image, desired_encoding="bgr8")
 
+        s = time.time()
         predictions, _, _ = self.demo.run_on_image_smoothing_v2(
             bgr_image, current_idx=self.img_idx)
-
-        # Publish detection set message
         decoded_preds = model.decode_prediction(predictions)
+        self.get_logger().info(f"Detection prediction took: {time.time() - s:.6f} s")
+
         if decoded_preds is not None:
+            # Publish detection set message
             self.publish_det_message(decoded_preds, image.header)
 
     def publish_det_message(self, preds, image_header):
@@ -135,6 +139,8 @@ class BerkeleyObjectDetector(Node):
         message.num_detections = len(message.label_vec)
 
         if message.num_detections == 0:
+            self.get_logger().info("No detections, nothing to publish")
+            self._det_publisher.publish(message)
             return
 
         for label, det in preds.items():

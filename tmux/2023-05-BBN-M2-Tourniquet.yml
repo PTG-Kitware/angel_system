@@ -19,8 +19,8 @@ root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 # on_project_start: command
 on_project_start: |
   export ROS_NAMESPACE=${ROS_NAMESPACE:-/kitware}
-  export HL2SS_API_URL=${HL2SS_API_URL:-localhost:8000}
-  export BBN_OUTPUT_URL=${BBN_OUTPUT_URL:-tcp://localhost:5555}
+  export HL2SS_API_URL=${HL2SS_API_URL:-128.33.193.178:8000}
+  export BBN_OUTPUT_URL=${BBN_OUTPUT_URL:-tcp://128.33.193.178:6667}
   export CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/config
   export NODE_CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/src/angel_system_nodes/configs
   export MODEL_DIR=${ANGEL_WORKSPACE_DIR}/model_files
@@ -56,8 +56,8 @@ windows:
       -r __ns:=${ROS_NAMESPACE}
       -p image_topic:=PVFramesBGR
       -p det_topic:=ObjectDetections2d
-      -p det_conf_threshold:=0.7
-      -p model_config:=${ANGEL_WORKSPACE_DIR}/angel_system/berkeley/configs/MC50-InstanceSegmentation/mask_rcnn_R_101_FPN_1x_demo.yaml
+      -p det_conf_threshold:=0.4
+      -p model_config:=${ANGEL_WORKSPACE_DIR}/angel_system/berkeley/configs/MC50-InstanceSegmentation/medical/M2/stage2/mask_rcnn_R_50_FPN_1x_BBN_M2_labels_with_inter_and_before_finished_steps_demo.yaml
       -p cuda_device_id:=0
 
   - activity_classifier: ros2 run angel_system_nodes activity_from_obj_dets_classifier --ros-args
@@ -69,7 +69,7 @@ windows:
   - task_monitor: ros2 run angel_system_nodes task_monitor_v2 --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p det_topic:=ActivityDetections
-      -p config_file:=${CONFIG_DIR}/tasks/task_steps_config-recipe_coffee_trimmed_v3_allows_skip.yaml
+      -p config_file:=${CONFIG_DIR}/tasks/task_steps_config-recipe_m2_apply_tourniquet_v0.052.yaml
       -p task_state_topic:=TaskUpdates
       -p task_error_topic:=TaskErrors
       -p query_task_graph_topic:=query_task_graph

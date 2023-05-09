@@ -9,7 +9,6 @@ from detectron2.utils.file_io import PathManager
 
 from .builtin_meta import _get_coco_instances_meta
 from .lvis_v0_5_categories import LVIS_CATEGORIES as LVIS_V0_5_CATEGORIES
-from .lvis_v1_categories_ft import LVIS_CATEGORIES as LVIS_V1_CATEGORIES
 from .lvis_v1_category_image_count_ft import LVIS_CATEGORY_IMAGE_COUNT as LVIS_V1_CATEGORY_IMAGE_COUNT
 
 """
@@ -20,6 +19,9 @@ This file contains functions to parse LVIS-format annotations into dicts in the
 logger = logging.getLogger(__name__)
 
 __all__ = ["load_lvis_json", "register_lvis_instances", "get_lvis_instances_meta"]
+
+
+LVIS_V1_CATEGORIES = LVIS_V0_5_CATEGORIES
 
 
 def register_lvis_instances(name, metadata, json_file, image_root):

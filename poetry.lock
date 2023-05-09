@@ -496,7 +496,7 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "fsspec"
-version = "2023.4.0"
+version = "2023.5.0"
 description = "File-system specification"
 category = "main"
 optional = false
@@ -1423,6 +1423,38 @@ description = "Fundamental package for array computing in Python"
 category = "main"
 optional = false
 python-versions = ">=3.8"
+
+[[package]]
+name = "nvidia-cublas-cu11"
+version = "11.10.3.66"
+description = "CUBLAS native runtime libraries"
+category = "main"
+optional = false
+python-versions = ">=3"
+
+[[package]]
+name = "nvidia-cuda-nvrtc-cu11"
+version = "11.7.99"
+description = "NVRTC native runtime libraries"
+category = "main"
+optional = false
+python-versions = ">=3"
+
+[[package]]
+name = "nvidia-cuda-runtime-cu11"
+version = "11.7.99"
+description = "CUDA Runtime native Libraries"
+category = "main"
+optional = false
+python-versions = ">=3"
+
+[[package]]
+name = "nvidia-cudnn-cu11"
+version = "8.5.0.96"
+description = "cuDNN runtime libraries"
+category = "main"
+optional = false
+python-versions = ">=3"
 
 [[package]]
 name = "omegaconf"
@@ -2601,14 +2633,21 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "torch"
-version = "1.10.2"
+version = "1.13.1"
 description = "Tensors and Dynamic neural networks in Python with strong GPU acceleration"
 category = "main"
 optional = false
-python-versions = ">=3.6.2"
+python-versions = ">=3.7.0"
 
 [package.dependencies]
+nvidia-cublas-cu11 = {version = "11.10.3.66", markers = "platform_system == \"Linux\""}
+nvidia-cuda-nvrtc-cu11 = {version = "11.7.99", markers = "platform_system == \"Linux\""}
+nvidia-cuda-runtime-cu11 = {version = "11.7.99", markers = "platform_system == \"Linux\""}
+nvidia-cudnn-cu11 = {version = "8.5.0.96", markers = "platform_system == \"Linux\""}
 typing-extensions = "*"
+
+[package.extras]
+opt-einsum = ["opt-einsum (>=3.3)"]
 
 [[package]]
 name = "torchmetrics"
@@ -2635,16 +2674,18 @@ text = ["nltk (>=3.6)", "regex (>=2021.9.24)", "tqdm (>=4.41.0)"]
 
 [[package]]
 name = "torchvision"
-version = "0.11.3"
+version = "0.14.1"
 description = "image and video datasets and models for torch deep learning"
 category = "main"
 optional = false
-python-versions = "*"
+python-versions = ">=3.7"
 
 [package.dependencies]
 numpy = "*"
-pillow = ">=5.3.0,<8.3.0 || >8.3.0"
-torch = "1.10.2"
+pillow = ">=5.3.0,<8.3.0 || >=8.4.0"
+requests = "*"
+torch = "1.13.1"
+typing-extensions = "*"
 
 [package.extras]
 scipy = ["scipy"]
@@ -2703,7 +2744,7 @@ test = ["pytest"]
 
 [[package]]
 name = "trimesh"
-version = "3.21.5"
+version = "3.21.6"
 description = "Import, export, process, analyze and view triangular meshes."
 category = "main"
 optional = false
@@ -2735,9 +2776,9 @@ xatlas = {version = "*", optional = true, markers = "extra == \"all\""}
 xxhash = {version = "*", optional = true, markers = "extra == \"all\""}
 
 [package.extras]
-all = ["colorlog", "glooey", "pycollada", "xxhash", "svg.path", "scipy", "scikit-image", "pyglet (<2)", "rtree", "python-fcl", "sympy", "jsonschema", "setuptools", "psutil", "mapbox-earcut", "lxml", "pillow", "networkx", "shapely", "meshio", "xatlas", "chardet", "requests"]
-easy = ["rtree", "colorlog", "sympy", "jsonschema", "setuptools", "pycollada", "lxml", "mapbox-earcut", "xxhash", "pillow", "networkx", "shapely", "svg.path", "scipy", "chardet", "requests"]
-test = ["ruff", "pytest", "pytest-cov", "coveralls", "autopep8", "pyinstrument", "ezdxf"]
+all = ["mapbox-earcut", "shapely", "scipy", "requests", "pyglet (<2)", "xatlas", "scikit-image", "lxml", "pycollada", "rtree", "setuptools", "xxhash", "python-fcl", "psutil", "glooey", "pillow", "chardet", "svg.path", "networkx", "sympy", "meshio", "jsonschema", "colorlog"]
+easy = ["mapbox-earcut", "shapely", "pillow", "chardet", "scipy", "svg.path", "networkx", "requests", "sympy", "pycollada", "jsonschema", "colorlog", "lxml", "rtree", "setuptools", "xxhash"]
+test = ["coveralls", "pytest-cov", "ezdxf", "pyinstrument", "autopep8", "ruff", "pytest"]
 
 [[package]]
 name = "typeguard"
@@ -2917,7 +2958,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "flake8 (<5)", "pytest-co
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8,<3.10"
-content-hash = "02979662b8fe4de9d4569e1d5dcb9d49d8a203337f14c27f8fa2ca66aaf22686"
+content-hash = "973316790f15bb4396049dd7db8d21f099df8498b8caf54372cbbe40971446f2"
 
 [metadata.files]
 aiohttp = []
@@ -3021,6 +3062,10 @@ nltk = []
 notebook = []
 notebook-shim = []
 numpy = []
+nvidia-cublas-cu11 = []
+nvidia-cuda-nvrtc-cu11 = []
+nvidia-cuda-runtime-cu11 = []
+nvidia-cudnn-cu11 = []
 omegaconf = []
 opencv-python = []
 openpyxl = []
