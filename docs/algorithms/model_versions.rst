@@ -35,6 +35,26 @@ Model weights are currently being trained and validated, eventually to be
 located on data.kitware.com `here
 <https://data.kitware.com/#collection/62cc5eb8bddec9d0c4fa9ee1/folder/64066cd97b0dfcc98f66ad11>`__.
 
+Tourniquet Model Stage1
+^^^^^^^^^^^^^^^^^^^^^^^
+Version tag: ``tourniquet_stage1``
+
+MaskRCNN detector trained on BBN's M2_Tourniquet v0.52 YoloModel data.
+
+This model's weights as utilized in the system are currently stored on
+data.kitware.com `here <https://data.kitware.com/#collection/62cc5eb8bddec9d0c4fa9ee1/folder/64105f737b0dfcc98f66ba26>`__.
+
+Tourniquet Model Stage2 with interstitial steps
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Version Tag: ``tourniquet_stage2_interstitial``
+
+MaskRCNN detector trained on the output of running the `tourniquet_stage1` model on BBN's M2_Tourniquet v0.52 videos. The input detections were
+artifically adjusted by adding contact metadata and adjusting the
+detection labels to include information about when the detction took place in relation to the task.
+
+This model's weights as utilized in the system are currently stored on
+data.kitware.com `here <https://data.kitware.com/#collection/62cc5eb8bddec9d0c4fa9ee1/folder/64105f737b0dfcc98f66ba26>`__.
+
 
 Activity Classification Models
 ==============================
