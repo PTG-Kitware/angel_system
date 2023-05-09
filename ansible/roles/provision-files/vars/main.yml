@@ -56,15 +56,20 @@ girder_file_downloads:
     - file_id: 63657eb111dab8142820af68
       sha512: 9a9f9aa836dc3eb6ba187b64bdd72bb0cdce062b086996921827270783b1686bdf079bfdb34eacd5c71cb28366e8e89a4303a71f9ce0d2c27628d78fae939ab3
       dest: "{{ stage_dirs.model_files }}/recipe_coffee_trimmed_v3_mean_std.npy"
+    - file_id: 645aa4ad58fefcae81a9f73f
+      sha512: 1091c0fa8ca7db5364f56829b74e8bed57c6739e0633c37745ee32ebc76477eb6363e08de9cc04a26bf6ba7efcf45115f53239fd7d5136ddb48b9c474c6f851d
+      dest: "{{ stage_dirs.model_files }}/recipe_m2_apply_tourniquet.npy"
+    # Coffee object detection
     - file_id: 63fe7dbb7b0dfcc98f66a871
       sha512: c15fc5c38359d92a3a8aad41cd8a06bdfda6df7ae8ca553188ae02917ca2eb3fef92e5ea6a3d4a0676816a299e9d4253facf6cb59cab6776885fbaad57c31c39
       dest: "{{ stage_dirs.model_files }}/berkeley_model_final.pth"
     - file_id: 640b6cc67b0dfcc98f66b743
       sha512: 1a9a96f201d4472d3c946e3a9a7af1e0e232abf5a2868ebf8b3184dba3b23d858e619ab24e28dd9f1921d908387e3a3986eccfb136d3c38bc9ca85b7cae78e2e
       dest: "{{ stage_dirs.model_files }}/berkeley_model_r50_final.pth"
+    # Tourniquet activity detection
     - file_id: 6455411e58fefcae81a9efc5
       sha512: e3d44527b572cb95f1869ec33214cbaf9c721aae18f14bc9db73ea8ed5c9c9d6c52975ebc0884acd3402e8ec66fcfd6168ff5744c5a9e31069049d23a97c5fce
-      dest: "{{ stage_dirs.model_files }}/recipe_m2_apply_tourniquet_v0.052.pkl"
+      dest: "{{ stage_dirs.model_files }}/recipe_m2_apply_tourniquet_v0.052.pkl" 
     # Tourniquet object detection
     - file_id: 645a94db58fefcae81a9f73a
       sha512: 2f07f3ec2759c729d70d89cd31266e000226208fbdcf25e50018cbb6c85e5c5a51378b73049334d5472f8dfe000040dbc740e65e093c6cd114d83e96bfcdab6d
