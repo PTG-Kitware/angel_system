@@ -329,6 +329,7 @@ class HMMNode(Node):
         and return it.
         """
         log = self.get_logger()
+        log.info("Received request for the current task graph")
         task_g = TaskGraph()
 
         with self._hmm_lock:
@@ -339,6 +340,7 @@ class HMMNode(Node):
         response.task_graph = task_g
 
         response.task_title = self._task_title
+        log.info("Received request for the current task graph -- Done")
         return response
 
     def thread_run_hmm(self):

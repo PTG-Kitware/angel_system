@@ -8,6 +8,8 @@ from typing import Union
 import yaml
 
 import rclpy
+from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
+from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from std_msgs.msg import Header
 
@@ -101,9 +103,6 @@ class TranslateTaskUpdateForBBN(Node):
                 bbn_step_list.append(bbn_to_kw['text'])
                 for kw_i in bbn_to_kw['kw_task_ids']:
                     local_kw_to_bbn[kw_i] = bbn_i
-            # Fill in a step list into self._task_to_step_list since we are
-            # being provided with one for output.
-            self._task_to_step_list[task_name] = bbn_step_list
 
         # State capture of task name to the list of task steps.
         # Pre-initialize with
@@ -115,21 +114,27 @@ class TranslateTaskUpdateForBBN(Node):
         # confidence value in the [0,1] range.
         self._task_completed_state: Dict[str, float] = {}
 
+        self._sub_task_update_cbg = MutuallyExclusiveCallbackGroup()
         self._sub_task_update = self.create_subscription(
             TaskUpdate,
             self._input_task_update_topic,
             self._callback_input_task_update,
-            1
+            1,
+            callback_group=self._sub_task_update_cbg,
         )
+        self._pub_bbn_update_cbg = MutuallyExclusiveCallbackGroup()
         self._pub_bbn_update = self.create_publisher(
             BBNUpdate,
             self._output_bbn_update_topic,
-            1
+            1,
+            callback_group=self._pub_bbn_update_cbg,
         )
 
+        self._task_graph_client_cbg = MutuallyExclusiveCallbackGroup()
         self._task_graph_client = self.create_client(
             QueryTaskGraph,
             self._task_graph_service_topic,
+            callback_group=self._task_graph_client_cbg,
         )
         # Wait for service to be available. Maybe not required if we assume
         # that the provider of the TaskUpdate messages also supplies the
@@ -179,10 +184,19 @@ class TranslateTaskUpdateForBBN(Node):
         :returns: True if the update occurred, and false the response returned
             did not match the task update provided.
         """
+        log = self.get_logger()
         req = QueryTaskGraph.Request()
-        future = self._task_graph_client.call_async(req)
-        rclpy.spin_until_future_complete(future)
-        resp: QueryTaskGraph.Response = future.result()
+        # This works **BECAUSE** we are using multi-threaded executor with
+        # separated callback groups.
+        log.info("Querying for task-monitor task graph")
+        resp = self._task_graph_client.call(req)
+        # Use of `self._task_graph_client.call_async(req)` into
+        # `rclpy.spin_until_future_complete(self, future)` also works here,
+        # but is more or less superfluous.
+        #future = self._task_graph_client.call_async(req)
+        #rclpy.spin_until_future_complete(self, future)
+        #resp: QueryTaskGraph.Response = future.result()
+        log.info("Querying for task-monitor task graph -- Done")
         if resp.task_title != msg.task_name:
             self.get_logger().warn(
                 f"Received QueryTaskGraph response with mismatching title "
@@ -347,6 +361,7 @@ class TranslateTaskUpdateForBBN(Node):
             current_user_state=BBNCurrentUserState(),
         )
 
+        self.get_logger().info("Publishing BBN Update translation")
         self._pub_bbn_update.publish(out_msg)
 
 
@@ -355,11 +370,15 @@ def main():
 
     node = TranslateTaskUpdateForBBN()
 
+    executor = MultiThreadedExecutor(num_threads=5)
+    executor.add_node(node)
     try:
-        rclpy.spin(node)
+        executor.spin()
     except KeyboardInterrupt:
-        node.get_logger().info("Keyboard interrupt, shutting down.")
+        node.get_logger().info("Keyboard interrupt, shutting down.\n")
+        executor.shutdown()
 
+    node.get_logger().info("Destroying node")
     node.destroy_node()
     rclpy.shutdown()
 
