@@ -1,3 +1,4 @@
+import dataclasses
 from pathlib import Path
 from typing import Any
 from typing import Dict
@@ -32,6 +33,20 @@ from bbn_integration_msgs.msg import (
     BBNStepState,
     BBNUpdate,
 )
+
+
+@dataclasses.dataclass
+class BbnStep:
+    """
+    Metadata about a single BBN-facing task step.
+    """
+    # Index of the step in the sequence.
+    bbn_idx: int
+    # Task step body text.
+    text: str
+    # The KW task step ID that identifies when we are *currently doing*
+    # this task step.
+    kw_id: int
 
 
 class TranslateTaskUpdateForBBN(Node):
@@ -93,16 +108,15 @@ class TranslateTaskUpdateForBBN(Node):
         self._bbn_step_mapping: Dict[str, List[Dict]] = self._config['bbn_to_kw_steps']
 
         # Mapping, for different task names, of KW task step index to BBN task
-        # step index. Not all KW task step indices may be represented here
-        # because there may be gaps in representation on the BBN side.
-        self._kw_step_to_bbn_idx: Dict[str, Dict[int, int]] = {}
+        # step node. Not all KW task step indices may be represented here
+        # because there may be intentional gaps in the translation.
+        self._kw_step_to_bbn_idx: Dict[str, Dict[int, BbnStep]] = {}
         for task_name, bbn_steps in self._bbn_step_mapping.items():
-            self._kw_step_to_bbn_idx[task_name] = local_kw_to_bbn =  {}
-            bbn_step_list = []
+            local_kw_to_bbn = {}
+            self._kw_step_to_bbn_idx[task_name] = local_kw_to_bbn
             for bbn_i, bbn_to_kw in enumerate(bbn_steps):
-                bbn_step_list.append(bbn_to_kw['text'])
-                for kw_i in bbn_to_kw['kw_task_ids']:
-                    local_kw_to_bbn[kw_i] = bbn_i
+                bbn_step = BbnStep(bbn_idx=bbn_i, **bbn_to_kw)
+                local_kw_to_bbn[bbn_step.kw_id] = bbn_step
 
         # State capture of task name to the list of task steps.
         # Pre-initialize with
@@ -216,6 +230,8 @@ class TranslateTaskUpdateForBBN(Node):
         Updates the internal state and outputs an appropriate BBNUpdate
         message.
         """
+        log = self.get_logger()
+
         ros_now = self.get_clock().now()
         ros_now_seconds = ros_now.nanoseconds * 1e-9
         latest_sensor_input_time = msg.latest_sensor_input_time
@@ -251,7 +267,7 @@ class TranslateTaskUpdateForBBN(Node):
         # A step is UNOBSERVED if it is not marked as complete and after the current step ID
         #
         current_step_id = msg.current_step_id
-        task_step_state_list = []
+        task_step_state_map = {}
         # Equivalent to check `in` against `_bbn_step_mapping` or  `_kw_step_to_bbn_idx`.
         mapping_in_effect = task_name in self._kw_step_to_bbn_idx
         for step_i, (step_name, step_completed) in enumerate(zip(current_kw_task_steps, msg.completed_steps)):
@@ -259,12 +275,26 @@ class TranslateTaskUpdateForBBN(Node):
             # still relative to each other (below may translate `step_i` into
             # something else).
             if step_completed:
-                state = BBNStepState.STATE_DONE
-            # The following imply step not completed condition
+                if step_i == current_step_id:
+                    state = BBNStepState.STATE_CURRENT
+                elif step_i < current_step_id:
+                    state = BBNStepState.STATE_DONE
+                else:  # current_step_id < step_i
+                    log.warn(f"Step {step_i} ('{step_name}') is marked as "
+                             f"completed but is beyond the current step "
+                             f"{current_step_id} "
+                             f"('{current_kw_task_steps[current_step_id]}'). "
+                             f"Calling step {step_i} DONE but we are in "
+                             f"possibly a wonky state / regressed the task.")
+                    state = BBNStepState.STATE_DONE
             elif step_i < current_step_id:
                 state = BBNStepState.STATE_IMPLIED
             elif step_i == current_step_id:
-                state = BBNStepState.STATE_CURRENT
+                log.warn(f"Step {step_i} ('{step_name}') marked current but it "
+                         f"is also marked incomplete. This is an unexpected "
+                         f"condition coming from TaskMonitor v2. Calling it "
+                         f"UNOBSERVED for now.")
+                state = BBNStepState.STATE_UNOBSERVED
             else:  # current_step_id < step_i
                 state = BBNStepState.STATE_UNOBSERVED
 
@@ -272,20 +302,38 @@ class TranslateTaskUpdateForBBN(Node):
             # `step_i` and `step_name`, or even skip this KW task step if it
             # does not map to something.
             if mapping_in_effect:
-                if step_i in self._kw_step_to_bbn_idx[task_name]:
-                    step_i = self._kw_step_to_bbn_idx[task_name][step_i]
-                    step_name = self._bbn_step_mapping[task_name][step_i]['text']
+                mapping = self._kw_step_to_bbn_idx[task_name]
+                if step_i in mapping:
+                    bbn_step = mapping[step_i]
+                    log.info(f"Mapping KW step ({step_i}) \"{step_name}\" "
+                             f"into BBN step ({bbn_step.bbn_idx}) \"{bbn_step.text}\".")
+                    # Translate into new index and naming.
+                    step_i = bbn_step.bbn_idx
+                    step_name = bbn_step.text
                 else:
-                    # Current KW step has no mapping into BBN steps, skipping
-                    # this step.
+                    # Current KW step has no mapping into BBN steps, skipping.
                     continue
 
-            task_step_state_list.append(BBNStepState(
+            task_step_state_map[step_i] = BBNStepState(
                 number=step_i,
                 name=step_name,
                 state=state,
                 confidence=1.0
-            ))
+            )
+
+        # Check that the index-to-step mapping is contiguous across step indices.
+        # If this is not true, there was a translation mapping and the mapping
+        # was not properly configured against the input KW steps for the task.
+        # Cannot proceed.
+        if set(task_step_state_map.keys()) != set(range(len(task_step_state_map))):
+            log.error(f"Translated steps is not composed of contiguous "
+                      f"indices. There is an error in translation "
+                      f"configuration for task {task_name}.")
+            return
+        task_step_state_list = [
+            task_step_state_map[_i]
+            for _i in range(len(task_step_state_map))
+        ]
 
         # Construct outgoing message
         out_msg = BBNUpdate(
@@ -361,7 +409,7 @@ class TranslateTaskUpdateForBBN(Node):
             current_user_state=BBNCurrentUserState(),
         )
 
-        self.get_logger().info("Publishing BBN Update translation")
+        log.info("Publishing BBN Update translation")
         self._pub_bbn_update.publish(out_msg)
 
 

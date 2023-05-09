@@ -14,18 +14,21 @@
 bbn_to_kw_steps:
   M2:
     - text: Place tourniquet over affected extremity 2-3 inches above wound site.
-      kw_task_ids: [ 1 ]
+      # This step is currently happening if the current KW task step index
+      # equals this value. This step is considered completed if the current KW
+      # task step index is greater than this value.
+      kw_id: 1
     - text: Pull tourniquet tight.
-      kw_task_ids: [ 3 ]
+      kw_id: 3
     - text: Apply strap to strap body.
-      kw_task_ids: [ 5 ]
+      kw_id: 5
     - text: Turn windless clock wise or counter clockwise until hemorrhage is controlled.
-      kw_task_ids: [ 7 ]
+      kw_id: 7
     - text: Lock windless into the windless keeper.
-      kw_task_ids: [ 9 ]
+      kw_id: 9
     - text: Pull remaining strap over the windless keeper.
-      kw_task_ids: [ 11 ]
+      kw_id: 11
     - text: Secure strap and windless keeper with keeper securing device.
-      kw_task_ids: [ 13 ]
+      kw_id: 13
     - text: Mark time on securing device strap with permanent marker.
-      kw_task_ids: [ 15 ]
+      kw_id: 15
