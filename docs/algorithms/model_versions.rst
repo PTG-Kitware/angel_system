@@ -44,7 +44,7 @@ MaskRCNN detector trained on BBN's M2_Tourniquet v0.52 YoloModel data.
 This model's weights as utilized in the system are currently stored on
 data.kitware.com `here <https://data.kitware.com/#collection/62cc5eb8bddec9d0c4fa9ee1/folder/64105f737b0dfcc98f66ba26>`__.
 
-Tourniquet Model Stage2 with interstitial steps
+Tourniquet Model Stage2 with Interstitial Steps
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Version Tag: ``tourniquet_stage2_interstitial``
 
@@ -96,6 +96,15 @@ Task Step Classification Models
 Hidden Markov Models
 --------------------
 TODO: Add description, POC @mattbrown11
+
+Model weights storage `here
+<https://data.kitware.com/#collection/62cc5eb8bddec9d0c4fa9ee1/folder/636151b611dab8142820adfc>`__.
+
+Tourniquet Interstitial HMM
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Version Tag: ``recipe_m2_apply_tourniquet``
+
+TODO
 
 Model weights storage `here
 <https://data.kitware.com/#collection/62cc5eb8bddec9d0c4fa9ee1/folder/636151b611dab8142820adfc>`__.
