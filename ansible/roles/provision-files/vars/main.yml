@@ -65,6 +65,14 @@ girder_file_downloads:
     - file_id: 6455411e58fefcae81a9efc5
       sha512: e3d44527b572cb95f1869ec33214cbaf9c721aae18f14bc9db73ea8ed5c9c9d6c52975ebc0884acd3402e8ec66fcfd6168ff5744c5a9e31069049d23a97c5fce
       dest: "{{ stage_dirs.model_files }}/recipe_m2_apply_tourniquet_v0.052.pkl"
+    # Tourniquet object detection
+    - file_id: 645a94db58fefcae81a9f73a
+      sha512: 2f07f3ec2759c729d70d89cd31266e000226208fbdcf25e50018cbb6c85e5c5a51378b73049334d5472f8dfe000040dbc740e65e093c6cd114d83e96bfcdab6d
+      dest: "{{ stage_dirs.model_files }}/tourniquet_stage1.pth"
+    - file_id: 645a946058fefcae81a9f737
+      sha512: 7382a33fe69bdb97ae218a30a5797404ef6573637a6bf28e04041f7c87b056bbb1d3e2dfb6ea8ceb869a6d73aff9e53e0d11a43e62e7c132964394bd0e033ff8
+      dest: "{{ stage_dirs.model_files }}/tourniquet_stage2_interstitial.pth"
+    
 
 # List of git repositories to check out at a specific ref and then archive.
 # Destination files will be written as GZipped TAR files, so please suffix
