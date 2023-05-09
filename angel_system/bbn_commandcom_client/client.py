@@ -82,7 +82,7 @@ def talk_to_server(address:str, name:str, tmux_ctrl:TmuxController) -> None:
     # this loop should be modified and incorporated into client code
     # so it can listen to and respond to the server
     while (True):
-        if socket.poll(timeout=2):                                # monitor the socket to see if a message is waiting, N.B, if you don't include a timeout, poll WILL block
+        if socket.poll(timeout=500):                              # monitor the socket to see if a message is waiting, N.B, if you don't include a timeout, poll WILL block
             response = socket.recv_string()                       # receive message
             print(f"{name}: Received message: {response}")
 
@@ -145,4 +145,12 @@ if __name__ == "__main__":
             skill_cfg_map[s[0]] = s[1]
 
         tmux_ctrl = TmuxController(skill_cfg_map)
-        talk_to_server(address, name, tmux_ctrl)
+        try:
+            talk_to_server(address, name, tmux_ctrl)
+        except (Exception, KeyboardInterrupt) as ex:
+            print(f"\nCaptured exception {type(ex).__name__}: {str(ex)}")
+            print("Shutting down any sessions...")
+            tmux_ctrl.stop_all_tmux_sessions()
+            print("Shutting down any sessions... Done")
+            raise
+    print("End of main")
