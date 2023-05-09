@@ -60,8 +60,8 @@ windows:
             -p audio_topic:=HeadsetAudioData
             -p sm_topic:=disable
             -p head_pose_topic:=disable
-            -p pv_width:=1280
-            -p pv_height:=720
+            -p pv_width:=760
+            -p pv_height:=428
             -p pv_framerate:=30
             -p sm_freq:=5
         # Visualize Images being output from the headset
