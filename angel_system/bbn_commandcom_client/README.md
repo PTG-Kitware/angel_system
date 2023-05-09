@@ -8,7 +8,7 @@ following command, where address is the address of the ZMQ server, name is the
 name of our client node, and skill-config is the mapping from skill name to
 tmuxinator configuration.
 ```
-python3 angel_system/zmq_client/client.py --address tcp://localhost:5555 --name kw \
+python3 angel_system/bbn_commandcom_client/client.py --address tcp://localhost:5555 --name kw \
 --skill-config m1 hl2ss_demo --skill-config m2 2023-02-test_hl2ss_full_system-coffee_allows_skip
 ```
 
