@@ -119,8 +119,6 @@ def decode_prediction(predictions):
     if not predictions == None:
         try:
             [boxes, labels, obj_obj_contact_classes, obj_obj_contact_scores, obj_hand_contact_classes, obj_hand_contact_scores, Contact_infos, Contact_hand_infos] = predictions
-            if len(labels) > 1:
-                print('labels in decode', labels)
             if obj_obj_contact_classes is None:
                 has_contact_info = False
             else:
@@ -155,17 +153,6 @@ def decode_prediction(predictions):
                 pre["obj_hand_contact_conf"] = obj_hand_contact_scores[i]
 
             pres[cls_name].append(pre)
-            if len(pres[cls_name]) > 1:
-                print(f"DOUBLE: {cls_name}")
-                print("DOUBLE")
-                print("DOUBLE")
-                print("DOUBLE")
-                print("DOUBLE")
-                print("DOUBLE")
-                print("DOUBLE")
-                print("DOUBLE")
-
-                print(pres)
         return pres
     else:
         return None
