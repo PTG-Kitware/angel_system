@@ -31,7 +31,7 @@ timm = "^0.5.4"
 torch = ">=1.10.2,<2"
 torchvision = ">=0.11.3"
 transitions = "^0.8.11"
-trimesh = {extras = ["all"], version = "^3.10.2"}
+open3d = "^0.17.0"
 # For UHO Activity Classifier
 # - see arisia: /data/dawei.du/ptg-activity-recognition/activity_hydra/requirements.txt
 hydra-core = "==1.1.0"

@@ -151,21 +151,6 @@ tests-no-zope = ["hypothesis", "pympler", "pytest (>=4.3.0)", "pytest-xdist", "c
 tests_no_zope = ["hypothesis", "pympler", "pytest (>=4.3.0)", "pytest-xdist", "cloudpickle", "mypy (>=0.971,<0.990)", "pytest-mypy-plugins"]
 
 [[package]]
-name = "autoprop"
-version = "4.1.0"
-description = "Infer properties from accessor methods."
-category = "main"
-optional = false
-python-versions = "~=3.6"
-
-[package.dependencies]
-signature_dispatch = ">=1.0,<2.0"
-
-[package.extras]
-doc = ["sphinx", "sphinx-rtd-theme", "autoclasstoc"]
-test = ["pytest", "pytest-cov", "coveralls"]
-
-[[package]]
 name = "av"
 version = "10.0.0"
 description = "Pythonic bindings for FFmpeg's libraries."
@@ -245,6 +230,14 @@ webencodings = "*"
 css = ["tinycss2 (>=1.1.0,<1.2)"]
 
 [[package]]
+name = "blinker"
+version = "1.6.2"
+description = "Fast, simple object-to-object and broadcast signaling"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+
+[[package]]
 name = "certifi"
 version = "2022.12.7"
 description = "Python package for providing Mozilla's CA Bundle."
@@ -262,14 +255,6 @@ python-versions = "*"
 
 [package.dependencies]
 pycparser = "*"
-
-[[package]]
-name = "chardet"
-version = "5.1.0"
-description = "Universal encoding detector for Python 3"
-category = "main"
-optional = false
-python-versions = ">=3.7"
 
 [[package]]
 name = "charset-normalizer"
@@ -307,20 +292,6 @@ optional = false
 python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,>=2.7"
 
 [[package]]
-name = "colorlog"
-version = "6.7.0"
-description = "Add colours to the output of Python's logging module."
-category = "main"
-optional = false
-python-versions = ">=3.6"
-
-[package.dependencies]
-colorama = {version = "*", markers = "sys_platform == \"win32\""}
-
-[package.extras]
-development = ["black", "flake8", "mypy", "pytest", "types-colorama"]
-
-[[package]]
 name = "comm"
 version = "0.1.3"
 description = "Jupyter Python Comm implementation, for usage in ipykernel, xeus-python etc."
@@ -335,6 +306,18 @@ traitlets = ">=5.3"
 lint = ["black (>=22.6.0)", "mdformat-gfm (>=0.3.5)", "mdformat (>0.7)", "ruff (>=0.0.156)"]
 test = ["pytest"]
 typing = ["mypy (>=0.990)"]
+
+[[package]]
+name = "configargparse"
+version = "1.5.3"
+description = "A drop-in replacement for argparse that allows options to also be set via config files and/or environment variables."
+category = "main"
+optional = false
+python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
+
+[package.extras]
+test = ["mock", "pyyaml", "pytest"]
+yaml = ["pyyaml"]
 
 [[package]]
 name = "contourpy"
@@ -363,12 +346,51 @@ optional = false
 python-versions = ">=3.6"
 
 [[package]]
-name = "cython"
-version = "0.29.33"
-description = "The Cython compiler for writing C extensions for the Python language."
+name = "dash"
+version = "2.9.3"
+description = "A Python framework for building reactive web-apps. Developed by Plotly."
 category = "main"
 optional = false
-python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
+python-versions = ">=3.6"
+
+[package.dependencies]
+dash-core-components = "2.0.0"
+dash-html-components = "2.0.0"
+dash-table = "5.0.0"
+Flask = ">=1.0.4"
+plotly = ">=5.0.0"
+
+[package.extras]
+celery = ["redis (>=3.5.3)", "celery[redis] (>=5.1.2)", "importlib-metadata (<5)"]
+ci = ["dash-flow-example (==0.0.5)", "dash-dangerously-set-inner-html", "flake8 (==3.9.2)", "flaky (==3.7.0)", "flask-talisman (==1.0.0)", "mimesis", "mock (==4.0.3)", "numpy", "preconditions", "pylint (==2.13.5)", "pytest-mock", "pytest-sugar (==0.9.6)", "pytest-rerunfailures", "black (==21.6b0)", "isort (==4.3.21)", "orjson (==3.5.4)", "pyarrow (<3)", "pandas (==1.1.5)", "xlrd (<2)", "black (==22.3.0)", "orjson (==3.6.7)", "pyarrow", "openpyxl", "pandas (>=1.4.0)", "xlrd (>=2.0.1)"]
+compress = ["flask-compress"]
+dev = ["coloredlogs (>=15.0.1)", "fire (>=0.4.0)", "PyYAML (>=5.4.1)"]
+diskcache = ["diskcache (>=5.2.1)", "multiprocess (>=0.70.12)", "psutil (>=5.8.0)"]
+testing = ["beautifulsoup4 (>=4.8.2)", "lxml (>=4.6.2)", "percy (>=2.0.2)", "pytest (>=6.0.2)", "requests[security] (>=2.21.0)", "selenium (>=3.141.0,<=4.2.0)", "waitress (>=1.4.4)", "multiprocess (>=0.70.12)", "psutil (>=5.8.0)", "dash-testing-stub (>=0.0.2)", "cryptography (<3.4)"]
+
+[[package]]
+name = "dash-core-components"
+version = "2.0.0"
+description = "Core component suite for Dash"
+category = "main"
+optional = false
+python-versions = "*"
+
+[[package]]
+name = "dash-html-components"
+version = "2.0.0"
+description = "Vanilla HTML components for Dash"
+category = "main"
+optional = false
+python-versions = "*"
+
+[[package]]
+name = "dash-table"
+version = "5.0.0"
+description = "Dash table"
+category = "main"
+optional = false
+python-versions = "*"
 
 [[package]]
 name = "debugpy"
@@ -449,12 +471,32 @@ tests = ["asttokens", "pytest", "littleutils", "rich"]
 name = "fastjsonschema"
 version = "2.16.3"
 description = "Fastest Python implementation of JSON schema"
-category = "dev"
+category = "main"
 optional = false
 python-versions = "*"
 
 [package.extras]
 devel = ["colorama", "jsonschema", "json-spec", "pylint", "pytest", "pytest-benchmark", "pytest-cache", "validictory"]
+
+[[package]]
+name = "flask"
+version = "2.3.2"
+description = "A simple framework for building complex web applications."
+category = "main"
+optional = false
+python-versions = ">=3.8"
+
+[package.dependencies]
+blinker = ">=1.6.2"
+click = ">=8.1.3"
+importlib-metadata = {version = ">=3.6.0", markers = "python_version < \"3.10\""}
+itsdangerous = ">=2.1.2"
+Jinja2 = ">=3.1.2"
+Werkzeug = ">=2.3.3"
+
+[package.extras]
+async = ["asgiref (>=3.2)"]
+dotenv = ["python-dotenv"]
 
 [[package]]
 name = "fonttools"
@@ -560,25 +602,6 @@ yacs = ">=0.1.6"
 all = ["shapely"]
 
 [[package]]
-name = "glooey"
-version = "0.3.6"
-description = "An object-oriented GUI library for pyglet."
-category = "main"
-optional = false
-python-versions = "~=3.6"
-
-[package.dependencies]
-autoprop = "*"
-more_itertools = "*"
-pyglet = "*"
-pyyaml = "*"
-vecrec = "*"
-
-[package.extras]
-docs = ["sphinx (>=3.1)", "sphinx-rtd-theme", "autoclasstoc"]
-tests = ["pytest", "pytest-cov", "coveralls"]
-
-[[package]]
 name = "hmmlearn"
 version = "0.2.8"
 description = "Hidden Markov Models in Python with scikit-learn like API"
@@ -617,34 +640,6 @@ optional = false
 python-versions = ">=3.5"
 
 [[package]]
-name = "imageio"
-version = "2.26.0"
-description = "Library for reading and writing a wide range of image, video, scientific, and volumetric data formats."
-category = "main"
-optional = false
-python-versions = ">=3.7"
-
-[package.dependencies]
-numpy = "*"
-pillow = ">=8.3.2"
-
-[package.extras]
-all-plugins = ["astropy", "av", "imageio-ffmpeg", "psutil", "tifffile"]
-all-plugins-pypy = ["av", "imageio-ffmpeg", "psutil", "tifffile"]
-build = ["wheel"]
-dev = ["invoke", "pytest", "pytest-cov", "fsspec", "black", "flake8"]
-docs = ["sphinx (<6)", "numpydoc", "pydata-sphinx-theme"]
-ffmpeg = ["imageio-ffmpeg", "psutil"]
-fits = ["astropy"]
-full = ["astropy", "av", "black", "flake8", "fsspec", "gdal", "imageio-ffmpeg", "invoke", "itk", "numpydoc", "psutil", "pydata-sphinx-theme", "pytest", "pytest-cov", "sphinx (<6)", "tifffile", "wheel"]
-gdal = ["gdal"]
-itk = ["itk"]
-linting = ["black", "flake8"]
-pyav = ["av"]
-test = ["invoke", "pytest", "pytest-cov", "fsspec"]
-tifffile = ["tifffile"]
-
-[[package]]
 name = "imagesize"
 version = "1.4.1"
 description = "Getting image size from png/jpeg/jpeg2000/gif file"
@@ -656,7 +651,7 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 name = "importlib-metadata"
 version = "6.0.0"
 description = "Read metadata from Python packages"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.7"
 
@@ -798,6 +793,14 @@ python-versions = ">=3.7"
 arrow = ">=0.15.0"
 
 [[package]]
+name = "itsdangerous"
+version = "2.1.2"
+description = "Safely pass data to untrusted environments and back."
+category = "main"
+optional = false
+python-versions = ">=3.7"
+
+[[package]]
 name = "jedi"
 version = "0.18.2"
 description = "An autocompletion tool for Python that can be used for text editors."
@@ -817,7 +820,7 @@ testing = ["Django (<3.1)", "attrs", "colorama", "docopt", "pytest (<7.0.0)"]
 name = "jinja2"
 version = "3.1.2"
 description = "A very fast and expressive template engine."
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.7"
 
@@ -930,7 +933,7 @@ test = ["flaky", "pexpect", "pytest"]
 name = "jupyter-core"
 version = "5.3.0"
 description = "Jupyter core package. A base package on which Jupyter projects rely."
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.8"
 
@@ -1067,59 +1070,10 @@ six = "*"
 tornado = {version = "*", markers = "python_version > \"2.7\""}
 
 [[package]]
-name = "lxml"
-version = "4.9.2"
-description = "Powerful and Pythonic XML processing library combining libxml2/libxslt with the ElementTree API."
-category = "main"
-optional = false
-python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, != 3.4.*"
-
-[package.extras]
-cssselect = ["cssselect (>=0.7)"]
-html5 = ["html5lib"]
-htmlsoup = ["beautifulsoup4"]
-source = ["Cython (>=0.29.7)"]
-
-[[package]]
-name = "mapbox-earcut"
-version = "1.0.1"
-description = "Python bindings for the mapbox earcut C++ polygon triangulation library."
-category = "main"
-optional = false
-python-versions = "*"
-
-[package.dependencies]
-numpy = "*"
-
-[package.extras]
-test = ["pytest"]
-
-[[package]]
-name = "markdown-it-py"
-version = "2.2.0"
-description = "Python port of markdown-it. Markdown parsing, done right!"
-category = "main"
-optional = false
-python-versions = ">=3.7"
-
-[package.dependencies]
-mdurl = ">=0.1,<1.0"
-
-[package.extras]
-benchmarking = ["psutil", "pytest", "pytest-benchmark"]
-code_style = ["pre-commit (>=3.0,<4.0)"]
-compare = ["commonmark (>=0.9,<1.0)", "markdown (>=3.4,<4.0)", "mistletoe (>=1.0,<2.0)", "mistune (>=2.0,<3.0)", "panflute (>=2.3,<3.0)"]
-linkify = ["linkify-it-py (>=1,<3)"]
-plugins = ["mdit-py-plugins"]
-profiling = ["gprof2dot"]
-rtd = ["attrs", "myst-parser", "pyyaml", "sphinx", "sphinx-copybutton", "sphinx-design", "sphinx-book-theme"]
-testing = ["coverage", "pytest", "pytest-cov", "pytest-regressions"]
-
-[[package]]
 name = "markupsafe"
 version = "2.1.2"
 description = "Safely add untrusted strings to HTML/XML markup."
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.7"
 
@@ -1156,55 +1110,12 @@ python-versions = ">=3.5"
 traitlets = "*"
 
 [[package]]
-name = "mdurl"
-version = "0.1.2"
-description = "Markdown URL utilities"
-category = "main"
-optional = false
-python-versions = ">=3.7"
-
-[[package]]
-name = "meshio"
-version = "5.3.4"
-description = "I/O for many mesh formats"
-category = "main"
-optional = false
-python-versions = ">=3.7"
-
-[package.dependencies]
-numpy = "*"
-rich = "*"
-
-[package.extras]
-all = ["netcdf4", "h5py"]
-
-[[package]]
 name = "mistune"
 version = "2.0.5"
 description = "A sane Markdown parser with useful plugins and renderers"
 category = "dev"
 optional = false
 python-versions = "*"
-
-[[package]]
-name = "more-itertools"
-version = "9.1.0"
-description = "More routines for operating on iterables, beyond itertools"
-category = "main"
-optional = false
-python-versions = ">=3.7"
-
-[[package]]
-name = "mpmath"
-version = "1.2.1"
-description = "Python library for arbitrary-precision floating-point arithmetic"
-category = "main"
-optional = false
-python-versions = "*"
-
-[package.extras]
-develop = ["pytest (>=4.6)", "pycodestyle", "pytest-cov", "codecov", "wheel"]
-tests = ["pytest (>=4.6)"]
 
 [[package]]
 name = "multidict"
@@ -1310,9 +1221,9 @@ webpdf = ["pyppeteer (>=1,<1.1)"]
 
 [[package]]
 name = "nbformat"
-version = "5.8.0"
+version = "5.7.0"
 description = "The Jupyter Notebook format"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.7"
 
@@ -1323,8 +1234,7 @@ jupyter-core = "*"
 traitlets = ">=5.1"
 
 [package.extras]
-docs = ["myst-parser", "pydata-sphinx-theme", "sphinx", "sphinxcontrib-github-alt", "sphinxcontrib-spelling"]
-test = ["pep440", "pre-commit", "pytest", "testpath"]
+test = ["check-manifest", "pep440", "pre-commit", "pytest", "testpath"]
 
 [[package]]
 name = "nest-asyncio"
@@ -1425,38 +1335,6 @@ optional = false
 python-versions = ">=3.8"
 
 [[package]]
-name = "nvidia-cublas-cu11"
-version = "11.10.3.66"
-description = "CUBLAS native runtime libraries"
-category = "main"
-optional = false
-python-versions = ">=3"
-
-[[package]]
-name = "nvidia-cuda-nvrtc-cu11"
-version = "11.7.99"
-description = "NVRTC native runtime libraries"
-category = "main"
-optional = false
-python-versions = ">=3"
-
-[[package]]
-name = "nvidia-cuda-runtime-cu11"
-version = "11.7.99"
-description = "CUDA Runtime native Libraries"
-category = "main"
-optional = false
-python-versions = ">=3"
-
-[[package]]
-name = "nvidia-cudnn-cu11"
-version = "8.5.0.96"
-description = "cuDNN runtime libraries"
-category = "main"
-optional = false
-python-versions = ">=3"
-
-[[package]]
 name = "omegaconf"
 version = "2.1.2"
 description = "A flexible configuration library"
@@ -1467,6 +1345,21 @@ python-versions = ">=3.6"
 [package.dependencies]
 antlr4-python3-runtime = "4.8"
 PyYAML = ">=5.1.0"
+
+[[package]]
+name = "open3d"
+version = "0.17.0"
+description = "Open3D: A Modern Library for 3D Data Processing."
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[package.dependencies]
+configargparse = "*"
+dash = ">=2.6.0"
+nbformat = "5.7.0"
+numpy = ">=1.18.0"
+werkzeug = ">=2.2.3"
 
 [[package]]
 name = "opencv-python"
@@ -1606,6 +1499,18 @@ docs = ["furo (>=2022.12.7)", "proselint (>=0.13)", "sphinx-autodoc-typehints (>
 test = ["appdirs (==1.4.4)", "covdefaults (>=2.2.2)", "pytest-cov (>=4)", "pytest-mock (>=3.10)", "pytest (>=7.2.1)"]
 
 [[package]]
+name = "plotly"
+version = "5.14.1"
+description = "An open-source, interactive data visualization library for Python"
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[package.dependencies]
+packaging = "*"
+tenacity = ">=6.2.0"
+
+[[package]]
 name = "portalocker"
 version = "2.7.0"
 description = "Wraps the portalocker recipe for easy usage"
@@ -1647,7 +1552,7 @@ wcwidth = "*"
 name = "psutil"
 version = "5.9.4"
 description = "Cross-platform lib for process and system monitoring in Python."
-category = "main"
+category = "dev"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 
@@ -1697,21 +1602,6 @@ matplotlib = ">=2.1.0"
 numpy = "*"
 
 [[package]]
-name = "pycollada"
-version = "0.7.2"
-description = "python library for reading and writing collada documents"
-category = "main"
-optional = false
-python-versions = "*"
-
-[package.dependencies]
-python-dateutil = ">=2.2"
-
-[package.extras]
-prettyprint = ["lxml"]
-validation = ["lxml"]
-
-[[package]]
 name = "pycparser"
 version = "2.21"
 description = "C parser in Python"
@@ -1720,18 +1610,10 @@ optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 
 [[package]]
-name = "pyglet"
-version = "1.5.27"
-description = "Cross-platform windowing and multimedia library"
-category = "main"
-optional = false
-python-versions = "*"
-
-[[package]]
 name = "pygments"
 version = "2.14.0"
 description = "Pygments is a syntax highlighting package written in Python."
-category = "main"
+category = "dev"
 optional = false
 python-versions = ">=3.6"
 
@@ -1839,18 +1721,6 @@ python-versions = ">=3.7"
 cli = ["click (>=5.0)"]
 
 [[package]]
-name = "python-fcl"
-version = "0.7.0.4"
-description = "Python bindings for the Flexible Collision Library"
-category = "main"
-optional = false
-python-versions = "*"
-
-[package.dependencies]
-Cython = "*"
-numpy = "*"
-
-[[package]]
 name = "python-json-logger"
 version = "2.0.7"
 description = "A python library adding a json log formatter"
@@ -1928,17 +1798,6 @@ description = "World timezone definitions, modern and historical"
 category = "main"
 optional = false
 python-versions = "*"
-
-[[package]]
-name = "pywavelets"
-version = "1.4.1"
-description = "PyWavelets, wavelet transform module"
-category = "main"
-optional = false
-python-versions = ">=3.8"
-
-[package.dependencies]
-numpy = ">=1.17.3"
 
 [[package]]
 name = "pywin32"
@@ -2058,54 +1917,6 @@ optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 
 [[package]]
-name = "rich"
-version = "13.3.1"
-description = "Render rich text, tables, progress bars, syntax highlighting, markdown and more to the terminal"
-category = "main"
-optional = false
-python-versions = ">=3.7.0"
-
-[package.dependencies]
-markdown-it-py = ">=2.1.0,<3.0.0"
-pygments = ">=2.14.0,<3.0.0"
-typing-extensions = {version = ">=4.0.0,<5.0", markers = "python_version < \"3.9\""}
-
-[package.extras]
-jupyter = ["ipywidgets (>=7.5.1,<9)"]
-
-[[package]]
-name = "rtree"
-version = "1.0.1"
-description = "R-Tree spatial index for Python GIS"
-category = "main"
-optional = false
-python-versions = ">=3.7"
-
-[[package]]
-name = "scikit-image"
-version = "0.19.3"
-description = "Image processing in Python"
-category = "main"
-optional = false
-python-versions = ">=3.7"
-
-[package.dependencies]
-imageio = ">=2.4.1"
-networkx = ">=2.2"
-numpy = ">=1.17.0"
-packaging = ">=20.0"
-pillow = ">=6.1.0,<7.1.0 || >7.1.0,<7.1.1 || >7.1.1,<8.3.0 || >8.3.0"
-PyWavelets = ">=1.1.1"
-scipy = ">=1.4.1"
-tifffile = ">=2019.7.26"
-
-[package.extras]
-data = ["pooch (>=1.3.0)"]
-docs = ["sphinx (>=1.8)", "sphinx-gallery (>=0.10.1)", "numpydoc (>=1.0)", "sphinx-copybutton", "pytest-runner", "scikit-learn", "matplotlib (>=3.3)", "dask[array] (>=0.15.0,!=2.17.0)", "cloudpickle (>=0.2.1)", "pandas (>=0.23.0)", "seaborn (>=0.7.1)", "pooch (>=1.3.0)", "tifffile (>=2020.5.30)", "myst-parser", "ipywidgets", "plotly (>=4.14.0)", "kaleido"]
-optional = ["simpleitk", "astropy (>=3.1.2)", "cloudpickle (>=0.2.1)", "dask[array] (>=1.0.0,!=2.17.0)", "matplotlib (>=3.0.3)", "pooch (>=1.3.0)", "pyamg", "qtpy"]
-test = ["asv", "codecov", "flake8", "matplotlib (>=3.0.3)", "pooch (>=1.3.0)", "pytest (>=5.2.0)", "pytest-cov (>=2.7.0)", "pytest-localserver", "pytest-faulthandler"]
-
-[[package]]
 name = "scikit-learn"
 version = "1.2.1"
 description = "A set of python modules for machine learning and data mining"
@@ -2188,36 +1999,6 @@ typing-extensions = "*"
 [package.extras]
 test = ["pytest (>=6.2)", "virtualenv (>20)"]
 toml = ["setuptools (>=42)"]
-
-[[package]]
-name = "shapely"
-version = "2.0.1"
-description = "Manipulation and analysis of geometric objects"
-category = "main"
-optional = false
-python-versions = ">=3.7"
-
-[package.dependencies]
-numpy = ">=1.14"
-
-[package.extras]
-docs = ["numpydoc (>=1.1.0,<1.2.0)", "matplotlib", "sphinx", "sphinx-book-theme", "sphinx-remove-toctrees"]
-test = ["pytest", "pytest-cov"]
-
-[[package]]
-name = "signature-dispatch"
-version = "1.0.0"
-description = "Execute the first function that matches the given arguments."
-category = "main"
-optional = false
-python-versions = "~=3.6"
-
-[package.dependencies]
-typeguard = "*"
-
-[package.extras]
-doc = ["sphinx", "sphinx-rtd-theme", "autoclasstoc"]
-test = ["pytest", "pytest-cov", "coveralls"]
 
 [[package]]
 name = "simpleaudio"
@@ -2514,28 +2295,6 @@ pure-eval = "*"
 tests = ["pytest", "typeguard", "pygments", "littleutils", "cython"]
 
 [[package]]
-name = "svg.path"
-version = "6.2"
-description = "SVG path objects and parser"
-category = "main"
-optional = false
-python-versions = "*"
-
-[package.extras]
-test = ["pillow", "pytest", "pytest-cov"]
-
-[[package]]
-name = "sympy"
-version = "1.11.1"
-description = "Computer algebra system (CAS) in Python"
-category = "main"
-optional = false
-python-versions = ">=3.8"
-
-[package.dependencies]
-mpmath = ">=0.19"
-
-[[package]]
 name = "tabulate"
 version = "0.9.0"
 description = "Pretty-print tabular data"
@@ -2545,6 +2304,17 @@ python-versions = ">=3.7"
 
 [package.extras]
 widechars = ["wcwidth"]
+
+[[package]]
+name = "tenacity"
+version = "8.2.2"
+description = "Retry code until it succeeds"
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[package.extras]
+doc = ["reno", "sphinx", "tornado (>=4.5)"]
 
 [[package]]
 name = "termcolor"
@@ -2583,20 +2353,6 @@ optional = false
 python-versions = ">=3.6"
 
 [[package]]
-name = "tifffile"
-version = "2023.2.28"
-description = "Read and write TIFF files"
-category = "main"
-optional = false
-python-versions = ">=3.8"
-
-[package.dependencies]
-numpy = "*"
-
-[package.extras]
-all = ["imagecodecs (>=2023.1.23)", "matplotlib", "defusedxml", "lxml", "zarr", "fsspec"]
-
-[[package]]
 name = "timm"
 version = "0.5.4"
 description = "(Unofficial) PyTorch Image Models"
@@ -2633,21 +2389,14 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "torch"
-version = "1.13.1"
+version = "1.10.2"
 description = "Tensors and Dynamic neural networks in Python with strong GPU acceleration"
 category = "main"
 optional = false
-python-versions = ">=3.7.0"
+python-versions = ">=3.6.2"
 
 [package.dependencies]
-nvidia-cublas-cu11 = {version = "11.10.3.66", markers = "platform_system == \"Linux\""}
-nvidia-cuda-nvrtc-cu11 = {version = "11.7.99", markers = "platform_system == \"Linux\""}
-nvidia-cuda-runtime-cu11 = {version = "11.7.99", markers = "platform_system == \"Linux\""}
-nvidia-cudnn-cu11 = {version = "8.5.0.96", markers = "platform_system == \"Linux\""}
 typing-extensions = "*"
-
-[package.extras]
-opt-einsum = ["opt-einsum (>=3.3)"]
 
 [[package]]
 name = "torchmetrics"
@@ -2674,18 +2423,16 @@ text = ["nltk (>=3.6)", "regex (>=2021.9.24)", "tqdm (>=4.41.0)"]
 
 [[package]]
 name = "torchvision"
-version = "0.14.1"
+version = "0.11.3"
 description = "image and video datasets and models for torch deep learning"
 category = "main"
 optional = false
-python-versions = ">=3.7"
+python-versions = "*"
 
 [package.dependencies]
 numpy = "*"
-pillow = ">=5.3.0,<8.3.0 || >=8.4.0"
-requests = "*"
-torch = "1.13.1"
-typing-extensions = "*"
+pillow = ">=5.3.0,<8.3.0 || >8.3.0"
+torch = "1.10.2"
 
 [package.extras]
 scipy = ["scipy"]
@@ -2719,7 +2466,7 @@ telegram = ["requests"]
 name = "traitlets"
 version = "5.9.0"
 description = "Traitlets Python configuration system"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.7"
 
@@ -2741,56 +2488,6 @@ six = "*"
 [package.extras]
 diagrams = ["pygraphviz"]
 test = ["pytest"]
-
-[[package]]
-name = "trimesh"
-version = "3.21.6"
-description = "Import, export, process, analyze and view triangular meshes."
-category = "main"
-optional = false
-python-versions = "*"
-
-[package.dependencies]
-chardet = {version = "*", optional = true, markers = "extra == \"all\""}
-colorlog = {version = "*", optional = true, markers = "extra == \"all\""}
-glooey = {version = "*", optional = true, markers = "extra == \"all\""}
-jsonschema = {version = "*", optional = true, markers = "extra == \"all\""}
-lxml = {version = "*", optional = true, markers = "extra == \"all\""}
-mapbox-earcut = {version = "*", optional = true, markers = "extra == \"all\""}
-meshio = {version = "*", optional = true, markers = "extra == \"all\""}
-networkx = {version = "*", optional = true, markers = "extra == \"all\""}
-numpy = "*"
-pillow = {version = "*", optional = true, markers = "extra == \"all\""}
-psutil = {version = "*", optional = true, markers = "extra == \"all\""}
-pycollada = {version = "*", optional = true, markers = "extra == \"all\""}
-pyglet = {version = "<2", optional = true, markers = "extra == \"all\""}
-python-fcl = {version = "*", optional = true, markers = "extra == \"all\""}
-requests = {version = "*", optional = true, markers = "extra == \"all\""}
-rtree = {version = "*", optional = true, markers = "extra == \"all\""}
-scikit-image = {version = "*", optional = true, markers = "extra == \"all\""}
-scipy = {version = "*", optional = true, markers = "extra == \"all\""}
-shapely = {version = "*", optional = true, markers = "extra == \"all\""}
-"svg.path" = {version = "*", optional = true, markers = "extra == \"all\""}
-sympy = {version = "*", optional = true, markers = "extra == \"all\""}
-xatlas = {version = "*", optional = true, markers = "extra == \"all\""}
-xxhash = {version = "*", optional = true, markers = "extra == \"all\""}
-
-[package.extras]
-all = ["mapbox-earcut", "shapely", "scipy", "requests", "pyglet (<2)", "xatlas", "scikit-image", "lxml", "pycollada", "rtree", "setuptools", "xxhash", "python-fcl", "psutil", "glooey", "pillow", "chardet", "svg.path", "networkx", "sympy", "meshio", "jsonschema", "colorlog"]
-easy = ["mapbox-earcut", "shapely", "pillow", "chardet", "scipy", "svg.path", "networkx", "requests", "sympy", "pycollada", "jsonschema", "colorlog", "lxml", "rtree", "setuptools", "xxhash"]
-test = ["coveralls", "pytest-cov", "ezdxf", "pyinstrument", "autopep8", "ruff", "pytest"]
-
-[[package]]
-name = "typeguard"
-version = "2.13.3"
-description = "Run-time type checker for Python"
-category = "main"
-optional = false
-python-versions = ">=3.5.3"
-
-[package.extras]
-doc = ["sphinx-rtd-theme", "sphinx-autodoc-typehints (>=1.2.0)"]
-test = ["pytest", "typing-extensions", "mypy"]
 
 [[package]]
 name = "typing-extensions"
@@ -2823,21 +2520,6 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*"
 brotli = ["brotlicffi (>=0.8.0)", "brotli (>=1.0.9)", "brotlipy (>=0.6.0)"]
 secure = ["pyOpenSSL (>=0.14)", "cryptography (>=1.3.4)", "idna (>=2.0.0)", "certifi", "urllib3-secure-extra", "ipaddress"]
 socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
-
-[[package]]
-name = "vecrec"
-version = "0.3.1"
-description = "2D vector and rectangle classes."
-category = "main"
-optional = false
-python-versions = "*"
-
-[package.dependencies]
-autoprop = "*"
-
-[package.extras]
-docs = ["sphinx", "sphinx-rtd-theme", "autoclasstoc"]
-tests = ["pytest", "pytest-cov", "coveralls"]
 
 [[package]]
 name = "wcwidth"
@@ -2889,6 +2571,20 @@ optional = false
 python-versions = ">=3.7"
 
 [[package]]
+name = "werkzeug"
+version = "2.3.4"
+description = "The comprehensive WSGI web application library."
+category = "main"
+optional = false
+python-versions = ">=3.8"
+
+[package.dependencies]
+MarkupSafe = ">=2.1.1"
+
+[package.extras]
+watchdog = ["watchdog (>=2.3)"]
+
+[[package]]
 name = "widgetsnbextension"
 version = "4.0.7"
 description = "Jupyter interactive widgets for Jupyter Notebook"
@@ -2903,22 +2599,6 @@ description = "Capture C-level output in context managers"
 category = "dev"
 optional = false
 python-versions = ">=3.5"
-
-[[package]]
-name = "xatlas"
-version = "0.0.7"
-description = "Python bindings for xatlas"
-category = "main"
-optional = false
-python-versions = "*"
-
-[[package]]
-name = "xxhash"
-version = "3.2.0"
-description = "Python binding for xxHash"
-category = "main"
-optional = false
-python-versions = ">=3.6"
 
 [[package]]
 name = "yacs"
@@ -2958,7 +2638,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "flake8 (<5)", "pytest-co
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8,<3.10"
-content-hash = "973316790f15bb4396049dd7db8d21f099df8498b8caf54372cbbe40971446f2"
+content-hash = "0f76a813fce5799dac1eb76c2a3ee6793106e57b07a76fa4564198f16d7f3fe5"
 
 [metadata.files]
 aiohttp = []
@@ -2973,25 +2653,27 @@ arrow = []
 asttokens = []
 async-timeout = []
 attrs = []
-autoprop = []
 av = []
 babel = []
 backcall = []
 beautifulsoup4 = []
 black = []
 bleach = []
+blinker = []
 certifi = []
 cffi = []
-chardet = []
 charset-normalizer = []
 click = []
 cloudpickle = []
 colorama = []
-colorlog = []
 comm = []
+configargparse = []
 contourpy = []
 cycler = []
-cython = []
+dash = []
+dash-core-components = []
+dash-html-components = []
+dash-table = []
 debugpy = []
 decorator = []
 defusedxml = []
@@ -3002,17 +2684,16 @@ et-xmlfile = []
 evdev = []
 executing = []
 fastjsonschema = []
+flask = []
 fonttools = []
 fqdn = []
 frozenlist = []
 fsspec = []
 future = []
 fvcore = []
-glooey = []
 hmmlearn = []
 hydra-core = []
 idna = []
-imageio = []
 imagesize = []
 importlib-metadata = []
 importlib-resources = []
@@ -3022,6 +2703,7 @@ ipython = []
 ipython-genutils = []
 ipywidgets = []
 isoduration = []
+itsdangerous = []
 jedi = []
 jinja2 = []
 joblib = []
@@ -3039,17 +2721,10 @@ jupyterlab-widgets = []
 kiwisolver = []
 lightning-utilities = []
 livereload = []
-lxml = []
-mapbox-earcut = []
-markdown-it-py = []
 markupsafe = []
 matplotlib = []
 matplotlib-inline = []
-mdurl = []
-meshio = []
 mistune = []
-more-itertools = []
-mpmath = []
 multidict = []
 mypy-extensions = []
 nbclassic = []
@@ -3062,11 +2737,8 @@ nltk = []
 notebook = []
 notebook-shim = []
 numpy = []
-nvidia-cublas-cu11 = []
-nvidia-cuda-nvrtc-cu11 = []
-nvidia-cuda-runtime-cu11 = []
-nvidia-cudnn-cu11 = []
 omegaconf = []
+open3d = []
 opencv-python = []
 openpyxl = []
 packaging = []
@@ -3080,6 +2752,7 @@ pickleshare = []
 pillow = []
 pkgutil-resolve-name = []
 platformdirs = []
+plotly = []
 portalocker = []
 prometheus-client = []
 prompt-toolkit = []
@@ -3088,9 +2761,7 @@ ptyprocess = []
 pure-eval = []
 pyarrow = []
 pycocotools = []
-pycollada = []
 pycparser = []
-pyglet = []
 pygments = []
 pynput = []
 pyobjc-core = []
@@ -3101,13 +2772,11 @@ pyparsing = []
 pyrsistent = []
 python-dateutil = []
 python-dotenv = []
-python-fcl = []
 python-json-logger = []
 python-xlib = []
 pytorch-lightning = []
 pytorchvideo = []
 pytz = []
-pywavelets = []
 pywin32 = []
 pywinpty = []
 pyyaml = []
@@ -3118,16 +2787,11 @@ regex = []
 requests = []
 rfc3339-validator = []
 rfc3986-validator = []
-rich = []
-rtree = []
-scikit-image = []
 scikit-learn = []
 scipy = []
 seaborn = []
 send2trash = []
 setuptools-scm = []
-shapely = []
-signature-dispatch = []
 simpleaudio = []
 six = []
 smqtk-classifier = []
@@ -3150,13 +2814,11 @@ sphinxcontrib-qthelp = []
 sphinxcontrib-serializinghtml = []
 spyder-kernels = []
 stack-data = []
-"svg.path" = []
-sympy = []
 tabulate = []
+tenacity = []
 termcolor = []
 terminado = []
 threadpoolctl = []
-tifffile = []
 timm = []
 tinycss2 = []
 tomli = []
@@ -3167,21 +2829,17 @@ tornado = []
 tqdm = []
 traitlets = []
 transitions = []
-trimesh = []
-typeguard = []
 typing-extensions = []
 uri-template = []
 urllib3 = []
-vecrec = []
 wcwidth = []
 webcolors = []
 webencodings = []
 websocket-client = []
 websockets = []
+werkzeug = []
 widgetsnbextension = []
 wurlitzer = []
-xatlas = []
-xxhash = []
 yacs = []
 yarl = []
 zipp = []
