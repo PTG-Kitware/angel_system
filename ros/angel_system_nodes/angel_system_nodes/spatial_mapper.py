@@ -17,6 +17,7 @@ from angel_msgs.msg import (
     HeadsetPoseData
 )
 from angel_msgs.srv import QueryImageSize
+from angel_utils import declare_and_get_parameters
 from angel_utils.conversion import to_confidence_matrix
 from geometry_msgs.msg import Point
 
@@ -44,41 +45,20 @@ class SpatialMapSubscriber(Node):
         super().__init__(self.__class__.__name__)
         log = self.get_logger()
 
-        parameter_names = [
-            PARAM_SM_TOPIC,
-            PARAM_DET_TOPIC,
-            PARAM_HEAD_POSE_TOPIC,
-            PARAM_DET_3D_TOPIC,
-        ]
-        set_parameters = self.declare_parameters(
-            namespace="",
-            parameters=[(p,) for p in parameter_names],
+        param_values = declare_and_get_parameters(
+            self,
+            [
+                (PARAM_SM_TOPIC,),
+                (PARAM_DET_TOPIC,),
+                (PARAM_HEAD_POSE_TOPIC,),
+                (PARAM_DET_3D_TOPIC,),
+            ]
         )
-        # Check for not-set parameters
-        some_not_set = False
-        for p in set_parameters:
-            if p.type_ is rclpy.parameter.Parameter.Type.NOT_SET:
-                some_not_set = True
-                log.error(f"Parameter not set: {p.name}")
-        if some_not_set:
-            raise ValueError("Some parameters are not set.")
 
-        self._spatial_map_topic = self.get_parameter(PARAM_SM_TOPIC).value
-        self._det_topic = self.get_parameter(PARAM_DET_TOPIC).value
-        self._headset_pose_topic = self.get_parameter(PARAM_HEAD_POSE_TOPIC).value
-        self._det_3d_topic = self.get_parameter(PARAM_DET_3D_TOPIC).value
-        log.info(f"Spatial map topic: "
-                      f"({type(self._spatial_map_topic).__name__}) "
-                      f"{self._spatial_map_topic}")
-        log.info(f"Input detection topic: "
-                      f"({type(self._det_topic).__name__}) "
-                      f"{self._det_topic}")
-        log.info(f"Headset pose topic: "
-                      f"({type(self._headset_pose_topic).__name__}) "
-                      f"{self._headset_pose_topic}")
-        log.info(f"Output detection topic: "
-                      f"({type(self._det_3d_topic).__name__}) "
-                      f"{self._det_3d_topic}")
+        self._spatial_map_topic = param_values[PARAM_SM_TOPIC]
+        self._det_topic = param_values[PARAM_DET_TOPIC]
+        self._headset_pose_topic = param_values[PARAM_HEAD_POSE_TOPIC]
+        self._det_3d_topic = param_values[PARAM_DET_3D_TOPIC]
 
         # Spatial meshes are added to this scene
         self.o3d_scene = o3d.t.geometry.RaycastingScene()
