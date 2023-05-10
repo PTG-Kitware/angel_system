@@ -9,8 +9,6 @@ import time
 
 import numpy as np
 import rclpy
-from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
-from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from angel_msgs.msg import (
     ObjectDetection2dSet,
@@ -44,7 +42,7 @@ class SpatialMapSubscriber(Node):
 
     def __init__(self):
         super().__init__(self.__class__.__name__)
-        self.log = self.get_logger()
+        log = self.get_logger()
 
         parameter_names = [
             PARAM_SM_TOPIC,
@@ -61,7 +59,7 @@ class SpatialMapSubscriber(Node):
         for p in set_parameters:
             if p.type_ is rclpy.parameter.Parameter.Type.NOT_SET:
                 some_not_set = True
-                self.log.error(f"Parameter not set: {p.name}")
+                log.error(f"Parameter not set: {p.name}")
         if some_not_set:
             raise ValueError("Some parameters are not set.")
 
@@ -69,16 +67,16 @@ class SpatialMapSubscriber(Node):
         self._det_topic = self.get_parameter(PARAM_DET_TOPIC).value
         self._headset_pose_topic = self.get_parameter(PARAM_HEAD_POSE_TOPIC).value
         self._det_3d_topic = self.get_parameter(PARAM_DET_3D_TOPIC).value
-        self.log.info(f"Spatial map topic: "
+        log.info(f"Spatial map topic: "
                       f"({type(self._spatial_map_topic).__name__}) "
                       f"{self._spatial_map_topic}")
-        self.log.info(f"Input detection topic: "
+        log.info(f"Input detection topic: "
                       f"({type(self._det_topic).__name__}) "
                       f"{self._det_topic}")
-        self.log.info(f"Headset pose topic: "
+        log.info(f"Headset pose topic: "
                       f"({type(self._headset_pose_topic).__name__}) "
                       f"{self._headset_pose_topic}")
-        self.log.info(f"Output detection topic: "
+        log.info(f"Output detection topic: "
                       f"({type(self._det_3d_topic).__name__}) "
                       f"{self._det_3d_topic}")
 
@@ -92,29 +90,31 @@ class SpatialMapSubscriber(Node):
         # Setup the image size query client and make sure the service is running
         self.image_size_client = self.create_client(QueryImageSize, 'query_image_size')
         while not self.image_size_client.wait_for_service(timeout_sec=1.0):
-            self.log.info("Waiting for image size service...")
+            log.info("Waiting for image size service...")
 
         # Send image size queries unti we get a valid response
         r = self.send_image_size_request()
-        self.log.info(f"Image size response {r}")
+        log.info(f"Image size response {r}")
         while (r.image_width <= 0 or r.image_height <= 0):
-            self.log.warn("Invalid image dimensions."
+            log.warn("Invalid image dimensions."
                      + " Make sure the image converter node is running and receiving frames")
 
             time.sleep(1)
             r = self.send_image_size_request()
-        self.log.info(f"Received valid image dimensions. Current size: {r.image_width}x{r.image_height}")
+        log.info(
+            f"Received valid image dimensions. Current size: {r.image_width}x{r.image_height}"
+        )
         self.image_height = r.image_height
         self.image_width = r.image_width
 
         # Start the runtime thread
-        self.log.info("Starting mapper thread...")
+        log.info("Starting mapper thread...")
         # switch for runtime loop
         self._rt_active = Event()
         self._rt_active.set()
         # seconds to occasionally time out of the wait condition for the loop
         # to check if it is supposed to still be alive.
-        self._rt_active_heartbeat = 0.1  # TODO: Parameterize?
+        self._rt_active_heartbeat = 0.1
         # Event to notify runtime it should try processing now.
         self._rt_awake_evt = Event()
         self._rt_thread = Thread(
@@ -123,7 +123,7 @@ class SpatialMapSubscriber(Node):
         )
         self._rt_thread.daemon = True
         self._rt_thread.start()
-        self.log.info("Starting mapper thread... Done")
+        log.info("Starting mapper thread... Done")
 
         # Create ROS pubs/subs
         self._spatial_mesh_subscription = self.create_subscription(
@@ -176,7 +176,7 @@ class SpatialMapSubscriber(Node):
                         world_matrix_1d = self.poses[i].world_matrix
                         projection_matrix_1d = self.poses[i].projection_matrix
 
-                        self.log.debug(
+                        log.debug(
                             f"time stamps: {self.poses[i].header.stamp} {detection.source_stamp}"
                         )
 
@@ -186,17 +186,17 @@ class SpatialMapSubscriber(Node):
                         break
 
                 if world_matrix_1d is None or projection_matrix_1d is None:
-                    self.log.info("Did not get world or projection matrix.")
+                    log.info("Did not get world or projection matrix.")
                     continue
 
                 # get world matrix from detection
                 world_matrix_2d = self.convert_1d_4x4_to_2d_matrix(world_matrix_1d)
-                self.log.debug(f"world matrix {world_matrix_2d}")
+                log.debug(f"world matrix {world_matrix_2d}")
 
                 # get position of the camera at the time of the frame
                 camera_origin = self.get_world_position(world_matrix_2d,
                                                         np.array([0.0, 0.0, 0.0])).reshape((1, 3))
-                self.log.debug(f"origin {camera_origin}")
+                log.debug(f"origin {camera_origin}")
 
                 # get projection matrix from detection
                 projection_matrix_2d = self.convert_1d_4x4_to_2d_matrix(projection_matrix_1d)
@@ -207,7 +207,7 @@ class SpatialMapSubscriber(Node):
                 det_3d_set_msg.header.frame_id = detection.header.frame_id
                 det_3d_set_msg.source_stamp = detection.source_stamp
 
-                self.log.info("processing detections matrix")
+                log.debug("Processing detections matrix")
                 det_conf_mat = to_confidence_matrix(detection)
                 for i in range(detection.num_detections):
                     object_type = sorted(zip(det_conf_mat[i], detection.label_vec))[-1][1]
@@ -228,9 +228,9 @@ class SpatialMapSubscriber(Node):
                         point_3d = self.convert_pixel_coord_to_world_coord(world_matrix_2d,
                                                                            projection_matrix_2d,
                                                                            p, camera_origin)
-                        self.log.debug(f"point 3d: {point_3d}")
+                        log.debug(f"point 3d: {point_3d}")
                         if point_3d is None:
-                            self.log.debug("No point found!")
+                            log.debug("No point found!")
                             all_points_found = False
                             break
 
@@ -248,7 +248,7 @@ class SpatialMapSubscriber(Node):
                     for p in range(4):
                         point_3d = Point()
 
-                        self.log.debug(f"scene position {corners_world_pos[p]}")
+                        log.debug(f"scene position {corners_world_pos[p]}")
                         point_3d.x = corners_world_pos[p][0]
                         point_3d.y = corners_world_pos[p][1]
                         point_3d.z = corners_world_pos[p][2]
@@ -264,7 +264,7 @@ class SpatialMapSubscriber(Node):
 
                 # Form and publish the 3d object detection message
                 self._object_3d_publisher.publish(det_3d_set_msg)
-                self.log.info(f"Published 3d detections with {det_3d_set_msg.num_objects} dets")
+                log.info(f"Published 3d detections with {det_3d_set_msg.num_objects} dets")
 
         log.info("Runtime function end.")
 
@@ -283,6 +283,7 @@ class SpatialMapSubscriber(Node):
         Callback function for the spatial meshes subscriber. Extracts the
         meshes and adds them to the Open3d scene.
         """
+        log = self.get_logger()
         with self.mesh_l:
             # Clear the old meshes
             self.o3d_scene = o3d.t.geometry.RaycastingScene()
@@ -304,14 +305,13 @@ class SpatialMapSubscriber(Node):
                     o3d.t.geometry.TriangleMesh.from_legacy(open3d_mesh)
                 )
 
-        self.log.info("Received updated meshes")
+        log.info("Received updated meshes")
 
     def headset_pose_callback(self, pose):
         """
-        Callback function for headset post messages. Appends the pose msg to
+        Callback function for headset pose messages. Appends the pose msg to
         list of stored poses.
         """
-        self.log.debug(f"pose stamp: {pose.header.stamp}")
         self.poses.append(pose)
 
     def detection_callback(self, detection):
@@ -319,12 +319,13 @@ class SpatialMapSubscriber(Node):
         Callback function for detection messages. Places the detection into the
         detection queue and returns.
         """
+        log = self.get_logger()
         if detection.num_detections == 0:
-            self.log.debug("No detections for this image")
+            log.debug("No detections for this image")
             return
 
         self.dets.put(detection)
-        self.log.info("Queued detection")
+        log.info("Queued detection")
 
         # Awaken the mapper thread
         self._rt_awake_evt.set()
@@ -359,10 +360,18 @@ class SpatialMapSubscriber(Node):
             return intersecting_point
 
     def get_world_position(self, world_matrix, point):
+        """
+        Converts the position of a point in camera space to its position in
+        world space using the camera-to-world matrix.
+        """
         point_matrix = np.array([point[0], point[1], point[2], 1])
         return np.matmul(point_matrix, world_matrix)[:3]
 
     def convert_1d_4x4_to_2d_matrix(self, matrix_1d):
+        """
+        Converts a 1d matrix of length 16 to a 2d matrix with shape (4, 4) and
+        returns it.
+        """
         matrix_2d = [[], [], [], []]
         for row in range(4):
             for col in range(4):
@@ -381,6 +390,7 @@ class SpatialMapSubscriber(Node):
 
         Adapted from https://github.com/VulcanTechnologies/HoloLensCameraStream
         """
+        log = self.get_logger()
         scaled_point = self.scale_pixel_coordinates(p)
 
         # see note with these constants for why we are not using the
@@ -402,18 +412,21 @@ class SpatialMapSubscriber(Node):
         dir_ray = np.array([(scaled_point[0] - center_x) / focal_length_x,
                             (scaled_point[1] - center_y) / focal_length_y,
                             -1.0 / norm_factor]).reshape((1, 3))
-        self.log.debug(f"dir_ray {dir_ray}")
+        log.debug(f"dir_ray {dir_ray}")
 
         # project camera space onto world position
         direction = self.get_world_position(world_matrix_2d, dir_ray[0]).reshape((1, 3))
 
-        self.log.debug(f"direction: {direction}")
-        self.log.debug(f"origin : {camera_origin}")
+        log.debug(f"direction: {direction}")
+        log.debug(f"origin : {camera_origin}")
 
         return self.cast_ray(camera_origin, direction - camera_origin)
 
     def scale_pixel_coordinates(self, p):
         """
+        Converts a set of coordinates in pixel space [image width pixels, image
+        height pixels] to the range [-1, 1].
+
         Adapted from https://github.com/VulcanTechnologies/HoloLensCameraStream
         """
         scaled_point = p
