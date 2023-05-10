@@ -425,9 +425,10 @@ class VisualizerUtil:
             for allowed in  self.metadata['allow_repeat_obj']:
                 if allowed in C: # accounts for states after class
                     allow_class_to_repeat = True
-                    print('allow repeat', allowed, C)
+                    #print('allow repeat', allowed, C)
 
             if allow_class_to_repeat:
+                idx = [i]
                 # Don't remove repeats of these classes
                 new_boxes.append(boxes[i, :])
                 new_labels.append(labels[i])
@@ -3763,7 +3764,6 @@ class Visualizer_eval:
             obj_hand_contact_scores,
             obj_hand_contact_classes):
         # print(labels)
-        print('rro 3766')
         new_boxes = []
         new_labels = []
 

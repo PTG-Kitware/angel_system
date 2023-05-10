@@ -149,11 +149,7 @@ class BerkeleyObjectDetector(Node):
 
         for label, det in preds.items():
             for i in range(len(det)):
-                conf_vec = np.zeros(len(message.label_vec))
-                conf_idx = np.where(message.label_vec == label)[i]
-                #conf_vec[message.label_vec.index(label)] = det[i]["confidence_score"]
-                conf_vec[conf_idx] = det[i]["confidence_score"]
-                label_confidences.append(conf_vec)
+                label_confidences.append(det[i]["confidence_score"])
 
                 tl_x, tl_y, br_x, br_y = det[i]["bbox"]
                 message.left.append(tl_x)
