@@ -144,21 +144,24 @@ class BerkeleyObjectDetector(Node):
             return
 
         for label, det in preds.items():
-            conf_vec = np.zeros(len(message.label_vec))
-            conf_vec[message.label_vec.index(label)] = det["confidence_score"]
-            label_confidences.append(conf_vec)
+            for i in range(len(det)):
+                conf_vec = np.zeros(len(message.label_vec))
+                conf_vec[message.label_vec.index(label)] = det[i]["confidence_score"]
+                label_confidences.append(conf_vec)
 
-            tl_x, tl_y, br_x, br_y = det["bbox"]
-            message.left.append(tl_x)
-            message.right.append(br_x)
-            message.top.append(tl_y)
-            message.bottom.append(br_y)
+                tl_x, tl_y, br_x, br_y = det[i]["bbox"]
+                message.left.append(tl_x)
+                message.right.append(br_x)
+                message.top.append(tl_y)
+                message.bottom.append(br_y)
 
-            # Add obj-obj and obj-hand info
-            message.obj_obj_contact_state.append(det["obj_obj_contact_state"])
-            message.obj_obj_contact_conf.append(det["obj_obj_contact_conf"])
-            message.obj_hand_contact_state.append(det["obj_hand_contact_state"])
-            message.obj_hand_contact_conf.append(det["obj_hand_contact_conf"])
+                # Add obj-obj and obj-hand info
+                if "obj_obj_contact_state" in det[i].keys():
+                    message.obj_obj_contact_state.append(det[i]["obj_obj_contact_state"])
+                    message.obj_obj_contact_conf.append(det[i]["obj_obj_contact_conf"])
+                if "obj_hand_contact_state" in det[i].keys():
+                    message.obj_hand_contact_state.append(det[i]["obj_hand_contact_state"])
+                    message.obj_hand_contact_conf.append(det[i]["obj_hand_contact_conf"])
 
         message.label_confidences = np.asarray(label_confidences, dtype=np.float64).ravel().tolist()
 
