@@ -3754,10 +3754,15 @@ class Visualizer_eval:
 
         label_list = []
         score_list = []
-        new_obj_obj_contact_scores = []
-        new_obj_obj_contact_class = []
-        new_obj_hand_contact_scores = []
-        new_obj_hand_contact_class = []
+
+        using_contact = True if obj_obj_contact_classes is not None else False
+        if using_contact:
+            new_obj_obj_contact_scores = []
+            new_obj_obj_contact_class = []
+            new_obj_hand_contact_scores = []
+            new_obj_hand_contact_class = []
+        else:
+            new_obj_obj_contact_class = new_obj_obj_contact_scores = new_obj_hand_contact_class = new_obj_hand_contact_scores = None
 
         for _label in labels:
             percent = _label.split(' ')[-1]
@@ -3768,7 +3773,7 @@ class Visualizer_eval:
         score_list = np.array(score_list)
         flag_list = np.zeros(len(labels))
 
-        R_class = []
+        R_class = self.metadata['R_class']
         for i in range(len(labels)):
             if flag_list[i] == 1:
                 continue
@@ -3779,9 +3784,10 @@ class Visualizer_eval:
             for allowed in  self.metadata['allow_repeat_obj']:
                 if allowed in C: # accounts for states after class
                     allow_class_to_repeat = True
-                    print('allow repeat', allowed, C)
+                    #print('allow repeat', allowed, C)
 
             if allow_class_to_repeat:
+                idx = [i]
                 # Don't remove repeats of these classes
                 new_boxes.append(boxes[i, :])
                 new_labels.append(labels[i])
@@ -3807,11 +3813,12 @@ class Visualizer_eval:
                 new_boxes.append(boxes[_idx, :])
                 new_labels.append(labels[_idx])
 
-                new_obj_obj_contact_class.append(obj_obj_contact_classes[_idx])
-                new_obj_obj_contact_scores.append(obj_obj_contact_scores[_idx])
+                if using_contact:
+                    new_obj_obj_contact_class.append(obj_obj_contact_classes[_idx])
+                    new_obj_obj_contact_scores.append(obj_obj_contact_scores[_idx])
 
-                new_obj_hand_contact_class.append(obj_hand_contact_classes[_idx])
-                new_obj_hand_contact_scores.append(obj_hand_contact_scores[_idx])
+                    new_obj_hand_contact_class.append(obj_hand_contact_classes[_idx])
+                    new_obj_hand_contact_scores.append(obj_hand_contact_scores[_idx])
 
             else: # remove the repeated objects
                 idx = np.where(label_list == C)[0].tolist()
@@ -3826,11 +3833,13 @@ class Visualizer_eval:
                 _idx = idx[max_idx]
                 new_boxes.append(boxes[_idx, :])
                 new_labels.append(labels[_idx])
-                new_obj_obj_contact_class.append(obj_obj_contact_classes[_idx])
-                new_obj_obj_contact_scores.append(obj_obj_contact_scores[_idx])
 
-                new_obj_hand_contact_class.append(obj_hand_contact_classes[_idx])
-                new_obj_hand_contact_scores.append(obj_hand_contact_scores[_idx])
+                if using_contact:
+                    new_obj_obj_contact_class.append(obj_obj_contact_classes[_idx])
+                    new_obj_obj_contact_scores.append(obj_obj_contact_scores[_idx])
+
+                    new_obj_hand_contact_class.append(obj_hand_contact_classes[_idx])
+                    new_obj_hand_contact_scores.append(obj_hand_contact_scores[_idx])
             for IDX in idx:
                 flag_list[IDX] = 1
         new_boxes = np.array(new_boxes)
