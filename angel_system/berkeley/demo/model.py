@@ -132,6 +132,7 @@ def decode_prediction(predictions):
             pre = {}
             x = len(instance_cls.split(' ')[-1])
             cls_name = instance_cls[:-(x + 1)]
+            pres[cls_name] = []
             # pre['category'] = cls_name
             pre['confidence_score'] = float(instance_cls.split(' ')[-1][:-1]) * 0.01
             pre['bbox'] = boxes[i]
@@ -149,7 +150,9 @@ def decode_prediction(predictions):
                     pre['obj_hand_contact_state'] = False
                 pre["obj_hand_contact_conf"] = obj_hand_contact_scores[i]
 
-            pres[cls_name] = pre
+            if cls_name in pres.keys():
+                print(f"DOUBLE: {cls_name}")
+            pres[cls_name].append(pre)
 
         return pres
     else:
