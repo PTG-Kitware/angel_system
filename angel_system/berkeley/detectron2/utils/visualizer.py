@@ -421,7 +421,13 @@ class VisualizerUtil:
             C = label_list[i]
             # S = score_list[i]
 
-            if C in self.metadata['allow_repeat_obj']:
+            allow_class_to_repeat = False
+            for allowed in  self.metadata['allow_repeat_obj']:
+                if allowed in C: # accounts for states after class
+                    allow_class_to_repeat = True
+                    print('allow repeat', allowed, C)
+
+            if allow_class_to_repeat:
                 # Don't remove repeats of these classes
                 new_boxes.append(boxes[i, :])
                 new_labels.append(labels[i])
@@ -432,9 +438,8 @@ class VisualizerUtil:
 
                     new_obj_hand_contact_class.append(obj_hand_contact_classes[i])
                     new_obj_hand_contact_scores.append(obj_hand_contact_scores[i])
-                continue
 
-            if C in R_class: # remove the special class
+            elif C in R_class: # remove the special class
                 idx = np.where(label_list == C)[0].tolist()
                 if len(idx) > 1:
                     area_list = []
@@ -565,8 +570,8 @@ class VisualizerUtil:
                     new_obj_hand_contact_scores.append(obj_hand_contact_scores[i])
 
         new_boxes = np.array(new_boxes)
-        print(labels)
-        print(new_labels)
+        #print(labels)
+        #print(new_labels)
         return new_boxes, new_labels, new_obj_obj_contact_scores, new_obj_obj_contact_class, new_obj_hand_contact_scores, new_obj_hand_contact_class
 
     def find_contact(self,
@@ -3758,6 +3763,7 @@ class Visualizer_eval:
             obj_hand_contact_scores,
             obj_hand_contact_classes):
         # print(labels)
+        print('rro 3766')
         new_boxes = []
         new_labels = []
 
@@ -3784,7 +3790,25 @@ class Visualizer_eval:
             C = label_list[i]
             # S = score_list[i]
 
-            if C in R_class: # remove the special class
+            allow_class_to_repeat = False
+            for allowed in  self.metadata['allow_repeat_obj']:
+                if allowed in C: # accounts for states after class
+                    allow_class_to_repeat = True
+                    print('allow repeat', allowed, C)
+
+            if allow_class_to_repeat:
+                # Don't remove repeats of these classes
+                new_boxes.append(boxes[i, :])
+                new_labels.append(labels[i])
+
+                if using_contact:
+                    new_obj_obj_contact_class.append(obj_obj_contact_classes[i])
+                    new_obj_obj_contact_scores.append(obj_obj_contact_scores[i])
+
+                    new_obj_hand_contact_class.append(obj_hand_contact_classes[i])
+                    new_obj_hand_contact_scores.append(obj_hand_contact_scores[i])
+
+            elif C in R_class: # remove the special class
                 idx = np.where(label_list == C)[0].tolist()
                 if len(idx) > 1:
                     area_list = []
@@ -3912,8 +3936,8 @@ class Visualizer_eval:
                     new_obj_hand_contact_scores.append(obj_hand_contact_scores[i])
 
         new_boxes = np.array(new_boxes)
-        print(labels)
-        print(new_labels)
+        #print(labels)
+        #print(new_labels)
         return new_boxes, new_labels, new_obj_obj_contact_scores, new_obj_obj_contact_class, new_obj_hand_contact_scores, new_obj_hand_contact_class
 
     def calculate_iou(self, boxA, boxB):

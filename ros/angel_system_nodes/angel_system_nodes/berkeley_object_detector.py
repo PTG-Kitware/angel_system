@@ -135,7 +135,11 @@ class BerkeleyObjectDetector(Node):
         message.top = []
         message.bottom = []
 
-        message.label_vec = list(preds.keys())
+        for label in preds.keys():
+            for i in range(len(preds[label])):
+                message.label_vec.append(label)
+
+        #message.label_vec = list(preds.keys())
         message.num_detections = len(message.label_vec)
 
         if message.num_detections == 0:
@@ -146,7 +150,9 @@ class BerkeleyObjectDetector(Node):
         for label, det in preds.items():
             for i in range(len(det)):
                 conf_vec = np.zeros(len(message.label_vec))
-                conf_vec[message.label_vec.index(label)] = det[i]["confidence_score"]
+                conf_idx = np.where(message.label_vec == label)[i]
+                #conf_vec[message.label_vec.index(label)] = det[i]["confidence_score"]
+                conf_vec[conf_idx] = det[i]["confidence_score"]
                 label_confidences.append(conf_vec)
 
                 tl_x, tl_y, br_x, br_y = det[i]["bbox"]

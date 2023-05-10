@@ -150,10 +150,18 @@ def decode_prediction(predictions):
                     pre['obj_hand_contact_state'] = False
                 pre["obj_hand_contact_conf"] = obj_hand_contact_scores[i]
 
-            if cls_name in pres.keys():
-                print(f"DOUBLE: {cls_name}")
             pres[cls_name].append(pre)
+            if len(pres[cls_name]) > 1:
+                print(f"DOUBLE: {cls_name}")
+                print("DOUBLE")
+                print("DOUBLE")
+                print("DOUBLE")
+                print("DOUBLE")
+                print("DOUBLE")
+                print("DOUBLE")
+                print("DOUBLE")
 
+                print(pres)
         return pres
     else:
         return None
