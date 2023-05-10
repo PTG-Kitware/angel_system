@@ -119,7 +119,10 @@ def decode_prediction(predictions):
     if not predictions == None:
         try:
             [boxes, labels, obj_obj_contact_classes, obj_obj_contact_scores, obj_hand_contact_classes, obj_hand_contact_scores, Contact_infos, Contact_hand_infos] = predictions
-            has_contact_info = True
+            if obj_obj_contact_classes is None:
+                has_contact_info = False
+            else:
+                has_contact_info = True
         except:
             [boxes, labels] = predictions
             has_contact_info = False
