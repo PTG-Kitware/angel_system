@@ -153,8 +153,8 @@ class SpatialMapSubscriber(Node):
                 # TODO: maybe implement a more efficient binary search here
                 for i in reversed(range(len(self.poses))):
                     if detection.source_stamp == self.poses[i].header.stamp:
-                        world_matrix_1d = self.poses[i].world_matrix
-                        projection_matrix_1d = self.poses[i].projection_matrix
+                        world_matrix_1d = np.array(self.poses[i].world_matrix)
+                        projection_matrix_1d = np.array(self.poses[i].projection_matrix)
 
                         log.debug(
                             f"time stamps: {self.poses[i].header.stamp} {detection.source_stamp}"
@@ -170,7 +170,7 @@ class SpatialMapSubscriber(Node):
                     continue
 
                 # get world matrix from detection
-                world_matrix_2d = self.convert_1d_4x4_to_2d_matrix(world_matrix_1d)
+                world_matrix_2d = world_matrix_1d.reshape(4, 4)
                 log.debug(f"world matrix {world_matrix_2d}")
 
                 # get position of the camera at the time of the frame
@@ -179,7 +179,7 @@ class SpatialMapSubscriber(Node):
                 log.debug(f"origin {camera_origin}")
 
                 # get projection matrix from detection
-                projection_matrix_2d = self.convert_1d_4x4_to_2d_matrix(projection_matrix_1d)
+                projection_matrix_2d = projection_matrix_1d.reshape(4, 4)
 
                 # start creating the 3D detection set message
                 det_3d_set_msg = ObjectDetection3dSet()
@@ -346,19 +346,6 @@ class SpatialMapSubscriber(Node):
         """
         point_matrix = np.array([point[0], point[1], point[2], 1])
         return np.matmul(point_matrix, world_matrix)[:3]
-
-    def convert_1d_4x4_to_2d_matrix(self, matrix_1d):
-        """
-        Converts a 1d matrix of length 16 to a 2d matrix with shape (4, 4) and
-        returns it.
-        """
-        matrix_2d = [[], [], [], []]
-        for row in range(4):
-            for col in range(4):
-                idx = row * 4 + col
-                matrix_2d[row].append(matrix_1d[idx])
-
-        return matrix_2d
 
     def convert_pixel_coord_to_world_coord(self, world_matrix_2d,
                                            projection_matrix, p, camera_origin):

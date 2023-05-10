@@ -81,7 +81,6 @@ windows:
       -p det_topic:=ObjectDetections
       -p det_3d_topic:=ObjectDetections3d
       -p headset_pose_topic:=HeadsetPoseData
-      -p draw_scene:=False
 
   - feedback_generator: ros2 run angel_system_nodes feedback_generator --ros-args
       -r __ns:=${ROS_NAMESPACE}
