@@ -78,14 +78,14 @@ def bbn_activity_data_loader(videos_dir, video, step_map=None,
         sub_step_str = step_map['step 1'][0][0].lower().strip().strip('.').strip()
         if sub_step_str in gt_activity.keys():
             end = gt_activity[sub_step_str][0]['start'] # when the first step starts
-            gt_activity['Not started'.lower()] = [{ 'start': 0, 'end': end }]
-                
+            gt_activity['not started'] = [{ 'start': 0, 'end': end }]
+
         # after task
         sub_step_str = step_map['step 8'][0][0].lower().strip().strip('.').strip()
         if sub_step_str in gt_activity.keys():
             start = gt_activity[sub_step_str][0]['end'] # when the last step ends
             end = len(glob.glob(f'{videos_dir}/{video}/_extracted/images/*.png')) - 1
-            gt_activity['Finished'.lower()] = [{ 'start': start, 'end': end }]
+            gt_activity['finished'] = [{ 'start': start, 'end': end }]
 
     print(f"Loaded ground truth from {skill_fn}")
 

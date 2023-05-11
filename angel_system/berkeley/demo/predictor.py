@@ -462,7 +462,7 @@ class VisualizationDemo_add_smoothing(object):
         # Determine how many predictions we have left
         num_instances = len(labels)
         
-        if obj_obj_contact_classes is not None:
+        if using_contact:
             assert num_instances == len(obj_obj_contact_scores) == len(obj_obj_contact_classes) == len(obj_hand_contact_scores) == len(obj_hand_contact_classes)
         else:
             assert num_instances == len(boxes)
