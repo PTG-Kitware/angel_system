@@ -61,7 +61,9 @@ def _get_bbn_instances_meta_v1(dataset_name, key):
         "sub_steps": bbn_activity_objects.sub_steps,
         "contact_pairs_details": bbn_activity_objects.contact_pairs_details,
         "CONTACT_PAIRS": bbn_activity_objects.CONTACT_PAIRS,
-        "States_Pairs": bbn_activity_objects.States_Pairs
+        "States_Pairs": bbn_activity_objects.States_Pairs,
+        "R_class": bbn_activity_objects.R_class,
+        "allow_repeat_obj": bbn_activity_objects.allow_repeat_obj
     }
     return meta
 

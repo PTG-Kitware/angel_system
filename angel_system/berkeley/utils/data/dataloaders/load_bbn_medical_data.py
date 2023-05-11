@@ -42,15 +42,16 @@ def bbn_activity_data_loader(videos_dir, video, step_map=None,
         # start time, end time, class
         data = line.split("\t")
 
-        class_label = data[2].lower().strip().strip('.')
-        if class_label not in gt_activity.keys():
-            gt_activity[class_label] = []
+        class_label = data[2].lower().strip().strip('.').strip()
+        
         try:
             start = int(data[0])
             end = int(data[1])
         except:
             continue
 
+        if class_label not in gt_activity.keys():
+            gt_activity[class_label] = []
         gt_activity[class_label].append({
             'start': start,
             'end': end
@@ -65,28 +66,27 @@ def bbn_activity_data_loader(videos_dir, video, step_map=None,
         for i, step in enumerate(steps[:-1]):
             sub_step_str = step_map[step][0][0].lower().strip().strip('.').strip()
             next_sub_step_str = step_map[steps[i+1]][0][0].lower().strip().strip('.').strip()
-            try:
+            if sub_step_str in gt_activity.keys() and next_sub_step_str in gt_activity.keys():
                 start = gt_activity[sub_step_str][0]['end']
                 end = gt_activity[next_sub_step_str][0]['start']
-            except:
-                continue
 
-            gt_activity[f'In between {step} and {steps[i+1]}'.lower()] =  [{ 'start': start, 'end': end }]
+                gt_activity[f'In between {step} and {steps[i+1]}'.lower()] =  [{ 'start': start, 'end': end }]
 
     if add_before_finished_task:
         print('Adding before and finished')
         # before task
         sub_step_str = step_map['step 1'][0][0].lower().strip().strip('.').strip()
-        end = gt_activity[sub_step_str][0]['start'] # when the first step starts
-        gt_activity['Not started'.lower()] = [{ 'start': 0, 'end': end }]
-            
+        if sub_step_str in gt_activity.keys():
+            end = gt_activity[sub_step_str][0]['start'] # when the first step starts
+            gt_activity['not started'] = [{ 'start': 0, 'end': end }]
+
         # after task
         sub_step_str = step_map['step 8'][0][0].lower().strip().strip('.').strip()
-        start = gt_activity[sub_step_str][0]['end'] # when the last step ends
-        end = len(glob.glob(f'{videos_dir}/{video}/_extracted/images/*.png')) - 1
-        gt_activity['Finished'.lower()] = [{ 'start': start, 'end': end }]
-    print(video)
-    print('gt', gt_activity)
+        if sub_step_str in gt_activity.keys():
+            start = gt_activity[sub_step_str][0]['end'] # when the last step ends
+            end = len(glob.glob(f'{videos_dir}/{video}/_extracted/images/*.png')) - 1
+            gt_activity['finished'] = [{ 'start': start, 'end': end }]
+
     print(f"Loaded ground truth from {skill_fn}")
 
     return gt_activity

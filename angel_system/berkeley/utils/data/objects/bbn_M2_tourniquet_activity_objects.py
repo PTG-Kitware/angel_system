@@ -195,4 +195,5 @@ CONTACT_PAIRS = contact_pairs_details = [
 
 
 States_Pairs = []
-
+R_class = []
+allow_repeat_obj = ['hand']
