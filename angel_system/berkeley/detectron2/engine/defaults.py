@@ -13,7 +13,10 @@ import argparse
 import logging
 import os
 import sys
+import torchvision
 import weakref
+import cv2
+import numpy as np
 from collections import OrderedDict
 from typing import Optional
 import torch
@@ -410,15 +413,26 @@ class DefaultTrainer(TrainerBase):
         GRID_SIZE = 9
         NUM_ROWS = 3 
         out_fp = os.path.join(cfg.OUTPUT_DIR, "batches")
-            if not os.path.exists(out_fp):
-                os.path.makedirs(out_fp)
-        for batch_idx, (X, y)  in enumerate(data_loader):
-            # assume X is the fake-image returned by the dataloader
-            # and y is some target value for the X, also returned by the dataloader
-            img_grid_fake = torchvision.utils.make_grid(X[:GRID_SIZE, ...], nrow=NUM_ROWS)
-            
-            filepath = os.path.join(out_fp, f"Fake_image-{batch_idx}.png")
-            torchvision.utils.save_image(img_grid_fake, filepath)
+        if not os.path.exists(out_fp):
+            os.mkdir(out_fp)
+
+        data_loader_iter = iter(data_loader)
+        
+
+        images = []
+        for data in data_loader.dataset:
+            images.append(data['image'])
+            if len(images) >= 100:
+                break
+
+        images = torch.stack(images)
+
+        img_grid_fake = torchvision.utils.make_grid(images[:GRID_SIZE, ...], nrow=NUM_ROWS).numpy()
+        im = np.moveaxis(img_grid_fake, 0, 2)
+
+        filepath = os.path.join(cfg.OUTPUT_DIR, f"sample-training-images.png")
+        cv2.imwrite(filepath, im)
+        print(f'Saved sample of training images to {filepath}')
 
         model = create_ddp_model(model, broadcast_buffers=False)
         self._trainer = (AMPTrainer if cfg.SOLVER.AMP.ENABLED else SimpleTrainer)(
