@@ -148,23 +148,28 @@ def preds_to_kwcoco(metadata, preds, save_dir, save_fn='result-with-contact.msco
             del dets['meta']
 
             for class_, det in dets.items():
-                cat = dset.index.name_to_cat[class_]
-                
-                xywh = kwimage.Boxes([det['bbox']], 'tlbr').toformat('xywh').data[0].tolist()
+                for i in range(len(det)):
+                    cat = dset.index.name_to_cat[class_]
+                    
+                    xywh = kwimage.Boxes([det[i]['bbox']], 'tlbr').toformat('xywh').data[0].tolist()
 
-                ann = {
-                    'area': xywh[2] * xywh[3],
-                    'image_id': img['id'],
-                    'category_id': cat['id'],
-                    'segmentation': [],
-                    'bbox': xywh,
-                    'confidence': det['confidence_score'],
-                    'obj-obj_contact_state': det['obj_obj_contact_state'],
-                    'obj-obj_contact_conf': det['obj_obj_contact_conf'],
-                    'obj-hand_contact_state': det['obj_hand_contact_state'],
-                    'obj-hand_contact_conf': det['obj_hand_contact_conf']
-                }
-                dset.add_annotation(**ann)
+                    ann = {
+                        'area': xywh[2] * xywh[3],
+                        'image_id': img['id'],
+                        'category_id': cat['id'],
+                        'segmentation': [],
+                        'bbox': xywh,
+                        'confidence': det[i]['confidence_score']
+                    }
+
+                    if 'obj_obj_contact_state' in det[i].keys():
+                        ann['obj-obj_contact_state'] = det[i]['obj_obj_contact_state']
+                        ann['obj-obj_contact_conf'] = det[i]['obj_obj_contact_conf']
+                    if 'obj_hand_contact_state' in det[i].keys():
+                        ann['obj-hand_contact_state'] = det[i]['obj_hand_contact_state'] 
+                        ann['obj-hand_contact_conf'] = det[i]['obj_hand_contact_conf']
+                    
+                    dset.add_annotation(**ann)
                 
     dset.fpath = f'{save_dir}/{save_fn}' if save_dir != '' else save_fn
     dset.dump(dset.fpath, newlines=True)
@@ -194,8 +199,8 @@ def visualize_kwcoco(dset=None, save_dir=''):
         im = dset.imgs[gid]
 
         img_video_id = im["video_id"]
-        if img_video_id == 3:
-            continue
+        #if img_video_id == 3:
+        #    continue
         
         fn = im['file_name'].split('/')[-1]
         gt = im['activity_gt']# if hasattr(im, 'activity_gt') else ''
@@ -210,15 +215,16 @@ def visualize_kwcoco(dset=None, save_dir=''):
         
         aids = gid_to_aids[gid]
         anns = ub.dict_subset(dset.anns, aids)
-
+        using_contact = False
         for aid, ann in anns.items():
+            using_contact = True if 'obj-obj_contact_state' in ann.keys() else False
             box = ann['bbox']
             label = dset.cats[ann['category_id']]['name']
 
             color = 'r'
-            if ann['obj-obj_contact_state']:
+            if using_contact and ann['obj-obj_contact_state']:
                 color = 'g'
-            if ann['obj-hand_contact_state']:
+            if using_contact and ann['obj-hand_contact_state']:
                 color = 'b'
             rect = patches.Rectangle((box[0], box[1]), box[2], box[3], 
                                      linewidth=1, edgecolor=color, facecolor='none')
@@ -226,7 +232,8 @@ def visualize_kwcoco(dset=None, save_dir=''):
             ax.add_patch(rect)
             ax.annotate(label, (box[0], box[1]), color='black')
         
-        plt.legend(handles=[red_patch, green_patch, blue_patch], loc='lower left')
+        if using_contact:
+            plt.legend(handles=[red_patch, green_patch, blue_patch], loc='lower left')
         
         video_dir = f'{save_dir}/video_{img_video_id}/images/'
         Path(video_dir).mkdir(parents=True, exist_ok=True)
@@ -245,7 +252,7 @@ def main():
 
     ptg_root = '/data/ptg/medical/bbn/'
    
-    kw = 'm2_with_lab_cleaned_fixed_data_with_inter_and_before_finished_steps_results_train_activity.mscoco.json'
+    kw = 'm2_with_lab_cleaned_fixed_data_with_inter_and_before_finished_steps_no_contact_results_val.mscoco.json'
     #kw = 'kitware_test_results_test.mscoco.json'
     #kw = 'm2_with_lab_cleaned_fixed_data_with_inter_and_before_finished_steps_results_train_activity.mscoco.json'
 
@@ -259,10 +266,10 @@ def main():
 
     stage = 'results'
     stage_dir = f'{ptg_root}/annotations/M2_Tourniquet/{stage}'
-    exp = 'm2_with_lab_cleaned_fixed_data_with_inter_and_before_finished_steps'
+    exp = 'm2_with_lab_cleaned_fixed_data_with_inter_and_before_finished_steps_no_contact'#'m2_with_lab_cleaned_fixed_data_with_inter_and_before_finished_steps'
     save_dir = f'{stage_dir}/{exp}/visualization/{split}'
     
-    save_dir = 'visualization'
+    #save_dir = 'visualization'
     Path(save_dir).mkdir(parents=True, exist_ok=True)
     
     #visualize_kwcoco('kitware_test_results_test.mscoco.json', save_dir)
