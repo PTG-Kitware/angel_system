@@ -35,6 +35,41 @@ Model weights are currently being trained and validated, eventually to be
 located on data.kitware.com `here
 <https://data.kitware.com/#collection/62cc5eb8bddec9d0c4fa9ee1/folder/64066cd97b0dfcc98f66ad11>`__.
 
+Tourniquet Model Stage1
+^^^^^^^^^^^^^^^^^^^^^^^
+Version tag: ``tourniquet_stage1``
+
+MaskRCNN detector trained on BBN's M2_Tourniquet v0.52 YoloModel data.
+
+This model's weights as utilized in the system are currently stored on
+data.kitware.com `here <https://data.kitware.com/#collection/62cc5eb8bddec9d0c4fa9ee1/folder/64105f737b0dfcc98f66ba26>`__.
+
+Tourniquet Model Stage2 with Interstitial Steps
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Version Tag: ``tourniquet_stage2_interstitial``
+
+Training data:
+    - BBN's M2_Tourniquet v0.52 videos: ['M2-131', 'M2-63', 'M2-71', 'tq_2', 'M2-11', 'tq_4', 'M2-54',
+            'M2-73', 'M2-62' 'M2-46', 'M2-60', 'M2-24', 'M2-19', 'M2-2', 'M2-74', 'M2-28', 'M2-135',
+            'M2-10', 'M2-61',  'M2-137', 'M2-53', 'M2-40', 'M2-66', 'M2-138', 'M2-124', 'M2-102', 'M2-32',
+            'M2-29','M2-41', 'M2-1' 'M2-127'   'M2-23', 'M2-17' 'M2-139', 'M2-55', 'M2-69' 'M2-68', 'M2-13',
+            'M2-133', 'M2-121', 'M2-14', 'M2-50', 'M2-44', 'M2-43', 'M2-35', 'M2-75', 'M2-37']
+    - BBN's M2 Lab Data (HoloLens videos):  ['tq_12', 'tq_8', 'tq_21', 'tq_23', 'tq_3', 'tq_20', 'tq_19',
+            'tq_14', 'tq_13', 'tq_10', 'tq_11', 'tq_5']
+
+
+Validation data:
+    - BBN's M2_Tourniquet v0.52 videos: ['M2-72', 'M2-58', 'M2-134', 'M2-105', 'M2-33', 'M2-9', 'M2-42',
+            'M2-30', 'M2-16', 'M2-128']
+    - BBN's M2 Lab Data (HoloLens videos): ['tq_18', 'tq_22']
+
+MaskRCNN detector trained on the output of running the `tourniquet_stage1` model on BBN's M2_Tourniquet v0.52 videos. The input detections were
+artifically adjusted by adding contact metadata and adjusting the
+detection labels to include information about when the detction took place in relation to the task.
+
+This model's weights as utilized in the system are currently stored on
+data.kitware.com `here <https://data.kitware.com/#collection/62cc5eb8bddec9d0c4fa9ee1/folder/64105f737b0dfcc98f66ba26>`__.
+
 
 Activity Classification Models
 ==============================
@@ -76,6 +111,29 @@ Task Step Classification Models
 Hidden Markov Models
 --------------------
 TODO: Add description, POC @mattbrown11
+
+Model weights storage `here
+<https://data.kitware.com/#collection/62cc5eb8bddec9d0c4fa9ee1/folder/636151b611dab8142820adfc>`__.
+
+Tourniquet Interstitial HMM
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Version Tag: ``recipe_m2_apply_tourniquet``
+
+Training data:
+    - BBN's M2_Tourniquet v0.52 videos: ['M2-38', 'M2-48', 'M2-123', 'M2-65', 'M2-59', 'M2-49', 'M2-45',
+            'M2-5', 'M2-7', 'M2-56', 'M2-12', 'M2-67', 'M2-20', 'M2-64', 'M2-6', 'M2-57', 'M2-126',
+            'M2-77', 'M2-106', 'M2-120', 'M2-132', 'M2-76', 'M2-27', 'M2-136', 'M2-47', 'M2-3', 'M2-18',
+            'M2-26',  'M2-25', 'M2-8', 'M2-34', 'M2-21', 'M2-119', 'M2-51', 'M2-31', 'M2-22', 'M2-36',
+            'M2-39', 'M2-70', , 'M2-4', 'M2-52']
+    - BBN's M2 Lab Data (HoloLens videos): ['tq_16', 'tq_6', 'tq_9', 'tq_1', 'tq_17', 'tq_15', 'tq_7']
+
+
+Test data:
+    The test data was split from the above videos using `GroupKFold
+    <https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.GroupKFold.html>`
+    with `n_splits=5`__.
+
+TODO
 
 Model weights storage `here
 <https://data.kitware.com/#collection/62cc5eb8bddec9d0c4fa9ee1/folder/636151b611dab8142820adfc>`__.

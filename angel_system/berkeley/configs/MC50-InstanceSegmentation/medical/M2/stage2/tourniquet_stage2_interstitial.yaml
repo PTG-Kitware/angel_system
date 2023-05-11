@@ -1,6 +1,6 @@
 _BASE_: "/angel_workspace/angel_system/berkeley/configs/Base-RCNN-FPN.yaml"
 MODEL:
-  WEIGHTS: "/angel_workspace/model_files/m2_with_lab_cleaned_fixed_data_with_inter_and_before_finished_steps.pth"
+  WEIGHTS: "/angel_workspace/model_files/tourniquet_stage2_interstitial.pth"
   MASK_ON: False
   RESNETS:
     DEPTH: 50
