@@ -242,7 +242,7 @@ class VisualizationDemo(object):
                 yield process_predictions(frame, self.predictor(frame))
 
 class VisualizationDemo_add_smoothing(object):
-    def __init__(self, cfg, last_time, draw_output=True, tracking=True, number_frames=None, fps=None, instance_mode=ColorMode.IMAGE, parallel=False):
+    def __init__(self, cfg, last_time, use_contact=True, draw_output=True, tracking=True, number_frames=None, fps=None, instance_mode=ColorMode.IMAGE, parallel=False):
         """
         Args:
             cfg (CfgNode):
@@ -255,6 +255,8 @@ class VisualizationDemo_add_smoothing(object):
         )
         self.cpu_device = torch.device("cpu")
         self.instance_mode = instance_mode
+
+        self.use_contact = use_contact
 
         self.draw_output = draw_output
 
@@ -416,8 +418,7 @@ class VisualizationDemo_add_smoothing(object):
                               obj_hand_contact_scores,
                               obj_hand_contact_classes,
                               REMOVE_REPEATED_obj=True,
-                              REMOVE_REPEATED_mutil_states=True,
-                              ADD_CONTACT_STATES=True):
+                              REMOVE_REPEATED_mutil_states=True):
         util = VisualizerUtil(metadata=self.metadata)
 
         # Display in largest to smallest order to reduce occlusion.
@@ -432,18 +433,21 @@ class VisualizationDemo_add_smoothing(object):
             # Re-order overlapped instances in descending order.
             boxes = boxes[sorted_idxs] if boxes is not None else None
             labels = [labels[k] for k in sorted_idxs] if labels is not None else None
+            
             obj_obj_contact_classes = [obj_obj_contact_classes[k] for k in sorted_idxs] if obj_obj_contact_classes is not None else None
             obj_obj_contact_scores = [obj_obj_contact_scores[k] for k in sorted_idxs] if obj_obj_contact_scores is not None else None
 
             obj_hand_contact_classes = [obj_hand_contact_classes[k] for k in sorted_idxs] if obj_hand_contact_classes is not None else None
             obj_hand_contact_scores = [obj_hand_contact_scores[k] for k in sorted_idxs] if obj_hand_contact_scores is not None else None
 
+            obj_obj_contact_scores = [_.item() for _ in obj_obj_contact_scores] if obj_obj_contact_scores is not None else None
+            obj_hand_contact_scores = [_.item() for _ in obj_hand_contact_scores] if obj_hand_contact_scores is not None else None
+
             masks = [masks[idx] for idx in sorted_idxs] if masks is not None else None
             # assigned_colors = [assigned_colors[idx] for idx in sorted_idxs]
             keypoints = keypoints[sorted_idxs] if keypoints is not None else None
-
-            obj_obj_contact_scores = [_.item() for _ in obj_obj_contact_scores]
-            obj_hand_contact_scores = [_.item() for _ in obj_hand_contact_scores]
+            
+        using_contact = True if obj_obj_contact_classes is not None else False
         
         # post-processing: remove_repeated, remove_multi_states, add_contacts
         if REMOVE_REPEATED_obj:
@@ -451,12 +455,17 @@ class VisualizationDemo_add_smoothing(object):
         if REMOVE_REPEATED_mutil_states:
             boxes, labels, obj_obj_contact_scores, obj_obj_contact_classes, obj_hand_contact_scores, obj_hand_contact_classes= util.remove_repeated_states(boxes, labels, obj_obj_contact_scores, obj_obj_contact_classes, obj_hand_contact_scores, obj_hand_contact_classes)
 
-        if ADD_CONTACT_STATES:
+        if using_contact:
             contact_flag, Contact_infos, contact_hand_flag, Contact_hand_infos = util.find_contact(boxes, labels, obj_obj_contact_scores, obj_obj_contact_classes, obj_hand_contact_scores, obj_hand_contact_classes)
-
+        else:
+            contact_flag = Contact_infos = contact_hand_flag = Contact_hand_infos = None
         # Determine how many predictions we have left
         num_instances = len(labels)
-        assert num_instances == len(obj_obj_contact_scores) == len(obj_obj_contact_classes) == len(obj_hand_contact_scores) == len(obj_hand_contact_classes)
+        
+        if using_contact:
+            assert num_instances == len(obj_obj_contact_scores) == len(obj_obj_contact_classes) == len(obj_hand_contact_scores) == len(obj_hand_contact_classes)
+        else:
+            assert num_instances == len(boxes)
 
         return num_instances, boxes, labels, masks, keypoints, obj_obj_contact_scores, \
                obj_obj_contact_classes, obj_hand_contact_scores, obj_hand_contact_classes, \
@@ -467,7 +476,6 @@ class VisualizationDemo_add_smoothing(object):
         # re-compile the preditions
         # tracker.test()
         self.tracker.update_memory(predictions, current_idx)
-
 
         step_infos = self.tracker.step_mapping(current_idx=current_idx)
 

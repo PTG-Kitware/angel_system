@@ -600,3 +600,5 @@ CONTACT_PAIRS = [['measuring cup', 'water'],
                     ['hand', 'used paper filter']  # step 8
                     ]
 
+R_class = ['paper filter bag', 'coffee bag']
+allow_repeat_obj = []
