@@ -23,6 +23,7 @@ import sys
 from collections import OrderedDict
 
 import detectron2.utils.comm as comm
+import detectron2.data.transforms as T
 from detectron2.checkpoint import DetectionCheckpointer
 from detectron2.config import get_cfg
 from detectron2.data import MetadataCatalog
@@ -38,6 +39,7 @@ from detectron2.evaluation import (
     SemSegEvaluator,
     verify_results,
 )
+
 from detectron2.modeling import GeneralizedRCNNWithTTA
 # os.environ['CUDA_VISIBLE_DEVICES'] = '0, 2, 3, 4, 6, 7, 8, 9'
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
@@ -111,6 +113,32 @@ class Trainer(DefaultTrainer):
         res = OrderedDict({k + "_TTA": v for k, v in res.items()})
         return res
 
+class TrainerAug(Trainer):
+    @classmethod
+    def build_train_loader(cls, cfg):
+        augs = [
+            # Orientation
+            T.RandomRotation(angle=[-60, 60], sample_style="range", expand=True) # neck/head angle
+            T.RandomFlip(prob=0.4, horizontal=True, vertical=False) # body position relative to dummy
+            T.RandomCrop(crop_type="relative", crop_size=(0.75, 0.75)), # camera distance to dummy 
+            
+            # Environment
+            T.RandomBrightness(intensity_min=0.5, intensity_max=1.5)
+            T.RandomContrast(intensity_min=0.5, intensity_max=1.5)
+            T.RandomSaturation(intensity_min=0.5, intensity_max=1.5)
+        
+            T.Resize(shape=(428, 760), interp=Image.BILINEAR) # bring everything back to the right size
+        ]
+        mapper = DatasetMapper(cfg, is_train=True, augmentations=augs)
+        return build_detection_train_loader(cfg, mapper=mapper)
+
+    @classmethod
+    def build_test_loader(cls, cfg, dataset_name):
+        augs = [
+            T.Resize(shape=(428, 760), interp=Image.BILINEAR) # bring everything back to the right size
+        ]
+        mapper = DatasetMapper(cfg, is_train=False, augmentations=augs)
+        return build_detection_test_loader(cfg, dataset_name, mapper=mapper)
 
 def setup(args):
     """
@@ -154,7 +182,7 @@ def main(args):
     consider writing your own training loop (see plain_train_net.py) or
     subclassing the trainer.
     """
-    trainer = Trainer(cfg)
+    trainer = TrainerAug(cfg)
     trainer.resume_or_load(resume=args.resume)
     if cfg.TEST.AUG.ENABLED:
         trainer.register_hooks(
