@@ -20,13 +20,14 @@ import logging
 import os
 import argparse
 import sys
+from PIL import Image
 from collections import OrderedDict
 
 import detectron2.utils.comm as comm
 import detectron2.data.transforms as T
 from detectron2.checkpoint import DetectionCheckpointer
 from detectron2.config import get_cfg
-from detectron2.data import MetadataCatalog
+from detectron2.data import MetadataCatalog, DatasetMapper, build_detection_train_loader, build_detection_test_loader
 from detectron2.engine import DefaultTrainer, default_argument_parser, default_setup, hooks, launch
 from detectron2.evaluation import (
     CityscapesInstanceEvaluator,
@@ -42,7 +43,7 @@ from detectron2.evaluation import (
 
 from detectron2.modeling import GeneralizedRCNNWithTTA
 # os.environ['CUDA_VISIBLE_DEVICES'] = '0, 2, 3, 4, 6, 7, 8, 9'
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0, 1, 2, 3'
 
 def build_evaluator(cfg, dataset_name, output_folder=None):
     """
@@ -117,15 +118,18 @@ class TrainerAug(Trainer):
     @classmethod
     def build_train_loader(cls, cfg):
         augs = [
+            # TODO: Adjust zed camera images
+
             # Orientation
-            T.RandomRotation(angle=[-60, 60], sample_style="range", expand=True) # neck/head angle
-            T.RandomFlip(prob=0.4, horizontal=True, vertical=False) # body position relative to dummy
-            T.RandomCrop(crop_type="relative", crop_size=(0.75, 0.75)), # camera distance to dummy 
+            #T.RandomRotation(angle=[-30, 30], sample_style="range", expand=True) # neck/head angle
+            T.RandomFlip(prob=0.5, horizontal=True, vertical=False), # body position relative to dummy
+            T.RandomCrop(crop_type="relative_range", crop_size=(0.85, 0.85)), # camera distance to dummy 
             
             # Environment
-            T.RandomBrightness(intensity_min=0.5, intensity_max=1.5)
-            T.RandomContrast(intensity_min=0.5, intensity_max=1.5)
-            T.RandomSaturation(intensity_min=0.5, intensity_max=1.5)
+            T.RandomBrightness(intensity_min=0.5, intensity_max=1.5),
+            T.RandomContrast(intensity_min=0.75, intensity_max=1.25),
+            T.RandomSaturation(intensity_min=0.5, intensity_max=1.25),
+            #T.ColorTransform(),
         
             T.Resize(shape=(428, 760), interp=Image.BILINEAR) # bring everything back to the right size
         ]
