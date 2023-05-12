@@ -1,0 +1,34 @@
+_BASE_: "/home/local/KHQ/hannah.defazio/angel_system/angel_system/berkeley/configs/Base-RCNN-FPN.yaml"
+MODEL:
+  WEIGHTS: "/data/ptg/medical/bbn/training/M2_Tourniquet/stage2/m2_with_lab_cleaned_fixed_data_with_inter_and_before_finished_steps/resnet50_no_contact_aug/model_final.pth"
+  MASK_ON: False
+  RESNETS:
+    DEPTH: 50
+  ROI_HEADS:
+    NUM_CLASSES: 85
+    SCORE_THRESH_TEST: 0.0001
+    #NAME: StandardROIHeads_PLUS_CONTACT
+    NAME: StandardROIHeads
+DATASETS:
+  TRAIN: ("BBN_M2_labels_with_inter_and_before_finished_steps_train",)
+  TEST: ("BBN_M2_labels_with_inter_and_before_finished_steps_val",)
+TEST:
+  DETECTIONS_PER_IMAGE: 300  # LVIS allows up to 300
+DATALOADER:
+  SAMPLER_TRAIN: "RepeatFactorTrainingSampler"
+  REPEAT_THRESHOLD: 0.5
+  FILTER_EMPTY_ANNOTATIONS: True
+
+OUTPUT_DIR: '/data/ptg/medical/bbn/training/M2_Tourniquet/stage2/m2_with_lab_cleaned_fixed_data_with_inter_and_before_finished_steps/resnet50_no_contact_aug/'
+
+SOLVER:
+  TOTAL_IMAGE_NUMBER: 25701
+  IMS_PER_BATCH: 52
+  BASE_LR: 0.001
+  STEPS: (34000, 41000)
+  CHECKPOINT_PERIOD: 1000
+  EPOCH: 50
+
+VISUALIZER:
+  CAM: False
+
