@@ -166,7 +166,9 @@ class RedisROSBridge(Node):
                 d = holoframe.load(data)
 
                 try:
-                    image_msg = BRIDGE.cv2_to_imgmsg(d["image"], encoding="bgr8")
+                    # The most recent version of the HL2SS redis streaming
+                    # service (git hash 27c223d) is outputting RGB imagery.
+                    image_msg = BRIDGE.cv2_to_imgmsg(d["image"], encoding="rgb8")
                     image_msg.header.stamp = hl2ss_stamp_to_ros_time(d["time"])
                     image_msg.header.frame_id = "PVFramesBGR"
                 except TypeError as e:
