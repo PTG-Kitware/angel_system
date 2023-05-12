@@ -22,6 +22,8 @@ namespace RosMessageTypes.Angel
         public string task_name;
         //  Task description
         public string task_description;
+        //  Timestamp of the latest input that has gone into this task update estimation.
+        public BuiltinInterfaces.TimeMsg latest_sensor_input_time;
         //  The index of the step currently in progress.
         //  A value of `-1` indicates that no step has been started yet.
         public sbyte current_step_id;
@@ -60,6 +62,7 @@ namespace RosMessageTypes.Angel
             this.header = new Std.HeaderMsg();
             this.task_name = "";
             this.task_description = "";
+            this.latest_sensor_input_time = new BuiltinInterfaces.TimeMsg();
             this.current_step_id = 0;
             this.current_step = "";
             this.previous_step = "";
@@ -73,11 +76,12 @@ namespace RosMessageTypes.Angel
             this.time_remaining_until_next_task = 0;
         }
 
-        public TaskUpdateMsg(Std.HeaderMsg header, string task_name, string task_description, sbyte current_step_id, string current_step, string previous_step, float task_complete_confidence, bool[] completed_steps, float[] hmm_step_confidence, string[] steps, string current_activity, string next_activity, TaskItemMsg[] task_items, int time_remaining_until_next_task)
+        public TaskUpdateMsg(Std.HeaderMsg header, string task_name, string task_description, BuiltinInterfaces.TimeMsg latest_sensor_input_time, sbyte current_step_id, string current_step, string previous_step, float task_complete_confidence, bool[] completed_steps, float[] hmm_step_confidence, string[] steps, string current_activity, string next_activity, TaskItemMsg[] task_items, int time_remaining_until_next_task)
         {
             this.header = header;
             this.task_name = task_name;
             this.task_description = task_description;
+            this.latest_sensor_input_time = latest_sensor_input_time;
             this.current_step_id = current_step_id;
             this.current_step = current_step;
             this.previous_step = previous_step;
@@ -98,6 +102,7 @@ namespace RosMessageTypes.Angel
             this.header = Std.HeaderMsg.Deserialize(deserializer);
             deserializer.Read(out this.task_name);
             deserializer.Read(out this.task_description);
+            this.latest_sensor_input_time = BuiltinInterfaces.TimeMsg.Deserialize(deserializer);
             deserializer.Read(out this.current_step_id);
             deserializer.Read(out this.current_step);
             deserializer.Read(out this.previous_step);
@@ -116,6 +121,7 @@ namespace RosMessageTypes.Angel
             serializer.Write(this.header);
             serializer.Write(this.task_name);
             serializer.Write(this.task_description);
+            serializer.Write(this.latest_sensor_input_time);
             serializer.Write(this.current_step_id);
             serializer.Write(this.current_step);
             serializer.Write(this.previous_step);
@@ -139,6 +145,7 @@ namespace RosMessageTypes.Angel
             "\nheader: " + header.ToString() +
             "\ntask_name: " + task_name.ToString() +
             "\ntask_description: " + task_description.ToString() +
+            "\nlatest_sensor_input_time: " + latest_sensor_input_time.ToString() +
             "\ncurrent_step_id: " + current_step_id.ToString() +
             "\ncurrent_step: " + current_step.ToString() +
             "\nprevious_step: " + previous_step.ToString() +
