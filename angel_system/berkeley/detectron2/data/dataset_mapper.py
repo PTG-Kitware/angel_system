@@ -65,6 +65,9 @@ class DatasetMapper:
             recompute_boxes: whether to overwrite bounding box annotations
                 by computing tight bounding boxes from instance mask annotations.
         """
+        self.logger = logging.getLogger("detectron2.DatasetMapper")
+        self.logger.setLevel(logging.DEBUG)
+
         if recompute_boxes:
             assert use_instance_mask, "recompute_boxes requires instance masks"
         # fmt: off
@@ -152,6 +155,8 @@ class DatasetMapper:
         dataset_dict = copy.deepcopy(dataset_dict)  # it will be modified by code below
         # USER: Write your own image loading if it's not from a file
         image = utils.read_image(dataset_dict["file_name"], format=self.image_format)
+        h, w, c = image.shape
+        self.logger.debug(f"Input size: {h} x {w}")
         utils.check_image_size(dataset_dict, image)
 
         # USER: Remove if you don't do semantic/panoptic segmentation.
@@ -165,10 +170,12 @@ class DatasetMapper:
         image, sem_seg_gt = aug_input.image, aug_input.sem_seg
 
         image_shape = image.shape[:2]  # h, w
+        self.logger.debug(f"AugInput size: {image_shape[0]} x {image_shape[1]}")
         # Pytorch's dataloader is efficient on torch.Tensor due to shared-memory,
         # but not efficient on large generic data structures due to the use of pickle & mp.Queue.
         # Therefore it's important to use torch.Tensor.
         dataset_dict["image"] = torch.as_tensor(np.ascontiguousarray(image.transpose(2, 0, 1)))
+
         if sem_seg_gt is not None:
             dataset_dict["sem_seg"] = torch.as_tensor(sem_seg_gt.astype("long"))
 
@@ -188,4 +195,6 @@ class DatasetMapper:
         if "annotations" in dataset_dict:
             self._transform_annotations(dataset_dict, transforms, image_shape)
 
+        new_h, new_w = dataset_dict["image"].shape[:2]
+        self.logger.debug(f"New dataset_dict image size {new_h} x {new_w}")
         return dataset_dict
