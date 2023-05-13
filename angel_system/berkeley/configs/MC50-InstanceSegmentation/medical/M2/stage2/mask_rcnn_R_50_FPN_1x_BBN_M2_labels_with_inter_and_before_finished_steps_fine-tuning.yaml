@@ -9,6 +9,11 @@ MODEL:
     SCORE_THRESH_TEST: 0.0001
     #NAME: StandardROIHeads_PLUS_CONTACT
     NAME: StandardROIHeads
+INPUT:
+  MIN_SIZE_TRAIN: (428,)
+  MAX_SIZE_TRAIN: 760
+  MIN_SIZE_TEST: 428
+  MAX_SIZE_TEST: 760
 DATASETS:
   TRAIN: ("BBN_M2_labels_with_inter_and_before_finished_steps_train",)
   TEST: ("BBN_M2_labels_with_inter_and_before_finished_steps_val",)
