@@ -301,9 +301,11 @@ class DefaultPredictor:
         else:
             self.cam_extractor = None
 
-        self.aug = T.ResizeShortestEdge(
-            [cfg.INPUT.MIN_SIZE_TEST, cfg.INPUT.MIN_SIZE_TEST], cfg.INPUT.MAX_SIZE_TEST
-        )
+        # self.aug = T.ResizeShortestEdge(
+        #     [cfg.INPUT.MIN_SIZE_TEST, cfg.INPUT.MIN_SIZE_TEST], cfg.INPUT.MAX_SIZE_TEST
+        # )
+        from PIL import Image
+        self.aug = T.Resize(shape=(428, 760), interp=Image.BILINEAR) 
 
         self.input_format = cfg.INPUT.FORMAT
         assert self.input_format in ["RGB", "BGR"], self.input_format
