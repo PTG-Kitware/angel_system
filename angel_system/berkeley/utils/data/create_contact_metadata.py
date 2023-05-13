@@ -18,7 +18,7 @@ import math
 import pprint
 import random 
 
-from PIL import ImageFile
+from PIL import Image, ImageFile
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 from detectron2.data.detection_utils import read_image
@@ -81,7 +81,12 @@ def run_obj_detector(demo, bbn_root, data_dirs, split, no_contact=False, add_hl_
         input_list = Re_order(video_images, len(video_images))
         for image_fn in ub.ProgIter(input_list, desc=f'images in {video_name}'):
             frame, time_stamp = time_from_name(image_fn)
+            
             image = read_image(image_fn, format='RGB')
+            image = Image.fromarray(image)
+            image = image.resize(size=(760, 428), resample=Image.BILINEAR)
+            image = np.array(image)
+
             h, w, c = image.shape
 
             predictions, step_infos, visualized_output = demo.run_on_image_smoothing_v2(
@@ -297,11 +302,11 @@ def tourniquet_main(stage, using_inter_steps, using_before_finished_task):
     skill = 'M2_Tourniquet'
     m2_data_dir = f'{data_root}/{skill}/Data' # M2 specific
     lab_data_dir = 'M2_Lab_data/skills_by_frame/'
-    kitware_test_dir = f'kitware_m2_test'
+    kitware_test_dir = f'kitware_m2'
 
     m2_videos = [f'M2-{x}' for x in range(1, 139+1)]
     lab_videos = [f'tq_{x}' for x in range(1, 23+1)]
-    kitware_videos = ['test_1', 'test_2', 'test_3']
+    kitware_videos = ['kitware_m2_video_1', 'kitware_m2_video_2', 'kitware_m2_video_3', 'kitware_m2_video_4', 'kitware_m2_video_5']
 
     ignore_videos = [f'M2-{x}' for x in [
         15, # bad video
@@ -358,11 +363,13 @@ def tourniquet_main(stage, using_inter_steps, using_before_finished_task):
         step_map['finished'] = [['Finished'.lower(), [['tourniquet_tourniquet', 'hand']]]]
     print(f'step map: {step_map}')
     
+    data_dirs = (kitware_test_dir, lab_data_dir)
+    training_split['test'] = kitware_videos
     return demo, training_split, bbn_root, data_dirs, activity_data_loader, metadata, step_map
 
 
 def main():
-    experiment_name = 'm2_with_lab_cleaned_fixed_data_with_inter_and_before_finished_steps_no_contact'
+    experiment_name = 'kitware_m2'#'m2_with_lab_cleaned_fixed_data_with_inter_and_before_finished_steps_no_contact_aug'
     stage = 'results'
 
     print('Experiment: ', experiment_name)
@@ -386,9 +393,8 @@ def main():
     else:
         splits = ['test', 'train_activity', 'val']
 
-    #splits = ['test']
-    #data_dirs = (kitware_test_dir, lab_data_dir)
-    #training_split['test'] = kitware_videos
+    splits = ['test']
+
     for split in splits:
         print(f'{split}: {len(training_split[split])} videos')
 
@@ -407,6 +413,8 @@ def main():
             pickle.dump(preds_no_contact, fh)
 
         # Update contact info based on gt
+        preds_with_contact = preds_no_contact
+        """
         preds_with_contact = update_preds(activity_data_loader,
                                           preds_no_contact,
                                           using_contact,
@@ -414,6 +422,7 @@ def main():
                                           step_map, 
                                           data_root, data_dirs, 
                                           experiment_flags)
+        """
         
         dset = preds_to_kwcoco(metadata, preds_with_contact, '', save_fn=f'{experiment_name}_{stage}_{split}.mscoco.json',
                                # assuming detector already has the right labels so these aren't needed here

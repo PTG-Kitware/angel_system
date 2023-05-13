@@ -211,13 +211,23 @@ def visualize_kwcoco(dset=None, save_dir=''):
         plt.title("\n".join(textwrap.wrap(gt, 55)))
 
         image = read_image(im['file_name'], format='RGB') # now assuming absolute path
+        image = Image.fromarray(image)
+        image = image.resize(size=(760, 428), resample=Image.BILINEAR)
+        image = np.array(image)
+        
         ax.imshow(image)
         
         aids = gid_to_aids[gid]
         anns = ub.dict_subset(dset.anns, aids)
         using_contact = False
         for aid, ann in anns.items():
+            conf = ann['confidence']
+            if conf < 0.4:
+                continue
+
             using_contact = True if 'obj-obj_contact_state' in ann.keys() else False
+            
+            
             box = ann['bbox']
             label = dset.cats[ann['category_id']]['name']
 
@@ -252,7 +262,8 @@ def main():
 
     ptg_root = '/data/ptg/medical/bbn/'
    
-    kw = 'm2_with_lab_cleaned_fixed_data_with_inter_and_before_finished_steps_no_contact_results_val.mscoco.json'
+    kw = 'kitware_m2_results_test.mscoco.json'
+    #kw = 'm2_with_lab_cleaned_fixed_data_with_inter_and_before_finished_steps_no_contact_aug_results_test.mscoco.json'
     #kw = 'kitware_test_results_test.mscoco.json'
     #kw = 'm2_with_lab_cleaned_fixed_data_with_inter_and_before_finished_steps_results_train_activity.mscoco.json'
 
@@ -266,14 +277,14 @@ def main():
 
     stage = 'results'
     stage_dir = f'{ptg_root}/annotations/M2_Tourniquet/{stage}'
-    exp = 'm2_with_lab_cleaned_fixed_data_with_inter_and_before_finished_steps_no_contact'#'m2_with_lab_cleaned_fixed_data_with_inter_and_before_finished_steps'
+    exp = 'm2_with_lab_cleaned_fixed_data_with_inter_and_before_finished_steps_no_contact_aug'#'m2_with_lab_cleaned_fixed_data_with_inter_and_before_finished_steps'
     save_dir = f'{stage_dir}/{exp}/visualization/{split}'
     
-    #save_dir = 'visualization'
+    save_dir = 'visualization'
     Path(save_dir).mkdir(parents=True, exist_ok=True)
     
-    #visualize_kwcoco('kitware_test_results_test.mscoco.json', save_dir)
-    visualize_kwcoco(f'{stage_dir}/{exp}/{kw}', save_dir)
+    visualize_kwcoco(kw, save_dir)
+    #visualize_kwcoco(f'{stage_dir}/{exp}/{kw}', save_dir)
 
 
 if __name__ == '__main__':
