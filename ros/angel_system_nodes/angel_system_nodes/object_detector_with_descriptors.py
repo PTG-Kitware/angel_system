@@ -320,12 +320,12 @@ class ObjectDetectorWithDescriptors(Node):
         max_conf = torch.zeros((pred_boxes.shape[0])).to(device=self._torch_device)
 
         for j in range(1, len(self.classes)):
-            inds = torch.nonzero(scores[:,j]>self._detection_threshold).view(-1).cpu()
+            inds = torch.nonzero(scores[:,j]>self._detection_threshold).view(-1)
             # if there is det
             if inds.numel() > 0:
                 cls_scores = scores[:,j][inds]
                 _, order = torch.sort(cls_scores, 0, True)
-                boxs_inds = pred_boxes[inds]
+                boxs_inds = pred_boxes[inds.cpu()]
                 if boxs_inds.ndim == 1:
                     boxs_inds = np.expand_dims(boxs_inds, 0)
                 cls_boxes = (
