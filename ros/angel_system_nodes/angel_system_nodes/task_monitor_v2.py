@@ -329,7 +329,7 @@ class HMMNode(Node):
         and return it.
         """
         log = self.get_logger()
-        log.info("Received request for the current task graph")
+        log.debug("Received request for the current task graph")
         task_g = TaskGraph()
 
         with self._hmm_lock:
@@ -340,7 +340,7 @@ class HMMNode(Node):
         response.task_graph = task_g
 
         response.task_title = self._task_title
-        log.info("Received request for the current task graph -- Done")
+        log.debug("Received request for the current task graph -- Done")
         return response
 
     def thread_run_hmm(self):
@@ -358,7 +358,7 @@ class HMMNode(Node):
 
         while self._hmm_active.wait(0):  # will quickly return false if cleared
             if self._hmm_awake_evt.wait(self._hmm_active_heartbeat):
-                log.info("HMM loop awakened")
+                log.debug("HMM loop awakened")
                 self._hmm_awake_evt.clear()
 
                 # Get the HMM prediction
@@ -375,7 +375,7 @@ class HMMNode(Node):
                     times, state_seq, step_finished_conf, unfilt_step_conf = (
                         self._hmm.analyze_current_state()
                     )
-                    log.info(f"HMM computation time: {time.time() - start_time}")
+                    log.debug(f"HMM computation time: {time.time() - start_time}")
                     log.debug(f"HMM State Sequence: {state_seq}")
                     log.debug(f"HMM Steps Finished: {step_finished_conf}")
 
@@ -418,7 +418,7 @@ class HMMNode(Node):
                             # skipped cache.
                             self._clean_skipped_cache(hmm_step_id)
 
-                    log.info(f"Most recently completed step: {self._current_step}")
+                    log.debug(f"Most recently completed step: {self._current_step}")
 
                     # Skipped steps are those steps at or before the current
                     # step that are strictly below the step complete threshold.
@@ -513,9 +513,9 @@ class HMMNode(Node):
                 # ("ideal" input confidence vector for a step).
                 # Check if we are at the end of the list (current == "done")
                 if curr_step_id == (len(steps) - 1):
-                    log.info("Attempting to advance past end of list... ignoring")
+                    log.debug("Attempting to advance past end of list... ignoring")
                     return
-                log.info(f"Manually progressing forward pass step: "
+                log.debug(f"Manually progressing forward pass step: "
                          f"{self._current_step}")
                 # Getting the mean vector for the step *after* the current one.
                 conf_vec = self._hmm.get_hmm_mean_and_std()[0][curr_step_id + 1]
@@ -534,7 +534,7 @@ class HMMNode(Node):
             else:
                 # Check if we are at the start of the list
                 if self._current_step is None:
-                    log.info("Attempting to advance before start of list... ignoring")
+                    log.debug("Attempting to advance before start of list... ignoring")
                     return
 
                 new_step_id = curr_step_id - 1
@@ -553,7 +553,7 @@ class HMMNode(Node):
                         steps_complete,
                         zero_step_conf
                     )
-                    log.info("HMM reset to beginning")
+                    log.debug("HMM reset to beginning")
                 else:
                     self._hmm.revert_to_step(new_step_id)
                     self._clean_skipped_cache(new_step_id)
