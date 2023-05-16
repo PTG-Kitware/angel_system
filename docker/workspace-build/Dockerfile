@@ -52,7 +52,7 @@ ENV NVIDIA_DRIVER_CAPABILITIES graphics,utility,compute
 # NODE: Installing "dev" dependencies here because why not. Stop if the desire
 #       becomes to create a minimal image.
 ENV PATH=/root/.local/bin:${PATH}
-ENV POETRY_VERSION=1.1.13
+ENV POETRY_VERSION=1.4.2
 RUN pip3 install --user pip==23.0 \
  && (curl -sSL 'https://install.python-poetry.org' | python3 -) \
  && poetry config virtualenvs.create false
