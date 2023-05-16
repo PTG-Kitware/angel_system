@@ -170,8 +170,8 @@ class BerkeleyObjectDetector(Node):
         self._det_publisher.publish(message)
         self._rate_tracker.tick()
         self.get_logger().debug(f"Published det] message (hz: "
-                               f"{self._rate_tracker.get_rate_avg()})",
-                               throttle_duration_sec=1)
+                                f"{self._rate_tracker.get_rate_avg()})",
+                                throttle_duration_sec=1)
 
 
 def main():
@@ -195,7 +195,6 @@ def main():
             rclpy.spin(berkeley_obj_det)
         except KeyboardInterrupt:
             berkeley_obj_det.get_logger().debug("Keyboard interrupt, shutting down.\n")
-    
 
     # Destroy the node explicitly
     # (optional - otherwise it will be done automatically

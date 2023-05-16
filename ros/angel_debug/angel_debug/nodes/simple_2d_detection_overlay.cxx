@@ -244,8 +244,8 @@ Simple2dDetectionOverlay
   // Because we like to know how fast this is going.
   m_img_rate_tracker.tick();
   RCLCPP_DEBUG( log,
-               "Collected Image #%d (hz: %f)",
-               m_image_count, m_img_rate_tracker.get_rate_avg() );
+                "Collected Image #%d (hz: %f)",
+                m_image_count, m_img_rate_tracker.get_rate_avg() );
   ++m_image_count;
 }
 
@@ -381,7 +381,7 @@ Simple2dDetectionOverlay
   // Because we like to know how fast this is going.
   m_det_rate_tracker.tick();
   RCLCPP_DEBUG( log, "Plotted detection set #%d (hz: %f)",
-               m_detset_count, m_det_rate_tracker.get_rate_avg() );
+                m_detset_count, m_det_rate_tracker.get_rate_avg() );
   ++m_detset_count;
 }
 
