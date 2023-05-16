@@ -282,4 +282,4 @@ if __name__.endswith(".builtin"):
     register_all_ade20k(_root)
 
     register_all_bbn_data()
-    register_all_kitware_cooking_data()
+    # register_all_kitware_cooking_data()
