@@ -160,7 +160,7 @@ class FeedbackGenerator(Node):
         """
         this_header = self._make_common_header()
         with self.lock:
-            self.log.info(f"Publishing AruiUpdate")
+            self.log.debug(f"Publishing AruiUpdate")
             self.arui_update_publisher.publish(AruiUpdate(
                 header=this_header,
                 object3d_remove=object3d_remove,

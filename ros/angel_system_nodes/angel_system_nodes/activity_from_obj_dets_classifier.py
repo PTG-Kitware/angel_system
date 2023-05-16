@@ -129,7 +129,7 @@ class ActivityFromObjectDetectionsClassifier(Node):
         activity_det_msg.conf_vec = list(label_conf_dict.values())
 
         self._activity_publisher.publish(activity_det_msg)
-        log.info("Publish activity detection msg")
+        log.debug("Publish activity detection msg")
         log.debug(f'highest conf: {max(activity_det_msg.conf_vec)}')
         log.debug(f"- msg start time: {time_to_int(activity_det_msg.source_stamp_start_frame)}")
         log.debug(f"- msg end time  : {time_to_int(activity_det_msg.source_stamp_end_frame)}")
