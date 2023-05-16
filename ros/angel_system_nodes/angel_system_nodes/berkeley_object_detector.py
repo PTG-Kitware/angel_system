@@ -97,7 +97,7 @@ class BerkeleyObjectDetector(Node):
 
         self.img_idx = 0
         self._rate_tracker = RateTracker()
-        log.debug("Detector initialized")
+        log.info("Detector initialized")
 
     def listener_callback(self, image):
         """
