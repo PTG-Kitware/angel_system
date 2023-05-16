@@ -10,12 +10,12 @@ from sensor_msgs.msg import Image
 
 from angel_msgs.msg import ObjectDetection2dSet
 from angel_utils import RateTracker
-
+from rclpy.callback_groups import MutuallyExclusiveCallbackGroup, ReentrantCallbackGroup
+from rclpy.executors import MultiThreadedExecutor
 from angel_system.berkeley.demo import predictor, model
 
 
 BRIDGE = CvBridge()
-
 
 class BerkeleyObjectDetector(Node):
     """
@@ -61,16 +61,20 @@ class BerkeleyObjectDetector(Node):
         log.info(f"CUDA Device ID: {self._cuda_device_id}")
 
         # Initialize ROS hooks
+        self._subscription_cb_group = MutuallyExclusiveCallbackGroup()
         self._subscription = self.create_subscription(
             Image,
             self._image_topic,
             self.listener_callback,
-            1
+            1,
+            callback_group=self._subscription_cb_group
         )
+        self._publisher_cb_group = MutuallyExclusiveCallbackGroup()
         self._det_publisher = self.create_publisher(
             ObjectDetection2dSet,
             self._det_topic,
-            1
+            1,
+            callback_group=self._publisher_cb_group
         )
 
         # Step classifier
@@ -79,9 +83,9 @@ class BerkeleyObjectDetector(Node):
         args = parser.parse_args(
                 f"--config-file {self._model_config} --confidence-threshold {self._det_conf_thresh}".split()
         )
-        log.info("Arguments: " + str(args))
+        log.debug("Arguments: " + str(args))
         cfg = model.setup_cfg(args)
-        self.get_logger().info(f'cfg: {cfg}')
+        self.get_logger().debug(f'cfg: {cfg}')
 
         os.environ['CUDA_VISIBLE_DEVICES'] = f'{self._cuda_device_id}'
         self.demo = predictor.VisualizationDemo_add_smoothing(
@@ -109,7 +113,7 @@ class BerkeleyObjectDetector(Node):
         predictions, _, _ = self.demo.run_on_image_smoothing_v2(
             bgr_image, current_idx=self.img_idx)
         decoded_preds = model.decode_prediction(predictions)
-        self.get_logger().info(f"Detection prediction took: {time.time() - s:.6f} s")
+        self.get_logger().debug(f"Detection prediction took: {time.time() - s:.6f} s")
 
         if decoded_preds is not None:
             # Publish detection set message
@@ -139,7 +143,7 @@ class BerkeleyObjectDetector(Node):
         message.num_detections = len(message.label_vec)
 
         if message.num_detections == 0:
-            self.get_logger().info("No detections, nothing to publish")
+            self.get_logger().debug("No detections, nothing to publish")
             self._det_publisher.publish(message)
             return
 
@@ -165,20 +169,32 @@ class BerkeleyObjectDetector(Node):
         # Publish
         self._det_publisher.publish(message)
         self._rate_tracker.tick()
-        self.get_logger().info(f"Published det] message (hz: "
-                               f"{self._rate_tracker.get_rate_avg()})",
-                               throttle_duration_sec=1)
+        self.get_logger().debug(f"Published det] message (hz: "
+                                f"{self._rate_tracker.get_rate_avg()})",
+                                throttle_duration_sec=1)
 
 
 def main():
     rclpy.init()
-
+    do_multithreading=True # TODO add this to cli args
     berkeley_obj_det = BerkeleyObjectDetector()
-
-    try:
-        rclpy.spin(berkeley_obj_det)
-    except KeyboardInterrupt:
-        berkeley_obj_det.get_logger().info("Keyboard interrupt, shutting down.\n")
+    if do_multithreading:
+        # Don't really want to use *all* available threads...
+        # 5 threads because:
+        # - 3 known subscribers which have their own groups
+        # - 1 for default group
+        # - 1 for publishers
+        executor = MultiThreadedExecutor(num_threads=5)
+        executor.add_node(berkeley_obj_det)
+        try:
+            executor.spin()
+        except KeyboardInterrupt:
+            berkeley_obj_det.get_logger().debug("Keyboard interrupt, shutting down.\n")
+    else:
+        try:
+            rclpy.spin(berkeley_obj_det)
+        except KeyboardInterrupt:
+            berkeley_obj_det.get_logger().debug("Keyboard interrupt, shutting down.\n")
 
     # Destroy the node explicitly
     # (optional - otherwise it will be done automatically
