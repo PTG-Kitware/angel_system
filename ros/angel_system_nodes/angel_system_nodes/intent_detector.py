@@ -46,7 +46,7 @@ class IntentDetector(Node):
                 some_not_set = True
                 self.log.error(f"Parameter not set: {p.name}")
         if some_not_set:
-            raise ValueError("Some parameters are not set.")    
+            raise ValueError("Some parameters are not set.")
 
         self._utterances_topic = \
             self.get_parameter(UTTERANCES_TOPIC).value
@@ -70,43 +70,48 @@ class IntentDetector(Node):
             Utterance,
             self._utterances_topic,
             self.listener_callback,
-            10)
+            100)
         
         self._expected_publisher = self.create_publisher(
             InterpretedAudioUserIntent,
             self._expect_uintent_topic,
-            10
-        )
+            100)
 
         self._interp_publisher = self.create_publisher(
             InterpretedAudioUserIntent,
             self._interp_uintent_topic,
-            10
-        )
+            10)
 
     def listener_callback(self, msg):
-        log = self.get_logger()
         intent_msg = InterpretedAudioUserIntent()
         intent_msg.utterance_text = msg.value
 
-        lower_utterance = msg.value.lower()            
+        lower_utterance = msg.value.lower()
+        interp_intents = []
+        confidences =  []    
         if self.contains_phrase(lower_utterance, NEXT_STEP_KEYPHRASES):
-            intent_msg.user_intent = LABELS[0]
-            intent_msg.confidence = 0.5
-        elif self.contains_phrase(lower_utterance, PREV_STEP_KEYPHRASES):
-            intent_msg.user_intent = LABELS[1]
-            intent_msg.confidence = 0.5
-        else:
-            log.info(f"No intents detected for:\n\n\"{msg.value}\":")
+            interp_intents.append(LABELS[0])
+            confidences.append(0.5)
+        if self.contains_phrase(lower_utterance, PREV_STEP_KEYPHRASES):
+            interp_intents = LABELS[1]
+            confidences.append(0.5)
+        if not self.contains_phrase(lower_utterance, NEXT_STEP_KEYPHRASES + PREV_STEP_KEYPHRASES):
+            self.log.info(f"No intents detected for:\n\n\"{msg.value}\":")
             return
 
+        if len(interp_intents) > 1:
+            self.log.info(f"Detected multiple intents: \n{interp_intents}\n" +\
+                          f"Defaulting to the first one: {interp_intents[0]}.")
+        
+        intent_msg.user_intent = interp_intents[0]
+        intent_msg.confidence = confidences[0]
         if self.contains_phrase(lower_utterance, OVERRIDE_KEYPHRASES):
             intent_msg.confidence = 1.0
             self._expected_publisher.publish(intent_msg)
         else:
             self._interp_publisher.publish(intent_msg)
 
-        log.info(f"Detected intents for\n\n\"{msg.value}\"\n\n" +
+        self.log.info(f"Detected intents for\n\n\"{msg.value}\"\n\n" +
             f"\"{self._red_font(intent_msg.user_intent)}\": {intent_msg.confidence}")
 
     def contains_phrase(self, utterance, phrases):
