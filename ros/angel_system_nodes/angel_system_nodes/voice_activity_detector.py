@@ -107,7 +107,7 @@ class VoiceActivityDetector(Node):
         self.num_channels = -1
         self.bytes_per_sample = FLOAT32_BYTE_LENGTH
         
-        self.debug_mode = False # Set this field to turn on debugging.
+        self.debug_mode = True # Set this field to turn on debugging.
         # Used to keep track of number of vocal activity detection splits.
         self.split_counter = 0
 
@@ -261,9 +261,10 @@ class VoiceActivityDetector(Node):
             self.log.info("Querying Columbia VAD server...")
             response = requests.post(self._vad_server_url,
                                     files={'audio_data': f})
-            segments = json.loads(response.content)['segments']
-            self.log.info(f"Received VAD response: {segments}")
-            return segments
+            if response:
+                segments = json.loads(response.content)['segments']
+                self.log.info(f"Received VAD response: {segments}")
+                return segments
     
     def _handle_publication(self, audio_data, split_timestamp,
                      sample_byte_length, num_channels, sample_rate):
