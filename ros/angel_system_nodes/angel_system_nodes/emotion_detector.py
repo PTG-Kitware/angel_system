@@ -5,7 +5,6 @@ from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from angel_msgs.msg import InterpretedAudioUserEmotion, InterpretedAudioUserIntent
 
 
-IN_INTENT_TOPIC = "user_intent_topic"
 IN_EXPECT_USER_INTENT_TOPIC = "expect_user_intent_topic"
 IN_INTERP_USER_INTENT_TOPIC = "interp_user_intent_topic"
 OUT_INTERP_USER_EMOTION_TOPIC = "user_emotion_topic"
@@ -36,7 +35,8 @@ class EmotionDetector(Node):
         self.log = self.get_logger()
 
         parameter_names = [
-            IN_INTENT_TOPIC,
+            IN_EXPECT_USER_INTENT_TOPIC,
+            IN_INTERP_USER_INTENT_TOPIC,
             OUT_INTERP_USER_EMOTION_TOPIC,
             EMOTION_DETECTOR_MODE
         ]
