@@ -451,7 +451,7 @@ class HL2SSROSBridge(Node):
         n_threads = 2
 
         center  = [0.0, 0.0, 0.0] # Position of the box
-        extents = [8.0, 8.0, 8.0] # Dimensions of the box
+        extents = [2.0, 2.0, 2.0] # Dimensions of the box
 
         # Initialize observer and bounding volume
         self.hl2ss_sm_client.create_observer()
