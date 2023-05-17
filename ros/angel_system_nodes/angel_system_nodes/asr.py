@@ -5,6 +5,7 @@ import threading
 import time
 import wave
 
+import nltk
 from nltk.tokenize import sent_tokenize
 import rclpy
 from rclpy.node import Node
@@ -27,6 +28,9 @@ class ASR(Node):
     def __init__(self):
         super().__init__(self.__class__.__name__)
         self.log = self.get_logger()
+
+        # TODO (derekahmed) The following was relocated from 
+        nltk.download('punkt')
 
         parameter_names = [
             AUDIO_TOPIC,
