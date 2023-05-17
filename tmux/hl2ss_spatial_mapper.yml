@@ -74,9 +74,15 @@ windows:
       -p descriptor_topic:=ObjectDetections
       -p min_time_topic:=ObjDetMinTime
       -p torch_device:=cuda:0
-      -p detection_threshold:=0.05
+      -p detection_threshold:=0.50
       -p object_vocab_list:=${MODEL_DIR}/fasterrcnn_label_list.txt
       -p model_checkpoint:=${MODEL_DIR}/fasterrcnn_res101_vg.pth
+  - simple_2d_overlay: ros2 run angel_debug Simple2dDetectionOverlay --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p topic_input_images:=PVFramesBGR
+      -p topic_input_det_2d:=ObjectDetections
+      -p topic_output_images:=pv_image_detections_2d
+      -p filter_top_k:=5
 
   - spatial_mapper: ros2 run angel_system_nodes spatial_mapper --ros-args
       -r __ns:=${ROS_NAMESPACE}
@@ -84,6 +90,16 @@ windows:
       -p det_topic:=ObjectDetections
       -p det_3d_topic:=ObjectDetections3d
       -p headset_pose_topic:=HeadsetPoseData
+
+  - task_monitor: ros2 run angel_system_nodes task_monitor_v2 --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p det_topic:=ActivityDetections
+      -p config_file:=${CONFIG_DIR}/tasks/task_steps_config-recipe_coffee_trimmed_v3_allows_skip.yaml
+      -p task_state_topic:=TaskUpdates
+      -p task_error_topic:=TaskErrors
+      -p query_task_graph_topic:=query_task_graph
+      -p step_complete_threshold:=0.5
+      -p sys_cmd_topic:=a
 
   - feedback_generator: ros2 run angel_system_nodes feedback_generator --ros-args
       -r __ns:=${ROS_NAMESPACE}
