@@ -101,7 +101,7 @@ class IntentDetector(Node):
 
         if len(interp_intents) > 1:
             self.log.info(f"Detected multiple intents: \n{interp_intents}\n" +\
-                          f"Defaulting to the first one: {interp_intents[0]}.")
+                          f"Defaulting to the first one: \"{interp_intents[0]}\".")
         
         intent_msg.user_intent = interp_intents[0]
         intent_msg.confidence = confidences[0]
