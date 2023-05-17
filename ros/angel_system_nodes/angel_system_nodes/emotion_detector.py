@@ -24,6 +24,9 @@ VADER_SENTIMENT_LABEL_MAPPINGS = {
     "neu": "neutral"
 }
 
+VADER_NEGATIVE_COMPOUND_THRESHOLD = -0.05
+VADER_POSITIVE_COMPOUND_THRESHOLD = 0.05
+
 class EmotionDetector(Node):
     '''
     As of Q22023, emotion detection is derived via VaderSentiment
@@ -105,16 +108,19 @@ class EmotionDetector(Node):
     def _get_vader_sentiment_analysis(self, utterance: str):
         '''
         Applies Vader Sentiment Analysis model to assign 'positive,' 'negative,'
-        and 'neutral' sentiment labels.
+        and 'neutral' sentiment labels. Returns with  a 100% confidence.
         '''
         polarity_scores = \
             self.sentiment_analysis_model.polarity_scores(utterance)
-        label_scores = {l: polarity_scores[l] for l in VADER_SENTIMENT_LABELS}
-        classification = max(label_scores, key=label_scores.get)
         self.log.info(f"Rated user utterance: \"{utterance}\"" +\
-                      f" with emotion scores {label_scores}")
-        return (VADER_SENTIMENT_LABEL_MAPPINGS[classification],
-                label_scores[classification])
+                      f" with emotion scores {polarity_scores}")
+        if polarity_scores['compound'] >= VADER_POSITIVE_COMPOUND_THRESHOLD:
+            classification = 'positive'
+        elif  polarity_scores['compound'] <= VADER_NEGATIVE_COMPOUND_THRESHOLD:
+            classification = 'negative'
+        else:
+            classification = 'neutral'
+        return (classification, 1.00)
 
     def get_inference(self, utterance: str):
         '''
