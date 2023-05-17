@@ -17,6 +17,11 @@ EMOTION_DETECTOR_MODE = "model_mode"
 # output to VaderSentiment (https://github.com/cjhutto/vaderSentiment) and
 # will be subject to change in future iterations.
 VADER_SENTIMENT_LABELS = ['pos', 'neg', 'neu']
+VADER_SENTIMENT_LABEL_MAPPINGS = {
+    "pos": "positive",
+    "neg": "negative",
+    "neu": "neutral"
+}
 
 class EmotionDetector(Node):
     '''
@@ -94,7 +99,8 @@ class EmotionDetector(Node):
         classification = max(label_scores, key=label_scores.get)
         self.log.info(f"User utterance \"{utterance}\" rated " +\
                       f"with emotion scores {label_scores}")
-        return (classification, label_scores[classification])
+        return (VADER_SENTIMENT_LABEL_MAPPINGS[classification],
+                label_scores[classification])
 
     def get_inference(self, utterance: str):
         '''
