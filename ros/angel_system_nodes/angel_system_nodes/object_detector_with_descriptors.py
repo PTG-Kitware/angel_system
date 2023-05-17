@@ -199,6 +199,13 @@ class ObjectDetectorWithDescriptors(Node):
                      f"{min_time} ns")
             return
 
+        try:
+            if self.should_stop:
+                print("stopping")
+                return
+        except AttributeError:
+            pass
+
         # Update the current image dimensions
         self._image_width = image.width
         self._image_height = image.height
@@ -251,10 +258,17 @@ class ObjectDetectorWithDescriptors(Node):
             msg.descriptor_dim = detection_info['feats'].shape[-1]
             msg.descriptors = detection_info['feats'].ravel().tolist()
 
+        print(detection_info['labels'])
+        try:
+            if "hand" in detection_info["labels"]:
+                self.should_stop = True
+        except Exception:
+            pass
+
         # Publish detection set message
         self._publisher.publish(msg)
         self._detection_rate_tracker.tick()
-        self.get_logger().debug(f"Published audio message (hz: "
+        self.get_logger().debug(f"Published det message (hz: "
                                 f"{self._detection_rate_tracker.get_rate_avg()})",
                                 throttle_duration_sec=1)
         log.info("Published detection set message")

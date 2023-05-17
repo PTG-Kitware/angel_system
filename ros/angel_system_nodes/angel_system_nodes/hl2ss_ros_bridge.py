@@ -437,7 +437,7 @@ class HL2SSROSBridge(Node):
         log = self.get_logger()
 
         # Maximum triangles per cubic meter
-        tpcm = 1000
+        tpcm = 2000
 
         # Data format
         vpf = hl2ss.SM_VertexPositionFormat.R32G32B32A32Float

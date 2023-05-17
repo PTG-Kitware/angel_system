@@ -168,6 +168,7 @@ class SpatialMapSubscriber(Node):
                 if world_matrix_1d is None or projection_matrix_1d is None:
                     log.info("Did not get world or projection matrix.")
                     continue
+                should_break = False
 
                 # get world matrix from detection
                 world_matrix_2d = world_matrix_1d.reshape(4, 4)
@@ -242,9 +243,59 @@ class SpatialMapSubscriber(Node):
                         elif p == 3:
                             det_3d_set_msg.bottom.append(point_3d)
 
+                        if object_type == "hand":
+                            mesh_sphere = o3d.geometry.TriangleMesh.create_sphere(radius=.02)
+                            mesh_sphere.compute_vertex_normals()
+                            mesh_sphere.paint_uniform_color([0.1, 0.1, 0.7])
+
+                            mesh_sphere = mesh_sphere.translate(corners_world_pos[p])
+
+                            self.meshes.append(mesh_sphere)
+                            should_break = True
+
+                    if object_type == "hand":
+                        xs = sorted([
+                            det_3d_set_msg.right[-1].x,
+                            det_3d_set_msg.left[-1].x,
+                            det_3d_set_msg.top[-1].x,
+                            det_3d_set_msg.bottom[-1].x
+                        ])
+                        ys = sorted([
+                            det_3d_set_msg.right[-1].y,
+                            det_3d_set_msg.left[-1].y,
+                            det_3d_set_msg.top[-1].y,
+                            det_3d_set_msg.bottom[-1].y,
+                        ])
+                        zs = sorted([
+                            det_3d_set_msg.right[-1].z,
+                            det_3d_set_msg.left[-1].z,
+                            det_3d_set_msg.top[-1].z,
+                            det_3d_set_msg.bottom[-1].z
+                        ])
+
+                        width = xs[-1] - xs[0]  # width
+                        height = ys[-1] - ys[0]  # height
+                        depth = zs[-1] - zs[0]  # depth
+
+                        center_x = xs[0] + (0.5 * width)
+                        center_y = ys[0] + (0.5 * height)
+                        center_z = zs[0] + (0.5 * depth)
+                        print("CENTER", center_x, center_y, center_z)
+
+                        # Draw the center sphere
+                        mesh_sphere = o3d.geometry.TriangleMesh.create_sphere(radius=.02)
+                        mesh_sphere.compute_vertex_normals()
+                        mesh_sphere.paint_uniform_color([0.7, 0.1, 0.7])
+                        mesh_sphere = mesh_sphere.translate([center_x, center_y, center_z])
+                        self.meshes.append(mesh_sphere)
+
                 # Form and publish the 3d object detection message
                 self._object_3d_publisher.publish(det_3d_set_msg)
                 log.info(f"Published 3d detections with {det_3d_set_msg.num_objects} dets")
+
+                if should_break:
+                    o3d.visualization.draw_geometries(self.meshes, mesh_show_back_face=False)
+                    break
 
         log.info("Runtime function end.")
 
@@ -264,6 +315,8 @@ class SpatialMapSubscriber(Node):
         meshes and adds them to the Open3d scene.
         """
         log = self.get_logger()
+
+        self.meshes = []
         with self.mesh_l:
             # Clear the old meshes
             self.o3d_scene = o3d.t.geometry.RaycastingScene()
@@ -280,6 +333,8 @@ class SpatialMapSubscriber(Node):
                 open3d_mesh = o3d.geometry.TriangleMesh()
                 open3d_mesh.vertices = o3d.utility.Vector3dVector(vertices)
                 open3d_mesh.triangles = o3d.utility.Vector3iVector(triangles)
+
+                self.meshes.append(open3d_mesh)
 
                 self.o3d_scene.add_triangles(
                     o3d.t.geometry.TriangleMesh.from_legacy(open3d_mesh)
