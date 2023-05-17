@@ -147,7 +147,7 @@ class EmotionDetector(Node):
         emotion_msg.user_emotion = classification
         emotion_msg.confidence = confidence_score
         self.log.info(f"Classifying utterance \"{utterance}\" " +\
-                      f"with emotion: \"{classification}\" " +\
+                      f"with emotion: \"{self._red_font(classification)}\" " +\
                       f"and score {emotion_msg.confidence}")        
         self._interp_emo_publisher.publish(emotion_msg)
 
@@ -163,6 +163,9 @@ class EmotionDetector(Node):
         classification, confidence_score  = self.get_inference(msg.utterance_text)
         self._publish_detected_emotion(msg.utterance_text,
                                        classification, confidence_score)
+                                       
+    def _red_font(self, text):
+        return f"\033[91m{text}\033[0m"
 
 def main():
     rclpy.init()
