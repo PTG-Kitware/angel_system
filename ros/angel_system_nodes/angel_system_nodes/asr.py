@@ -156,7 +156,7 @@ class ASR(Node):
             wav_write = wave.open(temp_file, 'wb')
             wav_write.setnchannels(num_channels)
             
-            wav_write.setsampwidth(WAV_SAMPLE_WIDTH) 
+            wav_write.setsampwidth(WAV_SAMPLE_WIDTH)
             wav_write.setframerate(sample_rate)
             wav_write.writeframes(audio_data)
 
@@ -170,7 +170,7 @@ class ASR(Node):
                 return
             if response:
                 response_text = json.loads(response.text)["text"]
-                # self.log.info("Complete ASR text is:\n" + f"\"{response_text}\"")
+                self.log.info("Complete ASR text is:\n" + f"\"{response_text}\"")
                 if self._is_sentence_tokenize_mode:
                     for sentence in sent_tokenize(response_text):
                         utterance_msg = Utterance()
@@ -181,7 +181,7 @@ class ASR(Node):
                     utterance_msg = Utterance()
                     utterance_msg.value = response_text
                     self.log.info("Publishing message: " + f"\"{response_text}\"")
-                    self._publisher.publish(utterance_msg)                
+                    self._publisher.publish(utterance_msg)
 
 
 def main():
