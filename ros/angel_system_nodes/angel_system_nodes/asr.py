@@ -19,6 +19,7 @@ AUDIO_TOPIC = "audio_topic"
 UTTERANCES_TOPIC = "utterances_topic"
 ASR_SERVER_URL = "asr_server_url"
 ASR_REQ_SEGMENT_SECONDS_DURATION = "asr_req_segment_duration"
+IS_SENTENCE_TOKENIZE = "is_sentence_tokenize"
 
 # TODO (derekahmed) We should figure out how this value was derived
 # and make this a constant accordingly.
@@ -37,7 +38,8 @@ class ASR(Node):
             AUDIO_TOPIC,
             UTTERANCES_TOPIC,
             ASR_SERVER_URL,
-            ASR_REQ_SEGMENT_SECONDS_DURATION
+            ASR_REQ_SEGMENT_SECONDS_DURATION,
+            IS_SENTENCE_TOKENIZE
         ]
         set_parameters = self.declare_parameters(
             namespace="",
@@ -58,8 +60,10 @@ class ASR(Node):
             self.get_parameter(UTTERANCES_TOPIC).get_parameter_value().string_value
         self._asr_server_url =\
             self.get_parameter(ASR_SERVER_URL).get_parameter_value().string_value
-        self.segmentation_duration =\
+        self._segmentation_duration =\
             self.get_parameter(ASR_REQ_SEGMENT_SECONDS_DURATION).value
+        self._is_sentence_tokenize_mode =\
+            self.get_parameter(IS_SENTENCE_TOKENIZE).get_parameter_value().bool_value
         self.log.info(f"Audio topic: "
                       f"({type(self._audio_topic).__name__}) "
                       f"{self._audio_topic}")
@@ -70,8 +74,11 @@ class ASR(Node):
                       f"({type(self._asr_server_url).__name__}) "
                       f"{self._asr_server_url}")
         self.log.info(f"Columbia ASR Server Request Segmentation Duration: "
-                      f"({type(self.segmentation_duration).__name__}) "
-                      f"{self.segmentation_duration}")
+                      f"({type(self._segmentation_duration).__name__}) "
+                      f"{self._segmentation_duration}")
+        self.log.info(f"Is Sentence Tokenization On: "
+                      f"({type(self._is_sentence_tokenize_mode).__name__}) "
+                      f"{self._is_sentence_tokenize_mode}")
 
         self.subscription = self.create_subscription(
             HeadsetAudioData,
@@ -126,7 +133,7 @@ class ASR(Node):
                 return
 
             self.prev_timestamp = msg.header.stamp
-            if self.audio_stream_duration >= self.segmentation_duration and not(self.t.is_alive()):
+            if self.audio_stream_duration >= self._segmentation_duration and not(self.t.is_alive()):
                 # Make a copy of the current data so we can run ASR
                 # while more data is accumulated.
                 audio_data = self.audio_stream
@@ -164,11 +171,17 @@ class ASR(Node):
             if response:
                 response_text = json.loads(response.text)["text"]
                 # self.log.info("Complete ASR text is:\n" + f"\"{response_text}\"")
-                for sentence in sent_tokenize(response_text):
+                if self._is_sentence_tokenize_mode:
+                    for sentence in sent_tokenize(response_text):
+                        utterance_msg = Utterance()
+                        utterance_msg.value = sentence
+                        self.log.info("Publishing message: " + f"\"{sentence}\"")
+                        self._publisher.publish(utterance_msg)
+                else:
                     utterance_msg = Utterance()
-                    utterance_msg.value = sentence
-                    self.log.info("Publishing message: " + f"\"{sentence}\"")
-                    self._publisher.publish(utterance_msg)
+                    utterance_msg.value = response_text
+                    self.log.info("Publishing message: " + f"\"{response_text}\"")
+                    self._publisher.publish(utterance_msg)                
 
 
 def main():
