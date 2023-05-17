@@ -53,7 +53,7 @@ class EmotionDetector(Node):
         if some_not_set:
             raise ValueError("Some parameters are not set.")
 
-        self.interp_uintent_topic = \
+        self._in_interp_uintent_topic = \
             self.get_parameter(IN_INTERP_USER_INTENT_TOPIC).value
         self._in_expect_uintent_topic = \
             self.get_parameter(IN_EXPECT_USER_INTENT_TOPIC).value
@@ -62,8 +62,8 @@ class EmotionDetector(Node):
         self.mode = \
             self.get_parameter(EMOTION_DETECTOR_MODE).value
         self.log.info(f"Interpreted User Intents topic: "
-                      f"({type(self.interp_uintent_topic).__name__}) "
-                      f"{self.interp_uintent_topic}")
+                      f"({type(self._in_interp_uintent_topic).__name__}) "
+                      f"{self._in_interp_uintent_topic}")
         self.log.info(f"Expected User Intents topic: "
                       f"({type(self._in_expect_uintent_topic).__name__}) "
                       f"{self._in_expect_uintent_topic}")
@@ -93,6 +93,7 @@ class EmotionDetector(Node):
             self._out_interp_uemotion_topic,
             1
         )
+        self.debug_moode = True
 
         # Add other model modes here in the below conditional cases as they
         # get implemented. As of  2023Q2, only Vader is supported.
@@ -148,7 +149,9 @@ class EmotionDetector(Node):
         '''
         This is the main ROS node listener callback loop that will process
         all messages received via subscribed topics.
-        '''      
+        '''
+        if self.debug_moode:
+            self.log.info(f"Received message:\n\n{msg.utterance_text}")
         if not self._apply_filter(msg):
             return
         classification, confidence_score  = self.get_inference(msg.utterance_text)
