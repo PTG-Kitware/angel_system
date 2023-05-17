@@ -16,7 +16,6 @@ LABELS = [
     "Go to previous step"
 ]
 
-
 UTTERANCES_TOPIC = "utterances_topic"
 PARAM_EXPECT_USER_INTENT_TOPIC = "expect_user_intent_topic"
 PARAM_INTERP_USER_INTENT_TOPIC = "interp_user_intent_topic"
@@ -76,13 +75,13 @@ class IntentDetector(Node):
         self._expected_publisher = self.create_publisher(
             InterpretedAudioUserIntent,
             self._expect_uintent_topic,
-            1
+            10
         )
 
         self._interp_publisher = self.create_publisher(
             InterpretedAudioUserIntent,
             self._interp_uintent_topic,
-            1
+            10
         )
 
     def listener_callback(self, msg):
@@ -98,7 +97,7 @@ class IntentDetector(Node):
             intent_msg.user_intent = LABELS[1]
             intent_msg.confidence = 0.5
         else:
-            log.info(f"Detected no intents for \"{msg.value}\":")
+            log.info(f"No intents detected for:\n\n\"{msg.value}\":")
             return
 
         if self.contains_phrase(lower_utterance, OVERRIDE_KEYPHRASES):
@@ -107,7 +106,7 @@ class IntentDetector(Node):
         else:
             self._interp_publisher.publish(intent_msg)
 
-        log.info(f"Detected intents for \"{msg.value}\":\n" +
+        log.info(f"Detected intents for\n\n\"{msg.value}\"\n\n" +
             f"\"{self._red_font(intent_msg.user_intent)}\": {intent_msg.confidence}")
 
     def contains_phrase(self, utterance, phrases):
