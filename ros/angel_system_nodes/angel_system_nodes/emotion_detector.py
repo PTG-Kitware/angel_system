@@ -6,6 +6,8 @@ from angel_msgs.msg import InterpretedAudioUserEmotion, InterpretedAudioUserInte
 
 
 IN_INTENT_TOPIC = "user_intent_topic"
+IN_EXPECT_USER_INTENT_TOPIC = "expect_user_intent_topic"
+IN_INTERP_USER_INTENT_TOPIC = "interp_user_intent_topic"
 OUT_INTERP_USER_EMOTION_TOPIC = "user_emotion_topic"
 
 # Model implementation configurations. As of 2023Q2, only "vader" mode is
@@ -51,15 +53,20 @@ class EmotionDetector(Node):
         if some_not_set:
             raise ValueError("Some parameters are not set.")
 
-        self._in_topic = \
-            self.get_parameter(IN_INTENT_TOPIC).value
+        self.interp_uintent_topic = \
+            self.get_parameter(IN_INTERP_USER_INTENT_TOPIC).value
+        self._in_expect_uintent_topic = \
+            self.get_parameter(IN_EXPECT_USER_INTENT_TOPIC).value
         self._out_interp_uemotion_topic = \
             self.get_parameter(OUT_INTERP_USER_EMOTION_TOPIC).value
         self.mode = \
             self.get_parameter(EMOTION_DETECTOR_MODE).value
-        self.log.info(f"Utterances topic: "
-                      f"({type(self._in_topic).__name__}) "
-                      f"{self._in_topic}")
+        self.log.info(f"Interpreted User Intents topic: "
+                      f"({type(self.interp_uintent_topic).__name__}) "
+                      f"{self.interp_uintent_topic}")
+        self.log.info(f"Expected User Intents topic: "
+                      f"({type(self._in_expect_uintent_topic).__name__}) "
+                      f"{self._in_expect_uintent_topic}")
         self.log.info(f"Interpreted User Emotion topic: "
                       f"({type(self._out_interp_uemotion_topic).__name__}) "
                       f"{self._out_interp_uemotion_topic}")
@@ -69,13 +76,19 @@ class EmotionDetector(Node):
         
         # TODO(derekahmed): Add internal queueing to reduce subscriber queue
         # size to 1.
-        self.subscription = self.create_subscription(
+        self.interp_uintent_subscription = self.create_subscription(
             InterpretedAudioUserIntent,
-            self._in_topic,
+            self._in_interp_uintent_topic,
+            self.listener_callback,
+            10)
+        
+        self.expect_uintent_subscription = self.create_subscription(
+            InterpretedAudioUserIntent,
+            self._in_expect_uintent_topic,
             self.listener_callback,
             10)
 
-        self._interp_publisher = self.create_publisher(
+        self._interp_emo_publisher = self.create_publisher(
             InterpretedAudioUserEmotion,
             self._out_interp_uemotion_topic,
             1
@@ -129,7 +142,7 @@ class EmotionDetector(Node):
         self.log.info(f"Classifying utterance \"{utterance}\" " +\
                       f"with emotion: \"{classification}\" " +\
                       f"and score {emotion_msg.confidence}")        
-        self._interp_publisher.publish(emotion_msg)
+        self._interp_emo_publisher.publish(emotion_msg)
 
     def listener_callback(self, msg):
         '''

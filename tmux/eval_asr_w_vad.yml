@@ -63,7 +63,7 @@ windows:
             -p input_audio_topic:=HeadsetAudioData
             -p output_voice_activity_topic:=DetectedVoiceData
             -p vad_server_url:=http://communication.cs.columbia.edu:55667/vad
-            -p vad_cadence:=4
+            -p vad_cadence:=3
             -p vad_margin:=0.1
             -p max_accumulation_length:=8
         - asr: ros2 run angel_system_nodes asr --ros-args
@@ -72,7 +72,7 @@ windows:
             -p utterances_topic:=utterances_topic
             -p asr_server_url:=http://communication.cs.columbia.edu:55667/asr
             -p asr_req_segment_duration:=6
-            -p is_sentence_tokenize:=True
+            -p is_sentence_tokenize:=False
   - text_detection:
       layout: even-vertical
       panes:
@@ -83,7 +83,8 @@ windows:
            -p interp_user_intent_topic:=interp_user_intent_topic
         - emotion_detection: ros2 run angel_system_nodes emotion_detector --ros-args
            -r __ns:=${ROS_NAMESPACE}
-           -p user_intent_topic:=interp_user_intent_topic
+           -p interp_user_intent_topic:=interp_user_intent_topic
+           -p expect_user_intent_topic:=expect_user_intent_topic
            -p user_emotion_topic:=user_emotion_topic
            -p model_mode:=vader
   - question_answerer: ros2 run angel_system_nodes qa --ros-args
