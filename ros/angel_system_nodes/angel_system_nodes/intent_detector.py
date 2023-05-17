@@ -95,7 +95,7 @@ class IntentDetector(Node):
         if self.contains_phrase(lower_utterance, PREV_STEP_KEYPHRASES):
             interp_intents = LABELS[1]
             confidences.append(0.5)
-        if not self.contains_phrase(lower_utterance, NEXT_STEP_KEYPHRASES + PREV_STEP_KEYPHRASES):
+        if not interp_intents:
             self.log.info(f"No intents detected for:\n\n\"{msg.value}\":")
             return
 
