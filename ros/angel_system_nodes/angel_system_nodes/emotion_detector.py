@@ -97,8 +97,8 @@ class EmotionDetector(Node):
             self.sentiment_analysis_model.polarity_scores(utterance)
         label_scores = {l: polarity_scores[l] for l in VADER_SENTIMENT_LABELS}
         classification = max(label_scores, key=label_scores.get)
-        self.log.info(f"User utterance \"{utterance}\" rated " +\
-                      f"with emotion scores {label_scores}")
+        self.log.info(f"Rated user utterance: \"{utterance}\"" +\
+                      f" with emotion scores {label_scores}")
         return (VADER_SENTIMENT_LABEL_MAPPINGS[classification],
                 label_scores[classification])
 

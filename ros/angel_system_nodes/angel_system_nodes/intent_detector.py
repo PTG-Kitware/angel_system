@@ -108,14 +108,16 @@ class IntentDetector(Node):
             self._interp_publisher.publish(intent_msg)
 
         log.info(f"Detected intents for \"{msg.value}\":\n" +
-            f"\"{intent_msg.user_intent}\": {intent_msg.confidence}")
+            f"\"{self._red_font(intent_msg.user_intent)}\": {intent_msg.confidence}")
 
     def contains_phrase(self, utterance, phrases):
         for phrase in phrases:
             if phrase in utterance:
                 return True
         return False
-
+    
+    def _red_font(self, text):
+        return f"\033[91m{text}\033[0m"
 
 def main():
     rclpy.init()

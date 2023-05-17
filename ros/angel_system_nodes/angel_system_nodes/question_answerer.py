@@ -59,8 +59,15 @@ class QuestionAnswerer(Node):
         the user's detected emotion. Inference calls can be added and revised
         here.
         '''
-        return f"I'm sorry. I don't know how to answer \"{user_utterance}\" " +\
-              f"at this time. I understand that you feel \"{user_emotion}\"."
+        
+        utterance_words = user_utterance.split()
+        # shortened_utterance = \
+        #     ' '.join(utterance_words[:4]) + " ... " + \
+        #         ' '.join(utterance_words[-4:]) \
+        #         if len(utterance_words) >= 8 else user_utterance
+        apology_msg = "I'm sorry. I don't know how to answer your statement."
+        return self._red_font(apology_msg) +\
+            f" I understand that you feel \"{self._red_font(user_emotion)}\"."
 
     def _publish_generated_response(self, utterance: str,
                                     response: str):
@@ -68,7 +75,7 @@ class QuestionAnswerer(Node):
         msg.utterance_text = utterance
         msg.response = response
         self.log.info(f"Responding to utterance \"{utterance}\" " +\
-                      f"with {response}")        
+                      f"with:\n{response}")        
         self._qa_publisher.publish(msg)
 
     def listener_callback(self, msg):
@@ -80,6 +87,9 @@ class QuestionAnswerer(Node):
         emotion = msg.user_emotion
         response = self.get_response(utterance, emotion)
         self._publish_generated_response(utterance, response)
+
+    def _red_font(self, text):
+        return f"\033[91m{text}\033[0m"
 
 def main():
     rclpy.init()

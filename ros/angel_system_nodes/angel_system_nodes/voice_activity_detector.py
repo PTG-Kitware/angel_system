@@ -178,7 +178,7 @@ class VoiceActivityDetector(Node):
                 and not(self.request_thread.is_alive()):
                 self.log.info(f"{self.n_cadence_steps}-th cadence occurred " +\
                               f"with {self.accumulated_audio_duration} sec " +\
-                              "currently accumulated. Requesting voice acitvity detection.")
+                              "currently accumulated. Requesting voice activity detection.")
                 
                 # Make a copy of the current data so we can run VAD
                 # while more data is accumulated.

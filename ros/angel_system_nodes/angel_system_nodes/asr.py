@@ -1,3 +1,4 @@
+import json
 import pyaudio
 import requests
 import tempfile
@@ -76,7 +77,7 @@ class ASR(Node):
             HeadsetAudioData,
             self._audio_topic,
             self.listener_callback,
-            1)
+            10)
         
         # TODO(derekahmed): Add internal buffering to reduce publisher queue
         # size to 1.
@@ -161,8 +162,9 @@ class ASR(Node):
                 self.log.error("ASR Server Response contains an error.")
                 return
             if response:
-                self.log.info("Complete ASR text is:\n" + f"\"{response.text}\"")
-                for sentence in sent_tokenize(response.text):
+                response_text = json.loads(response.text)["text"]
+                # self.log.info("Complete ASR text is:\n" + f"\"{response_text}\"")
+                for sentence in sent_tokenize(response_text):
                     utterance_msg = Utterance()
                     utterance_msg.value = sentence
                     self.log.info("Publishing message: " + f"\"{sentence}\"")
