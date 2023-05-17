@@ -212,6 +212,9 @@ class VoiceActivityDetector(Node):
                 next_voice_activity_interval = voice_active_segments[0]
                 _, end = next_voice_activity_interval
                 if end >= audio_duration - self._vad_sec_margin:
+                    self.log.info(f"Vocal segment end={end} while " +\
+                                  f"audio_duration={audio_duration} with  "+\
+                                  f"margin={self._vad_sec_margin}.")
                     return
                 self._handle_publication(audio_data, end,
                                          self.bytes_per_sample, num_channels,
