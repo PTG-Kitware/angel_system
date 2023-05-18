@@ -13,12 +13,25 @@ import kwimage
 import pandas as pd
 import numpy as np
 
+from utils.data.dataloaders.common import time_from_name, activities_from_dive_csv
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '0, 1, 2, 3'
 
 root_dir = '/data/ptg/medical/bbn/data/Release_v0.5/v0.52'
 #root_dir = '/media/hannah.defazio/Padlock_DT/Data/notpublic/PTG/Release_v0.5'
 
+
+def dive_to_activity_file(videos_dir):
+    for dive_csv in glob.glob(f"{videos_dir}/*/*.csv"):
+        print(dive_csv)
+        video_dir = os.path.dirname(dive_csv)
+        video = video_dir.split('/')[-1]
+
+        activities = activities_from_dive_csv(dive_csv)
+
+        with open(f"{video_dir}/{video}.skill_labels_by_frame.txt", "w") as f:
+            for activity in activities:
+                f.write(f"{activity.start_frame}\t{activity.end_frame}\t{activity.class_label}\n")
 
 def bbn_activity_data_loader(videos_dir, video, step_map=None,
                              lab_data=False, add_inter_steps=False, add_before_finished_task=False):
