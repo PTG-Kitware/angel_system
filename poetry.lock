@@ -355,7 +355,7 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "fsspec"
-version = "2023.4.0"
+version = "2023.5.0"
 description = "File-system specification"
 category = "main"
 optional = false
@@ -1652,6 +1652,20 @@ optional = false
 python-versions = "*"
 
 [[package]]
+name = "soundfile"
+version = "0.12.1"
+description = "An audio library based on libsndfile, CFFI and NumPy"
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+cffi = ">=1.0"
+
+[package.extras]
+numpy = ["numpy"]
+
+[[package]]
 name = "sphinx"
 version = "6.2.1"
 description = "Python documentation generator"
@@ -2000,7 +2014,7 @@ test = ["pytest"]
 
 [[package]]
 name = "trimesh"
-version = "3.21.5"
+version = "3.21.6"
 description = "Import, export, process, analyze and view triangular meshes."
 category = "main"
 optional = false
@@ -2032,9 +2046,9 @@ xatlas = {version = "*", optional = true, markers = "extra == \"all\""}
 xxhash = {version = "*", optional = true, markers = "extra == \"all\""}
 
 [package.extras]
-all = ["colorlog", "glooey", "pycollada", "xxhash", "svg.path", "scipy", "scikit-image", "pyglet (<2)", "rtree", "python-fcl", "sympy", "jsonschema", "setuptools", "psutil", "mapbox-earcut", "lxml", "pillow", "networkx", "shapely", "meshio", "xatlas", "chardet", "requests"]
-easy = ["rtree", "colorlog", "sympy", "jsonschema", "setuptools", "pycollada", "lxml", "mapbox-earcut", "xxhash", "pillow", "networkx", "shapely", "svg.path", "scipy", "chardet", "requests"]
-test = ["ruff", "pytest", "pytest-cov", "coveralls", "autopep8", "pyinstrument", "ezdxf"]
+all = ["mapbox-earcut", "shapely", "scipy", "requests", "pyglet (<2)", "xatlas", "scikit-image", "lxml", "pycollada", "rtree", "setuptools", "xxhash", "python-fcl", "psutil", "glooey", "pillow", "chardet", "svg.path", "networkx", "sympy", "meshio", "jsonschema", "colorlog"]
+easy = ["mapbox-earcut", "shapely", "pillow", "chardet", "scipy", "svg.path", "networkx", "requests", "sympy", "pycollada", "jsonschema", "colorlog", "lxml", "rtree", "setuptools", "xxhash"]
+test = ["coveralls", "pytest-cov", "ezdxf", "pyinstrument", "autopep8", "ruff", "pytest"]
 
 [[package]]
 name = "typeguard"
@@ -2169,7 +2183,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "flake8 (<5)", "pytest-co
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8,<3.10"
-content-hash = "c3dadc340a5322eac59c18f4c69323215294a4162a3192c6d9be55616908b754"
+content-hash = "27da452fe68aabadd141d3d843f1810c274f21d9bbef4f0bf428c804d6d4d716"
 
 [metadata.files]
 aiohttp = []
@@ -2302,6 +2316,7 @@ smqtk-descriptors = []
 smqtk-detection = []
 smqtk-image-io = []
 snowballstemmer = []
+soundfile = []
 sphinx = []
 sphinx-prompt = []
 sphinx-rtd-theme = []

@@ -54,6 +54,7 @@ black = "22.3.0"
 
 # For Columbia ASR
 nltk = "^3.8.1"
+soundfile = "0.12.1"
 
 # For Columbia Emotion Detection
 vaderSentiment = "^3.3.2"
