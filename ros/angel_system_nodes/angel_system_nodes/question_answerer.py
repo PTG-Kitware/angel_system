@@ -45,7 +45,7 @@ class QuestionAnswerer(Node):
             InterpretedAudioUserEmotion,
             self._in_emotion_topic,
             self.listener_callback,
-            10)
+            1)
 
         self._qa_publisher = self.create_publisher(
             SystemTextResponse,

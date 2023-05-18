@@ -75,12 +75,12 @@ class IntentDetector(Node):
         self._expected_publisher = self.create_publisher(
             InterpretedAudioUserIntent,
             self._expect_uintent_topic,
-            100)
+            1)
 
         self._interp_publisher = self.create_publisher(
             InterpretedAudioUserIntent,
             self._interp_uintent_topic,
-            10)
+            1)
 
     def listener_callback(self, msg):
         intent_msg = InterpretedAudioUserIntent()

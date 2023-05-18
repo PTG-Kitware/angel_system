@@ -64,7 +64,7 @@ windows:
             -p output_voice_activity_topic:=DetectedVoiceData
             -p vad_server_url:=http://communication.cs.columbia.edu:55667/vad
             -p vad_cadence:=4
-            -p vad_margin:=0.5
+            -p vad_margin:=0.4
             -p max_accumulation_length:=10
             -p debug_mode:=True
         - asr: ros2 run angel_system_nodes asr --ros-args

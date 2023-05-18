@@ -83,7 +83,7 @@ class EmotionDetector(Node):
             InterpretedAudioUserIntent,
             self._in_interp_uintent_topic,
             self.listener_callback,
-            10)
+            1)
         
         # self.expect_uintent_subscription = self.create_subscription(
         #     InterpretedAudioUserIntent,
