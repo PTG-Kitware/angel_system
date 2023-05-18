@@ -1,14 +1,18 @@
 import re
 import os
+import cv2
 import kwcoco
 import textwrap
 
 import numpy as np
 import ubelt as ub
+import pandas as pd
 
 from pathlib import Path
-from detectron2.data.detection_utils import read_image
+from typing import List
 
+from detectron2.data.detection_utils import read_image
+from utils.data.dataloaders.structures import Activity
 
 RE_FILENAME_TIME = re.compile(r"frame_(?P<frame>\d+)_(?P<ts>\d+(?:_|.)\d+).(?P<ext>\w+)")
 def time_from_name(fname):
@@ -31,6 +35,59 @@ def time_from_name(fname):
 
     frame = match.group('frame')
     return int(frame), time
+
+def activities_from_dive_csv(filepath: str) -> List[Activity]:
+    """
+    Load from a DIVE output CSV file a sequence of ground truth activity
+    annotations.
+
+    Class labels are converted to lower-case and stripped of any extraneous
+    whitespace.
+
+    :param filepath: Filesystem path to the CSV file.
+    :return: List of loaded activity annotations.
+    """
+    print(f"Loading ground truth activities from: {filepath}")
+    df = pd.read_csv(filepath)
+    # There may be additional metadata rows. Filter out rows whose first column
+    # value starts with a `#`.
+    df = df[df[df.keys()[0]].str.contains('^[^#]')]
+    # Create a mapping of detection/track ID to the activity annotation
+    id_to_activity: Dict[int, Activity] = {}
+    for row in df.iterrows():
+        i, s = row
+        a_id = int(s[0])
+        frame, time = time_from_name(s[1])
+        if a_id not in id_to_activity:
+            id_to_activity[a_id] = Activity(
+                s[9].lower().strip(), # class label
+                time, # start
+                np.inf, # end 
+                frame, # start frame
+                np.inf, # end frame
+                1.0, # conf
+            )
+        else:
+            # There's a struct in there, update it.
+            a = id_to_activity[a_id]
+            # Activity should not already have an end time assigned.
+            assert a.end is np.inf, (
+                f"More than 2 entries observed for activity track ID {a_id}."
+            )
+            id_to_activity[a_id] = Activity(
+                a.class_label,
+                a.start,
+                time,
+                a.start_frame,
+                frame,
+                a.conf,
+            )
+    # Assert that all activities have been assigned an associated end time.
+    assert np.inf not in {a.end for a in id_to_activity.values()}, (
+        f"Some activities in source CSV do not have corresponding end time "
+        f"entries: {filepath}"
+    )
+    return list(id_to_activity.values())
 
 def Re_order(image_list, image_number):
     img_id_list = []
@@ -222,25 +279,32 @@ def visualize_kwcoco(dset=None, save_dir=''):
         using_contact = False
         for aid, ann in anns.items():
             conf = ann['confidence']
-            if conf < 0.4:
-                continue
 
-            using_contact = True if 'obj-obj_contact_state' in ann.keys() else False
+            using_contact = False#True if 'obj-obj_contact_state' in ann.keys() else False
             
             
-            box = ann['bbox']
-            label = dset.cats[ann['category_id']]['name']
+            x, y, w, h = ann['bbox'] # xywh
+            cat = dset.cats[ann['category_id']]['name']
+            if 'tourniquet_tourniquet' in cat:
+                tourniquet_im = image[int(y):int(y+h), int(x):int(x+w), ::-1]
+
+                m2_fn = fn[:-4] + '_tourniquet_chip.png'
+                m2_out = f'{save_dir}/video_{img_video_id}/images/chipped'
+                Path(m2_out).mkdir(parents=True, exist_ok=True)
+                cv2.imwrite(f'{m2_out}/{m2_fn}', tourniquet_im)
+            
+            label = f"{cat}: {round(conf, 2)}"
 
             color = 'r'
             if using_contact and ann['obj-obj_contact_state']:
                 color = 'g'
             if using_contact and ann['obj-hand_contact_state']:
                 color = 'b'
-            rect = patches.Rectangle((box[0], box[1]), box[2], box[3], 
+            rect = patches.Rectangle((x, y), w, h, 
                                      linewidth=1, edgecolor=color, facecolor='none')
 
             ax.add_patch(rect)
-            ax.annotate(label, (box[0], box[1]), color='black')
+            ax.annotate(label, (x, y), color='black')
         
         if using_contact:
             plt.legend(handles=[red_patch, green_patch, blue_patch], loc='lower left')
@@ -262,7 +326,7 @@ def main():
 
     ptg_root = '/data/ptg/medical/bbn/'
    
-    kw = 'kitware_m2_results_test.mscoco.json'
+    kw = 'm2_all_data_cleaned_fixed_with_steps_results_train_activity.mscoco.json'
     #kw = 'm2_with_lab_cleaned_fixed_data_with_inter_and_before_finished_steps_no_contact_aug_results_test.mscoco.json'
     #kw = 'kitware_test_results_test.mscoco.json'
     #kw = 'm2_with_lab_cleaned_fixed_data_with_inter_and_before_finished_steps_results_train_activity.mscoco.json'
@@ -277,14 +341,20 @@ def main():
 
     stage = 'results'
     stage_dir = f'{ptg_root}/annotations/M2_Tourniquet/{stage}'
-    exp = 'm2_with_lab_cleaned_fixed_data_with_inter_and_before_finished_steps_no_contact_aug'#'m2_with_lab_cleaned_fixed_data_with_inter_and_before_finished_steps'
-    save_dir = f'{stage_dir}/{exp}/visualization/{split}'
+    exp = 'm2_all_data_cleaned_fixed_with_steps'#'m2_with_lab_cleaned_fixed_data_with_inter_and_before_finished_steps'
+    if stage == 'stage1':
+        save_dir = f'{stage_dir}/visualization_1/{split}'
+    else:
+        save_dir = f'{stage_dir}/{exp}/visualization/{split}'
     
-    save_dir = 'visualization'
+    #save_dir = 'visualization'
     Path(save_dir).mkdir(parents=True, exist_ok=True)
     
-    visualize_kwcoco(kw, save_dir)
-    #visualize_kwcoco(f'{stage_dir}/{exp}/{kw}', save_dir)
+    #visualize_kwcoco(kw, save_dir)
+    if stage == 'stage1':
+        visualize_kwcoco(f'{stage_dir}/{kw}', save_dir)
+    else:
+        visualize_kwcoco(f'{stage_dir}/{exp}/{kw}', save_dir)
 
 
 if __name__ == '__main__':
