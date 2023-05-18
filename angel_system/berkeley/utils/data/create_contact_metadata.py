@@ -53,7 +53,7 @@ def load_model(config, conf_thr=0.01):
     print(f'Loaded {model_config}')
     return demo
 
-def run_obj_detector(demo, bbn_root, data_dirs, split, no_contact=False, add_hl_hands=True):
+def run_obj_detector(demo, stage, bbn_root, data_dirs, split, no_contact=False, add_hl_hands=True):
     """
     Run object detector trained without contact information 
     on all the videos associated with the task and clear any 
@@ -63,8 +63,13 @@ def run_obj_detector(demo, bbn_root, data_dirs, split, no_contact=False, add_hl_
 
     videos = []
     for x in split:
-        if x[:2] == 'tq':
+        x_split = x.split('_')
+        if x_split[0] == 'tq':
+            # BBN lab videos
             videos.append(f'{bbn_root}/{data_dirs[1]}/{x}')
+        elif x_split[0] == 'kitware':
+            # Kitware lab videos
+            videos.append(f'{bbn_root}/{data_dirs[2]}/{x}')
         else:
             videos.append(f'{bbn_root}/{data_dirs[0]}/{x}')
     
@@ -83,9 +88,10 @@ def run_obj_detector(demo, bbn_root, data_dirs, split, no_contact=False, add_hl_
             frame, time_stamp = time_from_name(image_fn)
             
             image = read_image(image_fn, format='RGB')
-            image = Image.fromarray(image)
-            image = image.resize(size=(760, 428), resample=Image.BILINEAR)
-            image = np.array(image)
+            if stage == 'results':
+                image = Image.fromarray(image)
+                image = image.resize(size=(760, 428), resample=Image.BILINEAR)
+                image = np.array(image)
 
             h, w, c = image.shape
 
@@ -154,9 +160,14 @@ def update_preds(activity_data_loader, preds, using_contact, original_step_map, 
     """
     activity_only_preds = {}
     for video_name in preds.keys():
-        if video_name[:2] == 'tq':
+        x_split = video_name.split('_')
+        if x_split[0] == 'tq':
             videos_dir = f'{data_root}/{data_dirs[1]}'
             lab_data = True
+        elif x_split[0] == 'kitware':
+            # Kitware lab videos
+            videos_dir = f'{data_root}/{data_dirs[2]}'
+            lab_data = False
         else:
             videos_dir = f'{data_root}/{data_dirs[0]}'
             lab_data = False
@@ -186,8 +197,6 @@ def update_preds(activity_data_loader, preds, using_contact, original_step_map, 
                                     if matching_gt['start'] <= ts <= matching_gt['end']}
                     matching_preds.update(matching_pred)
                 #print('matching preds', matching_preds)
-                #if matching_preds == {} and experiment_flags['filter_activity_frames']:
-                #    print('Skipping frame without activity ground truth')
 
                 for frame in matching_preds.keys():
                     detected_classes = list(preds[video_name][frame].keys())
@@ -221,15 +230,17 @@ def update_preds(activity_data_loader, preds, using_contact, original_step_map, 
 
                         # Update contact metadata
                         for obj in object_pair:
+                            
                             if obj == 'hand':
                                 hand_labels = find_closest_hands(object_pair, detected_classes, preds[video_name][frame])
+                                
                                 if hand_labels is not None:
                                     found_items += 1
                                     if using_contact:
                                         for hand_label in hand_labels:
                                             for i in range(len(preds[video_name][frame][hand_label])):
                                                 preds[video_name][frame][hand_label][i]['obj_hand_contact_state'] = obj_hand_contact_state
-                                            
+
                             elif obj in detected_classes:
                                 found_items += 1
                                 if using_contact:
@@ -294,19 +305,19 @@ def coffee_main():
 
 
 def tourniquet_main(stage, using_inter_steps, using_before_finished_task):
-    #demo = load_model(config='MC50-InstanceSegmentation/medical/M2/stage1/mask_rcnn_R_101_FPN_1x_BBN_M2_demo.yaml')
-    demo = load_model(config='MC50-InstanceSegmentation/medical/M2/stage2/mask_rcnn_R_50_FPN_1x_BBN_M2_labels_with_inter_and_before_finished_steps_demo.yaml')
+    #demo = load_model(config='MC50-InstanceSegmentation/medical/M2/stage1/mask_rcnn_R_101_FPN_1x_BBN_M2_demo.yaml', conf_thr=0.4)
+    demo = load_model(config='MC50-InstanceSegmentation/medical/M2/stage2/mask_rcnn_R_50_FPN_1x_BBN_M2_labels_with_steps_demo.yaml', conf_thr=0.01)
 
     bbn_root = '/data/ptg/medical/bbn/data'
     data_root ='Release_v0.5/v0.52'
     skill = 'M2_Tourniquet'
     m2_data_dir = f'{data_root}/{skill}/Data' # M2 specific
     lab_data_dir = 'M2_Lab_data/skills_by_frame/'
-    kitware_test_dir = f'kitware_m2'
+    kitware_dir = f'kitware_m2'
 
     m2_videos = [f'M2-{x}' for x in range(1, 139+1)]
-    lab_videos = [f'tq_{x}' for x in range(1, 23+1)]
-    kitware_videos = ['kitware_m2_video_1', 'kitware_m2_video_2', 'kitware_m2_video_3', 'kitware_m2_video_4', 'kitware_m2_video_5']
+    lab_videos = [f'tq_{x}' for x in range(1, 32+1)]
+    kitware_videos = [f'kitware_m2_video_{x}' for x in range(1, 32+1)]
 
     ignore_videos = [f'M2-{x}' for x in [
         15, # bad video
@@ -316,8 +327,8 @@ def tourniquet_main(stage, using_inter_steps, using_before_finished_task):
         ]
     ]
 
-    all_videos = m2_videos + lab_videos
-    data_dirs = (m2_data_dir, lab_data_dir)
+    all_videos = m2_videos + lab_videos + kitware_videos
+    data_dirs = (m2_data_dir, lab_data_dir, kitware_dir)
     
     good_videos = [x for x in all_videos if x not in ignore_videos]
     random.shuffle(good_videos)
@@ -344,6 +355,9 @@ def tourniquet_main(stage, using_inter_steps, using_before_finished_task):
             'val': ['M2-72', 'M2-58', 'M2-134', 'M2-105', 'tq_18', 'M2-33', 'tq_22', 'M2-9', 'M2-42', 'M2-30', 'M2-16', 'M2-128'], 
             'test': ['tq_17', 'M2-119', 'M2-51', 'M2-31', 'M2-22', 'M2-36', 'M2-39', 'M2-70', 'tq_15', 'M2-4', 'M2-52', 'tq_7']
     }
+    training_split['train_contact'] = kitware_videos[:20] + [f'tq_{x}' for x in range(24, 28+1)] + training_split['train_contact']
+    training_split['train_activity'] = kitware_videos[20:] + [f'tq_{x}' for x in range(29, 32+1)] + training_split['train_activity']
+    
     print(training_split)
 
     from dataloaders.load_bbn_medical_data import bbn_activity_data_loader
@@ -363,13 +377,13 @@ def tourniquet_main(stage, using_inter_steps, using_before_finished_task):
         step_map['finished'] = [['Finished'.lower(), [['tourniquet_tourniquet', 'hand']]]]
     print(f'step map: {step_map}')
     
-    data_dirs = (kitware_test_dir, lab_data_dir)
-    training_split['test'] = kitware_videos
+    #data_dirs = (kitware_test_dir, lab_data_dir)
+    #training_split['test'] = kitware_videos
     return demo, training_split, bbn_root, data_dirs, activity_data_loader, metadata, step_map
 
 
 def main():
-    experiment_name = 'kitware_m2'#'m2_with_lab_cleaned_fixed_data_with_inter_and_before_finished_steps_no_contact_aug'
+    experiment_name = 'm2_all_data_cleaned_fixed_with_steps'
     stage = 'results'
 
     print('Experiment: ', experiment_name)
@@ -379,27 +393,25 @@ def main():
     experiment_flags = {
         'no_contact': False if stage == 'results' else True,
         'filter_activity_frames': False if stage == 'results' else True,
-        'filter_all_obj_frames': False,
+        'filter_all_obj_frames': False if stage == 'results' else True,
         'using_step_labels' : True,
-        'using_inter_steps': True,
-        'using_before_finished_task': True
+        'using_inter_steps': False,
+        'using_before_finished_task': False
     }
     print(f'experiment flags: {experiment_flags}')
 
     demo, training_split, data_root, data_dirs, activity_data_loader, metadata, step_map = tourniquet_main(stage, experiment_flags['using_inter_steps'], experiment_flags['using_before_finished_task'])
     
     if stage == 'stage2':
-        splits = ['val', 'train_contact', 'test', 'train_activity']
+        splits = ['train_activity']#['val', 'train_contact', 'test', 'train_activity']
     else:
         splits = ['test', 'train_activity', 'val']
-
-    splits = ['test']
 
     for split in splits:
         print(f'{split}: {len(training_split[split])} videos')
 
         # Raw detector output
-        preds_no_contact, using_contact = run_obj_detector(demo, 
+        preds_no_contact, using_contact = run_obj_detector(demo, stage,
                                             data_root, data_dirs,
                                             training_split[split], 
                                             no_contact=experiment_flags['no_contact'], 
@@ -413,8 +425,7 @@ def main():
             pickle.dump(preds_no_contact, fh)
 
         # Update contact info based on gt
-        preds_with_contact = preds_no_contact
-        """
+        
         preds_with_contact = update_preds(activity_data_loader,
                                           preds_no_contact,
                                           using_contact,
@@ -422,7 +433,6 @@ def main():
                                           step_map, 
                                           data_root, data_dirs, 
                                           experiment_flags)
-        """
         
         dset = preds_to_kwcoco(metadata, preds_with_contact, '', save_fn=f'{experiment_name}_{stage}_{split}.mscoco.json',
                                # assuming detector already has the right labels so these aren't needed here
