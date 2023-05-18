@@ -1,6 +1,8 @@
 import json
+import numpy as np
 import pyaudio
 import requests
+import soundfile
 import tempfile
 import threading
 import time
@@ -20,6 +22,7 @@ UTTERANCES_TOPIC = "utterances_topic"
 ASR_SERVER_URL = "asr_server_url"
 ASR_REQ_SEGMENT_SECONDS_DURATION = "asr_req_segment_duration"
 IS_SENTENCE_TOKENIZE = "is_sentence_tokenize"
+DEBUG_MODE = "debug_mode"
 
 # TODO (derekahmed) We should figure out how this value was derived
 # and make this a constant accordingly.
@@ -39,7 +42,8 @@ class ASR(Node):
             UTTERANCES_TOPIC,
             ASR_SERVER_URL,
             ASR_REQ_SEGMENT_SECONDS_DURATION,
-            IS_SENTENCE_TOKENIZE
+            IS_SENTENCE_TOKENIZE,
+            DEBUG_MODE
         ]
         set_parameters = self.declare_parameters(
             namespace="",
@@ -64,6 +68,8 @@ class ASR(Node):
             self.get_parameter(ASR_REQ_SEGMENT_SECONDS_DURATION).value
         self._is_sentence_tokenize_mode =\
             self.get_parameter(IS_SENTENCE_TOKENIZE).get_parameter_value().bool_value
+        self._debug_mode =\
+            self.get_parameter(DEBUG_MODE).get_parameter_value().bool_value
         self.log.info(f"Audio topic: "
                       f"({type(self._audio_topic).__name__}) "
                       f"{self._audio_topic}")
@@ -79,6 +85,9 @@ class ASR(Node):
         self.log.info(f"Is Sentence Tokenization On: "
                       f"({type(self._is_sentence_tokenize_mode).__name__}) "
                       f"{self._is_sentence_tokenize_mode}")
+        self.log.info(f"Is Debugging On: "
+                      f"({type(self._debug_mode).__name__}) "
+                      f"{self._debug_mode}")
 
         self.subscription = self.create_subscription(
             HeadsetAudioData,
@@ -94,7 +103,7 @@ class ASR(Node):
             10
         )
 
-        self.audio_stream = bytearray()
+        self.audio_stream = []
         self.t = threading.Thread()
         self.prev_timestamp = None
         self.audio_stream_duration = 0.0
@@ -139,7 +148,7 @@ class ASR(Node):
                 audio_data = self.audio_stream
 
                 # Remove the data that we just copied from the stream.
-                self.audio_stream = bytearray()
+                self.audio_stream = []
                 self.audio_stream_duration = 0.0
 
                 # Start the ASR server request thread.
@@ -151,19 +160,19 @@ class ASR(Node):
     def asr_server_request_thread(self, audio_data, num_channels, sample_rate):
         with self.asr_server_lock:
 
-            temp_file = tempfile.NamedTemporaryFile(suffix='.wav', delete=True)
+            temp_file = tempfile.NamedTemporaryFile(suffix='.wav', delete=(not self._debug_mode))
             self.log.info(f"Writing audio to temporary file: {temp_file.name}")
-            wav_write = wave.open(temp_file, 'wb')
-            wav_write.setnchannels(num_channels)
+            channels_data = []
+            for channel_i in range(num_channels):
+                channels_data.append(audio_data[channel_i::num_channels])
+            channels_data = np.array(channels_data).T
+            soundfile.write(temp_file, channels_data, sample_rate)
             
-            wav_write.setsampwidth(WAV_SAMPLE_WIDTH)
-            wav_write.setframerate(sample_rate)
-            wav_write.writeframes(audio_data)
-
             with open(temp_file.name, 'rb') as temp_file:
                 response = requests.post(self._asr_server_url,
                                          files={'audio_data': temp_file})
-            temp_file.close()
+            if not self._debug_mode:
+                temp_file.close()
             
             if not response.ok:
                 self.log.error("ASR Server Response contains an error.")
@@ -186,11 +195,8 @@ class ASR(Node):
 
 def main():
     rclpy.init()
-
     asr = ASR()
-    
     rclpy.spin(asr)
-    
     asr.destroy_node()
     rclpy.shutdown()
 

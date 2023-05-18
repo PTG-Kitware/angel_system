@@ -54,7 +54,7 @@ tmux_options: -f <%= ENV["ANGEL_WORKSPACE_DIR"] %>/tmux/tmux.conf
 
 windows:
   # - ros_bag_play: ros2 bag play <<PATH_TO_BAG_FILE>>
-  - ros_bag_play: ros2 bag play /angel_workspace/ros_bags/rosbag2_2023_03_01-17_28_00/rosbag2_2023_03_01-17_28_00_0.db3
+  - ros_bag_play: sleep 5; ros2 bag play /angel_workspace/ros_bags/rosbag2_2023_03_01-17_28_00/rosbag2_2023_03_01-17_28_00_0.db3
   - vocal:
       layout: even-vertical
       panes:
@@ -63,16 +63,18 @@ windows:
             -p input_audio_topic:=HeadsetAudioData
             -p output_voice_activity_topic:=DetectedVoiceData
             -p vad_server_url:=http://communication.cs.columbia.edu:55667/vad
-            -p vad_cadence:=3
-            -p vad_margin:=0.1
-            -p max_accumulation_length:=8
+            -p vad_cadence:=4
+            -p vad_margin:=0.5
+            -p max_accumulation_length:=10
+            -p debug_mode:=True
         - asr: ros2 run angel_system_nodes asr --ros-args
             -r __ns:=${ROS_NAMESPACE}
             -p audio_topic:=DetectedVoiceData
             -p utterances_topic:=utterances_topic
             -p asr_server_url:=http://communication.cs.columbia.edu:55667/asr
-            -p asr_req_segment_duration:=0.5
+            -p asr_req_segment_duration:=4
             -p is_sentence_tokenize:=False
+            -p debug_mode:=True
   - text_detection:
       layout: even-vertical
       panes:

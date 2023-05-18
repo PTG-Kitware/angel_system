@@ -1,6 +1,8 @@
 import json
+import numpy as np
 import pyaudio
 import requests
+import soundfile
 import struct
 import tempfile
 import threading
@@ -46,6 +48,8 @@ VAD_SEC_MARGIN = "vad_margin"
 # message for downstream consumption.
 MAX_ACCUMULATION_SEC_LENGTH = "max_accumulation_length"
 
+DEBUG_MODE = "debug_mode"
+
 class VoiceActivityDetector(Node):
 
     def __init__(self):
@@ -58,7 +62,8 @@ class VoiceActivityDetector(Node):
             VAD_SERVER_URL,
             VAD_SEC_CADENCE,
             VAD_SEC_MARGIN,
-            MAX_ACCUMULATION_SEC_LENGTH
+            MAX_ACCUMULATION_SEC_LENGTH,
+            DEBUG_MODE
         ]
         set_parameters = self.declare_parameters(
             namespace="",
@@ -83,9 +88,10 @@ class VoiceActivityDetector(Node):
             self.get_parameter(VAD_SEC_CADENCE).value
         self._vad_sec_margin =\
             self.get_parameter(VAD_SEC_MARGIN).value
-
         self._max_accumulation_sec_length =\
             self.get_parameter(MAX_ACCUMULATION_SEC_LENGTH).value
+        self._debug_mode =\
+            self.get_parameter(DEBUG_MODE).get_parameter_value().bool_value
         self.log.info(f"Input Audio topic: "
                       f"({type(self._in_audio_topic).__name__}) "
                       f"{self._in_audio_topic}")
@@ -101,13 +107,15 @@ class VoiceActivityDetector(Node):
         self.log.info(f"Columbia VAD Margin (Seconds): "
                       f"({type(self._vad_sec_margin).__name__}) "
                       f"{self._vad_sec_margin}")
+        self.log.info(f"Is Debugging On: "
+                      f"({type(self._debug_mode).__name__}) "
+                      f"{self._debug_mode}")
         
         self.is_audio_metadata_set = False
         self.sample_rate = -1
         self.num_channels = -1
         self.bytes_per_sample = FLOAT32_BYTE_LENGTH
         
-        self.debug_mode = True # Set this field to turn on debugging.
         # Used to keep track of number of vocal activity detection splits.
         self.split_counter = 0
 
@@ -129,7 +137,7 @@ class VoiceActivityDetector(Node):
 
         self.request_thread = threading.Thread()
         self.prev_timestamp = None
-        self.accumulated_audio = bytearray()
+        self.accumulated_audio = []
         self.accumulated_timestamps = []
         self.accumulated_audio_duration = 0.0
         self.intracadence_duration = 0.0
@@ -148,7 +156,7 @@ class VoiceActivityDetector(Node):
 
     def listener_callback(self, msg):
 
-        self._check_and_update_audio_metadata_fields(msg)
+        self._check_init_audio_metadata_fields(msg)
         with self.audio_stream_lock:
             # Check that this message comes temporally after the previous message.
             message_order_valid = False
@@ -199,59 +207,71 @@ class VoiceActivityDetector(Node):
     def vad_server_request_thread(self, audio_data, num_channels, sample_rate,
                                   audio_duration):
         with self.vad_server_lock:
+            with self.audio_stream_lock:    
+                temp_file = self._create_temp_audio_file(
+                    audio_data, sample_rate, num_channels,
+                    prefix=f"accumulation-{self.n_cadence_steps}_")
+                voice_active_segments = self.vad_server_request(temp_file)
+                if voice_active_segments:
+                    # Take the ("next") first segment. If the detected voice
+                    # activity ends reasonably before the end of the audio_data,
+                    # we can publish the audio data before the point of inactivity.
+                    end = self._get_next_voice_activity_end(voice_active_segments)
+                    if end >= audio_duration - self._vad_sec_margin:
+                        self.log.info(f"Continuing with vocal segment end={end} and " +\
+                                    f"audio_duration={audio_duration} with  "+\
+                                    f"margin={self._vad_sec_margin}.")
+                        return
+                    self._handle_publication(audio_data, end, self.bytes_per_sample, num_channels,
+                                            sample_rate)
+                    # Update the accumulated audio stream to remove any split data.
+                    self._split_audio(end, num_channels, sample_rate)
+                    if not self._debug_mode:
+                        temp_file.close()
 
-            temp_file = self._create_temp_audio_file(
-                audio_data, sample_rate, num_channels,
-                prefix=f"main-{self.n_cadence_steps}_")
-            voice_active_segments = self.vad_server_request(temp_file)
-            split_timestamp = self._max_accumulation_sec_length
-            if voice_active_segments:
-                # Take the ("next") first segment. If the detected voice
-                # activity ends reasonably before the end of the audio_data,
-                # we can publish the audio data before the point of inactivity.
-                next_voice_activity_interval = voice_active_segments[0]
-                _, end = next_voice_activity_interval
-                if end >= audio_duration - self._vad_sec_margin:
-                    self.log.info(f"Vocal segment end={end} while " +\
-                                  f"audio_duration={audio_duration} with  "+\
-                                  f"margin={self._vad_sec_margin}.")
-                    return
-                self._handle_publication(audio_data, end,
-                                         self.bytes_per_sample, num_channels,
-                                         sample_rate)
-                split_timestamp = end
-            elif not voice_active_segments and\
-                audio_duration > self._max_accumulation_sec_length:
-                # If no vocal detection was identified but the accumulated
-                # audio is too long, publish anyways.
-                self._handle_publication(audio_data, 
-                                         split_timestamp,
-                                         self.bytes_per_sample, num_channels,
-                                         sample_rate)
-            else:
-                return
+                elif not voice_active_segments and\
+                    self._max_accumulation_sec_length > 0 and\
+                    audio_duration > self._max_accumulation_sec_length:
+                    # If no vocal detection was identified but the accumulated
+                    # audio is too long, publish anyways.
+                    self.log.info(f"Audio Duration = {audio_duration} has breached max accumulation " +\
+                                f"length={self._max_accumulation_sec_length}. Publishing now.")
+                    self._handle_publication(
+                        audio_data, audio_duration, self.bytes_per_sample, num_channels, sample_rate)
+                    # Update the accumulated audio stream to remove any split data.
+                    self._split_audio(audio_duration, num_channels, sample_rate)
+                    if not self._debug_mode:
+                        temp_file.close()
 
-            # Update the accumulated audio stream to remove any split data.
-            self._split_audio(split_timestamp, num_channels, sample_rate)
-            if not self.debug_mode:
-                temp_file.close()
+    def _get_next_voice_activity_end(self, voice_active_segments):
+        next_voice_activity_interval = voice_active_segments[0]
+        _, end = next_voice_activity_interval
+        for interval in voice_active_segments[1:]:
+                        # Coalesce with nearby intervals.
+            next_start, next_end = interval
+            if next_start - end < self._vad_sec_margin:
+                end = next_end
+                self.log.info(f"Aggregated vocal segments until {end}.")
+        return end
 
     def _split_audio(self, split_timestamp, num_channels, sample_rate):
         '''
         Split the accumulated audio given a timestamp for the split.
         Also updates the accumulated timestamps
         '''
-        split_idx = self._time_to_index(split_timestamp, sample_rate)
-        split_byte_idx = self._time_to_byte_index(split_timestamp,
-                    self.bytes_per_sample, num_channels, sample_rate)
         with self.audio_stream_lock:
+            split_idx = self._time_to_sample_idx(split_timestamp, sample_rate)
+            split_byte_idx = self._time_to_byte_index(split_timestamp,
+                        self.bytes_per_sample, num_channels, sample_rate)
             old_duration = self.accumulated_audio_duration
             self.accumulated_audio = self.accumulated_audio[split_byte_idx:]
             self.accumulated_timestamps =\
                 self.accumulated_timestamps[split_idx:]
             self.accumulated_audio_duration -= split_timestamp
-            self.log.info(f"Audio data chopped from {old_duration} " +\
-                                    f"-> {self.accumulated_audio_duration}s...")
+            self.log.info(
+                "Audio data chopped from " +\
+                    f"{old_duration:4f} -> {self.accumulated_audio_duration:4f}s " +\
+                        f"({-split_timestamp:4f}s)...")
     
     def vad_server_request(self, file):
         '''
@@ -276,7 +296,7 @@ class VoiceActivityDetector(Node):
         with self.audio_stream_lock:
             audio_prefix = audio_data[:split_byte_idx]
             self.log.info(f"Split @ {split_timestamp}s: ({split_byte_idx})")            
-            if self.debug_mode:
+            if self._debug_mode:
                 self.log.info("Writing VOCAL ACTIVITY DETECTED prefix of " +\
                           "currently accumulated audio data to \"split\" " +\
                           "temporary file.")
@@ -294,24 +314,23 @@ class VoiceActivityDetector(Node):
         audio_msg.sample_rate = sample_rate
         n_samples = split_byte_idx / (num_channels * sample_byte_length)
         audio_msg.sample_duration = n_samples * sample_rate
-        audio_msg.data = struct.unpack(
-            'f' * int(split_byte_idx / sample_byte_length), audio_prefix)
+        audio_msg.data = audio_prefix
         self._publisher.publish(audio_msg)
         self.log.info(f"Buffer of {int(split_byte_idx / sample_byte_length)} float32 was published")
 
     def _create_temp_audio_file(self, audio_data, sample_rate, num_channels,
                                 prefix=None):
-        temp_file = tempfile.NamedTemporaryFile(
-            suffix='.wav', prefix=prefix, delete=False)
+        temp_file = tempfile.NamedTemporaryFile(suffix='.wav', prefix=prefix,
+                                                delete=(not self._debug_mode))
         self.log.info(f"Writing to {temp_file.name}...")
-        wav_write = wave.open(temp_file, 'wb')
-        wav_write.setnchannels(num_channels)
-        wav_write.setsampwidth(FLOAT32_BYTE_LENGTH)
-        wav_write.setframerate(sample_rate)
-        wav_write.writeframes(audio_data)
+        channels_data = []
+        for channel_i in range(num_channels):
+            channels_data.append(audio_data[channel_i::num_channels])
+        channels_data = np.array(channels_data).T
+        soundfile.write(temp_file, channels_data, sample_rate)
         return temp_file
 
-    def _check_and_update_audio_metadata_fields(self, msg):
+    def _check_init_audio_metadata_fields(self, msg):
         '''
         Ideally the affected metadata fields are not updated frequently.
         Such may result due to unexpected changes in the hardware. e.g. a new
@@ -320,16 +339,24 @@ class VoiceActivityDetector(Node):
         '''
         if not self.is_audio_metadata_set:
             if msg.channels != self.num_channels:
+                if self.num_channels != -1:
+                    raise RuntimeError(
+                        "Invalid message data encountered. VAD node has already been configured " +\
+                            f"for {self.num_channels} channels, " +\
+                                f"but message data contains {msg.channels} channels.")
                 self.log.info("Audio number of channels is being changed " +\
                             f"{self.num_channels} -> {msg.channels}")
                 self.num_channels = msg.channels
             
             if msg.sample_rate != self.sample_rate:
+                if self.sample_rate != -1:
+                    raise RuntimeError(
+                        "Invalid message data encountered. VAD node has already been configured " +\
+                            f"for {self.sample_rate} sample rate, " +\
+                                f"but message data is rate={msg.sample_rate}.")
                 self.log.info("Audio sample rate is being changed " +\
                             f"{self.sample_rate} -> {msg.sample_rate}")
                 self.sample_rate = msg.sample_rate
-            
-            self.is_audio_metadata_set = True
 
         elif msg.channels != self.num_channels or\
                 msg.sample_rate != self.sample_rate:
@@ -347,10 +374,10 @@ class VoiceActivityDetector(Node):
         This mapping requires the sample frequency, the number of Bytes per
         sample, and the number of channels are inherently necessary.
         '''
-        return self._time_to_index(seconds_timestamp, sample_rate) *\
+        return self._time_to_sample_idx(seconds_timestamp, sample_rate) *\
                    sample_byte_length * num_channels
 
-    def _time_to_index(self, seconds_timestamp, sample_rate):
+    def _time_to_sample_idx(self, seconds_timestamp, sample_rate):
         '''
         Maps a timestamp to corresponding index in a float32[] of audio data.
         '''

@@ -59,7 +59,6 @@ class QuestionAnswerer(Node):
         the user's detected emotion. Inference calls can be added and revised
         here.
         '''
-        
         utterance_words = user_utterance.split()
         # shortened_utterance = \
         #     ' '.join(utterance_words[:4]) + " ... " + \
@@ -84,6 +83,7 @@ class QuestionAnswerer(Node):
         all messages received via subscribed topics.
         '''  
         utterance = msg.utterance_text
+        self.log.info(f"Received utterance:\n\n{utterance}")
         emotion = msg.user_emotion
         response = self.get_response(utterance, emotion)
         self._publish_generated_response(utterance, response)
