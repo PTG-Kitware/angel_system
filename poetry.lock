@@ -156,7 +156,7 @@ uvloop = ["uvloop (>=0.15.2)"]
 
 [[package]]
 name = "certifi"
-version = "2022.12.7"
+version = "2023.5.7"
 description = "Python package for providing Mozilla's CA Bundle."
 category = "main"
 optional = false
@@ -274,11 +274,11 @@ python-versions = ">=3.5"
 
 [[package]]
 name = "docutils"
-version = "0.18.1"
+version = "0.20.1"
 description = "Docutils -- Python Documentation Utilities"
 category = "dev"
 optional = false
-python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
+python-versions = ">=3.7"
 
 [[package]]
 name = "easydict"
@@ -325,7 +325,7 @@ tests = ["asttokens", "pytest", "littleutils", "rich"]
 
 [[package]]
 name = "fonttools"
-version = "4.39.3"
+version = "4.39.4"
 description = "Tools to manipulate font files"
 category = "main"
 optional = false
@@ -477,7 +477,7 @@ python-versions = ">=3.5"
 
 [[package]]
 name = "imageio"
-version = "2.28.0"
+version = "2.28.1"
 description = "Library for reading and writing a wide range of image, video, scientific, and volumetric data formats."
 category = "main"
 optional = false
@@ -491,16 +491,16 @@ pillow = ">=8.3.2"
 all-plugins = ["astropy", "av", "imageio-ffmpeg", "psutil", "tifffile"]
 all-plugins-pypy = ["av", "imageio-ffmpeg", "psutil", "tifffile"]
 build = ["wheel"]
-dev = ["invoke", "pytest", "pytest-cov", "fsspec", "black", "flake8"]
+dev = ["pytest", "pytest-cov", "fsspec", "black", "flake8"]
 docs = ["sphinx (<6)", "numpydoc", "pydata-sphinx-theme"]
 ffmpeg = ["imageio-ffmpeg", "psutil"]
 fits = ["astropy"]
-full = ["astropy", "av", "black", "flake8", "fsspec", "gdal", "imageio-ffmpeg", "invoke", "itk", "numpydoc", "psutil", "pydata-sphinx-theme", "pytest", "pytest-cov", "sphinx (<6)", "tifffile", "wheel"]
+full = ["astropy", "av", "black", "flake8", "fsspec", "gdal", "imageio-ffmpeg", "itk", "numpydoc", "psutil", "pydata-sphinx-theme", "pytest", "pytest-cov", "sphinx (<6)", "tifffile", "wheel"]
 gdal = ["gdal"]
 itk = ["itk"]
 linting = ["black", "flake8"]
 pyav = ["av"]
-test = ["invoke", "pytest", "pytest-cov", "fsspec"]
+test = ["pytest", "pytest-cov", "fsspec"]
 tifffile = ["tifffile"]
 
 [[package]]
@@ -556,7 +556,7 @@ tqdm = "*"
 
 [[package]]
 name = "ipython"
-version = "8.12.0"
+version = "8.13.0"
 description = "IPython: Productive Interactive Computing"
 category = "dev"
 optional = false
@@ -892,6 +892,25 @@ antlr4-python3-runtime = "4.8"
 PyYAML = ">=5.1.0"
 
 [[package]]
+name = "openai"
+version = "0.27.6"
+description = "Python client library for the OpenAI API"
+category = "main"
+optional = false
+python-versions = ">=3.7.1"
+
+[package.dependencies]
+aiohttp = "*"
+requests = ">=2.20"
+tqdm = "*"
+
+[package.extras]
+datalib = ["numpy", "pandas (>=1.2.3)", "pandas-stubs (>=1.1.0.11)", "openpyxl (>=3.0.7)"]
+dev = ["black (>=21.6b0,<22.0.0)", "pytest (>=6.0.0,<7.0.0)", "pytest-asyncio", "pytest-mock"]
+embeddings = ["scikit-learn (>=1.0.2)", "tenacity (>=8.0.1)", "matplotlib", "plotly", "numpy", "scipy", "pandas (>=1.2.3)", "pandas-stubs (>=1.1.0.11)", "openpyxl (>=3.0.7)"]
+wandb = ["wandb", "numpy", "pandas (>=1.2.3)", "pandas-stubs (>=1.1.0.11)", "openpyxl (>=3.0.7)"]
+
+[[package]]
 name = "opencv-python"
 version = "4.7.0.72"
 description = "Wrapper package for OpenCV python bindings."
@@ -1010,14 +1029,14 @@ python-versions = ">=3.6"
 
 [[package]]
 name = "platformdirs"
-version = "3.3.0"
+version = "3.5.1"
 description = "A small Python package for determining appropriate platform-specific dirs, e.g. a \"user data dir\"."
 category = "main"
 optional = false
 python-versions = ">=3.7"
 
 [package.extras]
-docs = ["furo (>=2023.3.27)", "proselint (>=0.13)", "sphinx-autodoc-typehints (>=1.23,!=1.23.4)", "sphinx (>=6.1.3)"]
+docs = ["furo (>=2023.3.27)", "proselint (>=0.13)", "sphinx-autodoc-typehints (>=1.23,!=1.23.4)", "sphinx (>=6.2.1)"]
 test = ["appdirs (==1.4.4)", "covdefaults (>=2.3)", "pytest-cov (>=4)", "pytest-mock (>=3.10)", "pytest (>=7.3.1)"]
 
 [[package]]
@@ -1365,25 +1384,25 @@ cffi = {version = "*", markers = "implementation_name == \"pypy\""}
 
 [[package]]
 name = "regex"
-version = "2023.3.23"
+version = "2023.5.5"
 description = "Alternative regular expression module, to replace re."
 category = "main"
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.6"
 
 [[package]]
 name = "requests"
-version = "2.28.2"
+version = "2.30.0"
 description = "Python HTTP for Humans."
 category = "main"
 optional = false
-python-versions = ">=3.7, <4"
+python-versions = ">=3.7"
 
 [package.dependencies]
 certifi = ">=2017.4.17"
 charset-normalizer = ">=2,<4"
 idna = ">=2.5,<4"
-urllib3 = ">=1.21.1,<1.27"
+urllib3 = ">=1.21.1,<3"
 
 [package.extras]
 socks = ["PySocks (>=1.5.6,!=1.5.7)"]
@@ -1391,7 +1410,7 @@ use_chardet_on_py3 = ["chardet (>=3.0.2,<6)"]
 
 [[package]]
 name = "rich"
-version = "13.3.4"
+version = "13.3.5"
 description = "Render rich text, tables, progress bars, syntax highlighting, markdown and more to the terminal"
 category = "main"
 optional = false
@@ -1667,7 +1686,7 @@ numpy = ["numpy"]
 
 [[package]]
 name = "sphinx"
-version = "6.2.1"
+version = "7.0.1"
 description = "Python documentation generator"
 category = "dev"
 optional = false
@@ -1677,7 +1696,7 @@ python-versions = ">=3.8"
 alabaster = ">=0.7,<0.8"
 babel = ">=2.9"
 colorama = {version = ">=0.4.5", markers = "sys_platform == \"win32\""}
-docutils = ">=0.18.1,<0.20"
+docutils = ">=0.18.1,<0.21"
 imagesize = ">=1.3"
 importlib-metadata = {version = ">=4.8", markers = "python_version < \"3.10\""}
 Jinja2 = ">=3.0"
@@ -1699,7 +1718,7 @@ test = ["pytest (>=4.6)", "html5lib", "cython", "filelock"]
 
 [[package]]
 name = "sphinx-prompt"
-version = "1.6.0"
+version = "1.7.0"
 description = "Sphinx directive to add unselectable prompt"
 category = "dev"
 optional = false
@@ -1708,23 +1727,21 @@ python-versions = ">=3.8,<3.11"
 [package.dependencies]
 docutils = "*"
 pygments = "*"
-Sphinx = ">=6.0.0,<7.0.0"
+Sphinx = ">=7.0.0,<8.0.0"
 
 [[package]]
 name = "sphinx-rtd-theme"
-version = "1.2.0"
+version = "0.5.1"
 description = "Read the Docs theme for Sphinx"
 category = "dev"
 optional = false
-python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,>=2.7"
+python-versions = "*"
 
 [package.dependencies]
-docutils = "<0.19"
-sphinx = ">=1.6,<7"
-sphinxcontrib-jquery = {version = ">=2.0.0,<3.0.0 || >3.0.0", markers = "python_version > \"3\""}
+sphinx = "*"
 
 [package.extras]
-dev = ["transifex-client", "sphinxcontrib-httpdomain", "bump2version", "wheel"]
+dev = ["transifex-client", "sphinxcontrib-httpdomain", "bump2version"]
 
 [[package]]
 name = "sphinxcontrib-applehelp"
@@ -1761,17 +1778,6 @@ python-versions = ">=3.8"
 [package.extras]
 lint = ["flake8", "mypy", "docutils-stubs"]
 test = ["pytest", "html5lib"]
-
-[[package]]
-name = "sphinxcontrib-jquery"
-version = "4.1"
-description = "Extension to include jQuery on newer Sphinx releases"
-category = "dev"
-optional = false
-python-versions = ">=2.7"
-
-[package.dependencies]
-Sphinx = ">=1.8"
 
 [[package]]
 name = "sphinxcontrib-jsmath"
@@ -1826,18 +1832,18 @@ tests = ["pytest", "typeguard", "pygments", "littleutils", "cython"]
 
 [[package]]
 name = "svg.path"
-version = "6.2"
+version = "6.3"
 description = "SVG path objects and parser"
 category = "main"
 optional = false
-python-versions = "*"
+python-versions = ">=3.8"
 
 [package.extras]
-test = ["pillow", "pytest", "pytest-cov"]
+test = ["pillow", "black", "check-manifest", "flake8", "pyroma", "pytest", "pytest-cov", "zest.releaser"]
 
 [[package]]
 name = "sympy"
-version = "1.11.1"
+version = "1.12"
 description = "Computer algebra system (CAS) in Python"
 category = "main"
 optional = false
@@ -1962,7 +1968,7 @@ scipy = ["scipy"]
 
 [[package]]
 name = "tornado"
-version = "6.3.1"
+version = "6.3.2"
 description = "Tornado is a Python web framework and asynchronous networking library, originally developed at FriendFeed."
 category = "dev"
 optional = false
@@ -2076,16 +2082,17 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "urllib3"
-version = "1.26.15"
+version = "2.0.2"
 description = "HTTP library with thread-safe connection pooling, file post, and more."
 category = "main"
 optional = false
-python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*"
+python-versions = ">=3.7"
 
 [package.extras]
-brotli = ["brotlicffi (>=0.8.0)", "brotli (>=1.0.9)", "brotlipy (>=0.6.0)"]
-secure = ["pyOpenSSL (>=0.14)", "cryptography (>=1.3.4)", "idna (>=2.0.0)", "certifi", "urllib3-secure-extra", "ipaddress"]
-socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
+brotli = ["brotli (>=1.0.9)", "brotlicffi (>=0.8.0)"]
+secure = ["certifi", "cryptography (>=1.9)", "idna (>=2.0.0)", "pyopenssl (>=17.1.0)", "urllib3-secure-extra"]
+socks = ["pysocks (>=1.5.6,!=1.5.7,<2.0)"]
+zstd = ["zstandard (>=0.18.0)"]
 
 [[package]]
 name = "vadersentiment"
@@ -2123,7 +2130,7 @@ python-versions = "*"
 
 [[package]]
 name = "websockets"
-version = "11.0.2"
+version = "11.0.3"
 description = "An implementation of the WebSocket Protocol (RFC 6455 & 7692)"
 category = "main"
 optional = false
@@ -2183,7 +2190,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "flake8 (<5)", "pytest-co
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8,<3.10"
-content-hash = "27da452fe68aabadd141d3d843f1810c274f21d9bbef4f0bf428c804d6d4d716"
+content-hash = "509cac97700e836a0be010d6a87e11964546bf27a1ad44a6264f82345a00b40d"
 
 [metadata.files]
 aiohttp = []
@@ -2255,6 +2262,7 @@ networkx = []
 nltk = []
 numpy = []
 omegaconf = []
+openai = []
 opencv-python = []
 openpyxl = []
 packaging = []
@@ -2323,7 +2331,6 @@ sphinx-rtd-theme = []
 sphinxcontrib-applehelp = []
 sphinxcontrib-devhelp = []
 sphinxcontrib-htmlhelp = []
-sphinxcontrib-jquery = []
 sphinxcontrib-jsmath = []
 sphinxcontrib-qthelp = []
 sphinxcontrib-serializinghtml = []
