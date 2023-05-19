@@ -68,7 +68,7 @@ class QuestionAnswerer(Node):
 
         with open(self.prompt_file, 'r') as file:
             self.prompt = file.read()
-        self.log.info(f"Initialized few-shot prompt to:\n\n {self.prompt}")
+        self.log.info(f"Initialized few-shot prompt to:\n\n {self.prompt}\n\n")
         self.openai_api_key = os.getenv("OPENAI_API_KEY")
         self.openai_org_id = os.getenv("OPENAI_ORG_ID")
         # self.log.debug(f"OpenAI API established with API_KEY={self.openai_api_key} and " +\
@@ -118,7 +118,7 @@ class QuestionAnswerer(Node):
 
     def prompt_gpt(self, question, model: str = "gpt-3.5-turbo"):
         prompt = self.prompt.format(question)
-        self.log.info(f"Prompting OpenAI with\n {prompt}\n")
+        self.debug.info(f"Prompting OpenAI with\n {prompt}\n")
         payload = {
             "model" : model,
             "messages" : [
