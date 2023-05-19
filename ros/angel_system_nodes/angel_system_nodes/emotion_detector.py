@@ -1,5 +1,7 @@
+import queue
 import rclpy
 from rclpy.node import Node
+import threading
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 from angel_msgs.msg import InterpretedAudioUserEmotion, InterpretedAudioUserIntent
@@ -17,7 +19,6 @@ EMOTION_DETECTOR_MODE = "model_mode"
 # Currently supported emotions. This is tied with the emotions
 # output to VaderSentiment (https://github.com/cjhutto/vaderSentiment) and
 # will be subject to change in future iterations.
-VADER_SENTIMENT_LABELS = ['pos', 'neg', 'neu']
 VADER_SENTIMENT_LABEL_MAPPINGS = {
     "pos": "positive",
     "neg": "negative",
@@ -77,29 +78,30 @@ class EmotionDetector(Node):
                       f"({type(self.mode).__name__}) "
                       f"{self.mode}")
         
-        # TODO(derekahmed): Add internal queueing to reduce subscriber queue
-        # size to 1.
+         # Handle subscription/publication topics.
         self.interp_uintent_subscription = self.create_subscription(
             InterpretedAudioUserIntent,
             self._in_interp_uintent_topic,
             self.listener_callback,
             1)
         
-        # self.expect_uintent_subscription = self.create_subscription(
-        #     InterpretedAudioUserIntent,
-        #     self._in_expect_uintent_topic,
-        #     self.listener_callback,
-        #     10)
+        self.expect_uintent_subscription = self.create_subscription(
+            InterpretedAudioUserIntent,
+            self._in_expect_uintent_topic,
+            self.listener_callback,
+            1)
 
         self._interp_emo_publisher = self.create_publisher(
             InterpretedAudioUserEmotion,
             self._out_interp_uemotion_topic,
-            1
-        )
-        self.debug_moode = True
+            1)
+        
+        self.message_queue = queue.Queue()
+        self.handler_thread = threading.Thread(target=self.process_message_queue)
+        self.handler_thread.start()
 
         # Add other model modes here in the below conditional cases as they
-        # get implemented. As of  2023Q2, only Vader is supported.
+        # get implemented. As of 2023Q2, only Vader is supported.
         if self.mode == "vader":
             self.sentiment_analysis_model = SentimentIntensityAnalyzer()
         else:
@@ -120,7 +122,11 @@ class EmotionDetector(Node):
             classification = 'negative'
         else:
             classification = 'neutral'
-        return (classification, 1.00)
+
+        confidence = 1.00
+        self.log.info(f"Classifying with emotion: \"{self._red_font(classification)}\" " +\
+                      f"and score {confidence}")     
+        return (classification, confidence)
 
     def get_inference(self, utterance: str):
         '''
@@ -132,6 +138,34 @@ class EmotionDetector(Node):
         raise ValueError("Invalid Emotion Detector has been configured." +\
                           f"{self.mode} is an invalid mode.")       
 
+    def listener_callback(self, msg):
+        '''
+        This is the main ROS node listener callback loop that will process
+        all messages received via subscribed topics.
+        '''
+        self.log.info(f"Received message:\n\n{msg.utterance_text}")
+        if not self._apply_filter(msg):
+            return
+        self.message_queue.put(msg)
+
+    def process_message_queue(self):
+        '''
+        Constant loop to process received messages.
+        '''
+        while True:
+            msg = self.message_queue.get()
+            self.log.info(f"Processing message:\n\n{msg.utterance_text}")
+            classification, confidence_score  = self.get_inference(msg.utterance_text)
+            self.publish_detected_emotion(msg.utterance_text, classification, confidence_score)
+
+    def publish_detected_emotion(self, utterance: str,  classification: str,
+                                  confidence_score: float):
+        emotion_msg = InterpretedAudioUserEmotion()
+        emotion_msg.utterance_text = utterance
+        emotion_msg.user_emotion = classification
+        emotion_msg.confidence = confidence_score   
+        self._interp_emo_publisher.publish(emotion_msg)
+
     def _apply_filter(self, msg):
         '''
         Abstracts away any filtering to apply on received messages. Return
@@ -140,30 +174,6 @@ class EmotionDetector(Node):
         '''
         return msg
 
-    def _publish_detected_emotion(self, utterance: str,  classification: str,
-                                  confidence_score: float):
-        emotion_msg = InterpretedAudioUserEmotion()
-        emotion_msg.utterance_text = utterance
-        emotion_msg.user_emotion = classification
-        emotion_msg.confidence = confidence_score
-        self.log.info(f"Classifying utterance \"{utterance}\" " +\
-                      f"with emotion: \"{self._red_font(classification)}\" " +\
-                      f"and score {emotion_msg.confidence}")        
-        self._interp_emo_publisher.publish(emotion_msg)
-
-    def listener_callback(self, msg):
-        '''
-        This is the main ROS node listener callback loop that will process
-        all messages received via subscribed topics.
-        '''
-        if self.debug_moode:
-            self.log.info(f"Received message:\n\n{msg.utterance_text}")
-        if not self._apply_filter(msg):
-            return
-        classification, confidence_score  = self.get_inference(msg.utterance_text)
-        self._publish_detected_emotion(msg.utterance_text,
-                                       classification, confidence_score)
-                                       
     def _red_font(self, text):
         return f"\033[91m{text}\033[0m"
 
