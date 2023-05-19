@@ -167,7 +167,9 @@ class EmotionDetector(Node):
         none if the message should be filtered out. Else, return the incoming
         msg if it can be included.
         '''
-        return msg
+        if msg.user_intent.lower() == "user inquiry":
+            return msg
+        return None
 
     def _red_font(self, text):
         return f"\033[91m{text}\033[0m"
