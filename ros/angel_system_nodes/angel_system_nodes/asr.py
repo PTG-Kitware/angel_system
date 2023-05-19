@@ -1,6 +1,7 @@
 import json
 import numpy as np
 import pyaudio
+import queue
 import requests
 import soundfile
 import tempfile
@@ -89,19 +90,16 @@ class ASR(Node):
                       f"({type(self._debug_mode).__name__}) "
                       f"{self._debug_mode}")
 
+        # Handle subscription/publication topics.
         self.subscription = self.create_subscription(
             HeadsetAudioData,
             self._audio_topic,
             self.listener_callback,
-            10)
-        
-        # TODO(derekahmed): Add internal buffering to reduce publisher queue
-        # size to 1.
+            1)
         self._publisher = self.create_publisher(
             Utterance,
             self._utterances_topic,
-            10
-        )
+            1)
 
         self.audio_stream = []
         self.t = threading.Thread()
@@ -118,44 +116,53 @@ class ASR(Node):
         # this external server.
         self.asr_server_lock = threading.RLock()
 
+        self.message_queue = queue.Queue()
+        self.handler_thread = threading.Thread(target=self.process_message_queue)
+        self.handler_thread.start()
+
     def listener_callback(self, msg):
+        self.message_queue.put(msg)
         
-        with self.audio_stream_lock:
-            # Check that this message comes temporally after the previous message.
-            message_order_valid = False
-            if self.prev_timestamp is None:
-                message_order_valid = True
-            else:
-                if msg.header.stamp.sec > self.prev_timestamp.sec:
+    def process_message_queue(self):
+        while True:
+            msg = self.message_queue.get()
+            with self.audio_stream_lock:
+                # Check that this message comes temporally after the previous message.
+                message_order_valid = False
+                if self.prev_timestamp is None:
                     message_order_valid = True
-                elif msg.header.stamp.sec == self.prev_timestamp.sec:
-                    # Seconds are same, so check nanoseconds.
-                    if msg.header.stamp.nanosec > self.prev_timestamp.nanosec:
+                else:
+                    if msg.header.stamp.sec > self.prev_timestamp.sec:
                         message_order_valid = True
+                    elif msg.header.stamp.sec == self.prev_timestamp.sec:
+                        # Seconds are same, so check nanoseconds.
+                        if msg.header.stamp.nanosec > self.prev_timestamp.nanosec:
+                            message_order_valid = True
 
-            if message_order_valid:
-                self.audio_stream.extend(msg.data)
-                self.audio_stream_duration += msg.sample_duration
-            else:
-                self.log.info("Warning! Out of order messages.\n"
-                         + f"Prev: {self.prev_timestamp} \nCurr: {msg.header.stamp}")
-                return
+                if message_order_valid:
+                    self.audio_stream.extend(msg.data)
+                    self.audio_stream_duration += msg.sample_duration
+                else:
+                    self.log.info("Warning! Out of order messages.\n"
+                            + f"Prev: {self.prev_timestamp} \nCurr: {msg.header.stamp}")
+                    return
 
-            self.prev_timestamp = msg.header.stamp
-            if self.audio_stream_duration >= self._segmentation_duration and not(self.t.is_alive()):
-                # Make a copy of the current data so we can run ASR
-                # while more data is accumulated.
-                audio_data = self.audio_stream
+                self.prev_timestamp = msg.header.stamp
+                if self.audio_stream_duration >= self._segmentation_duration and\
+                    not(self.t.is_alive()):
+                    # Make a copy of the current data so we can run ASR
+                    # while more data is accumulated.
+                    audio_data = self.audio_stream
 
-                # Remove the data that we just copied from the stream.
-                self.audio_stream = []
-                self.audio_stream_duration = 0.0
+                    # Remove the data that we just copied from the stream.
+                    self.audio_stream = []
+                    self.audio_stream_duration = 0.0
 
-                # Start the ASR server request thread.
-                self.log.info("Spawning ASR request thread.")
-                self.t = threading.Thread(target=self.asr_server_request_thread,
-                    args=(audio_data, msg.channels, msg.sample_rate))
-                self.t.start()
+                    # Start the ASR server request thread.
+                    self.log.info("Spawning ASR request thread.")
+                    self.t = threading.Thread(target=self.asr_server_request_thread,
+                        args=(audio_data, msg.channels, msg.sample_rate))
+                    self.t.start()
 
     def asr_server_request_thread(self, audio_data, num_channels, sample_rate):
         with self.asr_server_lock:
