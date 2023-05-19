@@ -185,20 +185,6 @@ class ActivityHMMRos:
         self.activity_per_step = activity_per_step
         self.class_str = class_str
         self.med_class_duration = med_class_duration
-        self._class_mean_conf = np.array(class_mean_conf)
-        self._class_std_conf = np.array(class_std_conf)
-
-        # This is the model that enforces steps are done in order without
-        # skipping steps.
-        self.noskip_model = ActivityHMM(
-            self.dt,
-            class_str,
-            med_class_duration,
-            num_steps_can_jump_fwd=0,
-            num_steps_can_jump_bck=0,
-            class_mean_conf=class_mean_conf,
-            class_std_conf=class_std_conf,
-        )
 
         self.num_steps_can_jump_fwd = config["hmm"]["num_steps_can_jump_fwd"]
         self.num_steps_can_jump_bck = config["hmm"]["num_steps_can_jump_bck"]
@@ -222,6 +208,7 @@ class ActivityHMMRos:
             class_mean_conf=class_mean_conf,
             class_std_conf=class_std_conf,
         )
+        self.set_hmm_mean_and_std(class_mean_conf, class_std_conf)
 
     @property
     def num_steps(self):
@@ -258,7 +245,24 @@ class ActivityHMMRos:
                                  class_mean_conf=self.class_mean_conf,
                                  class_std_conf=self.class_std_conf)
 
-    def add_activity_classification(self, label_vec, conf_vec, start_time, end_time):
+        self.unconstrained_model = ActivityHMM(self.dt, self.class_str,
+                                               self.med_class_duration,
+                                               num_steps_can_jump_fwd=self.num_steps,
+                                               num_steps_can_jump_bck=self.num_steps,
+                                               class_mean_conf=self.class_mean_conf,
+                                               class_std_conf=self.class_std_conf)
+
+        # This is the model that enforces steps are done in order without
+        # skipping steps.
+        self.noskip_model = ActivityHMM(self.dt, self.class_str,
+                                        self.med_class_duration,
+                                        num_steps_can_jump_fwd=0,
+                                        num_steps_can_jump_bck=0,
+                                        class_mean_conf=self.class_mean_conf,
+                                        class_std_conf=self.class_std_conf)
+
+    def add_activity_classification(self, label_vec, conf_vec, start_time,
+                                    end_time):
         """Provide activity classification results for time period.
 
         Parameters
