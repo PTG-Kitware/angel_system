@@ -48,7 +48,6 @@ class EmotionDetector(Node):
             namespace="",
             parameters=[(p,) for p in parameter_names],
         )
-        # Check for unset parameters
         some_not_set = False
         for p in set_parameters:
             if p.type_ is rclpy.parameter.Parameter.Type.NOT_SET:
@@ -57,12 +56,9 @@ class EmotionDetector(Node):
         if some_not_set:
             raise ValueError("Some parameters are not set.")
 
-        self._in_interp_uintent_topic = \
-            self.get_parameter(IN_INTERP_USER_INTENT_TOPIC).value
-        self._in_expect_uintent_topic = \
-            self.get_parameter(IN_EXPECT_USER_INTENT_TOPIC).value
-        self._out_interp_uemotion_topic = \
-            self.get_parameter(OUT_INTERP_USER_EMOTION_TOPIC).value
+        self._in_interp_uintent_topic = self.get_parameter(IN_INTERP_USER_INTENT_TOPIC).value
+        self._in_expect_uintent_topic = self.get_parameter(IN_EXPECT_USER_INTENT_TOPIC).value
+        self._out_interp_uemotion_topic = self.get_parameter(OUT_INTERP_USER_EMOTION_TOPIC).value
         self.mode = \
             self.get_parameter(EMOTION_DETECTOR_MODE).value
         self.log.info(f"Interpreted User Intents topic: "
@@ -90,7 +86,6 @@ class EmotionDetector(Node):
             self._in_expect_uintent_topic,
             self.listener_callback,
             1)
-
         self._interp_emo_publisher = self.create_publisher(
             InterpretedAudioUserEmotion,
             self._out_interp_uemotion_topic,
@@ -114,17 +109,17 @@ class EmotionDetector(Node):
         '''
         polarity_scores = \
             self.sentiment_analysis_model.polarity_scores(utterance)
-        self.log.info(f"Rated user utterance: \"{utterance}\"" +\
-                      f" with emotion scores {polarity_scores}")
         if polarity_scores['compound'] >= VADER_POSITIVE_COMPOUND_THRESHOLD:
-            classification = 'positive'
+            classification = VADER_SENTIMENT_LABEL_MAPPINGS['pos']
         elif  polarity_scores['compound'] <= VADER_NEGATIVE_COMPOUND_THRESHOLD:
-            classification = 'negative'
+            classification = VADER_SENTIMENT_LABEL_MAPPINGS['neg']
         else:
-            classification = 'neutral'
+            classification = VADER_SENTIMENT_LABEL_MAPPINGS['neu']
 
         confidence = 1.00
-        self.log.info(f"Classifying with emotion=\"{self._red_font(classification)}\" " +\
+        self.log.info(f"Rated user utterance: \"{utterance}\"" +\
+                      f" with emotion scores {polarity_scores}. " +\
+                      f"Classifying with emotion=\"{self._red_font(classification)}\" " +\
                       f"and score={confidence}")     
         return (classification, confidence)
 
@@ -143,7 +138,7 @@ class EmotionDetector(Node):
         This is the main ROS node listener callback loop that will process
         all messages received via subscribed topics.
         '''
-        self.log.info(f"Received message:\n\n\"{msg.utterance_text}\"")
+        self.log.debug(f"Received message:\n\n\"{msg.utterance_text}\"")
         if not self._apply_filter(msg):
             return
         self.message_queue.put(msg)
@@ -154,7 +149,7 @@ class EmotionDetector(Node):
         '''
         while True:
             msg = self.message_queue.get()
-            self.log.info(f"Processing message:\n\n\"{msg.utterance_text}\"")
+            self.log.debug(f"Processing message:\n\n\"{msg.utterance_text}\"")
             classification, confidence_score  = self.get_inference(msg.utterance_text)
             self.publish_detected_emotion(msg.utterance_text, classification, confidence_score)
 

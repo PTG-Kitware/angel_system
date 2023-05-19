@@ -107,7 +107,6 @@ class VoiceActivityDetector(Node):
                       f"({type(self._debug_mode).__name__}) "
                       f"{self._debug_mode}")
         
-        self.is_audio_metadata_set = False
         self.sample_rate = -1
         self.num_channels = -1
         self.bytes_per_sample = FLOAT32_BYTE_LENGTH
@@ -336,34 +335,33 @@ class VoiceActivityDetector(Node):
         microphone getting used for recording. This functionality encapsulates
         how this is handled (e.g. logging, error raising, etc.)
         '''
-        if not self.is_audio_metadata_set:
-            if msg.channels != self.num_channels:
-                if self.num_channels != -1:
-                    raise RuntimeError(
-                        "Invalid message data encountered. VAD node has already been configured " +\
-                            f"for {self.num_channels} channels, " +\
-                                f"but message data contains {msg.channels} channels.")
-                self.log.info("Audio number of channels is being changed " +\
-                            f"{self.num_channels} -> {msg.channels}")
-                self.num_channels = msg.channels
-            
-            if msg.sample_rate != self.sample_rate:
-                if self.sample_rate != -1:
-                    raise RuntimeError(
-                        "Invalid message data encountered. VAD node has already been configured " +\
-                            f"for {self.sample_rate} sample rate, " +\
-                                f"but message data is rate={msg.sample_rate}.")
-                self.log.info("Audio sample rate is being changed " +\
-                            f"{self.sample_rate} -> {msg.sample_rate}")
-                self.sample_rate = msg.sample_rate
+        if msg.channels != self.num_channels:
+            if self.num_channels != -1:
+                raise RuntimeError(
+                    "Invalid message data encountered. VAD node has already been configured " +\
+                        f"for {self.num_channels} channels, " +\
+                            f"but message data contains {msg.channels} channels.")
+            self.log.info("Audio number of channels is being changed " +\
+                        f"{self.num_channels} -> {msg.channels}")
+            self.num_channels = msg.channels
+        
+        if msg.sample_rate != self.sample_rate:
+            if self.sample_rate != -1:
+                raise RuntimeError(
+                    "Invalid message data encountered. VAD node has already been configured " +\
+                        f"for {self.sample_rate} sample rate, " +\
+                            f"but message data is rate={msg.sample_rate}.")
+            self.log.info("Audio sample rate is being changed " +\
+                        f"{self.sample_rate} -> {msg.sample_rate}")
+            self.sample_rate = msg.sample_rate
 
-        elif msg.channels != self.num_channels or\
-                msg.sample_rate != self.sample_rate:
-            self.log.error("Audio message metadata has suddenly changed. " +\
-                           f"Node audio metadata is {self.num_channels} " +\
-                           f"channels and {self.sample_rate} frequency. " +\
-                           f"Msg audio metadata is {msg.num_channels} " +\
-                           f"channels and {msg.sample_rate} frequency. ")
+    elif msg.channels != self.num_channels or\
+            msg.sample_rate != self.sample_rate:
+        self.log.error("Audio message metadata has suddenly changed. " +\
+                        f"Node audio metadata is {self.num_channels} " +\
+                        f"channels and {self.sample_rate} frequency. " +\
+                        f"Msg audio metadata is {msg.num_channels} " +\
+                        f"channels and {msg.sample_rate} frequency. ")
 
     def _time_to_byte_index(self, seconds_timestamp,
                             sample_byte_length,
