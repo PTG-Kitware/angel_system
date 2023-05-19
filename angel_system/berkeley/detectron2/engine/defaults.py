@@ -351,6 +351,47 @@ class DefaultPredictor:
         # activation_map = self.cam_extractor(0, contact_pred[1, :])
         return predictions
 
+def save_sample_images(data_loader, output_dir, sub_folder):
+        logger = logging.getLogger("detectron2")
+        logger.setLevel(logging.DEBUG)
+
+        GRID_SIZE = 9
+        NUM_ROWS = 3
+        
+        # Stack of sample images
+        images = []
+        for data in data_loader.dataset:
+            images.append(data['image'])
+
+            if len(images) >= 100:
+                    break
+
+        images = torch.stack(images)
+
+        debug_out = f"{output_dir}/sample_images"
+        if not os.path.exists(debug_out):
+            os.mkdir(debug_out)
+        debug_out = f"{debug_out}/{sub_folder}"
+        if not os.path.exists(debug_out):
+            os.mkdir(debug_out)
+        
+        # Visualize input images
+        for i, image in enumerate(images):
+            image = image.numpy()
+            image = np.moveaxis(image, 0, 2)
+
+            h, w, c = image.shape
+            logger.debug(f"data_loader image shape: {h} x {w}")
+            cv2.imwrite(f"{debug_out}/image_{i}.jpg", image)
+
+        if sub_folder == "train":
+            # Visualize batches
+            img_grid_fake = torchvision.utils.make_grid(images[:GRID_SIZE, ...], nrow=NUM_ROWS).numpy()
+            im = np.moveaxis(img_grid_fake, 0, 2)
+
+            filepath = os.path.join(debug_out, f"sample-training-images.png")
+            cv2.imwrite(filepath, im)
+            logger.info(f'Saved sample of training images to {filepath}')
 
 class DefaultTrainer(TrainerBase):
     """
@@ -401,10 +442,8 @@ class DefaultTrainer(TrainerBase):
             cfg (CfgNode):
         """
         super().__init__()
-        self.logger = logging.getLogger("detectron2")
-        self.logger.setLevel(logging.DEBUG)
-
-        if not self.logger.isEnabledFor(logging.INFO):  # setup_logger is not called for d2
+        logger = logging.getLogger("detectron2")
+        if not logger.isEnabledFor(logging.INFO):  # setup_logger is not called for d2
             setup_logger()
         cfg = DefaultTrainer.auto_scale_workers(cfg, comm.get_world_size())
 
@@ -413,7 +452,7 @@ class DefaultTrainer(TrainerBase):
         optimizer = self.build_optimizer(cfg, model)
         
         data_loader = self.build_train_loader(cfg)
-        self.save_sample_images(data_loader, cfg.OUTPUT_DIR, "train")
+        save_sample_images(data_loader, cfg.OUTPUT_DIR, "train")
 
         data_loader_iter = iter(data_loader)
 
@@ -434,45 +473,6 @@ class DefaultTrainer(TrainerBase):
         self.cfg = cfg
 
         self.register_hooks(self.build_hooks())
-
-    def save_sample_images(self, data_loader, output_dir, sub_folder):
-        GRID_SIZE = 9
-        NUM_ROWS = 3
-        
-        # Stack of sample images
-        images = []
-        for data in data_loader.dataset:
-            images.append(data['image'])
-
-            if len(images) >= 100:
-                    break
-
-        images = torch.stack(images)
-
-        debug_out = f"{output_dir}/sample_images"
-        if not os.path.exists(debug_out):
-            os.mkdir(debug_out)
-        debug_out = f"{debug_out}/{sub_folder}"
-        if not os.path.exists(debug_out):
-            os.mkdir(debug_out)
-        
-        # Visualize input images
-        for i, image in enumerate(images):
-            image = image.numpy()
-            image = np.moveaxis(image, 0, 2)
-
-            h, w, c = image.shape
-            self.logger.debug(f"data_loader image shape: {h} x {w}")
-            cv2.imwrite(f"{debug_out}/image_{i}.jpg", image)
-
-        if sub_folder == "train":
-            # Visualize batches
-            img_grid_fake = torchvision.utils.make_grid(images[:GRID_SIZE, ...], nrow=NUM_ROWS).numpy()
-            im = np.moveaxis(img_grid_fake, 0, 2)
-
-            filepath = os.path.join(debug_out, f"sample-training-images.png")
-            cv2.imwrite(filepath, im)
-            print(f'Saved sample of training images to {filepath}')
 
     def resume_or_load(self, resume=True):
         """
@@ -679,7 +679,7 @@ Alternatively, you can call evaluation functions yourself (see Colab balloon tut
         results = OrderedDict()
         for idx, dataset_name in enumerate(cfg.DATASETS.TEST):
             data_loader = cls.build_test_loader(cfg, dataset_name)
-            self.save_sample_images(data_loader, cfg.OUTPUT_DIR, "test")
+            save_sample_images(data_loader, output_dir=cfg.OUTPUT_DIR, sub_folder="test")
 
             # When evaluators are passed in as arguments,
             # implicitly assume that evaluators can be created before data_loader.

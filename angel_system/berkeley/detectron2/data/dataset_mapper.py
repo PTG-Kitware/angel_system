@@ -165,7 +165,6 @@ class DatasetMapper:
         image, sem_seg_gt = aug_input.image, aug_input.sem_seg
 
         image_shape = image.shape[:2]  # h, w
-        self.logger.debug(f"AugInput size: {image_shape[0]} x {image_shape[1]}")
         # Pytorch's dataloader is efficient on torch.Tensor due to shared-memory,
         # but not efficient on large generic data structures due to the use of pickle & mp.Queue.
         # Therefore it's important to use torch.Tensor.
