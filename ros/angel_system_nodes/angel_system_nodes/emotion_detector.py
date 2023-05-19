@@ -78,7 +78,7 @@ class EmotionDetector(Node):
                       f"({type(self.mode).__name__}) "
                       f"{self.mode}")
         
-         # Handle subscription/publication topics.
+        # Handle subscription/publication topics.
         self.interp_uintent_subscription = self.create_subscription(
             InterpretedAudioUserIntent,
             self._in_interp_uintent_topic,
