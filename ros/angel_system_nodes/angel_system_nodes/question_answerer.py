@@ -118,7 +118,7 @@ class QuestionAnswerer(Node):
 
     def prompt_gpt(self, question, model: str = "gpt-3.5-turbo"):
         prompt = self.prompt.format(question)
-        self.debug.info(f"Prompting OpenAI with\n {prompt}\n")
+        self.log.debug(f"Prompting OpenAI with\n {prompt}\n")
         payload = {
             "model" : model,
             "messages" : [
