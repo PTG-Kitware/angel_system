@@ -81,7 +81,7 @@ class QuestionAnswerer(Node):
         here.
         '''
         try: 
-            return self.prompt_gpt(user_utterance)
+            return self._red_font(self.prompt_gpt(user_utterance))
         except Exception as e:
             self.log.info(e)
             apology_msg = "I'm sorry. I don't know how to answer your statement."
@@ -95,6 +95,8 @@ class QuestionAnswerer(Node):
         all messages received via subscribed topics.
         '''  
         self.log.debug(f"Received message:\n\n{msg.utterance_text}")
+        if not self._apply_filter(msg):
+            return
         self.message_queue.put(msg)
 
     def process_message_queue(self):
@@ -115,8 +117,8 @@ class QuestionAnswerer(Node):
         self._qa_publisher.publish(msg)
 
     def prompt_gpt(self, question, model: str = "gpt-3.5-turbo"):
-        self.log.info(f"Prompting OpenAI with {self.openai_api_key} ; {self.openai_org_id}")
         prompt = self.prompt.format(question)
+        self.log.info(f"Prompting OpenAI with\n {prompt}\n")
         payload = {
             "model" : model,
             "messages" : [
@@ -129,6 +131,14 @@ class QuestionAnswerer(Node):
         req = requests.post("https://api.openai.com/v1/chat/completions", json=payload,
             headers={"Authorization":"Bearer {}".format(self.openai_api_key)})
         return json.loads(req.text)['choices'][0]['message']['content'].split("A:")[-1].lstrip()
+
+    def _apply_filter(self, msg):
+        '''
+        Abstracts away any filtering to apply on received messages. Return
+        none if the message should be filtered out. Else, return the incoming
+        msg if it can be included.
+        '''
+        return msg
 
     def _red_font(self, text):
         return f"\033[91m{text}\033[0m"
