@@ -1,12 +1,20 @@
+import json
+import openai
+import os
 import queue
 import rclpy
 from rclpy.node import Node
+import requests
 import threading
 from angel_msgs.msg import InterpretedAudioUserEmotion, SystemTextResponse
 
 
+openai.organization = os.getenv("OPENAI_ORG_ID")
+openai.api_key = os.getenv("OPENAI_API_KEY")
+
 IN_EMOTION_TOPIC = "user_emotion_topic"
 OUT_QA_TOPIC = "system_text_response_topic"
+FEW_SHOT_PROMPT = "few_shot_prompt_file"
 
 class QuestionAnswerer(Node):
     def __init__(self):
@@ -16,6 +24,7 @@ class QuestionAnswerer(Node):
         parameter_names = [
             IN_EMOTION_TOPIC,
             OUT_QA_TOPIC,
+            FEW_SHOT_PROMPT
         ]
         set_parameters = self.declare_parameters(
             namespace="",
@@ -31,12 +40,16 @@ class QuestionAnswerer(Node):
 
         self._in_emotion_topic = self.get_parameter(IN_EMOTION_TOPIC).value
         self._out_qa_topic = self.get_parameter(OUT_QA_TOPIC).value
+        self.prompt_file = self.get_parameter(FEW_SHOT_PROMPT).value
         self.log.info(f"Input Emotion topic: "
                       f"({type(self._in_emotion_topic).__name__}) "
                       f"{self._in_emotion_topic}")
         self.log.info(f"Output Question-Answer topic: "
                       f"({type(self._out_qa_topic).__name__}) "
                       f"{self._out_qa_topic}")
+        self.log.info(f"Few-shot prompt file: "
+                      f"({type(self.prompt_file).__name__}) "
+                      f"{self.prompt_file}")
 
         # Handle subscription/publication topics.
         self.subscription = self.create_subscription(
@@ -53,20 +66,28 @@ class QuestionAnswerer(Node):
         self.handler_thread = threading.Thread(target=self.process_message_queue)
         self.handler_thread.start()
 
+        with open(self.prompt_file, 'r') as file:
+            self.prompt = file.read()
+        self.log.info(f"Initialized few-shot prompt to:\n\n {self.prompt}")
+        self.openai_api_key = os.getenv("OPENAI_API_KEY")
+        self.openai_org_id = os.getenv("OPENAI_ORG_ID")
+        self.log.info(f"OpenAI API established with API_KEY={self.openai_api_key} and " +\
+                      f"org_id={self.openai_org_id}.")
+
     def get_response(self, user_utterance: str, user_emotion: str):
         '''
         Generate a  response to the utterance, enriched with the addition of
         the user's detected emotion. Inference calls can be added and revised
         here.
         '''
-        # utterance_words = user_utterance.split()
-        # shortened_utterance = \
-        #     ' '.join(utterance_words[:4]) + " ... " + \
-        #         ' '.join(utterance_words[-4:]) \
-        #         if len(utterance_words) >= 8 else user_utterance
-        apology_msg = "I'm sorry. I don't know how to answer your statement."
-        return self._red_font(apology_msg) +\
-            f" I understand that you feel \"{self._red_font(user_emotion)}\"."
+        try: 
+            return self.prompt_gpt(user_utterance)
+        except Exception as e:
+            self.log.info(e)
+            apology_msg = "I'm sorry. I don't know how to answer your statement."
+            return self._red_font(apology_msg) +\
+                f" I understand that you feel \"{self._red_font(user_emotion)}\"."
+        
 
     def listener_callback(self, msg):
         '''
@@ -92,6 +113,22 @@ class QuestionAnswerer(Node):
         msg.response = response
         self.log.info(f"Responding to utterance \"{utterance}\" with:\n\"{response}\"")
         self._qa_publisher.publish(msg)
+
+    def prompt_gpt(self, question, model: str = "gpt-3.5-turbo"):
+        self.log.info(f"Prompting OpenAI with {self.openai_api_key} ; {self.openai_org_id}")
+        prompt = self.prompt.format(question)
+        payload = {
+            "model" : model,
+            "messages" : [
+                {
+                    "role": "user",
+                    "content" : prompt
+                }
+            ]
+        }
+        req = requests.post("https://api.openai.com/v1/chat/completions", json=payload,
+            headers={"Authorization":"Bearer {}".format(self.openai_api_key)})
+        return json.loads(req.text)['choices'][0]['message']['content'].split("A:")[-1].lstrip()
 
     def _red_font(self, text):
         return f"\033[91m{text}\033[0m"

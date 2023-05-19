@@ -21,6 +21,7 @@ root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 on_project_start: |
   export ROS_NAMESPACE=${ROS_NAMESPACE:-/debug}
   export CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/src/angel_system_nodes/configs
+  export NODE_RESOURCES_DIR=${ANGEL_WORKSPACE_DIR}/src/angel_system_nodes/resource
 # Run on project start, the first time
 # on_project_first_start: command
 
@@ -93,3 +94,4 @@ windows:
       -r __ns:=${ROS_NAMESPACE}
       -p user_emotion_topic:=user_emotion_topic
       -p system_text_response_topic:=system_text_response_topic
+      -p few_shot_prompt_file:=${NODE_RESOURCES_DIR}/question_answer_prompt
