@@ -71,8 +71,8 @@ class QuestionAnswerer(Node):
         self.log.info(f"Initialized few-shot prompt to:\n\n {self.prompt}")
         self.openai_api_key = os.getenv("OPENAI_API_KEY")
         self.openai_org_id = os.getenv("OPENAI_ORG_ID")
-        self.log.info(f"OpenAI API established with API_KEY={self.openai_api_key} and " +\
-                      f"org_id={self.openai_org_id}.")
+        # self.log.debug(f"OpenAI API established with API_KEY={self.openai_api_key} and " +\
+        #               f"org_id={self.openai_org_id}.")
 
     def get_response(self, user_utterance: str, user_emotion: str):
         '''
