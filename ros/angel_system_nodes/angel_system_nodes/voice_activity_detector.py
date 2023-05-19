@@ -136,7 +136,6 @@ class VoiceActivityDetector(Node):
         # self.prev_timestamp, and self.t to faciilitate accumulation of
         # audio data prior to ASR processing.
         self.audio_stream_lock = threading.RLock()
-        self.msg_i = 0
 
         # This locks Voice Activity Detection (VAD) server requesting
         # to ensure only 1 VAD request gets processed at a time.
@@ -178,7 +177,6 @@ class VoiceActivityDetector(Node):
                             + f"Prev: {self.prev_timestamp} \nCurr: {msg.header.stamp}")
                     return
                 
-                self.msg_i = self.msg_i + 1
                 self.prev_timestamp = msg.header.stamp
                 if self.intracadence_duration >= self.vad_cadence\
                     and not(self.request_thread.is_alive()):
