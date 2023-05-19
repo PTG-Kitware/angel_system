@@ -1,6 +1,7 @@
 import json
 import numpy as np
 import pyaudio
+import queue
 import requests
 import soundfile
 import struct
@@ -82,16 +83,11 @@ class VoiceActivityDetector(Node):
             self.get_parameter(IN_AUDIO_TOPIC).get_parameter_value().string_value
         self._out_voice_activity_topic =\
             self.get_parameter(OUT_VOICE_ACTIVITY_TOPIC).get_parameter_value().string_value
-        self._vad_server_url =\
-            self.get_parameter(VAD_SERVER_URL).get_parameter_value().string_value
-        self.vad_cadence =\
-            self.get_parameter(VAD_SEC_CADENCE).value
-        self._vad_sec_margin =\
-            self.get_parameter(VAD_SEC_MARGIN).value
-        self._max_accumulation_sec_length =\
-            self.get_parameter(MAX_ACCUMULATION_SEC_LENGTH).value
-        self._debug_mode =\
-            self.get_parameter(DEBUG_MODE).get_parameter_value().bool_value
+        self._vad_server_url = self.get_parameter(VAD_SERVER_URL).get_parameter_value().string_value
+        self.vad_cadence = self.get_parameter(VAD_SEC_CADENCE).value
+        self._vad_sec_margin = self.get_parameter(VAD_SEC_MARGIN).value
+        self._max_accumulation_sec_length = self.get_parameter(MAX_ACCUMULATION_SEC_LENGTH).value
+        self._debug_mode = self.get_parameter(DEBUG_MODE).get_parameter_value().bool_value
         self.log.info(f"Input Audio topic: "
                       f"({type(self._in_audio_topic).__name__}) "
                       f"{self._in_audio_topic}")
@@ -116,24 +112,19 @@ class VoiceActivityDetector(Node):
         self.num_channels = -1
         self.bytes_per_sample = FLOAT32_BYTE_LENGTH
         
-        # Used to keep track of number of vocal activity detection splits.
+        # Counter for the number of vocal activity detection splits.
         self.split_counter = 0
 
-        # TODO(derekahmed): Add internal buffering to reduce subscriber queue
-        # size to 1.
+        # Handle subscription/publication topics.
         self.subscription = self.create_subscription(
             HeadsetAudioData,
             self._in_audio_topic,
             self.listener_callback,
-            3000)
-        
-        # TODO(derekahmed): Add internal buffering to reduce publisher queue
-        # size to 1.
+            1)
         self._publisher = self.create_publisher(
             HeadsetAudioData,
             self._out_voice_activity_topic,
-            3000
-        )
+            1)
 
         self.request_thread = threading.Thread()
         self.prev_timestamp = None
@@ -154,55 +145,63 @@ class VoiceActivityDetector(Node):
         # this external server.
         self.vad_server_lock = threading.RLock()
 
+        self.message_queue = queue.Queue()
+        self.handler_thread = threading.Thread(target=self.process_message_queue)
+        self.handler_thread.start()
+
     def listener_callback(self, msg):
-
         self._check_init_audio_metadata_fields(msg)
-        with self.audio_stream_lock:
-            # Check that this message comes temporally after the previous message.
-            message_order_valid = False
-            if self.prev_timestamp is None:
-                message_order_valid = True
-            else:
-                if msg.header.stamp.sec > self.prev_timestamp.sec:
+        self.message_queue.put(msg)
+
+    def process_message_queue(self):
+        while True:
+            msg = self.message_queue.get()
+            with self.audio_stream_lock:
+                # Check that this message comes temporally after the previous message.
+                message_order_valid = False
+                if self.prev_timestamp is None:
                     message_order_valid = True
-                elif msg.header.stamp.sec == self.prev_timestamp.sec:
-                    # Seconds are same, so check nanoseconds.
-                    if msg.header.stamp.nanosec > self.prev_timestamp.nanosec:
+                else:
+                    if msg.header.stamp.sec > self.prev_timestamp.sec:
                         message_order_valid = True
+                    elif msg.header.stamp.sec == self.prev_timestamp.sec:
+                        # Seconds are same, so check nanoseconds.
+                        if msg.header.stamp.nanosec > self.prev_timestamp.nanosec:
+                            message_order_valid = True
 
-            if message_order_valid:
-                self.accumulated_audio.extend(msg.data)
-                self.accumulated_timestamps.append(msg.header.stamp)
-                self.accumulated_audio_duration += msg.sample_duration
-                self.intracadence_duration += msg.sample_duration
-            else:
-                self.log.info("Warning! Out of order messages.\n"
-                         + f"Prev: {self.prev_timestamp} \nCurr: {msg.header.stamp}")
-                return
-            
-            self.msg_i = self.msg_i + 1
-            self.prev_timestamp = msg.header.stamp
-            if self.intracadence_duration >= self.vad_cadence\
-                and not(self.request_thread.is_alive()):
-                self.log.info(f"{self.n_cadence_steps}-th cadence occurred " +\
-                              f"with {self.accumulated_audio_duration} sec " +\
-                              "currently accumulated. Requesting voice activity detection.")
+                if message_order_valid:
+                    self.accumulated_audio.extend(msg.data)
+                    self.accumulated_timestamps.append(msg.header.stamp)
+                    self.accumulated_audio_duration += msg.sample_duration
+                    self.intracadence_duration += msg.sample_duration
+                else:
+                    self.log.info("Warning! Out of order messages.\n"
+                            + f"Prev: {self.prev_timestamp} \nCurr: {msg.header.stamp}")
+                    return
                 
-                # Make a copy of the current data so we can run VAD
-                # while more data is accumulated.
-                req_data = self.accumulated_audio[:]
-                req_duration = self.accumulated_audio_duration
+                self.msg_i = self.msg_i + 1
+                self.prev_timestamp = msg.header.stamp
+                if self.intracadence_duration >= self.vad_cadence\
+                    and not(self.request_thread.is_alive()):
+                    self.log.info(f"{self.n_cadence_steps}-th cadence occurred " +\
+                                f"with {self.accumulated_audio_duration} sec " +\
+                                "currently accumulated. Requesting voice activity detection.")
+                    
+                    # Make a copy of the current data so we can run VAD
+                    # while more data is accumulated.
+                    req_data = self.accumulated_audio[:]
+                    req_duration = self.accumulated_audio_duration
 
-                # Start the VAD server request thread.
-                self.request_thread = threading.Thread(target=self.vad_server_request_thread,
-                    args=(req_data, self.num_channels, self.sample_rate,
-                          req_duration))
-                self.request_thread.start()
+                    # Start the VAD server request thread.
+                    self.request_thread = threading.Thread(target=self.vad_server_request_thread,
+                        args=(req_data, self.num_channels, self.sample_rate,
+                            req_duration))
+                    self.request_thread.start()
 
-                # Reset the intercadence-accumulation counter, regardless
-                # if voice activity was detected.
-                self.intracadence_duration = 0.0
-                self.n_cadence_steps += 1
+                    # Reset the intercadence-accumulation counter, regardless
+                    # if voice activity was detected.
+                    self.intracadence_duration = 0.0
+                    self.n_cadence_steps += 1
 
     def vad_server_request_thread(self, audio_data, num_channels, sample_rate,
                                   audio_duration):
@@ -222,7 +221,7 @@ class VoiceActivityDetector(Node):
                                     f"audio_duration={audio_duration} with  "+\
                                     f"margin={self._vad_sec_margin}.")
                         return
-                    self._handle_publication(audio_data, end, self.bytes_per_sample, num_channels,
+                    self.handle_publication(audio_data, end, self.bytes_per_sample, num_channels,
                                             sample_rate)
                     # Update the accumulated audio stream to remove any split data.
                     self._split_audio(end, num_channels, sample_rate)
@@ -236,7 +235,7 @@ class VoiceActivityDetector(Node):
                     # audio is too long, publish anyways.
                     self.log.info(f"Audio Duration = {audio_duration} has breached max accumulation " +\
                                 f"length={self._max_accumulation_sec_length}. Publishing now.")
-                    self._handle_publication(
+                    self.handle_publication(
                         audio_data, audio_duration, self.bytes_per_sample, num_channels, sample_rate)
                     # Update the accumulated audio stream to remove any split data.
                     self._split_audio(audio_duration, num_channels, sample_rate)
@@ -286,7 +285,7 @@ class VoiceActivityDetector(Node):
                 self.log.info(f"Received VAD response: {segments}")
                 return segments
     
-    def _handle_publication(self, audio_data, split_timestamp,
+    def handle_publication(self, audio_data, split_timestamp,
                      sample_byte_length, num_channels, sample_rate):
         
         # Obtain the audio "prefix" with detected voice activity (before split).
