@@ -101,7 +101,7 @@ class IntentDetector(Node):
         '''
         while True:
             msg = self.message_queue.get()
-            self.log.info(f"Processing message:\n\n\"{msg.value}\"")
+            self.log.debug(f"Processing message:\n\n\"{msg.value}\"")
             intent, score = self.detect_intents(msg)
             if not intent:
                 continue
