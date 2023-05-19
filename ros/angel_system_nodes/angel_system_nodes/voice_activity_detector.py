@@ -353,14 +353,6 @@ class VoiceActivityDetector(Node):
                         f"{self.sample_rate} -> {msg.sample_rate}")
             self.sample_rate = msg.sample_rate
 
-    elif msg.channels != self.num_channels or\
-            msg.sample_rate != self.sample_rate:
-        self.log.error("Audio message metadata has suddenly changed. " +\
-                        f"Node audio metadata is {self.num_channels} " +\
-                        f"channels and {self.sample_rate} frequency. " +\
-                        f"Msg audio metadata is {msg.num_channels} " +\
-                        f"channels and {msg.sample_rate} frequency. ")
-
     def _time_to_byte_index(self, seconds_timestamp,
                             sample_byte_length,
                             num_channels, sample_rate):
