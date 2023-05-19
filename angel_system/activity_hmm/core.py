@@ -65,7 +65,7 @@ class ActivityHMMRos:
             self.activity_mean_and_cov_fname = None
 
         if self.activity_mean_and_cov_fname is not None:
-            ret = np.load(self.activity_mean_and_cov_fname)
+            ret = np.load(self.activity_mean_and_cov_fname, allow_pickle=True)
             class_mean_conf, class_std_conf = ret
         else:
             self.default_mean_conf = config["hmm"]["default_mean_conf"]
