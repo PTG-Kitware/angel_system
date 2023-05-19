@@ -9,7 +9,7 @@ from angel_msgs.msg import InterpretedAudioUserIntent, Utterance
 # https://docs.google.com/document/d/1uuvSL5de3LVM9c0tKpRKYazDxckffRHf7IAcabSw9UA .
 NEXT_STEP_KEYPHRASES = ['skip', 'next', 'next step']
 PREV_STEP_KEYPHRASES = ['previous', 'previous step', 'last step', 'go back']
-QUESTION_KEYPHRASES = ['question', '?']
+QUESTION_KEYPHRASES = ['question']
 OVERRIDE_KEYPHRASES = ['angel', 'angel system']
 
 # TODO(derekahmed): Please figure out how to keep this sync-ed with
@@ -132,6 +132,7 @@ class IntentDetector(Node):
         confidence = confidences[0]
         if len(interp_intents) > 1:
             if LABELS[2] in interp_intents:
+                # Question intents override all others.
                 classified_intent = LABELS[2]
             self.log.info(f"Detected multiple intents: \n{interp_intents}\n" +\
                             f"Defaulting: \"{classified_intent}\".")
