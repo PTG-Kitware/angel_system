@@ -29,10 +29,8 @@ class QuestionAnswerer(Node):
         if some_not_set:
             raise ValueError("Some parameters are not set.")
 
-        self._in_emotion_topic = \
-            self.get_parameter(IN_EMOTION_TOPIC).value
-        self._out_qa_topic = \
-            self.get_parameter(OUT_QA_TOPIC).value
+        self._in_emotion_topic = self.get_parameter(IN_EMOTION_TOPIC).value
+        self._out_qa_topic = self.get_parameter(OUT_QA_TOPIC).value
         self.log.info(f"Input Emotion topic: "
                       f"({type(self._in_emotion_topic).__name__}) "
                       f"{self._in_emotion_topic}")
@@ -46,12 +44,10 @@ class QuestionAnswerer(Node):
             self._in_emotion_topic,
             self.listener_callback,
             1)
-
         self._qa_publisher = self.create_publisher(
             SystemTextResponse,
             self._out_qa_topic,
-            1
-        )
+            1)
 
         self.message_queue = queue.Queue()
         self.handler_thread = threading.Thread(target=self.process_message_queue)
@@ -72,7 +68,6 @@ class QuestionAnswerer(Node):
         return self._red_font(apology_msg) +\
             f" I understand that you feel \"{self._red_font(user_emotion)}\"."
 
-
     def listener_callback(self, msg):
         '''
         This is the main ROS node listener callback loop that will process
@@ -91,13 +86,11 @@ class QuestionAnswerer(Node):
             response = self.get_response(msg.utterance_text, emotion)
             self.publish_generated_response(msg.utterance_text, response)
 
-    def publish_generated_response(self, utterance: str,
-                                    response: str):
+    def publish_generated_response(self, utterance: str, response: str):
         msg = SystemTextResponse()
         msg.utterance_text = utterance
         msg.response = response
-        self.log.info(f"Responding to utterance \"{utterance}\" " +\
-                      f"with:\n{response}")        
+        self.log.info(f"Responding to utterance \"{utterance}\" with:\n\"{response}\"")
         self._qa_publisher.publish(msg)
 
     def _red_font(self, text):

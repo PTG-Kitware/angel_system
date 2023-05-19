@@ -92,7 +92,7 @@ class IntentDetector(Node):
         This is the main ROS node listener callback loop that will process
         all messages received via subscribed topics.
         '''
-        self.log.info(f"Received message:\n\n{msg.value}")
+        self.log.info(f"Received message:\n\n\"{msg.value}\"")
         self.message_queue.put(msg)
 
     def process_message_queue(self):
@@ -101,7 +101,7 @@ class IntentDetector(Node):
         '''
         while True:
             msg = self.message_queue.get()
-            self.log.info(f"Processing message:\n\n{msg.value}")
+            self.log.info(f"Processing message:\n\n\"{msg.value}\"")
             intent, score = self.detect_intents(msg)
             if not intent:
                 continue

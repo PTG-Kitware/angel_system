@@ -124,8 +124,8 @@ class EmotionDetector(Node):
             classification = 'neutral'
 
         confidence = 1.00
-        self.log.info(f"Classifying with emotion: \"{self._red_font(classification)}\" " +\
-                      f"and score {confidence}")     
+        self.log.info(f"Classifying with emotion=\"{self._red_font(classification)}\" " +\
+                      f"and score={confidence}")     
         return (classification, confidence)
 
     def get_inference(self, utterance: str):
@@ -143,7 +143,7 @@ class EmotionDetector(Node):
         This is the main ROS node listener callback loop that will process
         all messages received via subscribed topics.
         '''
-        self.log.info(f"Received message:\n\n{msg.utterance_text}")
+        self.log.info(f"Received message:\n\n\"{msg.utterance_text}\"")
         if not self._apply_filter(msg):
             return
         self.message_queue.put(msg)
@@ -154,7 +154,7 @@ class EmotionDetector(Node):
         '''
         while True:
             msg = self.message_queue.get()
-            self.log.info(f"Processing message:\n\n{msg.utterance_text}")
+            self.log.info(f"Processing message:\n\n\"{msg.utterance_text}\"")
             classification, confidence_score  = self.get_inference(msg.utterance_text)
             self.publish_detected_emotion(msg.utterance_text, classification, confidence_score)
 
