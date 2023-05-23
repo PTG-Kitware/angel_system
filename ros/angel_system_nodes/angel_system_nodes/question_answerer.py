@@ -81,7 +81,7 @@ class QuestionAnswerer(Node):
         here.
         '''
         try: 
-            return self._red_font(self.prompt_gpt(user_utterance))
+            return self._red_font(self.prompt_gpt(user_utterance) + "\n")
         except Exception as e:
             self.log.info(e)
             apology_msg = "I'm sorry. I don't know how to answer your statement."
@@ -128,9 +128,12 @@ class QuestionAnswerer(Node):
                 }
             ]
         }
-        req = requests.post("https://api.openai.com/v1/chat/completions", json=payload,
-            headers={"Authorization":"Bearer {}".format(self.openai_api_key)})
-        return json.loads(req.text)['choices'][0]['message']['content'].split("A:")[-1].lstrip()
+        try:
+            req = requests.post("https://api.openai.com/v1/chat/completions", json=payload,
+                headers={"Authorization":"Bearer {}".format(self.openai_api_key)})
+            return json.loads(req.text)['choices'][0]['message']['content'].split("A:")[-1].lstrip()
+        except Exception as e:
+            self.log.info(e)
 
     def _apply_filter(self, msg):
         '''
