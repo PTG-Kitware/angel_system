@@ -231,9 +231,8 @@ class VoiceActivityDetector(Node):
                     # If no vocal detection was identified but the accumulated
                     # audio is too long, publish anyways.
                     self.log.info(f"Audio Duration = {audio_duration} has breached max accumulation " +\
-                                f"length={self._max_accumulation_sec_length}. Publishing now.")
-                    self.handle_publication(
-                        audio_data, audio_duration, self.bytes_per_sample, num_channels, sample_rate)
+                                f"length={self._max_accumulation_sec_length} without " +\
+                                "detected voice activity.  Removing.")
                     # Update the accumulated audio stream to remove any split data.
                     self._split_audio(audio_duration, num_channels, sample_rate)
                     if not self._debug_mode:
