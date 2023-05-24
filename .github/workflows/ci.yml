@@ -1,0 +1,40 @@
+name: "CI jobs"
+
+# This section controls when this action set will run.
+on:
+  # Triggers the workflow on push or pull request events but only for the
+  # master branch and others.
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+      - release*
+
+defaults:
+  run:
+    shell: bash
+
+# A workflow run is made of one or more jobs that can run sequentially or in
+# parallel.
+# NOTE: GitHub actions does nto support anchors. Forgive duplication of jobs
+#       steps.
+jobs:
+  docker-image-build:
+    runs-on: ubuntu-latest
+    steps:
+      # Check out repository under $GITHUB_WORKSPACE so our job can access it.
+      - uses: actions/checkout@v3
+      # Use scripting to perform a build for the current state of this branch.
+      - name: Build image
+        run: ./angel-docker-build.sh
+
+  code-style-py:
+    runs-on: ubuntu-latest
+    container: pyfound/black:latest_release
+    steps:
+      # Check out repository under $GITHUB_WORKSPACE so our job can access it.
+      - uses: actions/checkout@v3
+      - name: Lint python code
+        run: black --check .
