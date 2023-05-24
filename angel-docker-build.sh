@@ -58,7 +58,8 @@ warn_build_spaces=(
 )
 git_status="$(git status --porcelain "${warn_build_spaces[@]}")"
 # Check if there are ignored files in the workspace that should not be there.
-git_clean_dr="$(git clean "${warn_build_spaces[@]}" -Xdn)"
+git_clean_dr_cmd=( git clean "${warn_build_spaces[@]}" -Xdn )
+git_clean_dr="$("${git_clean_dr_cmd[@]}")"
 if [[ -n "${git_status}" ]] || [[ -n "${git_clean_dr}" ]]
 then
   log "WARNING: Docker/ROS workspace subtree is modified and/or un-clean."
@@ -69,7 +70,7 @@ then
   fi
   if [[ -n "${git_clean_dr}" ]]
   then
-    log "WARNING: -- There are unexpected ignored files (check git clean -xdn)."
+    log "WARNING: -- There are unexpected ignored files (check \`${git_clean_dr_cmd[@]}\`)."
     log "${git_clean_dr}"
   fi
   if [[ -n "$FORCE_BUILD" ]]
