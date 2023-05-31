@@ -23,7 +23,7 @@ Pillow = "^8"
 pyarrow = "^9.0.0"  # for feature file support
 pynput = "^1.7.6"
 pytorchvideo = "^0.1.5"
-scikit-learn = "^1.1.2"
+scikit-learn = "==1.2.1"
 seaborn = "^0.12.1"
 simpleaudio = "^1.0.4"
 smqtk-detection = ">=0.19.0"
@@ -57,6 +57,8 @@ nltk = "^3.8.1"
 
 # For BBN ZMQ client
 pyzmq = "==25.0.0"
+kwcoco = "^0.6.2"
+kwimage = "^0.9.18"
 
 [tool.poetry.dev-dependencies]
 ipython = "^8.0.1"
