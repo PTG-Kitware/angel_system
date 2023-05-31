@@ -18,10 +18,10 @@ defaults:
 
 # A workflow run is made of one or more jobs that can run sequentially or in
 # parallel.
-# NOTE: GitHub actions does nto support anchors. Forgive duplication of jobs
-#       steps.
+# NOTE: GitHub actions does nto support anchors. Forgive duplication of job
+#       fields, parameters and steps.
 jobs:
-  docker-image-build:
+  docker-image-build-test:
     runs-on: ubuntu-latest
     steps:
       # Check out repository under $GITHUB_WORKSPACE so our job can access it.
@@ -29,6 +29,7 @@ jobs:
       # Use scripting to perform a build for the current state of this branch.
       - name: Build image
         run: ./angel-docker-build.sh
+      # Perform ROS-only Python unit testing
 
   code-style-py:
     runs-on: ubuntu-latest
@@ -38,3 +39,24 @@ jobs:
       - uses: actions/checkout@v3
       - name: Lint python code
         run: black --check .
+
+  pytest-angel-system:
+    runs-on: ubuntu-latest
+    steps:
+      # Check out repository under $GITHUB_WORKSPACE so our job can access it.
+      - uses: actions/checkout@v3
+      # setup-python with poetry requires poetry to already be installed
+      - run: |
+          echo "${HOME}/.local/bin" >> $GITHUB_PATH
+          pip install --user -U poetry
+      # Setup python version and caching
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.8'  # matching python version in container env.
+          cache: 'poetry'
+      # Install standard packages
+      - run: |
+          sudo apt install -y libasound2-dev  # for python simpleaudio
+          poetry install
+      # Run top-level unit-tests (outside of ROS)
+      - run: poetry run pytest

@@ -70,6 +70,9 @@ livereload = "*"
 # Jupyter dev support
 jupyter = "^1.0"
 spyder-kernels = "^2.4"
+# Testing
+pytest = "*"
+pytest-cov = "*"
 
 [tool.poetry.scripts]
 # Evaluation
@@ -97,3 +100,24 @@ extend-exclude = '''
   | ^/hl2ss
 )
 '''
+
+[tool.pytest.ini_options]
+addopts = [
+    "-lv",                                  # Show local in trace-backs.
+    "--doctest-modules",                    # Increased verbosity.
+    "--tb=long",                            # Trace-back print mode.
+    "--ignore=./angel_system/berkeley",     # Ignore bundled package
+    "--ignore=./angel_system/fasterrcnn",   # Ignore bundled package
+    "--cov=./angel_system",                 # Cover our package specifically
+    "--cov=./tests",                        # Also cover our tests for dead spots
+    "--cov-report=term",                    # Coverage report to terminal
+    "--cov-report=xml:coverage.xml",        # for external tool reporting
+]
+testpaths = [
+    "tests",
+    "angel_system",
+]
+doctest_optionflags = [
+    "NORMALIZE_WHITESPACE",
+    "IGNORE_EXCEPTION_DETAIL",
+]
