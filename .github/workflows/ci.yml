@@ -29,7 +29,6 @@ jobs:
       # Use scripting to perform a build for the current state of this branch.
       - name: Build image
         run: ./angel-docker-build.sh
-      # Perform ROS-only Python unit testing
 
   code-style-py:
     runs-on: ubuntu-latest

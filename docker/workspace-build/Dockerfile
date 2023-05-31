@@ -122,6 +122,7 @@ COPY docker/cyclonedds_profile.xml.tmpl \
      docker/workspace_entrypoint.sh \
      docker/workspace_setenv.sh \
      docker/workspace_build.sh \
+     docker/workspace_test.sh \
      "${ANGEL_WORKSPACE_DIR}"/
 
 WORKDIR "${ANGEL_WORKSPACE_DIR}"
