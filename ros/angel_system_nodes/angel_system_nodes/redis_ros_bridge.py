@@ -21,11 +21,11 @@ from angel_msgs.msg import (
     HandJointPosesUpdate,
     HeadsetAudioData,
 )
-from angel_system.hl2ss_viewer import hl2ss
-import angel_system.hl2ss_viewer.BBN_redis_frame_load as holoframe
 from angel_utils import declare_and_get_parameters, RateTracker
 from angel_utils.conversion import hl2ss_stamp_to_ros_time
 from angel_utils.hand import JOINT_LIST
+from hl2ss.viewer import hl2ss
+from hl2ss.viewer import BBN_redis_frame_load as holoframe
 
 
 BRIDGE = CvBridge()

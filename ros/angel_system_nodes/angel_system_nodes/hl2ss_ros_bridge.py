@@ -26,9 +26,9 @@ from angel_msgs.msg import (
     HeadsetPoseData,
     SpatialMesh
 )
-from angel_system.hl2ss_viewer import hl2ss
 from angel_utils import declare_and_get_parameters, RateTracker
 from angel_utils.hand import JOINT_LIST
+from hl2ss.viewer import hl2ss
 
 
 BRIDGE = CvBridge()
