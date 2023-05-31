@@ -92,10 +92,15 @@ fi
 # Encapsulating the source in a nested bash instance to not pollute the
 # current env with the contents of the file.
 ENV_FILE="${SCRIPT_DIR}/docker/.env"
-bash -c "\
-source \"${ENV_FILE}\";
->&2 echo \"[INFO] Using container tag: \${PTG_TAG}\"
-"
+if [[ -n "${PTG_TAG+x}" ]]
+then
+  >&2 echo "[INFO] Using container tag: ${PTG_TAG}"
+else
+  bash -c "\
+    source \"${ENV_FILE}\";
+    >&2 echo \"[INFO] Using container tag: \${PTG_TAG}\"
+  "
+fi
 
 set +e
 docker-compose \
