@@ -4,12 +4,14 @@ import os
 from torch import nn
 import torch
 import pdb
-from src.datamodules.ros_datamodule import ROSFrameDataset
-from src.models.components.fcn import UnifiedFCNModule
+
+from angel_system.uho.src.datamodules.ros_datamodule import ROSFrameDataset
+from angel_system.uho.src.models.components.fcn import UnifiedFCNModule
 
 from torchvision.models import resnext50_32x4d
 from torch.utils.data import DataLoader, Dataset
 from torchvision.transforms import transforms
+
 
 if __name__ == "__main__":
     subset = "all_activities_" # "brian_coffee_" # "all_activities_"

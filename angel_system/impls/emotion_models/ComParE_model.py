@@ -5,7 +5,9 @@ from types import MethodType
 import json
 import numpy as np
 from joblib import load
-import opensmile
+
+from angel_system.interfaces.emotion_models import SpeechEmotionModel
+
 
 class ComParEModel(SpeechEmotionModel):
     """
@@ -18,7 +20,8 @@ class ComParEModel(SpeechEmotionModel):
         e.g. model = "mlp_esd_compare.joblib"
         scaler: a serialized StandardScaler, e.g. "esd_compare_scaler.joblib"
         """
-        self.model = load(model) 
+        self.model = load(model)
+        import opensmile
         self.smile = opensmile.Smile(
             feature_set=opensmile.FeatureSet.ComParE_2016,
             feature_level=opensmile.FeatureLevel.Functionals,
