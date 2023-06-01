@@ -16,48 +16,64 @@ from angel_msgs.msg import ActivityDetection, TaskUpdate, TaskItem, TaskGraph, T
 from angel_msgs.srv import QueryTaskGraph
 
 
-class TeaTask():
+class TeaTask:
     """
     Representation of the simple weak tea task defined
     by its steps and transitions between them.
     """
+
     def __init__(self):
-        self.name = 'Making Tea'
+        self.name = "Making Tea"
 
-        self.items = {'water bottle': 1, 'tea bag': 1, 'cup': 1}
+        self.items = {"water bottle": 1, "tea bag": 1, "cup": 1}
 
-        self.description = ('Open the water bottle and pour the water into a tea cup.' +
-                            ' Place the tea bag in the cup.' +
-                            ' Wait 20 seconds while the tea bag steeps, then drink and enjoy!')
+        self.description = (
+            "Open the water bottle and pour the water into a tea cup."
+            + " Place the tea bag in the cup."
+            + " Wait 20 seconds while the tea bag steeps, then drink and enjoy!"
+        )
 
-        self.steps = [{'name': 'open_bottle_and_pour_water_into_cup'},
-                      {'name': 'place_tea_bag_into_cup'},
-                      {'name': 'steep_for_20_seconds'},
-                      {'name': 'enjoy'},
-                     ]
-
-        self.transitions = [
-            { 'trigger': 'open_bottle', 'source': 'open_bottle_and_pour_water_into_cup', 'dest': 'place_tea_bag_into_cup' },
-            { 'trigger': 'make_tea', 'source': 'place_tea_bag_into_cup', 'dest': 'steep_for_20_seconds' },
+        self.steps = [
+            {"name": "open_bottle_and_pour_water_into_cup"},
+            {"name": "place_tea_bag_into_cup"},
+            {"name": "steep_for_20_seconds"},
+            {"name": "enjoy"},
         ]
 
-        self.machine = Machine(model=self, states=self.steps,
-                               transitions=self.transitions, initial='open_bottle_and_pour_water_into_cup')
+        self.transitions = [
+            {
+                "trigger": "open_bottle",
+                "source": "open_bottle_and_pour_water_into_cup",
+                "dest": "place_tea_bag_into_cup",
+            },
+            {
+                "trigger": "make_tea",
+                "source": "place_tea_bag_into_cup",
+                "dest": "steep_for_20_seconds",
+            },
+        ]
 
-        self.machine.states['steep_for_20_seconds'].timer_length = 20.0
+        self.machine = Machine(
+            model=self,
+            states=self.steps,
+            transitions=self.transitions,
+            initial="open_bottle_and_pour_water_into_cup",
+        )
+
+        self.machine.states["steep_for_20_seconds"].timer_length = 20.0
 
         # Mapping from state name to the to_state function, which provides a way to get
         # to the state from anywhere.
         # The to_* functions are created automatically when the Machine is initialized.
         self.to_state_dict = {
-            'open_bottle_and_pour_water_into_cup': self.to_open_bottle_and_pour_water_into_cup,
-            'place_tea_bag_into_cup': self.to_place_tea_bag_into_cup,
-            'steep_for_20_seconds': self.to_steep_for_20_seconds,
-            'enjoy': self.to_enjoy,
+            "open_bottle_and_pour_water_into_cup": self.to_open_bottle_and_pour_water_into_cup,
+            "place_tea_bag_into_cup": self.to_place_tea_bag_into_cup,
+            "steep_for_20_seconds": self.to_steep_for_20_seconds,
+            "enjoy": self.to_enjoy,
         }
 
 
-class CoffeeDemoTask():
+class CoffeeDemoTask:
     """
     Representation of the coffee demo recipe defined
     by its steps and transitions between them.
@@ -74,18 +90,26 @@ class CoffeeDemoTask():
         mapping activity names to step indices. The activity names should match
         the output of the activity detector node.
     """
-    def __init__(
-        self,
-        task_steps_file: str
-    ):
-        self.name = 'Pour-over coffee'
 
-        self.items = {'scale': 1, '25g coffee beans': 1, 'mug': 1, '12 oz water': 1,
-                      'kettle': 1, 'grinder': 1, 'measuring cup': 1, 'bowl': 1}
+    def __init__(self, task_steps_file: str):
+        self.name = "Pour-over coffee"
 
-        self.description = ('Boil water, grind coffee beans, and' +
-                            ' place the coffee filter into the dripper,'
-                            ' and then place the dripper on top of the mug')
+        self.items = {
+            "scale": 1,
+            "25g coffee beans": 1,
+            "mug": 1,
+            "12 oz water": 1,
+            "kettle": 1,
+            "grinder": 1,
+            "measuring cup": 1,
+            "bowl": 1,
+        }
+
+        self.description = (
+            "Boil water, grind coffee beans, and"
+            + " place the coffee filter into the dripper,"
+            " and then place the dripper on top of the mug"
+        )
 
         # Load the task steps from the provided steps file
         with open(task_steps_file, "r") as f:
@@ -103,23 +127,23 @@ class CoffeeDemoTask():
         # the task graph information
         for name, step in self._task_steps.items():
             self.task_graph_steps.append(name)
-            self.task_graph_step_levels.append(step['level'])
+            self.task_graph_step_levels.append(step["level"])
 
             # NOTE: Only extracting the sub steps for use in the state machine
             # for now
-            for sub_step_name, sub_step in step['sub-steps'].items():
+            for sub_step_name, sub_step in step["sub-steps"].items():
                 self.task_graph_steps.append(sub_step_name)
-                self.task_graph_step_levels.append(sub_step['level'])
+                self.task_graph_step_levels.append(sub_step["level"])
 
-                task_name = sub_step['activity']
-                self.steps.append({'name': task_name})
+                task_name = sub_step["activity"]
+                self.steps.append({"name": task_name})
                 self.uids[task_name] = str(uuid.uuid4())
 
         # Manually add the finish step
         self.task_graph_steps.append("Done")
         self.task_graph_step_levels.append(0)
-        self.steps.append({'name': 'Done'})
-        self.uids['Done'] = str(uuid.uuid4())
+        self.steps.append({"name": "Done"})
+        self.uids["Done"] = str(uuid.uuid4())
 
         # Create the transitions between steps, assuming linear steps
         # TODO: use the step index in the task steps file to decide
@@ -128,12 +152,20 @@ class CoffeeDemoTask():
         for idx, step in enumerate(self.steps):
             # No transition needed for the last step
             if idx < (len(self.steps) - 1):
-                self.transitions.append({'trigger': step['name'],
-                                         'source': step['name'],
-                                         'dest': self.steps[idx + 1]['name']})
+                self.transitions.append(
+                    {
+                        "trigger": step["name"],
+                        "source": step["name"],
+                        "dest": self.steps[idx + 1]["name"],
+                    }
+                )
 
-        self.machine = Machine(model=self, states=self.steps,
-                               transitions=self.transitions, initial=self.steps[0]['name'])
+        self.machine = Machine(
+            model=self,
+            states=self.steps,
+            transitions=self.transitions,
+            initial=self.steps[0]["name"],
+        )
 
 
 class TaskMonitor(Node):
@@ -155,22 +187,38 @@ class TaskMonitor(Node):
     this mapping will be ignored. Thresholds are triggered if values meet or
     exceed the values provided.
     """
+
     def __init__(self):
         super().__init__(self.__class__.__name__)
 
-        self._det_topic = self.declare_parameter("det_topic", "ActivityDetections").get_parameter_value().string_value
-        self._task_state_topic = self.declare_parameter("task_state_topic", "TaskUpdates").get_parameter_value().string_value
-        self._task_steps = self.declare_parameter("task_steps", "default_task_label_config.json").get_parameter_value().string_value
+        self._det_topic = (
+            self.declare_parameter("det_topic", "ActivityDetections")
+            .get_parameter_value()
+            .string_value
+        )
+        self._task_state_topic = (
+            self.declare_parameter("task_state_topic", "TaskUpdates")
+            .get_parameter_value()
+            .string_value
+        )
+        self._task_steps = (
+            self.declare_parameter("task_steps", "default_task_label_config.json")
+            .get_parameter_value()
+            .string_value
+        )
         # Path to the JSON file that maps steps
-        self._task_trigger_thresholds_fp = self.declare_parameter(
-            "task_trigger_thresholds",
-            "default_task_trigger_thresholds.json"
-        ).get_parameter_value().string_value
+        self._task_trigger_thresholds_fp = (
+            self.declare_parameter(
+                "task_trigger_thresholds", "default_task_trigger_thresholds.json"
+            )
+            .get_parameter_value()
+            .string_value
+        )
 
         log = self.get_logger()
 
         # Load step thresholds structure
-        with open(self._task_trigger_thresholds_fp, 'r') as infile:
+        with open(self._task_trigger_thresholds_fp, "r") as infile:
             self._task_trigger_thresholds = json.load(infile)
 
         self._task = CoffeeDemoTask(self._task_steps)
@@ -192,20 +240,11 @@ class TaskMonitor(Node):
 
         # Initialize ROS hooks
         self._subscription = self.create_subscription(
-            ActivityDetection,
-            self._det_topic,
-            self.listener_callback,
-            1
+            ActivityDetection, self._det_topic, self.listener_callback, 1
         )
-        self._publisher = self.create_publisher(
-            TaskUpdate,
-            self._task_state_topic,
-            1
-        )
+        self._publisher = self.create_publisher(TaskUpdate, self._task_state_topic, 1)
         self._task_graph_service = self.create_service(
-            QueryTaskGraph,
-            "query_task_graph",
-            self.query_task_graph_callback
+            QueryTaskGraph, "query_task_graph", self.query_task_graph_callback
         )
 
         # Publish task update to indicate the initial state
@@ -238,14 +277,18 @@ class TaskMonitor(Node):
             # Index of the current state label in the activity detection output
             lbl_idx = activity_msg.label_vec.index(lbl)
         except ValueError:
-            log.warn(f"Current state ({lbl}) not represented in activity "
-                     f"detection results. Received: {activity_msg.label_vec}")
+            log.warn(
+                f"Current state ({lbl}) not represented in activity "
+                f"detection results. Received: {activity_msg.label_vec}"
+            )
             return
 
         conf = activity_msg.conf_vec[lbl_idx]
         current_activity: Optional[str] = None
-        log.info(f"Awaiting sufficiently high confidence for activity '{lbl}'. "
-                 f"Currently: {conf}. Need {self._task_trigger_thresholds[lbl]}.")
+        log.info(
+            f"Awaiting sufficiently high confidence for activity '{lbl}'. "
+            f"Currently: {conf}. Need {self._task_trigger_thresholds[lbl]}."
+        )
         if conf >= self._task_trigger_thresholds[lbl]:
             log.info("Threshold exceeded, setting as current activity.")
             current_activity = lbl
@@ -344,14 +387,16 @@ class TaskMonitor(Node):
             message.current_activity = self._current_activity
 
         for t in self._task.transitions:
-            if t['source'] == self._task.state:
-                self._next_activity = t['trigger']
+            if t["source"] == self._task.state:
+                self._next_activity = t["trigger"]
                 break
 
         message.next_activity = self._next_activity
 
         try:
-            message.time_remaining_until_next_task = int(self._task.machine.states[self._task.state].timer_length)
+            message.time_remaining_until_next_task = int(
+                self._task.machine.states[self._task.state].timer_length
+            )
         except AttributeError as e:
             message.time_remaining_until_next_task = -1
 
@@ -387,8 +432,10 @@ class TaskMonitor(Node):
 
         # Make sure that the state has not changed during the timer delay
         if curr_state != self._task.state:
-            log.warn("State change detecting during timer loop."
-                     + " Next state will NOT be triggered via timer.")
+            log.warn(
+                "State change detecting during timer loop."
+                + " Next state will NOT be triggered via timer."
+            )
             return
 
         # Advance to the next state
@@ -403,9 +450,11 @@ class TaskMonitor(Node):
 
     def monitor_keypress(self):
         log = self.get_logger()
-        log.info(f"Starting keyboard monitor. Press the right arrow key to"
-                 + " proceed to the next step. Press the left arrow key to"
-                 + " go back to the previous step.")
+        log.info(
+            f"Starting keyboard monitor. Press the right arrow key to"
+            + " proceed to the next step. Press the left arrow key to"
+            + " go back to the previous step."
+        )
         # Collect events until released
         with keyboard.Listener(on_press=self.on_press) as listener:
             listener.join()
@@ -437,20 +486,23 @@ class TaskMonitor(Node):
                 try:
                     self._task.machine.set_state(self._previous_step)
                 except ValueError:
-                    log.warn(f"Tried to set machine to invalid state: {self._previous_step}")
+                    log.warn(
+                        f"Tried to set machine to invalid state: {self._previous_step}"
+                    )
                     return
 
                 # Update current step
                 self._current_step = self._task.state
 
                 # Find the index of the current step
-                curr_step_index = self._task.steps.index({'name': self._current_step,
-                                                          'ignore_invalid_triggers': None})
+                curr_step_index = self._task.steps.index(
+                    {"name": self._current_step, "ignore_invalid_triggers": None}
+                )
 
                 # Lookup the new previous step
                 prev_step_index = curr_step_index - 1
                 if prev_step_index >= 0:
-                    self._previous_step = self._task.steps[prev_step_index]['name']
+                    self._previous_step = self._task.steps[prev_step_index]["name"]
                 else:
                     self._previous_step = None
 
@@ -479,5 +531,5 @@ def main():
     rclpy.shutdown()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

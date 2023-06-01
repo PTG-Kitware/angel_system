@@ -21,8 +21,7 @@ def get_common_transform() -> transforms.Compose:
     return transforms.Compose(
         [
             transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                 std=[0.229, 0.224, 0.225]),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         ]
     )
 
@@ -48,8 +47,12 @@ def collate_fn_pad(batch):
     data_dic["idx"] = torch.Tensor([t[2] for t in batch]).to(device).int()
     labels = {"l_hand": [], "r_hand": []}
     for t in batch:
-        labels["l_hand"].append(torch.cat([k["l_hand"] for k in t[0]["labels"]]).to(device))
-        labels["r_hand"].append(torch.cat([k["r_hand"] for k in t[0]["labels"]]).to(device))
+        labels["l_hand"].append(
+            torch.cat([k["l_hand"] for k in t[0]["labels"]]).to(device)
+        )
+        labels["r_hand"].append(
+            torch.cat([k["r_hand"] for k in t[0]["labels"]]).to(device)
+        )
     labels["l_hand"] = torch.stack(labels["l_hand"])
     labels["r_hand"] = torch.stack(labels["r_hand"])
     data_dic["labels"] = labels
@@ -61,17 +64,17 @@ def collate_fn_pad(batch):
         # collect detections
         det1 = [torch.from_numpy(tmp[:topK]) for tmp in t[0]["dets"]]
         det1 = torch.stack(det1)
-        det1 = det1.reshape([det1.shape[0]*det1.shape[1],1,det1.shape[2]])
+        det1 = det1.reshape([det1.shape[0] * det1.shape[1], 1, det1.shape[2]])
         dets.append(det1.to(device))
         # collect detection outputs
         dcls1 = [torch.from_numpy(tmp[:topK]) for tmp in t[0]["dcls"]]
         dcls1 = torch.stack(dcls1)
-        dcls1 = dcls1.reshape([dcls1.shape[0]*dcls1.shape[1],1])
+        dcls1 = dcls1.reshape([dcls1.shape[0] * dcls1.shape[1], 1])
         dcls.append(dcls1.to(device))
         # collect detection outputs
         bbox1 = [torch.from_numpy(tmp[:topK]) for tmp in t[0]["bbox"]]
         bbox1 = torch.stack(bbox1)
-        bbox1 = bbox1.reshape([bbox1.shape[0]*bbox1.shape[1],1,bbox1.shape[2]])
+        bbox1 = bbox1.reshape([bbox1.shape[0] * bbox1.shape[1], 1, bbox1.shape[2]])
         bbox.append(bbox1.to(device))
 
     data_dic["dets"] = torch.stack(dets).squeeze()
@@ -121,7 +124,9 @@ class VideoRecord(object):
 
     @property
     def num_frames(self) -> int:
-        return self.end_frame - self.start_frame + 1  # +1 because end frame is inclusive
+        return (
+            self.end_frame - self.start_frame + 1
+        )  # +1 because end frame is inclusive
 
     @property
     def start_frame(self) -> int:
@@ -264,9 +269,9 @@ class ROSVideoDataset(torch.utils.data.Dataset):
         """
         # choose start indices that are perfectly evenly spread across the video frames.
         if self.test_mode:
-            distance_between_indices = (record.num_frames - self.frames_per_segment + 1) / float(
-                self.num_segments
-            )
+            distance_between_indices = (
+                record.num_frames - self.frames_per_segment + 1
+            ) / float(self.num_segments)
 
             start_indices = np.array(
                 [
@@ -283,7 +288,6 @@ class ROSVideoDataset(torch.utils.data.Dataset):
             start_indices = np.multiply(
                 list(range(self.num_segments)), max_valid_start_index
             ) + np.random.randint(max_valid_start_index, size=self.num_segments)
-
 
         return start_indices
 
@@ -324,7 +328,7 @@ class ROSVideoDataset(torch.utils.data.Dataset):
             "torch.Tensor[num_frames, channels, height, width]",
             Union[int, List[int]],
         ],
-        Tuple[Any, Union[int, List[int]]]
+        Tuple[Any, Union[int, List[int]]],
     ]:
         """Loads the frames of a video at the corresponding indices.
 
@@ -341,7 +345,7 @@ class ROSVideoDataset(torch.utils.data.Dataset):
         """
         data = {}
         frame_start_indices = frame_start_indices + record.start_frame
-        
+
         # from each start_index, load self.frames_per_segment
         # consecutive frames
         for start_index in frame_start_indices:
@@ -349,7 +353,12 @@ class ROSVideoDataset(torch.utils.data.Dataset):
 
             # load self.frames_per_segment consecutive frames
             for _ in range(self.frames_per_segment):
-                if not os.path.exists(os.path.join(record.feat_path, self.imagefile_template.format(frame_index) + ".pk")):
+                if not os.path.exists(
+                    os.path.join(
+                        record.feat_path,
+                        self.imagefile_template.format(frame_index) + ".pk",
+                    )
+                ):
                     frame_index -= 1
 
                 sample_data = self._load_feats(record.feat_path, frame_index)
@@ -359,8 +368,8 @@ class ROSVideoDataset(torch.utils.data.Dataset):
                     sample_data["dcls"] = det_data["objects"]
                     sample_data["bbox"] = det_data["boxes"]
 
-                #sample_data["frm"] = self._load_image(record.path, frame_index)
-                #if self.transform is not None:
+                # sample_data["frm"] = self._load_image(record.path, frame_index)
+                # if self.transform is not None:
                 #    sample_data["frm"] = self.transform(sample_data["frm"])
 
                 for k in sample_data:
@@ -457,7 +466,9 @@ class ROSFrameDataset(torch.utils.data.Dataset):
         path_list = "/".join(v_path[:-2])
         fname = v_path[-1].split(".")[0]
 
-        l_hand, r_hand = self._load_hand_pose(os.path.join(path_list, "hand_pose", f"{fname}.txt"))
+        l_hand, r_hand = self._load_hand_pose(
+            os.path.join(path_list, "hand_pose", f"{fname}.txt")
+        )
 
         return {
             "frm": frm,
@@ -499,7 +510,7 @@ class ROSDataModule(LightningDataModule):
         self.save_hyperparameters(logger=False)
         self.frames_per_segment = frames_per_segment
 
-        # data transformations (Normalization values recommended by 
+        # data transformations (Normalization values recommended by
         # torchvision model zoo)
         self.transforms = get_common_transform()
 
@@ -654,7 +665,7 @@ class AngelDataset(torch.utils.data.Dataset):
         annotationfile_path: str,
         num_segments: int = 1,
         frames_per_segment: int = 32,
-        imagefile_template: str = "{:06d}"
+        imagefile_template: str = "{:06d}",
     ):
         super(AngelDataset, self).__init__()
 
@@ -730,9 +741,9 @@ class AngelDataset(torch.utils.data.Dataset):
             segment are to be loaded from.
         """
         # choose start indices that are perfectly evenly spread across the video frames.
-        distance_between_indices = (record.num_frames - self.frames_per_segment + 1) / float(
-            self.num_segments
-        )
+        distance_between_indices = (
+            record.num_frames - self.frames_per_segment + 1
+        ) / float(self.num_segments)
 
         start_indices = np.array(
             [
@@ -780,7 +791,7 @@ class AngelDataset(torch.utils.data.Dataset):
             "torch.Tensor[num_frames, channels, height, width]",
             Union[int, List[int]],
         ],
-        Tuple[Any, Union[int, List[int]]]
+        Tuple[Any, Union[int, List[int]]],
     ]:
         """Loads the frames of a video at the corresponding indices.
 
@@ -797,7 +808,7 @@ class AngelDataset(torch.utils.data.Dataset):
         """
         data = {}
         frame_start_indices = frame_start_indices + record.start_frame
-        
+
         # from each start_index, load self.frames_per_segment
         # consecutive frames
         for start_index in frame_start_indices:
@@ -805,7 +816,12 @@ class AngelDataset(torch.utils.data.Dataset):
 
             # load self.frames_per_segment consecutive frames
             for _ in range(self.frames_per_segment):
-                if not os.path.exists(os.path.join(record.feat_path, self.imagefile_template.format(frame_index) + ".pk")):
+                if not os.path.exists(
+                    os.path.join(
+                        record.feat_path,
+                        self.imagefile_template.format(frame_index) + ".pk",
+                    )
+                ):
                     frame_index -= 1
 
                 sample_data = {}
@@ -818,8 +834,10 @@ class AngelDataset(torch.utils.data.Dataset):
                     sample_data["frm"] = self.transform(sample_data["frm"])
 
                 fname = self.imagefile_template.format(frame_index)
-                #pdb.set_trace()
-                l_hand, r_hand = self._load_hand_pose(os.path.join(record.path, "hand_pose", f"{fname}.txt"))
+                # pdb.set_trace()
+                l_hand, r_hand = self._load_hand_pose(
+                    os.path.join(record.path, "hand_pose", f"{fname}.txt")
+                )
                 sample_data["l_hand"] = np.array(l_hand)
                 sample_data["r_hand"] = np.array(r_hand)
 

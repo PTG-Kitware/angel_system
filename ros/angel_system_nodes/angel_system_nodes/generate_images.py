@@ -57,10 +57,10 @@ class GenerateImages(Node):
             Image,
             # CompressedImage,
             self._output_topic_name,
-            10  # TODO: Learn QoS meanings
+            10,  # TODO: Learn QoS meanings
         )
 
-        timer_period = 1. / self._fps
+        timer_period = 1.0 / self._fps
         self.timer = self.create_timer(timer_period, self.generate_publish_image)
 
     def generate_publish_image(self) -> None:

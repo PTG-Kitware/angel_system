@@ -15,11 +15,7 @@ import numpy.typing as npt
 # ROS Message types
 from builtin_interfaces.msg import Time
 
-from angel_msgs.msg import (
-    ActivityDetection,
-    HandJointPosesUpdate,
-    ObjectDetection2dSet
-)
+from angel_msgs.msg import ActivityDetection, HandJointPosesUpdate, ObjectDetection2dSet
 
 from angel_system.utils.matching import descending_match_with_tolerance
 from angel_utils.conversion import time_to_int
@@ -35,6 +31,7 @@ class InputWindow:
     other fields may have None values, which indicates that no message of that
     field's associated type was matched to the index's corresponding frame.
     """
+
     # Buffer of RGB image matrices and the associated timestamp.
     # Set at construction time with the known window of frames.
     frames: List[Tuple[Time, npt.NDArray]]
@@ -75,6 +72,7 @@ class InputBuffer:
 
     NOTE: `__post_init__` is a thing if we need it.
     """
+
     # Tolerance in nanoseconds for associating hand-pose messages to a frame.
     hand_msg_tolerance_nsec: int
 
@@ -82,17 +80,21 @@ class InputBuffer:
     get_logger_fn: Callable[[], Any]  # don't know where to get the type for this...
 
     # Buffer of RGB image matrices and the associated timestamp
-    frames: Deque[Tuple[Time, npt.NDArray]] = field(default_factory=deque,
-                                                    init=False, repr=False)
+    frames: Deque[Tuple[Time, npt.NDArray]] = field(
+        default_factory=deque, init=False, repr=False
+    )
     # Buffer of left-hand pose messages
-    hand_pose_left: Deque[HandJointPosesUpdate] = field(default_factory=deque,
-                                                        init=False, repr=False)
+    hand_pose_left: Deque[HandJointPosesUpdate] = field(
+        default_factory=deque, init=False, repr=False
+    )
     # Buffer of right-hand pose messages
-    hand_pose_right: Deque[HandJointPosesUpdate] = field(default_factory=deque,
-                                                         init=False, repr=False)
+    hand_pose_right: Deque[HandJointPosesUpdate] = field(
+        default_factory=deque, init=False, repr=False
+    )
     # Buffer of object detection predictions
-    obj_dets: Deque[ObjectDetection2dSet] = field(default_factory=deque,
-                                                  init=False, repr=False)
+    obj_dets: Deque[ObjectDetection2dSet] = field(
+        default_factory=deque, init=False, repr=False
+    )
 
     __state_lock: RLock = field(default_factory=RLock, init=False, repr=False)
 
@@ -108,7 +110,9 @@ class InputBuffer:
         # Same as RLock.__exit__
         self.__state_lock.release()
 
-    def queue_image(self, img_mat: npt.NDArray[np.uint8], img_header_stamp: Time) -> bool:
+    def queue_image(
+        self, img_mat: npt.NDArray[np.uint8], img_header_stamp: Time
+    ) -> bool:
         """
         Queue up a new image frame.
         :returns: True if the image was queued, otherwise false because it was
@@ -116,9 +120,8 @@ class InputBuffer:
         """
         with self.__state_lock:
             # before the current lead frame?
-            if (
-                self.frames and
-                time_to_int(img_header_stamp) <= time_to_int(self.frames[-1][0])
+            if self.frames and time_to_int(img_header_stamp) <= time_to_int(
+                self.frames[-1][0]
             ):
                 self.get_logger_fn().warn(
                     f"Input image frame was NOT after the previous latest: "
@@ -136,17 +139,16 @@ class InputBuffer:
             not newer than the current latest message.
         """
         hand_list: Deque[HandJointPosesUpdate]
-        if msg.hand == 'Right':
+        if msg.hand == "Right":
             hand_list = self.hand_pose_right
-        elif msg.hand == 'Left':
+        elif msg.hand == "Left":
             hand_list = self.hand_pose_left
         else:
             raise ValueError(f"Input hand pose for hand '{msg.hand}'? What?")
         with self.__state_lock:
             # before the current lead pose?
-            if (
-                hand_list and
-                time_to_int(msg.header.stamp) <= time_to_int(hand_list[-1].header.stamp)
+            if hand_list and time_to_int(msg.header.stamp) <= time_to_int(
+                hand_list[-1].header.stamp
             ):
                 self.get_logger_fn().warn(
                     f"Input hand pose was NOT after the previous latest: "
@@ -162,9 +164,8 @@ class InputBuffer:
         """
         with self.__state_lock:
             # before the current lead pose?
-            if (
-                self.obj_dets and
-                time_to_int(msg.header.stamp) <= time_to_int(self.obj_dets[-1].header.stamp)
+            if self.obj_dets and time_to_int(msg.header.stamp) <= time_to_int(
+                self.obj_dets[-1].header.stamp
             ):
                 self.get_logger_fn().warn(
                     f"Input object detection result was NOT after the previous latest: "
@@ -206,10 +207,13 @@ class InputBuffer:
 
             # This window's frame in ascending time order
             # deques don't support slicing, so thus the following madness
-            window_frames = list(itertools.islice(reversed(self.frames), window_size))[::-1]
+            window_frames = list(itertools.islice(reversed(self.frames), window_size))[
+                ::-1
+            ]
             window_frame_times: List[Time] = [wf[0] for wf in window_frames]
-            window_frame_times_ns: List[int] = [time_to_int(wft) for wft
-                                                in window_frame_times]
+            window_frame_times_ns: List[int] = [
+                time_to_int(wft) for wft in window_frame_times
+            ]
 
             # tolerance associate hand messages, left and right
             # - For each frame backwards, reverse-iterate through hand messages
@@ -256,15 +260,19 @@ class InputBuffer:
         # for each deque, traverse from the left (the earliest time) and pop if
         # the ts is < the given.
         with self.__state_lock:
-            while (self.frames and
-                   time_to_int(self.frames[0][0]) < time_nsec):
+            while self.frames and time_to_int(self.frames[0][0]) < time_nsec:
                 self.frames.popleft()
-            while (self.hand_pose_left and
-                   time_to_int(self.hand_pose_left[0].header.stamp) < time_nsec):
+            while (
+                self.hand_pose_left
+                and time_to_int(self.hand_pose_left[0].header.stamp) < time_nsec
+            ):
                 self.hand_pose_left.popleft()
-            while (self.hand_pose_right and
-                   time_to_int(self.hand_pose_right[0].header.stamp) < time_nsec):
+            while (
+                self.hand_pose_right
+                and time_to_int(self.hand_pose_right[0].header.stamp) < time_nsec
+            ):
                 self.hand_pose_right.popleft()
-            while (self.obj_dets and
-                   time_to_int(self.obj_dets[0].source_stamp) < time_nsec):
+            while (
+                self.obj_dets and time_to_int(self.obj_dets[0].source_stamp) < time_nsec
+            ):
                 self.obj_dets.popleft()

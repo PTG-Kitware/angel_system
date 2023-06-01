@@ -17,12 +17,13 @@ from pytorchvideo.transforms import (
     ApplyTransformToKey,
     ShortSideScale,
     UniformTemporalSubsample,
-    UniformCropVideo
+    UniformCropVideo,
 )
 
 from angel_system.interfaces.detect_activities import DetectActivities
 
 LOG = logging.getLogger(__name__)
+
 
 class PytorchVideoSlowFastR50(DetectActivities):
     """
@@ -69,30 +70,26 @@ class PytorchVideoSlowFastR50(DetectActivities):
             # Note: Line below is a workaround for an intermittent HTTP error
             # when downloading the model from pytorch.
             # See: https://github.com/pytorch/vision/issues/4156
-            torch.hub._validate_not_a_forked_repo=lambda a,b,c: True
+            torch.hub._validate_not_a_forked_repo = lambda a, b, c: True
 
             # Load the pretrained model
-            model = torch.hub.load("facebookresearch/pytorchvideo",
-                                     model="slowfast_r50", pretrained=True)
+            model = torch.hub.load(
+                "facebookresearch/pytorchvideo", model="slowfast_r50", pretrained=True
+            )
             model = model.eval()
-            model_device = torch.device('cpu')
+            model_device = torch.device("cpu")
             if self._use_cuda:
                 if torch.cuda.is_available():
                     model_device = torch.device(device=self._cuda_device)
                     model = model.to(device=model_device)
                 else:
-                    raise RuntimeError(
-                        "Use of CUDA requested but not available."
-                    )
+                    raise RuntimeError("Use of CUDA requested but not available.")
             self._model = model
             self._model_device = model_device
 
         return model
 
-    def detect_activities(
-        self,
-        frame_iter: Iterable[np.ndarray]
-    ) -> Dict[str, float]:
+    def detect_activities(self, frame_iter: Iterable[np.ndarray]) -> Dict[str, float]:
         """
         Formats the given iterable of frames into the required input format
         for the SlowFastR50 model and then inputs them to the model for inferencing.
@@ -100,7 +97,7 @@ class PytorchVideoSlowFastR50(DetectActivities):
         model = self.get_model()
 
         # Create tensor with shape CxTxHxW
-        video_tensor = {'video': None, 'audio':torch.empty((1))}
+        video_tensor = {"video": None, "audio": torch.empty((1))}
         for frame in frame_iter:
             # Convert np.array to tensor
             frame_t = torch.from_numpy(frame)
@@ -110,23 +107,22 @@ class PytorchVideoSlowFastR50(DetectActivities):
             frame_t = torch.permute(frame_t, (3, 0, 1, 2))
 
             try:
-                video_tensor["video"] = torch.cat([video_tensor['video'], frame_t],
-                                                   dim=1)
+                video_tensor["video"] = torch.cat(
+                    [video_tensor["video"], frame_t], dim=1
+                )
             except:
                 video_tensor["video"] = frame_t
 
-        transform =  ApplyTransformToKey(
+        transform = ApplyTransformToKey(
             key="video",
             transform=Compose(
                 [
                     UniformTemporalSubsample(self._num_frames),
-                    Lambda(lambda x: x/255.0),
+                    Lambda(lambda x: x / 255.0),
                     NormalizeVideo(self._mean, self._std),
-                    ShortSideScale(
-                        size=self._side_size
-                    ),
+                    ShortSideScale(size=self._side_size),
                     CenterCropVideo(self._crop_size),
-                    PackPathway()
+                    PackPathway(),
                 ]
             ),
         )
@@ -143,7 +139,7 @@ class PytorchVideoSlowFastR50(DetectActivities):
 
         # Get the predicted classes
         post_act = torch.nn.Softmax(dim=1)
-        preds: torch.Tensor = post_act(preds)[0] # shape: (400)
+        preds: torch.Tensor = post_act(preds)[0]  # shape: (400)
 
         # Create the label to prediction confidence map
         prediction_map = {}
@@ -161,19 +157,20 @@ class PytorchVideoSlowFastR50(DetectActivities):
     @classmethod
     def is_usable(cls) -> bool:
         # check for optional dependencies
-        torch_spec = importlib.util.find_spec('torch')
-        torchvision_spec = importlib.util.find_spec('torchvision')
-        pytorchvideo_spec = importlib.util.find_spec('pytorchvideo')
+        torch_spec = importlib.util.find_spec("torch")
+        torchvision_spec = importlib.util.find_spec("torchvision")
+        pytorchvideo_spec = importlib.util.find_spec("pytorchvideo")
         if (
-            torch_spec is not None and
-            torchvision_spec is not None and
-            pytorchvideo_spec is not None
+            torch_spec is not None
+            and torchvision_spec is not None
+            and pytorchvideo_spec is not None
         ):
             return True
         else:
             return False
 
 
+# fmt: off
 KINETICS_400_LABELS = (
     'abseiling', 'air drumming', 'answering questions', 'applauding',
     'applying cream', 'archery', 'arm wrestling', 'arranging flowers',
@@ -276,6 +273,8 @@ KINETICS_400_LABELS = (
     'weaving basket', 'welding', 'whistling', 'windsurfing', 'wrapping present',
     'wrestling', 'writing', 'yawning', 'yoga', 'zumba'
 )
+# fmt: on
+
 
 class PackPathway(torch.nn.Module):
     """
@@ -283,6 +282,7 @@ class PackPathway(torch.nn.Module):
 
     Source: https://pytorchvideo.org/docs/tutorial_torchhub_inference
     """
+
     def __init__(self):
         super().__init__()
 
@@ -292,9 +292,7 @@ class PackPathway(torch.nn.Module):
         slow_pathway = torch.index_select(
             frames,
             1,
-            torch.linspace(
-                0, frames.shape[1] - 1, frames.shape[1] // 4
-            ).long(),
+            torch.linspace(0, frames.shape[1] - 1, frames.shape[1] // 4).long(),
         )
         frame_list = [slow_pathway, fast_pathway]
         return frame_list

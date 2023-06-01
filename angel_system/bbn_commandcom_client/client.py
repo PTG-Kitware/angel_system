@@ -26,7 +26,7 @@ class InvalidMessage(Exception):
     pass
 
 
-class InvalidSkill(InvalidMessage):
+class InvalidSkill(Exception):
     pass
 
 
@@ -38,28 +38,37 @@ def validate_message(message: str) -> None:
     if message == "raise no response error":  # to demonstrate timeout
         print("sleeping")
         time.sleep(8)
-    if not any("skill" and s_d in message.lower() for s_d in ['started', 'done']):
+    if not any("skill" and s_d in message.lower() for s_d in ["started", "done"]):
         if not message.lower() in utils.valid_messages:
-            raise InvalidMessage(f"Invalid message, message must be in [{', '.join(utils.valid_messages)}], or `skill XX started/stopped`")
+            raise InvalidMessage(
+                f"Invalid message, message must be in [{', '.join(utils.valid_messages)}], "
+                f"or `skill XX started/stopped`"
+            )
     elif not any(skill in message.lower() for skill in utils.skills):
-        raise InvalidSkill(f"Invalid skill, skill must be one of [{', '.join(utils.skills)}]")
-    else:return
+        raise InvalidSkill(
+            f"Invalid skill, skill must be one of [{', '.join(utils.skills)}]"
+        )
+    else:
+        return
 
 
-def generate_response(message:str) -> str:
+def generate_response(message: str) -> str:
     try:
         validate_message(message)
         return "OK"
     except InvalidMessage:
-        return f"Invalid message, message must be in [{', '.join(utils.valid_messages)}], or `skill XX started/stopped`"
+        return (
+            f"Invalid message, message must be in [{', '.join(utils.valid_messages)}], "
+            f"or `skill XX started/stopped`"
+        )
     except InvalidSkill:
         return f"Invalid skill, skill must be one of [{', '.join(utils.skills)}]"
     except Exception as e:
-        traceback_str = ''.join(traceback.format_tb(e.__traceback__))
+        traceback_str = "".join(traceback.format_tb(e.__traceback__))
         return f"Client error {traceback_str}"
 
 
-def talk_to_server(address:str, name:str, tmux_ctrl:TmuxController) -> None:
+def talk_to_server(address: str, name: str, tmux_ctrl: TmuxController) -> None:
     """
     Summary
     Connects to the server and sends a series of messages.
@@ -70,20 +79,25 @@ def talk_to_server(address:str, name:str, tmux_ctrl:TmuxController) -> None:
     name: [String] Client name?
     tmux_ctrl: [TmuxController] Controls starting and stopping the tmux config.
     """
-    context = zmq.Context()    # Get zmq context to make socket
+    context = zmq.Context()  # Get zmq context to make socket
     print(f"Connecting to server at {address}")
-    socket = context.socket(zmq.DEALER)         # create socket from context. N.B., socket must be dealer type
-                                                # other socket message patterns will cause errors
+    # create socket from context. N.B., socket must be dealer type
+    # other socket message patterns will cause errors
+    socket = context.socket(zmq.DEALER)
 
     socket.connect(address)  # Connect to the server
     print(f"Connected to {address}")
-    socket.send_string(f"{name}:OK",flags=zmq.DONTWAIT)   # Let server know client is listening
+    socket.send_string(
+        f"{name}:OK", flags=zmq.DONTWAIT
+    )  # Let server know client is listening
 
     # this loop should be modified and incorporated into client code
     # so it can listen to and respond to the server
-    while (True):
-        if socket.poll(timeout=500):                              # monitor the socket to see if a message is waiting, N.B, if you don't include a timeout, poll WILL block
-            response = socket.recv_string()                       # receive message
+    while True:
+        # monitor the socket to see if a message is waiting, N.B, if you don't
+        # include a timeout, poll WILL block
+        if socket.poll(timeout=500):
+            response = socket.recv_string()  # receive message
             print(f"{name}: Received message: {response}")
 
             if "started" in response:
@@ -101,15 +115,16 @@ def talk_to_server(address:str, name:str, tmux_ctrl:TmuxController) -> None:
                 print("Stopping all tmux sessions")
                 tmux_ctrl.stop_all_tmux_sessions()
 
-            return_message = generate_response(response)          # validate the message and form response
-            socket.send_string(f"{name}:{return_message}",flags=zmq.DONTWAIT)  # send the response to the server
-                                                                                # n.b. server expects string in form `name:message`
-        time.sleep(.5)
+            # validate the message and form response
+            return_message = generate_response(response)
+            # send the response to the server
+            # n.b. server expects string in form `name:message`
+            socket.send_string(f"{name}:{return_message}", flags=zmq.DONTWAIT)
+        time.sleep(0.5)
         continue
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--address",

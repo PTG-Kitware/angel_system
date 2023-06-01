@@ -20,11 +20,7 @@ from typing import List
 from typing import Optional
 from typing import Tuple
 
-from angel_msgs.msg import (
-    ActivityDetection,
-    HandJointPosesUpdate,
-    ObjectDetection2dSet
-)
+from angel_msgs.msg import ActivityDetection, HandJointPosesUpdate, ObjectDetection2dSet
 
 from angel_system.uho.aux_data import AuxData
 from angel_system.berkeley.activity_classification import predict as predict_berkeley
@@ -44,7 +40,6 @@ BRIDGE = CvBridge()
 
 
 class UHOActivityDetector(Node):
-
     def __init__(self):
         super().__init__(self.__class__.__name__)
 
@@ -102,8 +97,9 @@ class UHOActivityDetector(Node):
             .double_value
         )
         self._model_checkpoint = (
-            self.declare_parameter("model_checkpoint",
-                                   "/angel_workspace/model_files/uho_epoch_090.ckpt")
+            self.declare_parameter(
+                "model_checkpoint", "/angel_workspace/model_files/uho_epoch_090.ckpt"
+            )
             .get_parameter_value()
             .string_value
         )
@@ -116,9 +112,7 @@ class UHOActivityDetector(Node):
         )
         # Model specific top-K parameter.
         self._topk = (
-            self.declare_parameter("top_k", 5)
-            .get_parameter_value()
-            .integer_value
+            self.declare_parameter("top_k", 5).get_parameter_value().integer_value
         )
         # Ground truth file for classifications (optional)
         # This is expecting a feather file format. Activity prediction vector
@@ -126,9 +120,7 @@ class UHOActivityDetector(Node):
         # (+ background), and the confidence vector order will be determined
         # by the order labels appear in this file.
         self._gt_file = (
-            self.declare_parameter("gt_file", "")
-            .get_parameter_value()
-            .string_value
+            self.declare_parameter("gt_file", "").get_parameter_value().string_value
         )
         # Whether overlapping windows are passed to the classifier
         self._overlapping_mode = (
@@ -226,8 +218,7 @@ class UHOActivityDetector(Node):
         # Event to notify runtime it should try processing now.
         self._rt_awake_evt = Event()
         self._rt_thread = Thread(
-            target=self.thread_predict_runtime,
-            name="prediction_runtime"
+            target=self.thread_predict_runtime, name="prediction_runtime"
         )
         self._rt_thread.daemon = True
         self._rt_thread.start()
@@ -257,7 +248,9 @@ class UHOActivityDetector(Node):
         # Check first, so we don't accumulate anything when we aren't using it.
         image_mat = BRIDGE.imgmsg_to_cv2(image, desired_encoding="rgb8")
         image_header_stamp = image.header.stamp
-        if self.rt_alive() and self._input_buffer.queue_image(image_mat, image_header_stamp):
+        if self.rt_alive() and self._input_buffer.queue_image(
+            image_mat, image_header_stamp
+        ):
             self.get_logger().info(f"Queueing image (ts={image_header_stamp})")
             # On new imagery, tell the RT loop to wake up and try to form a window
             # for processing.
@@ -270,8 +263,10 @@ class UHOActivityDetector(Node):
         """
         # Check first, so we don't accumulate anything when we aren't using it.
         if self.rt_alive() and self._input_buffer.queue_hand_pose(hand_pose):
-            self.get_logger().info(f"Queueing hand pose (hand={hand_pose.hand}) "
-                                   f"(ts={hand_pose.header.stamp})")
+            self.get_logger().info(
+                f"Queueing hand pose (hand={hand_pose.hand}) "
+                f"(ts={hand_pose.header.stamp})"
+            )
 
     def obj_det_callback(self, msg):
         """
@@ -284,8 +279,9 @@ class UHOActivityDetector(Node):
         log = self.get_logger()
 
         if msg.num_detections < self._topk:
-            log.warn(f"Received msg with less than {self._topk} detections. "
-                     f"Skipping.")
+            log.warn(
+                f"Received msg with less than {self._topk} detections. " f"Skipping."
+            )
             return
 
         # Check first, so we don't accumulate anything when we aren't using it.
@@ -295,9 +291,11 @@ class UHOActivityDetector(Node):
     def _window_criterion_correct_size(self, window: InputWindow) -> bool:
         window_ok = len(window) == self._frames_per_det
         if not window_ok:
-            self.get_logger().warn(f"Window is not the appropriate size "
-                                   f"(actual:{len(window)} != "
-                                   f"{self._frames_per_det}:expected)")
+            self.get_logger().warn(
+                f"Window is not the appropriate size "
+                f"(actual:{len(window)} != "
+                f"{self._frames_per_det}:expected)"
+            )
         return window_ok
 
     def _window_criterion_enough_dets(self, window: InputWindow) -> bool:
@@ -305,8 +303,10 @@ class UHOActivityDetector(Node):
         self.get_logger().info(f"Window num dets: {num_dets}")
         window_ok = num_dets >= self._obj_dets_per_window
         if not window_ok:
-            self.get_logger().warn(f"Window num dets ({num_dets}) not at "
-                                   f"least {self._obj_dets_per_window}")
+            self.get_logger().warn(
+                f"Window num dets ({num_dets}) not at "
+                f"least {self._obj_dets_per_window}"
+            )
         return window_ok
 
     def _window_criterion_new_leading_frame(self, window: InputWindow) -> bool:
@@ -463,10 +463,20 @@ class UHOActivityDetector(Node):
                     n_labels = len(msg.label_vec)
                     n_dets = msg.num_detections
                     n_feats = msg.descriptor_dim
-                    det_scores = torch.Tensor(msg.label_confidences).reshape((n_dets, n_labels))
-                    det_descrs = torch.Tensor(msg.descriptors).reshape((n_dets, n_feats))
-                    det_bboxes = torch.Tensor([msg.left, msg.top, msg.right, msg.bottom]).T
-                    assert det_descrs.shape[0] == det_bboxes.shape[0] == det_scores.shape[0], (
+                    det_scores = torch.Tensor(msg.label_confidences).reshape(
+                        (n_dets, n_labels)
+                    )
+                    det_descrs = torch.Tensor(msg.descriptors).reshape(
+                        (n_dets, n_feats)
+                    )
+                    det_bboxes = torch.Tensor(
+                        [msg.left, msg.top, msg.right, msg.bottom]
+                    ).T
+                    assert (
+                        det_descrs.shape[0]
+                        == det_bboxes.shape[0]
+                        == det_scores.shape[0]
+                    ), (
                         f"There should be the same number of descriptors, boxes, "
                         f"and scores. Instead found "
                         f"{det_descrs.shape[0]} != {det_bboxes.shape[0]} != "
@@ -489,8 +499,10 @@ class UHOActivityDetector(Node):
         # Model input format notes/questions
         with SimpleTimer("Activity classification prediction", log.info):
             pred_conf = predict(
-                self._uho_fcn, self._uho_temporal,
-                frame_set, aux_data,
+                self._uho_fcn,
+                self._uho_temporal,
+                frame_set,
+                aux_data,
                 fcn_batch_size=self._uho_batch_size,
             )
             assert len(pred_conf) == len(self._uho_labels), (
@@ -598,5 +610,5 @@ def main():
     cv2.destroyAllWindows()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -28,19 +28,21 @@ def time_from_name(fname):
 
     :return: timestamp (float) in seconds
     """
-    time = RE_FILENAME_TIME.match(fname).groups()[0].split('_')
+    time = RE_FILENAME_TIME.match(fname).groups()[0].split("_")
     return float(time[0]) + (float(time[1]) * 1e-9)
 
 
-def load_from_file(gt_fn, detections_fn) -> Tuple[List[str], pd.DataFrame, pd.DataFrame]:
+def load_from_file(
+    gt_fn, detections_fn
+) -> Tuple[List[str], pd.DataFrame, pd.DataFrame]:
     """
     Load the labels, ground truth, and detections from files
 
     :param gt_fn: Path to the ground truth feather file
-    :param detections_fn: Path to the extracted activity detections 
+    :param detections_fn: Path to the extracted activity detections
         in json format
 
-    :return: Tuple(array of class labels (str), pandas dataframe of ground truth, 
+    :return: Tuple(array of class labels (str), pandas dataframe of ground truth,
         pandas dataframe of detections)
     """
     # ============================
@@ -52,9 +54,9 @@ def load_from_file(gt_fn, detections_fn) -> Tuple[List[str], pd.DataFrame, pd.Da
     gt = []
     for i, row in gt_f.iterrows():
         g = {
-            'class_label': row["class"].lower().strip(),
-            'start': time_from_name(row["start_frame"]),
-            'end': time_from_name(row["end_frame"])
+            "class_label": row["class"].lower().strip(),
+            "start": time_from_name(row["start_frame"]),
+            "end": time_from_name(row["end_frame"]),
         }
         gt.append(g)
 
@@ -65,7 +67,9 @@ def load_from_file(gt_fn, detections_fn) -> Tuple[List[str], pd.DataFrame, pd.Da
     # Load detections from
     # extracted ros bag
     # ============================
-    detections_input = [det for det in (literal_eval(s) for s in open(detections_fn))][0]
+    detections_input = [det for det in (literal_eval(s) for s in open(detections_fn))][
+        0
+    ]
     detections = []
 
     for dets in detections_input:
@@ -75,10 +79,10 @@ def load_from_file(gt_fn, detections_fn) -> Tuple[List[str], pd.DataFrame, pd.Da
 
         for l in dets["label_vec"]:
             d = {
-                'class_label': l.lower().strip(),
-                'start': dets["source_stamp_start_frame"],
-                'end': dets["source_stamp_end_frame"],
-                'conf': good_dets[l]
+                "class_label": l.lower().strip(),
+                "start": dets["source_stamp_start_frame"],
+                "end": dets["source_stamp_end_frame"],
+                "conf": good_dets[l],
             }
             detections.append(d)
     detections = pd.DataFrame(detections)
@@ -88,7 +92,9 @@ def load_from_file(gt_fn, detections_fn) -> Tuple[List[str], pd.DataFrame, pd.Da
     # Load labels
     # ============================
     # grab all labels present in data
-    labels = list(set([l.lower().strip().rstrip('.') for l in detections['class_label'].unique()]))
+    labels = list(
+        set([l.lower().strip().rstrip(".") for l in detections["class_label"].unique()])
+    )
 
     log.debug(f"Labels: {labels}")
 
@@ -110,7 +116,7 @@ def activities_from_dive_csv(filepath: str) -> List[Activity]:
     df = pd.read_csv(filepath)
     # There may be additional metadata rows. Filter out rows whose first column
     # value starts with a `#`.
-    df = df[df[df.keys()[0]].str.contains('^[^#]')]
+    df = df[df[df.keys()[0]].str.contains("^[^#]")]
     # Create a mapping of detection/track ID to the activity annotation
     id_to_activity: Dict[int, Activity] = {}
     for row in df.iterrows():
@@ -127,9 +133,9 @@ def activities_from_dive_csv(filepath: str) -> List[Activity]:
             # There's a struct in there, update it.
             a = id_to_activity[a_id]
             # Activity should not already have an end time assigned.
-            assert a.end is np.inf, (
-                f"More than 2 entries observed for activity track ID {a_id}."
-            )
+            assert (
+                a.end is np.inf
+            ), f"More than 2 entries observed for activity track ID {a_id}."
             id_to_activity[a_id] = Activity(
                 a.class_label,
                 a.start,
@@ -160,30 +166,27 @@ def activities_from_ros_export_json(filepath: str) -> Tuple[List[str], List[Acti
         annotations (predicted).
     """
     log.info(f"Loading predicted activities from: {filepath}")
-    with open(filepath, 'r') as f:
+    with open(filepath, "r") as f:
         data = json.load(f)
     activity_seq: List[Activity] = []
     label_vec = None
     for act_i, act_json in enumerate(data):
         # Cache/check stable labels vector.
         if label_vec is not None:
-            assert act_json['label_vec'] == label_vec, (
+            assert act_json["label_vec"] == label_vec, (
                 f"Inconsistent label set in loaded JSON activities. Activity "
                 f"index {act_i} showed inconsistency."
             )
         else:
-            label_vec = act_json['label_vec']
+            label_vec = act_json["label_vec"]
 
         # This activity window start/end times in seconds.
-        act_start = act_json['source_stamp_start_frame']
-        act_end = act_json['source_stamp_end_frame']
+        act_start = act_json["source_stamp_start_frame"]
+        act_end = act_json["source_stamp_end_frame"]
 
         # Create a separate activity item per prediction
-        for lbl, conf in zip(label_vec, act_json['conf_vec']):
-            activity_seq.append(Activity(
-                lbl.lower().strip(),
-                act_start, act_end, conf
-            ))
+        for lbl, conf in zip(label_vec, act_json["conf_vec"]):
+            activity_seq.append(Activity(lbl.lower().strip(), act_start, act_end, conf))
     # normalize output label vec just like activity label treatment.
     label_vec = [lbl.lower().strip() for lbl in label_vec]
     return label_vec, activity_seq

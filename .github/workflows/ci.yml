@@ -37,7 +37,9 @@ jobs:
       # Check out repository under $GITHUB_WORKSPACE so our job can access it.
       - uses: actions/checkout@v3
       - name: Lint python code
-        run: black --check .
+        run: |
+          black --version
+          black --check --diff --color .
 
   pytest-angel-system:
     runs-on: ubuntu-latest

@@ -136,13 +136,12 @@ class WindowAttention3D(nn.Module):
         attn_drop=0.0,
         proj_drop=0.0,
     ):
-
         super().__init__()
         self.dim = dim
         self.window_size = window_size  # Wd, Wh, Ww
         self.num_heads = num_heads
         head_dim = dim // num_heads
-        self.scale = qk_scale or head_dim ** -0.5
+        self.scale = qk_scale or head_dim**-0.5
 
         # define a parameter table of relative position bias
         self.relative_position_bias_table = nn.Parameter(
@@ -527,7 +526,7 @@ class BasicLayer(nn.Module):
         window_size, shift_size = get_window_size(
             (D, H, W), self.window_size, self.shift_size
         )
-        x = rearrange(x, 'b c d h w -> b d h w c')
+        x = rearrange(x, "b c d h w -> b d h w c")
         Dp = int(np.ceil(D / window_size[0])) * window_size[0]
         Hp = int(np.ceil(H / window_size[1])) * window_size[1]
         Wp = int(np.ceil(W / window_size[2])) * window_size[2]
@@ -538,7 +537,7 @@ class BasicLayer(nn.Module):
 
         if self.downsample is not None:
             x = self.downsample(x)
-        x = rearrange(x, 'b d h w c -> b c d h w')
+        x = rearrange(x, "b d h w c -> b c d h w")
         return x
 
 
@@ -663,7 +662,7 @@ class SwinTransformer3D(nn.Module):
         self.layers = nn.ModuleList()
         for i_layer in range(self.num_layers):
             layer = BasicLayer(
-                dim=int(embed_dim * 2 ** i_layer),
+                dim=int(embed_dim * 2**i_layer),
                 depth=depths[i_layer],
                 num_heads=num_heads[i_layer],
                 window_size=window_size,
@@ -713,8 +712,8 @@ class SwinTransformer3D(nn.Module):
             logger (logging.Logger): The logger used to print
                 debugging infomation.
         """
-        checkpoint = torch.load(self.pretrained, map_location='cpu')
-        state_dict = checkpoint['model']
+        checkpoint = torch.load(self.pretrained, map_location="cpu")
+        state_dict = checkpoint["model"]
 
         # delete relative_position_index since we always re-init it
         relative_position_index_keys = [
@@ -728,8 +727,8 @@ class SwinTransformer3D(nn.Module):
         for k in attn_mask_keys:
             del state_dict[k]
 
-        state_dict['patch_embed.proj.weight'] = (
-            state_dict['patch_embed.proj.weight']
+        state_dict["patch_embed.proj.weight"] = (
+            state_dict["patch_embed.proj.weight"]
             .unsqueeze(2)
             .repeat(1, 1, self.patch_size[0], 1, 1)
             / self.patch_size[0]
@@ -750,7 +749,7 @@ class SwinTransformer3D(nn.Module):
                 logger.warning(f"Error in loading {k}, passing")
             else:
                 if L1 != L2:
-                    S1 = int(L1 ** 0.5)
+                    S1 = int(L1**0.5)
                     relative_position_bias_table_pretrained_resized = (
                         torch.nn.functional.interpolate(
                             relative_position_bias_table_pretrained.permute(1, 0).view(
@@ -760,7 +759,7 @@ class SwinTransformer3D(nn.Module):
                                 2 * self.window_size[1] - 1,
                                 2 * self.window_size[2] - 1,
                             ),
-                            mode='bicubic',
+                            mode="bicubic",
                         )
                     )
                     relative_position_bias_table_pretrained = (
@@ -800,7 +799,7 @@ class SwinTransformer3D(nn.Module):
         if isinstance(self.pretrained, str):
             self.apply(_init_weights)
             logger = logging.getLogger(__name__)
-            logger.info(f'load model from: {self.pretrained}')
+            logger.info(f"load model from: {self.pretrained}")
 
             if self.pretrained2d:
                 # Inflate 2D model into 3D model.
@@ -809,22 +808,24 @@ class SwinTransformer3D(nn.Module):
                 # Directly load 3D model.
                 checkpoint = torch.load(self.pretrained, map_location="cpu")
                 # get state_dict from checkpoint
-                if 'state_dict' in checkpoint:
-                    state_dict = checkpoint['state_dict']
+                if "state_dict" in checkpoint:
+                    state_dict = checkpoint["state_dict"]
                 else:
                     state_dict = checkpoint
                 # strip prefix of state_dict
 
-                if list(state_dict.keys())[0].startswith('module.'):
+                if list(state_dict.keys())[0].startswith("module."):
                     state_dict = {k[7:]: v for k, v in state_dict.items()}
                 # load state_dict
-                state_dict = {k: v for k, v in state_dict.items() if k.startswith("backbone")}
-                state_dict = {k[len("backbone."):]: v for k, v in state_dict.items()}
+                state_dict = {
+                    k: v for k, v in state_dict.items() if k.startswith("backbone")
+                }
+                state_dict = {k[len("backbone.") :]: v for k, v in state_dict.items()}
                 self.load_state_dict(state_dict, strict=True)
         elif self.pretrained is None:
             self.apply(_init_weights)
         else:
-            raise TypeError('pretrained must be a str or None')
+            raise TypeError("pretrained must be a str or None")
 
     def forward(self, x):
         """Forward function."""
@@ -835,9 +836,9 @@ class SwinTransformer3D(nn.Module):
         for layer in self.layers:
             x = layer(x.contiguous())
 
-        x = rearrange(x, 'n c d h w -> n d h w c')
+        x = rearrange(x, "n c d h w -> n d h w c")
         x = self.norm(x)
-        x = rearrange(x, 'n d h w c -> n c d h w')
+        x = rearrange(x, "n d h w c -> n c d h w")
 
         return x
 
@@ -879,6 +880,7 @@ class swin_t(nn.Module):
         x = self.head(x)
         return x
 
+
 class swin_s(nn.Module):
     def __init__(self, pretrained, num_classes):
         super().__init__()
@@ -903,7 +905,6 @@ class swin_s(nn.Module):
         self.dropout = nn.Dropout(p=0.5)
         self.head = nn.Linear(768, num_classes)
 
-
     def forward(self, x):
         x = self.backbone(x)
         x = self.avg_pool(x)
@@ -911,6 +912,7 @@ class swin_s(nn.Module):
         x = x.view(x.shape[0], -1)
         x = self.head(x)
         return x
+
 
 class swin_b(nn.Module):
     def __init__(self, pretrained, num_classes):
@@ -940,8 +942,8 @@ class swin_b(nn.Module):
     def initialize_head(self, pretrained):
         checkpoint = torch.load(pretrained, map_location="cpu")
         # get state_dict from checkpoint
-        if 'state_dict' in checkpoint:
-            state_dict = checkpoint['state_dict']
+        if "state_dict" in checkpoint:
+            state_dict = checkpoint["state_dict"]
         else:
             state_dict = checkpoint
         state_dict = {k[7:]: v for k, v in state_dict.items()}
@@ -949,7 +951,6 @@ class swin_b(nn.Module):
         with torch.no_grad():
             self.head.weight.copy_(state_dict["head.weight"])
             self.head.bias.copy_(state_dict["head.bias"])
-
 
     def forward(self, x):
         x = self.backbone(x)

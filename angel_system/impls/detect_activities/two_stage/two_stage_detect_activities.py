@@ -14,6 +14,7 @@ from angel_system.impls.detect_activities.two_stage.two_stage import TwoStageMod
 
 LOG = logging.getLogger(__name__)
 
+
 class TwoStageDetector(Configurable):
     """
     Implementation of the explicit spatio temporal two-stage training models.
@@ -75,9 +76,7 @@ class TwoStageDetector(Configurable):
         self.transform = torchvision.transforms.Compose(
             [
                 torchvision.transforms.ToTensor(),
-                torchvision.transforms.Normalize(
-                    self._mean, self._std
-                )
+                torchvision.transforms.Normalize(self._mean, self._std),
             ]
         )
 
@@ -108,10 +107,10 @@ class TwoStageDetector(Configurable):
     def detect_activities(
         self,
         frame_iter: Iterable[np.ndarray],
-        aux_data_iter: Dict[str, Iterable[np.ndarray]]
+        aux_data_iter: Dict[str, Iterable[np.ndarray]],
     ) -> Dict[str, float]:
         """
-        Formats the given iterable of frames and multi-modal auxiliary 
+        Formats the given iterable of frames and multi-modal auxiliary
         data into the required input format for the two-stage model and
         then inputs them to the model for inferencing.
         """
@@ -139,7 +138,7 @@ class TwoStageDetector(Configurable):
             preds = self._model(frames, aux_data)
 
         # Get the top predicted classes
-        preds: torch.Tensor = F.softmax(preds, dim=1) # shape: (1, num_classes)
+        preds: torch.Tensor = F.softmax(preds, dim=1)  # shape: (1, num_classes)
         top_preds = preds.topk(k=5)
 
         # Map the predicted classes to the label names

@@ -133,7 +133,9 @@ def from_detect_image_objects_result(
         msg.top = bounds_mat[1].tolist()
         msg.right = bounds_mat[2].tolist()
         msg.bottom = bounds_mat[3].tolist()
-        msg.label_confidences = np.asarray(det_confidence, dtype=np.float64).ravel().tolist()
+        msg.label_confidences = (
+            np.asarray(det_confidence, dtype=np.float64).ravel().tolist()
+        )
 
     return msg
 
@@ -144,14 +146,12 @@ def to_confidence_matrix(msg: ObjectDetection2dSet) -> np.ndarray:
     :param msg: Message to get the matrix confidences from.
     :return: New numpy ndarray of 2 dimensions with shape [nDets x nClasses].
     """
-    return (
-        np.asarray(msg.label_confidences)
-          .reshape((msg.num_detections, len(msg.label_vec)))
+    return np.asarray(msg.label_confidences).reshape(
+        (msg.num_detections, len(msg.label_vec))
     )
 
 
-def convert_nv12_to_rgb(nv12_image: array.array,
-                        height: int, width: int) -> np.ndarray:
+def convert_nv12_to_rgb(nv12_image: array.array, height: int, width: int) -> np.ndarray:
     """
     Converts an image in NV12 format to RGB.
 
@@ -161,12 +161,14 @@ def convert_nv12_to_rgb(nv12_image: array.array,
 
     :returns: RGB image
     """
-    yuv_image = np.frombuffer(nv12_image, np.uint8).reshape(height*3//2, width)
+    yuv_image = np.frombuffer(nv12_image, np.uint8).reshape(height * 3 // 2, width)
     rgb_image = cv2.cvtColor(yuv_image, cv2.COLOR_YUV2BGR_NV12)
     return rgb_image
 
 
-def hand_joint_poses_to_struct(msg: HandJointPosesUpdate) -> Tuple[List[str], npt.NDArray[np.float64]]:
+def hand_joint_poses_to_struct(
+    msg: HandJointPosesUpdate,
+) -> Tuple[List[str], npt.NDArray[np.float64]]:
     """
     Convert a hand joint pose message into a list of joint labels and the
     matrix of 3D joint positions ([x, y, z] format).
@@ -179,13 +181,15 @@ def hand_joint_poses_to_struct(msg: HandJointPosesUpdate) -> Tuple[List[str], np
     :return:
     """
     n_joints = len(msg.joints)
-    joint_labels = [''] * n_joints
+    joint_labels = [""] * n_joints
     joint_poses = np.empty((n_joints, 3))
     for i, j in enumerate(msg.joints):
         joint_labels[i] = j.joint
-        joint_poses[i] = [j.pose.position.x,
-                          j.pose.position.y,
-                          j.pose.position.z,]
+        joint_poses[i] = [
+            j.pose.position.x,
+            j.pose.position.y,
+            j.pose.position.z,
+        ]
     return joint_labels, joint_poses
 
 
@@ -223,7 +227,9 @@ def sparse_hand_joint_poses_to_structs(
         if msg is not None:
             labels, poses = hand_joint_poses_to_struct(msg)
             if labels != ret_labels:
-                raise ValueError("Subsequent message does not have the same "
-                                 "joints labels order as the first.")
+                raise ValueError(
+                    "Subsequent message does not have the same "
+                    "joints labels order as the first."
+                )
             position_mats[i] = poses
     return ret_labels, position_mats

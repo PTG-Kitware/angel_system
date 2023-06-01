@@ -7,6 +7,7 @@ from sensor_msgs.msg import Image
 from threading import Lock
 import torch
 import torchvision
+
 print("TORCH VERSION", torch.__version__)
 print("torch")
 from torch.autograd import Variable
@@ -64,14 +65,18 @@ class ObjectDetectorWithDescriptors_v3(Node):
             .double_value
         )
         self._object_vocabulary = (
-            self.declare_parameter("object_vocab_list",
-                                   "/angel_workspace/model_files/fasterrcnn_fine_tuned_label_list.txt")
+            self.declare_parameter(
+                "object_vocab_list",
+                "/angel_workspace/model_files/fasterrcnn_fine_tuned_label_list.txt",
+            )
             .get_parameter_value()
             .string_value
         )
         self._model_checkpoint = (
-            self.declare_parameter("model_checkpoint",
-                                   "/angel_workspace/model_files/faster_rcnn_res101_vg.pth")
+            self.declare_parameter(
+                "model_checkpoint",
+                "/angel_workspace/model_files/faster_rcnn_res101_vg.pth",
+            )
             .get_parameter_value()
             .string_value
         )
@@ -85,34 +90,26 @@ class ObjectDetectorWithDescriptors_v3(Node):
         self._model_device = None
 
         self._subscription = self.create_subscription(
-            Image,
-            self._image_topic,
-            self.image_callback,
-            1
+            Image, self._image_topic, self.image_callback, 1
         )
         self._publisher = self.create_publisher(
-            ObjectDetection2dSet,
-            self._desc_topic,
-            1
+            ObjectDetection2dSet, self._desc_topic, 1
         )
 
         # Be able to receive a notification that there is a minimum time
         # before which we should not detect objects.
         self._min_time_subscription = self.create_subscription(
-            Time,
-            self._min_time_topic,
-            self.receive_min_time,
-            1
+            Time, self._min_time_topic, self.receive_min_time, 1
         )
         # minimum time in nanoseconds (see `time_to_int`)
         self._min_time_lock = Lock()
         self._min_time: int = 0
 
         # Load class labels
-        classes = ['__background__']
+        classes = ["__background__"]
         with open(self._object_vocabulary) as f:
             for obj in f.readlines():
-                classes.append(obj.split(',')[0].lower().strip())
+                classes.append(obj.split(",")[0].lower().strip())
         self.classes = classes
         self.counter = 0
         log.info("Ready to detect")
@@ -129,7 +126,7 @@ class ObjectDetectorWithDescriptors_v3(Node):
             model.create_architecture()
             print("checkpoint", self._model_checkpoint)
             checkpoint = torch.load(self._model_checkpoint)
-            model.load_state_dict(checkpoint['model'])
+            model.load_state_dict(checkpoint["model"])
             model.eval()
 
             # Transfer the model to the requested device
@@ -177,13 +174,13 @@ class ObjectDetectorWithDescriptors_v3(Node):
         model = self.get_model()
         img_time_ns = time_to_int(image.header.stamp)
         min_time = self.get_min_time()
-        #if img_time_ns <= min_time:
-            # Before min processing time, don't process this frame.
-            #log.warn(f"Skipping frame with time {img_time_ns} ns <= min time "
-            #         f"{min_time} ns")
-            #return
+        # if img_time_ns <= min_time:
+        # Before min processing time, don't process this frame.
+        # log.warn(f"Skipping frame with time {img_time_ns} ns <= min time "
+        #         f"{min_time} ns")
+        # return
 
-        #log.info(f"Starting detection for frame time {img_time_ns} ns")
+        # log.info(f"Starting detection for frame time {img_time_ns} ns")
 
         # Preprocess image - NOTE: bgr order required by _get_image_blob
         im_in = np.array(BRIDGE.imgmsg_to_cv2(image, desired_encoding="bgr8"))
@@ -191,17 +188,13 @@ class ObjectDetectorWithDescriptors_v3(Node):
 
         # Send to model
         with torch.no_grad():
-            (
-                rois, cls_prob,
-                bbox_pred, _, _, _, _, _,
-                pooled_feat
-            ) = model(im_data, im_info, gt_boxes, num_boxes, pool_feat=True)
+            (rois, cls_prob, bbox_pred, _, _, _, _, _, pooled_feat) = model(
+                im_data, im_info, gt_boxes, num_boxes, pool_feat=True
+            )
 
         # Postprocess model output
         detection_info = self.postprocess_detections(
-            rois, cls_prob,
-            bbox_pred, im_info,
-            pooled_feat, im_scales
+            rois, cls_prob, bbox_pred, im_info, pooled_feat, im_scales
         )
 
         # The above may take non-trivial time.
@@ -217,20 +210,20 @@ class ObjectDetectorWithDescriptors_v3(Node):
         msg.header.frame_id = image.header.frame_id
         msg.source_stamp = image.header.stamp
 
-        if detection_info['boxes'] is None:
+        if detection_info["boxes"] is None:
             msg.num_detections = 0
         else:
-            msg.num_detections = len(detection_info['labels'])
+            msg.num_detections = len(detection_info["labels"])
             msg.label_vec = self.classes[1:]
-            msg.label_confidences = detection_info['scores'].ravel().tolist()
+            msg.label_confidences = detection_info["scores"].ravel().tolist()
 
-            msg.left = detection_info['boxes'][:,0].tolist()
-            msg.top = detection_info['boxes'][:,1].tolist()
-            msg.right = detection_info['boxes'][:,2].tolist()
-            msg.bottom = detection_info['boxes'][:,3].tolist()
+            msg.left = detection_info["boxes"][:, 0].tolist()
+            msg.top = detection_info["boxes"][:, 1].tolist()
+            msg.right = detection_info["boxes"][:, 2].tolist()
+            msg.bottom = detection_info["boxes"][:, 3].tolist()
 
-            msg.descriptor_dim = detection_info['feats'].shape[-1]
-            msg.descriptors = detection_info['feats'].ravel().tolist()
+            msg.descriptor_dim = detection_info["feats"].shape[-1]
+            msg.descriptors = detection_info["feats"].ravel().tolist()
 
         # Publish detection set message
         self._publisher.publish(msg)
@@ -239,7 +232,7 @@ class ObjectDetectorWithDescriptors_v3(Node):
             log.info("published 30 messages")
         else:
             self.counter += 1
-        #log.info("Published detection set message")
+        # log.info("Published detection set message")
         self.first = False
 
     def preprocess_image(self, im_in):
@@ -268,8 +261,7 @@ class ObjectDetectorWithDescriptors_v3(Node):
         assert len(im_scales) == 1, "Only single-image batch implemented"
         im_blob = blobs
         im_info_np = np.array(
-            [[im_blob.shape[1], im_blob.shape[2], im_scales[0]]],
-            dtype=np.float32
+            [[im_blob.shape[1], im_blob.shape[2], im_scales[0]]], dtype=np.float32
         )
 
         im_data_pt = torch.from_numpy(im_blob)
@@ -284,7 +276,9 @@ class ObjectDetectorWithDescriptors_v3(Node):
 
         return im_data, im_info, gt_boxes, num_boxes, im_scales
 
-    def postprocess_detections(self, rois, cls_prob, bbox_pred, im_info, pooled_feat, im_scales):
+    def postprocess_detections(
+        self, rois, cls_prob, bbox_pred, im_info, pooled_feat, im_scales
+    ):
         """
         Form the model outputs into a dictionary containing the bounding boxes,
         object indices, labels, features, and probability scores.
@@ -294,8 +288,11 @@ class ObjectDetectorWithDescriptors_v3(Node):
         scores = cls_prob.data
         boxes = rois.data[:, :, 1:5]
         box_deltas = bbox_pred.data
-        box_deltas = box_deltas.view(-1, 4) * torch.FloatTensor((0.1, 0.1, 0.2, 0.2)).to(device=self._torch_device) \
-                           + torch.FloatTensor((0.0, 0.0, 0.0, 0.0)).to(device=self._torch_device)
+        box_deltas = box_deltas.view(-1, 4) * torch.FloatTensor(
+            (0.1, 0.1, 0.2, 0.2)
+        ).to(device=self._torch_device) + torch.FloatTensor((0.0, 0.0, 0.0, 0.0)).to(
+            device=self._torch_device
+        )
         box_deltas = box_deltas.view(1, -1, 4 * len(self.classes))
         pred_boxes = bbox_transform_inv(boxes, box_deltas, 1)
         pred_boxes = clip_boxes(pred_boxes, im_info.data, 1)
@@ -304,15 +301,17 @@ class ObjectDetectorWithDescriptors_v3(Node):
         pred_boxes /= im_scales[0]
         # Simply repeat the boxes, once for each class
         scores = scores.squeeze()
-        #-------------
+        # -------------
         pred_boxes = pred_boxes.squeeze()
 
         const_bbox_size = torch.arange(4).to(device=self._torch_device)
-        max_class_ind = (torch.argmax(scores[:,1:], dim=1) + 1).to(device=self._torch_device) 
+        max_class_ind = (torch.argmax(scores[:, 1:], dim=1) + 1).to(
+            device=self._torch_device
+        )
         # getting indices for bbox in flattened array length num_classes*4
-        bbox_indices = (max_class_ind.unsqueeze(1)*4) + const_bbox_size
+        bbox_indices = (max_class_ind.unsqueeze(1) * 4) + const_bbox_size
         max_class_boxes = pred_boxes.gather(1, bbox_indices)
-        max_class_scores = scores.gather(1,max_class_ind.unsqueeze(1)).squeeze()
+        max_class_scores = scores.gather(1, max_class_ind.unsqueeze(1)).squeeze()
         above_thresh_mask = max_class_scores >= self._detection_threshold
         above_thresh_max_class_conf = max_class_scores[above_thresh_mask]
         above_thresh_scores = scores[above_thresh_mask]
@@ -330,7 +329,7 @@ class ObjectDetectorWithDescriptors_v3(Node):
 
             objects = keep_class_ind - 1
             box_dets = keep_boxes.cpu().numpy()
-            scores = keep_scores[:,1:]
+            scores = keep_scores[:, 1:]
             labels = []
             classes = self.classes
             for i in keep_class_ind:
@@ -339,32 +338,39 @@ class ObjectDetectorWithDescriptors_v3(Node):
 
             sample_info = dict(
                 labels=labels,
-                boxes=box_dets.astype('float32'),
+                boxes=box_dets.astype("float32"),
                 objects=objects.cpu().numpy(),
                 feats=feats,
-                scores=scores
+                scores=scores,
             )
         else:
-            sample_info = dict(boxes=None, objects=None, feats=None, labels=None, scores=None)
+            sample_info = dict(
+                boxes=None, objects=None, feats=None, labels=None, scores=None
+            )
         return sample_info
-        #------------------
+        # ------------------
         max_conf = torch.zeros((scores.shape[0])).to(device=self._torch_device)
-        inds = torch.nonzero(scores >self._detection_threshold, as_tuple=True)
+        inds = torch.nonzero(scores > self._detection_threshold, as_tuple=True)
         cls_scores = scores[inds]
         _, order = torch.sort(cls_scores, 0, True)
 
-        filled_boxes = boxes[:,inds[0],:]
+        filled_boxes = boxes[:, inds[0], :]
         if filled_boxes.ndim == 1:
             filled_boxes = torch.unsqueeze(filled_boxes, 0)
         elif filled_boxes.ndim > 2:
-            filled_boxes = torch.squeeze(filled_boxes,0)
-        keep = nms(filled_boxes[order,:], cls_scores[order], 0.3)
-        
+            filled_boxes = torch.squeeze(filled_boxes, 0)
+        keep = nms(filled_boxes[order, :], cls_scores[order], 0.3)
+
         index = inds[0][order[keep]]
-        max_conf = torch.where(torch.max(scores[index,:]) > max_conf[index], torch.max(scores[index,:]), max_conf[index])
-        keep_boxes = (
-            torch.where(max_conf >= self._detection_threshold, max_conf, torch.tensor(0.0)
-            .to(device=self._torch_device))
+        max_conf = torch.where(
+            torch.max(scores[index, :]) > max_conf[index],
+            torch.max(scores[index, :]),
+            max_conf[index],
+        )
+        keep_boxes = torch.where(
+            max_conf >= self._detection_threshold,
+            max_conf,
+            torch.tensor(0.0).to(device=self._torch_device),
         )
 
         keep_boxes = torch.squeeze(torch.nonzero(keep_boxes))
@@ -376,7 +382,7 @@ class ObjectDetectorWithDescriptors_v3(Node):
                 boxes = filled_boxes[keep_boxes]
                 kind = objects + 1
 
-                bbox = boxes[kind * 4: (kind + 1) * 4]
+                bbox = boxes[kind * 4 : (kind + 1) * 4]
                 box_dets[0] = bbox
 
                 scores = scores[keep_boxes][1:]
@@ -388,7 +394,7 @@ class ObjectDetectorWithDescriptors_v3(Node):
                 feats = pooled_feat[keep_boxes].cpu().detach().numpy()
                 feats = np.expand_dims(feats, 0)
             else:
-                objects = torch.argmax(scores[keep_boxes][:,1:], dim=1)
+                objects = torch.argmax(scores[keep_boxes][:, 1:], dim=1)
                 box_dets = np.zeros((len(keep_boxes), 4))
                 box_dets = filled_boxes[keep_boxes].cpu().numpy()
 
@@ -401,13 +407,15 @@ class ObjectDetectorWithDescriptors_v3(Node):
 
             sample_info = dict(
                 labels=labels,
-                boxes=box_dets.astype('float32'),
+                boxes=box_dets.astype("float32"),
                 objects=objects.cpu().numpy(),
                 feats=feats,
-                scores=scores
+                scores=scores,
             )
         else:
-            sample_info = dict(boxes=None, objects=None, feats=None, labels=None, scores=None)
+            sample_info = dict(
+                boxes=None, objects=None, feats=None, labels=None, scores=None
+            )
 
         return sample_info
 
@@ -426,5 +434,5 @@ def main():
     rclpy.shutdown()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
