@@ -228,26 +228,6 @@ def save_as_kwcoco(classes, data, save_fn='bbn-data.mscoco.json'):
 
     print_class_freq(dset)
 
-def print_class_freq(dset):
-    freq_per_class = dset.category_annotation_frequency()
-    stats = []
-
-    for cat in dset.cats.values():
-        freq = freq_per_class[cat['name']]
-        class_ = {
-            'id': cat['id'],
-            'name': cat['name'],
-            #'instances_count': freq,
-            #'def': '',
-            #'synonyms': [],
-            #'image_count': freq,
-            #'frequency': '',
-            #'synset': ''
-        }
-
-        stats.append(class_)
-
-    print(f'MC50_CATEGORIES = {stats}')
 
 def main():
     for split in ['train', 'test']:

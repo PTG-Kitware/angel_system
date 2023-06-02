@@ -14,6 +14,9 @@ class Activity:
     # Start and end time in floating-point seconds.
     start: float
     end: float
+    # Start and end frame
+    start_frame: int
+    end_frame: int
     # Confidence of a predicted activity. This should be in the [0,1] range.
     # Ground truth traditionally sets this to `1.0`.
     conf: float
