@@ -13,7 +13,7 @@ import kwimage
 import pandas as pd
 import numpy as np
 
-from utils.data.dataloaders.common import time_from_name, activities_from_dive_csv
+from angel_system.data.common.load_data import activities_from_dive_csv
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '0, 1, 2, 3'
 

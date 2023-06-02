@@ -1,4 +1,3 @@
-import re
 import os
 import cv2
 import kwcoco
@@ -9,45 +8,11 @@ import ubelt as ub
 import pandas as pd
 
 from pathlib import Path
-from typing import List
 
 from detectron2.data.detection_utils import read_image
-from utils.data.dataloaders.structures import Activity
 
 
-def Re_order(image_list, image_number):
-    img_id_list = []
-    for img in image_list:
-        img_id, ts = time_from_name(img)
-        img_id_list.append(img_id)
-    img_id_arr = np.array(img_id_list)
-    s = np.argsort(img_id_arr)
-    new_list = []
-    for i in range(image_number):
-        idx = s[i]
-        new_list.append(image_list[idx])
-    return new_list
 
-def find_matching_gt_activity(gt_activity, fn):
-    fn = os.path.basename(fn)
-    frame, time = time_from_name(fn)
-
-    """
-    gt_activity = {
-        sub_step_str: [{
-            'start': 123456,
-            'end': 657899
-        }]
-    }
-    """
-
-    matching_gt = {}
-    for sub_step_str, times in gt_activity.items():
-        for gt_time in times:
-            if gt_time['start'] <= time <= gt_time['end']:
-                return sub_step_str
-            
-    return 'None'
 
 # Save
 def preds_to_kwcoco(metadata, preds, save_dir, save_fn='result-with-contact.mscoco.json',
@@ -225,20 +190,138 @@ def visualize_kwcoco(dset=None, save_dir=''):
         plt.close(fig) # needed to remove the plot because savefig doesn't clear it
     plt.close('all')
 
+def filter_kwcoco(dset, split):
+    experiment_name = 'm2_all_data_cleaned_fixed_with_steps'
+    stage = 'stage2'
+
+    print('Experiment: ', experiment_name)
+    print('Stage: ', stage)
+
+    if type(dset) == str:
+        print(f'Loaded dset from file: {dset}')
+        dset = kwcoco.CocoDataset(dset)
+        print(dset)
+
+    # Remove in-between categories
+    remove_cats = []
+    for cat_id in dset.cats:
+        cat_name = dset.cats[cat_id]['name']
+        if '.5)' in cat_name or '(before)' in cat_name or '(finished)' in cat_name:
+            remove_cats.append(cat_id)        
+            
+    print(f'removing cat ids: {remove_cats}')
+    dset.remove_categories(remove_cats)
+
+    # Remove images with these 
+    gid_to_aids = dset.index.gid_to_aids
+    gids = ub.argsort(ub.map_vals(len, gid_to_aids))
+
+    remove_images = []
+    remove_anns = []
+    for gid in sorted(gids):
+        im = dset.imgs[gid]
+        
+        fn = im['file_name'].split('/')[-1]
+        gt = im['activity_gt']
+
+        if gt == 'not started' or 'in between' in gt or gt == 'finished':
+            remove_images.append(gid)
+
+        """
+        aids = gid_to_aids[gid]
+        anns = ub.dict_subset(dset.anns, aids)
+
+        for aid, ann in anns.items():
+            conf = ann['confidence']
+            if conf < 0.4:
+                remove_anns.append(aid)
+        """
+
+    #print(f'removing {len(remove_anns)} annotations')       
+    #dset.remove_annotations(remove_anns)
+
+    print(f'removing {len(remove_images)} images (and associated annotations)')
+    dset.remove_images(remove_images)
+
+    # Save to a new dataset to adjust ids
+    new_dset = kwcoco.CocoDataset()
+    new_cats = [{"id": 1, "name": "tourniquet_tourniquet (step 1)"}, {"id": 2, "name": "tourniquet_tourniquet (step 2)"}, {"id": 3, "name": "tourniquet_tourniquet (step 3)"}, {"id": 4, "name": "tourniquet_tourniquet (step 4)"}, {"id": 5, "name": "tourniquet_tourniquet (step 5)"}, {"id": 6, "name": "tourniquet_tourniquet (step 6)"}, {"id": 7, "name": "tourniquet_tourniquet (step 7)"}, {"id": 8, "name": "tourniquet_tourniquet (step 8)"}, {"id": 9, "name": "tourniquet_label (step 1)"}, {"id": 10, "name": "tourniquet_label (step 2)"}, {"id": 11, "name": "tourniquet_label (step 3)"}, {"id": 12, "name": "tourniquet_label (step 4)"}, {"id": 13, "name": "tourniquet_label (step 5)"}, {"id": 14, "name": "tourniquet_label (step 6)"}, {"id": 15, "name": "tourniquet_label (step 7)"}, {"id": 16, "name": "tourniquet_label (step 8)"}, {"id": 17, "name": "tourniquet_windlass (step 1)"}, {"id": 18, "name": "tourniquet_windlass (step 2)"}, {"id": 19, "name": "tourniquet_windlass (step 3)"}, {"id": 20, "name": "tourniquet_windlass (step 4)"}, {"id": 21, "name": "tourniquet_windlass (step 5)"}, {"id": 22, "name": "tourniquet_windlass (step 6)"}, {"id": 23, "name": "tourniquet_windlass (step 7)"}, {"id": 24, "name": "tourniquet_windlass (step 8)"}, {"id": 25, "name": "tourniquet_pen (step 1)"}, {"id": 26, "name": "tourniquet_pen (step 2)"}, {"id": 27, "name": "tourniquet_pen (step 3)"}, {"id": 28, "name": "tourniquet_pen (step 4)"}, {"id": 29, "name": "tourniquet_pen (step 5)"}, {"id": 30, "name": "tourniquet_pen (step 6)"}, {"id": 31, "name": "tourniquet_pen (step 7)"}, {"id": 32, "name": "tourniquet_pen (step 8)"}, {"id": 33, "name": "hand (step 1)"}, {"id": 34, "name": "hand (step 2)"}, {"id": 35, "name": "hand (step 3)"}, {"id": 36, "name": "hand (step 4)"}, {"id": 37, "name": "hand (step 5)"}, {"id": 38, "name": "hand (step 6)"}, {"id": 39, "name": "hand (step 7)"}, {"id": 40, "name": "hand (step 8)"}]
+    for new_cat in new_cats:
+        new_dset.add_category(name=new_cat['name'], id=new_cat['id'])
+
+    for video_id, video in dset.index.videos.items():
+        new_dset.add_video(**video)
+
+    gid_to_aids = dset.index.gid_to_aids
+    gids = ub.argsort(ub.map_vals(len, gid_to_aids))
+
+    for gid in sorted(gids):
+        im = dset.imgs[gid]
+        new_im = im.copy()
+
+        aids = gid_to_aids[gid]
+        anns = ub.dict_subset(dset.anns, aids)
+
+        old_video = dset.index.videos[im['video_id']]['name']
+        new_video = new_dset.index.name_to_video[old_video]
+
+        del new_im['id']
+        new_im['video_id'] = new_video['id']
+        new_gid = new_dset.add_image(**new_im)
+
+        for aid, ann in anns.items():
+            old_cat = dset.cats[ann['category_id']]['name']
+            new_cat = new_dset.index.name_to_cat[old_cat]
+
+            new_ann = ann.copy()
+            del new_ann['id']
+            new_ann['category_id'] = new_cat['id']
+            new_ann['image_id'] = new_gid
+
+            new_dset.add_annotation(**new_ann)
+
+    new_dset.fpath = f'{experiment_name}_{stage}_{split}.mscoco.json'
+    new_dset.dump(new_dset.fpath, newlines=True)
+    print(f'Saved predictions to {new_dset.fpath}')
+
+def filter_kwcoco_conf_by_video(dset):
+    if type(dset) == str:
+        print(f'Loaded dset from file: {dset}')
+        dset = kwcoco.CocoDataset(dset)
+        print(dset)
+
+    gid_to_aids = dset.index.gid_to_aids
+    gids = ub.argsort(ub.map_vals(len, gid_to_aids))
+
+    remove_anns =[]
+    for gid in sorted(gids):
+        im = dset.imgs[gid]
+
+        aids = gid_to_aids[gid]
+        anns = ub.dict_subset(dset.anns, aids)
+
+        for aid, ann in anns.items():
+            conf = ann['confidence']
+            video_id = im['video_id']
+            video = dset.index.videos[video_id]['name']
+
+            if 'kitware' in video:
+                continue
+            else:
+                # filter the BBN videos by 0.4 conf 
+                if conf < 0.4:
+                    remove_anns.append(aid)
+
+    print(f'removing {len(remove_anns)} annotations')       
+    dset.remove_annotations(remove_anns)
+
+    dset.dump(dset.fpath, newlines=True)
+
 
 def main():
-    #coffee_root = '/Padlock_DT/Coffee'
-    #ros_bags_dir = f'{coffee_root}/coffee_recordings/extracted/'
-
-    #visualize_kwcoco(ros_bags_dir, 1, f'{ros_bags_dir}/coffee_contact_preds_with_background_all_objs_only_train.mscoco.json')
-
-
     ptg_root = '/data/ptg/medical/bbn/'
    
     kw = 'm2_all_data_cleaned_fixed_with_steps_results_train_activity.mscoco.json'
-    #kw = 'm2_with_lab_cleaned_fixed_data_with_inter_and_before_finished_steps_no_contact_aug_results_test.mscoco.json'
-    #kw = 'kitware_test_results_test.mscoco.json'
-    #kw = 'm2_with_lab_cleaned_fixed_data_with_inter_and_before_finished_steps_results_train_activity.mscoco.json'
 
     n = kw[:-12].split('_')
     name = '_'.join(n[:-1])
@@ -250,7 +333,7 @@ def main():
 
     stage = 'results'
     stage_dir = f'{ptg_root}/annotations/M2_Tourniquet/{stage}'
-    exp = 'm2_all_data_cleaned_fixed_with_steps'#'m2_with_lab_cleaned_fixed_data_with_inter_and_before_finished_steps'
+    exp = 'm2_all_data_cleaned_fixed_with_steps'
     if stage == 'stage1':
         save_dir = f'{stage_dir}/visualization_1/{split}'
     else:
@@ -259,7 +342,6 @@ def main():
     #save_dir = 'visualization'
     Path(save_dir).mkdir(parents=True, exist_ok=True)
     
-    #visualize_kwcoco(kw, save_dir)
     if stage == 'stage1':
         visualize_kwcoco(f'{stage_dir}/{kw}', save_dir)
     else:

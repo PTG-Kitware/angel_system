@@ -3,6 +3,7 @@ from dataclasses import asdict, fields
 import logging
 import json
 import re
+import os
 from typing import Dict
 from typing import List
 from typing import Sequence
@@ -11,10 +12,23 @@ from typing import Tuple
 import pandas as pd
 import numpy as np
 
-from angel_system.ptg_eval.common.structures import Activity
+from angel_system.data.common.structures import Activity
 
 
-log = logging.getLogger("ptg_eval_common")
+log = logging.getLogger("ptg_data_common")
+
+def Re_order(image_list, image_number):
+    img_id_list = []
+    for img in image_list:
+        img_id, ts = time_from_name(img)
+        img_id_list.append(img_id)
+    img_id_arr = np.array(img_id_list)
+    s = np.argsort(img_id_arr)
+    new_list = []
+    for i in range(image_number):
+        idx = s[i]
+        new_list.append(image_list[idx])
+    return new_list
 
 RE_FILENAME_TIME = re.compile(r"frame_(?P<frame>\d+)_(?P<ts>\d+(?:_|.)\d+).(?P<ext>\w+)")
 def time_from_name(fname):
@@ -214,3 +228,24 @@ def activities_as_dataframe(act_sequence: Sequence[Activity]) -> pd.DataFrame:
         {field.name: getattr(obj, field.name) for field in fields(obj)}
         for obj in act_sequence
     )
+
+def find_matching_gt_activity(gt_activity, fn):
+    fn = os.path.basename(fn)
+    frame, time = time_from_name(fn)
+
+    """
+    gt_activity = {
+        sub_step_str: [{
+            'start': 123456,
+            'end': 657899
+        }]
+    }
+    """
+
+    matching_gt = {}
+    for sub_step_str, times in gt_activity.items():
+        for gt_time in times:
+            if gt_time['start'] <= time <= gt_time['end']:
+                return sub_step_str
+            
+    return 'None'

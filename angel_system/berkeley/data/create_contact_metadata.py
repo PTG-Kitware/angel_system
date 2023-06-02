@@ -5,9 +5,6 @@ based on the ground truth annotations.
 This should be run on videos not used during training. 
 """
 import os
-import kwimage
-import kwcoco
-import cv2
 import glob
 import numpy as np
 import pandas as pd
@@ -23,10 +20,10 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 from detectron2.data.detection_utils import read_image
 from demo import predictor, model
-from detectron2.utils.visualizer import Visualizer
 
-from utils.data.dataloaders.common import Re_order, time_from_name, preds_to_kwcoco
-from utils.data.update_dets_utils import load_hl_hand_bboxes, replace_compound_label, find_closest_hands
+from angel_system.data.common.load_data import Re_order, time_from_name
+from angel_system.data.common.kwcoco_utils import preds_to_kwcoco
+from data.update_dets_utils import load_hl_hand_bboxes, replace_compound_label, find_closest_hands
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
@@ -299,7 +296,7 @@ def coffee_main():
         'test': [f'all_activities_{x}' for x in [41, 42, 43]],
     } # Coffee specific
 
-    from dataloaders.load_kitware_coffee_data import coffee_activity_data_loader
+    from angel_system.data.load_kitware_coffee_data import coffee_activity_data_loader
     activity_data_loader = coffee_activity_data_loader
 
 
@@ -360,7 +357,7 @@ def tourniquet_main(stage, using_inter_steps, using_before_finished_task):
     
     print(training_split)
 
-    from dataloaders.load_bbn_medical_data import bbn_activity_data_loader
+    from angel_system.data.load_bbn_medical_data import bbn_activity_data_loader
     activity_data_loader = bbn_activity_data_loader
 
     # Update step map

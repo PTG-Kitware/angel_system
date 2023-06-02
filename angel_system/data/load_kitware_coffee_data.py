@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 
-from angel_system.berkeley.utils.data.dataloaders.common import time_from_name
+from angel_system.data.common.load_data import time_from_name
 
     
 def coffee_activity_data_loader(video='all_activities_11'):
