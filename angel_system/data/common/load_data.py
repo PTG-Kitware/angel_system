@@ -3,6 +3,7 @@ from dataclasses import asdict, fields
 import logging
 import json
 import re
+import os
 from typing import Dict
 from typing import List
 from typing import Sequence
@@ -11,14 +12,25 @@ from typing import Tuple
 import pandas as pd
 import numpy as np
 
-from angel_system.ptg_eval.common.structures import Activity
+from angel_system.data.common.structures import Activity
 
 
-log = logging.getLogger("ptg_eval_common")
+log = logging.getLogger("ptg_data_common")
 
-RE_FILENAME_TIME = re.compile(r"frame_\d+_(\d+_\d+).\w+")
+def Re_order(image_list, image_number):
+    img_id_list = []
+    for img in image_list:
+        img_id, ts = time_from_name(img)
+        img_id_list.append(img_id)
+    img_id_arr = np.array(img_id_list)
+    s = np.argsort(img_id_arr)
+    new_list = []
+    for i in range(image_number):
+        idx = s[i]
+        new_list.append(image_list[idx])
+    return new_list
 
-
+RE_FILENAME_TIME = re.compile(r"frame_(?P<frame>\d+)_(?P<ts>\d+(?:_|.)\d+).(?P<ext>\w+)")
 def time_from_name(fname):
     """
     Extract the float timestamp from the filename.
@@ -28,9 +40,17 @@ def time_from_name(fname):
 
     :return: timestamp (float) in seconds
     """
-    time = RE_FILENAME_TIME.match(fname).groups()[0].split("_")
-    return float(time[0]) + (float(time[1]) * 1e-9)
+    fname = os.path.basename(fname)
+    match = RE_FILENAME_TIME.match(fname)
+    time = match.group('ts')
+    if '_' in time:
+        time = time.split('_')
+        time = float(time[0]) + (float(time[1]) * 1e-9)
+    elif '.' in time:
+        time = float(time)
 
+    frame = match.group('frame')
+    return int(frame), time
 
 def load_from_file(
     gt_fn, detections_fn
@@ -100,7 +120,6 @@ def load_from_file(
 
     return labels, gt, detections
 
-
 def activities_from_dive_csv(filepath: str) -> List[Activity]:
     """
     Load from a DIVE output CSV file a sequence of ground truth activity
@@ -112,7 +131,7 @@ def activities_from_dive_csv(filepath: str) -> List[Activity]:
     :param filepath: Filesystem path to the CSV file.
     :return: List of loaded activity annotations.
     """
-    log.info(f"Loading ground truth activities from: {filepath}")
+    print(f"Loading ground truth activities from: {filepath}")
     df = pd.read_csv(filepath)
     # There may be additional metadata rows. Filter out rows whose first column
     # value starts with a `#`.
@@ -122,12 +141,15 @@ def activities_from_dive_csv(filepath: str) -> List[Activity]:
     for row in df.iterrows():
         i, s = row
         a_id = int(s[0])
+        frame, time = time_from_name(s[1])
         if a_id not in id_to_activity:
             id_to_activity[a_id] = Activity(
-                s[9].lower().strip(),
-                time_from_name(s[1]),
-                np.inf,
-                1.0,
+                s[9].lower().strip(), # class label
+                time, # start
+                np.inf, # end 
+                frame, # start frame
+                np.inf, # end frame
+                1.0, # conf
             )
         else:
             # There's a struct in there, update it.
@@ -139,7 +161,9 @@ def activities_from_dive_csv(filepath: str) -> List[Activity]:
             id_to_activity[a_id] = Activity(
                 a.class_label,
                 a.start,
-                time_from_name(s[1]),
+                time,
+                a.start_frame,
+                frame,
                 a.conf,
             )
     # Assert that all activities have been assigned an associated end time.
@@ -148,7 +172,6 @@ def activities_from_dive_csv(filepath: str) -> List[Activity]:
         f"entries: {filepath}"
     )
     return list(id_to_activity.values())
-
 
 def activities_from_ros_export_json(filepath: str) -> Tuple[List[str], List[Activity]]:
     """
@@ -185,8 +208,13 @@ def activities_from_ros_export_json(filepath: str) -> Tuple[List[str], List[Acti
         act_end = act_json["source_stamp_end_frame"]
 
         # Create a separate activity item per prediction
-        for lbl, conf in zip(label_vec, act_json["conf_vec"]):
-            activity_seq.append(Activity(lbl.lower().strip(), act_start, act_end, conf))
+        for lbl, conf in zip(label_vec, act_json['conf_vec']):
+            activity_seq.append(Activity(
+                lbl.lower().strip(),
+                act_start, act_end, # time
+                np.inf, np.inf, # frame
+                conf
+            ))
     # normalize output label vec just like activity label treatment.
     label_vec = [lbl.lower().strip() for lbl in label_vec]
     return label_vec, activity_seq
@@ -208,3 +236,24 @@ def activities_as_dataframe(act_sequence: Sequence[Activity]) -> pd.DataFrame:
         {field.name: getattr(obj, field.name) for field in fields(obj)}
         for obj in act_sequence
     )
+
+def find_matching_gt_activity(gt_activity, fn):
+    fn = os.path.basename(fn)
+    frame, time = time_from_name(fn)
+
+    """
+    gt_activity = {
+        sub_step_str: [{
+            'start': 123456,
+            'end': 657899
+        }]
+    }
+    """
+
+    matching_gt = {}
+    for sub_step_str, times in gt_activity.items():
+        for gt_time in times:
+            if gt_time['start'] <= time <= gt_time['end']:
+                return sub_step_str
+            
+    return 'None'
