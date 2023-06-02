@@ -1,7 +1,4 @@
-from threading import (
-    Event,
-    Thread
-)
+from threading import Event, Thread
 
 from cv_bridge import CvBridge
 import cv2
@@ -21,11 +18,11 @@ from angel_msgs.msg import (
     HandJointPosesUpdate,
     HeadsetAudioData,
 )
-from angel_system.hl2ss_viewer import hl2ss
-import angel_system.hl2ss_viewer.BBN_redis_frame_load as holoframe
 from angel_utils import declare_and_get_parameters, RateTracker
 from angel_utils.conversion import hl2ss_stamp_to_ros_time
 from angel_utils.hand import JOINT_LIST
+from hl2ss.viewer import hl2ss
+from hl2ss.viewer import BBN_redis_frame_load as holoframe
 
 
 BRIDGE = CvBridge()
@@ -37,9 +34,11 @@ PARAM_URL = "url"
 
 
 class async2sync:
-    '''Helper to have a method be both sync and async.'''
+    """Helper to have a method be both sync and async."""
+
     def __init__(self, func_async):
         import functools
+
         functools.update_wrapper(self, func_async)
         self.asyncio = func_async
 
@@ -48,6 +47,7 @@ class async2sync:
 
     def __call__(self, *a, **kw):
         import asyncio
+
         return asyncio.run(self.asyncio(*a, **kw))
 
 
@@ -67,7 +67,7 @@ class RedisROSBridge(Node):
                 (PARAM_HAND_POSE_TOPIC,),
                 (PARAM_PV_IMAGES_TOPIC,),
                 (PARAM_URL,),
-            ]
+            ],
         )
 
         self._image_topic = param_values[PARAM_PV_IMAGES_TOPIC]
@@ -80,16 +80,10 @@ class RedisROSBridge(Node):
         self._si_sid = "si"
 
         # Create frame publisher
-        self.ros_frame_publisher = self.create_publisher(
-            Image,
-            self._image_topic,
-            1
-        )
+        self.ros_frame_publisher = self.create_publisher(Image, self._image_topic, 1)
         # Create the hand joint pose publisher
         self.ros_hand_publisher = self.create_publisher(
-            HandJointPosesUpdate,
-            self._hand_pose_topic,
-            1
+            HandJointPosesUpdate, self._hand_pose_topic, 1
         )
 
         self.log.info("Starting publishing threads...")
@@ -97,20 +91,14 @@ class RedisROSBridge(Node):
         self._pv_active = Event()
         self._pv_active.set()
         self._pv_rate_tracker = RateTracker()
-        self._pv_thread = Thread(
-            target=self.pv_publisher,
-            name="publish_pv"
-        )
+        self._pv_thread = Thread(target=self.pv_publisher, name="publish_pv")
         self._pv_thread.daemon = True
         self._pv_thread.start()
         # Start the hand tracking data thread
         self._si_active = Event()
         self._si_active.set()
         self._si_rate_tracker = RateTracker()
-        self._si_thread = Thread(
-            target=self.si_publisher,
-            name="publish_si"
-        )
+        self._si_thread = Thread(target=self.si_publisher, name="publish_si")
         self._si_thread.daemon = True
         self._si_thread.start()
         self.log.info("Starting publishing threads... Done")
@@ -133,9 +121,7 @@ class RedisROSBridge(Node):
         Main thread that starts the async image publish method.
         Images are published directly in the `publish_image` method.
         """
-        self.publish_images(
-            sid=self._pv_sid
-        )
+        self.publish_images(sid=self._pv_sid)
 
     def si_publisher(self) -> None:
         """
@@ -145,16 +131,14 @@ class RedisROSBridge(Node):
         Currently only publishes hand tracking data. However, eye gaze data and
         head pose data is also available in the SI data packet.
         """
-        self.publish_si_data(
-            sid=self._si_sid
-        )
+        self.publish_si_data(sid=self._si_sid)
 
     @async2sync
     async def publish_images(
         self,
         sid: str,
     ):
-        connection_str = f'ws://{self._url}/data/{sid}/pull?header=0&latest=1'
+        connection_str = f"ws://{self._url}/data/{sid}/pull?header=0&latest=1"
         self.log.info(f"Connecting websocket to URL: {connection_str}")
         async with websockets.connect(connection_str, max_size=None) as ws:
             while self._pv_active.wait(0):
@@ -177,16 +161,18 @@ class RedisROSBridge(Node):
                 self.ros_frame_publisher.publish(image_msg)
 
                 self._pv_rate_tracker.tick()
-                self.log.info(f"Published image message (hz: "
-                              f"{self._pv_rate_tracker.get_rate_avg()})",
-                              throttle_duration_sec=1)
+                self.log.info(
+                    f"Published image message (hz: "
+                    f"{self._pv_rate_tracker.get_rate_avg()})",
+                    throttle_duration_sec=1,
+                )
 
     @async2sync
     async def publish_si_data(
         self,
         sid: str,
     ):
-        connection_str = f'ws://{self._url}/data/{sid}/pull?header=0&latest=1'
+        connection_str = f"ws://{self._url}/data/{sid}/pull?header=0&latest=1"
         self.log.info(f"Connecting websocket to URL: {connection_str}")
         async with websockets.connect(connection_str, max_size=None) as ws:
             while self._si_active.wait(0):
@@ -196,7 +182,7 @@ class RedisROSBridge(Node):
                     self.log.warning("No data yet :(")
                     continue
                 d = holoframe.load(data)
-                si_data = hl2ss.unpack_si(d['data'])
+                si_data = hl2ss.unpack_si(d["data"])
 
                 # Publish the hand tracking data if it is valid
                 if si_data.is_valid_hand_left():
@@ -211,15 +197,14 @@ class RedisROSBridge(Node):
                     self.ros_hand_publisher.publish(hand_msg_right)
 
                 self._si_rate_tracker.tick()
-                self.log.info(f"Published hand pose message (hz: "
-                              f"{self._si_rate_tracker.get_rate_avg()})",
-                              throttle_duration_sec=1)
+                self.log.info(
+                    f"Published hand pose message (hz: "
+                    f"{self._si_rate_tracker.get_rate_avg()})",
+                    throttle_duration_sec=1,
+                )
 
     def create_hand_pose_msg_from_si_data(
-        self,
-        si_data: hl2ss.unpack_si,
-        hand: str,
-        timestamp: int
+        self, si_data: hl2ss.unpack_si, hand: str, timestamp: int
     ) -> HandJointPosesUpdate:
         """
         Extracts the hand joint poses data from the HL2SS SI structure
@@ -267,6 +252,7 @@ class RedisROSBridge(Node):
 
         return hand_msg
 
+
 def main():
     rclpy.init()
 
@@ -286,5 +272,5 @@ def main():
     rclpy.shutdown()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

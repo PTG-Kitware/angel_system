@@ -17,6 +17,7 @@ from angel_system.berkeley.demo import predictor, model
 
 BRIDGE = CvBridge()
 
+
 class BerkeleyObjectDetector(Node):
     """
     ROS node that runs the berkeley object detector model and outputs
@@ -34,8 +35,9 @@ class BerkeleyObjectDetector(Node):
         )
         self._model_config = (
             self.declare_parameter(
-              "model_config",
-              "angel_system/berkeley/configs/MC50-InstanceSegmentation/mask_rcnn_R_101_FPN_1x_demo.yaml")
+                "model_config",
+                "angel_system/berkeley/configs/MC50-InstanceSegmentation/mask_rcnn_R_101_FPN_1x_demo.yaml",
+            )
             .get_parameter_value()
             .string_value
         )
@@ -44,14 +46,8 @@ class BerkeleyObjectDetector(Node):
             .get_parameter_value()
             .string_value
         )
-        self._det_conf_thresh = (
-            self.declare_parameter("det_conf_threshold", 0.7)
-            .value
-        )
-        self._cuda_device_id = (
-            self.declare_parameter("cuda_device_id", 0)
-            .value
-        )
+        self._det_conf_thresh = self.declare_parameter("det_conf_threshold", 0.7).value
+        self._cuda_device_id = self.declare_parameter("cuda_device_id", 0).value
 
         log = self.get_logger()
         log.info(f"Image topic: {self._image_topic}")
@@ -67,27 +63,27 @@ class BerkeleyObjectDetector(Node):
             self._image_topic,
             self.listener_callback,
             1,
-            callback_group=self._subscription_cb_group
+            callback_group=self._subscription_cb_group,
         )
         self._publisher_cb_group = MutuallyExclusiveCallbackGroup()
         self._det_publisher = self.create_publisher(
             ObjectDetection2dSet,
             self._det_topic,
             1,
-            callback_group=self._publisher_cb_group
+            callback_group=self._publisher_cb_group,
         )
 
         # Step classifier
         parser = model.get_parser()
 
         args = parser.parse_args(
-                f"--config-file {self._model_config} --confidence-threshold {self._det_conf_thresh}".split()
+            f"--config-file {self._model_config} --confidence-threshold {self._det_conf_thresh}".split()
         )
         log.debug("Arguments: " + str(args))
         cfg = model.setup_cfg(args)
-        self.get_logger().debug(f'cfg: {cfg}')
+        self.get_logger().debug(f"cfg: {cfg}")
 
-        os.environ['CUDA_VISIBLE_DEVICES'] = f'{self._cuda_device_id}'
+        os.environ["CUDA_VISIBLE_DEVICES"] = f"{self._cuda_device_id}"
         self.demo = predictor.VisualizationDemo_add_smoothing(
             cfg,
             last_time=2,
@@ -111,7 +107,8 @@ class BerkeleyObjectDetector(Node):
 
         s = time.time()
         predictions, _, _ = self.demo.run_on_image_smoothing_v2(
-            bgr_image, current_idx=self.img_idx)
+            bgr_image, current_idx=self.img_idx
+        )
         decoded_preds = model.decode_prediction(predictions)
         self.get_logger().debug(f"Detection prediction took: {time.time() - s:.6f} s")
 
@@ -143,7 +140,7 @@ class BerkeleyObjectDetector(Node):
             for i in range(len(preds[label])):
                 message.label_vec.append(label)
 
-        #message.label_vec = list(preds.keys())
+        # message.label_vec = list(preds.keys())
         message.num_detections = len(message.label_vec)
 
         if message.num_detections == 0:
@@ -163,25 +160,34 @@ class BerkeleyObjectDetector(Node):
 
                 # Add obj-obj and obj-hand info
                 if "obj_obj_contact_state" in det[i].keys():
-                    message.obj_obj_contact_state.append(det[i]["obj_obj_contact_state"])
+                    message.obj_obj_contact_state.append(
+                        det[i]["obj_obj_contact_state"]
+                    )
                     message.obj_obj_contact_conf.append(det[i]["obj_obj_contact_conf"])
                 if "obj_hand_contact_state" in det[i].keys():
-                    message.obj_hand_contact_state.append(det[i]["obj_hand_contact_state"])
-                    message.obj_hand_contact_conf.append(det[i]["obj_hand_contact_conf"])
+                    message.obj_hand_contact_state.append(
+                        det[i]["obj_hand_contact_state"]
+                    )
+                    message.obj_hand_contact_conf.append(
+                        det[i]["obj_hand_contact_conf"]
+                    )
 
-        message.label_confidences = np.asarray(label_confidences, dtype=np.float64).ravel().tolist()
+        message.label_confidences = (
+            np.asarray(label_confidences, dtype=np.float64).ravel().tolist()
+        )
 
         # Publish
         self._det_publisher.publish(message)
         self._rate_tracker.tick()
-        self.get_logger().debug(f"Published det] message (hz: "
-                                f"{self._rate_tracker.get_rate_avg()})",
-                                throttle_duration_sec=1)
+        self.get_logger().debug(
+            f"Published det] message (hz: " f"{self._rate_tracker.get_rate_avg()})",
+            throttle_duration_sec=1,
+        )
 
 
 def main():
     rclpy.init()
-    do_multithreading=True # TODO add this to cli args
+    do_multithreading = True  # TODO add this to cli args
     berkeley_obj_det = BerkeleyObjectDetector()
     if do_multithreading:
         # Don't really want to use *all* available threads...
@@ -209,5 +215,5 @@ def main():
     rclpy.shutdown()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

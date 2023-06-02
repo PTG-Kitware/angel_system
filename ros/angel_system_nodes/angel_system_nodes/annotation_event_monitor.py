@@ -19,15 +19,15 @@ class AnnotationEventMonitor(Node):
     def __init__(self):
         super().__init__(self.__class__.__name__)
 
-        self._annotation_event_topic = self.declare_parameter(
-            "annotation_event_topic", "AnnotationEvents"
-        ).get_parameter_value().string_value
+        self._annotation_event_topic = (
+            self.declare_parameter("annotation_event_topic", "AnnotationEvents")
+            .get_parameter_value()
+            .string_value
+        )
 
         # Initialize ROS hooks
         self._publisher = self.create_publisher(
-            AnnotationEvent,
-            self._annotation_event_topic,
-            1
+            AnnotationEvent, self._annotation_event_topic, 1
         )
 
         # Whether or not an annotation is currently ongoing
@@ -109,5 +109,5 @@ def main():
     rclpy.shutdown()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

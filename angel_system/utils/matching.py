@@ -15,7 +15,7 @@ def descending_match_with_tolerance(
     key_times: Sequence[int],
     values: Reversible[T],
     tol: int,
-    time_from_value_fn: Optional[Callable[[T], int]] = None
+    time_from_value_fn: Optional[Callable[[T], int]] = None,
 ) -> List[Optional[T]]:
     """
     Match `values` to `key_times` until there are no more `key_times` to

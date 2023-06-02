@@ -14,7 +14,7 @@ def gt_predict(
     gt_file: str,
     frame_set_start_stamp: float,
     frame_set_end_stamp: float,
-    predict_time: float = 1.0
+    predict_time: float = 1.0,
 ) -> Tuple[Tuple[torch.Tensor, torch.Tensor], List[str]]:
     """
     Creates a simulated classifier prediction given the ground truth annotation
@@ -42,12 +42,12 @@ def gt_predict(
     gt = pandas.read_feather(gt_file)
 
     # Create list of classifier classes
-    anno_labels = gt['class'].tolist()
+    anno_labels = gt["class"].tolist()
     classes = list(dict.fromkeys(anno_labels))
     classes.insert(0, "Background")
 
-    start_frames = gt['start_frame'].tolist()
-    end_frames = gt['end_frame'].tolist()
+    start_frames = gt["start_frame"].tolist()
+    end_frames = gt["end_frame"].tolist()
 
     start_frames_sec = [time_from_name(f) for f in start_frames]
     end_frames_sec = [time_from_name(f) for f in end_frames]
@@ -61,18 +61,12 @@ def gt_predict(
             classifier_label_idx = classes.index(anno_label)
             activity = anno_label
             break
-        elif (
-            frame_set_start_stamp < start and
-            start <= frame_set_end_stamp <= end
-        ):
+        elif frame_set_start_stamp < start and start <= frame_set_end_stamp <= end:
             # Frame window end frame is within this annotation window
             classifier_label_idx = classes.index(anno_label)
             activity = anno_label
             break
-        elif (
-            start <= frame_set_start_stamp <= end and
-            frame_set_end_stamp > end
-        ):
+        elif start <= frame_set_start_stamp <= end and frame_set_end_stamp > end:
             # Frame window start frame is within this annotation window
             classifier_label_idx = classes.index(anno_label)
             activity = anno_label

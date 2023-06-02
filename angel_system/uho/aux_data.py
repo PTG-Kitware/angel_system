@@ -34,6 +34,7 @@ class AuxData:
             of detections. The combined shape is expected to be
             [nImages x N x 4].
     """
+
     # Hand stuff
     hand_joint_names: Sequence[str]
     lhand: Sequence[Optional[npt.ArrayLike]]

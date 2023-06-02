@@ -9,6 +9,7 @@ class Activity:
     This structure is expected to be utilized for both ground truth and
     predicted activities.
     """
+
     # String label of the class the activity is representing.
     class_label: str
     # Start and end time in floating-point seconds.
