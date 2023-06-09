@@ -53,7 +53,7 @@ def _get_bbn_instances_meta_v1(dataset_name, key):
     thing_classes = [k["name"] for k in MC50_categories]
 
     if dataset_name == 'BBN_M2':
-        import utils.data.objects.bbn_M2_tourniquet_activity_objects as bbn_activity_objects
+        import data.objects.bbn_M2_tourniquet_activity_objects as bbn_activity_objects
 
     meta = {
         "thing_classes": thing_classes,

@@ -404,6 +404,9 @@ def main():
     else:
         splits = ['test', 'train_activity', 'val']
 
+    if not os.path.exists('temp'):
+        os.mkdir('temp')
+
     for split in splits:
         print(f'{split}: {len(training_split[split])} videos')
 
