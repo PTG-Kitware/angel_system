@@ -19,7 +19,7 @@ root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 # on_project_start: command
 on_project_start: |
   export ROS_NAMESPACE=${ROS_NAMESPACE:-/kitware}
-  export HL2_IP=${HL2_IP:-192.168.1.5}
+  export HL2_IP=${HL2_IP:-192.168.1.101}
 
 # Run on project start, the first time
 # on_project_first_start: command
@@ -57,18 +57,29 @@ windows:
   # ROS-TCP-Endpoint
   - sensor_input:
       layout: even-vertical
+      root: ./ros_bags
       panes:
-#        - datahub: ros2 run ros_tcp_endpoint default_server_endpoint --ros-args
-#            -r __ns:=${ROS_NAMESPACE}
-#            -p ROS_IP:=0.0.0.0
+        - ros_bag_record: ros2 bag record
+            ${ROS_NAMESPACE}/PVFramesBGR
+            ${ROS_NAMESPACE}/HeadsetPoseData
+            ${ROS_NAMESPACE}/HeadsetAudioData
+            ${ROS_NAMESPACE}/HandJointPoseData
+            ${ROS_NAMESPACE}/SpatialMapData
+            ${ROS_NAMESPACE}/EyeGazeData
+            ${ROS_NAMESPACE}/AnnotationEvents
+            ${ROS_NAMESPACE}/HeadsetDepthPoseData
+            ${ROS_NAMESPACE}/ShortThrowDepthMapImages
+        #- datahub: ros2 run ros_tcp_endpoint default_server_endpoint --ros-args
+        #    -r __ns:=${ROS_NAMESPACE}
+        #    -p ROS_IP:=0.0.0.0
         - hl2ss_bridge: ros2 run angel_system_nodes hl2ss_ros_bridge --ros-args
             -r __ns:=${ROS_NAMESPACE}
             -p ip_addr:=${HL2_IP}
             -p image_topic:=PVFramesBGR
             -p hand_pose_topic:=HandJointPoseData
             -p audio_topic:=HeadsetAudioData
-            -p sm_topic:=disable
-            -p head_pose_topic:=disable
+            -p sm_topic:=SpatialMapData
+            -p head_pose_topic:=HeadsetPoseData
             -p pv_width:=1280
             -p pv_height:=720
             -p pv_framerate:=30
@@ -77,16 +88,6 @@ windows:
         - rqt_pv_images: rqt -s rqt_image_view/ImageView
             --args ${ROS_NAMESPACE}/PVFramesBGR
             --ros-args -p _image_transport:=raw
-  - ros_bag_record: ros2 bag record
-      ${ROS_NAMESPACE}/EyeGazeData
-      ${ROS_NAMESPACE}/HandJointPoseData
-      ${ROS_NAMESPACE}/HeadsetPoseData
-      ${ROS_NAMESPACE}/HeadsetAudioData
-      ${ROS_NAMESPACE}/PVFramesBGR
-      ${ROS_NAMESPACE}/SpatialMapData
-      ${ROS_NAMESPACE}/AnnotationEvents
-      ${ROS_NAMESPACE}/HeadsetDepthPoseData
-      ${ROS_NAMESPACE}/ShortThrowDepthMapImages
-  - event_monitor: ros2 run angel_system_nodes annotation_event_monitor --ros-args
-      -r __ns:=${ROS_NAMESPACE}
-      -p annotation_event_topic:=AnnotationEvents
+  #- event_monitor: ros2 run angel_system_nodes annotation_event_monitor --ros-args
+  #    -r __ns:=${ROS_NAMESPACE}
+  #    -p annotation_event_topic:=AnnotationEvents
