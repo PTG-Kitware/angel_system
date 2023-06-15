@@ -405,7 +405,7 @@ def main():
     else:
         save_dir = f"{stage_dir}/{exp}/visualization/{split}"
 
-    #save_dir = "visualization"
+    # save_dir = "visualization"
     Path(save_dir).mkdir(parents=True, exist_ok=True)
 
     if stage == "stage1":
