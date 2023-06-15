@@ -13,7 +13,9 @@ from angel_system.data.common.load_data import (
     activities_as_dataframe,
 )
 from angel_system.data.common.discretize_data import discretize_data_to_windows
-from angel_system.ptg_eval.activity_classification.visualization import EvalVisualization
+from angel_system.ptg_eval.activity_classification.visualization import (
+    EvalVisualization,
+)
 from angel_system.ptg_eval.activity_classification.compute_scores import EvalMetrics
 
 
