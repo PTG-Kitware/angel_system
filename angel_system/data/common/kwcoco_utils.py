@@ -9,8 +9,6 @@ import pandas as pd
 
 from pathlib import Path
 
-from detectron2.data.detection_utils import read_image
-
 
 # Save
 def preds_to_kwcoco(
@@ -163,8 +161,7 @@ def visualize_kwcoco(dset=None, save_dir=""):
         fig, ax = plt.subplots()
         plt.title("\n".join(textwrap.wrap(gt, 55)))
 
-        image = read_image(im["file_name"], format="RGB")  # now assuming absolute path
-        image = Image.fromarray(image)
+        image = Image.open(im["file_name"])
         image = image.resize(size=(760, 428), resample=Image.BILINEAR)
         image = np.array(image)
 
@@ -408,7 +405,7 @@ def main():
     else:
         save_dir = f"{stage_dir}/{exp}/visualization/{split}"
 
-    # save_dir = 'visualization'
+    #save_dir = "visualization"
     Path(save_dir).mkdir(parents=True, exist_ok=True)
 
     if stage == "stage1":
