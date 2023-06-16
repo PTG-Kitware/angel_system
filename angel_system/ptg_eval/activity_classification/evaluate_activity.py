@@ -7,12 +7,12 @@ from typing import Optional
 import numpy as np
 import numpy.typing as npt
 
-from angel_system.ptg_eval.common.load_data import (
+from angel_system.data.common.load_data import (
     activities_from_dive_csv,
     activities_from_ros_export_json,
     activities_as_dataframe,
 )
-from angel_system.ptg_eval.common.discretize_data import discretize_data_to_windows
+from angel_system.data.common.discretize_data import discretize_data_to_windows
 from angel_system.ptg_eval.activity_classification.visualization import (
     EvalVisualization,
 )

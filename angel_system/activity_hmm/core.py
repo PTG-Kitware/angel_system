@@ -8,8 +8,8 @@ import os
 import scipy
 import time
 
-from angel_system.ptg_eval.common.load_data import time_from_name
-from angel_system.ptg_eval.common.load_data import activities_from_dive_csv
+from angel_system.data.common.load_data import time_from_name
+from angel_system.data.common.load_data import activities_from_dive_csv
 
 try:
     import matplotlib.pyplot as plt
