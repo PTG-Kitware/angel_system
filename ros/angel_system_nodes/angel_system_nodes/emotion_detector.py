@@ -1,6 +1,7 @@
 import queue
 import rclpy
 from rclpy.node import Node
+from termcolor import colored
 import threading
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
@@ -117,9 +118,11 @@ class EmotionDetector(Node):
             classification = VADER_SENTIMENT_LABEL_MAPPINGS['neu']
 
         confidence = 1.00
-        self.log.info(f"Rated user utterance: \"{utterance}\"" +\
-                      f" with emotion scores {polarity_scores}. " +\
-                      f"Classifying with emotion=\"{self._red_font(classification)}\" " +\
+        colored_utterance = colored_utterance = colored(utterance, "light_blue")
+        colored_emotion = colored(classification, "light_green")
+        self.log.info(f"Rated user utterance:\n>>> \"{colored_utterance}\"" +\
+                      f"\n>>> with emotion scores {polarity_scores}.\n>>> " +\
+                      f"Classifying with emotion=\"{colored_emotion}\" " +\
                       f"and score={confidence}")     
         return (classification, confidence)
 
@@ -167,12 +170,11 @@ class EmotionDetector(Node):
         none if the message should be filtered out. Else, return the incoming
         msg if it can be included.
         '''
-        if msg.user_intent.lower() == "user inquiry":
-            return msg
-        return None
-
-    def _red_font(self, text):
-        return f"\033[91m{text}\033[0m"
+        # if msg.user_intent.lower() == "user inquiry":
+        #     return msg
+        # else:
+        #     return None
+        return msg
 
 def main():
     rclpy.init()
