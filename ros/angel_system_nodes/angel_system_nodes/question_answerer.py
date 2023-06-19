@@ -5,6 +5,7 @@ import queue
 import rclpy
 from rclpy.node import Node
 import requests
+from termcolor import colored
 import threading
 from angel_msgs.msg import InterpretedAudioUserEmotion, SystemTextResponse
 
@@ -51,6 +52,26 @@ class QuestionAnswerer(Node):
                       f"({type(self.prompt_file).__name__}) "
                       f"{self.prompt_file}")
 
+        self.message_queue = queue.Queue()
+        self.handler_thread = threading.Thread(target=self.process_message_queue)
+        self.handler_thread.start()
+
+        with open(self.prompt_file, 'r') as file:
+            self.prompt = file.read()
+        self.log.info(f"Initialized few-shot prompt to:\n\n {self.prompt}\n\n")
+
+        self.is_openai_ready = True
+        if not os.getenv("OPENAI_API_KEY"):
+            self.log.info("OPENAI_API_KEY environment variable is unset!")
+            self.is_openai_ready = False
+        else:
+            self.openai_api_key = os.getenv("OPENAI_API_KEY")
+        if not os.getenv("OPENAI_ORG_ID"):
+            self.log.info("OPENAI_ORG_ID environment variable is unset!")
+            self.is_openai_ready = False
+        else:
+            self.openai_org_id = os.getenv("OPENAI_ORG_ID")
+
         # Handle subscription/publication topics.
         self.subscription = self.create_subscription(
             InterpretedAudioUserEmotion,
@@ -62,38 +83,31 @@ class QuestionAnswerer(Node):
             self._out_qa_topic,
             1)
 
-        self.message_queue = queue.Queue()
-        self.handler_thread = threading.Thread(target=self.process_message_queue)
-        self.handler_thread.start()
-
-        with open(self.prompt_file, 'r') as file:
-            self.prompt = file.read()
-        self.log.info(f"Initialized few-shot prompt to:\n\n {self.prompt}\n\n")
-        self.openai_api_key = os.getenv("OPENAI_API_KEY")
-        self.openai_org_id = os.getenv("OPENAI_ORG_ID")
-        # self.log.debug(f"OpenAI API established with API_KEY={self.openai_api_key} and " +\
-        #               f"org_id={self.openai_org_id}.")
-
     def get_response(self, user_utterance: str, user_emotion: str):
         '''
         Generate a  response to the utterance, enriched with the addition of
         the user's detected emotion. Inference calls can be added and revised
         here.
         '''
-        try: 
-            return self._red_font(self.prompt_gpt(user_utterance) + "\n")
-        except Exception as e:
-            self.log.info(e)
-            apology_msg = "I'm sorry. I don't know how to answer your statement."
-            return self._red_font(apology_msg) +\
-                f" I understand that you feel \"{self._red_font(user_emotion)}\"."
+        return_msg = ""
+        try:
+            if self.is_openai_ready:
+                return_msg = colored(self.prompt_gpt(user_utterance) + "\n", "light_green")
+        except RuntimeError as err:
+            self.log.info(err)
+        finally:
+            colored_apology = colored("I'm sorry. I don't know how to answer your statement.",
+                                  "light_red")
+            colored_emotion = colored(user_emotion, "light_red")
+            return_msg = f"{colored_apology} I understand that you feel {colored_emotion}."
+        return return_msg
         
 
     def listener_callback(self, msg):
         '''
         This is the main ROS node listener callback loop that will process
         all messages received via subscribed topics.
-        '''  
+        '''
         self.log.debug(f"Received message:\n\n{msg.utterance_text}")
         if not self._apply_filter(msg):
             return
@@ -113,7 +127,10 @@ class QuestionAnswerer(Node):
         msg = SystemTextResponse()
         msg.utterance_text = utterance
         msg.response = response
-        self.log.info(f"Responding to utterance \"{utterance}\" with:\n\"{response}\"")
+        colored_utterance = colored(utterance, "light_blue")
+        colored_response = colored(response, "light_green")
+        self.log.info(f"Responding to utterance:\n>>> \"{colored_utterance}\"\n>>> with:\n" +\
+                      f">>> \"{colored_response}\"")
         self._qa_publisher.publish(msg)
 
     def prompt_gpt(self, question, model: str = "gpt-3.5-turbo"):
@@ -128,12 +145,10 @@ class QuestionAnswerer(Node):
                 }
             ]
         }
-        try:
-            req = requests.post("https://api.openai.com/v1/chat/completions", json=payload,
-                headers={"Authorization":"Bearer {}".format(self.openai_api_key)})
-            return json.loads(req.text)['choices'][0]['message']['content'].split("A:")[-1].lstrip()
-        except Exception as e:
-            self.log.info(e)
+        req = requests.post("https://api.openai.com/v1/chat/completions", json=payload,
+            headers={"Authorization":"Bearer {}".format(self.openai_api_key)})
+        return json.loads(req.text)['choices'][0]['message']['content'].split("A:")[-1].lstrip()
+
 
     def _apply_filter(self, msg):
         '''
