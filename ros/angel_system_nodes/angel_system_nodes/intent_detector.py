@@ -1,6 +1,7 @@
 import queue
 import rclpy
 from rclpy.node import Node
+from termcolor import colored
 import threading
 
 from angel_msgs.msg import InterpretedAudioUserIntent, Utterance
@@ -111,32 +112,37 @@ class IntentDetector(Node):
         '''
         Core logic for intent detection and publishing.
         '''
+        def _tiebreak_intents(intents, confidences):
+            classification = intents[0]
+            score = confidences[0]
+            if len(intents) > 1:
+                for i, intent in enumerate(intents):
+                    if intent == LABELS[2]:
+                        classification, score = intent, confidences[i]
+                self.log.info(f">>> Detected multiple intents: \n{intents}\n" +\
+                        f">>> Selected \"{classification}\".")
+            return classification, score
+
         lower_utterance = msg.value.lower()
-        interp_intents = []
+        intents = []
         confidences =  []
         if self._contains_phrase(lower_utterance, NEXT_STEP_KEYPHRASES):
-            interp_intents.append(LABELS[0])
+            intents.append(LABELS[0])
             confidences.append(0.5)
         if self._contains_phrase(lower_utterance, PREV_STEP_KEYPHRASES):
-            interp_intents.append(LABELS[1])
+            intents.append(LABELS[1])
             confidences.append(0.5)
         if self._contains_phrase(lower_utterance, QUESTION_KEYPHRASES):
-            interp_intents.append(LABELS[2])
+            intents.append(LABELS[2])
             confidences.append(0.5)
-        
-        if not interp_intents:
-            self.log.info(f"No intents detected for:\n\n\"{msg.value}\":")
+        if not intents:
+            colored_utterance = colored(msg.value, "light_blue")
+            self.log.info(f"No intents detected for:\n>>> \"{colored_utterance}\":")
             return None, -1.0
-        
-        classified_intent = interp_intents[0]
-        confidence = confidences[0]
-        if len(interp_intents) > 1:
-            if LABELS[2] in interp_intents:
-                # Question intents override all others.
-                classified_intent = LABELS[2]
-            self.log.info(f"Detected multiple intents: \n{interp_intents}\n" +\
-                            f"Defaulting: \"{classified_intent}\".")
-        return classified_intent, confidence
+
+        classification, confidence = _tiebreak_intents(intents, confidences)
+        classification = colored(classification, "light_green")
+        return classification, confidence
     
     def publish_msg(self, utterance, intent, score):
         '''
@@ -146,28 +152,25 @@ class IntentDetector(Node):
         intent_msg.utterance_text = utterance
         intent_msg.user_intent = intent
         intent_msg.confidence = score
+        published_topic = None
         if self._contains_phrase(utterance.lower(), OVERRIDE_KEYPHRASES):
             intent_msg.confidence = 1.0
             self._expected_publisher.publish(intent_msg)
-            self.log.info(f"Publishing intents to {PARAM_EXPECT_USER_INTENT_TOPIC} " +\
-                          f"for\n\n\"{utterance}\"" +\
-                          f"\n\n\"{self._red_font(intent_msg.user_intent)}\": " +\
-                          f"{intent_msg.confidence}")
+            published_topic = PARAM_EXPECT_USER_INTENT_TOPIC
         else:
             self._interp_publisher.publish(intent_msg)
-            self.log.info(f"Publishing intents to {PARAM_INTERP_USER_INTENT_TOPIC} " +\
-                          f"for\n\n\"{utterance}\"" +\
-                          f"\n\n\"{self._red_font(intent_msg.user_intent)}\": " +\
-                          f"{intent_msg.confidence}")
+            published_topic = PARAM_INTERP_USER_INTENT_TOPIC
+        
+        colored_utterance = colored(utterance, "light_blue")
+        colored_intent = colored(intent_msg.user_intent, "light_green")
+        self.log.info(f"Publishing intents to {published_topic} " +\
+                        f"for\n>>> \"{colored_utterance}\"\n>>> \"{colored_intent}\": {score}")
 
     def _contains_phrase(self, utterance, phrases):
         for phrase in phrases:
             if phrase in utterance:
                 return True
         return False
-    
-    def _red_font(self, text):
-        return f"\033[91m{text}\033[0m"
 
 def main():
     rclpy.init()
