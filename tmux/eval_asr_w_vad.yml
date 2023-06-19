@@ -86,8 +86,8 @@ windows:
            -p interp_user_intent_topic:=interp_user_intent_topic
         - emotion_detection: ros2 run angel_system_nodes emotion_detector --ros-args
            -r __ns:=${ROS_NAMESPACE}
-           -p interp_user_intent_topic:=interp_user_intent_topic
            -p expect_user_intent_topic:=expect_user_intent_topic
+           -p interp_user_intent_topic:=interp_user_intent_topic
            -p user_emotion_topic:=user_emotion_topic
            -p model_mode:=vader
   - question_answerer: ros2 run angel_system_nodes qa --ros-args
