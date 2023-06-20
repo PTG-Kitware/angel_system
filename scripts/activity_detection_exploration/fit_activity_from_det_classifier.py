@@ -464,6 +464,7 @@ for n_components in range(5, 50):
 
 plt.plot(range(5, 50), scores)
 
+
 # ----------------------------------------------------------------------------
 def fit_regr(clf, X, y, dataset_id, n_splits=2, n_components=50):
     group_kfold = GroupKFold(n_splits=n_splits)
