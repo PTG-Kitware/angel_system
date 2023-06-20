@@ -14,6 +14,7 @@ The target linux machine will need to have installed:
 
 You will want to add your user to the ``docker`` group to facilitate using
 docker commands.
+See `Adding a User to the docker Group`_.
 
 The network interface to which we are going to connect to the HoloLens2 should
 be appropriately configured:
@@ -32,6 +33,14 @@ To acquire the ANGEL System software and other required files:
 
 * Provision model files (see section below).
 
+Adding a User to the docker Group
+---------------------------------
+When logged in to the target user, run:
+
+.. prompt:: bash
+
+    sudo usermod -a -G docker
+
 Provisioning Files
 ------------------
 External large files should be provisioned by running the ansible tool:
@@ -43,6 +52,7 @@ other files required for building docker images.
 
 This provisioning may require additional configuration and variables set in
 your environment in order to satisfy some permissions:
+
 * ``GIRDER_API_KEY`` will need to be set in order to acquire protected files from
   ``data.kitware.com``.
 
