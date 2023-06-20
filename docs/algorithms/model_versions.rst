@@ -74,7 +74,7 @@ data.kitware.com `here <https://data.kitware.com/#collection/62cc5eb8bddec9d0c4f
 Activity Classification Models
 ==============================
 
-UHO Models 
+UHO Models
 ----------
 
 Baseline Faster-RCNN detector
@@ -131,7 +131,7 @@ Training data:
 Test data:
     The test data was split from the above videos using `GroupKFold
     <https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.GroupKFold.html>`
-    with `n_splits=5`__.
+    with ``n_splits=5``.
 
 TODO
 
