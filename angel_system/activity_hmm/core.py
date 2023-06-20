@@ -65,7 +65,7 @@ class ActivityHMMRos:
             self.activity_mean_and_cov_fname = None
 
         if self.activity_mean_and_cov_fname is not None:
-            ret = np.load(self.activity_mean_and_cov_fname)
+            ret = np.load(self.activity_mean_and_cov_fname, allow_pickle=True)
             class_mean_conf, class_std_conf = ret
         else:
             self.default_mean_conf = config["hmm"]["default_mean_conf"]
@@ -185,24 +185,38 @@ class ActivityHMMRos:
         self.activity_per_step = activity_per_step
         self.class_str = class_str
         self.med_class_duration = med_class_duration
-        self.class_mean_conf = np.array(class_mean_conf)
-        self.class_std_conf = np.array(class_std_conf)
-
-        # This is the model that enforces steps are done in order without
-        # skipping steps.
-        self.noskip_model = ActivityHMM(
-            self.dt,
-            class_str,
-            med_class_duration,
-            num_steps_can_jump_fwd=0,
-            num_steps_can_jump_bck=0,
-            class_mean_conf=class_mean_conf,
-            class_std_conf=class_std_conf,
-        )
 
         self.num_steps_can_jump_fwd = config["hmm"]["num_steps_can_jump_fwd"]
         self.num_steps_can_jump_bck = config["hmm"]["num_steps_can_jump_bck"]
 
+        self.set_hmm_mean_and_std(class_mean_conf, class_std_conf)
+
+    @property
+    def num_steps(self):
+        """Number of steps in the recipe."""
+        return self.model.num_steps
+
+    @property
+    def num_activities(self):
+        """Return number of dimensions in classification vector to be recieved."""
+        return self.model.num_activities
+
+    @property
+    def class_mean_conf(self):
+        return self._class_mean_conf
+
+    @property
+    def class_std_conf(self):
+        return self._class_std_conf
+
+    def get_hmm_mean_and_std(self):
+        """Return the mean and standard deviation of activity classifications."""
+        return self.model.get_hmm_mean_and_std()
+
+    def set_hmm_mean_and_std(self, class_mean_conf, class_std_conf):
+        """Set the mean and standard deviation of activity classifications."""
+        self._class_mean_conf = np.array(class_mean_conf)
+        self._class_std_conf = np.array(class_std_conf)
         self.model = ActivityHMM(
             self.dt,
             self.class_str,
@@ -215,38 +229,22 @@ class ActivityHMMRos:
 
         self.unconstrained_model = ActivityHMM(
             self.dt,
-            class_str,
-            med_class_duration,
+            self.class_str,
+            self.med_class_duration,
             num_steps_can_jump_fwd=self.num_steps,
             num_steps_can_jump_bck=self.num_steps,
-            class_mean_conf=class_mean_conf,
-            class_std_conf=class_std_conf,
+            class_mean_conf=self.class_mean_conf,
+            class_std_conf=self.class_std_conf,
         )
 
-    @property
-    def num_steps(self):
-        """Number of steps in the recipe."""
-        return self.model.num_steps
-
-    @property
-    def num_activities(self):
-        """Return number of dimensions in classification vector to be recieved."""
-        return self.model.num_activities
-
-    def get_hmm_mean_and_std(self):
-        """Return the mean and standard deviation of activity classifications."""
-        return self.model.get_hmm_mean_and_std()
-
-    def set_hmm_mean_and_std(self, class_mean_conf, class_std_conf):
-        """Set the mean and standard deviation of activity classifications."""
-        self.class_mean_conf = np.array(class_mean_conf)
-        self.class_std_conf = np.array(class_std_conf)
-        self.model = ActivityHMM(
+        # This is the model that enforces steps are done in order without
+        # skipping steps.
+        self.noskip_model = ActivityHMM(
             self.dt,
             self.class_str,
-            med_class_duration=self.med_class_duration,
-            num_steps_can_jump_fwd=self.num_steps_can_jump_fwd,
-            num_steps_can_jump_bck=self.num_steps_can_jump_bck,
+            self.med_class_duration,
+            num_steps_can_jump_fwd=0,
+            num_steps_can_jump_bck=0,
             class_mean_conf=self.class_mean_conf,
             class_std_conf=self.class_std_conf,
         )
@@ -539,8 +537,17 @@ class ActivityHMM(object):
         class_std_conf : array of float | None
             If provided, this defines the standard deviation of the Guassian
             model for confidence emission for each class when that class is
-            actually active.
-
+            actually active. If class_std_conf has shape (n_features,), then
+            it represent the standard deviation of each feature assumed to
+            apply equally to all components of the mixture model (steps). If
+            class_std_conf has shape (n_steps, n_features), then
+            class_std_conf[i] represents the standard deviations of the
+            n_features when the ith  step is active. If class_std_conf has
+            shape (n_steps, n_features, n_features), then class_std_conf[i]
+            represents the covariance matrix between the n_features when the
+            ith step is active. Note 3 dimensional, class_std_conf represents
+            covariance versus the other shapes encoding standard deviation,
+            which internally will get squared to become diagonal covariances.
         """
         self.cov_eps = 1e-9
         med_class_duration = np.array(med_class_duration)
@@ -662,28 +669,39 @@ class ActivityHMM(object):
 
         if class_std_conf is not None:
             class_std_conf = np.array(class_std_conf)
+            if np.ndim(class_std_conf) == 3:
+                # Full covariance
+                model.covariance_type = "full"
+                conf_cov_mat = np.zeros((N_, num_activities, num_activities))
 
-            # Square to turn from std to cov.
-            class_std_conf2 = class_std_conf**2
+                ki = 0
+                for i in range(N_):
+                    if orig_mask[i]:
+                        conf_cov_mat[i] = class_std_conf[ki]
+                        ki += 1
+                    else:
+                        conf_cov_mat[i] = conf_cov_mat[0]
 
-            if np.ndim(class_std_conf) == 1:
-                class_std_conf2 = np.tile(class_std_conf2, (N, 1))
-            elif np.ndim(class_mean_conf) > 2:
-                raise ValueError("np.ndim(class_std_conf) must be 1 or 2")
+                model.covars_ = conf_cov_mat + self.cov_eps
+            else:
+                # Square to turn from std to cov.
+                class_std_conf2 = class_std_conf**2
 
-            # Full covariance
-            model.covariance_type = "diag"
-            conf_cov_mat = np.zeros((N_, num_activities))
+                if np.ndim(class_std_conf) == 1:
+                    class_std_conf2 = np.tile(class_std_conf2, (N, 1))
 
-            ki = 0
-            for i in range(N_):
-                if orig_mask[i]:
-                    conf_cov_mat[i] = class_std_conf2[ki]
-                    ki += 1
-                else:
-                    conf_cov_mat[i] = conf_cov_mat[0]
+                model.covariance_type = "diag"
+                conf_cov_mat = np.zeros((N_, num_activities))
 
-            model.covars_ = conf_cov_mat + self.cov_eps
+                ki = 0
+                for i in range(N_):
+                    if orig_mask[i]:
+                        conf_cov_mat[i] = class_std_conf2[ki]
+                        ki += 1
+                    else:
+                        conf_cov_mat[i] = conf_cov_mat[0]
+
+                model.covars_ = conf_cov_mat + self.cov_eps
 
         # -------------- Define transition probabilities -------------------------
         # Median number of timesteps spent in each step.
