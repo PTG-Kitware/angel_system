@@ -214,36 +214,42 @@ class ActivityHMMRos:
         return self.model.get_hmm_mean_and_std()
 
     def set_hmm_mean_and_std(self, class_mean_conf, class_std_conf):
-        """Set the mean and standard deviation of activity classifications.
-
-        """
+        """Set the mean and standard deviation of activity classifications."""
         self._class_mean_conf = np.array(class_mean_conf)
         self._class_std_conf = np.array(class_std_conf)
-        self.model = ActivityHMM(self.dt, self.class_str,
-                                 med_class_duration=self.med_class_duration,
-                                 num_steps_can_jump_fwd=self.num_steps_can_jump_fwd,
-                                 num_steps_can_jump_bck=self.num_steps_can_jump_bck,
-                                 class_mean_conf=self.class_mean_conf,
-                                 class_std_conf=self.class_std_conf)
+        self.model = ActivityHMM(
+            self.dt,
+            self.class_str,
+            med_class_duration=self.med_class_duration,
+            num_steps_can_jump_fwd=self.num_steps_can_jump_fwd,
+            num_steps_can_jump_bck=self.num_steps_can_jump_bck,
+            class_mean_conf=self.class_mean_conf,
+            class_std_conf=self.class_std_conf,
+        )
 
-        self.unconstrained_model = ActivityHMM(self.dt, self.class_str,
-                                               self.med_class_duration,
-                                               num_steps_can_jump_fwd=self.num_steps,
-                                               num_steps_can_jump_bck=self.num_steps,
-                                               class_mean_conf=self.class_mean_conf,
-                                               class_std_conf=self.class_std_conf)
+        self.unconstrained_model = ActivityHMM(
+            self.dt,
+            self.class_str,
+            self.med_class_duration,
+            num_steps_can_jump_fwd=self.num_steps,
+            num_steps_can_jump_bck=self.num_steps,
+            class_mean_conf=self.class_mean_conf,
+            class_std_conf=self.class_std_conf,
+        )
 
         # This is the model that enforces steps are done in order without
         # skipping steps.
-        self.noskip_model = ActivityHMM(self.dt, self.class_str,
-                                        self.med_class_duration,
-                                        num_steps_can_jump_fwd=0,
-                                        num_steps_can_jump_bck=0,
-                                        class_mean_conf=self.class_mean_conf,
-                                        class_std_conf=self.class_std_conf)
+        self.noskip_model = ActivityHMM(
+            self.dt,
+            self.class_str,
+            self.med_class_duration,
+            num_steps_can_jump_fwd=0,
+            num_steps_can_jump_bck=0,
+            class_mean_conf=self.class_mean_conf,
+            class_std_conf=self.class_std_conf,
+        )
 
-    def add_activity_classification(self, label_vec, conf_vec, start_time,
-                                    end_time):
+    def add_activity_classification(self, label_vec, conf_vec, start_time, end_time):
         """Provide activity classification results for time period.
 
         Parameters
@@ -665,7 +671,7 @@ class ActivityHMM(object):
             class_std_conf = np.array(class_std_conf)
             if np.ndim(class_std_conf) == 3:
                 # Full covariance
-                model.covariance_type = 'full'
+                model.covariance_type = "full"
                 conf_cov_mat = np.zeros((N_, num_activities, num_activities))
 
                 ki = 0
@@ -684,7 +690,7 @@ class ActivityHMM(object):
                 if np.ndim(class_std_conf) == 1:
                     class_std_conf2 = np.tile(class_std_conf2, (N, 1))
 
-                model.covariance_type = 'diag'
+                model.covariance_type = "diag"
                 conf_cov_mat = np.zeros((N_, num_activities))
 
                 ki = 0
