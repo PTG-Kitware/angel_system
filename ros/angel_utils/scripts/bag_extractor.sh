@@ -10,5 +10,5 @@ shift
 
 ros2 run angel_utils bag_extractor.py --ros-args \
   -p bag_path:="$BAG_PATH" \
-	-p pv_image_frame_id:=PVFramesBGR \
-	"$@"
+  -p pv_image_frame_id:=PVFramesBGR \
+  "$@"
