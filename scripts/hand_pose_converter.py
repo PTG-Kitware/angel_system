@@ -18,15 +18,11 @@ PROJECTION_MATRIX = [
     [FOCAL_LENGTH_X, 0.0, 0.0, 0.0],
     [0.0, FOCAL_LENGTH_Y, 0.0, 0.0],
     [0.0, 0.0, -1.0020020008087158, -0.20020020008087158],
-    [0.0, 0.0, -1.0, 0.0]
+    [0.0, 0.0, -1.0, 0.0],
 ]
 
 
-def project_3d_pos_to_2d_image(
-    position,
-    inverse_world_mat,
-    projection_mat
-):
+def project_3d_pos_to_2d_image(position, inverse_world_mat, projection_mat):
     """
     Projects the 3d position vector into 2d image space using the given world
     to camera and camera projection matrices.
@@ -38,12 +34,11 @@ def project_3d_pos_to_2d_image(
     x = np.matmul(inverse_world_mat, position)
     # Convert from camera space to image space
     image = np.matmul(projection_mat, x)
-    #print("image coords", image)
-
+    # print("image coords", image)
 
     # Normalize
-    image_scaled = image / -image[3] #perspective divide
-    #print("image scaled coords", image_scaled)
+    image_scaled = image / -image[3]  # perspective divide
+    # print("image scaled coords", image_scaled)
 
     image_scaled_x = image_scaled[0]
     image_scaled_y = image_scaled[1]
@@ -65,19 +60,22 @@ def project_3d_pos_to_2d_image(
 
     width = 1280
     height = 720
-    
+
     half_width = width / 2
     half_height = height / 2
-    
+
     w = image_scaled[3]
 
     # Convert to screen coordinates
-    projected_point_x = width - ((image_scaled[0] * width) / (2*w) + half_width)
-    projected_point_y = (image_scaled[1] * height) / (2*w) + half_height
-    #print("pixel coords", projected_point_x, projected_point_y)
+    projected_point_x = width - ((image_scaled[0] * width) / (2 * w) + half_width)
+    projected_point_y = (image_scaled[1] * height) / (2 * w) + half_height
+    # print("pixel coords", projected_point_x, projected_point_y)
 
-
-    return [projected_point_x, projected_point_y, 1.0], [image_scaled_x, image_scaled_y, 1.0], clipped
+    return (
+        [projected_point_x, projected_point_y, 1.0],
+        [image_scaled_x, image_scaled_y, 1.0],
+        clipped,
+    )
 
 
 def convert_1d_4x4_to_2d_matrix(matrix_1d):
@@ -90,7 +88,7 @@ def convert_1d_4x4_to_2d_matrix(matrix_1d):
     return matrix_2d
 
 
-class HandPoseConverter():
+class HandPoseConverter:
     """
     Converts hand poses in 3d world space coordinates to 2d image space coordinates.
     """
@@ -120,7 +118,7 @@ class HandPoseConverter():
         with open(self.head_pose_file) as f:
             head_pose_data = json.load(f)
 
-        tolerance = (5 / 60.0) * 1e9 # ns
+        tolerance = (5 / 60.0) * 1e9  # ns
         hand_poses_3d = []
 
         hand_msg_index = 0
@@ -130,11 +128,11 @@ class HandPoseConverter():
             hand_msg_index += 1
 
             # Find the closest headset pose message for this hand msg
-            hand_time_ns = hand_pose['time_sec'] * 1e9 + hand_pose['time_nanosec']
+            hand_time_ns = hand_pose["time_sec"] * 1e9 + hand_pose["time_nanosec"]
             min_diff = None
             min_idx = None
             for idx, h in enumerate(head_pose_data):
-                head_time_ns = h['time_sec'] * 1e9 + h['time_nanosec']
+                head_time_ns = h["time_sec"] * 1e9 + h["time_nanosec"]
 
                 diff = abs(head_time_ns - hand_time_ns)
                 if min_diff is None or diff < min_diff:
@@ -147,30 +145,27 @@ class HandPoseConverter():
             if matching_head_pose is None:
                 print("no match")
                 hand_pose_3d_dict = {
-                    "time_sec": hand_pose['time_sec'],
-                    "time_nanosec": hand_pose['time_nanosec'],
-                    "hand": hand_pose['hand'],
-                    "joint_poses": None
+                    "time_sec": hand_pose["time_sec"],
+                    "time_nanosec": hand_pose["time_nanosec"],
+                    "hand": hand_pose["hand"],
+                    "joint_poses": None,
                 }
                 hand_poses_3d.append(hand_pose_3d_dict)
                 continue
 
             projection_matrix = PROJECTION_MATRIX
             camera_to_world_matrix = convert_1d_4x4_to_2d_matrix(
-                matching_head_pose['world_matrix']
+                matching_head_pose["world_matrix"]
             )
-            #print(camera_to_world_matrix)
+            # print(camera_to_world_matrix)
             world_to_camera_matrix = np.linalg.inv(camera_to_world_matrix)
 
             # List of joints in this message
             joints_3d = []
-            for j in hand_pose['joint_poses']:
+            for j in hand_pose["joint_poses"]:
                 # Get the hand pose
                 joint_position_3d = np.array(
-                    [j['position'][0],
-                     j['position'][1],
-                     j['position'][2],
-                     1]
+                    [j["position"][0], j["position"][1], j["position"][2], 1]
                 )
                 proj, coords, clipped = project_3d_pos_to_2d_image(
                     joint_position_3d,
@@ -178,20 +173,28 @@ class HandPoseConverter():
                     projection_matrix,
                 )
 
-                joints_3d.append({'joint': j["joint"],  "position": coords, "projected": proj, "clipped": clipped})
+                joints_3d.append(
+                    {
+                        "joint": j["joint"],
+                        "position": coords,
+                        "projected": proj,
+                        "clipped": clipped,
+                    }
+                )
 
             # Append this pose to our list of poses
             hand_pose_3d_dict = {
-                "time_sec": hand_pose['time_sec'],
-                "time_nanosec": hand_pose['time_nanosec'],
-                "hand": hand_pose['hand'],
-                "joint_poses": joints_3d
+                "time_sec": hand_pose["time_sec"],
+                "time_nanosec": hand_pose["time_nanosec"],
+                "hand": hand_pose["hand"],
+                "joint_poses": joints_3d,
             }
             hand_poses_3d.append(hand_pose_3d_dict)
 
         # Write to the output file
         with open(self.hand_pose_out_file, mode="w", encoding="utf-8") as f:
             json.dump(hand_poses_3d, f)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -204,14 +207,23 @@ if __name__ == "__main__":
     for folder in subs:
         print(f"Processing folder: {folder}")
 
-        hand_pose_file = root_dir + "/" + folder + "/_extracted/" + "hand_pose_data.json"
-        head_pose_file = root_dir + "/" + folder + "/_extracted/" + "head_pose_data.json"
-        hand_pose_out_file = root_dir + "/" + folder + "/_extracted/_hand_pose_2d_data.json"
+        hand_pose_file = (
+            root_dir + "/" + folder + "/_extracted/" + "hand_pose_data.json"
+        )
+        head_pose_file = (
+            root_dir + "/" + folder + "/_extracted/" + "head_pose_data.json"
+        )
+        hand_pose_out_file = (
+            root_dir + "/" + folder + "/_extracted/_hand_pose_2d_data.json"
+        )
 
         try:
-            converter = HandPoseConverter(hand_pose_file, head_pose_file, hand_pose_out_file)
+            converter = HandPoseConverter(
+                hand_pose_file, head_pose_file, hand_pose_out_file
+            )
         except FileNotFoundError:
             hand_pose_file = root_dir + "/" + folder + "/" + "hand_pose_data.txt"
             head_pose_file = root_dir + "/" + folder + "/" + "head_pose_data.txt"
-            converter = HandPoseConverter(hand_pose_file, head_pose_file, hand_pose_out_file)
-
+            converter = HandPoseConverter(
+                hand_pose_file, head_pose_file, hand_pose_out_file
+            )
