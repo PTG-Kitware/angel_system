@@ -54,16 +54,33 @@ This provisioning may require additional configuration and variables set in
 your environment in order to satisfy some permissions:
 
 * ``GIRDER_API_KEY`` will need to be set in order to acquire protected files from
-  ``data.kitware.com``.
+  ``data.kitware.com`` (see `Getting your Girder API Key`_ below).
 
 The configuration that controls what is staged and where is located
 in the ``ansible/roles/provision-files/vars/main.yml`` file.
 
+Getting your Girder API Key
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+1) Log into your account at `data.kitware.com`_.
+
+2) From the drop-down in the upper-right, navigate to ``My Account``.
+
+3) Select the "API keys" tab.
+
+4) If you do not already have an appropriate key present, press the "Create
+   new key" to make one.
+
+   a) Only the "Read-only" permissions needs to be enabled.
+
+5) Click the "show" text to temporarily display the key text.
+   Copy and paste this into your terminal as the value for the `GIRDER_API_KEY`
+   environment variable.
 
 HL2 First-time Setup
 ====================
 
-* User account creation
+* User account creation (see MS docs
+  `here <https://learn.microsoft.com/en-us/hololens/hololens2-start>`__).
 
 * Eye Calibration
 
@@ -74,3 +91,6 @@ HL2 First-time Setup
     * Configure HL2 Ethernet settings to use Manual addressing, setting the
       IPv4 to 192.168.1.101 (address), 255.255.255.0 (netmask), 192.168.1.1
       (gateway).
+
+
+.. _data.kitware.com: https://data.kitware.com
