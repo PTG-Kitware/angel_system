@@ -187,12 +187,11 @@ class VoiceActivityDetector(Node):
                     # Make a copy of the current data so we can run VAD
                     # while more data is accumulated.
                     req_data = self.accumulated_audio[:]
-                    req_duration = self.accumulated_audio_duration
 
                     # Start the VAD server request thread.
                     self.request_thread = threading.Thread(target=self.vad_server_request_thread,
                         args=(req_data, self.num_channels, self.sample_rate,
-                            req_duration))
+                            self.accumulated_audio_duration))
                     self.request_thread.start()
 
                     # Reset the intercadence-accumulation counter, regardless
@@ -209,10 +208,10 @@ class VoiceActivityDetector(Node):
                     prefix=f"accumulation-{self.n_cadence_steps}_")
                 voice_active_segments = self.vad_server_request(temp_file)
                 if voice_active_segments:
-                    # Take the ("next") first segment. If the detected voice
+                    # Take the first segment. If the detected voice
                     # activity ends reasonably before the end of the audio_data,
                     # we can publish the audio data before the point of inactivity.
-                    end = self._get_next_voice_activity_end(voice_active_segments)
+                    end = self._get_voice_activity_end(voice_active_segments)
                     if end >= audio_duration - self._vad_sec_margin:
                         self.log.info(f"Continuing with vocal segment end={end} and " +\
                                     f"audio_duration={audio_duration} with  "+\
@@ -238,16 +237,17 @@ class VoiceActivityDetector(Node):
                     if not self._debug_mode:
                         temp_file.close()
 
-    def _get_next_voice_activity_end(self, voice_active_segments):
-        next_voice_activity_interval = voice_active_segments[0]
-        _, end = next_voice_activity_interval
+    def _get_voice_activity_end(self, voice_active_segments):
+        _, end = voice_active_segments[0]
+        next_start = end
         for interval in voice_active_segments[1:]:
-                        # Coalesce with nearby intervals.
+            # Coalesce with nearby intervals.
             next_start, next_end = interval
             if next_start - end < self._vad_sec_margin:
                 end = next_end
+                next_start = end
                 self.log.info(f"Aggregated vocal segments until {end}.")
-        return end
+        return next_start
 
     def _split_audio(self, split_timestamp, num_channels, sample_rate):
         '''
