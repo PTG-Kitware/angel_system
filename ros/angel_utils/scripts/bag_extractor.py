@@ -124,7 +124,7 @@ class BagConverter(Node):
             .string_value
         )
         self.pv_image_frame_id = (
-            self.declare_parameter("pv_image_frame_id", "PVFramesNV12")
+            self.declare_parameter("pv_image_frame_id", "PVFramesBGR")
             .get_parameter_value()
             .string_value
         )

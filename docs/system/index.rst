@@ -5,6 +5,7 @@ ROS System Components
 .. toctree::
    :maxdepth: 2
 
+   setup
    sensor_streams
    activity_classification
    task_monitor
