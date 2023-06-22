@@ -1,6 +1,7 @@
 import os
 import cv2
 import kwcoco
+import kwimage
 import textwrap
 
 import numpy as np
@@ -24,8 +25,6 @@ def preds_to_kwcoco(
     Save the predicitions in the json file
     format used by the detector training
     """
-    import kwimage
-
     dset = kwcoco.CocoDataset()
 
     for class_ in metadata["thing_classes"]:
@@ -90,6 +89,7 @@ def preds_to_kwcoco(
                         "confidence": det[i]["confidence_score"],
                     }
 
+                    print(det[i])
                     if "obj_obj_contact_state" in det[i].keys():
                         ann["obj-obj_contact_state"] = det[i]["obj_obj_contact_state"]
                         ann["obj-obj_contact_conf"] = det[i]["obj_obj_contact_conf"]
@@ -162,7 +162,7 @@ def visualize_kwcoco(dset=None, save_dir=""):
         plt.title("\n".join(textwrap.wrap(gt, 55)))
 
         image = Image.open(im["file_name"])
-        image = image.resize(size=(760, 428), resample=Image.BILINEAR)
+        #image = image.resize(size=(760, 428), resample=Image.BILINEAR)
         image = np.array(image)
 
         ax.imshow(image)
@@ -174,7 +174,7 @@ def visualize_kwcoco(dset=None, save_dir=""):
             conf = ann["confidence"]
 
             using_contact = (
-                False  # True if 'obj-obj_contact_state' in ann.keys() else False
+                True if 'obj-obj_contact_state' in ann.keys() else False
             )
 
             x, y, w, h = ann["bbox"]  # xywh
@@ -385,9 +385,10 @@ def filter_kwcoco_conf_by_video(dset):
 
 
 def main():
-    ptg_root = "/data/ptg/medical/bbn/"
+    ptg_root = '/home/local/KHQ/hannah.defazio/projects/PTG/angel_system/angel_system/berkeley'
+    #ptg_root = "/data/ptg/medical/bbn/"
 
-    kw = "m2_all_data_cleaned_fixed_with_steps_results_train_activity.mscoco.json"
+    kw = "coffee_no_background_stage2_val.mscoco.json"
 
     n = kw[:-12].split("_")
     name = "_".join(n[:-1])
@@ -405,13 +406,14 @@ def main():
     else:
         save_dir = f"{stage_dir}/{exp}/visualization/{split}"
 
-    # save_dir = "visualization"
+    save_dir = "visualization"
     Path(save_dir).mkdir(parents=True, exist_ok=True)
 
     if stage == "stage1":
         visualize_kwcoco(f"{stage_dir}/{kw}", save_dir)
     else:
-        visualize_kwcoco(f"{stage_dir}/{exp}/{kw}", save_dir)
+        visualize_kwcoco(f"{ptg_root}/{kw}", save_dir)
+        #visualize_kwcoco(f"{stage_dir}/{exp}/{kw}", save_dir)
 
 
 if __name__ == "__main__":

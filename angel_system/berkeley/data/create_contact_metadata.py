@@ -10,7 +10,6 @@ import numpy as np
 import pandas as pd
 import ubelt as ub
 import pickle
-import ast
 import math
 import pprint
 import random
@@ -28,6 +27,7 @@ from data.update_dets_utils import (
     load_hl_hand_bboxes,
     replace_compound_label,
     find_closest_hands,
+    update_step_map
 )
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
@@ -35,7 +35,8 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 def load_model(config, conf_thr=0.01):
     # Load model
-    root_dir = "/home/local/KHQ/hannah.defazio/angel_system"
+    #root_dir = "/home/local/KHQ/hannah.defazio/angel_system"
+    root_dir = "/home/local/KHQ/hannah.defazio/projects/PTG/angel_system"
     berkeley_configs_dir = f"{root_dir}/angel_system/berkeley/configs"
     model_config = f"{berkeley_configs_dir}/{config}"
 
@@ -65,21 +66,9 @@ def run_obj_detector(
     """
     preds = {}
 
-    videos = []
-    for x in split:
-        x_split = x.split("_")
-        if x_split[0] == "tq":
-            # BBN lab videos
-            videos.append(f"{bbn_root}/{data_dirs[1]}/{x}")
-        elif x_split[0] == "kitware":
-            # Kitware lab videos
-            videos.append(f"{bbn_root}/{data_dirs[2]}/{x}")
-        else:
-            videos.append(f"{bbn_root}/{data_dirs[0]}/{x}")
-
     for (
         video_folder
-    ) in videos:  # ub.ProgIter(videos, desc='Running detector on videos'):
+    ) in split:
         idx = 0
         video_name = video_folder.split("/")[-1]
 
@@ -133,11 +122,12 @@ def run_obj_detector(
                 if add_hl_hands:
                     # Add HL hand bounding boxes if we have them
                     all_hands = (
-                        all_hand_pose_2d_image_space[frame]
-                        if frame in all_hand_pose_2d_image_space.keys()
+                        all_hand_pose_2d_image_space[time_stamp]
+                        if time_stamp in all_hand_pose_2d_image_space.keys()
                         else []
                     )
                     if all_hands != []:
+                        print("Adding hand bboxes from the hololens joints")
                         for joints in all_hands:
                             keys = list(joints["joints"].keys())
                             hand_label = joints["hand"]
@@ -196,20 +186,11 @@ def update_preds(
     """
     activity_only_preds = {}
     for video_name in preds.keys():
-        x_split = video_name.split("_")
-        if x_split[0] == "tq":
-            videos_dir = f"{data_root}/{data_dirs[1]}"
-            lab_data = True
-        elif x_split[0] == "kitware":
-            # Kitware lab videos
-            videos_dir = f"{data_root}/{data_dirs[2]}"
-            lab_data = False
-        else:
-            videos_dir = f"{data_root}/{data_dirs[0]}"
-            lab_data = False
-
         activity_only_preds[video_name] = {}
 
+        # TODO: Be able to call activity_data_loader 
+        # without task specific imports
+        """
         gt_activity = activity_data_loader(
             videos_dir,
             video_name,
@@ -217,6 +198,10 @@ def update_preds(
             lab_data,
             experiment_flags["using_inter_steps"],
             experiment_flags["using_before_finished_task"],
+        )
+        """
+        gt_activity = activity_data_loader(
+            video_name
         )
 
         for step, substeps in step_map.items():
@@ -288,7 +273,6 @@ def update_preds(
 
                         # Update contact metadata
                         for obj in object_pair:
-
                             if obj == "hand":
                                 hand_labels = find_closest_hands(
                                     object_pair,
@@ -378,21 +362,65 @@ def update_preds(
     return preds
 
 
-def coffee_main():
+def coffee_main(stage, using_inter_steps, using_before_finished_task):
+    model_dir = "MC50-InstanceSegmentation/cooking/coffee"
+    # Model
+    demo = load_model(
+        config=f"{model_dir}/stage2/mask_rcnn_R_50_FPN_1x_demo.yaml",
+        #config=f"{model_dir}/stage1/mask_rcnn_R_101_FPN_1x_demo.yaml",
+        #conf_thr=0.4
+        conf_thr=0.01,
+    )
 
-    coffee_root = "/Padlock_DT/Coffee"
-    ros_bags_dir = f"{coffee_root}/coffee_recordings/extracted"
-    videos_dir = ros_bags_dir  # Coffee specific
+    # Data
+    coffee_root = "/media/hannah.defazio/Padlock_DT6/Data/notpublic/PTG/Coffee"
+    ros_bags_dir = "coffee_recordings/extracted" # Coffee specific
+
+    data_dirs = (ros_bags_dir,)
 
     training_split = {
-        "train": [f"all_activities_{x}" for x in [2, 10, 25, 28, 35]],
+        "train_contact": [f"all_activities_{x}" for x in [2, 10, 25]],
+        "train_activity": [f"all_activities_{x}" for x in [28, 35]],
         "val": [f"all_activities_{x}" for x in [24, 45]],
         "test": [f"all_activities_{x}" for x in [41, 42, 43]],
     }  # Coffee specific
 
+    print(training_split)
+
+    # Add data root to splits
+    for split, videos in training_split.items():
+        new_videos = []
+        for x in videos:
+            x_split = x.split("_")
+            if x_split[0] + '_' + x_split[1]  == "all_activities":
+                # Kitware Eval1 engineering dataset
+                new_videos.append(f"{coffee_root}/{data_dirs[0]}/{x}")
+            else:
+                print(f"Unknown video source for: {x}")
+                return
+        training_split[split] = new_videos
+    print(training_split)
+
+    # Activity data loader
     from angel_system.data.load_kitware_coffee_data import coffee_activity_data_loader
 
     activity_data_loader = coffee_activity_data_loader
+
+    # Step map
+    metadata = demo.metadata.as_dict()
+    step_map = update_step_map(metadata["sub_steps"],
+                               [],
+                               using_inter_steps, using_before_finished_task)
+
+    return (
+        demo,
+        training_split,
+        coffee_root,
+        data_dirs,
+        activity_data_loader,
+        metadata,
+        step_map,
+    )
 
 
 def tourniquet_main(stage, using_inter_steps, using_before_finished_task):
@@ -628,6 +656,21 @@ def tourniquet_main(stage, using_inter_steps, using_before_finished_task):
 
     print(training_split)
 
+    # Add data root to splits
+    for split in training_split:
+        new_split = []
+        for x in split:
+            x_split = x.split("_")
+            if x_split[0] == "tq":
+                # BBN lab videos
+                new_split.append(f"{bbn_root}/{data_dirs[1]}/{x}")
+            elif x_split[0] == "kitware":
+                # Kitware lab videos
+                new_split.append(f"{bbn_root}/{data_dirs[2]}/{x}")
+            else:
+                new_split.append(f"{bbn_root}/{data_dirs[0]}/{x}")
+        training_split[split] = new_split
+
     from angel_system.data.load_bbn_medical_data import bbn_activity_data_loader
 
     activity_data_loader = bbn_activity_data_loader
@@ -635,24 +678,9 @@ def tourniquet_main(stage, using_inter_steps, using_before_finished_task):
     # Update step map
     metadata = demo.metadata.as_dict()
 
-    step_map = metadata["sub_steps"]
-    if using_inter_steps:
-        steps = list(step_map.keys())
-        for i, step in enumerate(steps[:-1]):
-            step_map[f"{step}.5"] = [
-                [
-                    f"In between {step} and {steps[i+1]}".lower(),
-                    [["tourniquet_tourniquet", "hand"]],
-                ]
-            ]
-
-    if using_before_finished_task:
-        step_map["before"] = [
-            ["Not started".lower(), [["tourniquet_tourniquet", "hand"]]]
-        ]
-        step_map["finished"] = [
-            ["Finished".lower(), [["tourniquet_tourniquet", "hand"]]]
-        ]
+    step_map = update_step_map(metadata["step_map"],
+                               ["tourniquet_tourniquet", "hand"],
+                               using_inter_steps, using_before_finished_task)
     print(f"step map: {step_map}")
 
     # data_dirs = (kitware_test_dir, lab_data_dir)
@@ -669,7 +697,7 @@ def tourniquet_main(stage, using_inter_steps, using_before_finished_task):
 
 
 def main():
-    experiment_name = "m2_all_data_cleaned_fixed_with_steps"
+    experiment_name = "coffee_no_background"
     stage = "results"
 
     print("Experiment: ", experiment_name)
@@ -680,7 +708,7 @@ def main():
         "no_contact": False if stage == "results" else True,
         "filter_activity_frames": False if stage == "results" else True,
         "filter_all_obj_frames": False if stage == "results" else True,
-        "using_step_labels": True,
+        "using_step_labels": False,
         "using_inter_steps": False,
         "using_before_finished_task": False,
     }
@@ -694,16 +722,14 @@ def main():
         activity_data_loader,
         metadata,
         step_map,
-    ) = tourniquet_main(
+    ) = coffee_main(
         stage,
         experiment_flags["using_inter_steps"],
         experiment_flags["using_before_finished_task"],
     )
 
     if stage == "stage2":
-        splits = [
-            "train_activity"
-        ]  # ['val', 'train_contact', 'test', 'train_activity']
+        splits = ['val', 'train_contact', 'test', 'train_activity']
     else:
         splits = ["test", "train_activity", "val"]
 
@@ -721,18 +747,18 @@ def main():
             data_dirs,
             training_split[split],
             no_contact=experiment_flags["no_contact"],
-            add_hl_hands=False,
+            add_hl_hands=True,
         )
+        using_contact = True
         print(f"Using contact: {using_contact}")
 
         fn = f"temp/{experiment_name}_{split}_preds_no_contact.pickle"
         print("temp file: ", fn)
         with open(fn, "wb") as fh:
-            # preds_no_contact = pickle.load(fh)
+            #preds_no_contact = pickle.load(fh)
             pickle.dump(preds_no_contact, fh)
 
         # Update contact info based on gt
-
         preds_with_contact = update_preds(
             activity_data_loader,
             preds_no_contact,
