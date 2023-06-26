@@ -5,7 +5,7 @@ import os
 import angel_system
 from angel_system.activity_hmm.core import ActivityHMMRos
 
-os.chdir("/home/local/KHQ/matt.brown/libraries/angel_system")
+# os.chdir("/home/local/KHQ/matt.brown/libraries/angel_system")
 
 
 # ----------------------------------------------------------------------------
