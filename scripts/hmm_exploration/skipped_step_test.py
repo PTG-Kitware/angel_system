@@ -35,7 +35,7 @@ except ModuleNotFoundError:
     HAS_MATLOTLIB = False
 
 
-os.chdir("/home/local/KHQ/matt.brown/libraries/angel_system")
+# os.chdir("/home/local/KHQ/matt.brown/libraries/angel_system")
 
 
 # ----------------------------------------------------------------------------

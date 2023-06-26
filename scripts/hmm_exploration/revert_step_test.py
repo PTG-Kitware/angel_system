@@ -14,6 +14,7 @@ config_fname = (
     base_path + "/../config/tasks/task_steps_config-recipe_coffee_trimmed.yaml"
 )
 
+
 print(f"Loading HMM with recipe {config_fname}")
 live_model = ActivityHMMRos(config_fname)
 
