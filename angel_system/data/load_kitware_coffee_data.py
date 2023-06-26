@@ -8,7 +8,9 @@ def coffee_activity_data_loader(video="all_activities_11"):
     import pandas as pd
 
     # Load ground truth activity
-    root_dir = '/media/hannah.defazio/Padlock_DT6/Data/notpublic/PTG/Coffee/coffee_labels'
+    root_dir = (
+        "/media/hannah.defazio/Padlock_DT6/Data/notpublic/PTG/Coffee/coffee_labels"
+    )
     # root_dir = "/Padlock_DT/Coffee/coffee_labels"
     gt_dir = f"{root_dir}/Labels"
 
