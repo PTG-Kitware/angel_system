@@ -1,4 +1,6 @@
 import logging
+import warnings
+
 from typing import Sequence
 from typing import Tuple
 
@@ -48,6 +50,11 @@ def get_time_wind_range(
     ind1 = max([ind1, 0])
     ind2 = min([ind2, len(time_windows)])
 
+    # assert ind2 >= ind1, "Invalid time window indexes"
+    if ind2 < ind1:
+        # Rounding issue
+        warnings.warn(f"ind1: {ind1} is greater than ind2: {ind2} for start time {start} and ebd time {end}")
+        ind1 = ind2
     return ind1, ind2
 
 
@@ -77,6 +84,7 @@ def discretize_data_to_windows(labels, gt, detections, time_window, uncertainty_
     # Split by time window
     # ============================
     # Get time ranges
+    
     assert (
         time_window > uncertainty_pad
     ), "Time window must be longer than the uncertainty pad"
@@ -104,19 +112,28 @@ def discretize_data_to_windows(labels, gt, detections, time_window, uncertainty_
             time_windows,
         )
 
-        valid[ind1:ind2] = True
-        correct_label = detections["class_label"][i].strip().rstrip(".")
+        correct_label = detections["class_label"][i].lower().strip().strip(".").strip()
         correct_class_idx = labels.index(correct_label)
-        window_class_scores[ind1:ind2, correct_class_idx] = np.maximum(
-            window_class_scores[ind1:ind2, correct_class_idx], detections["conf"][i]
-        )
+
+        if ind1 == ind2:
+            # Bug fix: indexing ind1:ind2 does not work if they are equal
+            valid[ind1] = True
+            window_class_scores[ind1, correct_class_idx] = np.maximum(
+                window_class_scores[ind1, correct_class_idx], detections["conf"][i]
+            )
+        else:
+            valid[ind1:ind2] = True
+            window_class_scores[ind1:ind2, correct_class_idx] = np.maximum(
+                window_class_scores[ind1:ind2, correct_class_idx], detections["conf"][i]
+            )
+        
 
     gt_true_mask = np.zeros((len(time_windows), len(labels)), dtype=bool)
     for i in range(len(gt)):
         ind1, ind2 = get_time_wind_range(
             gt["start"][i], gt["end"][i], dt, min_start_time, time_windows
         )
-        correct_label = gt["class_label"][i].strip().rstrip(".")
+        correct_label = gt["class_label"][i].lower().strip().strip(".").strip()
         correct_class_idx = labels.index(correct_label)
         gt_true_mask[ind1:ind2, correct_class_idx] = True
 
