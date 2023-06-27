@@ -66,6 +66,7 @@ services:
       - ./workspace_build_rosdep_install.sh:${ANGEL_WORKSPACE_DIR}/workspace_build_rosdep_install.sh
       - ./workspace_entrypoint.sh:${ANGEL_WORKSPACE_DIR}/workspace_entrypoint.sh
       - ./workspace_setenv.sh:${ANGEL_WORKSPACE_DIR}/workspace_setenv.sh
+      - ./workspace_test.sh:${ANGEL_WORKSPACE_DIR}/workspace_test.sh
       - ../ros_bags:${ANGEL_WORKSPACE_DIR}/ros_bags
       - ../hl2ss:${ANGEL_WORKSPACE_DIR}/hl2ss
       # Build environment things

@@ -41,23 +41,31 @@ class IntentToCommand(Node):
         if some_not_set:
             raise ValueError("Some parameters are not set.")
 
-        self._confirmed_intent_topic = self.get_parameter(PARAM_CONFIRMED_INTENT_TOPIC).value
+        self._confirmed_intent_topic = self.get_parameter(
+            PARAM_CONFIRMED_INTENT_TOPIC
+        ).value
         self._sys_cmd_topic = self.get_parameter(PARAM_SYS_CMD_TOPIC).value
         self._intent_to_cmd_map_path = self.get_parameter(PARAM_INTENT_TO_CMD_MAP).value
 
         # log inputs for interpreted type and value
-        self.log.info(f"Confirmed intent topic: "
-                      f"({type(self._confirmed_intent_topic).__name__}) "
-                      f"{self._confirmed_intent_topic}")
-        self.log.info(f"System command topic: "
-                      f"({type(self._sys_cmd_topic).__name__}) "
-                      f"{self._sys_cmd_topic}")
-        self.log.info(f"Intent to cmd map: "
-                      f"({type(self._intent_to_cmd_map_path).__name__}) "
-                      f"{self._intent_to_cmd_map_path}")
+        self.log.info(
+            f"Confirmed intent topic: "
+            f"({type(self._confirmed_intent_topic).__name__}) "
+            f"{self._confirmed_intent_topic}"
+        )
+        self.log.info(
+            f"System command topic: "
+            f"({type(self._sys_cmd_topic).__name__}) "
+            f"{self._sys_cmd_topic}"
+        )
+        self.log.info(
+            f"Intent to cmd map: "
+            f"({type(self._intent_to_cmd_map_path).__name__}) "
+            f"{self._intent_to_cmd_map_path}"
+        )
 
         # Load intent to cmd map (yaml)
-        with open(self._intent_to_cmd_map_path, 'r') as f:
+        with open(self._intent_to_cmd_map_path, "r") as f:
             config = yaml.safe_load(f)
         self._intent_to_cmd_map = config["commands"]
 
@@ -65,12 +73,10 @@ class IntentToCommand(Node):
             InterpretedAudioUserIntent,
             self._confirmed_intent_topic,
             self.intent_callback,
-            1
+            1,
         )
         self._sys_cmd_publisher = self.create_publisher(
-            SystemCommands,
-            self._sys_cmd_topic,
-            1
+            SystemCommands, self._sys_cmd_topic, 1
         )
 
     def intent_callback(self, intent: InterpretedAudioUserIntent) -> None:
@@ -121,5 +127,5 @@ def main():
     rclpy.shutdown()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -33,8 +33,10 @@ from sensor_msgs.msg import Image
 from angel_utils.conversion import convert_nv12_to_rgb
 
 from cv_bridge import CvBridge
+
 # Instantiate CvBridge
 bridge = CvBridge()
+
 
 def get_rosbag_options(path, serialization_format="cdr"):
     """
@@ -122,7 +124,7 @@ class BagConverter(Node):
             .string_value
         )
         self.pv_image_frame_id = (
-            self.declare_parameter("pv_image_frame_id", "PVFramesNV12")
+            self.declare_parameter("pv_image_frame_id", "PVFramesBGR")
             .get_parameter_value()
             .string_value
         )
@@ -260,7 +262,10 @@ class BagConverter(Node):
         if self.extract_audio:
             self.create_wav_file()
             audio_stamp_file = self.data_folder + "audio_time_data.json"
-            stamps = {"start_time": self.min_audio_stamp, "end_time": self.max_audio_stamp}
+            stamps = {
+                "start_time": self.min_audio_stamp,
+                "end_time": self.max_audio_stamp,
+            }
             with open(audio_stamp_file, mode="w", encoding="utf-8") as f:
                 json.dump(stamps, f)
             self.log.info(f"Created audio timestamp file: {audio_stamp_file}")
@@ -493,7 +498,7 @@ class BagConverter(Node):
         Handler for the audio messages in the ROS bag.
         Adds the audio data to the audio_data list.
         """
-        time = msg.header.stamp.sec + msg.header.stamp.nanosec * 10e-9,
+        time = (msg.header.stamp.sec + msg.header.stamp.nanosec * 10e-9,)
         if self.num_audio_msgs == 0:
             self.min_audio_stamp = time
             self.max_audio_stamp = time

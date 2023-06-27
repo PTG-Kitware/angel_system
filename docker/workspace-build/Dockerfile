@@ -52,7 +52,7 @@ ENV NVIDIA_DRIVER_CAPABILITIES graphics,utility,compute
 # NODE: Installing "dev" dependencies here because why not. Stop if the desire
 #       becomes to create a minimal image.
 ENV PATH=/root/.local/bin:${PATH}
-ENV POETRY_VERSION=1.1.13
+ENV POETRY_VERSION=1.5.1
 RUN pip3 install --user pip==23.0 \
  && (curl -sSL 'https://install.python-poetry.org' | python3 -) \
  && poetry config virtualenvs.create false
@@ -122,6 +122,7 @@ COPY docker/cyclonedds_profile.xml.tmpl \
      docker/workspace_entrypoint.sh \
      docker/workspace_setenv.sh \
      docker/workspace_build.sh \
+     docker/workspace_test.sh \
      "${ANGEL_WORKSPACE_DIR}"/
 
 WORKDIR "${ANGEL_WORKSPACE_DIR}"

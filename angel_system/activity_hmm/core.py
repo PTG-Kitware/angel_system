@@ -8,13 +8,13 @@ import os
 import scipy
 import time
 
-from angel_system.ptg_eval.common.load_data import time_from_name
-from angel_system.ptg_eval.common.load_data import activities_from_dive_csv
+from angel_system.data.common.load_data import time_from_name
+from angel_system.data.common.load_data import activities_from_dive_csv
 
 try:
     import matplotlib.pyplot as plt
-    from matplotlib.ticker import MultipleLocator, FormatStrFormatter, \
-        AutoMinorLocator
+    from matplotlib.ticker import MultipleLocator, FormatStrFormatter, AutoMinorLocator
+
     HAS_MATLOTLIB = True
 except ModuleNotFoundError:
     HAS_MATLOTLIB = False
@@ -35,202 +35,221 @@ class ActivityHMMRos:
         self.default_std_conf = None
         self.default_mean_conf = None
 
-
         # Times associated with the center of the window associated with each
         # element of self.X.
         self.times = None
 
-        with open(config_fname, 'r') as stream:
+        with open(config_fname, "r") as stream:
             config = yaml.safe_load(stream)
 
         # Verify that all of the top-level sections of the config exist.
-        for key in ['version', 'activity_labels', 'title', 'steps', 'hmm']:
+        for key in ["version", "activity_labels", "title", "steps", "hmm"]:
             if key not in config:
-                raise AssertionError(f'config \'{config_fname}\' does not '
-                                     f'have the required \'{key}\' defined')
+                raise AssertionError(
+                    f"config '{config_fname}' does not have the required '{key}' defined"
+                )
 
         try:
-            self.activity_labels_fname = config['activity_labels']
+            self.activity_labels_fname = config["activity_labels"]
         except KeyError:
-            raise AssertionError(f"config '{config_fname}' does not "
-                                 f"have the required 'activity_labels' "
-                                 "defined")
+            raise AssertionError(
+                f"config '{config_fname}' does not have the required "
+                f"'activity_labels' defined"
+            )
 
         try:
-            self.activity_mean_and_cov_fname = config['activity_mean_and_std_file']
+            self.activity_mean_and_cov_fname = config["activity_mean_and_std_file"]
             loaded_mean_and_cov = True
         except KeyError:
             loaded_mean_and_cov = False
             self.activity_mean_and_cov_fname = None
 
         if self.activity_mean_and_cov_fname is not None:
-            ret = np.load(self.activity_mean_and_cov_fname)
+            ret = np.load(self.activity_mean_and_cov_fname, allow_pickle=True)
             class_mean_conf, class_std_conf = ret
         else:
-            self.default_mean_conf = config['hmm']['default_mean_conf']
-            self.default_std_conf = config['hmm']['default_std_conf']
+            self.default_mean_conf = config["hmm"]["default_mean_conf"]
+            self.default_std_conf = config["hmm"]["default_std_conf"]
             class_mean_conf = []
             class_std_conf = []
 
         try:
-            self.task_title = config['title']
+            self.task_title = config["title"]
         except KeyError:
-            raise AssertionError(f"config '{config_fname}' does not "
-                                 f"have the required 'title' defined")
+            raise AssertionError(
+                f"config '{config_fname}' does not have the required 'title' defined"
+            )
 
         try:
-            self.dt = config['hmm']['dt']
+            self.dt = config["hmm"]["dt"]
         except KeyError:
-            raise AssertionError(f"config '{config_fname}' does not "
-                                 f"have the required 'dt' under 'hmm' defined")
+            raise AssertionError(
+                f"config '{config_fname}' does not have the required 'dt' under "
+                f"'hmm' defined"
+            )
 
         class_str = []
         med_class_duration = []
         activity_per_step = []
 
-        steps = config['steps']
+        steps = config["steps"]
 
         # Verify that all steps have sufficient information defined.
         for i in range(len(steps)):
-            if 'id' not in steps[i]:
-                raise AssertionError(f"The {i}th step in '{config_fname}' "
-                                     f"does not define the 'id'")
+            if "id" not in steps[i]:
+                raise AssertionError(
+                    f"The {i}th step in '{config_fname}' does not define the 'id'"
+                )
 
-            for key in ['description', 'activity_id',
-                        'median_duration_seconds']:
+            for key in ["description", "activity_id", "median_duration_seconds"]:
                 if key not in steps[i]:
-                    raise AssertionError(f"The step with id: {steps[i]['id']} "
-                                         f"in '{config_fname}' does not "
-                                         f"define the required field '{key}'")
+                    raise AssertionError(
+                        f"The step with id: {steps[i]['id']} "
+                        f"in '{config_fname}' does not "
+                        f"define the required field '{key}'"
+                    )
 
             # Strip inline comments.
-            steps[i]['description'] = steps[i]['description'].split('#')[0].rstrip()
+            steps[i]["description"] = steps[i]["description"].split("#")[0].rstrip()
 
         # Step 0 must be the background step. The recipe yaml may explicitly
         # define it as such, or it may leave it out (and imply it), starting by
         # defining step 1.
-        if steps[0]['id'] == 0:
+        if steps[0]["id"] == 0:
             # If step with id=0 is defined, it better be background.
-            if steps[0]['description'].lower() not in ['background', 'background.']:
-                raise AssertionError(f"'{config_fname}' defines a step with "
-                                     "id=0, but the first step should start "
-                                     "with id=1 with id=0 implied but not "
-                                     "explicitly defined to be a background "
-                                     "state")
+            if steps[0]["description"].lower() not in ["background", "background."]:
+                raise AssertionError(
+                    f"'{config_fname}' defines a step with "
+                    "id=0, but the first step should start "
+                    "with id=1 with id=0 implied but not "
+                    "explicitly defined to be a background "
+                    "state"
+                )
         else:
             # Create the implied background step.
-            steps.insert(0, {'id': 0,
-                             'activity_id': 0,
-                             'description': 'Background',
-                             'median_duration_seconds': 5})
+            steps.insert(
+                0,
+                {
+                    "id": 0,
+                    "activity_id": 0,
+                    "description": "Background",
+                    "median_duration_seconds": 5,
+                },
+            )
             if not loaded_mean_and_cov:
-                steps[0]['mean_conf'] = self.default_mean_conf
-                steps[0]['std_conf'] = self.default_std_conf
-
+                steps[0]["mean_conf"] = self.default_mean_conf
+                steps[0]["std_conf"] = self.default_std_conf
 
         for i in range(len(steps)):
-            ii = steps[i]['id']
+            ii = steps[i]["id"]
 
-            if i  != ii:
-                raise AssertionError(f"The {i}th step in '{config_fname}' "
-                                     f"should have 'id' {i} but it has "
-                                     f"'id' {ii}")
+            if i != ii:
+                raise AssertionError(
+                    f"The {i}th step in '{config_fname}' should have 'id' {i} "
+                    f"but it has 'id' {ii}"
+                )
 
             if i == 0:
                 # This must be the background step.
-                if not steps[0]['description'].lower() in ['background', 'background.']:
-                    raise AssertionError(f"The step with id=0 must be the "
-                                         "background state with "
-                                         "description='Background'")
-            elif steps[i]['description'].lower() in ['background', 'background.']:
+                if not steps[0]["description"].lower() in ["background", "background."]:
+                    raise AssertionError(
+                        f"The step with id=0 must be the "
+                        "background state with "
+                        "description='Background'"
+                    )
+            elif steps[i]["description"].lower() in ["background", "background."]:
                 raise AssertionError(f"The background state must have id=0")
 
-            activity_per_step.append(steps[i]['activity_id'])
+            activity_per_step.append(steps[i]["activity_id"])
 
-            class_str_ = steps[i]['description']
-            class_str_ = class_str_.split('#')[0]
+            class_str_ = steps[i]["description"]
+            class_str_ = class_str_.split("#")[0]
             class_str_ = class_str_.rstrip()
             class_str.append(class_str_)
 
-            med_class_duration.append(steps[i]['median_duration_seconds'])
+            med_class_duration.append(steps[i]["median_duration_seconds"])
 
             if loaded_mean_and_cov:
                 pass
             else:
                 try:
-                    class_mean_conf.append(steps[i]['class_mean_conf'])
+                    class_mean_conf.append(steps[i]["class_mean_conf"])
                 except KeyError:
                     class_mean_conf.append(self.default_mean_conf)
 
                 try:
-                    class_std_conf.append(steps[i]['class_std_conf'])
+                    class_std_conf.append(steps[i]["class_std_conf"])
                 except KeyError:
                     class_std_conf.append(self.default_std_conf)
 
         self.activity_per_step = activity_per_step
         self.class_str = class_str
         self.med_class_duration = med_class_duration
-        self.class_mean_conf = np.array(class_mean_conf)
-        self.class_std_conf = np.array(class_std_conf)
 
-        # This is the model that enforces steps are done in order without
-        # skipping steps.
-        self.noskip_model = ActivityHMM(self.dt, class_str, med_class_duration,
-                                        num_steps_can_jump_fwd=0,
-                                        num_steps_can_jump_bck=0,
-                                        class_mean_conf=class_mean_conf,
-                                        class_std_conf=class_std_conf)
+        self.num_steps_can_jump_fwd = config["hmm"]["num_steps_can_jump_fwd"]
+        self.num_steps_can_jump_bck = config["hmm"]["num_steps_can_jump_bck"]
 
-        self.num_steps_can_jump_fwd = config['hmm']['num_steps_can_jump_fwd']
-        self.num_steps_can_jump_bck = config['hmm']['num_steps_can_jump_bck']
-
-        self.model = ActivityHMM(self.dt, self.class_str,
-                                 med_class_duration=self.med_class_duration,
-                                 num_steps_can_jump_fwd=self.num_steps_can_jump_fwd,
-                                 num_steps_can_jump_bck=self.num_steps_can_jump_bck,
-                                 class_mean_conf=self.class_mean_conf,
-                                 class_std_conf=self.class_std_conf)
-
-        self.unconstrained_model = ActivityHMM(self.dt, class_str,
-                                               med_class_duration,
-                                               num_steps_can_jump_fwd=self.num_steps,
-                                               num_steps_can_jump_bck=self.num_steps,
-                                               class_mean_conf=class_mean_conf,
-                                               class_std_conf=class_std_conf)
+        self.set_hmm_mean_and_std(class_mean_conf, class_std_conf)
 
     @property
     def num_steps(self):
-        """Number of steps in the recipe.
-        """
+        """Number of steps in the recipe."""
         return self.model.num_steps
 
     @property
     def num_activities(self):
-        """Return number of dimensions in classification vector to be recieved.
-        """
+        """Return number of dimensions in classification vector to be recieved."""
         return self.model.num_activities
 
-    def get_hmm_mean_and_std(self):
-        """Return the mean and standard deviation of activity classifications.
+    @property
+    def class_mean_conf(self):
+        return self._class_mean_conf
 
-        """
+    @property
+    def class_std_conf(self):
+        return self._class_std_conf
+
+    def get_hmm_mean_and_std(self):
+        """Return the mean and standard deviation of activity classifications."""
         return self.model.get_hmm_mean_and_std()
 
     def set_hmm_mean_and_std(self, class_mean_conf, class_std_conf):
-        """Set the mean and standard deviation of activity classifications.
+        """Set the mean and standard deviation of activity classifications."""
+        self._class_mean_conf = np.array(class_mean_conf)
+        self._class_std_conf = np.array(class_std_conf)
+        self.model = ActivityHMM(
+            self.dt,
+            self.class_str,
+            med_class_duration=self.med_class_duration,
+            num_steps_can_jump_fwd=self.num_steps_can_jump_fwd,
+            num_steps_can_jump_bck=self.num_steps_can_jump_bck,
+            class_mean_conf=self.class_mean_conf,
+            class_std_conf=self.class_std_conf,
+        )
 
-        """
-        self.class_mean_conf = np.array(class_mean_conf)
-        self.class_std_conf = np.array(class_std_conf)
-        self.model = ActivityHMM(self.dt, self.class_str,
-                                 med_class_duration=self.med_class_duration,
-                                 num_steps_can_jump_fwd=self.num_steps_can_jump_fwd,
-                                 num_steps_can_jump_bck=self.num_steps_can_jump_bck,
-                                 class_mean_conf=self.class_mean_conf,
-                                 class_std_conf=self.class_std_conf)
+        self.unconstrained_model = ActivityHMM(
+            self.dt,
+            self.class_str,
+            self.med_class_duration,
+            num_steps_can_jump_fwd=self.num_steps,
+            num_steps_can_jump_bck=self.num_steps,
+            class_mean_conf=self.class_mean_conf,
+            class_std_conf=self.class_std_conf,
+        )
 
-    def add_activity_classification(self, label_vec, conf_vec, start_time,
-                                    end_time):
+        # This is the model that enforces steps are done in order without
+        # skipping steps.
+        self.noskip_model = ActivityHMM(
+            self.dt,
+            self.class_str,
+            self.med_class_duration,
+            num_steps_can_jump_fwd=0,
+            num_steps_can_jump_bck=0,
+            class_mean_conf=self.class_mean_conf,
+            class_std_conf=self.class_std_conf,
+        )
+
+    def add_activity_classification(self, label_vec, conf_vec, start_time, end_time):
         """Provide activity classification results for time period.
 
         Parameters
@@ -254,7 +273,7 @@ class ActivityHMMRos:
 
         """
         assert end_time > start_time
-        t = (end_time + start_time)/2
+        t = (end_time + start_time) / 2
 
         label_vec = list(label_vec)
         X = [conf_vec[label_vec.index(i)] for i in range(self.num_activities)]
@@ -267,10 +286,12 @@ class ActivityHMMRos:
         DT = t - self.times[-1]
 
         if DT <= 0:
-            raise AssertionError('Set a new classification time starting at '
-                                 'time %0.4f s that is %0.4f s in the past '
-                                 'relative to most-recent update for time '
-                                 '%0.4f' % (start_time, DT, self.times[-1]))
+            raise AssertionError(
+                "Set a new classification time starting at "
+                "time %0.4f s that is %0.4f s in the past "
+                "relative to most-recent update for time "
+                "%0.4f" % (start_time, DT, self.times[-1])
+            )
 
         self.times = np.hstack([self.times, t])
         self.X = np.vstack([self.X, conf_vec])
@@ -304,18 +325,17 @@ class ActivityHMMRos:
         log_prob1, Z, _, Z_ = self.model.decode(self.X)
         ind = np.where(np.logical_and(Z <= step_ind, Z != 0))[0]
         if len(ind) == 0:
-            raise ValueError(f'Found no previous steps <= {step_ind}')
+            raise ValueError(f"Found no previous steps <= {step_ind}")
 
-        self.X = self.X[:ind[-1] + 1]
-        self.times = self.times[:ind[-1] + 1]
+        self.X = self.X[: ind[-1] + 1]
+        self.times = self.times[: ind[-1] + 1]
 
     def get_skip_score(self):
         s = get_skip_score(self.noskip_model, self.model, self.X)
         return s[0] - s[1]
 
     def get_current_state(self):
-        """Return HMM's most-likely current step.
-        """
+        """Return HMM's most-likely current step."""
         log_prob1, Z, _, Z_ = self.model.decode(self.X)
         return self.model.class_str[Z[-1]]
 
@@ -342,14 +362,12 @@ class ActivityHMMRos:
             is currently in that step. Values range from 0-1.
         """
         log_prob0, state_sequence, _, state_sequence_ = self.model.decode(self.X)
-        log_prob0 = self.unconstrained_model.calc_log_prob_(self.X,
-                                                            state_sequence_)
+        log_prob0 = self.unconstrained_model.calc_log_prob_(self.X, state_sequence_)
 
-        #log_prob1, state_sequence1, _, state_sequence1_ = self.noskip_model.decode(self.X)
+        # log_prob1, state_sequence1, _, state_sequence1_ = self.noskip_model.decode(self.X)
 
         states = set(state_sequence)
-        step_finished_conf = [s in states
-                              for s in range(1, self.model.num_steps)]
+        step_finished_conf = [s in states for s in range(1, self.model.num_steps)]
         step_finished_conf = np.array(step_finished_conf, dtype=float)
 
         # for i in range(len(step_finished_conf)):
@@ -377,83 +395,106 @@ class ActivityHMMRos:
         if save_weights_inline:
             mean, std = self.get_hmm_mean_and_std()
 
-        with open(fname, 'w') as f:
-            f.write('# Schema version.\n')
-            f.write('version: "1.0"\n\n')
-            f.write('# Reference to the activity classification labels '
-                    'configuration that we will\n')
-            f.write('# reference into.\n')
-
-            f.write(f'activity_labels: "{self.activity_labels_fname}"\n\n')
+        with open(fname, "w") as f:
+            f.write(
+                "# Schema version.\n"
+                'version: "1.0"\n'
+                "\n"
+                "# Reference to the activity classification labels configuration that we will\n"
+                "# reference into.\n"
+                f'activity_labels: "{self.activity_labels_fname}"\n\n'
+            )
 
             if not save_weights_inline:
-                f.write('# Reference to the file defining the mean and standard deviation of the\n')
-                f.write('# activity classifications to be used by the HMM. For N activities, both the\n')
-                f.write('# mean and standard deviation should be N x N matrices such that when activity\n')
-                f.write('# i is actually occuring, the classifier will emit confidence\n')
-                f.write('# mean[i, j] +/- std[i, j] for activity j.\n')
-                f.write(f'activity_mean_and_std_file: "{self.activity_mean_and_cov_fname}"\n\n')
+                f.write(
+                    "# Reference to the file defining the mean and standard deviation of the\n"
+                    "# activity classifications to be used by the HMM. For N activities, both the\n"
+                    "# mean and standard deviation should be N x N matrices such that when activity\n"
+                    "# i is actually occuring, the classifier will emit confidence\n"
+                    "# mean[i, j] +/- std[i, j] for activity j.\n"
+                    f'activity_mean_and_std_file: "{self.activity_mean_and_cov_fname}"\n\n'
+                )
 
-            f.write('# Task title for display purposes.\n')
-            f.write(f'title: "{self.task_title}"\n\n')
-
-            f.write('# Layout of the steps that define this task.\n')
-            f.write('steps:\n')
-            f.write('  # Item format:\n'
-                    '  # - id: Identifying integer for the step.\n'
-                    '  # - activity_id: The ID of an activity classification associated with this\n'
-                    '  #                step. This must reference an ID within the `activity_labels`\n'
-                    '  #                configuration file referenced above.\n'
-                    '  # - description: Human semantic description of this step.\n'
-                    '  # - median_duration_seconds: Median expected time this task will\n'
-                    '  #                            consume in seconds.\n'
-                    '  # - mean_conf: mean value of classifier confidence for true examples.\n'
-                    '  # - std_conf: standard deviation of confidence for both true and false\n'
-                    '  #             examples.\n')
+            f.write(
+                "# Task title for display purposes.\n"
+                f'title: "{self.task_title}"\n'
+                "\n"
+                "# Layout of the steps that define this task.\n"
+                "steps:\n"
+                "  # Item format:\n"
+                "  # - id: Identifying integer for the step.\n"
+                "  # - activity_id: The ID of an activity classification associated with this\n"
+                "  #                step. This must reference an ID within the `activity_labels`\n"
+                "  #                configuration file referenced above.\n"
+                "  # - description: Human semantic description of this step.\n"
+                "  # - median_duration_seconds: Median expected time this task will\n"
+                "  #                            consume in seconds.\n"
+                "  # - mean_conf: mean value of classifier confidence for true examples.\n"
+                "  # - std_conf: standard deviation of confidence for both true and false\n"
+                "  #             examples.\n"
+            )
 
             for i in range(1, len(self.activity_per_step)):
                 if i == 1:
-                    f.write(f'  - id: {i}   # Must start at 1, 0 is reserved for background.\n')
+                    f.write(
+                        f"  - id: {i}   # Must start at 1, 0 is reserved for background.\n"
+                    )
                 else:
-                    f.write(f'  - id: {i}\n')
+                    f.write(f"  - id: {i}\n")
 
-                f.write(f'    activity_id: {self.activity_per_step[i]}\n')
-                f.write(f'    description: >-\n')
-                f.write(f'      {self.class_str[i]}\n')
-                f.write(f'    median_duration_seconds: {self.med_class_duration[i]}\n')
+                f.write(
+                    f"    activity_id: {self.activity_per_step[i]}\n"
+                    f"    description: >-\n"
+                    f"      {self.class_str[i]}\n"
+                    f"    median_duration_seconds: {self.med_class_duration[i]}\n"
+                )
 
                 if save_weights_inline:
-                    mean_ = str(mean[i]).replace('\n', '')
-                    f.write(f'    mean_conf: {mean_}\n')
-                    std_ = str(std[i]).replace('\n', '')
-                    f.write(f'    std_conf: {std_}\n')
+                    mean_ = str(mean[i]).replace("\n", "")
+                    f.write(f"    mean_conf: {mean_}\n")
+                    std_ = str(std[i]).replace("\n", "")
+                    f.write(f"    std_conf: {std_}\n")
 
             # Write the final details about the HMM.
-            f.write(f'\n# Hidden markov model configuration parameters\n')
-            f.write(f'hmm:\n')
-            f.write(f'  # Time (seconds) between time steps of HMM. Sets the temporal precision of\n')
-            f.write(f'  # the HMM analysis at the expense of processing costs.\n')
-            f.write(f'  dt: {self.dt}\n\n')
-            f.write(f'  # Constrain whether HMM sequence can skip steps or jump backwards. When both\n')
-            f.write(f'  # values are set to 0, forward progress without skipping steps is enforced.\n')
-            f.write(f'  num_steps_can_jump_fwd: {self.num_steps_can_jump_fwd}\n')
-            f.write(f'  num_steps_can_jump_bck: {self.num_steps_can_jump_bck}\n\n')
+            f.write(
+                f"\n# Hidden markov model configuration parameters\n"
+                f"hmm:\n"
+                f"  # Time (seconds) between time steps of HMM. Sets the temporal precision of\n"
+                f"  # the HMM analysis at the expense of processing costs.\n"
+                f"  dt: {self.dt}\n\n"
+                f"  # Constrain whether HMM sequence can skip steps or jump backwards. When both\n"
+                f"  # values are set to 0, forward progress without skipping steps is enforced.\n"
+                f"  num_steps_can_jump_fwd: {self.num_steps_can_jump_fwd}\n"
+                f"  num_steps_can_jump_bck: {self.num_steps_can_jump_bck}\n"
+                f"\n"
+            )
 
             if self.default_mean_conf is not None:
-                f.write(f'  # Default classifier mean confidence to use if not explicitly provided for a\n')
-                f.write(f'  # step.\n')
-                f.write(f'  default_mean_conf: {self.default_mean_conf}\n\n')
+                f.write(
+                    f"  # Default classifier mean confidence to use if not explicitly provided for a\n"
+                    f"  # step.\n"
+                    f"  default_mean_conf: {self.default_mean_conf}\n\n"
+                )
 
             if self.default_std_conf is not None:
-                f.write(f'  # Default classifier standard deviation of confidence to use if not\n')
-                f.write(f'  # explicitly provided for a step.\n')
-                f.write(f'  default_std_conf: {self.default_std_conf}\n')
+                f.write(
+                    f"  # Default classifier standard deviation of confidence to use if not\n"
+                    f"  # explicitly provided for a step.\n"
+                    f"  default_std_conf: {self.default_std_conf}\n"
+                )
 
 
 class ActivityHMM(object):
-    def __init__(self, dt, class_str, med_class_duration,
-                 num_steps_can_jump_fwd=0, num_steps_can_jump_bck=0,
-                 class_mean_conf=None, class_std_conf=None):
+    def __init__(
+        self,
+        dt,
+        class_str,
+        med_class_duration,
+        num_steps_can_jump_fwd=0,
+        num_steps_can_jump_bck=0,
+        class_mean_conf=None,
+        class_std_conf=None,
+    ):
         """
 
         Parameters
@@ -496,12 +537,21 @@ class ActivityHMM(object):
         class_std_conf : array of float | None
             If provided, this defines the standard deviation of the Guassian
             model for confidence emission for each class when that class is
-            actually active.
-
+            actually active. If class_std_conf has shape (n_features,), then
+            it represent the standard deviation of each feature assumed to
+            apply equally to all components of the mixture model (steps). If
+            class_std_conf has shape (n_steps, n_features), then
+            class_std_conf[i] represents the standard deviations of the
+            n_features when the ith  step is active. If class_std_conf has
+            shape (n_steps, n_features, n_features), then class_std_conf[i]
+            represents the covariance matrix between the n_features when the
+            ith step is active. Note 3 dimensional, class_std_conf represents
+            covariance versus the other shapes encoding standard deviation,
+            which internally will get squared to become diagonal covariances.
         """
         self.cov_eps = 1e-9
         med_class_duration = np.array(med_class_duration)
-        assert class_str[0].lower() == 'background'
+        assert class_str[0].lower() == "background"
         assert num_steps_can_jump_fwd >= 0
         assert num_steps_can_jump_bck >= 0
 
@@ -532,7 +582,7 @@ class ActivityHMM(object):
 
         k = 0
         # Assuming class_str[0] is always 'background'
-        class_str_.append('background')
+        class_str_.append("background")
         class_str_map.append(len(class_str_) - 1)
         bckg_mask.append(True)
         inv_map.append(0)
@@ -548,7 +598,7 @@ class ActivityHMM(object):
 
             if i < len(class_str[1:]):
                 bckg_mask.append(True)
-                class_str_.append('background%i' % k)
+                class_str_.append("background%i" % k)
                 inv_map.append(0)
                 k += 1
 
@@ -564,7 +614,7 @@ class ActivityHMM(object):
 
         N = len(class_str)
         N_ = len(class_str_)
-        model = GaussianHMM(n_components=N_, covariance_type='spherical')
+        model = GaussianHMM(n_components=N_, covariance_type="spherical")
         self.model = model
         model.n_features = N_
 
@@ -594,7 +644,7 @@ class ActivityHMM(object):
             # We define an N x N mean matrix where element (i, j) is the mean
             # value emmitted for class j when class i is the state.
             if np.any(class_mean_conf > 1):
-                raise ValueError('\'class_mean_conf\' must be between 0-1')
+                raise ValueError("'class_mean_conf' must be between 0-1")
 
             if np.ndim(class_mean_conf) == 1:
                 num_activities = len(class_mean_conf)
@@ -602,7 +652,7 @@ class ActivityHMM(object):
             elif np.ndim(class_mean_conf) == 2:
                 num_activities = class_mean_conf.shape[1]
             else:
-                raise ValueError('np.ndim(class_mean_conf) must be 1 or 2')
+                raise ValueError("np.ndim(class_mean_conf) must be 1 or 2")
 
             self.num_activities = num_activities
 
@@ -619,37 +669,48 @@ class ActivityHMM(object):
 
         if class_std_conf is not None:
             class_std_conf = np.array(class_std_conf)
+            if np.ndim(class_std_conf) == 3:
+                # Full covariance
+                model.covariance_type = "full"
+                conf_cov_mat = np.zeros((N_, num_activities, num_activities))
 
-            # Square to turn from std to cov.
-            class_std_conf2 = class_std_conf**2
+                ki = 0
+                for i in range(N_):
+                    if orig_mask[i]:
+                        conf_cov_mat[i] = class_std_conf[ki]
+                        ki += 1
+                    else:
+                        conf_cov_mat[i] = conf_cov_mat[0]
 
-            if np.ndim(class_std_conf) == 1:
-                class_std_conf2 = np.tile(class_std_conf2, (N, 1))
-            elif np.ndim(class_mean_conf) > 2:
-                raise ValueError('np.ndim(class_std_conf) must be 1 or 2')
+                model.covars_ = conf_cov_mat + self.cov_eps
+            else:
+                # Square to turn from std to cov.
+                class_std_conf2 = class_std_conf**2
 
-            # Full covariance
-            model.covariance_type = 'diag'
-            conf_cov_mat = np.zeros((N_, num_activities))
+                if np.ndim(class_std_conf) == 1:
+                    class_std_conf2 = np.tile(class_std_conf2, (N, 1))
 
-            ki = 0
-            for i in range(N_):
-                if orig_mask[i]:
-                    conf_cov_mat[i] = class_std_conf2[ki]
-                    ki += 1
-                else:
-                    conf_cov_mat[i] = conf_cov_mat[0]
+                model.covariance_type = "diag"
+                conf_cov_mat = np.zeros((N_, num_activities))
 
-            model.covars_ = conf_cov_mat + self.cov_eps
+                ki = 0
+                for i in range(N_):
+                    if orig_mask[i]:
+                        conf_cov_mat[i] = class_std_conf2[ki]
+                        ki += 1
+                    else:
+                        conf_cov_mat[i] = conf_cov_mat[0]
+
+                model.covars_ = conf_cov_mat + self.cov_eps
 
         # -------------- Define transition probabilities -------------------------
         # Median number of timesteps spent in each step.
-        n = med_class_duration/dt
+        n = med_class_duration / dt
 
         # If we are in an activity (class) with probability of transitioning out
         # tii, then the probability that we are still in this class after n
         # timesteps is tii^n.
-        tdiag = (0.5)**(1/n)
+        tdiag = (0.5) ** (1 / n)
 
         # Only valid states are possible.
         valid = np.zeros((N_, N_), dtype=bool)
@@ -657,19 +718,19 @@ class ActivityHMM(object):
         for i in range(N_):
             # We are currently in state i, which other states are valid
             # transitions.
-            i0 = (i//2)*2
+            i0 = (i // 2) * 2
             if i0 == i:
                 # i is even, so this is a background step. Background steps can
                 # only ever move one forward. We don't want to allow hoping
                 # from background to background.
-                i1 = (i//2)*2 + 2
+                i1 = (i // 2) * 2 + 2
             else:
-                i1 = (i//2)*2 + 4
+                i1 = (i // 2) * 2 + 4
                 if num_steps_can_jump_fwd > 0:
-                    i1 += num_steps_can_jump_fwd*2
+                    i1 += num_steps_can_jump_fwd * 2
 
                 if num_steps_can_jump_bck > 0:
-                    i0 -= 2*num_steps_can_jump_bck
+                    i0 -= 2 * num_steps_can_jump_bck
 
             for ii in range(i0, i1):
                 if ii < 0 or ii >= N_:
@@ -679,25 +740,23 @@ class ActivityHMM(object):
 
         self.valid_trans = valid
 
-        #print(valid)
+        # print(valid)
 
         model.transmat_ = np.zeros((N_, N_))
         ki = 0
         for i in range(N_):
             if ~bckg_mask[i]:
                 # specify which indices are valid
-                model.transmat_[i, valid[i]] = (1 - tdiag[ki])/(sum(valid[i]) - 1)
+                model.transmat_[i, valid[i]] = (1 - tdiag[ki]) / (sum(valid[i]) - 1)
                 model.transmat_[i, i] = tdiag[ki]
                 # np.sum(model.transmat_[i])
 
                 ki += 1
             else:
-                model.transmat_[i, valid[i]] = 1/(sum(valid[i]))
+                model.transmat_[i, valid[i]] = 1 / (sum(valid[i]))
 
     def get_hmm_mean_and_std(self):
-        """Return the mean and covariance of the model.
-
-        """
+        """Return the mean and covariance of the model."""
         mean = self.model.means_.copy()
         cov = self.model._covars_.copy() - self.cov_eps
         mean = mean[self.fwd_map]
@@ -724,8 +783,8 @@ class ActivityHMM(object):
         """
         mean = self.model.means_[self.fwd_map[step_ind]]
         std = np.sqrt(self.model._covars_[self.fwd_map[step_ind]])
-        n1= scipy.stats.norm(loc=mean, scale=std)
-        random_state = np.uint32(time.time()*100000)
+        n1 = scipy.stats.norm(loc=mean, scale=std)
+        random_state = np.uint32(time.time() * 100000)
         return np.array([n1.rvs(random_state=random_state) for _ in range(N)])
 
     def sample(self, N):
@@ -752,9 +811,9 @@ class ActivityHMM(object):
         if False:
             print(min([X[i, Z[i]] for i in range(len(Z))]))
 
-        #X = (X.T/np.sum(X, axis=1)).T
+        # X = (X.T/np.sum(X, axis=1)).T
 
-        times = np.linspace(0, self.dt*(N - 1), N)
+        times = np.linspace(0, self.dt * (N - 1), N)
 
         # TODO stop return X, it is now redundant.
         return times, X, Z, X, Z_
@@ -766,13 +825,16 @@ class ActivityHMM(object):
             Enforce that the solution skips a particular step.
         """
         if force_skip_step == 0 or force_skip_step >= len(self.class_str):
-            raise ValueError('\'force_skip_step\' must be an integer '
-                             'between 1 and %i' %
-                             (len(self.class_str) - 1))
+            raise ValueError(
+                "'force_skip_step' must be an integer "
+                "between 1 and %i" % (len(self.class_str) - 1)
+            )
 
         # Make a copy of the model so we can adjust it.
-        model = GaussianHMM(n_components=self.model.n_components,
-                            covariance_type=self.model.covariance_type)
+        model = GaussianHMM(
+            n_components=self.model.n_components,
+            covariance_type=self.model.covariance_type,
+        )
         model.n_features = self.model.n_features
         model.startprob_ = self.model.startprob_.copy()
         model.means_ = self.model.means_.copy()
@@ -804,8 +866,8 @@ class ActivityHMM(object):
         for i in range(len(valid)):
             # We are currently in state i, which other states are valid
             # transitions.
-            i0 = (i//2)*2
-            i1 = (i//2)*2 + 2
+            i0 = (i // 2) * 2
+            i1 = (i // 2) * 2 + 2
 
             if i0 == i:
                 # i is even, so this is a background step. Background steps can
@@ -814,10 +876,10 @@ class ActivityHMM(object):
                 pass
             else:
                 if self.num_steps_can_jump_fwd > 0:
-                    i1 += self.num_steps_can_jump_fwd*2
+                    i1 += self.num_steps_can_jump_fwd * 2
 
                 if self.num_steps_can_jump_bck > 0:
-                    i0 -= 2*self.num_steps_can_jump_bck
+                    i0 -= 2 * self.num_steps_can_jump_bck
 
             for ii in range(i0, i1):
                 if ii < 0 or ii >= len(valid):
@@ -828,20 +890,20 @@ class ActivityHMM(object):
         valid[:, ind] = False
         valid[ind, ind] = True
 
-        #print(valid)
+        # print(valid)
 
         model.transmat_ = np.zeros_like(self.model.transmat_)
         ki = 0
         for i in range(N_):
             if ~bckg_mask[i]:
                 # specify which indices are valid
-                model.transmat_[i, valid[i]] = (1 - tdiag[ki])/(sum(valid[i]) - 1)
+                model.transmat_[i, valid[i]] = (1 - tdiag[ki]) / (sum(valid[i]) - 1)
                 model.transmat_[i, i] = tdiag[ki]
                 # np.sum(model.transmat_[i])
 
                 ki += 1
             else:
-                model.transmat_[i, valid[i]] = 1/(sum(valid[i]))
+                model.transmat_[i, valid[i]] = 1 / (sum(valid[i]))
 
         return model
 
@@ -942,18 +1004,23 @@ class ActivityHMM(object):
         gt_feather_fname : str
             File path for output ground truth feather file.
         """
-        time_bins = (times[1:] + times[:-1])/2
-        time_bins = np.hstack([(times[0] - times[1])/2, time_bins,
-                               times[-1] + (times[-1] - times[-2])/2])
+        time_bins = (times[1:] + times[:-1]) / 2
+        time_bins = np.hstack(
+            [
+                (times[0] - times[1]) / 2,
+                time_bins,
+                times[-1] + (times[-1] - times[-2]) / 2,
+            ]
+        )
         time_bins -= time_bins[0]
 
         # Save ground truth.
         img_fnames = []
         for i, t in enumerate(time_bins):
             s = int(np.floor(t))
-            micro_ = (t - s)*1e6
+            micro_ = (t - s) * 1e6
             micro = int(np.floor(micro_))
-            img_fnames.append('frame_%i_%i_%i.png' % (i + 1, s, micro))
+            img_fnames.append("frame_%i_%i_%i.png" % (i + 1, s, micro))
 
         data = []
         istart = 0
@@ -961,18 +1028,23 @@ class ActivityHMM(object):
         stop_i = len(Z) - 1
         while istart <= stop_i:
             if iend == stop_i or Z[iend + 1] != Z[istart]:
-                data.append([self.class_str[Z[istart]],
-                             img_fnames[istart],
-                             img_fnames[iend + 1],
-                             'simulated'])
-                #print(istart, iend, Z[istart], Z[iend], Z[iend+1], iend - istart)
+                data.append(
+                    [
+                        self.class_str[Z[istart]],
+                        img_fnames[istart],
+                        img_fnames[iend + 1],
+                        "simulated",
+                    ]
+                )
+                # print(istart, iend, Z[istart], Z[iend], Z[iend+1], iend - istart)
                 iend = iend + 1
                 istart = iend
             else:
                 iend = iend + 1
 
-        gt = pd.DataFrame(data,columns=['class', 'start_frame', 'end_frame',
-                                        'exploded_ros_bag_path'])
+        gt = pd.DataFrame(
+            data, columns=["class", "start_frame", "end_frame", "exploded_ros_bag_path"]
+        )
         gt.to_feather(gt_feather_fname)
 
         # Save detections
@@ -981,14 +1053,16 @@ class ActivityHMM(object):
             det = {}
             t = time_bins[i]
             s = int(np.floor(t))
-            nano = int((t - s)*1e9)
-            det['header'] = {'time_sec': s,
-                             'time_nanosec': nano,
-                             'frame_id': 'Activity detection'}
-            det['source_stamp_start_frame'] = time_bins[i]
-            det['source_stamp_end_frame'] = time_bins[i + 1]
-            det['label_vec'] = self.class_str
-            det['conf_vec'] = X[i].tolist()
+            nano = int((t - s) * 1e9)
+            det["header"] = {
+                "time_sec": s,
+                "time_nanosec": nano,
+                "frame_id": "Activity detection",
+            }
+            det["source_stamp_start_frame"] = time_bins[i]
+            det["source_stamp_end_frame"] = time_bins[i + 1]
+            det["label_vec"] = self.class_str
+            det["conf_vec"] = X[i].tolist()
             detections.append(det)
 
         with open(det_json_fname, "w") as write_file:
@@ -1033,7 +1107,7 @@ def get_skip_score(model, model_skip, X, brute_search=False):
 
     log_prob2, Z2, _, Z2_ = model_skip.decode(X)
 
-    #log_prob2 = model_skip.calc_log_prob_(X, Z2_)
+    # log_prob2 = model_skip.calc_log_prob_(X, Z2_)
 
     if len(model_skip.did_skip_step(Z2)[0]) == 0:
         # The maximum likelihood solution doesn't skip a step, so we need to
@@ -1041,16 +1115,16 @@ def get_skip_score(model, model_skip, X, brute_search=False):
 
         skipped_step_check = range(1, len(model.class_str))
         log_prob2 = []
-        #skipped = []
+        # skipped = []
         for j in skipped_step_check:
             log_prob2_, Z2_ = model.decode(X, force_skip_step=j)[:2]
             log_prob2.append(log_prob2_)
-            #skipped.append(model.did_skip_step(Z2_)[0])
+            # skipped.append(model.did_skip_step(Z2_)[0])
 
         ind = np.argmax(log_prob2)
         log_prob2 = log_prob2[ind]
 
-    #score = (log_prob2 - log_prob1)/log_prob2
+    # score = (log_prob2 - log_prob1)/log_prob2
 
     return log_prob2, log_prob1
 
@@ -1063,8 +1137,7 @@ def score_raw_detections(X, Z, plot_results=False):
     fp = X[~mask]
 
     s = np.hstack([tp, fp]).T
-    y_tue = np.hstack([np.ones(len(tp), dtype=bool),
-                       np.zeros(len(fp), dtype=bool)]).T
+    y_tue = np.hstack([np.ones(len(tp), dtype=bool), np.zeros(len(fp), dtype=bool)]).T
     s.shape = (-1, 1)
     y_tue.shape = (-1, 1)
 
@@ -1074,11 +1147,11 @@ def score_raw_detections(X, Z, plot_results=False):
 
     if plot_results:
         fig = plt.figure(num=None, figsize=(14, 10), dpi=80)
-        plt.rc('font', **{'size': 28})
-        plt.rc('axes', linewidth=4)
-        plt.plot(recall, precision, linewidth=6, label='Raw Detections')
-        plt.xlabel('Recall', fontsize=40)
-        plt.ylabel('Precision', fontsize=40)
+        plt.rc("font", **{"size": 28})
+        plt.rc("axes", linewidth=4)
+        plt.plot(recall, precision, linewidth=6, label="Raw Detections")
+        plt.xlabel("Recall", fontsize=40)
+        plt.ylabel("Precision", fontsize=40)
         fig.tight_layout()
 
         plt.xlim([0, 1.01])
@@ -1086,27 +1159,17 @@ def score_raw_detections(X, Z, plot_results=False):
         fig.tight_layout()
 
         plt.gca().yaxis.set_minor_locator(AutoMinorLocator(2))
+        plt.tick_params(axis="y", which="major", grid_color="lightgrey")
         plt.tick_params(
-                axis="y",
-                which="major",
-                grid_color='lightgrey')
-        plt.tick_params(
-                axis="y",
-                which="minor",
-                grid_linestyle='--',
-                grid_color='lightgrey')
-        plt.grid(axis='y', which='both')
+            axis="y", which="minor", grid_linestyle="--", grid_color="lightgrey"
+        )
+        plt.grid(axis="y", which="both")
         plt.gca().xaxis.set_minor_locator(AutoMinorLocator(2))
+        plt.tick_params(axis="x", which="major", grid_color="lightgrey")
         plt.tick_params(
-                axis="x",
-                which="major",
-                grid_color='lightgrey')
-        plt.tick_params(
-                axis="x",
-                which="minor",
-                grid_linestyle='--',
-                grid_color='lightgrey')
-        plt.grid(axis='x', which='both')
+            axis="x", which="minor", grid_linestyle="--", grid_color="lightgrey"
+        )
+        plt.grid(axis="x", which="both")
         plt.legend(fontsize=20, loc=0)
 
     return auc
@@ -1133,7 +1196,7 @@ def calc_log_prob_hmm(model, X, Z_, verbose=False):
         Log likelihood.
 
     """
-    #log_prob0, Z_ = self.model.decode(X)
+    # log_prob0, Z_ = self.model.decode(X)
 
     # We can't allow multiple possible backgrounds to have a high score.
 
@@ -1141,38 +1204,43 @@ def calc_log_prob_hmm(model, X, Z_, verbose=False):
 
     # We can't allow multiple possible backgrounds to have a high score.
 
-
     log_prob = log_prob_[0, Z_[0]] + np.log(model.startprob_[Z_[0]])
 
     if verbose:
-        print('Log(prob) of first state', log_prob)
+        print("Log(prob) of first state", log_prob)
 
     for i in range(1, len(Z_)):
         log_prob += log_prob_[i, Z_[i]]
 
         if verbose:
-            print('Log(prob) step %i being in state %i with detector'
-                  'confidence %0.6f:' % (i, Z_[i], X[i, Z_[i]]),
-                  log_prob_[i, Z_[i]])
+            print(
+                "Log(prob) step %i being in state %i with detector"
+                "confidence %0.6f:" % (i, Z_[i], X[i, Z_[i]]),
+                log_prob_[i, Z_[i]],
+            )
 
         if model.transmat_[Z_[i - 1], Z_[i]] == 0:
-            raise AssertionError(f'Cannot move from {Z_[i - 1]} to {Z_[i]}')
+            raise AssertionError(f"Cannot move from {Z_[i - 1]} to {Z_[i]}")
 
         # We moved from Z_[i - 1] to Z_[i].
         log_prob += np.log(model.transmat_[Z_[i - 1], Z_[i]])
 
         if verbose:
-            print('Log(prob) for the transition from step %i being in '
-                  'state %i to step %i being in state %i:' % (i - 1,
-                  Z_[i - 1], i, Z_[i]),
-                  np.log(model.transmat_[Z_[i - 1], Z_[i]]))
+            print(
+                "Log(prob) for the transition from step %i being in "
+                "state %i to step %i being in state %i:" % (i - 1, Z_[i - 1], i, Z_[i]),
+                np.log(model.transmat_[Z_[i - 1], Z_[i]]),
+            )
 
     return log_prob
 
 
-def load_and_discretize_data(activity_gt: str,
-                             extracted_activity_detections: str,
-                             time_window: float, uncertain_pad: float):
+def load_and_discretize_data(
+    activity_gt: str,
+    extracted_activity_detections: str,
+    time_window: float,
+    uncertain_pad: float,
+):
     """Loads unstructured detection and ground truth data and discretize.
 
     Parameters
@@ -1207,31 +1275,31 @@ def load_and_discretize_data(activity_gt: str,
     """
     ext = os.path.splitext(activity_gt)[1]
 
-    if ext == '.csv':
+    if ext == ".csv":
         gt0 = activities_from_dive_csv(activity_gt)
 
         gt = []
         for i, row in enumerate(gt0):
             g = {
-                'class': row.class_label.lower().strip(),
-                'start': row.start,
-                'end': row.end
+                "class": row.class_label.lower().strip(),
+                "start": row.start,
+                "end": row.end,
             }
             gt.append(g)
-    elif ext == '.feather':
+    elif ext == ".feather":
         gt_f = pd.read_feather(activity_gt)
         # Keys: class, start_frame,  end_frame, exploded_ros_bag_path
 
         gt = []
         for i, row in gt_f.iterrows():
             g = {
-                'class': row["class"].lower().strip(),
-                'start': time_from_name(row["start_frame"]),
-                'end': time_from_name(row["end_frame"])
+                "class": row["class"].lower().strip(),
+                "start": time_from_name(row["start_frame"]),
+                "end": time_from_name(row["end_frame"]),
             }
             gt.append(g)
     else:
-        raise Exception(f'Unhandled file extension {ext}')
+        raise Exception(f"Unhandled file extension {ext}")
 
     print(f"Loaded ground truth from {activity_gt}")
     gt = pd.DataFrame(gt)
@@ -1248,11 +1316,11 @@ def load_and_discretize_data(activity_gt: str,
 
         for l in dets["label_vec"]:
             d = {
-                'class': l.lower().strip(),
-                'start': dets["source_stamp_start_frame"],
-                'end': dets["source_stamp_end_frame"],
-                'conf': good_dets[l],
-                'detect_intersection': np.nan
+                "class": l.lower().strip(),
+                "start": dets["source_stamp_start_frame"],
+                "end": dets["source_stamp_end_frame"],
+                "conf": good_dets[l],
+                "detect_intersection": np.nan,
             }
             detections.append(d)
     detections = pd.DataFrame(detections)
@@ -1261,7 +1329,7 @@ def load_and_discretize_data(activity_gt: str,
     # ============================
     # Load labels
     # ============================
-    labels0 = [l.lower().strip().rstrip('.') for l in detections['class']]
+    labels0 = [l.lower().strip().rstrip(".") for l in detections["class"]]
     labels = []
     labels_ = set()
     for label in labels0:
@@ -1273,8 +1341,8 @@ def load_and_discretize_data(activity_gt: str,
     # Split by time window
     # ============================
     # Get time ranges
-    min_start_time = min(gt['start'].min(), detections['start'].min())
-    max_end_time = max(gt['end'].max(), detections['end'].max())
+    min_start_time = min(gt["start"].min(), detections["start"].min())
+    max_end_time = max(gt["end"].max(), detections["end"].max())
     dt = time_window
     time_windows = np.arange(min_start_time, max_end_time, time_window)
 
@@ -1282,9 +1350,7 @@ def load_and_discretize_data(activity_gt: str,
         time_windows = np.append(time_windows, time_windows[-1] + time_window)
     time_windows = list(zip(time_windows[:-1], time_windows[1:]))
     time_windows = np.array(time_windows)
-    dets_per_valid_time_w = np.zeros((len(time_windows), len(labels)),
-                                     dtype=float)
-
+    dets_per_valid_time_w = np.zeros((len(time_windows), len(labels)), dtype=float)
 
     def get_time_wind_range(start, end):
         """Return slice indices of time windows that reside completely in
@@ -1292,7 +1358,7 @@ def load_and_discretize_data(activity_gt: str,
         time_windows[ind1:ind2] all live inside start->end.
         """
         # The start time of the ith window is min_start_time + dt*i.
-        ind1_ = (start - min_start_time)/dt
+        ind1_ = (start - min_start_time) / dt
         ind1 = int(np.ceil(ind1_))
         if ind1_ - ind1 + 1 < 1e-15:
             # We want to avoid the case where ind1_ is (j + eps) and it gets
@@ -1300,7 +1366,7 @@ def load_and_discretize_data(activity_gt: str,
             ind1 -= 1
 
         # The end time of the ith window is min_start_time + dt*(i + 1).
-        ind2_ = (end - min_start_time)/dt
+        ind2_ = (end - min_start_time) / dt
         ind2 = int(np.floor(ind2_))
         if -ind2_ + ind2 + 1 < 1e-15:
             # We want to avoid the case where ind1_ is (j - eps) and it gets
@@ -1312,32 +1378,31 @@ def load_and_discretize_data(activity_gt: str,
 
         return ind1, ind2
 
-
     # Valid time windows overlap with a detection.
     valid = np.zeros(len(time_windows), dtype=bool)
     for i in range(len(detections)):
-        ind1, ind2 = get_time_wind_range(detections['start'][i],
-                                         detections['end'][i])
+        ind1, ind2 = get_time_wind_range(detections["start"][i], detections["end"][i])
 
         valid[ind1:ind2] = True
-        correct_label = detections['class'][i].strip().rstrip('.')
+        correct_label = detections["class"][i].strip().rstrip(".")
         correct_class_idx = labels.index(correct_label)
-        dets_per_valid_time_w[ind1:ind2, correct_class_idx] = np.maximum(dets_per_valid_time_w[ind1:ind2, correct_class_idx],
-                                                              detections['conf'][i])
+        dets_per_valid_time_w[ind1:ind2, correct_class_idx] = np.maximum(
+            dets_per_valid_time_w[ind1:ind2, correct_class_idx], detections["conf"][i]
+        )
 
     gt_true_mask = np.zeros((len(time_windows), len(labels)), dtype=bool)
     for i in range(len(gt)):
-        ind1, ind2 = get_time_wind_range(gt['start'][i], gt['end'][i])
-        correct_label = gt['class'][i].strip().rstrip('.')
+        ind1, ind2 = get_time_wind_range(gt["start"][i], gt["end"][i])
+        correct_label = gt["class"][i].strip().rstrip(".")
         correct_class_idx = labels.index(correct_label)
         gt_true_mask[ind1:ind2, correct_class_idx] = True
 
     if not np.all(np.sum(gt_true_mask, axis=1) <= 1):
-        raise ValueError('Conflicting ground truth for same time windows')
+        raise ValueError("Conflicting ground truth for same time windows")
 
     # If ground truth isn't specified for a particular window, we should assume
     # 'background'.
-    bckg_class_idx = labels.index('background')
+    bckg_class_idx = labels.index("background")
     ind = np.where(np.all(gt_true_mask == False, axis=1))[0]
     gt_true_mask[ind, bckg_class_idx] = True
 
@@ -1345,7 +1410,7 @@ def load_and_discretize_data(activity_gt: str,
     # padding, but there should always be at least one time window at the
     # center of the ground-truth span.
     gt_label = np.argmax(gt_true_mask, axis=1)
-    pad = int(np.round(uncertain_pad/dt))
+    pad = int(np.round(uncertain_pad / dt))
     if pad > 0:
         ind = np.where(np.diff(gt_label, axis=0) != 0)[0] + 1
         if ind[0] != 0:
@@ -1354,15 +1419,15 @@ def load_and_discretize_data(activity_gt: str,
         if ind[-1] != len(time_windows):
             ind = np.hstack([ind, len(time_windows)])
 
-        for i in range(len(ind) -1):
+        for i in range(len(ind) - 1):
             ind1 = ind[i]
-            ind2 = ind[i+1]
+            ind2 = ind[i + 1]
             # time windows in range ind1:ind2 all have the same ground
             # truth class.
 
             ind1_ = ind1 + pad
             ind2_ = ind2 - pad
-            indc = int(np.round((ind1 + ind2)/2))
+            indc = int(np.round((ind1 + ind2) / 2))
             ind1_ = min([ind1_, indc])
             ind2_ = max([ind2_, indc + 1])
             valid[ind1:ind1_] = False

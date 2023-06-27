@@ -20,7 +20,7 @@ class MMDetectActivities(Configurable, Pluggable):
         And also takes multi- streamed data.
 
         :param frame_iter: Iterable of input frames as numpy arrays.
-        :param aux_data_iter: Dictionaries of iterables where each 
+        :param aux_data_iter: Dictionaries of iterables where each
             iterable is multi-modal auxiliary data stream.
         :return: Dictionary mapping class labels to their prediction
             confidences for the given set of frames.

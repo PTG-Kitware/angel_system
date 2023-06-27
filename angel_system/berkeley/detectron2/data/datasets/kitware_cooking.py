@@ -41,7 +41,9 @@ def _get_cooking_instances_meta_v1(dataset_name):
         "original_sub_steps": cooking_activity_objects.original_sub_steps,
         "contact_pairs_details": cooking_activity_objects.contact_pairs_details,
         "CONTACT_PAIRS": cooking_activity_objects.CONTACT_PAIRS,
-        "States_Pairs": cooking_activity_objects.States_Pairs
+        "States_Pairs": cooking_activity_objects.States_Pairs,
+        "R_class": cooking_activity_objects.R_class,
+        "allow_repeat_obj": cooking_activity_objects.allow_repeat_obj
     }
     return meta
 

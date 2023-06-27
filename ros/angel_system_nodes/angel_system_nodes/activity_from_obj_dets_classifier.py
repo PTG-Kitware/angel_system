@@ -2,13 +2,16 @@ import rclpy
 from rclpy.node import Node
 import pickle
 
+from builtin_interfaces.msg import Time
+
 from angel_msgs.msg import (
     ObjectDetection2dSet,
     ActivityDetection,
 )
 from angel_system.impls.detect_activities.detections_to_activities.utils import (
-        obj_det2d_set_to_feature
+    obj_det2d_set_to_feature,
 )
+from angel_utils.conversion import time_to_int
 
 
 PARAM_DET_TOPIC = "det_topic"
@@ -47,32 +50,33 @@ class ActivityFromObjectDetectionsClassifier(Node):
         self._det_topic = self.get_parameter(PARAM_DET_TOPIC).value
         self._act_topic = self.get_parameter(PARAM_ACT_TOPIC).value
         self._classifier_file = self.get_parameter(PARAM_CLASSIFIER_FILE).value
-        log.info(f"Detections topic: "
-                      f"({type(self._det_topic).__name__}) "
-                      f"{self._det_topic}")
-        log.info(f"Activity detections topic: "
-                      f"({type(self._act_topic).__name__}) "
-                      f"{self._act_topic}")
-        log.info(f"Classifier: "
-                      f"({type(self._classifier_file).__name__}) "
-                      f"{self._classifier_file}")
+        log.info(
+            f"Detections topic: "
+            f"({type(self._det_topic).__name__}) "
+            f"{self._det_topic}"
+        )
+        log.info(
+            f"Activity detections topic: "
+            f"({type(self._act_topic).__name__}) "
+            f"{self._act_topic}"
+        )
+        log.info(
+            f"Classifier: "
+            f"({type(self._classifier_file).__name__}) "
+            f"{self._classifier_file}"
+        )
 
         # Load in model.
-        with open(self._classifier_file, 'rb') as of:
+        with open(self._classifier_file, "rb") as of:
             ret = pickle.load(of)
             self.label_to_ind, self.feat_ver, self.clf, self.act_str_list = ret
 
         # Create activity det publisher
         self._det_subscriber = self.create_subscription(
-            ObjectDetection2dSet,
-            self._det_topic,
-            self.det_callback,
-            1
+            ObjectDetection2dSet, self._det_topic, self.det_callback, 1
         )
         self._activity_publisher = self.create_publisher(
-            ActivityDetection,
-            self._act_topic,
-            1
+            ActivityDetection, self._act_topic, 1
         )
 
         # Would load the angel_system/sklearn module here from the classifier file
@@ -82,7 +86,7 @@ class ActivityFromObjectDetectionsClassifier(Node):
         # The very first message published will have a start time equal to the time
         # this node was initialized. After the first message, the source stamp
         # start time will be set to the end time of the previous message.
-        self._source_stamp_start_frame = self.get_clock().now().to_msg()
+        self._source_stamp_start_frame = None
 
     def det_callback(self, msg: ObjectDetection2dSet) -> None:
         """
@@ -92,29 +96,38 @@ class ActivityFromObjectDetectionsClassifier(Node):
         """
         log = self.get_logger()
 
-        feature_vec = obj_det2d_set_to_feature(msg.label_vec, msg.left,
-                                               msg.right, msg.top, msg.bottom,
-                                               msg.label_confidences,
-                                               msg.descriptors,
-                                               msg.obj_obj_contact_state,
-                                               msg.obj_obj_contact_conf,
-                                               msg.obj_hand_contact_state,
-                                               msg.obj_hand_contact_conf,
-                                               self.label_to_ind,
-                                               self.feat_ver)
+        # Set the activity det start/end frame time to this frame's source stamp
+        if self._source_stamp_start_frame is None:
+            self._source_stamp_start_frame = msg.source_stamp
+            return
 
-        conf = self.clf.predict_proba(feature_vec.reshape(1, -1)).ravel()
+        feature_vec = obj_det2d_set_to_feature(
+            msg.label_vec,
+            msg.left,
+            msg.right,
+            msg.top,
+            msg.bottom,
+            msg.label_confidences,
+            msg.descriptors,
+            msg.obj_obj_contact_state,
+            msg.obj_obj_contact_conf,
+            msg.obj_hand_contact_state,
+            msg.obj_hand_contact_conf,
+            self.label_to_ind,
+            self.feat_ver,
+        )
 
-        # TODO: Call stub activity classifier function. It is expected that this
+        # Call activity classifier function. It is expected that this
         # function will return a dictionary mapping activity labels to confidences.
-        #label_conf_dict = self.classifier.classify(msg)
+        conf = self.clf.predict_proba(feature_vec.reshape(1, -1)).ravel()
         label_conf_dict = {self.act_str_list[i]: conf[i] for i in range(len(conf))}
 
         activity_det_msg = ActivityDetection()
         activity_det_msg.header.stamp = self.get_clock().now().to_msg()
         activity_det_msg.header.frame_id = "ActivityDetection"
 
-        # Set the activity det start/end frame time to this frame's source stamp
+        # Set the activity det start/end frame time to the previously recieved
+        # frame (start) and the current frame (end).
         activity_det_msg.source_stamp_start_frame = self._source_stamp_start_frame
         activity_det_msg.source_stamp_end_frame = msg.source_stamp
 
@@ -122,8 +135,14 @@ class ActivityFromObjectDetectionsClassifier(Node):
         activity_det_msg.conf_vec = list(label_conf_dict.values())
 
         self._activity_publisher.publish(activity_det_msg)
-        log.info("Publish activity detection msg")
-
+        log.debug("Publish activity detection msg")
+        log.debug(f"highest conf: {max(activity_det_msg.conf_vec)}")
+        log.debug(
+            f"- msg start time: {time_to_int(activity_det_msg.source_stamp_start_frame)}"
+        )
+        log.debug(
+            f"- msg end time  : {time_to_int(activity_det_msg.source_stamp_end_frame)}"
+        )
         # Update start time for next message to be published
         self._source_stamp_start_frame = msg.source_stamp
 
@@ -146,5 +165,5 @@ def main():
     rclpy.shutdown()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

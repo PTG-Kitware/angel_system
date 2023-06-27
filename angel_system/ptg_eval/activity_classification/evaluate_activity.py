@@ -7,13 +7,15 @@ from typing import Optional
 import numpy as np
 import numpy.typing as npt
 
-from angel_system.ptg_eval.common.load_data import (
+from angel_system.data.common.load_data import (
     activities_from_dive_csv,
     activities_from_ros_export_json,
-    activities_as_dataframe
+    activities_as_dataframe,
 )
-from angel_system.ptg_eval.common.discretize_data import discretize_data_to_windows
-from angel_system.ptg_eval.activity_classification.visualization import EvalVisualization
+from angel_system.data.common.discretize_data import discretize_data_to_windows
+from angel_system.ptg_eval.activity_classification.visualization import (
+    EvalVisualization,
+)
 from angel_system.ptg_eval.activity_classification.compute_scores import EvalMetrics
 
 
@@ -50,14 +52,16 @@ def run_eval(args):
         detections = activities_as_dataframe(detections)
 
         # Local masks for this specific file pair
-        l_gt_true_mask, l_dets_per_valid_time_w, l_time_windows = (
-            discretize_data_to_windows(labels, gt, detections,
-                                       time_window, uncertainty_pad)
+        (
+            l_gt_true_mask,
+            l_dets_per_valid_time_w,
+            l_time_windows,
+        ) = discretize_data_to_windows(
+            labels, gt, detections, time_window, uncertainty_pad
         )
 
         # for each pair, output separate activity window plots
-        log.info("Visualizing this detection set against respective "
-                 "ground-truth.")
+        log.info("Visualizing this detection set against respective ground-truth.")
         pair_out_dir = output_dir / f"pair_{gt_fpath.stem}_{pred_fpath.stem}"
         vis = EvalVisualization(labels, None, None, output_dir=pair_out_dir)
         vis.plot_activities_confidence(gt=gt, dets=detections)
@@ -70,7 +74,9 @@ def run_eval(args):
         if dets_per_valid_time_w is None:
             dets_per_valid_time_w = l_dets_per_valid_time_w
         else:
-            dets_per_valid_time_w = np.concatenate([dets_per_valid_time_w, l_dets_per_valid_time_w])
+            dets_per_valid_time_w = np.concatenate(
+                [dets_per_valid_time_w, l_dets_per_valid_time_w]
+            )
 
     assert labels is not None, "No consistent label set loaded."
     assert gt_true_mask is not None, "No ground truth loaded."
@@ -79,7 +85,9 @@ def run_eval(args):
     # ============================
     # Metrics
     # ============================
-    metrics = EvalMetrics(labels, gt_true_mask, dets_per_valid_time_w, output_dir=output_dir)
+    metrics = EvalMetrics(
+        labels, gt_true_mask, dets_per_valid_time_w, output_dir=output_dir
+    )
     metrics.precision_recall()
 
     log.info(f"Saved metrics to {metrics.output_dir}")
@@ -87,7 +95,9 @@ def run_eval(args):
     # ============================
     # Plot
     # ============================
-    vis = EvalVisualization(labels, gt_true_mask, dets_per_valid_time_w, output_dir=output_dir)
+    vis = EvalVisualization(
+        labels, gt_true_mask, dets_per_valid_time_w, output_dir=output_dir
+    )
     vis.confusion_mat()
 
     log.info(f"Saved plots to {vis.output_dir}")
@@ -97,10 +107,12 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--gt-pred-pair",
-        help="Specification of a pair of filepaths that refer to the "
-             "ground-truth CSV file and prediction result JSON file, "
-             "respectively. This option may be repeated any number of times "
-             "for independent pairs.",
+        help=(
+            "Specification of a pair of filepaths that refer to the "
+            "ground-truth CSV file and prediction result JSON file, "
+            "respectively. This option may be repeated any number of times "
+            "for independent pairs."
+        ),
         dest="activity_gt_pred_pair",
         type=Path,
         nargs=2,
@@ -111,24 +123,24 @@ def main():
         "--time_window",
         type=float,
         default=1,
-        help="Time window in seconds to evaluate results on."
+        help="Time window in seconds to evaluate results on.",
     )
     parser.add_argument(
         "--uncertainty_pad",
         type=float,
         default=0.5,
-        help="Time in seconds to pad the ground-truth regions"
+        help="Time in seconds to pad the ground-truth regions",
     )
     parser.add_argument(
         "--output_dir",
         type=str,
         default="eval",
-        help="Folder to save results and plots to"
+        help="Folder to save results and plots to",
     )
 
     args = parser.parse_args()
     run_eval(args)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

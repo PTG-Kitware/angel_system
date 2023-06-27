@@ -14,13 +14,13 @@ class AudioPlayer(Node):
 
         self.declare_parameter("audio_topic", "HeadsetAudioData")
 
-        self._audio_topic = self.get_parameter("audio_topic").get_parameter_value().string_value
+        self._audio_topic = (
+            self.get_parameter("audio_topic").get_parameter_value().string_value
+        )
 
         self.subscription = self.create_subscription(
-            HeadsetAudioData,
-            self._audio_topic,
-            self.listener_callback,
-            1)
+            HeadsetAudioData, self._audio_topic, self.listener_callback, 1
+        )
 
         self.audio_stream = bytearray()
         self.audio_stream_lock = threading.RLock()
@@ -57,13 +57,17 @@ class AudioPlayer(Node):
                 self.audio_stream.extend(msg.data)
                 self.audio_stream_duration += msg.sample_duration
             else:
-                log.info("Warning! Out of order messages.\n"
-                         + f"Prev: {self.prev_timestamp} \nCurr: {msg.header.stamp}")
+                log.info(
+                    "Warning! Out of order messages.\n"
+                    + f"Prev: {self.prev_timestamp} \nCurr: {msg.header.stamp}"
+                )
                 return
 
             self.prev_timestamp = msg.header.stamp
 
-            if self.audio_stream_duration >= self.playback_duration and not(self.t.is_alive()):
+            if self.audio_stream_duration >= self.playback_duration and not (
+                self.t.is_alive()
+            ):
                 # Make a copy of the current data so we can play it back
                 # while more data is accumulated
                 audio_data = self.audio_stream
@@ -73,8 +77,14 @@ class AudioPlayer(Node):
                 self.audio_stream_duration = 0.0
 
                 # Start the audio playback thread
-                self.t = threading.Thread(target=self.audio_playback_thread,
-                                          args=(audio_data, msg.channels, msg.sample_rate,))
+                self.t = threading.Thread(
+                    target=self.audio_playback_thread,
+                    args=(
+                        audio_data,
+                        msg.channels,
+                        msg.sample_rate,
+                    ),
+                )
                 self.t.start()
 
     def audio_playback_thread(self, audio_data, num_channels, sample_rate):
@@ -84,10 +94,9 @@ class AudioPlayer(Node):
         """
         # Ensure only one playback is happening at a time
         with self.audio_player_lock:
-            audio_player_object = sa.play_buffer(audio_data,
-                                                 num_channels,
-                                                 4, # bytes per sample
-                                                 sample_rate)
+            audio_player_object = sa.play_buffer(
+                audio_data, num_channels, 4, sample_rate
+            )  # bytes per sample
 
             audio_player_object.wait_done()
 
@@ -105,5 +114,6 @@ def main():
     audio_player.destroy_node()
     rclpy.shutdown()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

@@ -2,8 +2,7 @@ import subprocess
 from typing import Dict
 
 
-
-class TmuxController():
+class TmuxController:
     """
     Handles creating tmuxinator sessions and stopping them.
     Tmuxinator sessions are started detached.
@@ -56,7 +55,7 @@ class TmuxController():
                 return
 
             subprocess.run(
-                ['tmuxinator', 'start', config_name, "--no-attach"],
+                ["tmuxinator", "start", config_name, "--no-attach"],
             )
             print(f"{config_name} session started")
 
@@ -80,7 +79,7 @@ class TmuxController():
                 return
 
             subprocess.run(
-                ['tmuxinator', 'stop',  config_name],
+                ["tmuxinator", "stop", config_name],
             )
             print(f"{config_name} session stopped")
 

@@ -20,33 +20,35 @@ import pdb
 
 
 # TODO: Pull in from a resource file instead of defining via hard-coding.
-UHO_LABELS = ["Background",
-              "Measure 12 ounces of water in the liquid measuring cup",
-              "Pour the water from the liquid measuring cup into the electric kettle",
-              "Turn on the Kettle",
-              "Place the dripper on top of the mug",
-              "Take the coffee filter and fold it in half to create a semi-circle",
-              "Fold the filter in half again to create a quarter-circle",
-              "Place the folded filter into the dripper such that the the point of the quarter-circle rests in the center of the dripper",
-              "Spread the filter open to create a cone inside the dripper",
-              "Turn on the kitchen scale",
-              "Place a bowl on the scale",
-              "Zero the scale",
-              "Add coffee beans to the bowl until the scale reads 25 grams",
-              "Pour the measured coffee beans into the coffee grinder",
-              "Set timer for 20 seconds",
-              "Turn on the timer",
-              "Grind the coffee beans by pressing and holding down on the black part of the lid",
-              "Pour the grounded coffee beans into the filter cone prepared in step 2",
-              "Turn on the thermometer",
-              "Place the end of the thermometer into the water",
-              "Set timer to 30 seconds",
-              "Pour a small amount of water over the grounds in order to wet the grounds",
-              "Slowly pour the water over the grounds in a circular motion. Do not overfill beyond the top of the paper filter",
-              "Allow the rest of the water in the dripper to drain",
-              "Remove the dripper from the cup",
-              "Remove the coffee grounds and paper filter from the dripper",
-              "Discard the coffee grounds and paper filter"]
+UHO_LABELS = [
+    "Background",
+    "Measure 12 ounces of water in the liquid measuring cup",
+    "Pour the water from the liquid measuring cup into the electric kettle",
+    "Turn on the Kettle",
+    "Place the dripper on top of the mug",
+    "Take the coffee filter and fold it in half to create a semi-circle",
+    "Fold the filter in half again to create a quarter-circle",
+    "Place the folded filter into the dripper such that the the point of the quarter-circle rests in the center of the dripper",
+    "Spread the filter open to create a cone inside the dripper",
+    "Turn on the kitchen scale",
+    "Place a bowl on the scale",
+    "Zero the scale",
+    "Add coffee beans to the bowl until the scale reads 25 grams",
+    "Pour the measured coffee beans into the coffee grinder",
+    "Set timer for 20 seconds",
+    "Turn on the timer",
+    "Grind the coffee beans by pressing and holding down on the black part of the lid",
+    "Pour the grounded coffee beans into the filter cone prepared in step 2",
+    "Turn on the thermometer",
+    "Place the end of the thermometer into the water",
+    "Set timer to 30 seconds",
+    "Pour a small amount of water over the grounds in order to wet the grounds",
+    "Slowly pour the water over the grounds in a circular motion. Do not overfill beyond the top of the paper filter",
+    "Allow the rest of the water in the dripper to drain",
+    "Remove the dripper from the cup",
+    "Remove the coffee grounds and paper filter from the dripper",
+    "Discard the coffee grounds and paper filter",
+]
 
 
 # prepare input data
@@ -71,12 +73,12 @@ def collate_fn_pad(batch):
         # collect detections
         det1 = [torch.from_numpy(tmp[:topK]) for tmp in t[0]["dets"]]
         det1 = torch.stack(det1)
-        det1 = det1.reshape([det1.shape[0]*det1.shape[1],1,det1.shape[2]])
+        det1 = det1.reshape([det1.shape[0] * det1.shape[1], 1, det1.shape[2]])
         dets.append(det1.to(device))
         # collect detection bboxes
         bbox1 = [torch.from_numpy(tmp[:topK]) for tmp in t[0]["bbox"]]
         bbox1 = torch.stack(bbox1)
-        bbox1 = bbox1.reshape([bbox1.shape[0]*bbox1.shape[1],1,bbox1.shape[2]])
+        bbox1 = bbox1.reshape([bbox1.shape[0] * bbox1.shape[1], 1, bbox1.shape[2]])
         bbox.append(bbox1.to(device))
         # collect frames
         frms1 = [tmp for tmp in t[0]["frm"]]
@@ -100,21 +102,22 @@ def load_model(model: TemTRANSModule, checkpoint_path: str) -> TemTRANSModule:
     :param checkpoint_path:
     :return:
     """
-    print("loading checkpoint at "+checkpoint_path)
+    print("loading checkpoint at " + checkpoint_path)
     checkpoint = torch.load(checkpoint_path)
     own_state = model.state_dict()
-    for k, v in checkpoint['state_dict'].items():
-        key = k.replace("temporal.","")
+    for k, v in checkpoint["state_dict"].items():
+        key = k.replace("temporal.", "")
         if key in own_state.keys():
             own_state[key].copy_(v)
 
     model.load_state_dict(own_state)
-    
+
     return model
 
 
-def get_uho_classifier(checkpoint_path: str,
-                       device: str) -> Tuple[UnifiedFCNModule, TemTRANSModule]:
+def get_uho_classifier(
+    checkpoint_path: str, device: str
+) -> Tuple[UnifiedFCNModule, TemTRANSModule]:
     """
     Instantiate and return the UHO activity classification model to be given to
     the prediction function.
@@ -149,11 +152,13 @@ def get_uho_classifier_labels() -> List[str]:
     return UHO_LABELS
 
 
-def predict(fcn: UnifiedFCNModule,
-            temporal: TemTRANSModule,
-            frames: List[npt.NDArray],
-            aux_data: AuxData,
-            fcn_batch_size: Optional[int] = None):
+def predict(
+    fcn: UnifiedFCNModule,
+    temporal: TemTRANSModule,
+    frames: List[npt.NDArray],
+    aux_data: AuxData,
+    fcn_batch_size: Optional[int] = None,
+):
     """
     Predict an activity classification for a single window of image frames and
     auxiliary data.
@@ -216,20 +221,20 @@ def predict(fcn: UnifiedFCNModule,
             batch_sections = np.arange(fcn_batch_size, n_frames, fcn_batch_size)
             for frame_batch in np.split(frames_tformed, batch_sections):
                 # calculate resnet features
-                feats_batched.append(
-                    fcn(frame_batch.to(device))
-                )
+                feats_batched.append(fcn(frame_batch.to(device)))
             feats = torch.cat(feats_batched)
 
     # Will reject hand pose joints not in OpenPose hand skeleton format.
     # TODO: Invert and set the order of expected joint names? network likely
     #  requires a specific order that is currently just implicitly followed
     #  through from training.
-    reject_joint_list = {'ThumbMetacarpalJoint',
-                         'IndexMetacarpal',
-                         'MiddleMetacarpal',
-                         'RingMetacarpal',
-                         'PinkyMetacarpal'}
+    reject_joint_list = {
+        "ThumbMetacarpalJoint",
+        "IndexMetacarpal",
+        "MiddleMetacarpal",
+        "RingMetacarpal",
+        "PinkyMetacarpal",
+    }
     # Collate left/right hand positions into vectors for the network.
     # Known quantity that network needs a 21*3=63 length tensor.
     # Missing hands for a frame should be filled with zero-vectors.
@@ -241,16 +246,21 @@ def predict(fcn: UnifiedFCNModule,
         if aux_data.hand_joint_names:
             # Collect indices of non-rejected labels, use that to index into
             # position matrices
-            keep_indices = [i
-                            for i, joint_label
-                            in enumerate(aux_data.hand_joint_names)
-                            if joint_label not in reject_joint_list]
+            keep_indices = [
+                i
+                for i, joint_label in enumerate(aux_data.hand_joint_names)
+                if joint_label not in reject_joint_list
+            ]
             for i, j_pos in enumerate(aux_data.lhand):
                 if j_pos is not None:
-                    lhand_tensor[i] = torch.from_numpy(j_pos[keep_indices].flatten()).float()
+                    lhand_tensor[i] = torch.from_numpy(
+                        j_pos[keep_indices].flatten()
+                    ).float()
             for i, j_pos in enumerate(aux_data.rhand):
                 if j_pos is not None:
-                    rhand_tensor[i] = torch.from_numpy(j_pos[keep_indices].flatten()).float()
+                    rhand_tensor[i] = torch.from_numpy(
+                        j_pos[keep_indices].flatten()
+                    ).float()
 
     # Collate detection descriptors and boxes based on top-k detections by max
     # label confidence score.
@@ -265,7 +275,9 @@ def predict(fcn: UnifiedFCNModule,
         if aux_data.labels:
             # There are labels, so there must be at least one detection
             # Assuming scores/dets/bbox are all the same length for a frame.
-            for i, (s, d, b) in enumerate(zip(aux_data.scores, aux_data.dets, aux_data.bbox)):
+            for i, (s, d, b) in enumerate(
+                zip(aux_data.scores, aux_data.dets, aux_data.bbox)
+            ):
                 if None not in (s, d, b):
                     assert s.shape[0] == d.shape[0] == b.shape[0]
                     # determine indices of top-k determine by det-wise max score
@@ -301,22 +313,27 @@ def predict(fcn: UnifiedFCNModule,
 
 if __name__ == "__main__":
     # paths and hyper-parameters
-    root_path = "/data/dawei.du/datasets/ROS/Data" # dataset path
-    action_set = "all_activities_action_val.txt" # path of video clips
-    model_path = "checkpoints/epoch_018.ckpt" # path of checkpoint, which can be found in Kitware data
+    root_path = "/data/dawei.du/datasets/ROS/Data"  # dataset path
+    action_set = "all_activities_action_val.txt"  # path of video clips
+    model_path = "checkpoints/epoch_018.ckpt"  # path of checkpoint, which can be found in Kitware data
     test_list = os.path.join(root_path, "label_split", action_set)
 
-    batch_size = 1 # we deal with 1 video clip in inference
-    num_workers = 0 # use all workers to deal with 32 frames per video clip
-    topK = 10 # we extract top 10 detections for each frame
+    batch_size = 1  # we deal with 1 video clip in inference
+    num_workers = 0  # use all workers to deal with 32 frames per video clip
+    topK = 10  # we extract top 10 detections for each frame
     torch.manual_seed(25)
     random.seed(25)
 
     # dataloader
     data_test = AngelDataset(root_path, test_list)
-    dataloader = DataLoader(dataset=data_test, batch_size=batch_size,
-                            num_workers=num_workers, pin_memory=False,
-                shuffle=False, collate_fn=collate_fn_pad)
+    dataloader = DataLoader(
+        dataset=data_test,
+        batch_size=batch_size,
+        num_workers=num_workers,
+        pin_memory=False,
+        shuffle=False,
+        collate_fn=collate_fn_pad,
+    )
 
     # models
     fcn, uho_classifier = get_uho_classifier(model_path, "cuda")
@@ -329,7 +346,9 @@ if __name__ == "__main__":
             dets=aux_data["dets"],
             bbox=aux_data["bbox"],
         )
-        action_prob, action_index = predict(fcn, uho_classifier, frames, aux_data_struct)
+        action_prob, action_index = predict(
+            fcn, uho_classifier, frames, aux_data_struct
+        )
         action_step = get_uho_classifier_labels(action_index)
         print(action_step)
         pdb.set_trace()

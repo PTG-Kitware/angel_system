@@ -1,3 +1,4 @@
+import dataclasses
 from pathlib import Path
 from typing import Any
 from typing import Dict
@@ -8,6 +9,8 @@ from typing import Union
 import yaml
 
 import rclpy
+from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
+from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from std_msgs.msg import Header
 
@@ -30,6 +33,21 @@ from bbn_integration_msgs.msg import (
     BBNStepState,
     BBNUpdate,
 )
+
+
+@dataclasses.dataclass
+class BbnStep:
+    """
+    Metadata about a single BBN-facing task step.
+    """
+
+    # Index of the step in the sequence.
+    bbn_idx: int
+    # Task step body text.
+    text: str
+    # The KW task step ID that identifies when we are *currently doing*
+    # this task step.
+    kw_id: int
 
 
 class TranslateTaskUpdateForBBN(Node):
@@ -75,7 +93,7 @@ class TranslateTaskUpdateForBBN(Node):
                 ("bbn_update_topic",),
                 ("task_graph_srv_topic",),
                 ("config",),
-            ]
+            ],
         )
         self._input_task_update_topic = parameter_values["task_update_topic"]
         self._output_bbn_update_topic = parameter_values["bbn_update_topic"]
@@ -88,22 +106,18 @@ class TranslateTaskUpdateForBBN(Node):
         # Mapping of different task names to a list of (sequential) task steps
         # for BBN consumption steps, each of which also relating which KW task
         # steps relate to the BBN step.
-        self._bbn_step_mapping: Dict[str, List[Dict]] = self._config['bbn_to_kw_steps']
+        self._bbn_step_mapping: Dict[str, List[Dict]] = self._config["bbn_to_kw_steps"]
 
         # Mapping, for different task names, of KW task step index to BBN task
-        # step index. Not all KW task step indices may be represented here
-        # because there may be gaps in representation on the BBN side.
-        self._kw_step_to_bbn_idx: Dict[str, Dict[int, int]] = {}
+        # step node. Not all KW task step indices may be represented here
+        # because there may be intentional gaps in the translation.
+        self._kw_step_to_bbn_idx: Dict[str, Dict[int, BbnStep]] = {}
         for task_name, bbn_steps in self._bbn_step_mapping.items():
-            self._kw_step_to_bbn_idx[task_name] = local_kw_to_bbn =  {}
-            bbn_step_list = []
+            local_kw_to_bbn = {}
+            self._kw_step_to_bbn_idx[task_name] = local_kw_to_bbn
             for bbn_i, bbn_to_kw in enumerate(bbn_steps):
-                bbn_step_list.append(bbn_to_kw['text'])
-                for kw_i in bbn_to_kw['kw_task_ids']:
-                    local_kw_to_bbn[kw_i] = bbn_i
-            # Fill in a step list into self._task_to_step_list since we are
-            # being provided with one for output.
-            self._task_to_step_list[task_name] = bbn_step_list
+                bbn_step = BbnStep(bbn_idx=bbn_i, **bbn_to_kw)
+                local_kw_to_bbn[bbn_step.kw_id] = bbn_step
 
         # State capture of task name to the list of task steps.
         # Pre-initialize with
@@ -115,21 +129,27 @@ class TranslateTaskUpdateForBBN(Node):
         # confidence value in the [0,1] range.
         self._task_completed_state: Dict[str, float] = {}
 
+        self._sub_task_update_cbg = MutuallyExclusiveCallbackGroup()
         self._sub_task_update = self.create_subscription(
             TaskUpdate,
             self._input_task_update_topic,
             self._callback_input_task_update,
-            1
+            1,
+            callback_group=self._sub_task_update_cbg,
         )
+        self._pub_bbn_update_cbg = MutuallyExclusiveCallbackGroup()
         self._pub_bbn_update = self.create_publisher(
             BBNUpdate,
             self._output_bbn_update_topic,
-            1
+            1,
+            callback_group=self._pub_bbn_update_cbg,
         )
 
+        self._task_graph_client_cbg = MutuallyExclusiveCallbackGroup()
         self._task_graph_client = self.create_client(
             QueryTaskGraph,
             self._task_graph_service_topic,
+            callback_group=self._task_graph_client_cbg,
         )
         # Wait for service to be available. Maybe not required if we assume
         # that the provider of the TaskUpdate messages also supplies the
@@ -152,9 +172,10 @@ class TranslateTaskUpdateForBBN(Node):
         # The `current_step_id` tracks this for us: -1 if no step has been
         # started, and something greater than that if one has.
         current_step_id = msg.current_step_id
-        assert current_step_id >= -1, \
-               f"Current step ID should have been something >= -1, instead " \
-               f"was [{current_step_id}]."
+        assert current_step_id >= -1, (
+            f"Current step ID should have been something >= -1, instead "
+            f"was [{current_step_id}]."
+        )
         if msg.current_step_id == -1:
             return 0.0
         return 1.0
@@ -179,10 +200,19 @@ class TranslateTaskUpdateForBBN(Node):
         :returns: True if the update occurred, and false the response returned
             did not match the task update provided.
         """
+        log = self.get_logger()
         req = QueryTaskGraph.Request()
-        future = self._task_graph_client.call_async(req)
-        rclpy.spin_until_future_complete(future)
-        resp: QueryTaskGraph.Response = future.result()
+        # This works **BECAUSE** we are using multi-threaded executor with
+        # separated callback groups.
+        log.info("Querying for task-monitor task graph")
+        resp = self._task_graph_client.call(req)
+        # Use of `self._task_graph_client.call_async(req)` into
+        # `rclpy.spin_until_future_complete(self, future)` also works here,
+        # but is more or less superfluous.
+        # future = self._task_graph_client.call_async(req)
+        # rclpy.spin_until_future_complete(self, future)
+        # resp: QueryTaskGraph.Response = future.result()
+        log.info("Querying for task-monitor task graph -- Done")
         if resp.task_title != msg.task_name:
             self.get_logger().warn(
                 f"Received QueryTaskGraph response with mismatching title "
@@ -202,11 +232,13 @@ class TranslateTaskUpdateForBBN(Node):
         Updates the internal state and outputs an appropriate BBNUpdate
         message.
         """
+        log = self.get_logger()
+
         ros_now = self.get_clock().now()
         ros_now_seconds = ros_now.nanoseconds * 1e-9
         latest_sensor_input_time = msg.latest_sensor_input_time
-        latest_sensor_input_time_seconds = (
-            latest_sensor_input_time.sec + (latest_sensor_input_time.nanosec * 1e-9)
+        latest_sensor_input_time_seconds = latest_sensor_input_time.sec + (
+            latest_sensor_input_time.nanosec * 1e-9
         )
 
         # Check if we have the KW Task-monitor reporting steps list, otherwise
@@ -225,9 +257,10 @@ class TranslateTaskUpdateForBBN(Node):
         self._task_completed_state[task_name] = self._task_is_complete(msg)
 
         current_kw_task_steps = self._task_to_step_list[task_name]
-        assert len(current_kw_task_steps) == len(msg.completed_steps), \
-               "Misalignment between state of task steps, steps completed " \
-               "bools, and step "
+        assert len(current_kw_task_steps) == len(msg.completed_steps), (
+            "Misalignment between state of task steps, steps completed "
+            "bools, and step "
+        )
 
         # Determine the current user task step state list
         #
@@ -237,20 +270,40 @@ class TranslateTaskUpdateForBBN(Node):
         # A step is UNOBSERVED if it is not marked as complete and after the current step ID
         #
         current_step_id = msg.current_step_id
-        task_step_state_list = []
+        task_step_state_map = {}
         # Equivalent to check `in` against `_bbn_step_mapping` or  `_kw_step_to_bbn_idx`.
         mapping_in_effect = task_name in self._kw_step_to_bbn_idx
-        for step_i, (step_name, step_completed) in enumerate(zip(current_kw_task_steps, msg.completed_steps)):
+        for step_i, (step_name, step_completed) in enumerate(
+            zip(current_kw_task_steps, msg.completed_steps)
+        ):
             # Getting the state first while `step_i` and `current_step_id` are
             # still relative to each other (below may translate `step_i` into
             # something else).
             if step_completed:
-                state = BBNStepState.STATE_DONE
-            # The following imply step not completed condition
+                if step_i == current_step_id:
+                    state = BBNStepState.STATE_CURRENT
+                elif step_i < current_step_id:
+                    state = BBNStepState.STATE_DONE
+                else:  # current_step_id < step_i
+                    log.warn(
+                        f"Step {step_i} ('{step_name}') is marked as "
+                        f"completed but is beyond the current step "
+                        f"{current_step_id} "
+                        f"('{current_kw_task_steps[current_step_id]}'). "
+                        f"Calling step {step_i} DONE but we are in "
+                        f"possibly a wonky state / regressed the task."
+                    )
+                    state = BBNStepState.STATE_DONE
             elif step_i < current_step_id:
                 state = BBNStepState.STATE_IMPLIED
             elif step_i == current_step_id:
-                state = BBNStepState.STATE_CURRENT
+                log.warn(
+                    f"Step {step_i} ('{step_name}') marked current but it "
+                    f"is also marked incomplete. This is an unexpected "
+                    f"condition coming from TaskMonitor v2. Calling it "
+                    f"UNOBSERVED for now."
+                )
+                state = BBNStepState.STATE_UNOBSERVED
             else:  # current_step_id < step_i
                 state = BBNStepState.STATE_UNOBSERVED
 
@@ -258,27 +311,44 @@ class TranslateTaskUpdateForBBN(Node):
             # `step_i` and `step_name`, or even skip this KW task step if it
             # does not map to something.
             if mapping_in_effect:
-                if step_i in self._kw_step_to_bbn_idx[task_name]:
-                    step_i = self._kw_step_to_bbn_idx[task_name][step_i]
-                    step_name = self._bbn_step_mapping[task_name][step_i]['text']
+                mapping = self._kw_step_to_bbn_idx[task_name]
+                if step_i in mapping:
+                    bbn_step = mapping[step_i]
+                    log.info(
+                        f'Mapping KW step ({step_i}) "{step_name}" '
+                        f'into BBN step ({bbn_step.bbn_idx}) "{bbn_step.text}".'
+                    )
+                    # Translate into new index and naming.
+                    step_i = bbn_step.bbn_idx
+                    step_name = bbn_step.text
                 else:
-                    # Current KW step has no mapping into BBN steps, skipping
-                    # this step.
+                    # Current KW step has no mapping into BBN steps, skipping.
                     continue
 
-            task_step_state_list.append(BBNStepState(
-                number=step_i,
-                name=step_name,
-                state=state,
-                confidence=1.0
-            ))
+            task_step_state_map[step_i] = BBNStepState(
+                number=step_i, name=step_name, state=state, confidence=1.0
+            )
+
+        # Check that the index-to-step mapping is contiguous across step indices.
+        # If this is not true, there was a translation mapping and the mapping
+        # was not properly configured against the input KW steps for the task.
+        # Cannot proceed.
+        if set(task_step_state_map.keys()) != set(range(len(task_step_state_map))):
+            log.error(
+                f"Translated steps is not composed of contiguous "
+                f"indices. There is an error in translation "
+                f"configuration for task {task_name}."
+            )
+            return
+        task_step_state_list = [
+            task_step_state_map[_i] for _i in range(len(task_step_state_map))
+        ]
 
         # Construct outgoing message
         out_msg = BBNUpdate(
             header=Header(
-                stamp=ros_now.to_msg(),
-                frame_id="Kitware"  # TODO: not sure what to put here in this case
-            ),
+                stamp=ros_now.to_msg(), frame_id="Kitware"
+            ),  # TODO: not sure what to put here in this case
             bbn_header=BBNHeader(
                 sender="Kitware",
                 sender_software_version="1.0",
@@ -298,14 +368,16 @@ class TranslateTaskUpdateForBBN(Node):
                     1,
                 ],
                 skill_confidences=[
-                    BBNSkillConfidenceList(list=[
-                        BBNSkillConfidence(
-                            label=lbl,
-                            confidence=c,
-                        )
-                        for lbl, c in self._task_in_progress_state.items()
-                    ]),
-                ]
+                    BBNSkillConfidenceList(
+                        list=[
+                            BBNSkillConfidence(
+                                label=lbl,
+                                confidence=c,
+                            )
+                            for lbl, c in self._task_in_progress_state.items()
+                        ]
+                    ),
+                ],
             ),
             # Build skills open list based on observation state
             # NOTE: Just one casualty subject supported at the moment.
@@ -316,14 +388,16 @@ class TranslateTaskUpdateForBBN(Node):
                     1,
                 ],
                 skill_confidences=[
-                    BBNSkillConfidenceList(list=[
-                        BBNSkillConfidence(
-                            label=lbl,
-                            confidence=c,
-                        )
-                        for lbl, c in self._task_completed_state.items()
-                    ])
-                ]
+                    BBNSkillConfidenceList(
+                        list=[
+                            BBNSkillConfidence(
+                                label=lbl,
+                                confidence=c,
+                            )
+                            for lbl, c in self._task_completed_state.items()
+                        ]
+                    )
+                ],
             ),
             current_user_actions=BBNCurrentUserActions(
                 populated=True if task_step_state_list else False,
@@ -347,6 +421,7 @@ class TranslateTaskUpdateForBBN(Node):
             current_user_state=BBNCurrentUserState(),
         )
 
+        log.info("Publishing BBN Update translation")
         self._pub_bbn_update.publish(out_msg)
 
 
@@ -355,11 +430,15 @@ def main():
 
     node = TranslateTaskUpdateForBBN()
 
+    executor = MultiThreadedExecutor(num_threads=5)
+    executor.add_node(node)
     try:
-        rclpy.spin(node)
+        executor.spin()
     except KeyboardInterrupt:
-        node.get_logger().info("Keyboard interrupt, shutting down.")
+        node.get_logger().info("Keyboard interrupt, shutting down.\n")
+        executor.shutdown()
 
+    node.get_logger().info("Destroying node")
     node.destroy_node()
     rclpy.shutdown()
 

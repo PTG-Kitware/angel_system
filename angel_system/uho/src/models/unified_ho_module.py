@@ -6,7 +6,7 @@ from torchmetrics import MaxMetric
 from torchmetrics.classification.accuracy import Accuracy
 import os
 import numpy as np
-import pdb
+
 
 class UnifiedHOModule(LightningModule):
     """This class implements the spatio-temporal model used for unified
@@ -17,10 +17,7 @@ class UnifiedHOModule(LightningModule):
     """
 
     def __init__(
-        self,
-        temporal: torch.nn.Module,
-        lr: float = 0.001,
-        weight_decay: float = 0.0005
+        self, temporal: torch.nn.Module, lr: float = 0.001, weight_decay: float = 0.0005
     ):
         super().__init__()
 
@@ -39,7 +36,6 @@ class UnifiedHOModule(LightningModule):
         self.val_acc_best = MaxMetric()
 
     def forward(self, data, mode):
-
         return self.temporal(data, mode)
 
     def on_train_start(self):
@@ -61,7 +57,6 @@ class UnifiedHOModule(LightningModule):
 
         return {"loss": loss, "preds": preds, "targets": batch[0]["act"]}
 
-
     def training_epoch_end(self, outputs: List[Any]):
         # `outputs` is a list of dicts returned from `training_step()`
         pass
@@ -74,7 +69,6 @@ class UnifiedHOModule(LightningModule):
         self.log("val/acc", acc, on_step=False, on_epoch=True, prog_bar=True)
 
         return {"loss": loss, "preds": preds, "targets": batch[0]["act"]}
-
 
     def validation_epoch_end(self, outputs: List[Any]):
         acc = self.val_acc.compute()  # get val accuracy from current epoch
@@ -94,7 +88,6 @@ class UnifiedHOModule(LightningModule):
         self.log("test/acc", acc, on_step=False, on_epoch=True, prog_bar=True)
 
         return {"loss": loss, "preds": preds, "targets": batch[0]["act"]}
-
 
     def test_epoch_end(self, outputs: List[Any]):
         pass

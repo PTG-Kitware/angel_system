@@ -1,6 +1,4 @@
-__all__ = [
-    "JOINT_LIST"
-]
+__all__ = ["JOINT_LIST"]
 
 
 # List containing joint names that matches the ordering in the HL2SS

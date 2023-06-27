@@ -23,13 +23,13 @@ Pillow = "^8"
 pyarrow = "^9.0.0"  # for feature file support
 pynput = "^1.7.6"
 pytorchvideo = "^0.1.5"
-scikit-learn = "^1.1.2"
+scikit-learn = "==1.2.1"
 seaborn = "^0.12.1"
 simpleaudio = "^1.0.4"
 smqtk-detection = ">=0.19.0"
 timm = "^0.5.4"
-torch = "^1.10.2"
-torchvision = "^0.11.3"
+torch = ">=1.10.2,<2"
+torchvision = ">=0.11.3"
 transitions = "^0.8.11"
 trimesh = {extras = ["all"], version = "^3.10.2"}
 # For UHO Activity Classifier
@@ -39,7 +39,7 @@ python-dotenv = "^0.21.0"
 pytorch-lightning = "^1.7.7"
 # Pinning setup tools to this known version due to torch 1.10.2 tensorboard
 # functionality assuming `distutils.version.LooseVersion` functionality.
-setuptools = "59.5.0"
+setuptools = ">=59.5.0"
 # For BBN Redis comms
 websockets = "^11.0"
 
@@ -57,6 +57,8 @@ nltk = "^3.8.1"
 
 # For BBN ZMQ client
 pyzmq = "==25.0.0"
+kwcoco = "^0.6.2"
+kwimage = "^0.9.18"
 
 [tool.poetry.dev-dependencies]
 ipython = "^8.0.1"
@@ -68,6 +70,9 @@ livereload = "*"
 # Jupyter dev support
 jupyter = "^1.0"
 spyder-kernels = "^2.4"
+# Testing
+pytest = "*"
+pytest-cov = "*"
 
 [tool.poetry.scripts]
 # Evaluation
@@ -79,3 +84,40 @@ ptg_eval_step = "angel_system.ptg_eval.step_completion.evaluate_step:main"
 "angel_system.impls.detect_activities.pytorchvideo_slow_fast_r50" = "angel_system.impls.detect_activities.pytorchvideo_slow_fast_r50"
 "angel_system.impls.detect_activities.swinb.swinb_detect_activities" = "angel_system.impls.detect_activities.swinb.swinb_detect_activities"
 "angel_system.impls.detect_activities.two_stage.two_stage_detect_activities" = "angel_system.impls.detect_activities.two_stage.two_stage_detect_activities"
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+# 'extend-exclude' excludes files or directories in addition to the defaults
+extend-exclude = '''
+# A regex preceded with ^/ will apply only to files and directories
+# in the root of the project.
+(
+  ^/angel_system/berkeley
+  | ^/angel_system/fasterrcnn
+  | ^/ros/(ROS-TCP-Endpoint|rosbag2)
+  | ^/src/(ROS-TCP-Endpoint|rosbag2)  # alternative for within docker contianer
+  | ^/hl2ss
+)
+'''
+
+[tool.pytest.ini_options]
+addopts = [
+    "-lv",                                  # Show local in trace-backs.
+    "--doctest-modules",                    # Increased verbosity.
+    "--tb=long",                            # Trace-back print mode.
+    "--ignore=./angel_system/berkeley",     # Ignore bundled package
+    "--ignore=./angel_system/fasterrcnn",   # Ignore bundled package
+    "--cov=./angel_system",                 # Cover our package specifically
+    "--cov=./tests",                        # Also cover our tests for dead spots
+    "--cov-report=term",                    # Coverage report to terminal
+    "--cov-report=xml:coverage.xml",        # for external tool reporting
+]
+testpaths = [
+    "tests",
+    "angel_system",
+]
+doctest_optionflags = [
+    "NORMALIZE_WHITESPACE",
+    "IGNORE_EXCEPTION_DETAIL",
+]

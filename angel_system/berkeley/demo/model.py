@@ -119,7 +119,10 @@ def decode_prediction(predictions):
     if not predictions == None:
         try:
             [boxes, labels, obj_obj_contact_classes, obj_obj_contact_scores, obj_hand_contact_classes, obj_hand_contact_scores, Contact_infos, Contact_hand_infos] = predictions
-            has_contact_info = True
+            if obj_obj_contact_classes is None:
+                has_contact_info = False
+            else:
+                has_contact_info = True
         except:
             [boxes, labels] = predictions
             has_contact_info = False
@@ -129,6 +132,9 @@ def decode_prediction(predictions):
             pre = {}
             x = len(instance_cls.split(' ')[-1])
             cls_name = instance_cls[:-(x + 1)]
+            if cls_name not in pres.keys():
+                 pres[cls_name] = []
+            
             # pre['category'] = cls_name
             pre['confidence_score'] = float(instance_cls.split(' ')[-1][:-1]) * 0.01
             pre['bbox'] = boxes[i]
@@ -146,8 +152,7 @@ def decode_prediction(predictions):
                     pre['obj_hand_contact_state'] = False
                 pre["obj_hand_contact_conf"] = obj_hand_contact_scores[i]
 
-            pres[cls_name] = pre
-
+            pres[cls_name].append(pre)
         return pres
     else:
         return None

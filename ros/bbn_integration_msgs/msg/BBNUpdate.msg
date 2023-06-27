@@ -6,7 +6,7 @@
 
 # ROS2 standard header info.
 # - frame_id is not defined yet.
-#std_msgs/Header header
+std_msgs/Header header
 
 # 1. BASIC HEADER STUFF (required)
 BBNHeader bbn_header

@@ -23,7 +23,7 @@ class RateTracker:
         self._time_vec_i = 0
 
     def _has_measurements(self) -> bool:
-        """ If we have any time measurements to act on or not. """
+        """If we have any time measurements to act on or not."""
         return self._time_vec.size() > 0
 
     def tick(self) -> None:

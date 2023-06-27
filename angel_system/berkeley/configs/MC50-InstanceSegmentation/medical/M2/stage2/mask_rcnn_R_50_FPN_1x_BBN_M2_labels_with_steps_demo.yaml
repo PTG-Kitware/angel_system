@@ -1,6 +1,6 @@
-_BASE_: "/home/local/KHQ/hannah.defazio/angel_system/angel_system/berkeley/configs/Base-RCNN-FPN.yaml"
+_BASE_: "/angel_workspace/angel_system/berkeley/configs/Base-RCNN-FPN.yaml"
 MODEL:
-  WEIGHTS: "/data/ptg/medical/bbn/training/M2_Tourniquet/stage2/m2_with_lab_cleaned_fixed_data_with_steps/resnet50/model_final.pth"
+  WEIGHTS: "/angel_workspace/model_files/m2_with_lab_cleaned_fixed_data_with_steps.pth"
   MASK_ON: False
   RESNETS:
     DEPTH: 50

@@ -13,23 +13,48 @@ import message_filters as mf
 
 from sensor_msgs.msg import Image
 from angel_msgs.msg import ActivityDetection, HandJointPosesUpdate
-from angel_system.impls.detect_activities.two_stage.two_stage_detect_activities import TwoStageDetector
+from angel_system.impls.detect_activities.two_stage.two_stage_detect_activities import (
+    TwoStageDetector,
+)
 
 
 BRIDGE = CvBridge()
-    
+
 
 class MMActivityDetector(Node):
-
     def __init__(self):
         super().__init__(self.__class__.__name__)
 
-        self._image_topic = self.declare_parameter("image_topic", "PVFrames").get_parameter_value().string_value
-        self._hand_topic = self.declare_parameter("hand_pose_topic", "HandJointPoseData").get_parameter_value().string_value
-        self._use_cuda = self.declare_parameter("use_cuda", True).get_parameter_value().bool_value
-        self._det_topic = self.declare_parameter("det_topic", "ActivityDetections").get_parameter_value().string_value
-        self._frames_per_det = self.declare_parameter("frames_per_det", 32.0).get_parameter_value().double_value
-        self._detector_config = self.declare_parameter("detector_config", "default_activity_det_config.json").get_parameter_value().string_value
+        self._image_topic = (
+            self.declare_parameter("image_topic", "PVFrames")
+            .get_parameter_value()
+            .string_value
+        )
+        self._hand_topic = (
+            self.declare_parameter("hand_pose_topic", "HandJointPoseData")
+            .get_parameter_value()
+            .string_value
+        )
+        self._use_cuda = (
+            self.declare_parameter("use_cuda", True).get_parameter_value().bool_value
+        )
+        self._det_topic = (
+            self.declare_parameter("det_topic", "ActivityDetections")
+            .get_parameter_value()
+            .string_value
+        )
+        self._frames_per_det = (
+            self.declare_parameter("frames_per_det", 32.0)
+            .get_parameter_value()
+            .double_value
+        )
+        self._detector_config = (
+            self.declare_parameter(
+                "detector_config", "default_activity_det_config.json"
+            )
+            .get_parameter_value()
+            .string_value
+        )
 
         log = self.get_logger()
         log.info(f"Image topic: {self._image_topic}")
@@ -42,24 +67,21 @@ class MMActivityDetector(Node):
         # Image subscription
         self.subscription_list.append(mf.Subscriber(self, Image, self._image_topic))
         # Hand pose subscription
-        self.subscription_list.append(mf.Subscriber(self, HandJointPosesUpdate, self._hand_topic))
+        self.subscription_list.append(
+            mf.Subscriber(self, HandJointPosesUpdate, self._hand_topic)
+        )
         self.time_sync = mf.TimeSynchronizer(
-            self.subscription_list,
-            self._frames_per_det
+            self.subscription_list, self._frames_per_det
         )
 
         self.time_sync.registerCallback(self.multimodal_listener_callback)
 
-        self._publisher = self.create_publisher(
-            ActivityDetection,
-            self._det_topic,
-            1
-        )
+        self._publisher = self.create_publisher(ActivityDetection, self._det_topic, 1)
 
         # Stores the frames until we have enough to send to the detector
         self._frames = []
         self._aux_data = dict(
-            lhand=[], 
+            lhand=[],
             rhand=[],
         )
         self._source_stamp_start_frame = -1
@@ -80,15 +102,17 @@ class MMActivityDetector(Node):
 
         self._frames.append(rgb_image_np)
         lhand, rhand = self.get_hand_pose_from_msg(hand_pose)
-        self._aux_data['lhand'].append(lhand)
-        self._aux_data['rhand'].append(rhand)
+        self._aux_data["lhand"].append(lhand)
+        self._aux_data["rhand"].append(rhand)
 
         # Store the image timestamp
         if self._source_stamp_start_frame == -1:
             self._source_stamp_start_frame = image.header.stamp
 
         if len(self._frames) >= self._frames_per_det:
-            activities_detected = self._detector.detect_activities(self._frames, self._aux_data)
+            activities_detected = self._detector.detect_activities(
+                self._frames, self._aux_data
+            )
 
             if len(activities_detected) > 0:
                 # Create activity ROS message
@@ -107,40 +131,44 @@ class MMActivityDetector(Node):
 
                 # Publish activities
                 self._publisher.publish(activity_msg)
-                log.info(max(activities_detected, key=activities_detected.get) + '\n')
+                log.info(max(activities_detected, key=activities_detected.get) + "\n")
                 # log.info(str(activities_detected))
 
             # Clear out stored frames, aux_data, and timestamps
             self._frames = []
             self._aux_data = dict(
-                lhand=[], 
+                lhand=[],
                 rhand=[],
             )
             self._source_stamp_start_frame = -1
 
     def get_hand_pose_from_msg(self, msg):
-        hand_joints = [{"joint": m.joint,
-                        "position": [ m.pose.position.x,
-                                      m.pose.position.y,
-                                      m.pose.position.z]} 
-                      for m in msg.joints]
+        hand_joints = [
+            {
+                "joint": m.joint,
+                "position": [m.pose.position.x, m.pose.position.y, m.pose.position.z],
+            }
+            for m in msg.joints
+        ]
 
         # Rejecting joints not in OpenPose hand skeleton format
-        reject_joint_list = ['ThumbMetacarpalJoint', 
-                            'IndexMetacarpal', 
-                            'MiddleMetacarpal', 
-                            'RingMetacarpal', 
-                            'PinkyMetacarpal']
+        reject_joint_list = [
+            "ThumbMetacarpalJoint",
+            "IndexMetacarpal",
+            "MiddleMetacarpal",
+            "RingMetacarpal",
+            "PinkyMetacarpal",
+        ]
         joint_pos = []
         for j in hand_joints:
             if j["joint"] not in reject_joint_list:
                 joint_pos.append(j["position"])
         joint_pos = np.array(joint_pos).flatten()
 
-        if msg.hand == 'Right':
+        if msg.hand == "Right":
             rhand = joint_pos
             lhand = np.zeros_like(joint_pos)
-        elif msg.hand == 'Left':
+        elif msg.hand == "Left":
             lhand = joint_pos
             rhand = np.zeros_like(joint_pos)
         else:
@@ -166,5 +194,5 @@ def main():
     cv2.destroyAllWindows()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

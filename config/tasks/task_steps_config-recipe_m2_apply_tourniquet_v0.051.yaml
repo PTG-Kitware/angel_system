@@ -32,56 +32,56 @@ steps:
     activity_id: 1
     description: >-
       Place tourniquet over affected extremity 2-3 inches above wound site.
-    median_duration_seconds: 5
+    median_duration_seconds: 1000
     mean_conf: 0.5
     std_conf: 0.2
   - id: 2
     activity_id: 2
     description: >-
       Pull tourniquet tight.
-    median_duration_seconds: 5
+    median_duration_seconds: 1000
     mean_conf: 0.5
     std_conf: 0.2
   - id: 3
     activity_id: 3
     description: >-
       Apply strap to strap body.
-    median_duration_seconds: 5
+    median_duration_seconds: 1000
     mean_conf: 0.5
     std_conf: 0.2
   - id: 4
     activity_id: 4
     description: >-
       Turn windless clock wise or counter clockwise until hemorrhage is controlled.
-    median_duration_seconds: 5
+    median_duration_seconds: 1000
     mean_conf: 0.5
     std_conf: 0.2
   - id: 5
     activity_id: 5
     description: >-
       Lock windless into the windless keeper.
-    median_duration_seconds: 5
+    median_duration_seconds: 1000
     mean_conf: 0.5
     std_conf: 0.2
   - id: 6
     activity_id: 6
     description: >-
       Pull remaining strap over the windless keeper.
-    median_duration_seconds: 5
+    median_duration_seconds: 1000
     mean_conf: 0.5
     std_conf: 0.2
   - id: 7
     activity_id: 7
     description: >-
       Secure strap and windless keeper with keeper securing device.
-    median_duration_seconds: 5
+    median_duration_seconds: 1000
     mean_conf: 0.5
     std_conf: 0.2
   - id: 8
     activity_id: 8
     description: >-
       Mark time on securing device strap with permanent marker.
-    median_duration_seconds: 5
+    median_duration_seconds: 1000
     mean_conf: 0.5
     std_conf: 0.2
 
@@ -93,7 +93,7 @@ hmm:
 
   # Constrain whether HMM sequence can skip steps or jump backwards. When both
   # values are set to 0, forward progress without skipping steps is enforced.
-  num_steps_can_jump_fwd: 1
+  num_steps_can_jump_fwd: 0
   num_steps_can_jump_bck: 0
 
   # Default classifier mean confidence to use if not explicitly provided for a

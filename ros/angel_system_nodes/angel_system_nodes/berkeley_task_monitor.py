@@ -22,6 +22,7 @@ BRIDGE = CvBridge()
 KEY_LEFT_SQBRACKET = keyboard.KeyCode.from_char("[")
 KEY_RIGHT_SQBRACKET = keyboard.KeyCode.from_char("]")
 
+
 class TaskMonitor(Node):
     """
     ROS node responsible for keeping track of the current task being performed.
@@ -41,6 +42,7 @@ class TaskMonitor(Node):
     this mapping will be ignored. Thresholds are triggered if values meet or
     exceed the values provided.
     """
+
     def __init__(self):
         super().__init__(self.__class__.__name__)
 
@@ -52,8 +54,9 @@ class TaskMonitor(Node):
         )
         self._model_config = (
             self.declare_parameter(
-              "model_config",
-              "angel_system/berkeley/configs/MC50-InstanceSegmentation/mask_rcnn_R_101_FPN_1x_demo.yaml")
+                "model_config",
+                "angel_system/berkeley/configs/MC50-InstanceSegmentation/mask_rcnn_R_101_FPN_1x_demo.yaml",
+            )
             .get_parameter_value()
             .string_value
         )
@@ -65,8 +68,10 @@ class TaskMonitor(Node):
             .double_value
         )
         self._config_file = (
-            self.declare_parameter("config_file",
-                                   "config/tasks/task_steps_berkeley_config-recipe_coffee.yaml")
+            self.declare_parameter(
+                "config_file",
+                "config/tasks/task_steps_berkeley_config-recipe_coffee.yaml",
+            )
             .get_parameter_value()
             .string_value
         )
@@ -107,34 +112,23 @@ class TaskMonitor(Node):
 
         # Initialize ROS hooks
         self._subscription = self.create_subscription(
-            Image,
-            self._image_topic,
-            self.listener_callback,
-            1
+            Image, self._image_topic, self.listener_callback, 1
         )
         self._task_update_publisher = self.create_publisher(
-            TaskUpdate,
-            self._task_state_topic,
-            1
+            TaskUpdate, self._task_state_topic, 1
         )
         self._det_publisher = self.create_publisher(
-            ObjectDetection2dSet,
-            self._det_topic,
-            1
+            ObjectDetection2dSet, self._det_topic, 1
         )
         self._generated_image_publisher = self.create_publisher(
-            Image,
-            self._topic_output_images_topic,
-            10  # TODO: Learn QoS meanings
+            Image, self._topic_output_images_topic, 10  # TODO: Learn QoS meanings
         )
         self._task_graph_service = self.create_service(
-            QueryTaskGraph,
-            self._query_task_graph_topic,
-            self.query_task_graph_callback
+            QueryTaskGraph, self._query_task_graph_topic, self.query_task_graph_callback
         )
 
         # Get the task info from the config
-        with open(self._config_file, 'r') as f:
+        with open(self._config_file, "r") as f:
             config = yaml.safe_load(f)
 
         self._task_title = config["title"]
@@ -146,14 +140,16 @@ class TaskMonitor(Node):
 
         # Step classifier
         parser = model.get_parser()
-        args = parser.parse_args(f"--config-file {self._model_config} --confidence-threshold {self._conf_thr}".split())
+        args = parser.parse_args(
+          f"--config-file {self._model_config} --confidence-threshold {self._conf_thr}".split()
+        )
 
         log.info("Arguments: " + str(args))
 
         cfg = model.setup_cfg(args)
         log.info(f'Weights: {cfg.MODEL.WEIGHTS}')
 
-        os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+        os.environ["CUDA_VISIBLE_DEVICES"] = "0"
         self.demo = predictor.VisualizationDemo_add_smoothing(
             cfg,
             last_time=2,
@@ -190,7 +186,7 @@ class TaskMonitor(Node):
         """
         log = self.get_logger()
         task_g = TaskGraph()
-        
+
         # TODO: support different task levels?
         task_g.task_steps = self._steps
         task_g.task_levels = [0] * len(self._steps)
@@ -201,16 +197,18 @@ class TaskMonitor(Node):
         return response
 
     def listener_callback(self, image):
-        """
-        """
+        """ """
         log = self.get_logger()
         self.idx += 1
 
         # Convert ROS img msg to CV2 image
         bgr_image = BRIDGE.imgmsg_to_cv2(image, desired_encoding="bgr8")
 
-        predictions, step_infos, visualized_output = self.demo.run_on_image_smoothing_v2(
-            bgr_image, current_idx=self.idx)
+        (
+            predictions,
+            step_infos,
+            visualized_output,
+        ) = self.demo.run_on_image_smoothing_v2(bgr_image, current_idx=self.idx)
 
         # Publish bounding boxes
         decoded_preds = model.decode_prediction(predictions)
@@ -225,29 +223,29 @@ class TaskMonitor(Node):
 
         # Update current step
         finished_sub_step = False
-        if not step_infos[0] == 'Need more test !':
+        if not step_infos[0] == "Need more test !":
             step, sub_step, next_sub_step, gt = step_infos
             if sub_step[-1] == -1:
-                _current_step = 'background'
-                _current_sub_step = 'background'
+                _current_step = "background"
+                _current_sub_step = "background"
             else:
                 # TODO: Support different task levels?
-                # Currently, this definition of "sub-steps" best matches up with our "steps" 
-                _current_sub_step = sub_step[-1]['sub-step']
+                # Currently, this definition of "sub-steps" best matches up with our "steps"
+                _current_sub_step = sub_step[-1]["sub-step"]
                 _current_sub_step_id = self._steps.index(_current_sub_step)
-                if 'end_frame' in list(sub_step[-1].keys()):
+                if "end_frame" in list(sub_step[-1].keys()):
                     # Sub-step is finished
                     finished_sub_step = True
-                    #log.info(f"{_current_sub_step} (finished)")
+                    # log.info(f"{_current_sub_step} (finished)")
         else:
             _current_sub_step = None
             _current_sub_step_id = -1
 
-        #log.info(f"current sub-step: {_current_sub_step}")
+        # log.info(f"current sub-step: {_current_sub_step}")
 
         # Only change steps if we have a new step or a step finished, and it is not
         # background (ID=0)
-        if _current_sub_step and _current_sub_step != 'background':
+        if _current_sub_step and _current_sub_step != "background":
             if finished_sub_step and (_current_sub_step != self._current_step):
                 # Moving forward
                 self._previous_step = self._current_step
@@ -256,7 +254,7 @@ class TaskMonitor(Node):
                 self._current_step_id = _current_sub_step_id
                 with self._task_lock:
                     self._completed_steps[self._current_step_id] = True
- 
+
                 log.info(f"Current step is now: {self._current_step}")
                 log.info(f"Current step id is now: {self._current_step_id}")
                 log.info(f"Previous step is now: {self._previous_step}")
@@ -303,14 +301,18 @@ class TaskMonitor(Node):
             message.top.append(tl_y)
             message.bottom.append(br_y)
 
-        message.label_confidences = np.asarray(label_confidences, dtype=np.float64).ravel().tolist()
+        message.label_confidences = (
+            np.asarray(label_confidences, dtype=np.float64).ravel().tolist()
+        )
 
         # Publish
         self._det_publisher.publish(message)
         self._task_monitor_tracker.tick()
-        self.get_logger().info(f"Published det] message (hz: "
-                               f"{self._task_monitor_tracker.get_rate_avg()})",
-                               throttle_duration_sec=1)
+        self.get_logger().info(
+            f"Published det] message (hz: "
+            f"{self._task_monitor_tracker.get_rate_avg()})",
+            throttle_duration_sec=1,
+        )
 
     def publish_task_state_message(self):
         """
@@ -347,9 +349,11 @@ class TaskMonitor(Node):
 
     def monitor_keypress(self):
         log = self.get_logger()
-        log.info(f"Starting keyboard monitor. Press the right-bracket key, `]`,"
-                 f"to proceed to the next step. Press the left-bracket key, `[`, "
-                 f"to go back to the previous step.")
+        log.info(
+            f"Starting keyboard monitor. Press the right-bracket key, `]`,"
+            f"to proceed to the next step. Press the left-bracket key, `[`, "
+            f"to go back to the previous step."
+        )
         # Collect events until released
         with keyboard.Listener(on_press=self.on_press) as listener:
             listener.join()
@@ -369,7 +373,7 @@ class TaskMonitor(Node):
 
         with self._task_lock:
             if forward:
-                if (self._current_step_id + 1) > (len(self._steps)-1):
+                if (self._current_step_id + 1) > (len(self._steps) - 1):
                     log.warn(f"Tried to trigger on invalid state")
                     return
 
@@ -412,6 +416,7 @@ class TaskMonitor(Node):
 
             self.publish_task_state_message()
 
+
 def main():
     rclpy.init()
 
@@ -430,5 +435,5 @@ def main():
     rclpy.shutdown()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
