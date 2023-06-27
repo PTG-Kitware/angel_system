@@ -53,7 +53,9 @@ def get_time_wind_range(
     # assert ind2 >= ind1, "Invalid time window indexes"
     if ind2 < ind1:
         # Rounding issue
-        warnings.warn(f"ind1: {ind1} is greater than ind2: {ind2} for start time {start} and ebd time {end}")
+        warnings.warn(
+            f"ind1: {ind1} is greater than ind2: {ind2} for start time {start} and ebd time {end}"
+        )
         ind1 = ind2
     return ind1, ind2
 
@@ -84,7 +86,7 @@ def discretize_data_to_windows(labels, gt, detections, time_window, uncertainty_
     # Split by time window
     # ============================
     # Get time ranges
-    
+
     assert (
         time_window > uncertainty_pad
     ), "Time window must be longer than the uncertainty pad"
@@ -126,7 +128,6 @@ def discretize_data_to_windows(labels, gt, detections, time_window, uncertainty_
             window_class_scores[ind1:ind2, correct_class_idx] = np.maximum(
                 window_class_scores[ind1:ind2, correct_class_idx], detections["conf"][i]
             )
-        
 
     gt_true_mask = np.zeros((len(time_windows), len(labels)), dtype=bool)
     for i in range(len(gt)):

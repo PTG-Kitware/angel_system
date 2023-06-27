@@ -141,18 +141,18 @@ def activities_from_dive_csv(filepath: str) -> List[Activity]:
     """
     print(f"Loading ground truth activities from: {filepath}")
     df = pd.read_csv(filepath)
-    
+
     # There may be additional metadata rows. Filter out rows whose first column
     # value starts with a `#`.
     df = df[df[df.keys()[0]].str.contains("^[^#]")]
     # Create a mapping of detection/track ID to the activity annotation
     id_to_activity: Dict[int, Activity] = {}
-    
+
     for row in df.iterrows():
         i, s = row
         a_id = int(s[0])
         frame, time = time_from_name(s[1])
-        
+
         if a_id not in id_to_activity:
             id_to_activity[a_id] = Activity(
                 s[9].lower().strip().strip(".").strip(),  # class label
@@ -186,27 +186,27 @@ def activities_from_dive_csv(filepath: str) -> List[Activity]:
 
     return list(id_to_activity.values())
 
-def add_inter_steps(gt, min_start_time, max_end_time,
-                    add_inter_steps=True,
-                    add_before_after_steps=True):
-    
-    first_activity = min(gt, key=lambda a:a.start)
-    last_activity = max(gt, key=lambda a:a.end)
+
+def add_inter_steps(
+    gt, min_start_time, max_end_time, add_inter_steps=True, add_before_after_steps=True
+):
+    first_activity = min(gt, key=lambda a: a.start)
+    last_activity = max(gt, key=lambda a: a.end)
 
     if add_inter_steps:
         for a_id, activity in enumerate(gt):
             sub_step_str = activity.class_label
-            if '(step ' not in sub_step_str:
+            if "(step " not in sub_step_str:
                 continue
-            step = sub_step_str.split('(')[1][:-1]
+            step = sub_step_str.split("(")[1][:-1]
 
-            if a_id+1 < len(gt):
-                next_activity = gt[a_id+1]
+            if a_id + 1 < len(gt):
+                next_activity = gt[a_id + 1]
                 next_sub_step_str = next_activity.class_label
 
-                if '(step ' not in next_sub_step_str:
+                if "(step " not in next_sub_step_str:
                     continue
-                next_step = next_sub_step_str.split('(')[1][:-1]
+                next_step = next_sub_step_str.split("(")[1][:-1]
 
                 inter_class = f"In between {step} and {next_step}".lower()
 
@@ -217,7 +217,7 @@ def add_inter_steps(gt, min_start_time, max_end_time,
                         next_activity.start,
                         activity.end_frame,
                         next_activity.start_frame,
-                        1
+                        1,
                     )
                 )
 
@@ -229,7 +229,7 @@ def add_inter_steps(gt, min_start_time, max_end_time,
                 first_activity.start,
                 np.inf,
                 first_activity.start_frame,
-                1
+                1,
             )
         )
 
@@ -240,12 +240,11 @@ def add_inter_steps(gt, min_start_time, max_end_time,
                 max_end_time,
                 last_activity.end_frame,
                 np.inf,
-                1
+                1,
             )
         )
 
     return gt
-
 
 
 def activities_from_ros_export_json(filepath: str) -> Tuple[List[str], List[Activity]]:
