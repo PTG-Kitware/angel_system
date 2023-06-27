@@ -141,18 +141,21 @@ def activities_from_dive_csv(filepath: str) -> List[Activity]:
     """
     print(f"Loading ground truth activities from: {filepath}")
     df = pd.read_csv(filepath)
+    
     # There may be additional metadata rows. Filter out rows whose first column
     # value starts with a `#`.
     df = df[df[df.keys()[0]].str.contains("^[^#]")]
     # Create a mapping of detection/track ID to the activity annotation
     id_to_activity: Dict[int, Activity] = {}
+    
     for row in df.iterrows():
         i, s = row
         a_id = int(s[0])
         frame, time = time_from_name(s[1])
+        
         if a_id not in id_to_activity:
             id_to_activity[a_id] = Activity(
-                s[9].lower().strip(),  # class label
+                s[9].lower().strip().strip(".").strip(),  # class label
                 time,  # start
                 np.inf,  # end
                 frame,  # start frame
@@ -174,12 +177,75 @@ def activities_from_dive_csv(filepath: str) -> List[Activity]:
                 frame,
                 a.conf,
             )
+
     # Assert that all activities have been assigned an associated end time.
     assert np.inf not in {a.end for a in id_to_activity.values()}, (
         f"Some activities in source CSV do not have corresponding end time "
         f"entries: {filepath}"
     )
+
     return list(id_to_activity.values())
+
+def add_inter_steps(gt, min_start_time, max_end_time,
+                    add_inter_steps=True,
+                    add_before_after_steps=True):
+    
+    first_activity = min(gt, key=lambda a:a.start)
+    last_activity = max(gt, key=lambda a:a.end)
+
+    if add_inter_steps:
+        for a_id, activity in enumerate(gt):
+            sub_step_str = activity.class_label
+            if '(step ' not in sub_step_str:
+                continue
+            step = sub_step_str.split('(')[1][:-1]
+
+            if a_id+1 < len(gt):
+                next_activity = gt[a_id+1]
+                next_sub_step_str = next_activity.class_label
+
+                if '(step ' not in next_sub_step_str:
+                    continue
+                next_step = next_sub_step_str.split('(')[1][:-1]
+
+                inter_class = f"In between {step} and {next_step}".lower()
+
+                gt.append(
+                    Activity(
+                        inter_class,
+                        activity.end,
+                        next_activity.start,
+                        activity.end_frame,
+                        next_activity.start_frame,
+                        1
+                    )
+                )
+
+    if add_before_after_steps:
+        gt.append(
+            Activity(
+                "not started",
+                min_start_time,
+                first_activity.start,
+                np.inf,
+                first_activity.start_frame,
+                1
+            )
+        )
+
+        gt.append(
+            Activity(
+                "finished",
+                last_activity.end,
+                max_end_time,
+                last_activity.end_frame,
+                np.inf,
+                1
+            )
+        )
+
+    return gt
+
 
 
 def activities_from_ros_export_json(filepath: str) -> Tuple[List[str], List[Activity]]:
@@ -220,7 +286,7 @@ def activities_from_ros_export_json(filepath: str) -> Tuple[List[str], List[Acti
         for lbl, conf in zip(label_vec, act_json["conf_vec"]):
             activity_seq.append(
                 Activity(
-                    lbl.lower().strip(),
+                    lbl.lower().lower().strip().strip(".").strip(),
                     act_start,
                     act_end,  # time
                     np.inf,
@@ -229,7 +295,7 @@ def activities_from_ros_export_json(filepath: str) -> Tuple[List[str], List[Acti
                 )
             )
     # normalize output label vec just like activity label treatment.
-    label_vec = [lbl.lower().strip() for lbl in label_vec]
+    label_vec = [lbl.lower().strip().strip(".").strip() for lbl in label_vec]
     return label_vec, activity_seq
 
 
