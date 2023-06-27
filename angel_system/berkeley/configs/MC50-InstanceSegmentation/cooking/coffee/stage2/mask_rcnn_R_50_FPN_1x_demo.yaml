@@ -1,7 +1,8 @@
-_BASE_: "/home/local/KHQ/hannah.defazio/projects/PTG/angel_system/angel_system/berkeley/configs/Base-RCNN-FPN.yaml"
-#_BASE_: "/angel_workspace/angel_system/berkeley/configs/Base-RCNN-FPN.yaml"
+#_BASE_: "/home/local/KHQ/hannah.defazio/projects/PTG/angel_system/angel_system/berkeley/configs/Base-RCNN-FPN.yaml"
+_BASE_: "/angel_workspace/angel_system/berkeley/configs/Base-RCNN-FPN.yaml"
 MODEL:
-  WEIGHTS: "/media/hannah.defazio/Padlock_DT6/Data/notpublic/PTG/training/cooking/coffee/coffee_no_background/model_final.pth"
+  #WEIGHTS: "/media/hannah.defazio/Padlock_DT6/Data/notpublic/PTG/training/cooking/coffee/coffee_no_background/model_final.pth"
+  WEIGHTS: "/angel_workspace/model_files/berkeley_model_r50_final.pth"
   MASK_ON: False
   RESNETS:
     DEPTH: 50
