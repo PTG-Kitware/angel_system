@@ -158,9 +158,6 @@ class QuestionAnswerer(Node):
         '''
         return msg
 
-    def _red_font(self, text):
-        return f"\033[91m{text}\033[0m"
-
 def main():
     rclpy.init()
     question_answerer = QuestionAnswerer()
