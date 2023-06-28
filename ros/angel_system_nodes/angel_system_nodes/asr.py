@@ -177,7 +177,8 @@ class ASR(Node):
             
             with open(temp_file.name, 'rb') as temp_file:
                 response = requests.post(self._asr_server_url,
-                                         files={'audio_data': temp_file})
+                                         files={'audio_data': temp_file},
+                                         params={'preprocessing': 'mfcc_up'})
             if not self._debug_mode:
                 temp_file.close()
             

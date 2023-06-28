@@ -275,7 +275,8 @@ class VoiceActivityDetector(Node):
         with open(file.name, 'rb') as f:
             self.log.info("Querying Columbia VAD server...")
             response = requests.post(self._vad_server_url,
-                                    files={'audio_data': f})
+                                    files={'audio_data': f},
+                                    params={'preprocessing': 'mfcc_up'})
             if response:
                 segments = json.loads(response.content)['segments']
                 self.log.info(f"Received VAD response: {segments}")
