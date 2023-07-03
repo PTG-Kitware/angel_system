@@ -74,6 +74,11 @@ class HMMNode(Node):
             .get_parameter_value()
             .bool_value
         )
+        self._allow_rollback = (
+            self.declare_parameter("allow_rollback", True)
+            .get_parameter_value()
+            .bool_value
+        )
         self._sys_cmd_topic = (
             self.declare_parameter("sys_cmd_topic", "")
             .get_parameter_value()
@@ -83,6 +88,16 @@ class HMMNode(Node):
             raise ValueError(
                 "Please provide the system command topic with the `sys_cmd_topic` parameter"
             )
+        
+        log.info(f"Detection topic: {self._det_topic}")
+        log.info(f"Task updates topic: {self._task_state_topic}")
+        log.info(f"Task error topic: {self._task_error_topic}")
+        log.info(f"Query task graph topic: {self._query_task_graph_topic}")
+        log.info(f"System command topic: {self._sys_cmd_topic}")
+
+        log.info(f"Step complete threshold: {self._step_complete_threshold}")
+        log.info(f"Enable manual progression: {self._enable_manual_progression}")
+        log.info(f"Allow progress rollback: {self._allow_rollback}")
 
         # Instantiate the HMM module
         self._hmm = ActivityHMMRos(self._config_file)
@@ -383,43 +398,50 @@ class HMMNode(Node):
                     assert hmm_step_id != 0, (
                         "Should not be able to be set to background ID at " "this point"
                     )
-                    user_step_id = hmm_step_id - 1  # no user "background" step
                     step_str = self._hmm.model.class_str[hmm_step_id]
-
-                    steps_complete = cast(
-                        npt.NDArray[bool],
-                        step_finished_conf >= self._step_complete_threshold,
-                    )
-                    # Force steps beyond the current to not be considered
-                    # finished (haven't happened yet). hmm_step_id includes
-                    # addressing background, so `hmm_step_id == user_step_id+1`
-                    steps_complete[user_step_id + 1 :] = False
-
+                    
                     # Only change steps if we have a new step, and it is not
                     # background (ID=0).
                     if self._current_step != step_str:
-                        self._previous_step = self._current_step
-                        self._previous_step_id = self._current_step_id
-                        self._current_step = step_str
-                        self._current_step_id = hmm_step_id
+                        if not self._allow_rollback and hmm_step_id < self._current_step_id:
+                            # Ignore backwards progress
+                            log.debug(f"Predicted step {hmm_step_id} but we are not allowing rollback from step {self._current_step_id}")      
+                        else:
+                            self._previous_step = self._current_step
+                            self._previous_step_id = self._current_step_id
+                            self._current_step = step_str
+                            self._current_step_id = hmm_step_id
+
+                            user_step_id = self._current_step_id - 1  # no user "background" step
+
+                            steps_complete = cast(
+                                npt.NDArray[bool],
+                                step_finished_conf >= self._step_complete_threshold,
+                            )
+
+                            # Force steps beyond the current to not be considered
+                            # finished (haven't happened yet). hmm_step_id includes
+                            # addressing background, so `hmm_step_id == user_step_id+1`
+                            steps_complete[user_step_id + 1 :] = False
+
+                            # Skipped steps are those steps at or before the current
+                            # step that are strictly below the step complete threshold.
+                            steps_skipped = cast(
+                                npt.NDArray[bool],
+                                step_finished_conf < self._step_complete_threshold,
+                            )
+                            # Force steps beyond the current to not be considered
+                            # skipped (haven't happened yet).
+                            steps_skipped[user_step_id + 1 :] = False
+                        
                         # Handle regression in steps actions
                         if hmm_step_id < self._previous_step_id:
                             # Now "later" steps should be removed from the
                             # skipped cache.
-                            self._clean_skipped_cache(hmm_step_id)
+                            self._clean_skipped_cache(self._current_step_id)
 
-                    log.debug(f"Most recently completed step: {self._current_step}")
-
-                    # Skipped steps are those steps at or before the current
-                    # step that are strictly below the step complete threshold.
-                    steps_skipped = cast(
-                        npt.NDArray[bool],
-                        step_finished_conf < self._step_complete_threshold,
-                    )
-                    # Force steps beyond the current to not be considered
-                    # skipped (haven't happened yet).
-                    steps_skipped[user_step_id + 1 :] = False
-
+                    log.debug(f"Most recently completed step {self._current_step_id}: {self._current_step}")
+                    
                     if steps_skipped.max():
                         skipped_step_ids = np.nonzero(steps_skipped)[0]
                         for s_id in skipped_step_ids:
