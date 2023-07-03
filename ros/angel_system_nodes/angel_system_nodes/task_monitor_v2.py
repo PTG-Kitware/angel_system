@@ -88,7 +88,7 @@ class HMMNode(Node):
             raise ValueError(
                 "Please provide the system command topic with the `sys_cmd_topic` parameter"
             )
-        
+
         log.info(f"Detection topic: {self._det_topic}")
         log.info(f"Task updates topic: {self._task_state_topic}")
         log.info(f"Task error topic: {self._task_error_topic}")
@@ -399,20 +399,27 @@ class HMMNode(Node):
                         "Should not be able to be set to background ID at " "this point"
                     )
                     step_str = self._hmm.model.class_str[hmm_step_id]
-                    
+
                     # Only change steps if we have a new step, and it is not
                     # background (ID=0).
                     if self._current_step != step_str:
-                        if not self._allow_rollback and hmm_step_id < self._current_step_id:
+                        if (
+                            not self._allow_rollback
+                            and hmm_step_id < self._current_step_id
+                        ):
                             # Ignore backwards progress
-                            log.debug(f"Predicted step {hmm_step_id} but we are not allowing rollback from step {self._current_step_id}")      
+                            log.debug(
+                                f"Predicted step {hmm_step_id} but we are not allowing rollback from step {self._current_step_id}"
+                            )
                         else:
                             self._previous_step = self._current_step
                             self._previous_step_id = self._current_step_id
                             self._current_step = step_str
                             self._current_step_id = hmm_step_id
 
-                            user_step_id = self._current_step_id - 1  # no user "background" step
+                            user_step_id = (
+                                self._current_step_id - 1
+                            )  # no user "background" step
 
                             steps_complete = cast(
                                 npt.NDArray[bool],
@@ -433,15 +440,17 @@ class HMMNode(Node):
                             # Force steps beyond the current to not be considered
                             # skipped (haven't happened yet).
                             steps_skipped[user_step_id + 1 :] = False
-                        
+
                         # Handle regression in steps actions
                         if hmm_step_id < self._previous_step_id:
                             # Now "later" steps should be removed from the
                             # skipped cache.
                             self._clean_skipped_cache(self._current_step_id)
 
-                    log.debug(f"Most recently completed step {self._current_step_id}: {self._current_step}")
-                    
+                    log.debug(
+                        f"Most recently completed step {self._current_step_id}: {self._current_step}"
+                    )
+
                     if steps_skipped.max():
                         skipped_step_ids = np.nonzero(steps_skipped)[0]
                         for s_id in skipped_step_ids:
