@@ -395,34 +395,37 @@ class HMMNode(Node):
                         continue
 
                     if self._allow_rollback:
-                      self._steps_complete = cast(
-                        npt.NDArray[bool],
-                        step_finished_conf >= self._step_complete_threshold,
-                      )
+                        self._steps_complete = cast(
+                            npt.NDArray[bool],
+                            step_finished_conf >= self._step_complete_threshold,
+                        )
 
-                      self._steps_skipped = cast(
-                        npt.NDArray[bool],
-                        step_finished_conf < self._step_complete_threshold,
-                      )
+                        self._steps_skipped = cast(
+                            npt.NDArray[bool],
+                            step_finished_conf < self._step_complete_threshold,
+                        )
                     else:
-                      # Ignore backwards progress
+                        # Ignore backwards progress
 
-                      # Only move self._steps_complete from False to True
-                      # if the current conf value supports it
-                      ind = np.where(self._steps_complete == False)[0]
-                      ind = ind[1:] # ignore background
+                        # Only move self._steps_complete from False to True
+                        # if the current conf value supports it
+                        ind = np.where(self._steps_complete == False)[0]
+                        ind = ind[1:]  # ignore background
 
-                      # step_finished_conf does not include background
-                      self._steps_complete[ind] = step_finished_conf[ind-1] >= self._step_complete_threshold
+                        # step_finished_conf does not include background
+                        self._steps_complete[ind] = (
+                            step_finished_conf[ind - 1] >= self._step_complete_threshold
+                        )
 
-                      skipped_ids = np.where(self._steps_complete == [True, False, True])
-                      self._steps_skipped = np.zeros(self._hmm.num_steps, dtype=bool)
-                      self._steps_skipped[skipped_ids] = True
+                        skipped_ids = np.where(
+                            self._steps_complete == [True, False, True]
+                        )
+                        self._steps_skipped = np.zeros(self._hmm.num_steps, dtype=bool)
+                        self._steps_skipped[skipped_ids] = True
                     # There are non-zero entries. hmm_step_id should never be
                     # zero.
                     hmm_step_id = state_seq[ss_nonzero[-1]]
 
-                    log.info(f"hmm step id: {hmm_step_id}")
                     assert hmm_step_id != 0, (
                         "Should not be able to be set to background ID at " "this point"
                     )
