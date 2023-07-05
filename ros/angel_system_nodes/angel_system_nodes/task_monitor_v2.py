@@ -136,10 +136,10 @@ class HMMNode(Node):
         self._latest_act_classification_end_time = None
         # Boolean vector the length of task steps
         # that indicates which steps to report as having been completed.
-        self._steps_complete = np.zeros(self._hmm.num_steps, dtype=bool)
+        self._steps_complete = np.zeros(self._n_steps, dtype=bool)
         # Skipped steps are those steps at or before the current
         # skipped (haven't happened yet).
-        self._steps_skipped = np.zeros(self._hmm.num_steps, dtype=bool)
+        self._steps_skipped = np.zeros(self._n_steps, dtype=bool)
 
         # Initialize ROS hooks
         self._subscription = self.create_subscription(
@@ -410,11 +410,9 @@ class HMMNode(Node):
                         # Only move self._steps_complete from False to True
                         # if the current conf value supports it
                         ind = np.where(self._steps_complete == False)[0]
-                        ind = ind[1:]  # ignore background
 
-                        # step_finished_conf does not include background
                         self._steps_complete[ind] = (
-                            step_finished_conf[ind - 1] >= self._step_complete_threshold
+                            step_finished_conf[ind] >= self._step_complete_threshold
                         )
 
                         skipped_ids = np.where(
