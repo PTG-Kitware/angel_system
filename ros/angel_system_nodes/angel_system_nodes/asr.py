@@ -34,7 +34,8 @@ class ASR(Node):
         super().__init__(self.__class__.__name__)
         self.log = self.get_logger()
 
-        # TODO (derekahmed) The following was relocated from 
+        # TODO (derekahmed) The following was relocated from the Dockerfile due to experienced
+        # issues.
         nltk.download('punkt')
 
         parameter_names = [

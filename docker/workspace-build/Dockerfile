@@ -90,7 +90,7 @@ RUN apt-get -y update \
 COPY poetry.lock pyproject.toml docker/workspace_build_pydep_install.sh "${ANGEL_WORKSPACE_DIR}"/
 RUN cd "${ANGEL_WORKSPACE_DIR}" \
  && "${ANGEL_WORKSPACE_DIR}/workspace_build_pydep_install.sh"
-RUN python3 -m nltk.downloader punkt
+# RUN python3 -m nltk.downloader punkt
 
 # Build the angel_system python package
 # * This is intentionally separated from the above dep installation so as to
