@@ -61,16 +61,15 @@ class ASR(Node):
         self._audio_topic = (
             self.get_parameter(AUDIO_TOPIC).get_parameter_value().string_value
         )
-        self._utterances_topic = (
+        self._utterances_topic = \
             self.get_parameter(UTTERANCES_TOPIC).get_parameter_value().string_value
-        )
-        self._asr_server_url = (
+        self._asr_server_url = \
             self.get_parameter(ASR_SERVER_URL).get_parameter_value().string_value
-        self._segmentation_duration =\
+        self._segmentation_duration = \
             self.get_parameter(ASR_REQ_SEGMENT_SECONDS_DURATION).value
-        self._is_sentence_tokenize_mode =\
+        self._is_sentence_tokenize_mode = \
             self.get_parameter(IS_SENTENCE_TOKENIZE).get_parameter_value().bool_value
-        self._debug_mode =\
+        self._debug_mode = \
             self.get_parameter(DEBUG_MODE).get_parameter_value().bool_value
         self.log.info(f"Audio topic: "
                       f"({type(self._audio_topic).__name__}) "
