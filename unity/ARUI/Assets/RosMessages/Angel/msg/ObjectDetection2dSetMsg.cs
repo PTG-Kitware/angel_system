@@ -51,6 +51,12 @@ namespace RosMessageTypes.Angel
         //  Flattened descriptor vector. The length of this list should be equal to
         //  num_detections * descriptor_dims.
         public double[] descriptors;
+        //  Optional fields for Berkeley object detector.
+        //  Each of these vectors is expected to be of length num_detections.
+        public bool[] obj_obj_contact_state;
+        public float[] obj_obj_contact_conf;
+        public bool[] obj_hand_contact_state;
+        public float[] obj_hand_contact_conf;
 
         public ObjectDetection2dSetMsg()
         {
@@ -65,9 +71,13 @@ namespace RosMessageTypes.Angel
             this.label_confidences = new double[0];
             this.descriptor_dim = 0;
             this.descriptors = new double[0];
+            this.obj_obj_contact_state = new bool[0];
+            this.obj_obj_contact_conf = new float[0];
+            this.obj_hand_contact_state = new bool[0];
+            this.obj_hand_contact_conf = new float[0];
         }
 
-        public ObjectDetection2dSetMsg(Std.HeaderMsg header, BuiltinInterfaces.TimeMsg source_stamp, string[] label_vec, long num_detections, float[] left, float[] right, float[] top, float[] bottom, double[] label_confidences, int descriptor_dim, double[] descriptors)
+        public ObjectDetection2dSetMsg(Std.HeaderMsg header, BuiltinInterfaces.TimeMsg source_stamp, string[] label_vec, long num_detections, float[] left, float[] right, float[] top, float[] bottom, double[] label_confidences, int descriptor_dim, double[] descriptors, bool[] obj_obj_contact_state, float[] obj_obj_contact_conf, bool[] obj_hand_contact_state, float[] obj_hand_contact_conf)
         {
             this.header = header;
             this.source_stamp = source_stamp;
@@ -80,6 +90,10 @@ namespace RosMessageTypes.Angel
             this.label_confidences = label_confidences;
             this.descriptor_dim = descriptor_dim;
             this.descriptors = descriptors;
+            this.obj_obj_contact_state = obj_obj_contact_state;
+            this.obj_obj_contact_conf = obj_obj_contact_conf;
+            this.obj_hand_contact_state = obj_hand_contact_state;
+            this.obj_hand_contact_conf = obj_hand_contact_conf;
         }
 
         public static ObjectDetection2dSetMsg Deserialize(MessageDeserializer deserializer) => new ObjectDetection2dSetMsg(deserializer);
@@ -97,6 +111,10 @@ namespace RosMessageTypes.Angel
             deserializer.Read(out this.label_confidences, sizeof(double), deserializer.ReadLength());
             deserializer.Read(out this.descriptor_dim);
             deserializer.Read(out this.descriptors, sizeof(double), deserializer.ReadLength());
+            deserializer.Read(out this.obj_obj_contact_state, sizeof(bool), deserializer.ReadLength());
+            deserializer.Read(out this.obj_obj_contact_conf, sizeof(float), deserializer.ReadLength());
+            deserializer.Read(out this.obj_hand_contact_state, sizeof(bool), deserializer.ReadLength());
+            deserializer.Read(out this.obj_hand_contact_conf, sizeof(float), deserializer.ReadLength());
         }
 
         public override void SerializeTo(MessageSerializer serializer)
@@ -119,6 +137,14 @@ namespace RosMessageTypes.Angel
             serializer.Write(this.descriptor_dim);
             serializer.WriteLength(this.descriptors);
             serializer.Write(this.descriptors);
+            serializer.WriteLength(this.obj_obj_contact_state);
+            serializer.Write(this.obj_obj_contact_state);
+            serializer.WriteLength(this.obj_obj_contact_conf);
+            serializer.Write(this.obj_obj_contact_conf);
+            serializer.WriteLength(this.obj_hand_contact_state);
+            serializer.Write(this.obj_hand_contact_state);
+            serializer.WriteLength(this.obj_hand_contact_conf);
+            serializer.Write(this.obj_hand_contact_conf);
         }
 
         public override string ToString()
@@ -134,7 +160,11 @@ namespace RosMessageTypes.Angel
             "\nbottom: " + System.String.Join(", ", bottom.ToList()) +
             "\nlabel_confidences: " + System.String.Join(", ", label_confidences.ToList()) +
             "\ndescriptor_dim: " + descriptor_dim.ToString() +
-            "\ndescriptors: " + System.String.Join(", ", descriptors.ToList());
+            "\ndescriptors: " + System.String.Join(", ", descriptors.ToList()) +
+            "\nobj_obj_contact_state: " + System.String.Join(", ", obj_obj_contact_state.ToList()) +
+            "\nobj_obj_contact_conf: " + System.String.Join(", ", obj_obj_contact_conf.ToList()) +
+            "\nobj_hand_contact_state: " + System.String.Join(", ", obj_hand_contact_state.ToList()) +
+            "\nobj_hand_contact_conf: " + System.String.Join(", ", obj_hand_contact_conf.ToList());
         }
 
 #if UNITY_EDITOR

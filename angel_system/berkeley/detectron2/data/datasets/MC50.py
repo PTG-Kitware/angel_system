@@ -9,8 +9,6 @@ from detectron2.utils.file_io import PathManager
 
 from .builtin_meta import _get_coco_instances_meta
 from .lvis_v0_5_categories import LVIS_CATEGORIES as LVIS_V0_5_CATEGORIES
-from .MC50_categories import MC50_CATEGORIES as MC50_CATEGORIES
-from .MC50_category_image_count import MC50_CATEGORY_IMAGE_COUNT as MC50_CATEGORY_IMAGE_COUNT
 
 """
 This file contains functions to parse LVIS-format annotations into dicts in the
@@ -32,15 +30,16 @@ def register_MC50_instances(name, metadata, json_file, image_root):
         json_file (str): path to the json instance annotation file.
         image_root (str or path-like): directory which contains all the images.
     """
-    image_root = '/shared/niudt/detectron2/fine_tuning/coco_format_ann/2022-11-06/inference_hannah/images'
-    json_file = '/shared/niudt/detectron2/fine_tuning/coco_format_ann/2022-11-06/inference_hannah/fine-tuning.json'
-    DatasetCatalog.register(name, lambda: load_MC50_json(json_file, image_root, name))
+
+    logger.info(f'json file: {json_file}')
+        
+    DatasetCatalog.register(name, lambda: load_MC50_json(json_file, image_root, name, metadata))
     MetadataCatalog.get(name).set(
         json_file=json_file, image_root=image_root, evaluator_type="lvis", **metadata
     )
 
 
-def load_MC50_json(json_file, image_root, dataset_name=None, extra_annotation_keys=None):
+def load_MC50_json(json_file, image_root, dataset_name=None, meta=None, extra_annotation_keys=None):
     """
     Load a json file in LVIS's annotation format.
 
@@ -67,12 +66,21 @@ def load_MC50_json(json_file, image_root, dataset_name=None, extra_annotation_ke
     json_file = PathManager.get_local_path(json_file)
 
     timer = Timer()
+    logger.info(f'load json file: {json_file}')
     lvis_api = LVIS(json_file)
     if timer.seconds() > 1:
         logger.info("Loading {} takes {:.2f} seconds.".format(json_file, timer.seconds()))
 
     if dataset_name is not None:
-        meta = get_MC50_instances_meta(dataset_name)
+        if meta is None:
+            if 'MC50' in dataset_name:
+                meta = get_MC50_instances_meta(dataset_name)
+            if 'BBN' in dataset_name:
+                from .bbn_medical import _get_bbn_instances_meta_v1
+                meta = _get_bbn_instances_meta_v1(dataset_name)
+            if 'KITWARE_COOKING' in dataset_name:
+                from .kitware_cooking import _get_cooking_instances_meta_v1
+                meta = _get_cooking_instances_meta_v1(dataset_name)
         MetadataCatalog.get(dataset_name).set(**meta)
 
     # sort indices for reproducible results
@@ -234,6 +242,8 @@ def _get_lvis_instances_meta_v0_5():
 
 
 def _get_MC50_instances_meta_v1():
+    from detectron2.data.datasets.kitware_cooking import ALL_COOOKING_CATEGORIES
+    MC50_CATEGORIES = ALL_COOOKING_CATEGORIES['KITWARE_COOKING_COFFEE']
     # assert len(LVIS_V1_CATEGORIES) == 20
     cat_ids = [k["id"] for k in MC50_CATEGORIES]
     assert min(cat_ids) == 1 and max(cat_ids) == len(
@@ -243,7 +253,7 @@ def _get_MC50_instances_meta_v1():
     MC50_categories = sorted(MC50_CATEGORIES, key=lambda x: x["id"])
     # thing_classes = [k["synonyms"][0] for k in lvis_categories]
     thing_classes = [k["name"] for k in MC50_categories]
-    meta = {"thing_classes": thing_classes, "class_image_count": MC50_CATEGORY_IMAGE_COUNT}
+    meta = {"thing_classes": thing_classes, "class_image_count": MC50_CATEGORIES}
     return meta
 
 

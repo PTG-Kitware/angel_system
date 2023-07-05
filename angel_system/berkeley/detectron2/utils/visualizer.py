@@ -16,7 +16,6 @@ from PIL import Image
 from detectron2.data import MetadataCatalog
 from detectron2.structures import BitMasks, Boxes, BoxMode, Keypoints, PolygonMasks, RotatedBoxes
 from detectron2.utils.file_io import PathManager
-from detectron2.data.datasets.MC50_categories import MC50_CATEGORIES
 
 from .colormap import random_color
 
@@ -306,6 +305,9 @@ class VisImage:
 
 
 class VisualizerUtil:
+    def __init__(self, metadata=None):
+        self.metadata = metadata.as_dict()
+
     def calculate_area(self, bbox):
         x0 = bbox[0]
         y0 = bbox[1]
@@ -393,10 +395,15 @@ class VisualizerUtil:
 
         label_list = []
         score_list = []
-        new_obj_obj_contact_scores = []
-        new_obj_obj_contact_class = []
-        new_obj_hand_contact_scores = []
-        new_obj_hand_contact_class = []
+        
+        using_contact = True if obj_obj_contact_classes is not None else False
+        if using_contact:
+            new_obj_obj_contact_scores = []
+            new_obj_obj_contact_class = []
+            new_obj_hand_contact_scores = []
+            new_obj_hand_contact_class = []
+        else:
+            new_obj_obj_contact_class = new_obj_obj_contact_scores = new_obj_hand_contact_class = new_obj_hand_contact_scores = None
 
         for _label in labels:
             percent = _label.split(' ')[-1]
@@ -407,14 +414,33 @@ class VisualizerUtil:
         score_list = np.array(score_list)
         flag_list = np.zeros(len(labels))
 
-        R_class = ['paper filter bag', 'coffee bag']
+        R_class = self.metadata['R_class']
         for i in range(len(labels)):
             if flag_list[i] == 1:
                 continue
             C = label_list[i]
             # S = score_list[i]
 
-            if C in R_class: # remove the special class
+            allow_class_to_repeat = False
+            for allowed in  self.metadata['allow_repeat_obj']:
+                if allowed in C: # accounts for states after class
+                    allow_class_to_repeat = True
+                    #print('allow repeat', allowed, C)
+
+            if allow_class_to_repeat:
+                idx = [i]
+                # Don't remove repeats of these classes
+                new_boxes.append(boxes[i, :])
+                new_labels.append(labels[i])
+
+                if using_contact:
+                    new_obj_obj_contact_class.append(obj_obj_contact_classes[i])
+                    new_obj_obj_contact_scores.append(obj_obj_contact_scores[i])
+
+                    new_obj_hand_contact_class.append(obj_hand_contact_classes[i])
+                    new_obj_hand_contact_scores.append(obj_hand_contact_scores[i])
+
+            elif C in R_class: # remove the special class
                 idx = np.where(label_list == C)[0].tolist()
                 if len(idx) > 1:
                     area_list = []
@@ -428,11 +454,12 @@ class VisualizerUtil:
                 new_boxes.append(boxes[_idx, :])
                 new_labels.append(labels[_idx])
 
-                new_obj_obj_contact_class.append(obj_obj_contact_classes[_idx])
-                new_obj_obj_contact_scores.append(obj_obj_contact_scores[_idx])
+                if using_contact:
+                    new_obj_obj_contact_class.append(obj_obj_contact_classes[_idx])
+                    new_obj_obj_contact_scores.append(obj_obj_contact_scores[_idx])
 
-                new_obj_hand_contact_class.append(obj_hand_contact_classes[_idx])
-                new_obj_hand_contact_scores.append(obj_hand_contact_scores[_idx])
+                    new_obj_hand_contact_class.append(obj_hand_contact_classes[_idx])
+                    new_obj_hand_contact_scores.append(obj_hand_contact_scores[_idx])
 
             else: # remove the repeated objects
                 idx = np.where(label_list == C)[0].tolist()
@@ -447,11 +474,13 @@ class VisualizerUtil:
                 _idx = idx[max_idx]
                 new_boxes.append(boxes[_idx, :])
                 new_labels.append(labels[_idx])
-                new_obj_obj_contact_class.append(obj_obj_contact_classes[_idx])
-                new_obj_obj_contact_scores.append(obj_obj_contact_scores[_idx])
 
-                new_obj_hand_contact_class.append(obj_hand_contact_classes[_idx])
-                new_obj_hand_contact_scores.append(obj_hand_contact_scores[_idx])
+                if using_contact:
+                    new_obj_obj_contact_class.append(obj_obj_contact_classes[_idx])
+                    new_obj_obj_contact_scores.append(obj_obj_contact_scores[_idx])
+
+                    new_obj_hand_contact_class.append(obj_hand_contact_classes[_idx])
+                    new_obj_hand_contact_scores.append(obj_hand_contact_scores[_idx])
             for IDX in idx:
                 flag_list[IDX] = 1
         new_boxes = np.array(new_boxes)
@@ -470,10 +499,16 @@ class VisualizerUtil:
         new_labels = []
         label_list = []
         score_list = []
-        new_obj_obj_contact_scores = []
-        new_obj_obj_contact_class = []
-        new_obj_hand_contact_scores = []
-        new_obj_hand_contact_class = []
+
+        using_contact = True if obj_obj_contact_classes is not None else False
+        if using_contact:
+            new_obj_obj_contact_scores = []
+            new_obj_obj_contact_class = []
+            new_obj_hand_contact_scores = []
+            new_obj_hand_contact_class = []
+        else:
+            new_obj_obj_contact_class = new_obj_obj_contact_scores = new_obj_hand_contact_class = new_obj_hand_contact_scores = None
+
         for _label in labels:
             percent = _label.split(' ')[-1]
             _class = _label[:-(len(percent) +1)]
@@ -483,27 +518,7 @@ class VisualizerUtil:
         score_list = np.array(score_list)
         flag_list = np.zeros(len(labels))
 
-        # Multi_States_class = ['kettle', 'kettle (empty)', 'kettle (full)', 'measuring cup (empty)', 'measuring cup (full)', 'filter cone', 'filter cone + mug', 'paper filter + filter cone + mug', 'coffee grounds + paper filter + filter cone + mug', 'water + coffee grounds + filter cone + mug', 'used paper filter + filter cone + mug', 'used paper filter + filter cone', 'container', 'coffee beans + container', 'scale (off)', 'scale (on)', 'container + scale', 'coffee beans + container + scale']
-        States_Pairs = [['kettle',
-                         'kettle (open)'],
-                        ['coffee beans + container', 'coffee beans + container + scale'],
-                        ['coffee grounds + paper filter + filter cone',
-                         'coffee grounds + paper filter + filter cone + mug',
-                         'filter cone', 'filter cone + mug', 'paper filter + filter cone',
-                         'paper filter + filter cone + mug', 'used paper filter + filter cone',
-                         'used paper filter + filter cone + mug', 'water + coffee grounds + paper filter + filter cone + mug'],
-                        ['coffee + mug',
-                         'coffee grounds + paper filter + filter cone + mug',
-                         'filter cone + mug', 'mug', 'paper filter + filter cone + mug',
-                         'used paper filter + filter cone + mug', 'water + coffee grounds + paper filter + filter cone + mug'],
-                        ['container', 'container + scale'],
-                        ['scale (off)', 'scale (on)', 'container + scale', 'coffee beans + container + scale'],
-                        ['paper filter (semi)', 'paper filter (quarter)', 'paper filter'],
-                        ['coffee beans + container', 'coffee beans + container + scale'],
-                        ['timer (else)', 'timer (20)', 'timer (30)'],
-                        ['thermometer (open)', 'thermometer (close)'],
-                        ['grinder (close)', 'grinder (open)']
-                        ]
+        States_Pairs = self.metadata['States_Pairs']
 
         for i in range(len(labels)):
             multi_flag = 0
@@ -531,11 +546,13 @@ class VisualizerUtil:
                     _idx = idx[max_idx]
                     new_boxes.append(boxes[_idx, :])
                     new_labels.append(labels[_idx])
-                    new_obj_obj_contact_class.append(obj_obj_contact_classes[_idx])
-                    new_obj_obj_contact_scores.append(obj_obj_contact_scores[_idx])
 
-                    new_obj_hand_contact_class.append(obj_hand_contact_classes[_idx])
-                    new_obj_hand_contact_scores.append(obj_hand_contact_scores[_idx])
+                    if using_contact:
+                        new_obj_obj_contact_class.append(obj_obj_contact_classes[_idx])
+                        new_obj_obj_contact_scores.append(obj_obj_contact_scores[_idx])
+
+                        new_obj_hand_contact_class.append(obj_hand_contact_classes[_idx])
+                        new_obj_hand_contact_scores.append(obj_hand_contact_scores[_idx])
                     for IDX in idx:
                         flag_list[IDX] = 1
 
@@ -545,17 +562,17 @@ class VisualizerUtil:
                     continue
                 new_boxes.append(boxes[i, :])
                 new_labels.append(labels[i])
-                new_obj_obj_contact_class.append(obj_obj_contact_classes[i])
-                new_obj_obj_contact_scores.append(obj_obj_contact_scores[i])
 
-                new_obj_hand_contact_class.append(obj_hand_contact_classes[i])
-                new_obj_hand_contact_scores.append(obj_hand_contact_scores[i])
+                if using_contact:
+                    new_obj_obj_contact_class.append(obj_obj_contact_classes[i])
+                    new_obj_obj_contact_scores.append(obj_obj_contact_scores[i])
 
-
-
+                    new_obj_hand_contact_class.append(obj_hand_contact_classes[i])
+                    new_obj_hand_contact_scores.append(obj_hand_contact_scores[i])
 
         new_boxes = np.array(new_boxes)
-        # print(new_labels)
+        #print(labels)
+        #print(new_labels)
         return new_boxes, new_labels, new_obj_obj_contact_scores, new_obj_obj_contact_class, new_obj_hand_contact_scores, new_obj_hand_contact_class
 
     def find_contact(self,
@@ -570,81 +587,7 @@ class VisualizerUtil:
         contact_flag = np.zeros(len(labels))
         contact_hand_flag = np.zeros(len(labels))
 
-        CONTACT_PAIRS_v1 = [['measuring cup (empty)', 'water'],
-                         ['measuring cup (full)', 'water'],
-                         ['measuring cup (full)', 'kettle (full)'],
-                         ['measuring cup (full)', 'kettle (empty)'],
-                         ['measuring cup (empty)', 'kettle (full)'],
-                         ['measuring cup (empty)', 'kettle (empty)'],  # step 1
-
-                         ['mug', 'filter cone'], # step 2
-
-                         ['paper filter', 'paper filter bag'],
-                         ['paper filter (semi)', 'filter cone + mug'],
-                         ['paper filter (quarter)', 'filter cone + mug'],
-                         ['paper filter', 'filter cone + mug'], # step 3
-
-                         ['scale (on)', 'container'],
-                         ['scale (off)', 'container'],
-                         ['container + scale', 'coffee bag'],
-                         ['coffee beans + container + scale', 'coffee bag'],
-                         ['coffee beans + container', 'grinder'],
-                         ['container', 'grinder'],
-                         ['paper filter + filter cone + mug', 'grinder'],
-                         ['paper filter + filter cone', 'grinder'],
-                         ['coffee beans + paper filter + filter cone + mug', 'grinder'],
-                         ['coffee beans + paper filter + filter cone', 'grinder'],
-                         ['coffee grounds + paper filter + filter cone', 'grinder'],
-                         ['coffee grounds + paper filter + filter cone + mug', 'grinder'],# step 4
-
-                         ['thermometer', 'kettle (full)'],
-                         ['thermometer', 'kettle (empty)'],
-                         # ['thermometer', 'kettle'], # step 5
-
-                         ['kettle', 'coffee grounds + paper filter + filter cone + mug'],
-                         ['kettle', 'water + coffee grounds + paper filter + filter cone + mug'],
-                         ['kettle', 'used paper filter + filter cone + mug'],  # step 6 ~ 7
-
-                         ['mug', 'used paper filter + filter cone'],
-                         ['used paper filter', 'filter cone'],
-                         ['used paper filter + filter cone', 'paper towel'],
-                         ['used paper filter', 'trash can'],
-                         ['trash can', 'filter cone']# step 8
-                         ]
-        CONTACT_PAIRS = [['measuring cup', 'water'],
-                         ['kettle (open)', 'measuring cup'],# step 1
-
-                            ['mug', 'filter cone'],  # step 2
-
-                            ['paper filter', 'paper filter bag'],
-                            ['paper filter (semi)', 'filter cone + mug'],
-                            ['paper filter (quarter)', 'filter cone + mug'],
-                            ['paper filter', 'filter cone + mug'],  # step 3
-
-                            ['scale (on)', 'container'],
-                            ['scale (off)', 'container'],
-                            ['container + scale', 'coffee bag'],
-                            ['coffee beans + container + scale', 'coffee bag'],
-                            ['coffee beans + container', 'grinder (open)'],
-                            ['container', 'grinder (open)'],
-                            ['paper filter + filter cone + mug', 'grinder (open)'],
-                            ['paper filter + filter cone', 'grinder (open)'],
-                            ['coffee grounds + paper filter + filter cone', 'grinder (open)'],
-                            ['coffee grounds + paper filter + filter cone + mug', 'grinder (open)'],  # step 4
-
-                            ['thermometer (open)', 'kettle (open)'],
-                            # ['thermometer', 'kettle'], # step 5
-
-                            ['kettle', 'coffee grounds + paper filter + filter cone + mug'],
-                            ['kettle', 'water + coffee grounds + paper filter + filter cone + mug'],  # step 6 ~ 7
-
-                            ['mug', 'used paper filter + filter cone'],
-                            # ['hand', 'used paper filter + filter cone'],
-                            # ['hand', 'used paper filter + filter cone + mug'],
-                            ['used paper filter', 'trash can'],
-                            ['trash can', 'filter cone'],
-                            ['hand', 'used paper filter']  # step 8
-                            ]
+        CONTACT_PAIRS = self.metadata['CONTACT_PAIRS']
 
         # new_boxes = []
         # new_labels = []
@@ -1078,8 +1021,8 @@ class Visualizer:
 
         for i in range(num_instances):
             #remove unwanted cls
-            if 'hand' in labels[i]:
-                continue
+            #if 'hand' in labels[i]:
+            #    continue
             color = assigned_colors[i]
             if _ASSIGN_COLOR:
                 len_score = len(labels[i].split(' ')[-1])
@@ -1580,7 +1523,7 @@ class Visualizer:
     def load_color_mapping(self):
         import pandas as pd
         import os
-        root_dir = "angel_system/berkeley/detectron2/utils"
+        root_dir = "/angel_workspace/angel_system/berkeley/detectron2/utils"
         root = f'{root_dir}/MC_COLOR.csv'
         data = pd.read_csv(root, header=None).values
         color_mapping = {}
@@ -1642,29 +1585,6 @@ class Visualizer:
         # # color_mapping['cheese'] = [255/255, 215/255, 0/255]
         # # color_mapping['ham'] = [238/255, 180/255, 180/255]
         # # color_mapping['lettuce'] = [0/255, 255/255, 127/255]
-        # # color_mapping['mug'] = [100/255, 149/255, 237/255]
-        # color_mapping['coffee bag'] = [139/255, 115/255, 85/255]
-        # color_mapping['coffee grounds'] = [139/255, 69/255, 19/255]
-        # color_mapping['filter cone (empty)'] = [205/255, 201/255, 201/255]
-        # color_mapping['filter cone + paper filter (full)'] = [205/255, 192/255, 176/255]
-        # color_mapping['grinder'] = [138/255, 43/255, 226/255]
-        # color_mapping['kettle'] = [54/255, 54/255, 54/255]
-        # color_mapping['measuring cup'] = [209/255, 238/255, 238/255]
-        # color_mapping['mug'] = [100/255, 149/255, 237/255]
-        # color_mapping['mug + coffee'] = [139/255, 115/255, 85/255]
-        # color_mapping['mug + filter cone (empty)'] = [110/255, 123/255, 139/255]
-        # color_mapping['mug + filter cone + paper filter (empty)'] = [255/255, 131/255, 250/255]
-        # color_mapping['mug + filter cone + paper filter (full)'] = [238/255, 58/255, 140/255]
-        # color_mapping['paper filter (full)'] = [205/255, 149/255, 12/255]
-        # color_mapping['paper filter (quarter)'] = [255/255, 185/255, 15/255]
-        # color_mapping['paper filter (semi)'] = [238/255, 173/255, 14/255]
-        # color_mapping['paper towel'] = [255/255, 255/255, 224/255]
-        # color_mapping['scale'] = [34/255, 139/255, 34/255]
-        # color_mapping['thermometer'] = [0/255, 255/255, 255/255]
-        # color_mapping['timer'] = [188/255, 238/255, 104/255]
-        # color_mapping['water'] = [176/255, 196/255, 222/255]
-
-
 
         num_instances = 0
         if boxes is not None:
@@ -1914,8 +1834,8 @@ class Visualizer:
 
             #remove unwanted cls
 
-            if 'hand' in labels[i]:
-                continue
+            #if 'hand' in labels[i]:
+            #    continue
             color = assigned_colors[i]
             if _ASSIGN_COLOR:
                 len_score = len(labels[i].split(' ')[-1])
@@ -2073,7 +1993,7 @@ class Visualizer:
         Returns:
             output (VisImage): image object with visualizations.
         """
-        _ASSIGN_COLOR = True
+        _ASSIGN_COLOR = False
         color_mapping = {}
         color_mapping['plate'] = [250 / 255, 250 / 255, 250 / 255]
         color_mapping['tomato'] = [255 / 255, 0 / 255, 0 / 255]
@@ -3147,7 +3067,7 @@ class Visualizer_eval:
         Returns:
             output (VisImage): image object with visualizations.
         """
-        _ASSIGN_COLOR = True
+        _ASSIGN_COLOR = False
         num_instances = 0
         if boxes is not None:
             boxes = _convert_boxes(boxes)
@@ -3704,7 +3624,7 @@ class Visualizer_eval:
         Returns:
             output (VisImage): image object with visualizations.
         """
-        _ASSIGN_COLOR = True
+        _ASSIGN_COLOR = False
         # color_mapping = {}
         # # color_mapping['plate'] = [250/255, 250/255, 250/255]
         # # color_mapping['tomato'] = [255/255, 0/255, 0/255]
@@ -3715,29 +3635,6 @@ class Visualizer_eval:
         # # color_mapping['cheese'] = [255/255, 215/255, 0/255]
         # # color_mapping['ham'] = [238/255, 180/255, 180/255]
         # # color_mapping['lettuce'] = [0/255, 255/255, 127/255]
-        # # color_mapping['mug'] = [100/255, 149/255, 237/255]
-        # color_mapping['coffee bag'] = [139/255, 115/255, 85/255]
-        # color_mapping['coffee grounds'] = [139/255, 69/255, 19/255]
-        # color_mapping['filter cone (empty)'] = [205/255, 201/255, 201/255]
-        # color_mapping['filter cone + paper filter (full)'] = [205/255, 192/255, 176/255]
-        # color_mapping['grinder'] = [138/255, 43/255, 226/255]
-        # color_mapping['kettle'] = [54/255, 54/255, 54/255]
-        # color_mapping['measuring cup'] = [209/255, 238/255, 238/255]
-        # color_mapping['mug'] = [100/255, 149/255, 237/255]
-        # color_mapping['mug + coffee'] = [139/255, 115/255, 85/255]
-        # color_mapping['mug + filter cone (empty)'] = [110/255, 123/255, 139/255]
-        # color_mapping['mug + filter cone + paper filter (empty)'] = [255/255, 131/255, 250/255]
-        # color_mapping['mug + filter cone + paper filter (full)'] = [238/255, 58/255, 140/255]
-        # color_mapping['paper filter (full)'] = [205/255, 149/255, 12/255]
-        # color_mapping['paper filter (quarter)'] = [255/255, 185/255, 15/255]
-        # color_mapping['paper filter (semi)'] = [238/255, 173/255, 14/255]
-        # color_mapping['paper towel'] = [255/255, 255/255, 224/255]
-        # color_mapping['scale'] = [34/255, 139/255, 34/255]
-        # color_mapping['thermometer'] = [0/255, 255/255, 255/255]
-        # color_mapping['timer'] = [188/255, 238/255, 104/255]
-        # color_mapping['water'] = [176/255, 196/255, 222/255]
-
-
 
         num_instances = 0
         if boxes is not None:
@@ -3872,10 +3769,15 @@ class Visualizer_eval:
 
         label_list = []
         score_list = []
-        new_obj_obj_contact_scores = []
-        new_obj_obj_contact_class = []
-        new_obj_hand_contact_scores = []
-        new_obj_hand_contact_class = []
+
+        using_contact = True if obj_obj_contact_classes is not None else False
+        if using_contact:
+            new_obj_obj_contact_scores = []
+            new_obj_obj_contact_class = []
+            new_obj_hand_contact_scores = []
+            new_obj_hand_contact_class = []
+        else:
+            new_obj_obj_contact_class = new_obj_obj_contact_scores = new_obj_hand_contact_class = new_obj_hand_contact_scores = None
 
         for _label in labels:
             percent = _label.split(' ')[-1]
@@ -3886,14 +3788,33 @@ class Visualizer_eval:
         score_list = np.array(score_list)
         flag_list = np.zeros(len(labels))
 
-        R_class = ['paper filter bag', 'coffee bag']
+        R_class = self.metadata['R_class']
         for i in range(len(labels)):
             if flag_list[i] == 1:
                 continue
             C = label_list[i]
             # S = score_list[i]
 
-            if C in R_class: # remove the special class
+            allow_class_to_repeat = False
+            for allowed in  self.metadata['allow_repeat_obj']:
+                if allowed in C: # accounts for states after class
+                    allow_class_to_repeat = True
+                    #print('allow repeat', allowed, C)
+
+            if allow_class_to_repeat:
+                idx = [i]
+                # Don't remove repeats of these classes
+                new_boxes.append(boxes[i, :])
+                new_labels.append(labels[i])
+
+                if using_contact:
+                    new_obj_obj_contact_class.append(obj_obj_contact_classes[i])
+                    new_obj_obj_contact_scores.append(obj_obj_contact_scores[i])
+
+                    new_obj_hand_contact_class.append(obj_hand_contact_classes[i])
+                    new_obj_hand_contact_scores.append(obj_hand_contact_scores[i])
+
+            elif C in R_class: # remove the special class
                 idx = np.where(label_list == C)[0].tolist()
                 if len(idx) > 1:
                     area_list = []
@@ -3907,11 +3828,12 @@ class Visualizer_eval:
                 new_boxes.append(boxes[_idx, :])
                 new_labels.append(labels[_idx])
 
-                new_obj_obj_contact_class.append(obj_obj_contact_classes[_idx])
-                new_obj_obj_contact_scores.append(obj_obj_contact_scores[_idx])
+                if using_contact:
+                    new_obj_obj_contact_class.append(obj_obj_contact_classes[_idx])
+                    new_obj_obj_contact_scores.append(obj_obj_contact_scores[_idx])
 
-                new_obj_hand_contact_class.append(obj_hand_contact_classes[_idx])
-                new_obj_hand_contact_scores.append(obj_hand_contact_scores[_idx])
+                    new_obj_hand_contact_class.append(obj_hand_contact_classes[_idx])
+                    new_obj_hand_contact_scores.append(obj_hand_contact_scores[_idx])
 
             else: # remove the repeated objects
                 idx = np.where(label_list == C)[0].tolist()
@@ -3926,11 +3848,13 @@ class Visualizer_eval:
                 _idx = idx[max_idx]
                 new_boxes.append(boxes[_idx, :])
                 new_labels.append(labels[_idx])
-                new_obj_obj_contact_class.append(obj_obj_contact_classes[_idx])
-                new_obj_obj_contact_scores.append(obj_obj_contact_scores[_idx])
 
-                new_obj_hand_contact_class.append(obj_hand_contact_classes[_idx])
-                new_obj_hand_contact_scores.append(obj_hand_contact_scores[_idx])
+                if using_contact:
+                    new_obj_obj_contact_class.append(obj_obj_contact_classes[_idx])
+                    new_obj_obj_contact_scores.append(obj_obj_contact_scores[_idx])
+
+                    new_obj_hand_contact_class.append(obj_hand_contact_classes[_idx])
+                    new_obj_hand_contact_scores.append(obj_hand_contact_scores[_idx])
             for IDX in idx:
                 flag_list[IDX] = 1
         new_boxes = np.array(new_boxes)
@@ -3944,15 +3868,21 @@ class Visualizer_eval:
             obj_obj_contact_classes,
             obj_hand_contact_scores,
             obj_hand_contact_classes):
-        # print(labels)
+         # print(labels)
         new_boxes = []
         new_labels = []
         label_list = []
         score_list = []
-        new_obj_obj_contact_scores = []
-        new_obj_obj_contact_class = []
-        new_obj_hand_contact_scores = []
-        new_obj_hand_contact_class = []
+
+        using_contact = True if obj_obj_contact_classes is not None else False
+        if using_contact:
+            new_obj_obj_contact_scores = []
+            new_obj_obj_contact_class = []
+            new_obj_hand_contact_scores = []
+            new_obj_hand_contact_class = []
+        else:
+            new_obj_obj_contact_class = new_obj_obj_contact_scores = new_obj_hand_contact_class = new_obj_hand_contact_scores = None
+
         for _label in labels:
             percent = _label.split(' ')[-1]
             _class = _label[:-(len(percent) +1)]
@@ -3962,54 +3892,8 @@ class Visualizer_eval:
         score_list = np.array(score_list)
         flag_list = np.zeros(len(labels))
 
-        # Multi_States_class = ['kettle', 'kettle (empty)', 'kettle (full)', 'measuring cup (empty)', 'measuring cup (full)', 'filter cone', 'filter cone + mug', 'paper filter + filter cone + mug', 'coffee grounds + paper filter + filter cone + mug', 'water + coffee grounds + filter cone + mug', 'used paper filter + filter cone + mug', 'used paper filter + filter cone', 'container', 'coffee beans + container', 'scale (off)', 'scale (on)', 'container + scale', 'coffee beans + container + scale']
-        States_Pairs = [['kettle',
-                         'kettle (open)'],
-                        ['coffee beans + container', 'coffee beans + container + scale'],
-                        ['coffee grounds + paper filter + filter cone',
-                         'coffee grounds + paper filter + filter cone + mug',
-                         'filter cone', 'filter cone + mug', 'paper filter + filter cone',
-                         'paper filter + filter cone + mug', 'used paper filter + filter cone',
-                         'used paper filter + filter cone + mug', 'water + coffee grounds + paper filter + filter cone + mug'],
-                        ['coffee + mug',
-                         'coffee grounds + paper filter + filter cone + mug',
-                         'filter cone + mug', 'mug', 'paper filter + filter cone + mug',
-                         'used paper filter + filter cone + mug', 'water + coffee grounds + paper filter + filter cone + mug'],
-                        ['container', 'container + scale'],
-                        ['scale (off)', 'scale (on)', 'container + scale', 'coffee beans + container + scale'],
-                        ['paper filter (semi)', 'paper filter (quarter)', 'paper filter'],
-                        ['coffee beans + container', 'coffee beans + container + scale'],
-                        ['timer (else)', 'timer (20)', 'timer (30)'],
-                        ['thermometer (open)', 'thermometer (close)'],
-                        ['grinder (close)', 'grinder (open)']
-                        ]
-        # States_Pairs = [['kettle',
-        #                  'kettle (empty)',
-        #                  'kettle (full)'],
-        #                 ['measuring cup (empty)',
-        #                  'measuring cup (full)'],
-        #                 ['coffee beans + container', 'coffee beans + container + scale'],
-        #                 ['coffee grounds + paper filter + filter cone',
-        #                  'coffee grounds + paper filter + filter cone + mug',
-        #                  'filter cone', 'filter cone + mug', 'paper filter + filter cone',
-        #                  'paper filter + filter cone + mug', 'used paper filter + filter cone',
-        #                  'used paper filter + filter cone + mug',
-        #                  'water + coffee grounds + paper filter + filter cone + mug'],
-        #                 ['coffee + mug',
-        #                  'coffee grounds + paper filter + filter cone + mug',
-        #                  'filter cone + mug', 'mug', 'paper filter + filter cone + mug',
-        #                  'used paper filter + filter cone + mug',
-        #                  'water + coffee grounds + paper filter + filter cone + mug'],
-        #                 ['container', 'container + scale'],
-        #                 ['scale (off)', 'scale (on)', 'container + scale', 'coffee beans + container + scale'],
-        #
-        #                 ['paper filter (semi)', 'paper filter (quarter)', 'paper filter'],
-        #                 ['coffee beans + container', 'coffee beans + container + scale']
-        #                 ]
-        # # auto_generate states_pairs
-        # States_Pairs = []
-        # for cate in MC50_CATEGORIES:
-        #     name = cate['name']
+        States_Pairs = self.metadata['States_Pairs']
+
         for i in range(len(labels)):
             multi_flag = 0
             if flag_list[i] == 1:
@@ -4036,11 +3920,13 @@ class Visualizer_eval:
                     _idx = idx[max_idx]
                     new_boxes.append(boxes[_idx, :])
                     new_labels.append(labels[_idx])
-                    new_obj_obj_contact_class.append(obj_obj_contact_classes[_idx])
-                    new_obj_obj_contact_scores.append(obj_obj_contact_scores[_idx])
 
-                    new_obj_hand_contact_class.append(obj_hand_contact_classes[_idx])
-                    new_obj_hand_contact_scores.append(obj_hand_contact_scores[_idx])
+                    if using_contact:
+                        new_obj_obj_contact_class.append(obj_obj_contact_classes[_idx])
+                        new_obj_obj_contact_scores.append(obj_obj_contact_scores[_idx])
+
+                        new_obj_hand_contact_class.append(obj_hand_contact_classes[_idx])
+                        new_obj_hand_contact_scores.append(obj_hand_contact_scores[_idx])
                     for IDX in idx:
                         flag_list[IDX] = 1
 
@@ -4050,17 +3936,17 @@ class Visualizer_eval:
                     continue
                 new_boxes.append(boxes[i, :])
                 new_labels.append(labels[i])
-                new_obj_obj_contact_class.append(obj_obj_contact_classes[i])
-                new_obj_obj_contact_scores.append(obj_obj_contact_scores[i])
 
-                new_obj_hand_contact_class.append(obj_hand_contact_classes[i])
-                new_obj_hand_contact_scores.append(obj_hand_contact_scores[i])
+                if using_contact:
+                    new_obj_obj_contact_class.append(obj_obj_contact_classes[i])
+                    new_obj_obj_contact_scores.append(obj_obj_contact_scores[i])
 
-
-
+                    new_obj_hand_contact_class.append(obj_hand_contact_classes[i])
+                    new_obj_hand_contact_scores.append(obj_hand_contact_scores[i])
 
         new_boxes = np.array(new_boxes)
-        # print(new_labels)
+        #print(labels)
+        #print(new_labels)
         return new_boxes, new_labels, new_obj_obj_contact_scores, new_obj_obj_contact_class, new_obj_hand_contact_scores, new_obj_hand_contact_class
 
     def calculate_iou(self, boxA, boxB):
@@ -4099,81 +3985,7 @@ class Visualizer_eval:
         contact_flag = np.zeros(len(labels))
         contact_hand_flag = np.zeros(len(labels))
 
-        CONTACT_PAIRS_v1 = [['measuring cup (empty)', 'water'],
-                         ['measuring cup (full)', 'water'],
-                         ['measuring cup (full)', 'kettle (full)'],
-                         ['measuring cup (full)', 'kettle (empty)'],
-                         ['measuring cup (empty)', 'kettle (full)'],
-                         ['measuring cup (empty)', 'kettle (empty)'],  # step 1
-
-                         ['mug', 'filter cone'], # step 2
-
-                         ['paper filter', 'paper filter bag'],
-                         ['paper filter (semi)', 'filter cone + mug'],
-                         ['paper filter (quarter)', 'filter cone + mug'],
-                         ['paper filter', 'filter cone + mug'], # step 3
-
-                         ['scale (on)', 'container'],
-                         ['scale (off)', 'container'],
-                         ['container + scale', 'coffee bag'],
-                         ['coffee beans + container + scale', 'coffee bag'],
-                         ['coffee beans + container', 'grinder'],
-                         ['container', 'grinder'],
-                         ['paper filter + filter cone + mug', 'grinder'],
-                         ['paper filter + filter cone', 'grinder'],
-                         ['coffee beans + paper filter + filter cone + mug', 'grinder'],
-                         ['coffee beans + paper filter + filter cone', 'grinder'],
-                         ['coffee grounds + paper filter + filter cone', 'grinder'],
-                         ['coffee grounds + paper filter + filter cone + mug', 'grinder'],# step 4
-
-                         ['thermometer', 'kettle (full)'],
-                         ['thermometer', 'kettle (empty)'],
-                         # ['thermometer', 'kettle'], # step 5
-
-                         ['kettle', 'coffee grounds + paper filter + filter cone + mug'],
-                         ['kettle', 'water + coffee grounds + paper filter + filter cone + mug'],
-                         ['kettle', 'used paper filter + filter cone + mug'],  # step 6 ~ 7
-
-                         ['mug', 'used paper filter + filter cone'],
-                         ['used paper filter', 'filter cone'],
-                         ['used paper filter + filter cone', 'paper towel'],
-                         ['used paper filter', 'trash can'],
-                         ['trash can', 'filter cone']# step 8
-                         ]
-        CONTACT_PAIRS = [['measuring cup', 'water'],
-                         ['kettle (open)', 'measuring cup'],# step 1
-
-                            ['mug', 'filter cone'],  # step 2
-
-                            ['paper filter', 'paper filter bag'],
-                            ['paper filter (semi)', 'filter cone + mug'],
-                            ['paper filter (quarter)', 'filter cone + mug'],
-                            ['paper filter', 'filter cone + mug'],  # step 3
-
-                            ['scale (on)', 'container'],
-                            ['scale (off)', 'container'],
-                            ['container + scale', 'coffee bag'],
-                            ['coffee beans + container + scale', 'coffee bag'],
-                            ['coffee beans + container', 'grinder (open)'],
-                            ['container', 'grinder (open)'],
-                            ['paper filter + filter cone + mug', 'grinder (open)'],
-                            ['paper filter + filter cone', 'grinder (open)'],
-                            ['coffee grounds + paper filter + filter cone', 'grinder (open)'],
-                            ['coffee grounds + paper filter + filter cone + mug', 'grinder (open)'],  # step 4
-
-                            ['thermometer (open)', 'kettle (open)'],
-                            # ['thermometer', 'kettle'], # step 5
-
-                            ['kettle', 'coffee grounds + paper filter + filter cone + mug'],
-                            ['kettle', 'water + coffee grounds + paper filter + filter cone + mug'],  # step 6 ~ 7
-
-                            ['mug', 'used paper filter + filter cone'],
-                            # ['hand', 'used paper filter + filter cone'],
-                            # ['hand', 'used paper filter + filter cone + mug'],
-                            ['used paper filter', 'trash can'],
-                            ['trash can', 'filter cone'],
-                            ['hand', 'used paper filter']  # step 8
-                            ]
+        CONTACT_PAIRS = self.metadata['CONTACT_PAIRS']
 
         # new_boxes = []
         # new_labels = []
@@ -4377,8 +4189,8 @@ class Visualizer_eval:
 
             #remove unwanted cls
 
-            if 'hand' in labels[i]:
-                continue
+            #if 'hand' in labels[i]:
+            #    continue
             color = assigned_colors[i]
             if _ASSIGN_COLOR:
                 len_score = len(labels[i].split(' ')[-1])

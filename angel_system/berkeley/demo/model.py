@@ -13,7 +13,6 @@ import tqdm
 from detectron2.config import get_cfg
 from detectron2.data.detection_utils import read_image
 from detectron2.utils.logger import setup_logger
-from detectron2.utils.smoothing_tracker_utils import MC50_CATEGORIES as MC50_CATEGORIES
 from detectron2.utils.tracker import Tracker
 
 from demo.predictor import VisualizationDemo, VisualizationDemo_add_smoothing
@@ -118,27 +117,42 @@ def decode_prediction(predictions):
     s = 1
 
     if not predictions == None:
+        try:
+            [boxes, labels, obj_obj_contact_classes, obj_obj_contact_scores, obj_hand_contact_classes, obj_hand_contact_scores, Contact_infos, Contact_hand_infos] = predictions
+            if obj_obj_contact_classes is None:
+                has_contact_info = False
+            else:
+                has_contact_info = True
+        except:
+            [boxes, labels] = predictions
+            has_contact_info = False
         pres = {}
 
-        for i, instance_cls in enumerate(predictions[1]):
+        for i, instance_cls in enumerate(labels):
             pre = {}
             x = len(instance_cls.split(' ')[-1])
             cls_name = instance_cls[:-(x + 1)]
+            if cls_name not in pres.keys():
+                 pres[cls_name] = []
+            
             # pre['category'] = cls_name
             pre['confidence_score'] = float(instance_cls.split(' ')[-1][:-1]) * 0.01
-            pre['bbox'] = predictions[0][i]
+            pre['bbox'] = boxes[i]
 
-            if predictions[2][i] == 1:
-                pre['obj_obj_contact_sate'] = True
-            else:
-                pre['obj_obj_contact_sate'] = False
+            if has_contact_info:
+                if obj_obj_contact_classes[i] == 1:
+                    pre['obj_obj_contact_state'] = True
+                else:
+                    pre['obj_obj_contact_state'] = False
+                pre["obj_obj_contact_conf"] = obj_obj_contact_scores[i]
 
-            if predictions[4][i] == 1:
-                pre['obj_hand_contact_sate'] = True
-            else:
-                pre['obj_hand_contact_sate'] = False
-            pres[cls_name] = pre
+                if obj_hand_contact_classes[i] == 1:
+                    pre['obj_hand_contact_state'] = True
+                else:
+                    pre['obj_hand_contact_state'] = False
+                pre["obj_hand_contact_conf"] = obj_hand_contact_scores[i]
 
+            pres[cls_name].append(pre)
         return pres
     else:
         return None

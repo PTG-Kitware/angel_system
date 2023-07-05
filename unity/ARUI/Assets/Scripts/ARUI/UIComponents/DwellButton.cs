@@ -2,7 +2,7 @@
 using Microsoft.MixedReality.Toolkit.Input;
 using System;
 using System.Collections;
-using System.Diagnostics.Eventing.Reader;
+//using System.Diagnostics.Eventing.Reader;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.EventSystems;

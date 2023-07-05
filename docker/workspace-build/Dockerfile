@@ -52,7 +52,7 @@ ENV NVIDIA_DRIVER_CAPABILITIES graphics,utility,compute
 # NODE: Installing "dev" dependencies here because why not. Stop if the desire
 #       becomes to create a minimal image.
 ENV PATH=/root/.local/bin:${PATH}
-ENV POETRY_VERSION=1.1.13
+ENV POETRY_VERSION=1.5.1
 RUN pip3 install --user pip==23.0 \
  && (curl -sSL 'https://install.python-poetry.org' | python3 -) \
  && poetry config virtualenvs.create false
@@ -90,7 +90,7 @@ RUN apt-get -y update \
 COPY poetry.lock pyproject.toml docker/workspace_build_pydep_install.sh "${ANGEL_WORKSPACE_DIR}"/
 RUN cd "${ANGEL_WORKSPACE_DIR}" \
  && "${ANGEL_WORKSPACE_DIR}/workspace_build_pydep_install.sh"
-# RUN python -m nltk.downloader punkt
+RUN python3 -m nltk.downloader punkt
 
 # Build the angel_system python package
 # * This is intentionally separated from the above dep installation so as to
@@ -122,6 +122,7 @@ COPY docker/cyclonedds_profile.xml.tmpl \
      docker/workspace_entrypoint.sh \
      docker/workspace_setenv.sh \
      docker/workspace_build.sh \
+     docker/workspace_test.sh \
      "${ANGEL_WORKSPACE_DIR}"/
 
 WORKDIR "${ANGEL_WORKSPACE_DIR}"

@@ -63,63 +63,66 @@ class FeedbackGenerator(Node):
         if some_not_set:
             raise ValueError("Some parameters are not set.")
 
-        self._activity_detector_topic = self.get_parameter(PARAM_ACTIVITY_DET_TOPIC).value
+        self._activity_detector_topic = self.get_parameter(
+            PARAM_ACTIVITY_DET_TOPIC
+        ).value
         self._object_detection_topic = self.get_parameter(PARAM_OBJECT_DET_TOPIC).value
         self._task_monitor_topic = self.get_parameter(PARAM_TASK_MONITOR_TOPIC).value
         self._arui_update_topic = self.get_parameter(PARAM_ARUI_UPDATE_TOPIC).value
-        self._interp_uintent_topic = self.get_parameter(PARAM_INTERP_USER_INTENT_TOPIC).value
+        self._interp_uintent_topic = self.get_parameter(
+            PARAM_INTERP_USER_INTENT_TOPIC
+        ).value
 
         # log inputs for interpreted type and value
-        self.log.info(f"Activity detector topic: "
-                      f"({type(self._activity_detector_topic).__name__}) "
-                      f"{self._activity_detector_topic}")
-        self.log.info(f"Object detection topic: "
-                      f"({type(self._object_detection_topic).__name__}) "
-                      f"{self._object_detection_topic}")
-        self.log.info(f"Task monitor topic: "
-                      f"({type(self._task_monitor_topic).__name__}) "
-                      f"{self._task_monitor_topic}")
-        self.log.info(f"AruiUpdate topic: "
-                      f"({type(self._arui_update_topic).__name__}) "
-                      f"{self._arui_update_topic}")
-        self.log.info(f"Interpreted User Intent topic: "
-                      f"({type(self._interp_uintent_topic).__name__}) "
-                      f"{self._interp_uintent_topic}")
+        self.log.info(
+            f"Activity detector topic: "
+            f"({type(self._activity_detector_topic).__name__}) "
+            f"{self._activity_detector_topic}"
+        )
+        self.log.info(
+            f"Object detection topic: "
+            f"({type(self._object_detection_topic).__name__}) "
+            f"{self._object_detection_topic}"
+        )
+        self.log.info(
+            f"Task monitor topic: "
+            f"({type(self._task_monitor_topic).__name__}) "
+            f"{self._task_monitor_topic}"
+        )
+        self.log.info(
+            f"AruiUpdate topic: "
+            f"({type(self._arui_update_topic).__name__}) "
+            f"{self._arui_update_topic}"
+        )
+        self.log.info(
+            f"Interpreted User Intent topic: "
+            f"({type(self._interp_uintent_topic).__name__}) "
+            f"{self._interp_uintent_topic}"
+        )
 
         # subscribers
         self.activity_subscriber = self.create_subscription(
-            ActivityDetection,
-            self._activity_detector_topic,
-            self.activity_callback,
-            1
+            ActivityDetection, self._activity_detector_topic, self.activity_callback, 1
         )
 
         self.object_detector_subscriber = self.create_subscription(
-            ObjectDetection3dSet,
-            self._object_detection_topic,
-            self.object_callback,
-            1
+            ObjectDetection3dSet, self._object_detection_topic, self.object_callback, 1
         )
 
         self.task_monitor_subscriber = self.create_subscription(
-            TaskUpdate,
-            self._task_monitor_topic,
-            self.task_callback,
-            1
+            TaskUpdate, self._task_monitor_topic, self.task_callback, 1
         )
 
         self.interp_uintent_subscriber = self.create_subscription(
             InterpretedAudioUserIntent,
             self._interp_uintent_topic,
             self.user_intent_callback,
-            1
+            1,
         )
 
         # publisher
         self.arui_update_publisher = self.create_publisher(
-            AruiUpdate,
-            self._arui_update_topic,
-            1
+            AruiUpdate, self._arui_update_topic, 1
         )
 
         # message
@@ -150,8 +153,13 @@ class FeedbackGenerator(Node):
             stamp=self.get_clock().now().to_msg(),
         )
 
-    def publish_update(self, object3d_remove=(), object3d_update=(),
-                       notifications=(), intents_for_confirmation=()) -> None:
+    def publish_update(
+        self,
+        object3d_remove=(),
+        object3d_update=(),
+        notifications=(),
+        intents_for_confirmation=(),
+    ) -> None:
         """
         Central message publishing method.
 
@@ -160,17 +168,19 @@ class FeedbackGenerator(Node):
         """
         this_header = self._make_common_header()
         with self.lock:
-            self.log.info(f"Publishing AruiUpdate")
-            self.arui_update_publisher.publish(AruiUpdate(
-                header=this_header,
-                object3d_remove=object3d_remove,
-                object3d_update=object3d_update,
-                latest_activity=self._arui_update_latest_activity,
-                # TODO: expertise_level=,
-                task_update=self._arui_update_task_update,
-                notifications=notifications,
-                intents_for_confirmation=intents_for_confirmation,
-            ))
+            self.log.debug(f"Publishing AruiUpdate")
+            self.arui_update_publisher.publish(
+                AruiUpdate(
+                    header=this_header,
+                    object3d_remove=object3d_remove,
+                    object3d_update=object3d_update,
+                    latest_activity=self._arui_update_latest_activity,
+                    # TODO: expertise_level=,
+                    task_update=self._arui_update_task_update,
+                    notifications=notifications,
+                    intents_for_confirmation=intents_for_confirmation,
+                )
+            )
 
     def activity_callback(self, activity: ActivityDetection) -> None:
         with self.lock:
@@ -198,9 +208,30 @@ class FeedbackGenerator(Node):
             detection.bbox = VisionBoundingBox3d()
 
             # min = sorted[0], max = sorted[-1]
-            xs = sorted([object_msg.right[i].x, object_msg.left[i].x, object_msg.top[i].x, object_msg.bottom[i].x])
-            ys = sorted([object_msg.right[i].y, object_msg.left[i].y, object_msg.top[i].y, object_msg.bottom[i].y])
-            zs = sorted([object_msg.right[i].z, object_msg.left[i].z, object_msg.top[i].z, object_msg.bottom[i].z])
+            xs = sorted(
+                [
+                    object_msg.right[i].x,
+                    object_msg.left[i].x,
+                    object_msg.top[i].x,
+                    object_msg.bottom[i].x,
+                ]
+            )
+            ys = sorted(
+                [
+                    object_msg.right[i].y,
+                    object_msg.left[i].y,
+                    object_msg.top[i].y,
+                    object_msg.bottom[i].y,
+                ]
+            )
+            zs = sorted(
+                [
+                    object_msg.right[i].z,
+                    object_msg.left[i].z,
+                    object_msg.top[i].z,
+                    object_msg.bottom[i].z,
+                ]
+            )
 
             detection.bbox.size.x = xs[-1] - xs[0]  # width
             detection.bbox.size.y = ys[-1] - ys[0]  # height
@@ -248,5 +279,5 @@ def main():
     rclpy.shutdown()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

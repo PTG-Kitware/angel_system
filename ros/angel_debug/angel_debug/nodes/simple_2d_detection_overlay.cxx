@@ -243,9 +243,9 @@ Simple2dDetectionOverlay
 
   // Because we like to know how fast this is going.
   m_img_rate_tracker.tick();
-  RCLCPP_INFO( log,
-               "Collected Image #%d (hz: %f)",
-               m_image_count, m_img_rate_tracker.get_rate_avg() );
+  RCLCPP_DEBUG( log,
+                "Collected Image #%d (hz: %f)",
+                m_image_count, m_img_rate_tracker.get_rate_avg() );
   ++m_image_count;
 }
 
@@ -260,7 +260,7 @@ Simple2dDetectionOverlay
   // check that detection header frame_id matches
   size_t source_nanosec_key =
     time_key_from_header( det_set->source_stamp );
-  RCLCPP_INFO( log, "Detection source key: %zu", source_nanosec_key );
+  RCLCPP_DEBUG( log, "Detection source key: %zu", source_nanosec_key );
 
   // Check that we have the image in our history that matches our detection set
   // received.
@@ -380,8 +380,8 @@ Simple2dDetectionOverlay
 
   // Because we like to know how fast this is going.
   m_det_rate_tracker.tick();
-  RCLCPP_INFO( log, "Plotted detection set #%d (hz: %f)",
-               m_detset_count, m_det_rate_tracker.get_rate_avg() );
+  RCLCPP_DEBUG( log, "Plotted detection set #%d (hz: %f)",
+                m_detset_count, m_det_rate_tracker.get_rate_avg() );
   ++m_detset_count;
 }
 

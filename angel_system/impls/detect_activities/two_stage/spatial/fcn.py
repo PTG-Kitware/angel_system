@@ -46,7 +46,7 @@ class SpatialFCNModule(nn.Module):
     def _select_network(self, net_opt: str) -> nn.Module:
         """Function to select the network given an option as string
 
-        : param net_opt: Network option (currently only 
+        :param net_opt: Network option (currently only
             supports "resnext")
         """
         net: nn.Module = None

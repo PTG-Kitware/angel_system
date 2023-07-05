@@ -63,6 +63,8 @@ langchain = "^0.0.223"
 openai = "^0.27.8"
 soundfile = "^0.12.1"
 vadersentiment = "^3.3.2"
+kwcoco = "^0.6.2"
+kwimage = "^0.9.18"
 
 [tool.poetry.dev-dependencies]
 ipython = "^8.0.1"

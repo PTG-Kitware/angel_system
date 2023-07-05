@@ -258,10 +258,10 @@ class SimpleTrainer(TrainerBase):
         new = []
         num_para = 0
         temp = self.optimizer.param_groups[0]
-        for paras in temp['params']:
-            num_para += 1
-            if num_para < 115:
-                paras.requires_grad = False
+        #for paras in temp['params']:
+        #    num_para += 1
+        #    if num_para < 115:
+        #        paras.requires_grad = True
 
 
 
@@ -285,8 +285,9 @@ class SimpleTrainer(TrainerBase):
             losses = loss_dict
             loss_dict = {"total_loss": loss_dict}
         else:
-            loss_dict['loss_obj_obj_contact_state'] = loss_dict['loss_obj_obj_contact_state'] * 5
-            loss_dict['loss_obj_hand_contact_state'] = loss_dict['loss_obj_hand_contact_state'] * 5
+            if 'loss_obj_obj_contact_state' in loss_dict.keys():
+                loss_dict['loss_obj_obj_contact_state'] = loss_dict['loss_obj_obj_contact_state'] * 5
+                loss_dict['loss_obj_hand_contact_state'] = loss_dict['loss_obj_hand_contact_state'] * 5
             losses = sum(loss_dict.values())
 
         """

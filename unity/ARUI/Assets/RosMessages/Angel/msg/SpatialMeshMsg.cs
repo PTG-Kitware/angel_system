@@ -17,19 +17,19 @@ namespace RosMessageTypes.Angel
         //  Message for transporting spatial mapping mesh updates received from
         //  the HoloLens.
         // 
-        public int mesh_id;
+        public string mesh_id;
         //  Signals if this mesh should be removed from the world map
         public bool removal;
         public Shape.MeshMsg mesh;
 
         public SpatialMeshMsg()
         {
-            this.mesh_id = 0;
+            this.mesh_id = "";
             this.removal = false;
             this.mesh = new Shape.MeshMsg();
         }
 
-        public SpatialMeshMsg(int mesh_id, bool removal, Shape.MeshMsg mesh)
+        public SpatialMeshMsg(string mesh_id, bool removal, Shape.MeshMsg mesh)
         {
             this.mesh_id = mesh_id;
             this.removal = removal;

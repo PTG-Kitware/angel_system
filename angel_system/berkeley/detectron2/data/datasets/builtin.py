@@ -29,6 +29,8 @@ from .coco_panoptic import register_coco_panoptic, register_coco_panoptic_separa
 from .lvis import get_lvis_instances_meta, register_lvis_instances
 from .MC50 import get_MC50_instances_meta, register_MC50_instances
 from .pascal_voc import register_pascal_voc
+from .bbn_medical import register_all_bbn_data
+from .kitware_cooking import register_all_kitware_cooking_data
 
 # ==== Predefined datasets and splits for COCO ==========
 
@@ -278,3 +280,6 @@ if __name__.endswith(".builtin"):
     register_all_cityscapes_panoptic(_root)
     register_all_pascal_voc(_root)
     register_all_ade20k(_root)
+
+    register_all_bbn_data()
+    # register_all_kitware_cooking_data()

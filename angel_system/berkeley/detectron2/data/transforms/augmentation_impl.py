@@ -3,6 +3,7 @@
 """
 Implement many useful :class:`Augmentation`.
 """
+import logging
 import numpy as np
 import sys
 from typing import Tuple
@@ -147,6 +148,11 @@ class ResizeShortestEdge(Augmentation):
             sample_style (str): either "range" or "choice".
         """
         super().__init__()
+        self.logger = logging.getLogger("detectron2.ResizeShortestEdge")
+        self.logger.setLevel(logging.DEBUG)
+
+        self.logger.debug('USING ResizeShortestEdge')
+        
         assert sample_style in ["range", "choice"], sample_style
 
         self.is_range = sample_style == "range"
@@ -170,6 +176,8 @@ class ResizeShortestEdge(Augmentation):
             return NoOpTransform()
 
         newh, neww = ResizeShortestEdge.get_output_shape(h, w, size, self.max_size)
+        self.logger.debug(f"ResizeShortestEdge input size: {h} x {w}")
+        self.logger.debug(f"ResizeShortestEdge new size: {newh} x {neww}")
         return ResizeTransform(h, w, newh, neww, self.interp)
 
     @staticmethod
@@ -192,6 +200,9 @@ class ResizeShortestEdge(Augmentation):
             neww = neww * scale
         neww = int(neww + 0.5)
         newh = int(newh + 0.5)
+        
+        self.logger.debug(f"ResizeShortestEdge input size: {h} x {w}")
+        self.logger.debug(f"ResizeShortestEdge new size: {newh} x {neww}")
         return (newh, neww)
 
 

@@ -176,6 +176,7 @@ class RepeatFactorTrainingSampler(Sampler):
         """
         # 1. For each category c, compute the fraction of images that contain it: f(c)
         category_freq = defaultdict(int)
+        
         for dataset_dict in dataset_dicts:  # For each image (without repeats)
             cat_ids = {ann["category_id"] for ann in dataset_dict["annotations"]}
             for cat_id in cat_ids:
@@ -183,6 +184,7 @@ class RepeatFactorTrainingSampler(Sampler):
         num_images = len(dataset_dicts)
         for k, v in category_freq.items():
             category_freq[k] = v / num_images
+        logger.info(f'category_freq {category_freq}')
 
         # 2. For each category c, compute the category-level repeat factor:
         #    r(c) = max(1, sqrt(t / f(c)))
@@ -190,6 +192,7 @@ class RepeatFactorTrainingSampler(Sampler):
             cat_id: max(1.0, math.sqrt(repeat_thresh / cat_freq))
             for cat_id, cat_freq in category_freq.items()
         }
+        logger.info(f'category_rep {category_rep}')
 
         # 3. For each image I, compute the image-level repeat factor:
         #    r(I) = max_{c in I} r(c)
@@ -198,6 +201,7 @@ class RepeatFactorTrainingSampler(Sampler):
             cat_ids = {ann["category_id"] for ann in dataset_dict["annotations"]}
             rep_factor = max({category_rep[cat_id] for cat_id in cat_ids}, default=1.0)
             rep_factors.append(rep_factor)
+        logger.info(f'rep_factors {rep_factors}')
 
         return torch.tensor(rep_factors, dtype=torch.float32)
 

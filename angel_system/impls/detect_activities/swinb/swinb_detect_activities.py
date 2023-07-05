@@ -9,7 +9,9 @@ import torchvision
 from angel_system.interfaces.detect_activities import DetectActivities
 from angel_system.impls.detect_activities.swinb.swin import swin_b
 from angel_system.impls.detect_activities.swinb.utils import (
-    get_start_end_idx, spatial_sampling, temporal_sampling
+    get_start_end_idx,
+    spatial_sampling,
+    temporal_sampling,
 )
 
 
@@ -75,9 +77,7 @@ class SwinBTransformer(DetectActivities):
         self.transform = torchvision.transforms.Compose(
             [
                 torchvision.transforms.ToTensor(),
-                torchvision.transforms.Normalize(
-                    self._mean, self._std
-                )
+                torchvision.transforms.Normalize(self._mean, self._std),
             ]
         )
 
@@ -107,10 +107,7 @@ class SwinBTransformer(DetectActivities):
 
         return model
 
-    def detect_activities(
-        self,
-        frame_iter: Iterable[np.ndarray]
-    ) -> Dict[str, float]:
+    def detect_activities(self, frame_iter: Iterable[np.ndarray]) -> Dict[str, float]:
         """
         Formats the given iterable of frames into the required input format
         for the swin model and then inputs them to the model for inferencing.
@@ -122,14 +119,15 @@ class SwinBTransformer(DetectActivities):
 
         # Form the frames into the required format for the video model
         # Based off of the Learn swin CollateFn
-        spatial_idx = 1 # only perform uniform crop and short size jitter
+        spatial_idx = 1  # only perform uniform crop and short size jitter
         clip_idx = -1
 
         frames = [self.transform(f) for f in frame_iter]
         frames = [torch.stack(frames)]
 
-        clip_size = (((self._sampling_rate * self._num_frames) / self._frames_per_second)
-                     * self._frames_per_second)
+        clip_size = (
+            (self._sampling_rate * self._num_frames) / self._frames_per_second
+        ) * self._frames_per_second
         start_end_idx = [
             get_start_end_idx(len(x), clip_size, clip_idx=clip_idx, num_clips=1)
             for x in frames
@@ -146,11 +144,16 @@ class SwinBTransformer(DetectActivities):
         # and crop size meaning that the random short side scale
         # transform is deterministic.
         frames = [x.permute(1, 0, 2, 3) for x in frames]
-        frames = [spatial_sampling(x,
-                                   spatial_idx=spatial_idx,
-                                   min_scale=self._crop_size,
-                                   max_scale=self._crop_size,
-                                   crop_size=self._crop_size) for x in frames]
+        frames = [
+            spatial_sampling(
+                x,
+                spatial_idx=spatial_idx,
+                min_scale=self._crop_size,
+                max_scale=self._crop_size,
+                crop_size=self._crop_size,
+            )
+            for x in frames
+        ]
         frames = torch.stack(frames)
 
         # Move the inputs to the GPU if necessary
@@ -163,7 +166,7 @@ class SwinBTransformer(DetectActivities):
 
         # Get the top predicted classes
         post_act = torch.nn.Softmax(dim=1)
-        preds: torch.Tensor = post_act(preds)[0] # shape: (num_classes)
+        preds: torch.Tensor = post_act(preds)[0]  # shape: (num_classes)
 
         # Create the label to prediction confidence map
         prediction_map = {}

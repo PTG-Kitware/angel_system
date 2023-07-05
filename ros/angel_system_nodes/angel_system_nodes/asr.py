@@ -30,7 +30,6 @@ DEBUG_MODE = "debug_mode"
 WAV_SAMPLE_WIDTH = 4  # Derived from audio_player.py
 
 class ASR(Node):
-
     def __init__(self):
         super().__init__(self.__class__.__name__)
         self.log = self.get_logger()
@@ -58,12 +57,14 @@ class ASR(Node):
                 self.log.error(f"Parameter not set: {p.name}")
         if some_not_set:
             raise ValueError("Some parameters are not set.")
-        
-        self._audio_topic =\
+
+        self._audio_topic = (
             self.get_parameter(AUDIO_TOPIC).get_parameter_value().string_value
-        self._utterances_topic =\
+        )
+        self._utterances_topic = (
             self.get_parameter(UTTERANCES_TOPIC).get_parameter_value().string_value
-        self._asr_server_url =\
+        )
+        self._asr_server_url = (
             self.get_parameter(ASR_SERVER_URL).get_parameter_value().string_value
         self._segmentation_duration =\
             self.get_parameter(ASR_REQ_SEGMENT_SECONDS_DURATION).value
@@ -209,5 +210,5 @@ def main():
     rclpy.shutdown()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

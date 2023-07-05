@@ -20,15 +20,34 @@ BRIDGE = CvBridge()
 
 
 class ActivityDetector(Node):
-
     def __init__(self):
         super().__init__(self.__class__.__name__)
 
-        self._image_topic = self.declare_parameter("image_topic", "debug/PVFrames").get_parameter_value().string_value
-        self._use_cuda = self.declare_parameter("use_cuda", True).get_parameter_value().bool_value
-        self._det_topic = self.declare_parameter("det_topic", "ActivityDetections").get_parameter_value().string_value
-        self._frames_per_det = self.declare_parameter("frames_per_det", 32.0).get_parameter_value().double_value
-        self._detector_config = self.declare_parameter("detector_config", "default_activity_det_config.json").get_parameter_value().string_value
+        self._image_topic = (
+            self.declare_parameter("image_topic", "debug/PVFrames")
+            .get_parameter_value()
+            .string_value
+        )
+        self._use_cuda = (
+            self.declare_parameter("use_cuda", True).get_parameter_value().bool_value
+        )
+        self._det_topic = (
+            self.declare_parameter("det_topic", "ActivityDetections")
+            .get_parameter_value()
+            .string_value
+        )
+        self._frames_per_det = (
+            self.declare_parameter("frames_per_det", 32.0)
+            .get_parameter_value()
+            .double_value
+        )
+        self._detector_config = (
+            self.declare_parameter(
+                "detector_config", "default_activity_det_config.json"
+            )
+            .get_parameter_value()
+            .string_value
+        )
 
         log = self.get_logger()
         log.info(f"Image topic: {self._image_topic}")
@@ -37,17 +56,10 @@ class ActivityDetector(Node):
         log.info(f"Detector config: {self._detector_config}")
 
         self._subscription = self.create_subscription(
-            Image,
-            self._image_topic,
-            self.listener_callback,
-            1
+            Image, self._image_topic, self.listener_callback, 1
         )
 
-        self._publisher = self.create_publisher(
-            ActivityDetection,
-            self._det_topic,
-            1
-        )
+        self._publisher = self.create_publisher(ActivityDetection, self._det_topic, 1)
 
         # Stores the frames until we have enough to send to the detector
         self._frames = []
@@ -57,8 +69,9 @@ class ActivityDetector(Node):
         with open(self._detector_config, "r") as f:
             config = json.load(f)
 
-        self._detector: DetectActivities = from_config_dict(config,
-                                                            DetectActivities.get_impls())
+        self._detector: DetectActivities = from_config_dict(
+            config, DetectActivities.get_impls()
+        )
 
     def listener_callback(self, image):
         """
@@ -120,5 +133,5 @@ def main():
     rclpy.shutdown()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -8,15 +8,22 @@ from torch.nn import functional as F
 from detectron2.config import configurable
 from detectron2.data.detection_utils import get_fed_loss_cls_weights
 from detectron2.layers import ShapeSpec, batched_nms, cat, cross_entropy, nonzero_tuple
-from detectron2.modeling.box_regression import Box2BoxTransform, _dense_box_regression_loss
+from detectron2.modeling.box_regression import (
+    Box2BoxTransform,
+    _dense_box_regression_loss,
+)
 from detectron2.structures import Boxes, Instances
 from detectron2.utils.events import get_event_storage
 
-__all__ = ["fast_rcnn_inference", "FastRCNNOutputLayers", "FastRCNNOutputLayers_PLUS_CONTACT", "FastRCNNOutputLayers_CONTACT"]
+__all__ = [
+    "fast_rcnn_inference",
+    "FastRCNNOutputLayers",
+    "FastRCNNOutputLayers_PLUS_CONTACT",
+    "FastRCNNOutputLayers_CONTACT",
+]
 
 
 logger = logging.getLogger(__name__)
-
 """
 Shape shorthand in this module:
 
@@ -78,11 +85,19 @@ def fast_rcnn_inference(
     """
     result_per_image = [
         fast_rcnn_inference_single_image(
-            boxes_per_image, scores_per_image, image_shape, score_thresh, nms_thresh, topk_per_image
+            boxes_per_image,
+            scores_per_image,
+            image_shape,
+            score_thresh,
+            nms_thresh,
+            topk_per_image,
         )
-        for scores_per_image, boxes_per_image, image_shape in zip(scores, boxes, image_shapes)
+        for scores_per_image, boxes_per_image, image_shape in zip(
+            scores, boxes, image_shapes
+        )
     ]
     return [x[0] for x in result_per_image], [x[1] for x in result_per_image]
+
 
 def fast_rcnn_inference_plus_contact(
     boxes: List[torch.Tensor],
@@ -121,9 +136,18 @@ def fast_rcnn_inference_plus_contact(
     """
     result_per_image = [
         fast_rcnn_inference_single_image_plus_contact(
-            boxes_per_image, scores_per_image, obj_obj_scores_per_image, obj_hand_scores_per_image, image_shape, score_thresh, nms_thresh, topk_per_image
+            boxes_per_image,
+            scores_per_image,
+            obj_obj_scores_per_image,
+            obj_hand_scores_per_image,
+            image_shape,
+            score_thresh,
+            nms_thresh,
+            topk_per_image,
         )
-        for scores_per_image, obj_obj_scores_per_image, obj_hand_scores_per_image, boxes_per_image, image_shape in zip(scores, obj_obj_scores, obj_hand_scores, boxes, image_shapes)
+        for scores_per_image, obj_obj_scores_per_image, obj_hand_scores_per_image, boxes_per_image, image_shape in zip(
+            scores, obj_obj_scores, obj_hand_scores, boxes, image_shapes
+        )
     ]
     return [x[0] for x in result_per_image], [x[1] for x in result_per_image]
 
@@ -142,6 +166,7 @@ def filter_contact_score(contact_scores):
             new_contact_score.append(ins[1])
             pred_contact_state.append(1)
     return new_contact_score, pred_contact_state
+
 
 def fast_rcnn_inference_single_image_plus_contact(
     boxes,
@@ -193,12 +218,12 @@ def fast_rcnn_inference_single_image_plus_contact(
     scores = scores[filter_mask]
 
     # modify if deliver cls-based contact
-    obj_obj_scores = obj_obj_scores.repeat(42, 1, 1)
+    obj_obj_scores = obj_obj_scores.repeat(num_bbox_reg_classes, 1, 1)
     obj_obj_scores = obj_obj_scores.permute(1, 0, 2)
     obj_obj_scores = obj_obj_scores[filter_mask]
 
     # modify if deliver cls-based contact
-    obj_hand_scores = obj_hand_scores.repeat(42, 1, 1)
+    obj_hand_scores = obj_hand_scores.repeat(num_bbox_reg_classes, 1, 1)
     obj_hand_scores = obj_hand_scores.permute(1, 0, 2)
     obj_hand_scores = obj_hand_scores[filter_mask]
 
@@ -206,11 +231,20 @@ def fast_rcnn_inference_single_image_plus_contact(
     keep = batched_nms(boxes, scores, filter_inds[:, 1], nms_thresh)
     if topk_per_image >= 0:
         keep = keep[:topk_per_image]
-    boxes, scores, obj_obj_scores, obj_hand_scores, filter_inds = boxes[keep], scores[keep], obj_obj_scores[keep], obj_hand_scores[keep], filter_inds[keep]
+    boxes, scores, obj_obj_scores, obj_hand_scores, filter_inds = (
+        boxes[keep],
+        scores[keep],
+        obj_obj_scores[keep],
+        obj_hand_scores[keep],
+        filter_inds[keep],
+    )
 
-    obj_obj_contact_scores, obj_obj_contact_classes = filter_contact_score(obj_obj_scores)
-    obj_hand_contact_scores, obj_hand_contact_classes = filter_contact_score(obj_hand_scores)
-
+    obj_obj_contact_scores, obj_obj_contact_classes = filter_contact_score(
+        obj_obj_scores
+    )
+    obj_hand_contact_scores, obj_hand_contact_classes = filter_contact_score(
+        obj_hand_scores
+    )
 
     result = Instances(image_shape)
     result.pred_boxes = Boxes(boxes)
@@ -244,6 +278,7 @@ def fast_rcnn_inference_single_image_plus_contact(
     # result.contact_classes = torch.tensor(pred_contact_state).cuda()
     # result.pred_classes = filter_inds[:, 1]
     # return result, filter_inds[:, 0]
+
 
 def fast_rcnn_inference_contact(
     boxes: List[torch.Tensor],
@@ -293,11 +328,21 @@ def fast_rcnn_inference_contact(
     # ):
     result_per_image = [
         fast_rcnn_inference_single_image_contact(
-            boxes = boxes_per_image, scores = scores_per_image, contact_scores = contact_scores_per_image, image_shape = image_shape, score_thresh = score_thresh, contact_thresh = contact_thresh, nms_thresh = nms_thresh, topk_per_image=topk_per_image
+            boxes=boxes_per_image,
+            scores=scores_per_image,
+            contact_scores=contact_scores_per_image,
+            image_shape=image_shape,
+            score_thresh=score_thresh,
+            contact_thresh=contact_thresh,
+            nms_thresh=nms_thresh,
+            topk_per_image=topk_per_image,
         )
-        for scores_per_image, contact_scores_per_image, boxes_per_image, image_shape in zip(scores, contact_scores, boxes, image_shapes)
+        for scores_per_image, contact_scores_per_image, boxes_per_image, image_shape in zip(
+            scores, contact_scores, boxes, image_shapes
+        )
     ]
     return [x[0] for x in result_per_image], [x[1] for x in result_per_image]
+
 
 def _log_classification_stats(pred_logits, gt_classes, prefix="fast_rcnn"):
     """
@@ -328,6 +373,7 @@ def _log_classification_stats(pred_logits, gt_classes, prefix="fast_rcnn"):
         storage.put_scalar(f"{prefix}/fg_cls_accuracy", fg_num_accurate / num_fg)
         storage.put_scalar(f"{prefix}/false_negative", num_false_negative / num_fg)
 
+
 def _log_contact_state_stats(pred_logits, gt_contact_state, prefix="fast_rcnn"):
     """
     Log the classification metrics to EventStorage.
@@ -347,7 +393,9 @@ def _log_contact_state_stats(pred_logits, gt_contact_state, prefix="fast_rcnn"):
     fg_gt_contact_state = gt_contact_state[fg_inds]
     fg_pred_contact_state = pred_contact_state[fg_inds]
 
-    num_false_negative = (fg_pred_contact_state == bg_contact_state_ind).nonzero().numel()
+    num_false_negative = (
+        (fg_pred_contact_state == bg_contact_state_ind).nonzero().numel()
+    )
     num_accurate = (pred_contact_state == gt_contact_state).nonzero().numel()
     fg_num_accurate = (fg_pred_contact_state == fg_gt_contact_state).nonzero().numel()
 
@@ -356,6 +404,7 @@ def _log_contact_state_stats(pred_logits, gt_contact_state, prefix="fast_rcnn"):
     if num_fg > 0:
         storage.put_scalar(f"{prefix}/fg_cls_accuracy", fg_num_accurate / num_fg)
         storage.put_scalar(f"{prefix}/false_negative", num_false_negative / num_fg)
+
 
 def fast_rcnn_inference_single_image(
     boxes,
@@ -412,6 +461,7 @@ def fast_rcnn_inference_single_image(
     result.pred_classes = filter_inds[:, 1]
     return result, filter_inds[:, 0]
 
+
 def fast_rcnn_inference_single_image_contact(
     boxes,
     scores,
@@ -459,16 +509,20 @@ def fast_rcnn_inference_single_image_contact(
     scores = scores[filter_mask]
 
     # modify if deliver cls-based contact
-    contact_scores = contact_scores.repeat(42, 1, 1)
+    contact_scores = contact_scores.repeat(num_bbox_reg_classes, 1, 1)
     contact_scores = contact_scores.permute(1, 0, 2)
     contact_scores = contact_scores[filter_mask]
-
 
     # 2. Apply NMS for each class independently.
     keep = batched_nms(boxes, scores, filter_inds[:, 1], nms_thresh)
     if topk_per_image >= 0:
         keep = keep[:topk_per_image]
-    boxes, scores, contact_scores, filter_inds = boxes[keep], scores[keep], contact_scores[keep], filter_inds[keep]
+    boxes, scores, contact_scores, filter_inds = (
+        boxes[keep],
+        scores[keep],
+        contact_scores[keep],
+        filter_inds[keep],
+    )
 
     # filter the contact score
     new_contact_score = []
@@ -483,8 +537,6 @@ def fast_rcnn_inference_single_image_contact(
             new_contact_score.append(ins[1])
             pred_contact_state.append(1)
 
-
-
     result = Instances(image_shape)
     result.pred_boxes = Boxes(boxes)
     result.scores = scores
@@ -492,6 +544,7 @@ def fast_rcnn_inference_single_image_contact(
     result.contact_classes = torch.tensor(pred_contact_state).cuda()
     result.pred_classes = filter_inds[:, 1]
     return result, filter_inds[:, 0]
+
 
 class FastRCNNOutputLayers(nn.Module):
     """
@@ -553,7 +606,9 @@ class FastRCNNOutputLayers(nn.Module):
         if isinstance(input_shape, int):  # some backward compatibility
             input_shape = ShapeSpec(channels=input_shape)
         self.num_classes = num_classes
-        input_size = input_shape.channels * (input_shape.width or 1) * (input_shape.height or 1)
+        input_size = (
+            input_shape.channels * (input_shape.width or 1) * (input_shape.height or 1)
+        )
         # prediction layer for num_classes foreground classes and one background class (hence + 1)
         self.cls_score = nn.Linear(input_size, num_classes + 1)
         num_bbox_reg_classes = 1 if cls_agnostic_bbox_reg else num_classes
@@ -579,7 +634,9 @@ class FastRCNNOutputLayers(nn.Module):
         self.fed_loss_num_classes = fed_loss_num_classes
 
         if self.use_fed_loss:
-            assert self.use_sigmoid_ce, "Please use sigmoid cross entropy loss with federated loss"
+            assert (
+                self.use_sigmoid_ce
+            ), "Please use sigmoid cross entropy loss with federated loss"
             fed_loss_cls_weights = get_fed_loss_cls_weights()
             assert (
                 len(fed_loss_cls_weights) == self.num_classes
@@ -590,7 +647,9 @@ class FastRCNNOutputLayers(nn.Module):
     def from_config(cls, cfg, input_shape):
         return {
             "input_shape": input_shape,
-            "box2box_transform": Box2BoxTransform(weights=cfg.MODEL.ROI_BOX_HEAD.BBOX_REG_WEIGHTS),
+            "box2box_transform": Box2BoxTransform(
+                weights=cfg.MODEL.ROI_BOX_HEAD.BBOX_REG_WEIGHTS
+            ),
             # fmt: off
             "num_classes"               : cfg.MODEL.ROI_HEADS.NUM_CLASSES,
             "cls_agnostic_bbox_reg"     : cfg.MODEL.ROI_BOX_HEAD.CLS_AGNOSTIC_BBOX_REG,
@@ -641,24 +700,35 @@ class FastRCNNOutputLayers(nn.Module):
 
         # parse classification outputs
         gt_classes = (
-            cat([p.gt_classes for p in proposals], dim=0) if len(proposals) else torch.empty(0)
+            cat([p.gt_classes for p in proposals], dim=0)
+            if len(proposals)
+            else torch.empty(0)
         )
         _log_classification_stats(scores, gt_classes)
 
         # parse box regression outputs
         if len(proposals):
-            proposal_boxes = cat([p.proposal_boxes.tensor for p in proposals], dim=0)  # Nx4
-            assert not proposal_boxes.requires_grad, "Proposals should not require gradients!"
+            proposal_boxes = cat(
+                [p.proposal_boxes.tensor for p in proposals], dim=0
+            )  # Nx4
+            assert (
+                not proposal_boxes.requires_grad
+            ), "Proposals should not require gradients!"
             # If "gt_boxes" does not exist, the proposals must be all negative and
             # should not be included in regression loss computation.
             # Here we just use proposal_boxes as an arbitrary placeholder because its
             # value won't be used in self.box_reg_loss().
             gt_boxes = cat(
-                [(p.gt_boxes if p.has("gt_boxes") else p.proposal_boxes).tensor for p in proposals],
+                [
+                    (p.gt_boxes if p.has("gt_boxes") else p.proposal_boxes).tensor
+                    for p in proposals
+                ],
                 dim=0,
             )
         else:
-            proposal_boxes = gt_boxes = torch.empty((0, 4), device=proposal_deltas.device)
+            proposal_boxes = gt_boxes = torch.empty(
+                (0, 4), device=proposal_deltas.device
+            )
 
         if self.use_sigmoid_ce:
             loss_cls = self.sigmoid_cross_entropy_loss(scores, gt_classes)
@@ -675,7 +745,9 @@ class FastRCNNOutputLayers(nn.Module):
 
     # Implementation from https://github.com/xingyizhou/CenterNet2/blob/master/projects/CenterNet2/centernet/modeling/roi_heads/fed_loss.py  # noqa
     # with slight modifications
-    def get_fed_loss_classes(self, gt_classes, num_fed_loss_classes, num_classes, weight):
+    def get_fed_loss_classes(
+        self, gt_classes, num_fed_loss_classes, num_classes, weight
+    ):
         """
         Args:
             gt_classes: a long tensor of shape R that contains the gt class label of each proposal.
@@ -782,7 +854,9 @@ class FastRCNNOutputLayers(nn.Module):
         # in minibatch (2) are given equal influence.
         return loss_box_reg / max(gt_classes.numel(), 1.0)  # return 0 if empty
 
-    def inference(self, predictions: Tuple[torch.Tensor, torch.Tensor], proposals: List[Instances]):
+    def inference(
+        self, predictions: Tuple[torch.Tensor, torch.Tensor], proposals: List[Instances]
+    ):
         """
         Args:
             predictions: return values of :meth:`forward()`.
@@ -805,7 +879,12 @@ class FastRCNNOutputLayers(nn.Module):
             self.test_topk_per_image,
         )
 
-    def inference_mixed(self, predictions: Tuple[torch.Tensor, torch.Tensor], predictions_contact: Tuple[torch.Tensor, torch.Tensor], proposals: List[Instances]):
+    def inference_mixed(
+        self,
+        predictions: Tuple[torch.Tensor, torch.Tensor],
+        predictions_contact: Tuple[torch.Tensor, torch.Tensor],
+        proposals: List[Instances],
+    ):
         """
         Args:
             predictions: return values of :meth:`forward()`.
@@ -863,7 +942,8 @@ class FastRCNNOutputLayers(nn.Module):
             gt_classes = gt_classes.clamp_(0, K - 1)
 
             predict_boxes = predict_boxes.view(N, K, B)[
-                torch.arange(N, dtype=torch.long, device=predict_boxes.device), gt_classes
+                torch.arange(N, dtype=torch.long, device=predict_boxes.device),
+                gt_classes,
             ]
         num_prop_per_image = [len(p) for p in proposals]
         return predict_boxes.split(num_prop_per_image)
@@ -930,7 +1010,7 @@ class FastRCNNOutputLayers(nn.Module):
                 A list of Tensors of predicted class probabilities for each image.
                 Element i has shape (Ri, K + 1), where Ri is the number of proposals for image i.
         """
-        scores= predictions
+        scores = predictions
         num_inst_per_image = [len(p) for p in proposals]
         if self.use_sigmoid_ce:
             probs = scores.sigmoid()
@@ -965,7 +1045,7 @@ class FastRCNNOutputLayers_PLUS_CONTACT(nn.Module):
         use_sigmoid_ce: bool = False,
         get_fed_loss_cls_weights: Optional[Callable] = None,
         fed_loss_num_classes: int = 50,
-        contact_score_thresh: float = 0.4
+        contact_score_thresh: float = 0.4,
     ):
         """
         NOTE: this interface is experimental.
@@ -1000,7 +1080,9 @@ class FastRCNNOutputLayers_PLUS_CONTACT(nn.Module):
         if isinstance(input_shape, int):  # some backward compatibility
             input_shape = ShapeSpec(channels=input_shape)
         self.num_classes = num_classes
-        input_size = input_shape.channels * (input_shape.width or 1) * (input_shape.height or 1)
+        input_size = (
+            input_shape.channels * (input_shape.width or 1) * (input_shape.height or 1)
+        )
         # prediction layer for num_classes foreground classes and one background class (hence + 1)
         self.cls_score = nn.Linear(input_size, num_classes + 1)
         num_bbox_reg_classes = 1 if cls_agnostic_bbox_reg else num_classes
@@ -1008,7 +1090,6 @@ class FastRCNNOutputLayers_PLUS_CONTACT(nn.Module):
         self.bbox_pred = nn.Linear(input_size, num_bbox_reg_classes * box_dim)
         # self.contact_pred = nn.Linear(input_size, num_classes + 1)
         self.contact_pred = nn.Linear(input_size, 3)
-
 
         nn.init.normal_(self.cls_score.weight, std=0.01)
         nn.init.normal_(self.contact_pred.weight, std=0.01)
@@ -1024,14 +1105,20 @@ class FastRCNNOutputLayers_PLUS_CONTACT(nn.Module):
         self.test_topk_per_image = test_topk_per_image
         self.box_reg_loss_type = box_reg_loss_type
         if isinstance(loss_weight, float):
-            loss_weight = {"loss_cls": loss_weight, "loss_box_reg": loss_weight, "loss_contact": loss_weight}
+            loss_weight = {
+                "loss_cls": loss_weight,
+                "loss_box_reg": loss_weight,
+                "loss_contact": loss_weight,
+            }
         self.loss_weight = loss_weight
         self.use_fed_loss = use_fed_loss
         self.use_sigmoid_ce = use_sigmoid_ce
         self.fed_loss_num_classes = fed_loss_num_classes
 
         if self.use_fed_loss:
-            assert self.use_sigmoid_ce, "Please use sigmoid cross entropy loss with federated loss"
+            assert (
+                self.use_sigmoid_ce
+            ), "Please use sigmoid cross entropy loss with federated loss"
             fed_loss_cls_weights = get_fed_loss_cls_weights()
             assert (
                 len(fed_loss_cls_weights) == self.num_classes
@@ -1042,7 +1129,9 @@ class FastRCNNOutputLayers_PLUS_CONTACT(nn.Module):
     def from_config(cls, cfg, input_shape):
         return {
             "input_shape": input_shape,
-            "box2box_transform": Box2BoxTransform(weights=cfg.MODEL.ROI_BOX_HEAD.BBOX_REG_WEIGHTS),
+            "box2box_transform": Box2BoxTransform(
+                weights=cfg.MODEL.ROI_BOX_HEAD.BBOX_REG_WEIGHTS
+            ),
             # fmt: off
             "num_classes"               : cfg.MODEL.ROI_HEADS.NUM_CLASSES,
             "cls_agnostic_bbox_reg"     : cfg.MODEL.ROI_BOX_HEAD.CLS_AGNOSTIC_BBOX_REG,
@@ -1094,36 +1183,51 @@ class FastRCNNOutputLayers_PLUS_CONTACT(nn.Module):
 
         # parse classification outputs
         gt_classes = (
-            cat([p.gt_classes for p in proposals], dim=0) if len(proposals) else torch.empty(0)
+            cat([p.gt_classes for p in proposals], dim=0)
+            if len(proposals)
+            else torch.empty(0)
         )
         _log_classification_stats(scores, gt_classes)
 
         # parse contact outputs
         gt_contact_state = (
-            cat([p.gt_contact_state for p in proposals], dim=0) if len(proposals) else torch.empty(0)
+            cat([p.gt_contact_state for p in proposals], dim=0)
+            if len(proposals)
+            else torch.empty(0)
         )
         _log_contact_state_stats(contact, gt_contact_state)
 
         # parse box regression outputs
         if len(proposals):
-            proposal_boxes = cat([p.proposal_boxes.tensor for p in proposals], dim=0)  # Nx4
-            assert not proposal_boxes.requires_grad, "Proposals should not require gradients!"
+            proposal_boxes = cat(
+                [p.proposal_boxes.tensor for p in proposals], dim=0
+            )  # Nx4
+            assert (
+                not proposal_boxes.requires_grad
+            ), "Proposals should not require gradients!"
             # If "gt_boxes" does not exist, the proposals must be all negative and
             # should not be included in regression loss computation.
             # Here we just use proposal_boxes as an arbitrary placeholder because its
             # value won't be used in self.box_reg_loss().
             gt_boxes = cat(
-                [(p.gt_boxes if p.has("gt_boxes") else p.proposal_boxes).tensor for p in proposals],
+                [
+                    (p.gt_boxes if p.has("gt_boxes") else p.proposal_boxes).tensor
+                    for p in proposals
+                ],
                 dim=0,
             )
         else:
-            proposal_boxes = gt_boxes = torch.empty((0, 4), device=proposal_deltas.device)
+            proposal_boxes = gt_boxes = torch.empty(
+                (0, 4), device=proposal_deltas.device
+            )
 
         if self.use_sigmoid_ce:
             loss_cls = self.sigmoid_cross_entropy_loss(scores, gt_classes)
         else:
             loss_cls = cross_entropy(scores, gt_classes, reduction="mean")
-            loss_contact_state = cross_entropy(contact, gt_contact_state, reduction="mean")
+            loss_contact_state = cross_entropy(
+                contact, gt_contact_state, reduction="mean"
+            )
 
         losses = {
             "loss_cls": loss_cls,
@@ -1136,7 +1240,9 @@ class FastRCNNOutputLayers_PLUS_CONTACT(nn.Module):
 
     # Implementation from https://github.com/xingyizhou/CenterNet2/blob/master/projects/CenterNet2/centernet/modeling/roi_heads/fed_loss.py  # noqa
     # with slight modifications
-    def get_fed_loss_classes(self, gt_classes, num_fed_loss_classes, num_classes, weight):
+    def get_fed_loss_classes(
+        self, gt_classes, num_fed_loss_classes, num_classes, weight
+    ):
         """
         Args:
             gt_classes: a long tensor of shape R that contains the gt class label of each proposal.
@@ -1243,7 +1349,9 @@ class FastRCNNOutputLayers_PLUS_CONTACT(nn.Module):
         # in minibatch (2) are given equal influence.
         return loss_box_reg / max(gt_classes.numel(), 1.0)  # return 0 if empty
 
-    def inference(self, predictions: Tuple[torch.Tensor, torch.Tensor], proposals: List[Instances]):
+    def inference(
+        self, predictions: Tuple[torch.Tensor, torch.Tensor], proposals: List[Instances]
+    ):
         """
         Args:
             predictions: return values of :meth:`forward()`.
@@ -1299,7 +1407,8 @@ class FastRCNNOutputLayers_PLUS_CONTACT(nn.Module):
             gt_classes = gt_classes.clamp_(0, K - 1)
 
             predict_boxes = predict_boxes.view(N, K, B)[
-                torch.arange(N, dtype=torch.long, device=predict_boxes.device), gt_classes
+                torch.arange(N, dtype=torch.long, device=predict_boxes.device),
+                gt_classes,
             ]
         num_prop_per_image = [len(p) for p in proposals]
         return predict_boxes.split(num_prop_per_image)
@@ -1396,6 +1505,7 @@ class FastRCNNOutputLayers_PLUS_CONTACT(nn.Module):
             probs = F.softmax(scores, dim=-1)
         return probs.split(num_inst_per_image, dim=0)
 
+
 class FastRCNNOutputLayers_CONTACT(nn.Module):
     """
     Two linear layers for predicting Fast R-CNN outputs:
@@ -1422,7 +1532,7 @@ class FastRCNNOutputLayers_CONTACT(nn.Module):
         use_sigmoid_ce: bool = False,
         get_fed_loss_cls_weights: Optional[Callable] = None,
         fed_loss_num_classes: int = 50,
-        contact_score_thresh: float = 0.4
+        contact_score_thresh: float = 0.4,
     ):
         """
         NOTE: this interface is experimental.
@@ -1457,7 +1567,9 @@ class FastRCNNOutputLayers_CONTACT(nn.Module):
         if isinstance(input_shape, int):  # some backward compatibility
             input_shape = ShapeSpec(channels=input_shape)
         self.num_classes = num_classes
-        input_size = input_shape.channels * (input_shape.width or 1) * (input_shape.height or 1)
+        input_size = (
+            input_shape.channels * (input_shape.width or 1) * (input_shape.height or 1)
+        )
         # prediction layer for num_classes foreground classes and one background class (hence + 1)
         self.obj_hand_contact_pred = nn.Linear(input_size, 3)
         # num_bbox_reg_classes = 1 if cls_agnostic_bbox_reg else num_classes
@@ -1465,7 +1577,6 @@ class FastRCNNOutputLayers_CONTACT(nn.Module):
         # self.bbox_pred = nn.Linear(input_size, num_bbox_reg_classes * box_dim)
         # self.contact_pred = nn.Linear(input_size, num_classes + 1)
         self.obj_obj_contact_pred = nn.Linear(input_size, 3)
-
 
         nn.init.normal_(self.obj_hand_contact_pred.weight, std=0.01)
         nn.init.normal_(self.obj_obj_contact_pred.weight, std=0.01)
@@ -1481,14 +1592,21 @@ class FastRCNNOutputLayers_CONTACT(nn.Module):
         self.test_topk_per_image = test_topk_per_image
         self.box_reg_loss_type = box_reg_loss_type
         if isinstance(loss_weight, float):
-            loss_weight = {"loss_cls": loss_weight, "loss_box_reg": loss_weight, "loss_obj_obj_contact": loss_weight, "loss_obj_hand_contact": loss_weight}
+            loss_weight = {
+                "loss_cls": loss_weight,
+                "loss_box_reg": loss_weight,
+                "loss_obj_obj_contact": loss_weight,
+                "loss_obj_hand_contact": loss_weight,
+            }
         self.loss_weight = loss_weight
         self.use_fed_loss = use_fed_loss
         self.use_sigmoid_ce = use_sigmoid_ce
         self.fed_loss_num_classes = fed_loss_num_classes
 
         if self.use_fed_loss:
-            assert self.use_sigmoid_ce, "Please use sigmoid cross entropy loss with federated loss"
+            assert (
+                self.use_sigmoid_ce
+            ), "Please use sigmoid cross entropy loss with federated loss"
             fed_loss_cls_weights = get_fed_loss_cls_weights()
             assert (
                 len(fed_loss_cls_weights) == self.num_classes
@@ -1499,7 +1617,9 @@ class FastRCNNOutputLayers_CONTACT(nn.Module):
     def from_config(cls, cfg, input_shape):
         return {
             "input_shape": input_shape,
-            "box2box_transform": Box2BoxTransform(weights=cfg.MODEL.ROI_BOX_HEAD.BBOX_REG_WEIGHTS),
+            "box2box_transform": Box2BoxTransform(
+                weights=cfg.MODEL.ROI_BOX_HEAD.BBOX_REG_WEIGHTS
+            ),
             # fmt: off
             "num_classes"               : cfg.MODEL.ROI_HEADS.NUM_CLASSES,
             "cls_agnostic_bbox_reg"     : cfg.MODEL.ROI_BOX_HEAD.CLS_AGNOSTIC_BBOX_REG,
@@ -1548,6 +1668,7 @@ class FastRCNNOutputLayers_CONTACT(nn.Module):
         Returns:
             Dict[str, Tensor]: dict of losses
         """
+
         obj_obj_contact_pred, obj_hand_contact_pred = predictions
 
         # # parse classification outputs
@@ -1557,15 +1678,28 @@ class FastRCNNOutputLayers_CONTACT(nn.Module):
         # _log_classification_stats(scores, gt_classes)
 
         # parse contact outputs
-        gt_obj_obj_contact_state = (
-            cat([p.gt_obj_obj_contact_state for p in proposals], dim=0) if len(proposals) else torch.empty(0)
-        )
+        try:
+            gt_obj_obj_contact_state = (
+                cat([p.gt_obj_obj_contact_state for p in proposals], dim=0)
+                if len(proposals)
+                else torch.empty(0)
+            )
+        except:
+            # logger.info('error =================================')
+            # print('proposal', proposals)
+            gt_obj_obj_contact_state = torch.empty(0)
+            # import pdb; pdb.set_trace()
         _log_contact_state_stats(obj_obj_contact_pred, gt_obj_obj_contact_state)
 
         # parse contact outputs
-        gt_obj_hand_contact_state = (
-            cat([p.gt_obj_hand_contact_state for p in proposals], dim=0) if len(proposals) else torch.empty(0)
-        )
+        try:
+            gt_obj_hand_contact_state = (
+                cat([p.gt_obj_hand_contact_state for p in proposals], dim=0)
+                if len(proposals)
+                else torch.empty(0)
+            )
+        except:
+            gt_obj_hand_contact_state = torch.empty(0)
         _log_contact_state_stats(obj_hand_contact_pred, gt_obj_hand_contact_state)
 
         # # parse box regression outputs
@@ -1587,18 +1721,24 @@ class FastRCNNOutputLayers_CONTACT(nn.Module):
             loss_cls = self.sigmoid_cross_entropy_loss(scores, gt_classes)
         else:
             # loss_cls = cross_entropy(scores, gt_classes, reduction="mean")
-            loss_obj_obj_contact_state = cross_entropy(obj_obj_contact_pred, gt_obj_obj_contact_state, reduction="mean")
-            loss_obj_hand_contact_state = cross_entropy(obj_hand_contact_pred, gt_obj_hand_contact_state, reduction="mean")
+            loss_obj_obj_contact_state = cross_entropy(
+                obj_obj_contact_pred, gt_obj_obj_contact_state, reduction="mean"
+            )
+            loss_obj_hand_contact_state = cross_entropy(
+                obj_hand_contact_pred, gt_obj_hand_contact_state, reduction="mean"
+            )
 
         losses = {
             "loss_obj_obj_contact_state": loss_obj_obj_contact_state,
-            "loss_obj_hand_contact_state": loss_obj_hand_contact_state
+            "loss_obj_hand_contact_state": loss_obj_hand_contact_state,
         }
         return {k: v * self.loss_weight.get(k, 1.0) for k, v in losses.items()}
 
     # Implementation from https://github.com/xingyizhou/CenterNet2/blob/master/projects/CenterNet2/centernet/modeling/roi_heads/fed_loss.py  # noqa
     # with slight modifications
-    def get_fed_loss_classes(self, gt_classes, num_fed_loss_classes, num_classes, weight):
+    def get_fed_loss_classes(
+        self, gt_classes, num_fed_loss_classes, num_classes, weight
+    ):
         """
         Args:
             gt_classes: a long tensor of shape R that contains the gt class label of each proposal.
@@ -1705,7 +1845,9 @@ class FastRCNNOutputLayers_CONTACT(nn.Module):
         # in minibatch (2) are given equal influence.
         return loss_box_reg / max(gt_classes.numel(), 1.0)  # return 0 if empty
 
-    def inference(self, predictions: Tuple[torch.Tensor, torch.Tensor], proposals: List[Instances]):
+    def inference(
+        self, predictions: Tuple[torch.Tensor, torch.Tensor], proposals: List[Instances]
+    ):
         """
         Args:
             predictions: return values of :meth:`forward()`.
@@ -1761,7 +1903,8 @@ class FastRCNNOutputLayers_CONTACT(nn.Module):
             gt_classes = gt_classes.clamp_(0, K - 1)
 
             predict_boxes = predict_boxes.view(N, K, B)[
-                torch.arange(N, dtype=torch.long, device=predict_boxes.device), gt_classes
+                torch.arange(N, dtype=torch.long, device=predict_boxes.device),
+                gt_classes,
             ]
         num_prop_per_image = [len(p) for p in proposals]
         return predict_boxes.split(num_prop_per_image)

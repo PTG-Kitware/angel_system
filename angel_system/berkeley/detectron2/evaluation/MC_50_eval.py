@@ -377,8 +377,8 @@ class LVISEval:
                 tps = np.logical_and(dt_m, np.logical_not(dt_ig))
                 fps = np.logical_and(np.logical_not(dt_m), np.logical_not(dt_ig))
 
-                tp_sum = np.cumsum(tps, axis=1).astype(dtype=np.float)
-                fp_sum = np.cumsum(fps, axis=1).astype(dtype=np.float)
+                tp_sum = np.cumsum(tps, axis=1).astype(dtype=np.float64)
+                fp_sum = np.cumsum(fps, axis=1).astype(dtype=np.float64)
 
                 dt_pointers[cat_idx][area_idx] = {
                     "dt_ids": dt_ids,
@@ -562,6 +562,6 @@ class Params:
         # r: Rare    :  < 10
         # c: Common  : >= 10 and < 100
         # f: Frequent: >= 100
-        # self.img_count_lbl = ["r", "c", "f"]
-        self.img_count_lbl = ['coffee + mug', 'coffee bag', 'coffee beans + container', 'coffee beans + container + scale', 'coffee grounds + paper filter + filter cone', 'coffee grounds + paper filter + filter cone + mug', 'container', 'container + scale', 'filter cone', 'filter cone + mug', 'grinder', 'hand (left)', 'hand (right)', 'kettle', 'kettle (empty)', 'kettle (full)', 'lid (grinder)', 'lid (kettle)', 'measuring cup (empty)', 'measuring cup (full)', 'mug', 'paper filter', 'paper filter (quarter)', 'paper filter (semi)', 'paper filter + filter cone', 'paper filter + filter cone + mug', 'paper filter bag', 'paper towel', 'scale (off)', 'scale (on)', 'thermometer', 'timer', 'timer (0)', 'timer (20)', 'timer (30)', 'trash can', 'used paper filter', 'used paper filter + filter cone', 'used paper filter + filter cone + mug', 'water', 'water + coffee grounds + paper filter + filter cone + mug']
+        self.img_count_lbl = ["r", "c", "f"]
         self.iou_type = iou_type
+

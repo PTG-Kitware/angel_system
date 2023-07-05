@@ -29,8 +29,10 @@ HL2SS plugin - 1.0.15 - https://github.com/jdibenes/hl2ss
 ## First time build/deploy instructions
 
 1) Open the unity/ARUI project with Unity Hub.
-2) Open the demo scene in the Unity editor (unity\ARUI\Assets\my_scene).
-3) Modify the default project build settings (``File -> Build Settings...``).  
+2) Open the arui_engineering scene in the Unity editor (unity\ARUI\Assets\my_scene).
+3) Modify the default project build settings (``File -> Build Settings...``).
+   - Ensure the "Scenes/arui_engineering" scene is checked for inclusion in the build
+     (others may be unchecked).
    - Under the Universal Windows Platform tab
      - Target Device = HoloLens  
      - Architecture = ARM64  
@@ -43,9 +45,8 @@ HL2SS plugin - 1.0.15 - https://github.com/jdibenes/hl2ss
 7) Open the .sln file with Visual Studio.  
 8) In Visual Studio, switch ``Solution Configurations`` to Release and ``Solution Platforms`` to ARM64.  
 9) Open the project properties window (In the ``Solution Explorer`` pane, right-click ``Angel_ARUI`` and select ``Properties``) and switch to the ``Configurations -> Debugging`` tab. Enter the IP address of your HoloLens in the Machine Name field.
-10) Modify the ``Package.appxmanifest`` per the README in HoloLens2-ResearchMode-Unity/  
-11) Deploy the app to the Hololens by clicking ``Build -> Deploy Solution``
-12) After deployment completes, open the Windows menu in the Hololens and select All Apps, and then click on the Angel_ARUI application.
+10) Deploy the app to the Hololens by clicking ``Build -> Deploy Solution``
+11) After deployment completes, open the Windows menu in the Hololens and select All Apps, and then click on the Angel_ARUI application.
 
 ## ROS Unity Setup
 ### ROS IP configuration

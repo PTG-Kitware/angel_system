@@ -78,25 +78,36 @@ XAUTH_DIR="${SCRIPT_DIR}/.container_xauth"
 # Exporting to be used in replacement in docker-compose file.
 XAUTH_FILEPATH="$(mktemp "${XAUTH_DIR}/local-XXXXXX.xauth")"
 export XAUTH_FILEPATH
-log "[INFO] Creating local xauth file: $XAUTH_FILEPATH"
-touch "$XAUTH_FILEPATH"
-xauth nlist "$DISPLAY" | sed -e 's/^..../ffff/' | xauth -f "$XAUTH_FILEPATH" nmerge -
+
+# Conditionally gather if jupyter is available in the current
+# environment and parameterize mounting it's runtime dir
+if [[ -n "$(which jupyter)" ]]
+then
+  jupyter_rt_dir="$(jupyter --runtime-dir)"
+  export JUPYTER_MOUNT_PARAM=(-v "${jupyter_rt_dir}:/root/.local/share/jupyter/runtime")
+fi
 
 # Print some status stuff from the ENV file we are using
 #
 # Encapsulating the source in a nested bash instance to not pollute the
 # current env with the contents of the file.
 ENV_FILE="${SCRIPT_DIR}/docker/.env"
-bash -c "\
-source \"${ENV_FILE}\";
->&2 echo \"[INFO] Using container tag: \${PTG_TAG}\"
-"
+if [[ -n "${PTG_TAG+x}" ]]
+then
+  >&2 echo "[INFO] Using container tag: ${PTG_TAG}"
+else
+  bash -c "\
+    source \"${ENV_FILE}\";
+    >&2 echo \"[INFO] Using container tag: \${PTG_TAG}\"
+  "
+fi
 
 set +e
 docker-compose \
   --env-file "$ENV_FILE" \
   -f "$SCRIPT_DIR"/docker/docker-compose.yml \
   run --rm \
+  "${JUPYTER_MOUNT_PARAM[@]}" \
   "$SERVICE_NAME" "${passthrough_args[@]}"
 DC_RUN_RET_CODE="$?"
 set -e
