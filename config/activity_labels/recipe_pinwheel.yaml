@@ -1,4 +1,5 @@
 version: "1"
+title: "Pinwheels"
 labels:
   # Item:
   # - id: Integer identification number of the label.
@@ -8,31 +9,73 @@ labels:
     label: "background"
   - id: 1
     label: "place-tortilla"
+    full_str: "Place tortilla on cutting board"
+    depends: ["start"]
   - id: 2
-    label: "knife-scoop-butter"
+    label: "scoop-nutbutter"
+    full_str: "Use the butter knife to scoop nut butter from the jar"
+    depends: ["start"]
   - id: 3
-    label: "spread-butter-tortilla"
+    label: "spread-nutbutter-tortilla"
+    full_str: "Spread nut butter onto tortilla, leaving ½ inch uncovered at the edges"
+    depends: ["place-tortilla", "scoop-nutbutter"]
   - id: 4
     label: "clean-knife"
+    full_str: "Clean the knife by wiping with a paper towel."
+    depends: ["spread-nutbutter-tortilla"]
   - id: 5
-    label: "knife-scoop-jelly"
+    label: "scoop-jelly"
+    full_str: "Use the butter knife to scoop jelly from the jar"
+    depends: ["clean-knife"]
   - id: 6
     label: "spread-jelly-tortilla"
+    full_str: "Spread jelly onto tortilla, leaving ½ inch uncovered at the edges"
+    depends: ["place-tortilla", "scoop-jelly"]
   - id: 7
-    label: "discard-paper-towel"
-  - id: 8
     label: "roll-tortilla"
-  - id: 9
+    full_str: "Roll the tortilla from one end to the other into a log shape, about 1.5 inches thick.  Roll it tight enough to prevent gaps, but not so tight that the filling leaks"
+    depends: ["spread-jelly-tortilla", "spread-nutbutter-tortilla"]
+  - id: 8
     label: "insert-toothpick-1"
-  - id: 10
+    full_str: "Insert a toothpick into the tortilla"
+    depends: ["roll-tortilla"]
+  - id: 9
     label: "insert-toothpick-2"
-  - id: 11
+    full_str: "Insert a toothpick into the tortilla approximately 1” from the previous toothpick"
+    depends:  ["insert-toothpick-1"]
+    repeat: 4
+  - id: 10
     label: "trim-tortilla"
-  - id: 12
+    full_str: "Trim one end of the tortilla roll leaving ½” margin from the toothpick"
+    depends: ["insert-toothpick-2-all"]
+    repeat: 2
+  - id: 11
     label: "discard-tortilla-ends"
-  - id: 13
+    full_str: "Discard both ends of the tortilla"
+    depends: ["trim-tortilla-all"]
+  - id: 12
     label: "place-floss-between-toothpicks"
+    full_str: "Slide floss under the tortilla, perpendicular to the length of the roll.  Place the floss halfway between two toothpicks."
+    depends: ["insert-toothpick-2-all"]
+  # TODO: How to represetn slicing the pinwheels so they can be repeated
+  # with plating wach pinwheel optionally after eaach slice
+  - id: 13
+    label: "cross-floss"
+    full_str: "Cross the two ends of the floss over the top of the tortilla roll."
+    depends: ["place-floss-between-toothpicks"]
   - id: 14
     label: "slice-tortilla"
+    full_str: "Holding one end of the floss in each hand, pull the floss ends in opposite directions to slice."
+    depends: ["cross-floss"]
+  - id: 15
+    label: "continue-slicing"
+    full_str: "Continue slicing with floss to create 5 pinwheels."
+    depends: ["slice-tortilla"]
   - id: 15
     label: "plate-pinwheels"
+    full_str: "Place the pinwheels on a plate."
+    depends: ["trim-tortilla-all", "continue-slicing"]
+  - id: 16
+    label: "done"
+    full_str: "done"
+    depends: ["plate-pinwheels"]
