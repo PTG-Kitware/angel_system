@@ -1,0 +1,61 @@
+version: "1"
+title: "Tea"
+labels:
+  # Item:
+  # - id: Integer identification number of the label.
+  # - label: Short human-readable semantic string to succinctly represent the
+  #          label.
+  - id: 0
+    label: "background"
+  - id: 1
+    label: "measure-12oz-water"
+    full_str: "Measure 12 ounces of water in the liquid measuring cup"
+    depends: ["start"]
+  - id: 2
+    label: "pour-water-kettle"
+    full_str: "Pour the water from the liquid measuring cup into the electric kettle"
+    depends: ["measure-12oz-water"]
+  - id: 3
+    label: "tea-bag-in-mug"
+    full_str: "Place tea bag in mug"
+    depends: ["start"]
+  - id: 4
+    label: "thermometer-turn-on"
+    full_str: "Turn on the thermometer"
+    depends: ["pour-water-kettle"]
+  - id: 5
+    label: "thermometer-in-water"
+    full_str: "Place the end of the thermometer into the water."
+    depends: ["thermometer-turn-on"]
+  - id: 6
+    label: "check-thermometer"
+    full_str: "Check the temperature displayed on the thermometer."
+    depends: ["thermometer-in-water"]
+  - id: 7
+    label: "pour-water-mug"
+    full_str: "Pour water from the electric kettle into the mug"
+    depends: ["check-thermometer"]
+  - id: 8
+    label: "steep"
+    full_str: "Steep for 3 minutes"
+    depends: ["tea-bag-in-mug", "pour-water-mug"]
+  - id: 9
+    label: "remove-tea-bag"
+    full_str: "Remove tea bag from mug"
+    depends: ["steep"]
+  - id: 10
+    label: "discard-tea-bag"
+    full_str: "Discard tea bag"
+    depends: ["remove-tea-bag"]
+  - id: 11
+    label: "add-honey"
+    full_str: "Add honey to mug"
+    depends: ["start"]
+  - id: 12
+    label: "stir"
+    full_str: "Stir"
+    depends: ["pour-water-mug", "add-honey"]
+  - id: 13
+    label: "done"
+    full_str: "done"
+    depends: ["discard-tea-bag", "stir"]
