@@ -1,0 +1,62 @@
+version: "1"
+title: "Oatmeal"
+labels:
+  # Item:
+  # - id: Integer identification number of the label.
+  # - label: Short human-readable semantic string to succinctly represent the
+  #          label.
+  - id: 0
+    label: "background"
+  - id: 1
+    label: "measure-half-cup-water"
+    full_str: "Measure 1/2 cup water in the liquid measuring cup."
+    depends: ["start"]
+  - id: 2
+    label: "pour-water-bowl"
+    full_str: "Pour the water from the liquid measuring cup into the microwave safe bowl."
+    depends: ["measure-half-cup-water"]
+  - id: 3
+    label: "measure-1-tbsp-oats"
+    full_str: "Measure 1 Tablespoon of quick-cook oats and place in a microwave-safe bowl."
+    depends: ["start"]
+    repeat: 4
+  - id: 4
+    label: "microwave-30-sec"
+    full_str: "Microwave for 30 seconds."
+    depends: ["measure-1-tbsp-oats-all", "pour-water-bowl"]
+  - id: 5
+    label: "add-raisins"
+    full_str: "Add handful of raisins"
+    depends: ["microwave-30-sec"]
+  - id: 6
+    label: "stir"
+    full_str: "Stir"
+    depends: ["add-raisins"]
+  - id: 7
+    label: "microwave-60-sec"
+    full_str: "Microwave for 60 seconds"
+    depends: ["stir"]
+  - id: 8
+    label: "slice-banana"
+    full_str: "Slice banana"
+    depends:
+  - id: 9
+    label: "top-banana-slices"
+    full_str: "Top with banana slices."
+    depends: ["slice-banana", "stir-again"]
+  - id: 10
+    label: "sprinkle-cinnamon"
+    full_str: "sprinkle with cinnamon"
+    depends: ["stir-again"]
+  - id: 11
+    label: "drizzle-honey"
+    full_str: "drizzle with honey"
+    depends: ["stir-again"]
+  - id: 12
+    label: "done"
+    full_str: "done"
+    depends: ["top-banana-slices", "sprinkle-cinnamon", "drizzle-honey"]
+  - id: 13
+    label: "stir-again"
+    full_str: "Stir"
+    depends: ["microwave-60-sec"]
