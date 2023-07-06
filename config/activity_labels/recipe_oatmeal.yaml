@@ -39,7 +39,7 @@ labels:
   - id: 8
     label: "slice-banana"
     full_str: "Slice banana"
-    depends:
+    depends: ["start"]
   - id: 9
     label: "top-banana-slices"
     full_str: "Top with banana slices."
