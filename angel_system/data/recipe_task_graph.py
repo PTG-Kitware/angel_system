@@ -12,9 +12,7 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 
 def load_recipe(recipe):
     config_dir = f"{dir_path}/../../config/activity_labels"
-
-    if recipe == "tea":
-        config_fname = f"{config_dir}/recipe_tea.yaml"
+    config_fname = f"{config_dir}/recipe_{recipe}.yaml"
 
     with open(config_fname, "r") as stream:
         config = yaml.safe_load(stream)
@@ -36,12 +34,31 @@ def get_all_recipe_orders(labels):
 
     for action in labels:
         act_label = action["label"]
-        G.add_node(act_label)
-
         depends = action["depends"]
-        if depends is not None:
-            for d in depends:
-                G.add_edge(d, act_label)
+
+        if "repeat" in action.keys():
+            repeat = action["repeat"]
+
+            # Node that indicated when the full repetition is finished
+            all_act_label = f"{act_label}-all"
+            G.add_node(all_act_label)
+            for r in range(repeat):
+                new_act_label = f"{act_label}-{r}"
+                G.add_edge(new_act_label, all_act_label)
+
+                G.add_node(new_act_label, root_label=act_label)
+                if depends is not None:
+                    for d in depends:
+                        G.add_edge(d, new_act_label)
+        else:
+            G.add_node(act_label)
+
+            if depends is not None:
+                for d in depends:
+                    G.add_edge(d, act_label)
+
+    # nx.draw(G, with_labels=True)
+    # plt.savefig("oatmeal_graph.png")
 
     all_possible_orders = list(nx.all_topological_sorts(G))
     return all_possible_orders
@@ -53,8 +70,14 @@ def print_recipe_order(recipe_title, labels, all_possible_orders):
 
     print(f"\n{recipe_title}")
     print("=" * len(recipe_title))
-    for i, action_label in enumerate(recipe_order):
-        action = [l for l in labels if l["label"] == action_label][0]
+            
+    recipe_actions = [al for al in recipe_order if not al.endswith("-all")]
+    for i, action_label in enumerate(recipe_actions):
+        try:
+            action = [l for l in labels if l["label"] == action_label][0]
+        except:
+            # The label might have a repeat index attached to it
+            action = [l for l in labels if l["label"] == '-'.join(action_label.split('-')[:-1])][0]
         str_ = action["full_str"]
         if str_ in ["start", "done"]:
             continue
