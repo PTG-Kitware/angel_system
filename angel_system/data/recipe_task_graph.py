@@ -57,9 +57,6 @@ def get_all_recipe_orders(labels):
                 for d in depends:
                     G.add_edge(d, act_label)
 
-    # nx.draw(G, with_labels=True)
-    # plt.savefig("oatmeal_graph.png")
-
     all_possible_orders = list(nx.all_topological_sorts(G))
     return all_possible_orders
 
@@ -70,18 +67,25 @@ def print_recipe_order(recipe_title, labels, all_possible_orders):
 
     print(f"\n{recipe_title}")
     print("=" * len(recipe_title))
-            
-    recipe_actions = [al for al in recipe_order if not al.endswith("-all")]
+
+    recipe_actions = [
+        al
+        for al in recipe_order
+        if not al.endswith("-all") and al not in ["start", "done"]
+    ]
     for i, action_label in enumerate(recipe_actions):
         try:
             action = [l for l in labels if l["label"] == action_label][0]
         except:
             # The label might have a repeat index attached to it
-            action = [l for l in labels if l["label"] == '-'.join(action_label.split('-')[:-1])][0]
+            action = [
+                l
+                for l in labels
+                if l["label"] == "-".join(action_label.split("-")[:-1])
+            ][0]
         str_ = action["full_str"]
-        if str_ in ["start", "done"]:
-            continue
-        print(f"{i}: {str_}")
+
+        print(f"{i+1}: {str_}")
 
     print("\n")
     print(f"Recipe order: {recipe_order}")
