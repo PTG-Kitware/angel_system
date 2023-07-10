@@ -14,10 +14,10 @@ from angel_system.data.common.load_data import (
     add_inter_steps,
 )
 from angel_system.data.common.discretize_data import discretize_data_to_windows
-from angel_system.ptg_eval.activity_classification.visualization import (
+from angel_system.ptg_eval.common.visualization import (
     EvalVisualization,
 )
-from angel_system.ptg_eval.activity_classification.compute_scores import EvalMetrics
+from angel_system.ptg_eval.common.compute_scores import EvalMetrics
 
 
 logging.basicConfig(level=logging.INFO)

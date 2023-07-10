@@ -19,11 +19,11 @@ from angel_system.activity_hmm.core import (
 from angel_system.impls.detect_activities.swinb.swinb_detect_activities import (
     SwinBTransformer,
 )
-from angel_system.ptg_eval.common.load_data import time_from_name
-from angel_system.ptg_eval.activity_classification.visualization import (
+from angel_system.data.common.load_data import time_from_name
+from angel_system.ptg_eval.common.visualization import (
     EvalVisualization,
 )
-from angel_system.ptg_eval.activity_classification.compute_scores import EvalMetrics
+from angel_system.ptg_eval.common.compute_scores import EvalMetrics
 
 try:
     import matplotlib.pyplot as plt

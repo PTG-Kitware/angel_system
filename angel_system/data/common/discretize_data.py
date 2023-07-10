@@ -60,7 +60,9 @@ def get_time_wind_range(
     return ind1, ind2
 
 
-def discretize_data_to_windows(labels, gt, detections, time_window, uncertainty_pad):
+def discretize_data_to_windows(labels, gt, detections, 
+                               time_window, uncertainty_pad,
+                               min_start_time, max_end_time):
     """
     Reformat the ground truth and detection data into time windows and
     removed any invalid time windows.
@@ -90,8 +92,6 @@ def discretize_data_to_windows(labels, gt, detections, time_window, uncertainty_
     assert (
         time_window > uncertainty_pad
     ), "Time window must be longer than the uncertainty pad"
-    min_start_time = min(gt["start"].min(), detections["start"].min())
-    max_end_time = max(gt["end"].max(), detections["end"].max())
     dt = time_window
     time_windows = np.arange(min_start_time, max_end_time, time_window)
 

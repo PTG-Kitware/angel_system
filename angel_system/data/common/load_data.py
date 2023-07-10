@@ -12,7 +12,7 @@ from typing import Tuple
 import pandas as pd
 import numpy as np
 
-from angel_system.data.common.structures import Activity
+from angel_system.data.common.structures import Activity, Step
 
 
 log = logging.getLogger("ptg_data_common")
@@ -246,6 +246,43 @@ def add_inter_steps(
 
     return gt
 
+def steps_from_ros_export_json(filepath: str) -> Tuple[List[str], List[Activity]]:
+    """
+    Load a number of predicted steps from a JSON file that is the result
+    of bag extraction of a `TaskUpdate.msg` message topic.
+
+    Class labels are converted to lower-case and stripped of any extraneous
+    whitespace.
+
+    See message file located here: ros/angel_msgs/msg/TaskUpdate.msg
+    See bag extraction conversion logic located here: ros/angel_utils/scripts/bag_extractor.py
+
+    :param filepath: Filesystem path to the JSON file.
+    :return: List activity predicted labels and a list of loaded activity
+        annotations (predicted).
+    """
+    log.info(f"Loading predicted steps from: {filepath}")
+    with open(filepath, "r") as f:
+        data = json.load(f)
+    step_seq: List[Step] = []
+    for step_json in data:
+        # This activity window start/end times in seconds.
+        time_stamp = step_json["source_stamp_start_frame"]
+        current_step_id = step_json["current_step_id"]
+        current_step = step_json["current_step"]
+        conf_vec = step_json["conf_vec"]
+        completed_vec = step_json["completed_steps"]
+
+        step_seq.append(
+            Step(
+                current_step_id,
+                current_step,
+                time_stamp,
+                conf_vec[current_step_id],
+                completed_vec[current_step_id]
+            )
+        )
+    return step_seq
 
 def activities_from_ros_export_json(filepath: str) -> Tuple[List[str], List[Activity]]:
     """
@@ -298,12 +335,12 @@ def activities_from_ros_export_json(filepath: str) -> Tuple[List[str], List[Acti
     return label_vec, activity_seq
 
 
-def activities_as_dataframe(act_sequence: Sequence[Activity]) -> pd.DataFrame:
+def objs_as_dataframe(sequence: Sequence) -> pd.DataFrame:
     """
-    Transform a sequence of activity structures into a pandas dataframe whose
+    Transform a sequence of structures into a pandas dataframe whose
     keys are the attributes of the Activity structure.
 
-    :param act_sequence: Sequence of activities to convert.
+    :param sequence: Sequence of objects to convert.
     :return: Converted data frame instance.
     """
     # `fields` introspection yields fields in order of specification in the
@@ -312,7 +349,7 @@ def activities_as_dataframe(act_sequence: Sequence[Activity]) -> pd.DataFrame:
     # deep-copy.
     return pd.DataFrame(
         {field.name: getattr(obj, field.name) for field in fields(obj)}
-        for obj in act_sequence
+        for obj in sequence
     )
 
 
