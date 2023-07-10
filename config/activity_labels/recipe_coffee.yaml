@@ -8,98 +8,100 @@ labels:
   - id: 0
     label: "background"
   - id: 1
+    label: "start"
+  - id: 2
     label: "measure-12oz-water"
     full_str: "Measure 12 ounces of water in the liquid measuring cup"
-    depends: ["start"]
-  - id: 2
+    depends: [1]
+  - id: 3
     label: "pour-water-kettle"
     full_str: "Pour the water from the liquid measuring cup into the electric kettle"
     depends: ["measure-12oz-water"]
-  - id: 3
+  - id: 4
     label: "place-dipper-on-mug"
     full_str: "Place the dripper on top of a coffee mug"
-    depends: ["start"]
-  - id: 4
+    depends: [1]
+  - id: 5
     label: "filter-fold-half"
     full_str: Take the coffee filter and fold it in half to create a semi-circle
-    depends: ["start"]
-  - id: 5
+    depends: [1]
+  - id: 6
     label: "filter-fold-quarter"
     full_str: "Fold the filter in half again to create a quarter-circle"
-    depends: ["filter-fold-half"]
-  - id: 6
+    depends: [5]
+  - id: 7
     label: "place-filter"
     full_str: "Place the folded filter into the dripper such that the the point of the quarter-circle rests in the center of the dripper"
-    depends: ["filter-fold-quarter"]
-  - id: 7
+    depends: [6]
+  - id: 8
     label: "spread-filter"
     full_str: "Spread the filter open to create a cone inside the dripper"
-    depends: ["place-filter"]
-  - id: 8
+    depends: [7]
+  - id: 9
     label: "scale-turn-on"
     full_str: "Turn on the kitchen scale"
-    depends: ["spread-filter"]
-  - id: 9
+    depends: [1]
+  - id: 10
     label: "place-bowl-on-scale"
     full_str: "Place a bowl on the scale"
-    depends: ["scale-turn-on"]
-  - id: 10
+    depends: [7]
+  - id: 11
     label: "zero-scale"
     full_str: "Zero the scale"
-    depends: ["place-bowl-on-scale"]
-  - id: 11
+    depends: [10]
+  - id: 12
     label: "measure-coffee-beans"
     full_str: "Add coffee beans to the bowl until the scale reads 25 grams"
-    depends: ["zero-scale"]
-  - id: 12
+    depends: [11]
+  - id: 13
     label: "pour-coffee-grinder"
     full_str: "Pour the measured coffee beans into the coffee grinder"
-    depends: ["measure-coffee-beans"]
-  - id: 13
+    depends: [12]
+  - id: 14
     label: "grind-beans"
     full_str: "Grind the coffee beans by pressing and holding down on the black part of the lid"
-    depends: ["pour-coffee-grinder"]
-  - id: 14
+    depends: [13]
+  - id: 15
     label: "pour-beans-filter"
     full_str: "Transfer the grounds to the filter cone"
-    depends: ["spread-filter", "grind-beans"]
-  - id: 15
+    depends: [8, 14]
+  - id: 16
     label: "thermometer-turn-on"
     full_str: "Turn on the thermometer"
-    depends: ["pour-water-kettle"]
-  - id: 16
+    depends: [1]
+  - id: 17
     label: "thermometer-in-water"
     full_str: "Place the end of the thermometer into the water."
-    depends: ["thermometer-turn-on"]
-  - id: 17
+    depends: [16]
+  - id: 18
     label: "check-thermometer"
     full_str: "Check the temperature displayed on the thermometer."
-    depends: ["thermometer-in-water"]
-  - id: 18
+    depends: [17]
+  - id: 19
     label: "pour-water-grounds-wet"
     full_str: "Pour a small amount of water over the grounds in order to wet the grounds. Wait about 30 seconds."
-    depends: ["pour-beans-filter", "place-dipper-on-mug", "check-thermometer"]
-  - id: 19
+    depends: [15, 4, 18]
+  - id: 20
     label: "pour-water-grounds-circular"
     full_str: "Slowly pour the rest of the water over the grounds in a circular motion. Do not overfill beyond the top of the paper filter"
-    depends: ["pour-water-grounds-wet"]
-  - id: 20
+    depends: [19]
+  - id: 21
     label: "water-drain"
     full_str: "Allow the rest of the water in the dripper to drain"
-    depends: ["pour-water-grounds-circular"]
-  - id: 21
+    depends: [20]
+  - id: 22
     label: "remove-dripper"
     full_str: "Remove the dripper from the cup"
-    depends: ["water-drain"]
-  - id: 22
+    depends: [21]
+  - id: 23
     label: "remove-grounds"
     full_str: "Remove the coffee grounds and paper filter from the dripper. "
-    depends: ["water-drain"]
-  - id: 23
+    depends: [21]
+  - id: 24
     label: "discard-grounds"
     full_str: "Discard the coffee grounds and paper filter"
-    depends: ["remove-grounds"]
-  - id: 24
+    depends: [23]
+  - id: 25
     label: "done"
     full_str: "done"
-    depends: ["remove-dripper", "discard-grounds"]
+    depends: [22, 24]

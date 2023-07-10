@@ -8,55 +8,57 @@ labels:
   - id: 0
     label: "background"
   - id: 1
+    label: "start"
+  - id: 2
     label: "measure-half-cup-water"
     full_str: "Measure 1/2 cup water in the liquid measuring cup."
-    depends: ["start"]
-  - id: 2
+    depends: [1]
+  - id: 3
     label: "pour-water-bowl"
     full_str: "Pour the water from the liquid measuring cup into the microwave safe bowl."
-    depends: ["measure-half-cup-water"]
-  - id: 3
+    depends: [2]
+  - id: 4
     label: "measure-1-tbsp-oats"
     full_str: "Measure 1 Tablespoon of quick-cook oats and place in a microwave-safe bowl."
-    depends: ["start"]
+    depends: [1]
     repeat: 4
-  - id: 4
+  - id: 5
     label: "microwave-30-sec"
     full_str: "Microwave for 30 seconds."
-    depends: ["measure-1-tbsp-oats-all", "pour-water-bowl"]
-  - id: 5
+    depends: [4, 3]
+  - id: 6
     label: "add-raisins"
     full_str: "Add handful of raisins"
-    depends: ["microwave-30-sec"]
-  - id: 6
+    depends: [5]
+  - id: 7
     label: "stir"
     full_str: "Stir"
-    depends: ["add-raisins"]
-  - id: 7
+    depends: [6]
+  - id: 8
     label: "microwave-60-sec"
     full_str: "Microwave for 60 seconds"
-    depends: ["stir"]
-  - id: 8
+    depends: [7]
+  - id: 9
     label: "slice-banana"
     full_str: "Slice banana"
-    depends: ["start"]
-  - id: 9
+    depends: [1]
+  - id: 10
     label: "top-banana-slices"
     full_str: "Top with banana slices."
-    depends: ["slice-banana", "stir-again"]
-  - id: 10
+    depends: [9, 14]
+  - id: 11
     label: "sprinkle-cinnamon"
     full_str: "sprinkle with cinnamon"
-    depends: ["stir-again"]
-  - id: 11
+    depends: [14]
+  - id: 12
     label: "drizzle-honey"
     full_str: "drizzle with honey"
-    depends: ["stir-again"]
-  - id: 12
+    depends: [14]
+  - id: 13
     label: "done"
     full_str: "done"
-    depends: ["top-banana-slices", "sprinkle-cinnamon", "drizzle-honey"]
-  - id: 13
+    depends: [10, 11, 12]
+  - id: 14
     label: "stir-again"
     full_str: "Stir"
-    depends: ["microwave-60-sec"]
+    depends: [8]

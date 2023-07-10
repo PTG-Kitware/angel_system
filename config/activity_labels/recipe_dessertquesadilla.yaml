@@ -8,43 +8,45 @@ labels:
   - id: 0
     label: "background"
   - id: 1
+    label: "start"
+  - id: 2
     label: "place-tortilla"
     full_str: "Place tortilla on cutting board"
-    depends: ["start"]
-  - id: 2
+    depends: [1]
+  - id: 3
     label: "scoop-nutella"
     full_str: "Use the butter knife to scoop nutella from the jar"
-    depends: ["start"]
-  - id: 3
+    depends: [1]
+  - id: 4
     label: "spread-nutella-tortilla"
     full_str: "Spread nutella onto tortilla, leaving ½ inch uncovered at the edges"
-    depends: ["place-tortilla", "scoop-nutella"]
-  - id: 4
+    depends: [2, 3]
+  - id: 5
     label: "slice-banana"
     full_str: "Slice banana"
-    depends: ["start"]
-  - id: 5
+    depends: [1]
+  - id: 6
     label: "top-banana-slices"
     full_str: "Top with banana slices."
-    depends: ["slice-banana", "spread-nutella-tortilla"]
-  - id: 6
+    depends: [5, 4]
+  - id: 7
     label: "sprinkle-cinnamon"
     full_str: "Sprinkle small amount of cinnamon onto tortilla"
-    depends: ["spread-nutella-tortilla"]
-  - id: 7
+    depends: [4]
+  - id: 8
     label: "fold-tortilla-half"
     full_str: "Fold tortilla in half into semi-cirlce"
-    depends: ["sprinkle-cinnamon", "top-banana-slices"]
-  - id: 8
+    depends: [7, 6]
+  - id: 9
     label: "slice-tortilla-half"
     full_str: "Slice tortilla in half using butter knife to create two triangular wedges"
-    depends: ["fold-tortilla-half"]
-  - id: 9
+    depends: [8]
+  - id: 10
     label: "place-tortilla-wedge"
     full_str: "Place tortilla wedge on the plate"
-    depends: ["slice-tortilla-half"]
+    depends: [9]
     repeat: 2
-  - id: 10
+  - id: 11
     label: "done"
     full_str: "done"
-    depends: ["place-tortilla-wedge-all"]
+    depends: [10]

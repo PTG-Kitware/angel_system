@@ -8,54 +8,56 @@ labels:
   - id: 0
     label: "background"
   - id: 1
+    label: "start"
+  - id: 2
     label: "measure-12oz-water"
     full_str: "Measure 12 ounces of water in the liquid measuring cup"
-    depends: ["start"]
-  - id: 2
+    depends: [1]
+  - id: 3
     label: "pour-water-kettle"
     full_str: "Pour the water from the liquid measuring cup into the electric kettle"
-    depends: ["measure-12oz-water"]
-  - id: 3
+    depends: [2]
+  - id: 4
     label: "tea-bag-in-mug"
     full_str: "Place tea bag in mug"
-    depends: ["start"]
-  - id: 4
+    depends: [1]
+  - id: 5
     label: "thermometer-turn-on"
     full_str: "Turn on the thermometer"
-    depends: ["pour-water-kettle"]
-  - id: 5
+    depends: [1]
+  - id: 6
     label: "thermometer-in-water"
     full_str: "Place the end of the thermometer into the water."
-    depends: ["thermometer-turn-on"]
-  - id: 6
+    depends: [5]
+  - id: 7
     label: "check-thermometer"
     full_str: "Check the temperature displayed on the thermometer."
-    depends: ["thermometer-in-water"]
-  - id: 7
+    depends: [6]
+  - id: 8
     label: "pour-water-mug"
     full_str: "Pour water from the electric kettle into the mug"
-    depends: ["check-thermometer"]
-  - id: 8
+    depends: [7]
+  - id: 9
     label: "steep"
     full_str: "Steep for 3 minutes"
-    depends: ["tea-bag-in-mug", "pour-water-mug"]
-  - id: 9
+    depends: [4, 8]
+  - id: 10
     label: "remove-tea-bag"
     full_str: "Remove tea bag from mug"
-    depends: ["steep"]
-  - id: 10
+    depends: [9]
+  - id: 11
     label: "discard-tea-bag"
     full_str: "Discard tea bag"
-    depends: ["remove-tea-bag"]
-  - id: 11
+    depends: [10]
+  - id: 12
     label: "add-honey"
     full_str: "Add honey to mug"
-    depends: ["start"]
-  - id: 12
+    depends: [1]
+  - id: 13
     label: "stir"
     full_str: "Stir"
-    depends: ["pour-water-mug", "add-honey"]
-  - id: 13
+    depends: [8, 12]
+  - id: 14
     label: "done"
     full_str: "done"
-    depends: ["discard-tea-bag", "stir"]
+    depends: [11, 13]
