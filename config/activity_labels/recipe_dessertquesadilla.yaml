@@ -5,48 +5,49 @@ labels:
   # - id: Integer identification number of the label.
   # - label: Short human-readable semantic string to succinctly represent the
   #          label.
+  # - full_str: Complete sentence that fully represents the label.
+  # - depends: List of ids that the item depends on
+  # - repeat: Optional field that indicated that the item must be repeated X times
   - id: 0
     label: "background"
   - id: 1
-    label: "start"
-  - id: 2
     label: "place-tortilla"
     full_str: "Place tortilla on cutting board"
-    depends: [1]
-  - id: 3
+    depends:
+  - id: 2
     label: "scoop-nutella"
     full_str: "Use the butter knife to scoop nutella from the jar"
-    depends: [1]
-  - id: 4
+    depends:
+  - id: 3
     label: "spread-nutella-tortilla"
     full_str: "Spread nutella onto tortilla, leaving ½ inch uncovered at the edges"
-    depends: [2, 3]
-  - id: 5
+    depends: [1, 2]
+  - id: 4
     label: "slice-banana"
     full_str: "Slice banana"
-    depends: [1]
-  - id: 6
+    depends:
+  - id: 5
     label: "top-banana-slices"
     full_str: "Top with banana slices."
-    depends: [5, 4]
-  - id: 7
+    depends: [4, 3]
+  - id: 6
     label: "sprinkle-cinnamon"
     full_str: "Sprinkle small amount of cinnamon onto tortilla"
-    depends: [4]
-  - id: 8
+    depends: [1]
+  - id: 7
     label: "fold-tortilla-half"
     full_str: "Fold tortilla in half into semi-cirlce"
-    depends: [7, 6]
-  - id: 9
+    depends: [6, 5]
+  - id: 8
     label: "slice-tortilla-half"
     full_str: "Slice tortilla in half using butter knife to create two triangular wedges"
-    depends: [8]
-  - id: 10
+    depends: [7]
+  - id: 9
     label: "place-tortilla-wedge"
     full_str: "Place tortilla wedge on the plate"
-    depends: [9]
+    depends: [8]
     repeat: 2
-  - id: 11
+  - id: 10
     label: "done"
     full_str: "done"
-    depends: [10]
+    depends: [9]

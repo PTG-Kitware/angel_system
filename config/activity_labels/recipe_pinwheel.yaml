@@ -5,79 +5,80 @@ labels:
   # - id: Integer identification number of the label.
   # - label: Short human-readable semantic string to succinctly represent the
   #          label.
+  # - full_str: Complete sentence that fully represents the label.
+  # - depends: List of ids that the item depends on
+  # - repeat: Optional field that indicated that the item must be repeated X times
   - id: 0
     label: "background"
   - id: 1
-    label: "start"
-  - id: 2
     label: "place-tortilla"
     full_str: "Place tortilla on cutting board"
-    depends: [1]
-  - id: 3
+    depends:
+  - id: 2
     label: "scoop-nutbutter"
     full_str: "Use the butter knife to scoop nut butter from the jar"
-    depends: [1]
-  - id: 4
+    depends:
+  - id: 3
     label: "spread-nutbutter-tortilla"
     full_str: "Spread nut butter onto tortilla, leaving ½ inch uncovered at the edges"
-    depends: [2, 3]
-  - id: 5
+    depends: [1, 2]
+  - id: 4
     label: "clean-knife"
     full_str: "Clean the knife by wiping with a paper towel."
-    depends: [4]
-  - id: 6
+    depends: [3]
+  - id: 5
     label: "scoop-jelly"
     full_str: "Use the butter knife to scoop jelly from the jar"
-    depends: [5]
-  - id: 7
+    depends: [4]
+  - id: 6
     label: "spread-jelly-tortilla"
     full_str: "Spread jelly onto tortilla, leaving ½ inch uncovered at the edges"
-    depends: [2, 6]
-  - id: 8
+    depends: [1, 5]
+  - id: 7
     label: "roll-tortilla"
     full_str: "Roll the tortilla from one end to the other into a log shape, about 1.5 inches thick.  Roll it tight enough to prevent gaps, but not so tight that the filling leaks"
-    depends: [7, 4]
-  - id: 9
+    depends: [6, 3]
+  - id: 8
     label: "insert-toothpick-1"
-    full_str: "Insert a toothpick into the tortilla"
-    depends: [8]
-  - id: 10
+    full_str: "Insert a toothpick into the tortilla. The toothpick should be placed such that 5 total toothpicks can be placed about 1 inch apart."
+    depends: [7]
+  - id: 9
     label: "insert-toothpick-2"
-    full_str: "Insert a toothpick into the tortilla approximately 1” from the previous toothpick"
-    depends:  [9]
+    full_str: "Insert a toothpick into the tortilla approximately 1 inch from the previous toothpick"
+    depends:  [8]
     repeat: 4
-  - id: 11
+  - id: 10
     label: "trim-tortilla"
     full_str: "Trim one end of the tortilla roll leaving ½” margin from the toothpick"
-    depends: [10]
+    depends: [9]
     repeat: 2
-  - id: 12
+  - id: 11
     label: "discard-tortilla-ends"
     full_str: "Discard both ends of the tortilla"
-    depends: [11]
-  - id: 13
+    depends: [10]
+  - id: 12
     label: "place-floss-between-toothpicks"
     full_str: "Slide floss under the tortilla, perpendicular to the length of the roll.  Place the floss halfway between two toothpicks."
-    depends: [10]
+    depends: [9]
   # TODO: How to represent slicing the pinwheels so they can be repeated
   # with plating each pinwheel optionally after each slice
-  - id: 14
+  - id: 13
     label: "cross-floss"
     full_str: "Cross the two ends of the floss over the top of the tortilla roll."
-    depends: [13]
-  - id: 15
+    depends: [12]
+  - id: 14
     label: "slice-tortilla"
     full_str: "Holding one end of the floss in each hand, pull the floss ends in opposite directions to slice."
-    depends: [14]
-  - id: 16
+    depends: [13]
+  - id: 15
     label: "continue-slicing"
     full_str: "Continue slicing with floss to create 5 pinwheels."
-    depends: [15]
-  - id: 17
+    depends: [14]
+  - id: 16
     label: "plate-pinwheels"
     full_str: "Place the pinwheels on a plate."
-    depends: [11, 16]
-  - id: 18
+    depends: [10, 15]
+  - id: 17
     label: "done"
     full_str: "done"
-    depends: [17]
+    depends: [16]

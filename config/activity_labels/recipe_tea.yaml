@@ -5,59 +5,60 @@ labels:
   # - id: Integer identification number of the label.
   # - label: Short human-readable semantic string to succinctly represent the
   #          label.
+  # - full_str: Complete sentence that fully represents the label.
+  # - depends: List of ids that the item depends on
+  # - repeat: Optional field that indicated that the item must be repeated X times
   - id: 0
     label: "background"
   - id: 1
-    label: "start"
-  - id: 2
     label: "measure-12oz-water"
     full_str: "Measure 12 ounces of water in the liquid measuring cup"
-    depends: [1]
-  - id: 3
+    depends:
+  - id: 2
     label: "pour-water-kettle"
     full_str: "Pour the water from the liquid measuring cup into the electric kettle"
-    depends: [2]
-  - id: 4
+    depends: [1]
+  - id: 3
     label: "tea-bag-in-mug"
     full_str: "Place tea bag in mug"
-    depends: [1]
-  - id: 5
+    depends: 
+  - id: 4
     label: "thermometer-turn-on"
     full_str: "Turn on the thermometer"
-    depends: [1]
-  - id: 6
+    depends: 
+  - id: 5
     label: "thermometer-in-water"
     full_str: "Place the end of the thermometer into the water."
-    depends: [5]
-  - id: 7
+    depends: [2, 4]
+  - id: 6
     label: "check-thermometer"
     full_str: "Check the temperature displayed on the thermometer."
-    depends: [6]
-  - id: 8
+    depends: [5]
+  - id: 7
     label: "pour-water-mug"
     full_str: "Pour water from the electric kettle into the mug"
-    depends: [7]
-  - id: 9
+    depends: [6]
+  - id: 8
     label: "steep"
     full_str: "Steep for 3 minutes"
-    depends: [4, 8]
-  - id: 10
+    depends: [3, 7]
+  - id: 9
     label: "remove-tea-bag"
     full_str: "Remove tea bag from mug"
-    depends: [9]
-  - id: 11
+    depends: [8]
+  - id: 10
     label: "discard-tea-bag"
     full_str: "Discard tea bag"
-    depends: [10]
-  - id: 12
+    depends: [9]
+  - id: 11
     label: "add-honey"
     full_str: "Add honey to mug"
-    depends: [1]
-  - id: 13
+    depends:
+  - id: 12
     label: "stir"
     full_str: "Stir"
-    depends: [8, 12]
-  - id: 14
+    depends: [7, 11]
+  - id: 13
     label: "done"
     full_str: "done"
-    depends: [11, 13]
+    depends: [10, 12]
