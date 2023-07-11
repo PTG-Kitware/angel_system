@@ -41,7 +41,7 @@ def load_recipe(recipe):
     labels = labels[1:]  # Ignore background
 
     # Add start
-    labels.append({"id": 0, "label": "start", "full_str": "start", "depends": None})
+    labels.insert(0, {"id": 0, "label": "start", "full_str": "start", "depends": None})
 
     return recipe_title, labels
 
