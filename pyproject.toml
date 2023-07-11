@@ -59,6 +59,7 @@ nltk = "^3.8.1"
 pyzmq = "==25.0.0"
 kwcoco = "^0.6.2"
 kwimage = "^0.9.18"
+networkx = "^3.1"
 
 [tool.poetry.dev-dependencies]
 ipython = "^8.0.1"

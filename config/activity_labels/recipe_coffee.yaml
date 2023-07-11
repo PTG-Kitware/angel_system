@@ -1,60 +1,108 @@
 version: "1"
+title: "Pour-over coffee"
 labels:
   # Item:
   # - id: Integer identification number of the label.
   # - label: Short human-readable semantic string to succinctly represent the
   #          label.
+  # - full_str: Complete sentence that fully represents the label.
+  # - depends: List of ids that the item depends on
+  # - repeat: Optional field that indicated that the item must be repeated X times
   - id: 0
     label: "background"
   - id: 1
     label: "measure-12oz-water"
+    full_str: "Measure 12 ounces of water in the liquid measuring cup"
+    depends:
   - id: 2
     label: "pour-water-kettle"
+    full_str: "Pour the water from the liquid measuring cup into the electric kettle"
+    depends: [1]
   - id: 3
-    label: "turn-kettle-on"
-  - id: 4
     label: "place-dipper-on-mug"
-  - id: 5
+    full_str: "Place the dripper on top of a coffee mug"
+    depends:
+  - id: 4
     label: "filter-fold-half"
-  - id: 6
+    full_str: Take the coffee filter and fold it in half to create a semi-circle
+    depends:
+  - id: 5
     label: "filter-fold-quarter"
-  - id: 7
+    full_str: "Fold the filter in half again to create a quarter-circle"
+    depends: [4]
+  - id: 6
     label: "place-filter"
-  - id: 8
+    full_str: "Place the folded filter into the dripper such that the the point of the quarter-circle rests in the center of the dripper"
+    depends: [5]
+  - id: 7
     label: "spread-filter"
-  - id: 9
+    full_str: "Spread the filter open to create a cone inside the dripper"
+    depends: [6]
+  - id: 8
     label: "scale-turn-on"
-  - id: 10
+    full_str: "Turn on the kitchen scale"
+    depends:
+  - id: 9
     label: "place-bowl-on-scale"
-  - id: 11
+    full_str: "Place a bowl on the scale"
+    depends: [8]
+  - id: 10
     label: "zero-scale"
-  - id: 12
+    full_str: "Zero the scale"
+    depends: [9]
+  - id: 11
     label: "measure-coffee-beans"
-  - id: 13
+    full_str: "Add coffee beans to the bowl until the scale reads 25 grams"
+    depends: [10]
+  - id: 12
     label: "pour-coffee-grinder"
-  - id: 14
-    label: "set-timer-20"
-  - id: 15
-    label: "timer-turn-on"
-  - id: 16
+    full_str: "Pour the measured coffee beans into the coffee grinder"
+    depends: [11]
+  - id: 13
     label: "grind-beans"
-  - id: 17
+    full_str: "Grind the coffee beans by pressing and holding down on the black part of the lid"
+    depends: [12]
+  - id: 14
     label: "pour-beans-filter"
-  - id: 18
+    full_str: "Transfer the grounds to the filter cone"
+    depends: [7, 13]
+  - id: 15
     label: "thermometer-turn-on"
-  - id: 19
+    full_str: "Turn on the thermometer"
+    depends:
+  - id: 16
     label: "thermometer-in-water"
-  - id: 20
-    label: "set-timer-30"
-  - id: 21
+    full_str: "Place the end of the thermometer into the water."
+    depends: [2, 15]
+  - id: 17
+    label: "check-thermometer"
+    full_str: "Check the temperature displayed on the thermometer."
+    depends: [16]
+  - id: 18
     label: "pour-water-grounds-wet"
-  - id: 22
+    full_str: "Pour a small amount of water over the grounds in order to wet the grounds. Wait about 30 seconds."
+    depends: [14, 3, 17]
+  - id: 19
     label: "pour-water-grounds-circular"
-  - id: 23
+    full_str: "Slowly pour the rest of the water over the grounds in a circular motion. Do not overfill beyond the top of the paper filter"
+    depends: [18]
+  - id: 20
     label: "water-drain"
-  - id: 24
+    full_str: "Allow the rest of the water in the dripper to drain"
+    depends: [19]
+  - id: 21
     label: "remove-dripper"
-  - id: 25
+    full_str: "Remove the dripper from the cup"
+    depends: [20]
+  - id: 22
     label: "remove-grounds"
-  - id: 26
+    full_str: "Remove the coffee grounds and paper filter from the dripper. "
+    depends: [20]
+  - id: 23
     label: "discard-grounds"
+    full_str: "Discard the coffee grounds and paper filter"
+    depends: [22]
+  - id: 24
+    label: "done"
+    full_str: "done"
+    depends: [21, 23]
