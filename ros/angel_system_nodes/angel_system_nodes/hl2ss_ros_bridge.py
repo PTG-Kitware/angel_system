@@ -22,6 +22,8 @@ from angel_msgs.msg import (
     HeadsetAudioData,
     HeadsetPoseData,
     SpatialMesh,
+    # TODO: Is a message for depth AHAT needed here? Or from sensor_msgs?
+    # Currently re-using Image message
 )
 from angel_utils import declare_and_get_parameters, RateTracker
 from angel_utils.hand import JOINT_LIST
@@ -45,6 +47,7 @@ PARAM_PV_WIDTH = "pv_width"
 PARAM_PV_HEIGHT = "pv_height"
 PARAM_PV_FRAMERATE = "pv_framerate"
 PARAM_SM_FREQ = "sm_freq"
+PARAM_RM_DEPTH_AHAT_TOPIC = "rm_depth_AHAT"
 
 # Pass string for any of the ROS topic params to disable that stream
 DISABLE_TOPIC_STR = "disable"
@@ -59,7 +62,6 @@ class HL2SSROSBridge(Node):
     def __init__(self):
         super().__init__(self.__class__.__name__)
         log = self.get_logger()
-
         param_values = declare_and_get_parameters(
             self,
             [
@@ -73,6 +75,7 @@ class HL2SSROSBridge(Node):
                 (PARAM_PV_HEIGHT,),
                 (PARAM_PV_FRAMERATE,),
                 (PARAM_SM_FREQ,),
+                (PARAM_RM_DEPTH_AHAT_TOPIC,),
             ],
         )
 
@@ -86,12 +89,14 @@ class HL2SSROSBridge(Node):
         self.pv_height = param_values[PARAM_PV_HEIGHT]
         self.pv_framerate = param_values[PARAM_PV_FRAMERATE]
         self.sm_freq = param_values[PARAM_SM_FREQ]
+        self._rm_depth_AHAT_topic = param_values[PARAM_RM_DEPTH_AHAT_TOPIC]
 
         # Define HL2SS server ports
         self.pv_port = hl2ss.StreamPort.PERSONAL_VIDEO
         self.si_port = hl2ss.StreamPort.SPATIAL_INPUT
         self.audio_port = hl2ss.StreamPort.MICROPHONE
         self.sm_port = hl2ss.IPCPort.SPATIAL_MAPPING
+        self.rm_depth_AHAT_port = hl2ss.StreamPort.RM_DEPTH_AHAT
 
         self._head_pose_topic_enabled = False
         if self._head_pose_topic != DISABLE_TOPIC_STR:
@@ -172,6 +177,23 @@ class HL2SSROSBridge(Node):
             self._sm_thread = Thread(target=self.sm_publisher, name="publish_sm")
             self._sm_thread.daemon = True
             self._sm_thread.start()
+        if self._rm_depth_AHAT_topic != DISABLE_TOPIC_STR:
+            # Create frame publisher
+            self.ros_frame_publisher = self.create_publisher(
+                Image, self._rm_depth_AHAT_topic, 1
+            )
+            self.connect_hl2ss_rm_depth_ahat()
+            log.info("RM Depth AHAT client connected!")
+
+            # Start the frame publishing thread
+            self._rm_depth_ahat_active = Event()
+            self._rm_depth_ahat_active.set()
+            self._rm_depth_ahat_rate_tracker = RateTracker()
+            self._rm_depth_ahat_thread = Thread(
+                target=self.rm_depth_ahat_publisher, name="publish_rm_depth_ahat"
+            )
+            self._rm_depth_ahat_thread.daemon = True
+            self._rm_depth_ahat_thread.start()
 
         log.info("Initialization complete.")
 
@@ -244,6 +266,34 @@ class HL2SSROSBridge(Node):
         self.hl2ss_sm_client = hl2ss.ipc_sm(self.ip_addr, self.sm_port)
         self.hl2ss_sm_client.open()
 
+    def connect_hl2ss_rm_depth_ahat(self) -> None:
+        """
+        Creates the HL2SS RM Depth AHAT client and connects it to the server on the headset.
+        """
+        # Operating mode
+        # 0: video
+        # 1: video + rig pose
+        # 2: query calibration (single transfer)
+        mode = hl2ss.StreamMode.MODE_1
+
+        # Video encoding profile
+        profile = hl2ss.VideoProfile.H265_MAIN
+
+        # TODO: Consider getting RM Depth AHAT camera intrinsics as well
+        # client_rm_depth_ahat.py example in hl2ss repo shows that this can be done, but
+        # would require some additional code changes (e.g., separate camera_intrinsics).
+        # Link: https://github.com/jdibenes/hl2ss/blob/main/viewer/client_rm_depth_ahat.py
+
+        self.hl2ss_rm_depth_ahat_client = hl2ss.rx_decoded_rm_depth_ahat(
+            self.ip_addr,
+            self.pv_port,
+            hl2ss.ChunkSize.RM_DEPTH_AHAT,
+            mode,
+            profile,
+            PV_BITRATE,
+        )
+        self.hl2ss_rm_depth_ahat_client.open()
+
     def shutdown_clients(self) -> None:
         """
         Shuts down the frame publishing thread and the HL2SS client.
@@ -287,6 +337,15 @@ class HL2SSROSBridge(Node):
 
             self.hl2ss_sm_client.close()
             log.info("SM client disconnected")
+
+        if self._rm_depth_AHAT_topic != DISABLE_TOPIC_STR:
+            # Stop SM publishing thread
+            self._rm_depth_ahat_active.clear()
+            self._rm_depth_ahat_thread.join()
+            log.info("RM Depth AHAT thread closed")
+
+            self.hl2ss_rm_depth_ahat_client.close()
+            log.info("RM Depth AHAT client disconnected")
 
     def pv_publisher(self) -> None:
         """
@@ -488,6 +547,52 @@ class HL2SSROSBridge(Node):
                 self.ros_sm_publisher.publish(spatial_mesh_msg)
 
             time.sleep(self.sm_freq)
+
+    def rm_depth_ahat_publisher(self) -> None:
+        """
+        Main thread that gets depth frames from the HL2SS RM Depth AHAT client and publishes
+        them to the rm_depth_ahat topic. For each image message published, a corresponding
+        HeadsetPoseData message is published with the same header info and the world
+        matrix for that image.
+        """
+        log = self.get_logger()
+
+        while self._rm_depth_ahat_active.wait(
+            0
+        ):  # will quickly return false if cleared.
+            data = self.hl2ss_rm_depth_ahat_client.get_next_packet()
+
+            log.debug(
+                f"Published RM Depth AHAT message. Pose at time "
+                f"{data.timestamp} recorded.",
+                data.pose,
+            )
+
+            # TODO: What is AB portion of data.payload (related to IR?), absolute? Albedo?
+            # Should it be included here as a part of the depth message?
+            try:
+                # Assume BGR because AHAT shares the same video encoding profile as PV
+                # Payload contains 16-bit Depth and 16-bit AB, so use BGR16
+                rm_depth_ahat_msg = BRIDGE.cv2_to_imgmsg(
+                    data.payload.depth, encoding="bgr16"
+                )
+                rm_depth_ahat_msg.header.stamp = (
+                    self.get_cloc_rm_depth_audio_activek().now().to_msg()
+                )
+                rm_depth_ahat_msg.header.frame_id = "RMDepthAHATFrames"
+            except TypeError as e:
+                log.warning(f"{e}")
+                return
+
+            # Publish the RM Depth AHAT msg
+            self.ros_frame_publisher.publish(rm_depth_ahat_msg)
+
+            self._rm_depth_ahat_rate_tracker.tick()
+            log.debug(
+                f"Published RM Depth AHAT message (hz: "
+                f"{self._rm_depth_ahat_rate_tracker.get_rate_avg()})",
+                throttle_duration_sec=1,
+            )
 
     def create_hand_pose_msg_from_si_data(
         self,
