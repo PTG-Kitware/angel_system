@@ -28,8 +28,8 @@ def data_loader(pred_fnames, act_label_yaml):
     act_map = {}
     inv_act_map = {}
     for step in act_labels["labels"]:
-        act_map[sanitize_str(step["label"])] = step["id"]
-        inv_act_map[step["id"]] = step["label"]
+        act_map[sanitize_str(step["full_str"])] = step["id"]
+        inv_act_map[step["id"]] = step["full_str"]
 
     if 0 not in act_map.values():
         act_map["background"] = 0
