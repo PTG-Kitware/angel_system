@@ -90,9 +90,6 @@ def get_all_recipe_orders(labels):
             else:
                 G.add_edge(0, act_id)
 
-    nx.draw(G, with_labels=True)
-    plt.savefig("coffee.png")
-
     all_possible_orders = list(nx.all_topological_sorts(G))
     return all_possible_orders, repeated_ids
 
