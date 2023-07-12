@@ -6,6 +6,8 @@ from typing import Tuple
 
 import numpy as np
 
+from angel_system.data.common.load_data import sanitize_str
+
 
 log = logging.getLogger("ptg_eval_common")
 
@@ -32,6 +34,7 @@ def get_time_wind_range(
         time_windows[ind1:ind2] all live inside start->end.
     """
     # The start time of the ith window is min_start_time + dt*i.
+    
     ind1_ = (start - min_start_time) / dt
     ind1 = int(np.ceil(ind1_))
     if ind1_ - ind1 + 1 < 1e-15:
@@ -48,13 +51,13 @@ def get_time_wind_range(
         ind1 += 1
 
     ind1 = max([ind1, 0])
-    ind2 = min([ind2, len(time_windows)])
+    ind2 = min([ind2, len(time_windows)-1])
 
     # assert ind2 >= ind1, "Invalid time window indexes"
     if ind2 < ind1:
         # Rounding issue
         warnings.warn(
-            f"ind1: {ind1} is greater than ind2: {ind2} for start time {start} and ebd time {end}"
+            f"ind1: {ind1} is greater than ind2: {ind2} for start time {start} and end time {end}"
         )
         ind1 = ind2
     return ind1, ind2
@@ -106,15 +109,17 @@ def discretize_data_to_windows(labels, gt, detections,
     # classification.
     valid = np.zeros(len(time_windows), dtype=bool)
     for i in range(len(detections)):
+        start_time = detections["start"][i]
+        end_time = detections["end"][i]
         ind1, ind2 = get_time_wind_range(
-            detections["start"][i],
-            detections["end"][i],
+            start_time,
+            end_time,
             dt,
             min_start_time,
             time_windows,
         )
 
-        correct_label = detections["class_label"][i].lower().strip().strip(".").strip()
+        correct_label = sanitize_str(detections["class_label"][i])
         correct_class_idx = labels.index(correct_label)
 
         if ind1 == ind2:
@@ -134,7 +139,7 @@ def discretize_data_to_windows(labels, gt, detections,
         ind1, ind2 = get_time_wind_range(
             gt["start"][i], gt["end"][i], dt, min_start_time, time_windows
         )
-        correct_label = gt["class_label"][i].lower().strip().strip(".").strip()
+        correct_label = sanitize_str(gt["class_label"][i])
         correct_class_idx = labels.index(correct_label)
         gt_true_mask[ind1:ind2, correct_class_idx] = True
 
