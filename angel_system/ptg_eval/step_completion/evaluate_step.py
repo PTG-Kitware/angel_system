@@ -10,10 +10,11 @@ import numpy as np
 import numpy.typing as npt
 
 from angel_system.data.common.load_data import (
-    activities_from_dive_csv,
+    steps_from_dive_csv,
     steps_from_ros_export_json,
     objs_as_dataframe,
-    add_inter_steps,
+    add_inter_steps_to_step_gt,
+    sanitize_str
 )
 from angel_system.data.common.discretize_data import discretize_data_to_windows
 from angel_system.ptg_eval.common.visualization import (
@@ -33,32 +34,34 @@ def run_eval(args):
     time_window = args.time_window
     uncertainty_pad = args.uncertainty_pad
 
-    with open(args.config_fname, "r") as stream:
+    with open(args.config_fn, "r") as stream:
         config = yaml.safe_load(stream)
-    labels = [l["description"].lower().strip().strip(".").strip() for l in config["steps"]]
+    labels = [sanitize_str(l["description"]) for l in config["steps"]]
+    if "background" not in labels:
+        labels.insert(0, "background")
     print("Labels: ", labels)
 
     # Loop over gt/pred pairs, gathering input data for eval.
     gt_true_mask: Optional[npt.NDArray] = None
     dets_per_valid_time_w: Optional[npt.NDArray] = None
-    for i, (gt_fpath, pred_fpath) in enumerate(args.activity_gt_pred_pair):
+    for i, (gt_fpath, pred_fpath) in enumerate(args.step_gt_pred_pair):
         log.info(f"Loading data from pair {i}")
 
         detections = steps_from_ros_export_json(pred_fpath.as_posix())
-        gt = activities_from_dive_csv(gt_fpath.as_posix())
+        gt = steps_from_dive_csv(gt_fpath.as_posix(), labels)
 
         min_start_time = min(
             min(gt, key=lambda a: a.start).start,
-            min(detections, key=lambda a: a.time_stamp).time_stamp,
+            min(detections, key=lambda a: a.start).start,
         )
         max_end_time = max(
             max(gt, key=lambda a: a.end).end,
-            max(detections, key=lambda a: a.time_stamp).time_stamp
+            max(detections, key=lambda a: a.start).start,
         )
-
-        if args.add_inter_steps or args.add_before_after_steps:
-            gt = add_inter_steps(
+        if args.add_inter_steps or args.add_before_finished_steps:
+            gt = add_inter_steps_to_step_gt(
                 gt,
+                labels,
                 min_start_time,
                 max_end_time,
                 add_inter_steps=args.add_inter_steps,
@@ -84,7 +87,7 @@ def run_eval(args):
         log.info("Visualizing this detection set against respective ground-truth.")
         pair_out_dir = output_dir / f"pair_{gt_fpath.stem}_{pred_fpath.stem}"
         vis = EvalVisualization(labels, None, None, output_dir=pair_out_dir)
-        vis.plot_activities_confidence(gt=gt, dets=detections)
+        vis.plot_activities_confidence(gt, detections, min_start_time, max_end_time)
 
         # Stack with global set
         if gt_true_mask is None:
@@ -157,7 +160,7 @@ def main():
     parser.add_argument(
         "--output_dir",
         type=str,
-        default="eval",
+        default="eval/step",
         help="Folder to save results and plots to",
     )
     parser.add_argument(
