@@ -18,6 +18,9 @@ from angel_system.data.common.structures import Activity, Step
 log = logging.getLogger("ptg_data_common")
 
 
+def sanitize_str(str):
+    return str.lower().strip().strip(".").strip()
+
 def Re_order(image_list, image_number):
     img_id_list = []
     for img in image_list:
@@ -81,7 +84,7 @@ def load_from_file(
     gt = []
     for i, row in gt_f.iterrows():
         g = {
-            "class_label": row["class"].lower().strip(),
+            "class_label": sanitize_str(row["class"]),
             "start": time_from_name(row["start_frame"]),
             "end": time_from_name(row["end_frame"]),
         }
@@ -106,7 +109,7 @@ def load_from_file(
 
         for l in dets["label_vec"]:
             d = {
-                "class_label": l.lower().strip(),
+                "class_label": sanitize_str(l),
                 "start": dets["source_stamp_start_frame"],
                 "end": dets["source_stamp_end_frame"],
                 "conf": good_dets[l],
@@ -120,7 +123,7 @@ def load_from_file(
     # ============================
     # grab all labels present in data
     labels = list(
-        set([l.lower().strip().rstrip(".") for l in detections["class_label"].unique()])
+        set([sanitize_str(l) for l in detections["class_label"].unique()])
     )
 
     log.debug(f"Labels: {labels}")
@@ -155,7 +158,7 @@ def activities_from_dive_csv(filepath: str) -> List[Activity]:
 
         if a_id not in id_to_activity:
             id_to_activity[a_id] = Activity(
-                s[9].lower().strip().strip(".").strip(),  # class label
+                sanitize_str(s[9]),  # class label
                 time,  # start
                 np.inf,  # end
                 frame,  # start frame
@@ -186,9 +189,70 @@ def activities_from_dive_csv(filepath: str) -> List[Activity]:
 
     return list(id_to_activity.values())
 
+def steps_from_dive_csv(filepath: str, labels) -> List[Activity]:
+    """
+    Load from a DIVE output CSV file a sequence of ground truth step
+    annotations.
 
-def add_inter_steps(
-    gt, min_start_time, max_end_time, add_inter_steps=True, add_before_after_steps=True
+    Class labels are converted to lower-case and stripped of any extraneous
+    whitespace.
+
+    :param filepath: Filesystem path to the CSV file.
+    :return: List of loaded step annotations.
+    """
+    print(f"Loading ground truth steps from: {filepath}")
+    df = pd.read_csv(filepath)
+
+    # There may be additional metadata rows. Filter out rows whose first column
+    # value starts with a `#`.
+    df = df[df[df.keys()[0]].str.contains("^[^#]")]
+    # Create a mapping of detection/track ID to the step annotation
+    id_to_step: Dict[int, Step] = {}
+
+    cleaned_labels = [sanitize_str(l.split("(step")[0]) for l in labels]
+    
+    for row in df.iterrows():
+        i, s = row
+        s_id = int(s[0])
+        frame, time = time_from_name(s[1])
+
+        label = sanitize_str(s[9])
+        label_idx = cleaned_labels.index(label)
+
+        if s_id not in id_to_step:
+            id_to_step[s_id] = Step(
+                label_idx, # current step id
+                labels[label_idx],  # current step
+                time,  # start
+                np.inf, # end
+                1.0,  # conf
+                False, # completed
+            )
+
+        else:
+            # There's a struct in there, update it.
+            a = id_to_step[s_id]
+            
+            id_to_step[s_id] = Step(
+                a.current_step_id,
+                a.class_label,
+                a.start, # start
+                time, # end
+                1.0,  # conf
+                True, # completed
+            )
+
+    # Assert that all activities have been assigned an associated end time.
+    assert np.inf not in {a.end for a in id_to_step.values()}, (
+        f"Some activities in source CSV do not have corresponding end time "
+        f"entries: {filepath}"
+    )
+
+    return list(id_to_step.values())
+
+def add_inter_steps_to_activity_gt(
+    gt, min_start_time, max_end_time,
+    add_inter_steps=True, add_before_after_steps=True,
 ):
     first_activity = min(gt, key=lambda a: a.start)
     last_activity = max(gt, key=lambda a: a.end)
@@ -208,7 +272,7 @@ def add_inter_steps(
                     continue
                 next_step = next_sub_step_str.split("(")[1][:-1]
 
-                inter_class = f"In between {step} and {next_step}".lower()
+                inter_class = sanitize_str(f"In between {step} and {next_step}")
 
                 gt.append(
                     Activity(
@@ -246,6 +310,68 @@ def add_inter_steps(
 
     return gt
 
+def add_inter_steps_to_step_gt(
+    gt, labels, min_start_time, max_end_time,
+    add_inter_steps=True, add_before_after_steps=True,
+):
+    first_activity = min(gt, key=lambda a: a.start)
+    last_activity = max(gt, key=lambda a: a.end)
+
+    if add_inter_steps:
+        for a_id, activity in enumerate(gt):
+            sub_step_str = activity.class_label
+            if "(step " not in sub_step_str:
+                continue
+            step = sub_step_str.split("(")[1][:-1]
+
+            if a_id + 1 < len(gt):
+                next_activity = gt[a_id + 1]
+                next_sub_step_str = next_activity.class_label
+
+                if "(step " not in next_sub_step_str:
+                    continue
+                next_step = next_sub_step_str.split("(")[1][:-1]
+
+                inter_class = sanitize_str(f"In between {step} and {next_step}")
+
+                gt.append(
+                    Step(
+                        labels.index(inter_class),
+                        inter_class,
+                        activity.end,
+                        next_activity.start,
+                        1,
+                        True,
+                    )
+                )
+
+    if add_before_after_steps:
+        ns = "not started"
+        gt.append(
+            Step(
+                labels.index(ns),
+                ns,
+                min_start_time,
+                first_activity.start,
+                1,
+                True,
+            )
+        )
+
+        f = "finished"
+        gt.append(
+            Step(
+                labels.index(f),
+                f,
+                last_activity.end,
+                max_end_time,
+                1,
+                True,
+            )
+        )
+
+    return gt
+
 def steps_from_ros_export_json(filepath: str) -> Tuple[List[str], List[Activity]]:
     """
     Load a number of predicted steps from a JSON file that is the result
@@ -267,19 +393,21 @@ def steps_from_ros_export_json(filepath: str) -> Tuple[List[str], List[Activity]
     step_seq: List[Step] = []
     for step_json in data:
         # This activity window start/end times in seconds.
-        time_stamp = step_json["source_stamp_start_frame"]
+        time_stamp = float(step_json["header"]["time_sec"]) + (float(step_json["header"]["time_nanosec"]) * 1e-9)
+        latest_sensor_ts = float(step_json["latest_sensor_input_time"])
         current_step_id = step_json["current_step_id"]
         current_step = step_json["current_step"]
-        conf_vec = step_json["conf_vec"]
+        conf_vec = step_json["hmm_step_confidence"]
         completed_vec = step_json["completed_steps"]
 
         step_seq.append(
             Step(
-                current_step_id,
-                current_step,
-                time_stamp,
-                conf_vec[current_step_id],
-                completed_vec[current_step_id]
+                current_step_id, # current id
+                sanitize_str(current_step), # class_label
+                latest_sensor_ts, # start
+                latest_sensor_ts, # end
+                conf_vec[current_step_id], # conf
+                completed_vec[current_step_id] # completed
             )
         )
     return step_seq
@@ -322,7 +450,7 @@ def activities_from_ros_export_json(filepath: str) -> Tuple[List[str], List[Acti
         for lbl, conf in zip(label_vec, act_json["conf_vec"]):
             activity_seq.append(
                 Activity(
-                    lbl.lower().lower().strip().strip(".").strip(),
+                    sanitize_str(lbl),
                     act_start,
                     act_end,  # time
                     np.inf,
@@ -331,7 +459,7 @@ def activities_from_ros_export_json(filepath: str) -> Tuple[List[str], List[Acti
                 )
             )
     # normalize output label vec just like activity label treatment.
-    label_vec = [lbl.lower().strip().strip(".").strip() for lbl in label_vec]
+    label_vec = [sanitize_str(lbl) for lbl in label_vec]
     return label_vec, activity_seq
 
 

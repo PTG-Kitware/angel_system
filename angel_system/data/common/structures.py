@@ -34,10 +34,12 @@ class Step:
     # The index of the step currently in progress.
     # A value of `-1` indicates that no step has been started yet.
     current_step_id: int
-    # # String of the step currently in progress.
-    current_step: str
-    # Previous step is the step worked on before the current step. 
-    time_stamp: float
+    # String of the step currently in progress.
+    class_label: str
+    # 
+    start: float
+    #
+    end: float
     # Confidence of a predicted step. This should be in the [0,1] range.
     # Ground truth traditionally sets this to `1.0`.
     conf: float
