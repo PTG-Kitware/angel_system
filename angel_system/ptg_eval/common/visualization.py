@@ -67,7 +67,8 @@ class EvalVisualization:
         plt.close(fig)
 
     def plot_activities_confidence(
-        self, gt, dets, custom_range=None, custom_range_color="red"
+        self, gt, dets, min_start_time, max_end_time,
+        custom_range=None, custom_range_color="red"
     ):
         """
         Plot activity confidences over time
@@ -89,11 +90,6 @@ class EvalVisualization:
                 # ============================
                 # Setup figure
                 # ============================
-                # Determine time range to plot
-                min_start_time = min(
-                    gt_ranges["start"].min(), det_ranges["start"].min()
-                )
-                max_end_time = max(gt_ranges["end"].max(), det_ranges["end"].max())
                 total_time_delta = max_end_time - min_start_time
                 pad = 0.05 * total_time_delta
 
@@ -172,4 +168,7 @@ class EvalVisualization:
                 fig.savefig(f"{str(activity_plot_dir)}/{label.replace(' ', '_')}.png")
                 plt.close(fig)
             else:
-                log.warning(f'No detections/gt found for "{label}"')
+                if gt_ranges.empty:
+                    log.warning(f'No gt found for "{label}"')
+                if det_ranges.empty:
+                    log.warning(f'No detections found for "{label}"')
