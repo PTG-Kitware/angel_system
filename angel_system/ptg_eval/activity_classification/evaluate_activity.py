@@ -10,8 +10,9 @@ import numpy.typing as npt
 from angel_system.data.common.load_data import (
     activities_from_dive_csv,
     activities_from_ros_export_json,
-    activities_as_dataframe,
-    add_inter_steps,
+    objs_as_dataframe,
+    add_inter_steps_to_activity_gt,
+    sanitize_str
 )
 from angel_system.data.common.discretize_data import discretize_data_to_windows
 from angel_system.ptg_eval.common.visualization import (
@@ -49,8 +50,8 @@ def run_eval(args):
             max(gt, key=lambda a: a.end).end, max(detections, key=lambda a: a.end).end
         )
 
-        if args.add_inter_steps or args.add_before_after_steps:
-            gt = add_inter_steps(
+        if args.add_inter_steps or args.add_before_finished_steps:
+            gt = add_inter_steps_to_activity_gt(
                 gt,
                 min_start_time,
                 max_end_time,
@@ -67,14 +68,13 @@ def run_eval(args):
             )
         cleaned_labels = []
         for label in labels:
-            cleaned_labels.append(label.lower().strip().strip(".").strip())
+            cleaned_labels.append(sanitize_str(label))
         labels = cleaned_labels
-        print(labels)
 
         # Make gt/detections pd.DataFrame instance to be consistent with downstream
         # implementation.
-        gt = activities_as_dataframe(gt)
-        detections = activities_as_dataframe(detections)
+        gt = objs_as_dataframe(gt)
+        detections = objs_as_dataframe(detections)
 
         # Local masks for this specific file pair
         (
@@ -159,7 +159,7 @@ def main():
     parser.add_argument(
         "--output_dir",
         type=str,
-        default="eval",
+        default="eval/activity",
         help="Folder to save results and plots to",
     )
     parser.add_argument(
