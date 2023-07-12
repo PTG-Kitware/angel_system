@@ -41,7 +41,7 @@ def load_recipe(recipe):
     labels = labels[1:]  # Ignore background
 
     # Add start
-    labels.append({"id": 0, "label": "start", "full_str": "start", "depends": None})
+    labels.insert(0, {"id": 0, "label": "start", "full_str": "start", "depends": None})
 
     return recipe_title, labels
 
@@ -110,7 +110,7 @@ def print_recipe_order(recipe_title, labels, all_possible_orders, repeated_ids):
     print(f"\n{recipe_title}")
     print("=" * len(recipe_title))
     recipe_actions = [
-        al for al in recipe_order if al not in [1, labels[-1]["id"]] + repeated_ids
+        al for al in recipe_order if al not in [0, len(labels) - 1] + repeated_ids
     ]
     for i, action_id in enumerate(recipe_actions):
         if type(action_id) is int:
