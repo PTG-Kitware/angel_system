@@ -29,6 +29,7 @@ def sanitize_str(str_):
     """
     return str_.lower().strip().strip(".").strip()
 
+
 def Re_order(image_list, image_number):
     img_id_list = []
     for img in image_list:
@@ -130,9 +131,7 @@ def load_from_file(
     # Load labels
     # ============================
     # grab all labels present in data
-    labels = list(
-        set([sanitize_str(l) for l in detections["class_label"].unique()])
-    )
+    labels = list(set([sanitize_str(l) for l in detections["class_label"].unique()]))
 
     log.debug(f"Labels: {labels}")
 
@@ -197,6 +196,7 @@ def activities_from_dive_csv(filepath: str) -> List[Activity]:
 
     return list(id_to_activity.values())
 
+
 def steps_from_dive_csv(filepath: str, labels) -> List[Activity]:
     """
     Load from a DIVE output CSV file a sequence of ground truth step
@@ -218,7 +218,7 @@ def steps_from_dive_csv(filepath: str, labels) -> List[Activity]:
     id_to_step: Dict[int, Step] = {}
 
     cleaned_labels = [sanitize_str(l.split("(step")[0]) for l in labels]
-    
+
     for row in df.iterrows():
         i, s = row
         s_id = int(s[0])
@@ -229,25 +229,25 @@ def steps_from_dive_csv(filepath: str, labels) -> List[Activity]:
 
         if s_id not in id_to_step:
             id_to_step[s_id] = Step(
-                label_idx, # current step id
+                label_idx,  # current step id
                 labels[label_idx],  # current step
                 time,  # start
-                np.inf, # end
+                np.inf,  # end
                 1.0,  # conf
-                False, # completed
+                False,  # completed
             )
 
         else:
             # There's a struct in there, update it.
             a = id_to_step[s_id]
-            
+
             id_to_step[s_id] = Step(
                 a.current_step_id,
                 a.class_label,
-                a.start, # start
-                time, # end
+                a.start,  # start
+                time,  # end
                 1.0,  # conf
-                True, # completed
+                True,  # completed
             )
 
     # Assert that all activities have been assigned an associated end time.
@@ -258,9 +258,13 @@ def steps_from_dive_csv(filepath: str, labels) -> List[Activity]:
 
     return list(id_to_step.values())
 
+
 def add_inter_steps_to_activity_gt(
-    gt, min_start_time, max_end_time,
-    add_inter_steps=True, add_before_after_steps=True,
+    gt,
+    min_start_time,
+    max_end_time,
+    add_inter_steps=True,
+    add_before_after_steps=True,
 ):
     """
     Adds interstitial activities to the ground truth if ``add_inter_steps`` is True and
@@ -338,9 +342,14 @@ def add_inter_steps_to_activity_gt(
 
     return gt
 
+
 def add_inter_steps_to_step_gt(
-    gt, labels, min_start_time, max_end_time,
-    add_inter_steps=True, add_before_after_steps=True,
+    gt,
+    labels,
+    min_start_time,
+    max_end_time,
+    add_inter_steps=True,
+    add_before_after_steps=True,
 ):
     """
     Adds interstitial steps to the ground truth if ``add_inter_steps`` is True and
@@ -420,6 +429,7 @@ def add_inter_steps_to_step_gt(
 
     return gt
 
+
 def steps_from_ros_export_json(filepath: str) -> Tuple[List[str], List[Activity]]:
     """
     Load a number of predicted steps from a JSON file that is the result
@@ -441,7 +451,9 @@ def steps_from_ros_export_json(filepath: str) -> Tuple[List[str], List[Activity]
     step_seq: List[Step] = []
     for step_json in data:
         # This activity window start/end times in seconds.
-        time_stamp = float(step_json["header"]["time_sec"]) + (float(step_json["header"]["time_nanosec"]) * 1e-9)
+        time_stamp = float(step_json["header"]["time_sec"]) + (
+            float(step_json["header"]["time_nanosec"]) * 1e-9
+        )
         latest_sensor_ts = float(step_json["latest_sensor_input_time"])
         current_step_id = step_json["current_step_id"]
         current_step = step_json["current_step"]
@@ -450,15 +462,16 @@ def steps_from_ros_export_json(filepath: str) -> Tuple[List[str], List[Activity]
 
         step_seq.append(
             Step(
-                current_step_id, # current id
-                sanitize_str(current_step), # class_label
-                latest_sensor_ts, # start
-                latest_sensor_ts, # end
-                conf_vec[current_step_id], # conf
-                completed_vec[current_step_id] # completed
+                current_step_id,  # current id
+                sanitize_str(current_step),  # class_label
+                latest_sensor_ts,  # start
+                latest_sensor_ts,  # end
+                conf_vec[current_step_id],  # conf
+                completed_vec[current_step_id],  # completed
             )
         )
     return step_seq
+
 
 def activities_from_ros_export_json(filepath: str) -> Tuple[List[str], List[Activity]]:
     """

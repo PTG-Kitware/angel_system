@@ -67,8 +67,13 @@ class EvalVisualization:
         plt.close(fig)
 
     def plot_activities_confidence(
-        self, gt, dets, min_start_time, max_end_time,
-        custom_range=None, custom_range_color="red"
+        self,
+        gt,
+        dets,
+        min_start_time,
+        max_end_time,
+        custom_range=None,
+        custom_range_color="red",
     ):
         """
         Plot activity confidences over time

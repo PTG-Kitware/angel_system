@@ -22,6 +22,7 @@ class Activity:
     # Ground truth traditionally sets this to `1.0`.
     conf: float
 
+
 @dataclass(frozen=True)
 class Step:
     """
@@ -36,7 +37,7 @@ class Step:
     current_step_id: int
     # String of the step currently in progress.
     class_label: str
-    # 
+    #
     start: float
     #
     end: float

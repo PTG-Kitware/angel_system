@@ -12,7 +12,7 @@ from angel_system.data.common.load_data import (
     activities_from_ros_export_json,
     objs_as_dataframe,
     add_inter_steps_to_activity_gt,
-    sanitize_str
+    sanitize_str,
 )
 from angel_system.data.common.discretize_data import discretize_data_to_windows
 from angel_system.ptg_eval.common.visualization import (

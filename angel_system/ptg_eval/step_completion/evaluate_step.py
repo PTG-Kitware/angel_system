@@ -14,7 +14,7 @@ from angel_system.data.common.load_data import (
     steps_from_ros_export_json,
     objs_as_dataframe,
     add_inter_steps_to_step_gt,
-    sanitize_str
+    sanitize_str,
 )
 from angel_system.data.common.discretize_data import discretize_data_to_windows
 from angel_system.ptg_eval.common.visualization import (
@@ -79,8 +79,13 @@ def run_eval(args):
             l_dets_per_valid_time_w,
             l_time_windows,
         ) = discretize_data_to_windows(
-            labels, gt, detections, time_window, uncertainty_pad,
-            min_start_time, max_end_time
+            labels,
+            gt,
+            detections,
+            time_window,
+            uncertainty_pad,
+            min_start_time,
+            max_end_time,
         )
 
         # for each pair, output separate activity window plots
@@ -123,6 +128,7 @@ def run_eval(args):
     vis.confusion_mat()
 
     log.info(f"Saved plots to {vis.output_dir}")
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -176,6 +182,7 @@ def main():
 
     args = parser.parse_args()
     run_eval(args)
+
 
 if __name__ == "__main__":
     main()

@@ -34,7 +34,7 @@ def get_time_wind_range(
         time_windows[ind1:ind2] all live inside start->end.
     """
     # The start time of the ith window is min_start_time + dt*i.
-    
+
     ind1_ = (start - min_start_time) / dt
     ind1 = int(np.ceil(ind1_))
     if ind1_ - ind1 + 1 < 1e-15:
@@ -51,7 +51,7 @@ def get_time_wind_range(
         ind1 += 1
 
     ind1 = max([ind1, 0])
-    ind2 = min([ind2, len(time_windows)-1])
+    ind2 = min([ind2, len(time_windows) - 1])
 
     # assert ind2 >= ind1, "Invalid time window indexes"
     if ind2 < ind1:
@@ -63,9 +63,9 @@ def get_time_wind_range(
     return ind1, ind2
 
 
-def discretize_data_to_windows(labels, gt, detections, 
-                               time_window, uncertainty_pad,
-                               min_start_time, max_end_time):
+def discretize_data_to_windows(
+    labels, gt, detections, time_window, uncertainty_pad, min_start_time, max_end_time
+):
     """
     Reformat the ground truth and detection data into time windows and
     removed any invalid time windows.
