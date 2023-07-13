@@ -18,8 +18,16 @@ from angel_system.data.common.structures import Activity, Step
 log = logging.getLogger("ptg_data_common")
 
 
-def sanitize_str(str):
-    return str.lower().strip().strip(".").strip()
+def sanitize_str(str_):
+    """
+    Convert string to lowercase and emove trailing whitespace and period.
+
+    :param str str_: Input text
+
+    :return: ``str_`` converted to lowercase and stripped of trailing whitespace and period.
+    :rtype: str
+    """
+    return str_.lower().strip().strip(".").strip()
 
 def Re_order(image_list, image_number):
     img_id_list = []
@@ -254,6 +262,26 @@ def add_inter_steps_to_activity_gt(
     gt, min_start_time, max_end_time,
     add_inter_steps=True, add_before_after_steps=True,
 ):
+    """
+    Adds interstitial activities to the ground truth if ``add_inter_steps`` is True and
+    the ground truth activities contain '(step X)'. The interstitial activities will use the step ids
+    from '(step X)' and '(step Y)' to create a new label
+    'In between step X and step Y' that represents  the time between step X and Y.
+
+    Adds 'before' and 'finished' activities to the ground truth if ``add_before_after_steps`` is True
+    and the ground truth activities contain '(step X)'. The 'before' activity will be created
+    from ``min_start_time`` to the start time of the first activity. The 'finished' activity
+    will be created from the end of the last activity to ``max_end_time``.
+
+    :param gt: list of Activities
+    :param min_start_time: Minimum start time across the ground truth and detection sets
+    :param max_end_time: Maximum end time across the ground truth and detection sets
+    :param add_inter_steps: If true, will add additional activities to ``gt`` that take place inbetween the exisiting activities
+    :param add_before_after_steps: If true, will add additional activities that take place before the
+        start of the first activity and after the end of the last activity
+
+    :return: ``gt`` with any additional activities inserted
+    """
     first_activity = min(gt, key=lambda a: a.start)
     last_activity = max(gt, key=lambda a: a.end)
 
@@ -314,6 +342,26 @@ def add_inter_steps_to_step_gt(
     gt, labels, min_start_time, max_end_time,
     add_inter_steps=True, add_before_after_steps=True,
 ):
+    """
+    Adds interstitial steps to the ground truth if ``add_inter_steps`` is True and
+    the ground truth steps contain '(step X)'. The interstitial steps will use the step ids
+    from '(step X)' and '(step Y)' to create a new label
+    'In between step X and step Y' that represents the time between step X and Y.
+
+    Adds 'before' and 'finished' steps to the ground truth if ``add_before_after_steps`` is True
+    and the ground truth steps contain '(step X)'. The 'before' step will be created
+    from ``min_start_time`` to the start time of the first step. The 'finished' step
+    will be created from the end of the last step to ``max_end_time``.
+
+    :param gt: list of Activities
+    :param min_start_time: Minimum start time across the ground truth and detection sets
+    :param max_end_time: Maximum end time across the ground truth and detection sets
+    :param add_inter_steps: If true, will add additional steps to ``gt`` that take place inbetween the exisiting steps
+    :param add_before_after_steps: If true, will add additional steps that take place before the
+        start of the first step and after the end of the last step
+
+    :return: ``gt`` with any additional steps inserted
+    """
     first_activity = min(gt, key=lambda a: a.start)
     last_activity = max(gt, key=lambda a: a.end)
 
