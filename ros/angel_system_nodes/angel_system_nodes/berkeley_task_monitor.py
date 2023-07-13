@@ -60,6 +60,9 @@ class TaskMonitor(Node):
             .get_parameter_value()
             .string_value
         )
+        self._conf_thr = (
+            self.declare_parameter("conf_thr", 0.6).get_parameter_value().double_value
+        )
         self._config_file = (
             self.declare_parameter(
                 "config_file",
@@ -133,19 +136,18 @@ class TaskMonitor(Node):
 
         # Step classifier
         parser = model.get_parser()
-
-        conf_thr = 0.7
         args = parser.parse_args(
-            f"--config-file {self._model_config} --confidence-threshold {conf_thr}".split()
+            f"--config-file {self._model_config} --confidence-threshold {self._conf_thr}".split()
         )
 
         log.info("Arguments: " + str(args))
 
         cfg = model.setup_cfg(args)
+        log.info(f"Weights: {cfg.MODEL.WEIGHTS}")
 
         os.environ["CUDA_VISIBLE_DEVICES"] = "0"
         self.demo = predictor.VisualizationDemo_add_smoothing(
-            cfg, last_time=2, draw_output=self._draw_output
+            cfg, last_time=2, draw_output=self._draw_output, tracking=True
         )
 
         self.idx = 0
