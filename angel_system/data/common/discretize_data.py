@@ -3,7 +3,9 @@ import warnings
 
 from typing import Sequence
 from typing import Tuple
+from typing import List
 
+import pandas as pd
 import numpy as np
 
 from angel_system.data.common.load_data import sanitize_str
@@ -64,7 +66,9 @@ def get_time_wind_range(
 
 
 def discretize_data_to_windows(
-    labels, gt, detections, time_window, uncertainty_pad, min_start_time, max_end_time
+    labels: List[str], gt: pd.DataFrame, detections: pd.DataFrame,
+    time_window: float, uncertainty_pad: float,
+    min_start_time: float, max_end_time: float
 ):
     """
     Reformat the ground truth and detection data into time windows and

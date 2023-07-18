@@ -1,8 +1,12 @@
 import os
 import seaborn as sn
+import pandas as pd
 import numpy as np
 from pathlib import Path
 import matplotlib.pyplot as plt
+
+from typing import List
+from typing import Tuple
 
 from sklearn.metrics import (
     PrecisionRecallDisplay,
@@ -22,7 +26,8 @@ plt.rcParams.update({"font.size": 35})
 
 
 class EvalVisualization:
-    def __init__(self, labels, gt_true_mask, window_class_scores, output_dir=""):
+    def __init__(self, labels: List[str], gt_true_mask: np.ndarray,
+                 window_class_scores: np.ndarray, output_dir: str=""):
         """
         :param labels: Array of class labels (str)
         :param gt_true_mask: Matrix of size (number of valid time windows x number classes) where True
@@ -68,12 +73,12 @@ class EvalVisualization:
 
     def plot_activities_confidence(
         self,
-        gt,
-        dets,
-        min_start_time,
-        max_end_time,
-        custom_range=None,
-        custom_range_color="red",
+        gt: pd.DataFrame,
+        dets: pd.DataFrame,
+        min_start_time: float,
+        max_end_time: float,
+        custom_range: Tuple[float, float]=None,
+        custom_range_color: str="red",
     ):
         """
         Plot activity confidences over time
