@@ -80,6 +80,8 @@ class EvalVisualization:
 
         :param gt: Pandas dataframe of the ground truth
         :param dets: Pandas dataframe of all detections per class
+        :param min_start_time: Minimum start time across the ground truth and detection sets
+        :param max_end_time: Maximum end time across the ground truth and detection sets
         :param custom_range: Optional tuple indicating the starting and ending times of an additional
                                 range to highlight in addition to the `gt_ranges`.
         :param custom_range_color: The color of the additional range to be drawn. If not set, we will

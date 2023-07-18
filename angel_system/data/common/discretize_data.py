@@ -77,6 +77,8 @@ def discretize_data_to_windows(
         equally-long windows of this size (seconds).
     :param uncertainty_pad: Time in seconds to pad ground truth detections by. Detections
         within the windows ground truth + or - uncertainty pad will not be scored.
+    :param min_start_time: Minimum start time across the ground truth and detection sets
+    :param max_end_time: Maximum end time across the ground truth and detection sets
 
     :return: Tuple(
         ground truth mask - Matrix of size (number of valid time windows x number classes)

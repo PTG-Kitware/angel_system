@@ -18,11 +18,11 @@ from angel_system.data.common.structures import Activity, Step
 log = logging.getLogger("ptg_data_common")
 
 
-def sanitize_str(str_):
+def sanitize_str(str_: str):
     """
     Convert string to lowercase and emove trailing whitespace and period.
 
-    :param str str_: Input text
+    :param str_: Input text
 
     :return: ``str_`` converted to lowercase and stripped of trailing whitespace and period.
     :rtype: str
@@ -197,7 +197,7 @@ def activities_from_dive_csv(filepath: str) -> List[Activity]:
     return list(id_to_activity.values())
 
 
-def steps_from_dive_csv(filepath: str, labels) -> List[Activity]:
+def steps_from_dive_csv(filepath: str, labels: List[str]) -> List[Activity]:
     """
     Load from a DIVE output CSV file a sequence of ground truth step
     annotations.
@@ -206,6 +206,8 @@ def steps_from_dive_csv(filepath: str, labels) -> List[Activity]:
     whitespace.
 
     :param filepath: Filesystem path to the CSV file.
+    :param labels: List of labels in the dataset
+
     :return: List of loaded step annotations.
     """
     print(f"Loading ground truth steps from: {filepath}")
@@ -260,11 +262,11 @@ def steps_from_dive_csv(filepath: str, labels) -> List[Activity]:
 
 
 def add_inter_steps_to_activity_gt(
-    gt,
-    min_start_time,
-    max_end_time,
-    add_inter_steps=True,
-    add_before_after_steps=True,
+    gt: List[Activity],
+    min_start_time: float,
+    max_end_time: float,
+    add_inter_steps: bool=True,
+    add_before_after_steps: bool=True,
 ):
     """
     Adds interstitial activities to the ground truth if ``add_inter_steps`` is True and
@@ -344,12 +346,12 @@ def add_inter_steps_to_activity_gt(
 
 
 def add_inter_steps_to_step_gt(
-    gt,
-    labels,
-    min_start_time,
-    max_end_time,
-    add_inter_steps=True,
-    add_before_after_steps=True,
+    gt: List[Step],
+    labels: List[str],
+    min_start_time: float,
+    max_end_time: float,
+    add_inter_steps: bool=True,
+    add_before_after_steps: bool=True,
 ):
     """
     Adds interstitial steps to the ground truth if ``add_inter_steps`` is True and

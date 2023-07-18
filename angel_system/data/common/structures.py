@@ -37,9 +37,9 @@ class Step:
     current_step_id: int
     # String of the step currently in progress.
     class_label: str
-    #
+    # Start time in floating point seconds.
     start: float
-    #
+    # End time in floating point seconds.
     end: float
     # Confidence of a predicted step. This should be in the [0,1] range.
     # Ground truth traditionally sets this to `1.0`.
