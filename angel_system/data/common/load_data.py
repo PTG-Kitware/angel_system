@@ -27,7 +27,7 @@ def sanitize_str(str_):
     :return: ``str_`` converted to lowercase and stripped of trailing whitespace and period.
     :rtype: str
     """
-    return str_.lower().strip().strip(".").strip()
+    return str_.lower().strip(" .")
 
 
 def Re_order(image_list, image_number):
