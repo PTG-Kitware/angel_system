@@ -75,9 +75,25 @@ def data_loader(pred_fnames, act_label_yaml):
         else:
             ann_by_image[ann["image_id"]].append(ann)
 
-    return act_map, inv_act_map, image_activity_gt, image_id_to_dataset, label_to_ind, act_id_to_str, ann_by_image
+    return (
+        act_map,
+        inv_act_map,
+        image_activity_gt,
+        image_id_to_dataset,
+        label_to_ind,
+        act_id_to_str,
+        ann_by_image,
+    )
 
-def compute_feats(act_map, image_activity_gt, image_id_to_dataset, label_to_ind, act_id_to_str, ann_by_image):
+
+def compute_feats(
+    act_map,
+    image_activity_gt,
+    image_id_to_dataset,
+    label_to_ind,
+    act_id_to_str,
+    ann_by_image,
+):
     print("Computing features...")
     X = []
     y = []
@@ -170,6 +186,7 @@ def compute_feats(act_map, image_activity_gt, image_id_to_dataset, label_to_ind,
 
     return X, y
 
+
 def plot_dataset_counts(X, y, output_dir):
     plt.imshow(np.cov(X.T))
     plt.colorbar()
@@ -188,6 +205,7 @@ def plot_dataset_counts(X, y, output_dir):
     plt.tight_layout()
     plt.savefig(f"{output_dir}/gt_counts.png")
 
+
 def train(X, y):
     print("Train...")
     # Train model on test set.
@@ -202,21 +220,39 @@ def train(X, y):
 
     return clf
 
+
 def save(output_dir, act_str_list, label_to_ind, clf):
     output_fn = f"{output_dir}/activity_weights.pkl"
     with open(output_fn, "wb") as of:
         pickle.dump([label_to_ind, 1, clf, act_str_list], of)
     print(f"Saved weights to {output_fn}")
 
+
 def train_activity_classifier(args):
-    act_map, inv_act_map, image_activity_gt, image_id_to_dataset, label_to_ind, act_id_to_str, ann_by_image = data_loader(args.pred_fnames, args.act_label_yaml)
-    X, y = compute_feats(act_map, image_activity_gt, image_id_to_dataset, label_to_ind, act_id_to_str, ann_by_image)
+    (
+        act_map,
+        inv_act_map,
+        image_activity_gt,
+        image_id_to_dataset,
+        label_to_ind,
+        act_id_to_str,
+        ann_by_image,
+    ) = data_loader(args.pred_fnames, args.act_label_yaml)
+    X, y = compute_feats(
+        act_map,
+        image_activity_gt,
+        image_id_to_dataset,
+        label_to_ind,
+        act_id_to_str,
+        ann_by_image,
+    )
     plot_dataset_counts(X, y, args.output_dir)
-    
+
     clf = train(X, y)
 
     act_str_list = [inv_act_map[key] for key in sorted(list(set(y)))]
     save(args.output_dir, act_str_list, label_to_ind, clf)
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -225,21 +261,13 @@ def main():
         help="Object detections in kwcoco format",
         dest="pred_fnames",
         type=Path,
-        nargs='+'
+        nargs="+",
     )
     parser.add_argument(
-        "--act-label-yaml",
-        help="",
-        type=Path,
-        dest="act_label_yaml",
-        default=""
+        "--act-label-yaml", help="", type=Path, dest="act_label_yaml", default=""
     )
     parser.add_argument(
-        "--output-dir",
-        help="",
-        type=Path,
-        dest="output_dir",
-        default=""
+        "--output-dir", help="", type=Path, dest="output_dir", default=""
     )
     args = parser.parse_args()
 
@@ -257,6 +285,7 @@ def main():
     act_label_yaml = "/angel_workspace/config/activity_labels/medical_tourniquet.v2.yaml"
     output_fn = "/angel_workspace/model_files/recipe_m2_apply_tourniquet_v0.052.pkl"
     """
+
 
 if __name__ == "__main__":
     main()

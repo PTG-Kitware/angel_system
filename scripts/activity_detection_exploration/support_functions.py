@@ -24,7 +24,10 @@ def sanitize_str(txt):
 
     return txt
 
+
 RE_FILENAME_TIME = re.compile(r"frame_\d+_(\d+_\d+).\w+")
+
+
 def time_from_name(fname):
     """
     Extract the float timestamp from the filename.
