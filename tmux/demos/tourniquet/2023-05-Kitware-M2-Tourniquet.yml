@@ -129,7 +129,6 @@ windows:
       -p enable_manual_progression:=false
       -p allow_rollback:=false
 
-  # Currently hard-coded to use the /debug ROS namespace.
   - engineering-ui:
       layout: even-vertical
       panes:
