@@ -2,16 +2,16 @@ import os
 from .MC50 import register_MC50_instances
 
 
-cooking_data_root = '/angel_workspace/angel_system/berkeley/'
+# cooking_data_root = '/angel_workspace/angel_system/berkeley/'
+cooking_data_root ='/media/hannah.defazio/Padlock_DT6/Data/notpublic/PTG'
 _PREDEFINED_SPLITS_KITWARE_COOKING = {
     "KITWARE_COOKING_COFFEE": {
         "COFFEE_UCB_train": (f"{cooking_data_root}/berkeley/2022-11-05_whole/ft_file/images", f"{cooking_data_root}/berkeley/2022-11-05_whole/ft_file/fine-tuning.json"),
         "COFFEE_UCB_val": (f"{cooking_data_root}/berkeley/2022-11-05_whole/ft_file/images", f"{cooking_data_root}/berkeley/2022-11-05_whole/ft_file/fine-tuning.json"),
     
         # Generated annotations on videos with contact metadata
-        "COFFEE_train": (f"{cooking_data_root}/coffee_recordings/extracted", f"{cooking_data_root}/coffee_recordings/extracted/coffee_preds_with_all_objects_train.mscoco.json"),
-        "COFFEE_train_with_background": (f"{cooking_data_root}/coffee_recordings/extracted", f"{cooking_data_root}/coffee_recordings/extracted/coffee_contact_preds_with_background_all_objs_only_train.mscoco.json"),
-        "COFFEE_val": (f"{cooking_data_root}/coffee_recordings/extracted", f"{cooking_data_root}/coffee_recordings/extracted/coffee_preds_with_all_objects_val.mscoco.json"),
+        "COFFEE_train": ("", f"{cooking_data_root}/Coffee/annotations/coffee_no_background/coffee_no_background_stage2_train_contact.mscoco.json"),
+        "COFFEE_val": ("", f"{cooking_data_root}/Coffee/annotations/coffee_no_background/coffee_no_background_stage2_val.mscoco.json"),
     },
 }
 
@@ -32,11 +32,10 @@ def _get_cooking_instances_meta_v1(dataset_name):
     thing_classes = [k["name"] for k in MC50_categories]
 
     if dataset_name == 'KITWARE_COOKING_COFFEE':
-        from angel_system.berkeley.utils.data.objects import coffee_activity_objects as cooking_activity_objects
+        from angel_system.berkeley.data.objects import coffee_activity_objects as cooking_activity_objects
 
     meta = {
         "thing_classes": thing_classes,
-        #"class_image_count": MC50_CATEGORIES,
         "sub_steps": cooking_activity_objects.sub_steps,
         "original_sub_steps": cooking_activity_objects.original_sub_steps,
         "contact_pairs_details": cooking_activity_objects.contact_pairs_details,

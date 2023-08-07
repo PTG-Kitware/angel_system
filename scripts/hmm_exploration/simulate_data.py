@@ -16,7 +16,7 @@ from angel_system.activity_hmm.core import (
 from angel_system.impls.detect_activities.swinb.swinb_detect_activities import (
     SwinBTransformer,
 )
-from angel_system.ptg_eval.common.load_data import time_from_name
+from angel_system.data.common.load_data import time_from_name
 from angel_system.ptg_eval.activity_classification.visualization import (
     EvalVisualization,
 )

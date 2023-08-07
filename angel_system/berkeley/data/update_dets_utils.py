@@ -1,5 +1,6 @@
+import os
 import math
-import kwcoco
+import ast
 
 import ubelt as ub
 
@@ -29,7 +30,7 @@ def load_hl_hand_bboxes(extracted_dir):
             # if joint['clipped'] == 0:
             joints[joint["joint"]] = joint  # 2d position
         if joints != {}:
-            all_hand_pose_2d[frame].append({"hand": hand_label, "joints": joints})
+            all_hand_pose_2d[time_stamp].append({"hand": hand_label, "joints": joints})
 
     return all_hand_pose_2d
 
@@ -80,6 +81,8 @@ def replace_compound_label(
 
         new_bbox = None
         new_conf = None
+        new_obj_obj_conf = None
+        new_obj_hand_conf = None
         for det_obj in replaced:
             assert len(preds[det_obj]) == 1
             bbox = preds[det_obj][0]["bbox"]
@@ -101,6 +104,11 @@ def replace_compound_label(
                 ]
 
             new_conf = conf if new_conf is None else (new_conf + conf) / 2  # average???
+            if using_contact:
+                obj_obj_conf = preds[det_obj][0]["obj_obj_contact_conf"]
+                new_obj_obj_conf = obj_obj_conf if new_obj_obj_conf is None else (new_obj_obj_conf + obj_obj_conf) / 2
+                obj_hand_conf = preds[det_obj][0]["obj_hand_contact_conf"]
+                new_obj_hand_conf = obj_hand_conf if new_obj_hand_conf is None else (new_obj_hand_conf + obj_hand_conf) / 2
 
             # remove old preds
             preds.pop(det_obj)
@@ -111,7 +119,9 @@ def replace_compound_label(
         }
         if using_contact:
             new_pred["obj_obj_contact_state"] = obj_obj_contact_state
+            new_pred['obj_obj_contact_conf'] = new_obj_obj_conf
             new_pred["obj_hand_contact_state"] = obj_hand_contact_state
+            new_pred['obj_hand_contact_conf'] = new_obj_hand_conf
 
         preds[obj] = [new_pred]
 
@@ -158,3 +168,29 @@ def find_closest_hands(object_pair, detected_classes, preds):
 
     hand_label = close_hands if len(close_hands) > 0 else None
     return hand_label
+
+
+def update_step_map(original_step_map, objects,
+                    using_inter_steps, using_before_finished_task):
+    # Update step map
+    step_map = original_step_map.copy()
+
+    if using_inter_steps:
+        steps = list(original_step_map.keys())
+        for i, step in enumerate(steps[:-1]):
+            step_map[f"{step}.5"] = [
+                [
+                    f"In between {step} and {steps[i+1]}".lower(),
+                    [objects],
+                ]
+            ]
+
+    if using_before_finished_task:
+        step_map["before"] = [
+            ["Not started".lower(), [objects]]
+        ]
+        step_map["finished"] = [
+            ["Finished".lower(), [objects]]
+        ]
+    print(f"step map: {step_map}")
+    return step_map

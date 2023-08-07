@@ -1,0 +1,40 @@
+_BASE_: "/home/local/KHQ/hannah.defazio/projects/PTG/angel_system/angel_system/berkeley/configs/Base-RCNN-FPN.yaml"
+#_BASE_: "/angel_workspace/angel_system/berkeley/configs/Base-RCNN-FPN.yaml"
+MODEL:
+  # WEIGHTS: '/shared/niudt/detectron2/tools/PTG_DEMO/11-5/train_Alex/model_final.pth'
+  WEIGHTS: '/home/local/KHQ/hannah.defazio/projects/PTG/angel_system/model_files/coffee_stage1.pth'
+  MASK_ON: False
+  RESNETS:
+    DEPTH: 101
+  ROI_HEADS:
+    NUM_CLASSES: 42
+    SCORE_THRESH_TEST: 0.0001
+    NAME: StandardROIHeads_PLUS_CONTACT
+    #NAME: StandardROIHeads
+INPUT:
+  MIN_SIZE_TRAIN: (720,)
+  MAX_SIZE_TRAIN: 1280
+  MIN_SIZE_TEST: 720
+  MAX_SIZE_TEST: 1280
+DATASETS:
+  TRAIN: ("COFFEE_UCB_train",)
+  TEST: ("COFFEE_UCB_val",)
+TEST:
+  DETECTIONS_PER_IMAGE: 300  # LVIS allows up to 300
+DATALOADER:
+  SAMPLER_TRAIN: "RepeatFactorTrainingSampler"
+  REPEAT_THRESHOLD: 0.5
+  FILTER_EMPTY_ANNOTATIONS: True
+
+OUTPUT_DIR: '/media/hannah.defazio/Padlock_DT6/Data/notpublic/PTG/training/cooking/coffee'
+
+SOLVER:
+  TOTAL_IMAGE_NUMBER: 904
+  IMS_PER_BATCH: 1
+  BASE_LR: 0.001
+  STEPS: (34000, 41000)
+  CHECKPOINT_PERIOD: 1000
+  EPOCH: 50
+
+VISUALIZER:
+  CAM: False

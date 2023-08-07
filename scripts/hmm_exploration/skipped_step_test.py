@@ -24,7 +24,7 @@ from angel_system.activity_hmm.eval import (
 from angel_system.impls.detect_activities.swinb.swinb_detect_activities import (
     SwinBTransformer,
 )
-from angel_system.ptg_eval.common.load_data import time_from_name
+from angel_system.data.common.load_data import time_from_name
 
 try:
     import matplotlib.pyplot as plt
@@ -35,7 +35,7 @@ except ModuleNotFoundError:
     HAS_MATLOTLIB = False
 
 
-os.chdir("/home/local/KHQ/matt.brown/libraries/angel_system")
+# os.chdir("/home/local/KHQ/matt.brown/libraries/angel_system")
 
 
 # ----------------------------------------------------------------------------

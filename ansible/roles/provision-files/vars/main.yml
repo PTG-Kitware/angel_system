@@ -62,7 +62,7 @@ girder_file_downloads:
     # Coffee object detection
     - file_id: 63fe7dbb7b0dfcc98f66a871
       sha512: c15fc5c38359d92a3a8aad41cd8a06bdfda6df7ae8ca553188ae02917ca2eb3fef92e5ea6a3d4a0676816a299e9d4253facf6cb59cab6776885fbaad57c31c39
-      dest: "{{ stage_dirs.model_files }}/berkeley_model_final.pth"
+      dest: "{{ stage_dirs.model_files }}/coffee_stage1.pth"
     - file_id: 640b6cc67b0dfcc98f66b743
       sha512: 1a9a96f201d4472d3c946e3a9a7af1e0e232abf5a2868ebf8b3184dba3b23d858e619ab24e28dd9f1921d908387e3a3986eccfb136d3c38bc9ca85b7cae78e2e
       dest: "{{ stage_dirs.model_files }}/berkeley_model_r50_final.pth"
