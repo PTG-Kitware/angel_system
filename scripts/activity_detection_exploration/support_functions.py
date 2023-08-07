@@ -10,6 +10,21 @@ from typing import List
 from typing import Tuple
 
 
+def sanitize_str(txt):
+    txt = txt.lower()
+
+    # remove (step 1)
+    try:
+        txt = txt[: txt.index("(") - 1]
+    except ValueError:
+        pass
+
+    if txt[-1] == ".":
+        txt = txt[:-1]
+
+    return txt
+
+
 RE_FILENAME_TIME = re.compile(r"frame_\d+_(\d+_\d+).\w+")
 
 
