@@ -379,10 +379,10 @@ def coffee_main(stage, using_inter_steps, using_before_finished_task):
     data_dirs = (ros_bags_dir,)
 
     training_split = {
-        "train_contact": [f"all_activities_{x}" for x in [2, 10, 25]],
-        "train_activity": [f"all_activities_{x}" for x in [28, 35]],
-        "val": [f"all_activities_{x}" for x in [24, 45]],
-        "test": [f"all_activities_{x}" for x in [41, 42, 43]],
+        "train_obj": [f"all_activities_{x}" for x in [10, 11, 17, 20, 27, 32, 33, 39]],
+        "train_activity": [f"all_activities_{x}" for x in [12, 13, 14, 15, 16, 18, 19, 21, 22, 25, 26, 28, 29, 30, 31, 34, 35, 36, 37, 38, 40, 47, 48, 49]],
+        "val": [f"all_activities_{x}" for x in [23, 24, 42, 46]],
+        "test": [f"all_activities_{x}" for x in [50, 51, 52, 53, 54]],
     }  # Coffee specific
 
     print(training_split)
