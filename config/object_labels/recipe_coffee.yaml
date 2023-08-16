@@ -1,0 +1,93 @@
+version: "1"
+title: "Coffee"
+labels:
+  # Item:
+  # - id: Integer identification number of the label.
+  # - label: Short human-readable semantic string to succinctly represent the
+  #          label.
+  - id: 0
+    label: "background"
+  - id: 1
+    label: "coffee + mug"
+  - id: 2
+    label: "coffee bag"
+  - id: 3
+    label: "coffee beans + container"
+  - id: 4
+    label: "coffee beans + container + scale"
+  - id: 5
+    label: "coffee grounds + paper filter + filter cone"
+  - id: 6
+    label: "coffee grounds + paper filter + filter cone + mug"
+  - id: 7
+    label: "container"
+  - id: 8
+    label: "container + scale"
+  - id: 9
+    label: "filter cone"
+  - id: 10
+    label: "filter cone + mug"
+  - id: 11
+    label: "grinder (close)"
+  - id: 12
+    label: "grinder (open)"
+  - id: 13
+    label: "hand (left)"
+  - id: 14
+    label: "hand (right)"
+  - id: 15
+    label: "kettle"
+  - id: 16
+    label: "kettle (open)"
+  - id: 17
+    label: "lid (grinder)"
+  - id: 18
+    label: "lid (kettle)"
+  - id: 19
+    label: "measuring cup"
+  - id: 20
+    label: "mug"
+  - id: 21
+    label: "paper filter"
+  - id: 22
+    label: "paper filter (quarter)"
+  - id: 23
+    label: "paper filter (semi)"
+  - id: 24
+    label: "paper filter + filter cone"
+  - id: 25
+    label: "paper filter + filter cone + mug"
+  - id: 26
+    label: "paper filter bag"
+  - id: 27
+    label: "paper towel"
+  - id: 28
+    label: "scale (off)"
+  - id: 29
+    label: "scale (on)"
+  - id: 30
+    label: "switch"
+  - id: 31
+    label: "thermometer (close)"
+  - id: 32
+    label: "thermometer (open)"
+  - id: 33
+    label: "timer"
+  - id: 34
+    label: "timer (20)"
+  - id: 35
+    label: "timer (30)"
+  - id: 36
+    label: "timer (else)"
+  - id: 37
+    label: "trash can"
+  - id: 38
+    label: "used paper filter"
+  - id: 39
+    label: "used paper filter + filter cone"
+  - id: 40
+    label: "used paper filter + filter cone + mug"
+  - id: 41
+    label: "water"
+  - id: 42
+    label: "water + coffee grounds + paper filter + filter cone + mug"

@@ -1,0 +1,44 @@
+version: "1"
+title: "Dessert Quesadilla"
+# Note: ids 2-3 are shared wih pinwheels, ids 4-8 are shareed with oatmeal
+labels:
+  # Item:
+  # - id: Integer identification number of the label.
+  # - label: Short human-readable semantic string to succinctly represent the
+  #          label.
+  - id: 0
+    label: "background"
+  - id: 1
+    label: "nutella"
+  - id: 2
+    label: "tortilla"
+  - id: 3
+    label: "plate"
+  - id: 4
+    label: "cutting board"
+  - id: 5
+    label: "butter knife"
+  - id: 6
+    label: "banana"
+  - id: 7
+    label: "sliced banana"
+  - id: 8
+    label: "cinnamon"
+  - id: 9
+    label: "butter knife + nutella"
+  - id: 10
+    label: "tortilla + nutella"
+  - id: 11
+    label: "tortilla + cinnamon"
+  - id: 12
+    label: "tortilla + nutella + sliced banana"
+  - id: 13
+    label: "tortilla + nutella + cinnamon"
+  - id: 14
+    label: "tortilla + nutella + sliced banana + cinnamon"
+  - id: 15
+    label: "folded tortilla (semi)"
+  - id: 16
+    label: "tortilla wedge"
+  - id: 17
+    label: "plate + tortilla wedges"

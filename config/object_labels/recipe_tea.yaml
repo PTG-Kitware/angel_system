@@ -1,0 +1,58 @@
+version: "1"
+title: "Tea"
+# Note: ids 5-20 are shared with coffee
+labels:
+  # Item:
+  # - id: Integer identification number of the label.
+  # - label: Short human-readable semantic string to succinctly represent the
+  #          label.
+  - id: 0
+    label: "background"
+  - id: 1
+    label: "jar of honey (close)"
+  - id: 2
+    label: "jar of honey (open)"
+  - id: 3
+    label: "spoon"
+  - id: 4
+    label: "tea bag"
+  - id: 5
+    label: "hand (left)"
+  - id: 6
+    label: "hand (right)"
+  - id: 7
+    label: "kettle"
+  - id: 8
+    label: "kettle (open)"
+  - id: 9
+    label: "measuring cup"
+  - id: 10
+    label: "mug"
+  - id: 11
+    label: "paper towel"
+  - id: 12
+    label: "switch"
+  - id: 13
+    label: "thermometer (close)"
+  - id: 14
+    label: "thermometer (open)"
+  - id: 15
+    label: "timer"
+  - id: 16
+    label: "timer (20)"
+  - id: 17
+    label: "timer (30)"
+  - id: 18
+    label: "timer (else)"
+  - id: 19
+    label: "trash can"
+  - id: 20
+    label: "water"
+  - id: 21
+    label: "mug + tea bag"
+  - id: 22
+    label: "mug + water"
+  - id: 23
+    label: "mug + tea bag + water"
+  - id: 24
+    label: "mug + tea"

@@ -1,0 +1,44 @@
+version: "1"
+title: "Pinwheels"
+# Note: ids 7-8 are shared with oatmeal, id 9 is shared with coffee
+labels:
+  # Item:
+  # - id: Integer identification number of the label.
+  # - label: Short human-readable semantic string to succinctly represent the
+  #          label.
+  - id: 0
+    label: "background"
+  - id: 1
+    label: "tortilla"
+  - id: 2
+    label: "nut butter"
+  - id: 3
+    label: "jelly"
+  - id: 4
+    label: "toothpick"
+  - id: 5
+    label: "dental floss"
+  - id: 6
+    label: "plate"
+  - id: 7
+    label: "cutting board"
+  - id: 8
+    label: "butter knife"
+  - id: 9
+    label: "paper towel"
+  - id: 10
+    label: "butter knife + nut butter"
+  - id: 11
+    label: "butter knife + jelly"
+  - id: 12
+    label: "tortilla + nut butter"
+  - id: 13
+    label: "tortilla + jelly"
+  - id: 14
+    label: "tortilla + nut butter + jelly"
+  - id: 15
+    label: "tortilla (rolled)"
+  - id: 16
+    label: "pinwheel"
+  - id: 17
+    label: "plate + pinwheels"
