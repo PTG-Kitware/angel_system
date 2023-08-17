@@ -26,8 +26,13 @@ plt.rcParams.update({"font.size": 35})
 
 
 class EvalVisualization:
-    def __init__(self, labels: List[str], gt_true_mask: np.ndarray,
-                 window_class_scores: np.ndarray, output_dir: str=""):
+    def __init__(
+        self,
+        labels: List[str],
+        gt_true_mask: np.ndarray,
+        window_class_scores: np.ndarray,
+        output_dir: str = "",
+    ):
         """
         :param labels: Array of class labels (str)
         :param gt_true_mask: Matrix of size (number of valid time windows x number classes) where True
@@ -77,8 +82,8 @@ class EvalVisualization:
         dets: pd.DataFrame,
         min_start_time: float,
         max_end_time: float,
-        custom_range: Tuple[float, float]=None,
-        custom_range_color: str="red",
+        custom_range: Tuple[float, float] = None,
+        custom_range_color: str = "red",
     ):
         """
         Plot activity confidences over time

@@ -66,9 +66,13 @@ def get_time_wind_range(
 
 
 def discretize_data_to_windows(
-    labels: List[str], gt: pd.DataFrame, detections: pd.DataFrame,
-    time_window: float, uncertainty_pad: float,
-    min_start_time: float, max_end_time: float
+    labels: List[str],
+    gt: pd.DataFrame,
+    detections: pd.DataFrame,
+    time_window: float,
+    uncertainty_pad: float,
+    min_start_time: float,
+    max_end_time: float,
 ):
     """
     Reformat the ground truth and detection data into time windows and

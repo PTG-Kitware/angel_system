@@ -265,8 +265,8 @@ def add_inter_steps_to_activity_gt(
     gt: List[Activity],
     min_start_time: float,
     max_end_time: float,
-    add_inter_steps: bool=True,
-    add_before_after_steps: bool=True,
+    add_inter_steps: bool = True,
+    add_before_after_steps: bool = True,
 ):
     """
     Adds interstitial activities to the ground truth if ``add_inter_steps`` is True and
@@ -350,8 +350,8 @@ def add_inter_steps_to_step_gt(
     labels: List[str],
     min_start_time: float,
     max_end_time: float,
-    add_inter_steps: bool=True,
-    add_before_after_steps: bool=True,
+    add_inter_steps: bool = True,
+    add_before_after_steps: bool = True,
 ):
     """
     Adds interstitial steps to the ground truth if ``add_inter_steps`` is True and
