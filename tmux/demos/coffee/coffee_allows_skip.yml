@@ -1,11 +1,11 @@
 #
-# System configuration to run the ANGEL system for the Kitware system with the
-# Kitware HL2 ARUI app.
+# System configuration to run the ANGEL system for the 2022/11 PI meeting and
+# Evaluation 1.
 #
-# This configuration is for the M2 tourniquet task.
+# This configuration is for the Coffee task/recipe.
 #
 
-name: 2023-05-Kitware-M2-Tourniquet
+name: coffee_allows_skip
 root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 
 # Optional tmux socket
@@ -19,11 +19,13 @@ root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 # Runs on project start, always
 # on_project_start: command
 on_project_start: |
-  export ROS_NAMESPACE=${ROS_NAMESPACE:-/kitware}
+  #export ROS_NAMESPACE=${ROS_NAMESPACE:-/debug}
+  export ROS_NAMESPACE=/debug
   export HL2_IP=${HL2_IP:-192.168.1.101}
   export CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/config
   export NODE_CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/src/angel_system_nodes/configs
   export MODEL_DIR=${ANGEL_WORKSPACE_DIR}/model_files
+
 # Run on project start, the first time
 # on_project_first_start: command
 
@@ -44,14 +46,14 @@ on_project_start: |
 tmux_options: -f <%= ENV["ANGEL_WORKSPACE_DIR"] %>/tmux/tmux.conf
 
 windows:
-  # Connection with the HL2 app via HL2SS sensor data streaming and the
-  # ROS-TCP-Endpoint
   - sensor_input:
       layout: even-vertical
       panes:
         - datahub: ros2 run ros_tcp_endpoint default_server_endpoint --ros-args
             -r __ns:=${ROS_NAMESPACE}
             -p ROS_IP:=0.0.0.0
+        # Connection with the HL2 app via HL2SS sensor data streaming and the
+        # ROS-TCP-Endpoint
         - hl2ss_bridge: ros2 run angel_system_nodes hl2ss_ros_bridge --ros-args
             -r __ns:=${ROS_NAMESPACE}
             -p ip_addr:=${HL2_IP}
@@ -60,35 +62,54 @@ windows:
             -p audio_topic:=HeadsetAudioData
             -p sm_topic:=disable
             -p head_pose_topic:=disable
-            -p pv_width:=760
-            -p pv_height:=428
+            -p pv_width:=1280
+            -p pv_height:=720
             -p pv_framerate:=30
             -p sm_freq:=5
-        # Visualize Images being output from the headset
-        - rqt_pv_images: rqt -s rqt_image_view/ImageView
-            --args ${ROS_NAMESPACE}/PVFramesBGR
+
+        # Visualize RGB Images being output from the headset
+        - rqt_2d_detections: rqt -s rqt_image_view/ImageView
+            --args ${ROS_NAMESPACE}/PVFramesRGB
             --ros-args -p _image_transport:=raw
 
   - object_detector:
       layout: even-vertical
       panes:
-        - detector: ros2 run angel_system_nodes berkeley_object_detector --ros-args
+        - object_detector: ros2 run angel_system_nodes berkeley_object_detector --ros-args
             -r __ns:=${ROS_NAMESPACE}
-            -p image_topic:=PVFramesBGR
+            -p image_topic:=PVFramesRGB
             -p det_topic:=ObjectDetections2d
-            -p det_conf_threshold:=0.4
-            -p model_config:=${ANGEL_WORKSPACE_DIR}/angel_system/berkeley/configs/MC50-InstanceSegmentation/medical/M2/stage2/tourniquet_stage2_interstitial.yaml
+            -p det_conf_threshold:=0.1
+            -p model_config:=${BERKELEY_CONFIG_DIR}/MC50-InstanceSegmentation/cooking/coffee/stage2/mask_rcnn_R_50_FPN_1x_demo.yaml
             -p cuda_device_id:=0
         - simple_2d_overlay: ros2 run angel_debug Simple2dDetectionOverlay --ros-args
             -r __ns:=${ROS_NAMESPACE}
-            -p topic_input_images:=PVFramesBGR
+            -p topic_input_images:=PVFramesRGB
             -p topic_input_det_2d:=ObjectDetections2d
             -p topic_output_images:=pv_image_detections_2d
-            -p filter_top_k:=5
+            -p filter_top_k:=-1
         - compress_image: ros2 run image_transport republish raw compressed --ros-args
-             -r __ns:=${ROS_NAMESPACE}
-             --remap in:=pv_image_detections_2d
-             --remap out/compressed:=pv_image_detections_2d/compressed
+            -r __ns:=${ROS_NAMESPACE}
+            --remap in:=pv_image_detections_2d
+            --remap out/compressed:=pv_image_detections_2d/compressed
+
+  - activity_classifier: ros2 run angel_system_nodes activity_from_obj_dets_classifier --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p det_topic:=ObjectDetections2d
+      -p act_topic:=ActivityDetections
+      -p classifier_file:=${MODEL_DIR}/recipe_coffee.pkl
+
+  - task_monitor: ros2 run angel_system_nodes task_monitor_v2 --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p det_topic:=ActivityDetections
+      -p config_file:=${CONFIG_DIR}/tasks/task_steps_config-recipe_coffee_trimmed_v3_allows_skip.yaml
+      -p task_state_topic:=TaskUpdates
+      -p task_error_topic:=TaskErrors
+      -p query_task_graph_topic:=query_task_graph
+      -p step_complete_threshold:=0.5
+      -p sys_cmd_topic:=SystemCommands
+      -p enable_manual_progression:=false
+      -p allow_rollback:=false
 
   - audio-processing:
       layout: even-vertical
@@ -104,42 +125,11 @@ windows:
             -p utterances_topic:=UtterancesTopic
             -p expect_user_intent_topic:=ConfirmedUserIntents
             -p interp_user_intent_topic:=UserIntentPredicted
-
-  - intent_to_cmd: ros2 run angel_system_nodes intent_to_command --ros-args
-      -r __ns:=${ROS_NAMESPACE}
-      -p confirmed_intent_topic:=ConfirmedUserIntents
-      -p sys_cmd_topic:=SystemCommands
-      -p intent_to_cmd_map:=${CONFIG_DIR}/angel_system_cmds/user_intent_to_sys_cmd_v1.yaml
-
-  - activity_classifier: ros2 run angel_system_nodes activity_from_obj_dets_classifier --ros-args
-      -r __ns:=${ROS_NAMESPACE}
-      -p det_topic:=ObjectDetections2d
-      -p act_topic:=ActivityDetections
-      -p classifier_file:=${MODEL_DIR}/recipe_m2_apply_tourniquet_v0.052.pkl
-
-  - task_monitor: ros2 run angel_system_nodes task_monitor_v2 --ros-args
-      -r __ns:=${ROS_NAMESPACE}
-      -p det_topic:=ActivityDetections
-      -p config_file:=${CONFIG_DIR}/tasks/task_steps_config-recipe_m2_apply_tourniquet_v0.052.yaml
-      -p task_state_topic:=TaskUpdates
-      -p task_error_topic:=TaskErrors
-      -p query_task_graph_topic:=query_task_graph
-      -p step_complete_threshold:=0.5
-      -p sys_cmd_topic:=SystemCommands
-      -p enable_manual_progression:=false
-
-  # Currently hard-coded to use the /debug ROS namespace.
-  - engineering-ui:
-      layout: even-vertical
-      panes:
-        - websocket: ros2 launch rosbridge_server rosbridge_websocket_launch.xml port:=9090
-        - server: node src/angel_utils/demo_ui/index.js
-            --namespace=${ROS_NAMESPACE}
-            --image_topic=pv_image_detections_2d/compressed
-            --query_task_graph_topic=query_task_graph
-            --task_updates_topic=TaskUpdates
-            --activity_detections_topic=ActivityDetections
-            --task_errors_topic=TaskErrors
+        - intent_to_cmd: ros2 run angel_system_nodes intent_to_command --ros-args
+            -r __ns:=${ROS_NAMESPACE}
+            -p confirmed_intent_topic:=ConfirmedUserIntents
+            -p sys_cmd_topic:=SystemCommands
+            -p intent_to_cmd_map:=${CONFIG_DIR}/angel_system_cmds/user_intent_to_sys_cmd_v1.yaml
 
   - feedback_generator: ros2 run angel_system_nodes feedback_generator --ros-args
       -r __ns:=${ROS_NAMESPACE}
@@ -147,4 +137,15 @@ windows:
       -p object_detection_topic:=ObjectDetections3d
       -p task_monitor_topic:=TaskUpdates
       -p arui_update_topic:=AruiUpdates
-      -p interp_user_intent_topic:=UserIntentPredicted
+
+  - engineering-ui:
+      layout: even-vertical
+      panes:
+        - engineering_ui_websocket: ros2 launch rosbridge_server rosbridge_websocket_launch.xml port:=9090
+        - engineering_ui_server: node src/angel_utils/demo_ui/index.js
+            --namespace=${ROS_NAMESPACE}
+            --image_topic=pv_image_detections_2d/compressed
+            --query_task_graph_topic=query_task_graph
+            --task_updates_topic=TaskUpdates
+            --activity_detections_topic=ActivityDetections
+            --task_errors_topic=TaskErrors

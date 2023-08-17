@@ -44,7 +44,8 @@ pred_fnames = [
     "/angel_workspace/ros_bags/m2_all_data_cleaned_fixed_with_steps/m2_all_data_cleaned_fixed_with_steps_results_train_activity.mscoco.json",
     "/angel_workspace/ros_bags/m2_all_data_cleaned_fixed_with_steps/m2_all_data_cleaned_fixed_with_steps_results_val.mscoco.json",
 ]
-act_label_yaml = "/angel_workspace/config/activity_labels/medical_tourniquet.v2.yaml"
+base_path = os.path.split(os.path.abspath(angel_system.__file__))[0]
+act_label_yaml = base_path + "/../config/activity_labels/medical_tourniquet.v2.yaml"
 
 with open(act_label_yaml, "r") as stream:
     act_labels = yaml.safe_load(stream)

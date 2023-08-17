@@ -21,6 +21,7 @@ on_project_start: |
   export ROS_NAMESPACE=${ROS_NAMESPACE:-/debug}
   export HL2_IP=${HL2_IP:-192.168.1.101}
   export CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/src/angel_system_nodes/configs
+  export MODEL_DIR=${ANGEL_WORKSPACE_DIR}/model_files
 
 # Run on project start, the first time
 # on_project_first_start: command
@@ -54,35 +55,46 @@ tmux_options: -f <%= ENV["ANGEL_WORKSPACE_DIR"] %>/tmux/tmux.conf
 # attach: false
 
 windows:
-  - ros_bag_play: #ros2 bag play <<PATH_TO_BAG_FILE>>
-  - image_converter: ros2 run angel_datahub ImageConverter --ros-args
+  - sensor_input:
+      layout: even-vertical
+      panes:
+        - ros_bag_play: #ros2 bag play <<PATH_TO_BAG_FILE>>
+        - image_converter: ros2 run angel_datahub ImageConverter --ros-args
+            -r __ns:=${ROS_NAMESPACE}
+            -p topic_input_images:=PVFramesNV12
+            -p topic_output_images:=PVFramesRGB
+        # Visualize Images being output from the headset
+        - rqt_pv_images: rqt -s rqt_image_view/ImageView
+            --args ${ROS_NAMESPACE}/PVFramesRGB
+            --ros-args -p _image_transport:=raw
+  
+  - object_detector:
+      layout: even-vertical
+      panes:
+        - detector: ros2 run angel_system_nodes berkeley_object_detector --ros-args
+            -r __ns:=${ROS_NAMESPACE}
+            -p image_topic:=PVFramesRGB
+            -p det_topic:=ObjectDetections2d
+            -p det_conf_threshold:=0.4
+            -p model_config:=${ANGEL_WORKSPACE_DIR}/angel_system/berkeley/configs/MC50-InstanceSegmentation/cooking/coffee/stage2/mask_rcnn_R_50_FPN_1x_demo.yaml 
+            -p cuda_device_id:=0
+        - simple_2d_overlay: ros2 run angel_debug Simple2dDetectionOverlay --ros-args
+            -r __ns:=${ROS_NAMESPACE}
+            -p topic_input_images:=PVFramesRGB
+            -p topic_input_det_2d:=ObjectDetections2d
+            -p topic_output_images:=pv_image_detections_2d
+            -p filter_top_k:=5
+        - compress_image: ros2 run image_transport republish raw compressed --ros-args
+             -r __ns:=${ROS_NAMESPACE}
+             --remap in:=pv_image_detections_2d
+             --remap out/compressed:=pv_image_detections_2d/compressed
+  
+  - activity_classifier: ros2 run angel_system_nodes activity_from_obj_dets_classifier --ros-args
       -r __ns:=${ROS_NAMESPACE}
-      -p topic_input_images:=PVFramesNV12
-      -p topic_output_images:=PVFramesRGB
-  - object_detector: ros2 run angel_system_nodes object_detector_with_descriptors --ros-args
-      -r __ns:=${ROS_NAMESPACE}
-      -p image_topic:=PVFramesRGB
-      -p descriptor_topic:=ObjectDetections
-      -p min_time_topic:=ObjDetMinTime
-      -p torch_device:=cuda:0
-      -p detection_threshold:=0.05
-      -p object_vocab_list:=${MODEL_DIR}/fasterrcnn_label_list.txt
-      -p model_checkpoint:=${MODEL_DIR}/fasterrcnn_res101_vg.pth
-  - activity_classifier: ros2 run angel_system_nodes uho_activity_detector --ros-args
-      -r __ns:=${ROS_NAMESPACE}
-      -p image_topic:=PVFramesRGB
-      -p hand_pose_topic:=HandJointPoseData
-      -p obj_det_topic:=ObjectDetections
-      -p torch_device:=cuda:1
-      -p det_topic:=ActivityDetections
-      -p min_time_topic:=ObjDetMinTime
-      -p frames_per_det:=32
-      -p object_dets_per_window:=2
-      -p buffer_max_size_seconds:=2.0
-      -p model_checkpoint:=${MODEL_DIR}/uho_checkpoint_20221022.ckpt
-      -p top_k:=10
-      -p overlapping_mode:=False
+      -p det_topic:=ObjectDetections2d
+      -p act_topic:=ActivityDetections
+      -p classifier_file:=${MODEL_DIR}/recipe_coffee.pkl
+  
   - ros_bag_record: ros2 bag record
       ${ROS_NAMESPACE}/ActivityDetections
       ${ROS_NAMESPACE}/PVFramesRGB
-  - play_ros_bag: ls data/ros_bags

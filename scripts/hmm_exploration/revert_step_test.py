@@ -5,7 +5,7 @@ import os
 import angel_system
 from angel_system.activity_hmm.core import ActivityHMMRos
 
-os.chdir("/home/local/KHQ/matt.brown/libraries/angel_system")
+# os.chdir("/home/local/KHQ/matt.brown/libraries/angel_system")
 
 
 # ----------------------------------------------------------------------------
@@ -13,6 +13,7 @@ base_path = os.path.split(os.path.abspath(angel_system.__file__))[0]
 config_fname = (
     base_path + "/../config/tasks/task_steps_config-recipe_coffee_trimmed.yaml"
 )
+
 
 print(f"Loading HMM with recipe {config_fname}")
 live_model = ActivityHMMRos(config_fname)

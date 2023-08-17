@@ -43,7 +43,8 @@ from detectron2.evaluation import (
 
 from detectron2.modeling import GeneralizedRCNNWithTTA
 # os.environ['CUDA_VISIBLE_DEVICES'] = '0, 2, 3, 4, 6, 7, 8, 9'
-os.environ['CUDA_VISIBLE_DEVICES'] = '0, 1, 2, 3'
+#os.environ['CUDA_VISIBLE_DEVICES'] = '0, 1, 2, 3'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 def build_evaluator(cfg, dataset_name, output_folder=None):
     """
@@ -133,7 +134,8 @@ class TrainerAug(Trainer):
             T.RandomSaturation(intensity_min=0.5, intensity_max=1.25),
             #T.ColorTransform(),
         
-            T.Resize(shape=(428, 760), interp=Image.BILINEAR) # bring everything back to the right size
+            #T.Resize(shape=(428, 760), interp=Image.BILINEAR) # bring everything back to the right size
+            T.Resize(shape=(720, 1280), interp=Image.BILINEAR) # bring everything back to the right size
         ]
         mapper = DatasetMapper(cfg, is_train=True, augmentations=augs)
         return build_detection_train_loader(cfg, mapper=mapper)

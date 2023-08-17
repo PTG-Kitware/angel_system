@@ -74,6 +74,11 @@ class HMMNode(Node):
             .get_parameter_value()
             .bool_value
         )
+        self._allow_rollback = (
+            self.declare_parameter("allow_rollback", True)
+            .get_parameter_value()
+            .bool_value
+        )
         self._sys_cmd_topic = (
             self.declare_parameter("sys_cmd_topic", "")
             .get_parameter_value()
@@ -83,6 +88,16 @@ class HMMNode(Node):
             raise ValueError(
                 "Please provide the system command topic with the `sys_cmd_topic` parameter"
             )
+
+        log.info(f"Detection topic: {self._det_topic}")
+        log.info(f"Task updates topic: {self._task_state_topic}")
+        log.info(f"Task error topic: {self._task_error_topic}")
+        log.info(f"Query task graph topic: {self._query_task_graph_topic}")
+        log.info(f"System command topic: {self._sys_cmd_topic}")
+
+        log.info(f"Step complete threshold: {self._step_complete_threshold}")
+        log.info(f"Enable manual progression: {self._enable_manual_progression}")
+        log.info(f"Allow progress rollback: {self._allow_rollback}")
 
         # Instantiate the HMM module
         self._hmm = ActivityHMMRos(self._config_file)
@@ -119,6 +134,12 @@ class HMMNode(Node):
         # Track the latest activity classification end time sent to the HMM
         # Time is in floating-point seconds up to nanosecond precision.
         self._latest_act_classification_end_time = None
+        # Boolean vector the length of task steps
+        # that indicates which steps to report as having been completed.
+        self._steps_complete = np.zeros(self._n_steps, dtype=bool)
+        # Skipped steps are those steps at or before the current
+        # skipped (haven't happened yet).
+        self._steps_skipped = np.zeros(self._n_steps, dtype=bool)
 
         # Initialize ROS hooks
         self._subscription = self.create_subscription(
@@ -218,16 +239,12 @@ class HMMNode(Node):
 
     def publish_task_state_message(
         self,
-        steps_complete_vec: npt.NDArray[bool],
         hmm_step_conf: npt.NDArray[float],
     ) -> None:
         """
         Forms and sends a `angel_msgs/TaskUpdate` message to the
         TaskUpdates topic.
 
-        :param steps_complete_vec: Boolean vector the length of task steps (as
-            reported by `query_task_graph_callback`) that indicates which steps
-            to report as having been completed.
         :param hmm_step_conf: Confidence vector of the HMM that we are in any
             particular step.
         """
@@ -272,7 +289,7 @@ class HMMNode(Node):
         else:
             message.task_complete_confidence = 0.0
 
-        message.completed_steps = steps_complete_vec.tolist()
+        message.completed_steps = self._steps_complete.tolist()
         log.debug(f"Steps complete: {message.completed_steps}")
         message.hmm_step_confidence = hmm_step_conf.tolist()
         log.debug(f"HMM step confidence: {message.hmm_step_confidence}")
@@ -377,23 +394,47 @@ class HMMNode(Node):
                         # No non-zero entries yet, nothing to do.
                         continue
 
+                    if self._allow_rollback:
+                        self._steps_complete = cast(
+                            npt.NDArray[bool],
+                            step_finished_conf >= self._step_complete_threshold,
+                        )
+
+                        self._steps_skipped = cast(
+                            npt.NDArray[bool],
+                            step_finished_conf < self._step_complete_threshold,
+                        )
+                    else:
+                        # Ignore backwards progress
+
+                        # Only move self._steps_complete from False to True
+                        # if the current conf value supports it
+                        ind = np.where(self._steps_complete == False)[0]
+
+                        self._steps_complete[ind] = (
+                            step_finished_conf[ind] >= self._step_complete_threshold
+                        )
+
+                        skipped_ids = np.where(
+                            self._steps_complete == [True, False, True]
+                        )
+                        self._steps_skipped = np.zeros(self._hmm.num_steps, dtype=bool)
+                        self._steps_skipped[skipped_ids] = True
                     # There are non-zero entries. hmm_step_id should never be
                     # zero.
                     hmm_step_id = state_seq[ss_nonzero[-1]]
+
                     assert hmm_step_id != 0, (
                         "Should not be able to be set to background ID at " "this point"
                     )
                     user_step_id = hmm_step_id - 1  # no user "background" step
                     step_str = self._hmm.model.class_str[hmm_step_id]
 
-                    steps_complete = cast(
-                        npt.NDArray[bool],
-                        step_finished_conf >= self._step_complete_threshold,
-                    )
-                    # Force steps beyond the current to not be considered
-                    # finished (haven't happened yet). hmm_step_id includes
-                    # addressing background, so `hmm_step_id == user_step_id+1`
-                    steps_complete[user_step_id + 1 :] = False
+                    if self._allow_rollback:
+                        # Force steps beyond the current to not be considered
+                        # finished (haven't happened yet). hmm_step_id includes
+                        # addressing background, so `hmm_step_id == user_step_id+1`
+                        self._steps_complete[user_step_id + 1 :] = False
 
                     # Only change steps if we have a new step, and it is not
                     # background (ID=0).
@@ -410,18 +451,13 @@ class HMMNode(Node):
 
                     log.debug(f"Most recently completed step: {self._current_step}")
 
-                    # Skipped steps are those steps at or before the current
-                    # step that are strictly below the step complete threshold.
-                    steps_skipped = cast(
-                        npt.NDArray[bool],
-                        step_finished_conf < self._step_complete_threshold,
-                    )
                     # Force steps beyond the current to not be considered
-                    # skipped (haven't happened yet).
-                    steps_skipped[user_step_id + 1 :] = False
+                    if self._allow_rollback:
+                        # skipped (haven't happened yet).
+                        self._steps_skipped[user_step_id + 1 :] = False
 
-                    if steps_skipped.max():
-                        skipped_step_ids = np.nonzero(steps_skipped)[0]
+                    if self._steps_skipped.max():
+                        skipped_step_ids = np.nonzero(self._steps_skipped)[0]
                         for s_id in skipped_step_ids:
                             if s_id not in self._steps_skipped_cache:
                                 s_str = self._hmm.model.class_str[s_id + 1]
@@ -432,7 +468,6 @@ class HMMNode(Node):
 
                     # Publish a new TaskUpdate message
                     self.publish_task_state_message(
-                        steps_complete,
                         unfilt_step_conf,
                     )
 
@@ -533,10 +568,10 @@ class HMMNode(Node):
                     self._current_step = None
                     self._previous_step = None
                     self._steps_skipped_cache.clear()
-                    steps_complete = np.zeros(self._n_steps, dtype=bool)
+                    self._steps_complete = np.zeros(self._n_steps, dtype=bool)
                     zero_step_conf = np.zeros(self._hmm.num_steps, dtype=float)
 
-                    self.publish_task_state_message(steps_complete, zero_step_conf)
+                    self.publish_task_state_message(zero_step_conf)
                     log.debug("HMM reset to beginning")
                 else:
                     self._hmm.revert_to_step(new_step_id)

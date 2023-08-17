@@ -1227,7 +1227,7 @@ class Visualizer:
                     output (VisImage): image object with text drawn.
                 """
         # step, sub_step, next_sub_step, gt = step_infos
-        if not step_infos[0] == 'Need more test !':
+        if step_infos and not step_infos[0] == 'Need more test !':
             step, sub_step, next_sub_step, gt = step_infos
             context_list = []
             if sub_step[-1] == -1:
@@ -1250,7 +1250,7 @@ class Visualizer:
                     context_list.append('next sub-step : ' + next_sub_step[-1])
 
         else:
-            gt = step_infos[1]
+            gt = step_infos[1] if step_infos is not None else "None"
             context_list = []
             context_list.append('Pred: background')
         context_list.append('Gt: ' + gt)

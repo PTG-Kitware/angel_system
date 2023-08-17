@@ -5,7 +5,7 @@
 # This configuration is for the Coffee task/recipe.
 #
 
-name: 2022-11-PI_Eval1-coffee
+name: 2022-11-PI_Eval1-coffee_allows_skip
 root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 
 # Optional tmux socket
@@ -19,7 +19,6 @@ root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 # Runs on project start, always
 # on_project_start: command
 on_project_start: |
-  # Current DemoUI component assumes "/debug" namespace.
   #export ROS_NAMESPACE=${ROS_NAMESPACE:-/debug}
   export ROS_NAMESPACE=/debug
   export HL2_IP=${HL2_IP:-192.168.1.101}

@@ -1,0 +1,96 @@
+#
+# Used to create ROS bags for all topics published from the HL2.
+# This configuration should be run by itself (e.g. not in combination with
+# another tmuxinator launch).
+#
+
+name: record-ros-bag
+root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
+
+# Optional tmux socket
+# socket_name: foo
+
+# Note that the pre and post options have been deprecated and will be replaced by
+# project hooks.
+
+# Project hooks
+
+# Runs on project start, always
+# on_project_start: command
+on_project_start: |
+  export ROS_NAMESPACE=${ROS_NAMESPACE:-/kitware}
+  export HL2_IP=${HL2_IP:-192.168.1.101}
+
+# Run on project start, the first time
+# on_project_first_start: command
+
+# Run on project start, after the first time
+# on_project_restart: command
+
+# Run on project exit ( detaching from tmux session )
+# on_project_exit: command
+
+# Run on project stop
+# on_project_stop: command
+
+# Runs in each window and pane before window/pane specific commands. Useful for setting up interpreter versions.
+# pre_window: rbenv shell 2.0.0-p247
+
+# Pass command line options to tmux. Useful for specifying a different tmux.conf.
+# tmux_options: -f ~/.tmux.mac.conf
+tmux_options: -f <%= ENV["ANGEL_WORKSPACE_DIR"] %>/tmux/tmux.conf
+
+# Change the command to call tmux.  This can be used by derivatives/wrappers like byobu.
+# tmux_command: byobu
+
+# Specifies (by name or index) which window will be selected on project startup. If not set, the first window is used.
+# startup_window: editor
+
+# Specifies (by index) which pane of the specified window will be selected on project startup. If not set, the first pane is used.
+# startup_pane: 1
+
+# Controls whether the tmux session should be attached to automatically. Defaults to true.
+# attach: false
+
+windows:
+  # Connection with the HL2 app via HL2SS sensor data streaming and the
+  # ROS-TCP-Endpoint
+  - sensor_input:
+      layout: even-vertical
+      panes:
+        - datahub: ros2 run ros_tcp_endpoint default_server_endpoint --ros-args
+            -r __ns:=${ROS_NAMESPACE}
+            -p ROS_IP:=0.0.0.0
+        - hl2ss_bridge: ros2 run angel_system_nodes hl2ss_ros_bridge --ros-args
+            -r __ns:=${ROS_NAMESPACE}
+            -p ip_addr:=${HL2_IP}
+            -p image_topic:=PVFramesBGR
+            -p hand_pose_topic:=HandJointPoseData
+            -p audio_topic:=HeadsetAudioData
+            -p sm_topic:=disable
+            -p head_pose_topic:=HeadsetPoseData
+            -p pv_width:=1280
+            -p pv_height:=720
+            -p pv_framerate:=30
+            -p sm_freq:=5
+        # Visualize Images being output from the headset
+        - rqt_pv_images: rqt -s rqt_image_view/ImageView
+            --args ${ROS_NAMESPACE}/PVFramesBGR
+            --ros-args -p _image_transport:=raw 
+  - record:
+      layout: even-vertical
+      root: ./ros_bags
+      panes:
+        - ros_bag_record: ros2 bag record
+            ${ROS_NAMESPACE}/PVFramesBGR
+            ${ROS_NAMESPACE}/HeadsetPoseData
+            ${ROS_NAMESPACE}/HeadsetAudioData
+            ${ROS_NAMESPACE}/HandJointPoseData
+            ${ROS_NAMESPACE}/SpatialMapData
+            ${ROS_NAMESPACE}/EyeGazeData
+            ${ROS_NAMESPACE}/AnnotationEvents
+            ${ROS_NAMESPACE}/HeadsetDepthPoseData
+            ${ROS_NAMESPACE}/ShortThrowDepthMapImages
+  #- event_monitor: ros2 run angel_system_nodes annotation_event_monitor --ros-args
+  #    -r __ns:=${ROS_NAMESPACE}
+  #    -p annotation_event_topic:=AnnotationEvents
