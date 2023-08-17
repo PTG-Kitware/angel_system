@@ -22,8 +22,6 @@ from angel_msgs.msg import (
     HeadsetAudioData,
     HeadsetPoseData,
     SpatialMesh,
-    # TODO: Is a message for depth AHAT needed here? Or from sensor_msgs?
-    # Currently re-using Image message
 )
 from angel_utils import declare_and_get_parameters, RateTracker
 from angel_utils.hand import JOINT_LIST
