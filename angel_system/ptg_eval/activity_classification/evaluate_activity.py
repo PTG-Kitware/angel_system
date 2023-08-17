@@ -10,13 +10,15 @@ import numpy.typing as npt
 from angel_system.data.common.load_data import (
     activities_from_dive_csv,
     activities_from_ros_export_json,
-    activities_as_dataframe,
+    objs_as_dataframe,
+    add_inter_steps_to_activity_gt,
+    sanitize_str,
 )
 from angel_system.data.common.discretize_data import discretize_data_to_windows
-from angel_system.ptg_eval.activity_classification.visualization import (
+from angel_system.ptg_eval.common.visualization import (
     EvalVisualization,
 )
-from angel_system.ptg_eval.activity_classification.compute_scores import EvalMetrics
+from angel_system.ptg_eval.common.compute_scores import EvalMetrics
 
 
 logging.basicConfig(level=logging.INFO)
@@ -36,8 +38,27 @@ def run_eval(args):
     labels: Optional[List[str]] = None
     for i, (gt_fpath, pred_fpath) in enumerate(args.activity_gt_pred_pair):
         log.info(f"Loading data from pair {i}")
-        gt = activities_from_dive_csv(gt_fpath.as_posix())
+
         l_labels, detections = activities_from_ros_export_json(pred_fpath.as_posix())
+        gt = activities_from_dive_csv(gt_fpath.as_posix())
+
+        min_start_time = min(
+            min(gt, key=lambda a: a.start).start,
+            min(detections, key=lambda a: a.start).start,
+        )
+        max_end_time = max(
+            max(gt, key=lambda a: a.end).end, max(detections, key=lambda a: a.end).end
+        )
+
+        if args.add_inter_steps or args.add_before_finished_steps:
+            gt = add_inter_steps_to_activity_gt(
+                gt,
+                min_start_time,
+                max_end_time,
+                add_inter_steps=args.add_inter_steps,
+                add_before_after_steps=args.add_before_finished_steps,
+            )
+
         if labels is None:
             labels = l_labels
         else:
@@ -45,11 +66,15 @@ def run_eval(args):
                 f"Subsequent gt/pred pair has disjoint label sets/orders. "
                 f"{labels} != {l_labels}"
             )
+        cleaned_labels = []
+        for label in labels:
+            cleaned_labels.append(sanitize_str(label))
+        labels = cleaned_labels
 
         # Make gt/detections pd.DataFrame instance to be consistent with downstream
         # implementation.
-        gt = activities_as_dataframe(gt)
-        detections = activities_as_dataframe(detections)
+        gt = objs_as_dataframe(gt)
+        detections = objs_as_dataframe(detections)
 
         # Local masks for this specific file pair
         (
@@ -134,8 +159,18 @@ def main():
     parser.add_argument(
         "--output_dir",
         type=str,
-        default="eval",
+        default="eval/activity",
         help="Folder to save results and plots to",
+    )
+    parser.add_argument(
+        "--add_inter_steps",
+        action="store_true",
+        help="Adds interstitial steps to the ground truth",
+    )
+    parser.add_argument(
+        "--add_before_finished_steps",
+        action="store_true",
+        help="Adds before and finished steps to the ground truth",
     )
 
     args = parser.parse_args()

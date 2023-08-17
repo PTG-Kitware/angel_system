@@ -1,8 +1,12 @@
 import os
 import seaborn as sn
+import pandas as pd
 import numpy as np
 from pathlib import Path
 import matplotlib.pyplot as plt
+
+from typing import List
+from typing import Tuple
 
 from sklearn.metrics import (
     PrecisionRecallDisplay,
@@ -22,7 +26,13 @@ plt.rcParams.update({"font.size": 35})
 
 
 class EvalVisualization:
-    def __init__(self, labels, gt_true_mask, window_class_scores, output_dir=""):
+    def __init__(
+        self,
+        labels: List[str],
+        gt_true_mask: np.ndarray,
+        window_class_scores: np.ndarray,
+        output_dir: str = "",
+    ):
         """
         :param labels: Array of class labels (str)
         :param gt_true_mask: Matrix of size (number of valid time windows x number classes) where True
@@ -67,13 +77,21 @@ class EvalVisualization:
         plt.close(fig)
 
     def plot_activities_confidence(
-        self, gt, dets, custom_range=None, custom_range_color="red"
+        self,
+        gt: pd.DataFrame,
+        dets: pd.DataFrame,
+        min_start_time: float,
+        max_end_time: float,
+        custom_range: Tuple[float, float] = None,
+        custom_range_color: str = "red",
     ):
         """
         Plot activity confidences over time
 
         :param gt: Pandas dataframe of the ground truth
         :param dets: Pandas dataframe of all detections per class
+        :param min_start_time: Minimum start time across the ground truth and detection sets
+        :param max_end_time: Maximum end time across the ground truth and detection sets
         :param custom_range: Optional tuple indicating the starting and ending times of an additional
                                 range to highlight in addition to the `gt_ranges`.
         :param custom_range_color: The color of the additional range to be drawn. If not set, we will
@@ -89,11 +107,6 @@ class EvalVisualization:
                 # ============================
                 # Setup figure
                 # ============================
-                # Determine time range to plot
-                min_start_time = min(
-                    gt_ranges["start"].min(), det_ranges["start"].min()
-                )
-                max_end_time = max(gt_ranges["end"].max(), det_ranges["end"].max())
                 total_time_delta = max_end_time - min_start_time
                 pad = 0.05 * total_time_delta
 
@@ -172,4 +185,7 @@ class EvalVisualization:
                 fig.savefig(f"{str(activity_plot_dir)}/{label.replace(' ', '_')}.png")
                 plt.close(fig)
             else:
-                log.warning(f'No detections/gt found for "{label}"')
+                if gt_ranges.empty:
+                    log.warning(f'No gt found for "{label}"')
+                if det_ranges.empty:
+                    log.warning(f'No detections found for "{label}"')

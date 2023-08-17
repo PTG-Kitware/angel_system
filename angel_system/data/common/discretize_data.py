@@ -1,8 +1,14 @@
 import logging
+import warnings
+
 from typing import Sequence
 from typing import Tuple
+from typing import List
 
+import pandas as pd
 import numpy as np
+
+from angel_system.data.common.load_data import sanitize_str
 
 
 log = logging.getLogger("ptg_eval_common")
@@ -30,6 +36,7 @@ def get_time_wind_range(
         time_windows[ind1:ind2] all live inside start->end.
     """
     # The start time of the ith window is min_start_time + dt*i.
+
     ind1_ = (start - min_start_time) / dt
     ind1 = int(np.ceil(ind1_))
     if ind1_ - ind1 + 1 < 1e-15:
@@ -46,12 +53,27 @@ def get_time_wind_range(
         ind1 += 1
 
     ind1 = max([ind1, 0])
-    ind2 = min([ind2, len(time_windows)])
+    ind2 = min([ind2, len(time_windows) - 1])
 
+    # assert ind2 >= ind1, "Invalid time window indexes"
+    if ind2 < ind1:
+        # Rounding issue
+        warnings.warn(
+            f"ind1: {ind1} is greater than ind2: {ind2} for start time {start} and end time {end}"
+        )
+        ind1 = ind2
     return ind1, ind2
 
 
-def discretize_data_to_windows(labels, gt, detections, time_window, uncertainty_pad):
+def discretize_data_to_windows(
+    labels: List[str],
+    gt: pd.DataFrame,
+    detections: pd.DataFrame,
+    time_window: float,
+    uncertainty_pad: float,
+    min_start_time: float,
+    max_end_time: float,
+):
     """
     Reformat the ground truth and detection data into time windows and
     removed any invalid time windows.
@@ -63,6 +85,8 @@ def discretize_data_to_windows(labels, gt, detections, time_window, uncertainty_
         equally-long windows of this size (seconds).
     :param uncertainty_pad: Time in seconds to pad ground truth detections by. Detections
         within the windows ground truth + or - uncertainty pad will not be scored.
+    :param min_start_time: Minimum start time across the ground truth and detection sets
+    :param max_end_time: Maximum end time across the ground truth and detection sets
 
     :return: Tuple(
         ground truth mask - Matrix of size (number of valid time windows x number classes)
@@ -77,11 +101,10 @@ def discretize_data_to_windows(labels, gt, detections, time_window, uncertainty_
     # Split by time window
     # ============================
     # Get time ranges
+
     assert (
         time_window > uncertainty_pad
     ), "Time window must be longer than the uncertainty pad"
-    min_start_time = min(gt["start"].min(), detections["start"].min())
-    max_end_time = max(gt["end"].max(), detections["end"].max())
     dt = time_window
     time_windows = np.arange(min_start_time, max_end_time, time_window)
 
@@ -96,27 +119,37 @@ def discretize_data_to_windows(labels, gt, detections, time_window, uncertainty_
     # classification.
     valid = np.zeros(len(time_windows), dtype=bool)
     for i in range(len(detections)):
+        start_time = detections["start"][i]
+        end_time = detections["end"][i]
         ind1, ind2 = get_time_wind_range(
-            detections["start"][i],
-            detections["end"][i],
+            start_time,
+            end_time,
             dt,
             min_start_time,
             time_windows,
         )
 
-        valid[ind1:ind2] = True
-        correct_label = detections["class_label"][i].strip().rstrip(".")
+        correct_label = sanitize_str(detections["class_label"][i])
         correct_class_idx = labels.index(correct_label)
-        window_class_scores[ind1:ind2, correct_class_idx] = np.maximum(
-            window_class_scores[ind1:ind2, correct_class_idx], detections["conf"][i]
-        )
+
+        if ind1 == ind2:
+            # Bug fix: indexing ind1:ind2 does not work if they are equal
+            valid[ind1] = True
+            window_class_scores[ind1, correct_class_idx] = np.maximum(
+                window_class_scores[ind1, correct_class_idx], detections["conf"][i]
+            )
+        else:
+            valid[ind1:ind2] = True
+            window_class_scores[ind1:ind2, correct_class_idx] = np.maximum(
+                window_class_scores[ind1:ind2, correct_class_idx], detections["conf"][i]
+            )
 
     gt_true_mask = np.zeros((len(time_windows), len(labels)), dtype=bool)
     for i in range(len(gt)):
         ind1, ind2 = get_time_wind_range(
             gt["start"][i], gt["end"][i], dt, min_start_time, time_windows
         )
-        correct_label = gt["class_label"][i].strip().rstrip(".")
+        correct_label = sanitize_str(gt["class_label"][i])
         correct_class_idx = labels.index(correct_label)
         gt_true_mask[ind1:ind2, correct_class_idx] = True
 
