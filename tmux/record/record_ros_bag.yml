@@ -73,6 +73,7 @@ windows:
             -p pv_height:=720
             -p pv_framerate:=30
             -p sm_freq:=5
+            -p rm_depth_AHAT:=disable
         # Visualize Images being output from the headset
         - rqt_pv_images: rqt -s rqt_image_view/ImageView
             --args ${ROS_NAMESPACE}/PVFramesBGR
