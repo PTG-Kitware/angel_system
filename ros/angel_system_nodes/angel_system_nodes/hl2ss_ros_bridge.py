@@ -179,7 +179,7 @@ class HL2SSROSBridge(Node):
             self._sm_thread.start()
         if self._rm_depth_AHAT_topic != DISABLE_TOPIC_STR:
             # Create frame publisher
-            self.ros_frame_publisher = self.create_publisher(
+            self.ros_depth_ahat_publisher = self.create_publisher(
                 Image, self._rm_depth_AHAT_topic, 1
             )
             self.connect_hl2ss_rm_depth_ahat()
@@ -557,9 +557,8 @@ class HL2SSROSBridge(Node):
         """
         log = self.get_logger()
 
-        while self._rm_depth_ahat_active.wait(
-            0
-        ):  # will quickly return false if cleared.
+        # `.wait(0)` will quickly return false if cleared.
+        while self._rm_depth_ahat_active.wait(0):
             data = self.hl2ss_rm_depth_ahat_client.get_next_packet()
 
             log.debug(
@@ -585,7 +584,7 @@ class HL2SSROSBridge(Node):
                 return
 
             # Publish the RM Depth AHAT msg
-            self.ros_frame_publisher.publish(rm_depth_ahat_msg)
+            self.ros_depth_ahat_publisher.publish(rm_depth_ahat_msg)
 
             self._rm_depth_ahat_rate_tracker.tick()
             log.debug(
