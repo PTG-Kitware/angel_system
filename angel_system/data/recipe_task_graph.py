@@ -107,6 +107,13 @@ def print_recipe_order(recipe_title, labels, all_possible_orders, repeated_ids):
     # TODO: create sample bias towards regular order?
     recipe_order = random.choice(all_possible_orders)
 
+    if recipe_title == "Dessert Quesadilla":
+      # Remove extra clean
+      clean_1 = recipe_order.index(10)
+      clean_2 = recipe_order.index(11)
+
+      recipe_order.pop(min(clean_1, clean_2))
+
     print(f"\n{recipe_title}")
     print("=" * len(recipe_title))
     recipe_actions = [
@@ -152,6 +159,22 @@ def main():
     recipe_title, labels = load_recipe(args.recipe)
 
     all_possible_orders, repeated_ids = get_all_recipe_orders(labels)
+
+    if args.recipe == "dessertquesadilla":
+      # Make sure the knife is cleaned directly before using it
+      cleaned_possible_orders = []
+      for order in all_possible_orders:
+        clean_knife_n = order.index(11)
+        scoop_nutella = order.index(2)
+
+        clean_knife_b = order.index(10)
+        slice_banana = order.index(4)
+
+        spread_nutella = order.index(3)
+
+        if (scoop_nutella == clean_knife_n+1) and (slice_banana == clean_knife_b+1) and (spread_nutella == scoop_nutella+1):
+          cleaned_possible_orders.append(order)
+      all_possible_orders = cleaned_possible_orders
     print_recipe_order(recipe_title, labels, all_possible_orders, repeated_ids)
 
 
