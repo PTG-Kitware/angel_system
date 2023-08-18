@@ -9,6 +9,8 @@ import matplotlib.pyplot as plt
 
 from pathlib import Path
 from sklearn.ensemble import RandomForestClassifier
+from sklearn import preprocessing
+from sklearn.metrics import average_precision_score
 
 from support_functions import sanitize_str
 
@@ -17,59 +19,49 @@ from angel_system.impls.detect_activities.detections_to_activities.utils import 
 )
 
 
-def data_loader(pred_fnames, act_label_yaml):
+def data_loader(fn, act_labels):
     print("Loading data....")
-    # Load labels
-    with open(act_label_yaml, "r") as stream:
-        print(f"Loading activity labels from: {act_label_yaml}")
-        act_labels = yaml.safe_load(stream)
-
     # Description to ID map.
     act_map = {}
     inv_act_map = {}
     for step in act_labels["labels"]:
-        act_map[sanitize_str(step["full_str"])] = step["id"]
-        inv_act_map[step["id"]] = step["full_str"]
+        act_map[sanitize_str(step["label"])] = step["id"]
+        inv_act_map[step["id"]] = step["label"]
 
     if 0 not in act_map.values():
         act_map["background"] = 0
         inv_act_map[0] = "Background"
 
     # Load object detections
-    dat = None
-    for pred_fname in pred_fnames:
-        print(f"Loading dataset: {pred_fname}")
-        dat_ = kwcoco.CocoDataset(pred_fname)
-
-        if dat is not None:
-            dat = dat.union(dat_)
-        else:
-            dat = dat_
+    dset = kwcoco.CocoDataset(fn)
+    print(f"Loaded dset from file: {fn}")
 
     image_activity_gt = {}
     image_id_to_dataset = {}
-    for img_id in dat.imgs:
-        im = dat.imgs[img_id]
-        image_id_to_dataset[im["id"]] = os.path.split(im["file_name"])[0]
+    for img_id in dset.imgs:
+        im = dset.imgs[img_id]
+        gid = im["id"]
+        image_id_to_dataset[gid] = os.path.split(im["file_name"])[0]
 
-        if im["activity_gt"] is None:
+        activity_gt = im["activity_gt"]
+        if activity_gt is None:
             continue
 
-        image_activity_gt[im["id"]] = act_map[sanitize_str(im["activity_gt"])]
+        image_activity_gt[gid] = act_map[sanitize_str(activity_gt)]
 
     dsets = sorted(list(set(image_id_to_dataset.values())))
     image_id_to_dataset = {
         i: dsets.index(image_id_to_dataset[i]) for i in image_id_to_dataset
     }
 
-    min_cat = min([dat.cats[i]["id"] for i in dat.cats])
-    num_act = len(dat.cats)
-    label_to_ind = {dat.cats[i]["name"]: dat.cats[i]["id"] - min_cat for i in dat.cats}
-    act_id_to_str = {dat.cats[i]["id"]: dat.cats[i]["name"] for i in dat.cats}
+    min_cat = min([dset.cats[i]["id"] for i in dset.cats])
+    num_act = len(dset.cats)
+    label_to_ind = {dset.cats[i]["name"]: dset.cats[i]["id"] - min_cat for i in dset.cats}
+    act_id_to_str = {dset.cats[i]["id"]: dset.cats[i]["name"] for i in dset.cats}
 
     ann_by_image = {}
-    for i in dat.anns:
-        ann = dat.anns[i]
+    for i in dset.anns:
+        ann = dset.anns[i]
         if ann["image_id"] not in ann_by_image:
             ann_by_image[ann["image_id"]] = [ann]
         else:
@@ -159,35 +151,10 @@ def compute_feats(
     y = np.array(y)
     dataset_id = np.array(dataset_id)
 
-    ###############
-    # Dataset
-    ###############
-    # Carve out final test set.
-    val_fract = 0.2
-    final_test_dataset_ids = sorted(list(set(dataset_id)))
-    i = final_test_dataset_ids[int(np.round((len(final_test_dataset_ids) * val_fract)))]
-    ind = dataset_id <= i
-    X_final_test = X[ind]
-    y_final_test = y[ind]
-    dataset_id_final_test = dataset_id[ind]
-    X = X[~ind]
-    y = y[~ind]
-    dataset_id = dataset_id[~ind]
-
-    ref = set(range(len(act_map)))
-    # Make sure every dataset has at least one example of each step.
-    for i in sorted(list(set(dataset_id))):
-        # ind = dataset_id == i
-        # for j in ref.difference(set(y[ind])):
-        for j in ref:
-            y = np.hstack([y, j])
-            X = np.vstack([X, np.zeros(X[0].shape)])
-            dataset_id = np.hstack([dataset_id, i])
-
     return X, y
 
 
-def plot_dataset_counts(X, y, output_dir):
+def plot_dataset_counts(X, y, output_dir, split):
     plt.imshow(np.cov(X.T))
     plt.colorbar()
 
@@ -203,7 +170,11 @@ def plot_dataset_counts(X, y, output_dir):
     plt.ylabel("Counts", fontsize=34)
     plt.xlabel("Ground Truth Steps", fontsize=34)
     plt.tight_layout()
-    plt.savefig(f"{output_dir}/gt_counts.png")
+
+    plot_dir = f"{output_dir}/{split}"
+    if not os.path.exists(plot_dir):
+        os.makedirs(plot_dir)
+    plt.savefig(f"{plot_dir}/gt_counts.png")
 
 
 def train(X, y):
@@ -215,11 +186,22 @@ def train(X, y):
         n_estimators=1000,
         max_features=0.1,
         bootstrap=True,
+        verbose=True
     )
     clf.fit(X, y)
 
     return clf
 
+def validate(clf, X_final_test, y_final_test):
+    y_score = clf.predict_proba(X_final_test)
+
+    lb = preprocessing.LabelBinarizer()
+    y_true = lb.fit(range(y_score.shape[1])).transform(y_final_test)
+    
+    s = average_precision_score(y_true, y_score)
+    print(f"Average precision: {s}")
+
+    return s
 
 def save(output_dir, act_str_list, label_to_ind, clf):
     output_fn = f"{output_dir}/activity_weights.pkl"
@@ -227,8 +209,13 @@ def save(output_dir, act_str_list, label_to_ind, clf):
         pickle.dump([label_to_ind, 1, clf, act_str_list], of)
     print(f"Saved weights to {output_fn}")
 
-
 def train_activity_classifier(args):
+    # Load labels
+    with open(args.act_label_yaml, "r") as stream:
+        print(f"Loading activity labels from: {args.act_label_yaml}")
+        act_labels = yaml.safe_load(stream)
+
+    # Load train dataset
     (
         act_map,
         inv_act_map,
@@ -237,7 +224,7 @@ def train_activity_classifier(args):
         label_to_ind,
         act_id_to_str,
         ann_by_image,
-    ) = data_loader(args.pred_fnames, args.act_label_yaml)
+    ) = data_loader(args.train_fn, act_labels)
     X, y = compute_feats(
         act_map,
         image_activity_gt,
@@ -246,22 +233,59 @@ def train_activity_classifier(args):
         act_id_to_str,
         ann_by_image,
     )
-    plot_dataset_counts(X, y, args.output_dir)
+    plot_dataset_counts(X, y, args.output_dir, "train")
 
+    # Load validation dataset
+    (
+        val_act_map,
+        val_inv_act_map,
+        val_image_activity_gt,
+        val_image_id_to_dataset,
+        val_label_to_ind,
+        val_act_id_to_str,
+        val_ann_by_image,
+    ) = data_loader(args.val_fn, act_labels)
+    X_final_test, y_final_test = compute_feats(
+        val_act_map,
+        val_image_activity_gt,
+        val_image_id_to_dataset,
+        val_label_to_ind,
+        val_act_id_to_str,
+        val_ann_by_image,
+    )
+    plot_dataset_counts(X_final_test, y_final_test, args.output_dir, "val")
+
+    # Train
     clf = train(X, y)
-
+    ap = validate(clf, X_final_test, y_final_test)
+    
+    # Save
     act_str_list = [inv_act_map[key] for key in sorted(list(set(y)))]
     save(args.output_dir, act_str_list, label_to_ind, clf)
 
 
 def main():
     parser = argparse.ArgumentParser()
+    """
     parser.add_argument(
         "--pred-fnames",
         help="Object detections in kwcoco format",
         dest="pred_fnames",
         type=Path,
         nargs="+",
+    )
+    """
+    parser.add_argument(
+        "--train",
+        help="Object detections in kwcoco format for the train set",
+        dest="train_fn",
+        type=Path
+    )
+    parser.add_argument(
+        "--val",
+        help="Object detections in kwcoco format for the validation set",
+        dest="val_fn",
+        type=Path
     )
     parser.add_argument(
         "--act-label-yaml", help="", type=Path, dest="act_label_yaml", default=""
@@ -270,6 +294,9 @@ def main():
         "--output-dir", help="", type=Path, dest="output_dir", default=""
     )
     args = parser.parse_args()
+
+    if not os.path.exists(args.output_dir):
+        os.makedirs(args.output_dir)
 
     train_activity_classifier(args)
 
