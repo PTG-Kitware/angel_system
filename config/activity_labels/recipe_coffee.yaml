@@ -1,4 +1,4 @@
-version: "1"
+version: "1.1"
 title: "Pour-over coffee"
 labels:
   # Item:
@@ -20,7 +20,7 @@ labels:
     depends: [1]
   - id: 3
     label: "place-dipper-on-mug"
-    full_str: "Place the dripper on top of a coffee mug"
+    full_str: "Place the dripper on top of the mug"
     depends:
   - id: 4
     label: "filter-fold-half"
@@ -64,7 +64,8 @@ labels:
     depends: [12]
   - id: 14
     label: "pour-beans-filter"
-    full_str: "Transfer the grounds to the filter cone"
+    #full_str: "Transfer the grounds to the filter cone"
+    full_str: "pour the grounded coffee beans into the filter cone prepared in step 2"
     depends: [7, 13]
   - id: 15
     label: "thermometer-turn-on"
@@ -73,18 +74,19 @@ labels:
   - id: 16
     label: "thermometer-in-water"
     full_str: "Place the end of the thermometer into the water."
-    depends: [2, 15]
+    depends: [2, 15, 24]
   - id: 17
     label: "check-thermometer"
     full_str: "Check the temperature displayed on the thermometer."
     depends: [16]
   - id: 18
     label: "pour-water-grounds-wet"
-    full_str: "Pour a small amount of water over the grounds in order to wet the grounds. Wait about 30 seconds."
+    #full_str: "Pour a small amount of water over the grounds in order to wet the grounds. Wait about 30 seconds."
+    full_str: "Pour a small amount of water over the grounds in order to wet the grounds"
     depends: [14, 3, 17]
   - id: 19
     label: "pour-water-grounds-circular"
-    full_str: "Slowly pour the rest of the water over the grounds in a circular motion. Do not overfill beyond the top of the paper filter"
+    full_str: "slowly pour the water over the grounds in a circular motion. do not overfill beyond the top of the paper filter"
     depends: [18]
   - id: 20
     label: "water-drain"
@@ -103,6 +105,10 @@ labels:
     full_str: "Discard the coffee grounds and paper filter"
     depends: [22]
   - id: 24
+    label: "turn-on-kettle"
+    full_str: "Turn on the kettle"
+    depends: [2]
+  - id: 25
     label: "done"
     full_str: "done"
     depends: [21, 23]
