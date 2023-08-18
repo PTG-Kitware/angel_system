@@ -1,14 +1,24 @@
 import os
 import cv2
+import yaml
 import kwcoco
 import kwimage
 import textwrap
+import warnings
 
 import numpy as np
 import ubelt as ub
 import pandas as pd
+import ubelt as ub
 
 from pathlib import Path
+
+from angel_system.data.common.load_data import (
+    activities_from_dive_csv,
+    activities_as_dataframe,
+    time_from_name,
+    sanitize_str
+)
 
 
 # Save
@@ -17,9 +27,6 @@ def preds_to_kwcoco(
     preds,
     save_dir,
     save_fn="result-with-contact.mscoco.json",
-    using_step_labels=False,
-    using_inter_steps=False,
-    using_before_finished_task=False,
 ):
     """
     Save the predicitions in the json file
@@ -28,20 +35,7 @@ def preds_to_kwcoco(
     dset = kwcoco.CocoDataset()
 
     for class_ in metadata["thing_classes"]:
-        if not using_step_labels and not using_inter_steps:
-            # add original classes from model
-            dset.add_category(name=class_)
-
-        if using_step_labels:
-            for i in range(1, 9):
-                dset.add_category(name=f"{class_} (step {i})")
-
-                if using_inter_steps:
-                    if i != 8:
-                        dset.add_category(name=f"{class_} (step {i+0.5})")
-        if using_before_finished_task:
-            dset.add_category(name=f"{class_} (before)")
-            dset.add_category(name=f"{class_} (finished)")
+        dset.add_category(name=class_)
 
     for video_name, predictions in preds.items():
         dset.add_video(name=video_name)
@@ -105,6 +99,68 @@ def preds_to_kwcoco(
 
     return dset
 
+def add_activity_gt_to_kwcoco(dset, activity_config_fn, activity_gt_dir):
+    """Takes an existing kwcoco file and fills in the "activity_gt"
+    field on each image based on the activity annotations.
+
+    This saves to a new file (the original kwcoco file name with "_fixed"
+    appended to the end).
+
+    :param dset: kwcoco object or a string pointing to a kwcoco file
+    :param activity_config_fn: Path to the activity labels config file
+    :param activity_gt_dir: Path to the activity annotation csv files
+    """
+    # Load kwcoco file
+    if type(dset) == str:
+        dset_fn = dset
+        print(f"Loaded dset from file: {dset_fn}")
+        dset = kwcoco.CocoDataset(dset_fn)
+        dset.fpath = dset_fn
+
+    # Load activity labels config
+    with open(activity_config_fn, "r") as stream:
+        activity_config = yaml.safe_load(stream)
+    activity_labels = activity_config["labels"]
+
+    gid_to_aids = dset.index.gid_to_aids
+    gids = ub.argsort(ub.map_vals(len, gid_to_aids))
+
+    # Update the activity gt for each image
+    for gid in ub.ProgIter(sorted(gids), desc="Adding activity ground truth to images"):
+        im = dset.imgs[gid]
+
+        video_id = im["video_id"]
+        video_name = dset.index.videos[video_id]["name"]
+
+        activity_gt_fn = f"{activity_gt_dir}/{video_name}.csv"
+        gt = activities_from_dive_csv(activity_gt_fn)
+        gt = activities_as_dataframe(gt)
+
+        frame_idx, time = time_from_name(im["file_name"]) 
+        matching_gt = gt.loc[(gt["start"] <= time) & (gt["end"] >= time)]
+                
+        if matching_gt.empty:
+            label = "background"
+            activity_label = label
+        else:
+            label = matching_gt.iloc[0]["class_label"]
+            activity = [x for x in activity_labels[1:-1] if sanitize_str(x["full_str"]) == sanitize_str(label)]
+            if not activity:
+                if "timer" in label:
+                    # Ignoring timer based labels
+                    label = "background"
+                    activity_label = label
+                else:
+                    warnings.warn(f"Label: {label} is not in the activity labels config, ignoring")
+                    continue
+            else:
+                activity = activity[0]
+                activity_label = activity["label"]
+
+        dset.imgs[gid]["activity_gt"] = activity_label
+    
+    dset.fpath = dset.fpath.split('.')[0] + "_fixed.mscoco.json"
+    dset.dump(dset.fpath, newlines=True)
 
 def print_class_freq(dset):
     freq_per_class = dset.category_annotation_frequency()
@@ -172,6 +228,8 @@ def visualize_kwcoco(dset=None, save_dir=""):
         using_contact = False
         for aid, ann in anns.items():
             conf = ann["confidence"]
+            if conf < 0.4:
+                continue
 
             using_contact = True if "obj-obj_contact_state" in ann.keys() else False
 
@@ -384,23 +442,23 @@ def filter_kwcoco_conf_by_video(dset):
 
 def main():
     ptg_root = (
-        "/home/local/KHQ/hannah.defazio/projects/PTG/angel_system/angel_system/berkeley"
+        "/home/local/KHQ/hannah.defazio/angel_system/angel_system/berkeley"
     )
     # ptg_root = "/data/ptg/medical/bbn/"
 
-    kw = "coffee_no_background_stage2_val.mscoco.json"
+    kw = "coffee_base_results_val.mscoco.json"
 
     n = kw[:-12].split("_")
     name = "_".join(n[:-1])
     split = n[-1]
-    if split == "contact":
-        split = "train_contact"
+
     if split == "activity":
         split = "train_activity"
 
     stage = "results"
-    stage_dir = f"{ptg_root}/annotations/M2_Tourniquet/{stage}"
-    exp = "m2_all_data_cleaned_fixed_with_steps"
+    #stage_dir = f"{ptg_root}/annotations/M2_Tourniquet/{stage}"
+    stage_dir = ""
+    exp = "coffee_base"
     if stage == "stage1":
         save_dir = f"{stage_dir}/visualization_1/{split}"
     else:
@@ -412,7 +470,7 @@ def main():
     if stage == "stage1":
         visualize_kwcoco(f"{stage_dir}/{kw}", save_dir)
     else:
-        visualize_kwcoco(f"{ptg_root}/{kw}", save_dir)
+        visualize_kwcoco(f"{kw}", save_dir)
         # visualize_kwcoco(f"{stage_dir}/{exp}/{kw}", save_dir)
 
 
