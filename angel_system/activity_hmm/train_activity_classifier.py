@@ -7,7 +7,8 @@ import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 
-from pathlib import Path
+from typing import Union, Tuple
+from pathlib import Path, PosixPath
 from sklearn.ensemble import RandomForestClassifier
 from sklearn import preprocessing
 from sklearn.metrics import average_precision_score
@@ -19,7 +20,23 @@ from angel_system.impls.detect_activities.detections_to_activities.utils import 
 )
 
 
-def data_loader(dset, act_labels):
+def data_loader(
+    dset: Union[str, PosixPath, kwcoco.CocoDataset], act_labels: dict
+) -> Tuple[dict, dict, dict, dict, dict, dict]:
+    """Parse the data in ``dset``
+
+    :param dset: kwcoco dataset
+    :param act_labels: The activity labels
+
+    :return:
+        - act_map: Activity label string to id dict
+        - inv_act_map: Activity id to label string dict
+        - image_activity_gt: Image id to activity label string dict
+        - image_id_to_dataset: Image id to id in ``dset`` dict
+        - label_to_ind: Object detection labels to ids dict
+        - act_id_to_str: Object detection ids to labels dict
+        - ann_by_image: Image id to annotation dict
+    """
     print("Loading data....")
     # Description to ID map.
     act_map = {}
@@ -33,7 +50,7 @@ def data_loader(dset, act_labels):
         inv_act_map[0] = "Background"
 
     # Load object detections
-    if type(dset) == str:
+    if type(dset) == str or type(dset) == PosixPath:
         dset_fn = dset
         dset = kwcoco.CocoDataset(dset_fn)
         print(f"Loaded dset from file: {dset_fn}")
@@ -59,7 +76,9 @@ def data_loader(dset, act_labels):
 
     min_cat = min([dset.cats[i]["id"] for i in dset.cats])
     num_act = len(dset.cats)
-    label_to_ind = {dset.cats[i]["name"]: dset.cats[i]["id"] - min_cat for i in dset.cats}
+    label_to_ind = {
+        dset.cats[i]["name"]: dset.cats[i]["id"] - min_cat for i in dset.cats
+    }
     act_id_to_str = {dset.cats[i]["id"]: dset.cats[i]["name"] for i in dset.cats}
 
     ann_by_image = {}
@@ -82,13 +101,24 @@ def data_loader(dset, act_labels):
 
 
 def compute_feats(
-    act_map,
-    image_activity_gt,
-    image_id_to_dataset,
-    label_to_ind,
-    act_id_to_str,
-    ann_by_image,
-):
+    act_map: dict,
+    image_activity_gt: dict,
+    image_id_to_dataset: dict,
+    label_to_ind: dict,
+    act_id_to_str: dict,
+    ann_by_image: dict,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Compute features from object detections
+
+    :param act_map: Activity label string to id
+    :param image_activity_gt: Image id to activity label string dict
+    :param image_id_to_dataset: Image id to id in ``dset`` dict
+    :param label_to_ind: Object detection labels to ids dict
+    :param act_id_to_str: Object detection ids to labels dict
+    :param ann_by_image: Image id to annotation dict
+
+    :return: resulting feature data and its labels
+    """
     print("Computing features...")
     X = []
     y = []
@@ -157,7 +187,19 @@ def compute_feats(
     return X, y
 
 
-def plot_dataset_counts(X, y, output_dir, split):
+def plot_dataset_counts(
+    X: np.ndarray, y: np.ndarray, output_dir: Union[str, PosixPath], split: str
+):
+    """Plot the number of ground truth steps in the data
+
+    :param X: feature vector from object detections per image,
+        shape is (# frames x # object detection labels)
+    :param y: the target activity ids,
+        shape is (# frames,)
+    :param output_dir: Directory to save the plot to
+    :param split: Which test set ``X`` and ``y`` come from. This is
+        used to create a subfolder under ``output_dir``
+    """
     plt.imshow(np.cov(X.T))
     plt.colorbar()
 
@@ -180,7 +222,18 @@ def plot_dataset_counts(X, y, output_dir, split):
     plt.savefig(f"{plot_dir}/gt_counts.png")
 
 
-def train(X, y):
+def train(X: np.ndarray, y: np.ndarray) -> RandomForestClassifier:
+    """Train the random forest classifier
+
+    :param X: feature vector from object detections per image,
+        shape is (# frames x # object detection labels)
+    :param y: the target activity ids,
+        shape is (# frames,)
+
+    :return: The trained random forest classifier
+    """
+    print("x", type(X), X.shape)
+    print("y", type(y), y.shape)
     print("Train...")
     # Train model on test set.
     clf = RandomForestClassifier(
@@ -189,30 +242,62 @@ def train(X, y):
         n_estimators=1000,
         max_features=0.1,
         bootstrap=True,
-        verbose=True
+        verbose=True,
     )
     clf.fit(X, y)
 
     return clf
 
-def validate(clf, X_final_test, y_final_test):
-    y_score = clf.predict_proba(X_final_test)
 
+def validate(
+    clf: RandomForestClassifier, X_final_test: np.ndarray, y_final_test: np.ndarray
+) -> float:
+    """Calculate the average precision of ``clf``
+
+    :param clf: model
+    :param X_final_test: feature vector from object detections per image,
+        shape is (# frames x # object detection labels)
+    :param y_final_test: the target activity ids,
+        shape is (# frames,)
+
+    :return: Average precision score
+    """
+    y_score = clf.predict_proba(X_final_test)  # num data pts x num classes
+
+    # Convert column vector to indicator vector
     lb = preprocessing.LabelBinarizer()
     y_true = lb.fit(range(y_score.shape[1])).transform(y_final_test)
-    
+
     s = average_precision_score(y_true, y_score)
     print(f"Average precision: {s}")
 
     return s
 
-def save(output_dir, act_str_list, label_to_ind, clf):
+
+def save(
+    output_dir: Union[str, PosixPath],
+    act_str_list: List[str],
+    label_to_ind: dict,
+    clf: RandomForestClassifier,
+):
+    """Save the model to a pickle file
+
+    :param output_dir: Path to save the model to
+    :param act_str_list: List of activity label strings
+    :param label_to_ind: Object detection labels to ids dict
+    :param clf: model
+    """
     output_fn = f"{output_dir}/activity_weights.pkl"
     with open(output_fn, "wb") as of:
         pickle.dump([label_to_ind, 1, clf, act_str_list], of)
     print(f"Saved weights to {output_fn}")
 
-def train_activity_classifier(args):
+
+def train_activity_classifier(args: argparse.Namespace):
+    """Load the data and train an activity classifier
+
+    :param args: Input arguments
+    """
     # Load labels
     with open(args.act_label_yaml, "r") as stream:
         print(f"Loading activity labels from: {args.act_label_yaml}")
@@ -261,7 +346,7 @@ def train_activity_classifier(args):
     # Train
     clf = train(X, y)
     ap = validate(clf, X_final_test, y_final_test)
-    
+
     # Save
     act_str_list = [inv_act_map[key] for key in sorted(list(set(y)))]
     save(args.output_dir, act_str_list, label_to_ind, clf)
@@ -269,26 +354,18 @@ def train_activity_classifier(args):
 
 def main():
     parser = argparse.ArgumentParser()
-    """
-    parser.add_argument(
-        "--pred-fnames",
-        help="Object detections in kwcoco format",
-        dest="pred_fnames",
-        type=Path,
-        nargs="+",
-    )
-    """
+
     parser.add_argument(
         "--train",
         help="Object detections in kwcoco format for the train set",
         dest="train_fn",
-        type=Path
+        type=Path,
     )
     parser.add_argument(
         "--val",
         help="Object detections in kwcoco format for the validation set",
         dest="val_fn",
-        type=Path
+        type=Path,
     )
     parser.add_argument(
         "--act-label-yaml", help="", type=Path, dest="act_label_yaml", default=""
@@ -302,19 +379,6 @@ def main():
         os.makedirs(args.output_dir)
 
     train_activity_classifier(args)
-
-    """
-    ###############
-    # filepaths
-    ###############
-    pred_fnames = [
-        "/angel_workspace/ros_bags/m2_all_data_cleaned_fixed_with_steps/m2_all_data_cleaned_fixed_with_steps_results_test.mscoco.json",
-        "/angel_workspace/ros_bags/m2_all_data_cleaned_fixed_with_steps/m2_all_data_cleaned_fixed_with_steps_results_train_activity.mscoco.json",
-        "/angel_workspace/ros_bags/m2_all_data_cleaned_fixed_with_steps/m2_all_data_cleaned_fixed_with_steps_results_val.mscoco.json",
-    ]
-    act_label_yaml = "/angel_workspace/config/activity_labels/medical_tourniquet.v2.yaml"
-    output_fn = "/angel_workspace/model_files/recipe_m2_apply_tourniquet_v0.052.pkl"
-    """
 
 
 if __name__ == "__main__":
