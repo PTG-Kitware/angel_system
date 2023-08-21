@@ -12,14 +12,14 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn import preprocessing
 from sklearn.metrics import average_precision_score
 
-from support_functions import sanitize_str
+from angel_system.activity_hmm.support_functions import sanitize_str
 
 from angel_system.impls.detect_activities.detections_to_activities.utils import (
     obj_det2d_set_to_feature,
 )
 
 
-def data_loader(fn, act_labels):
+def data_loader(dset, act_labels):
     print("Loading data....")
     # Description to ID map.
     act_map = {}
@@ -33,8 +33,11 @@ def data_loader(fn, act_labels):
         inv_act_map[0] = "Background"
 
     # Load object detections
-    dset = kwcoco.CocoDataset(fn)
-    print(f"Loaded dset from file: {fn}")
+    if type(dset) == str:
+        dset_fn = dset
+        dset = kwcoco.CocoDataset(dset_fn)
+        print(f"Loaded dset from file: {dset_fn}")
+        dset.fpath = dset_fn
 
     image_activity_gt = {}
     image_id_to_dataset = {}
