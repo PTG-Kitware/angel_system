@@ -15,7 +15,7 @@ from pathlib import Path
 
 from angel_system.data.common.load_data import (
     activities_from_dive_csv,
-    activities_as_dataframe,
+    objs_as_dataframe,
     time_from_name,
     sanitize_str,
 )

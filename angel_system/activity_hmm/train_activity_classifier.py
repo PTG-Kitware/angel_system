@@ -7,7 +7,7 @@ import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 
-from typing import Union, Tuple
+from typing import Union, Tuple, List
 from pathlib import Path, PosixPath
 from sklearn.ensemble import RandomForestClassifier
 from sklearn import preprocessing
