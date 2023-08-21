@@ -154,7 +154,7 @@ def activities_from_dive_csv(filepath: str) -> List[Activity]:
 
     # There may be additional metadata rows. Filter out rows whose first column
     # value starts with a `#`.
-    df = df[df[df.keys()[0]].str.contains("^[^#]")]
+    # df = df[df[df.keys()[0]].str.contains("^[^#]")]
     # Create a mapping of detection/track ID to the activity annotation
     id_to_activity: Dict[int, Activity] = {}
 

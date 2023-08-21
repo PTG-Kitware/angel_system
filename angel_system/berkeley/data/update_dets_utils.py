@@ -34,6 +34,66 @@ def load_hl_hand_bboxes(extracted_dir):
 
     return all_hand_pose_2d
 
+def add_hl_hand_bbox(preds):
+    for video_name, dets in preds.items():
+        all_hand_pose_2d_image_space = None
+
+        for frame, det in dets.items():
+            meta = preds[video_name][frame]["meta"]
+            time_stamp = meta["time_stamp"]
+            # <video_folder>/_extracted/images/<file_name>
+            video_folder = meta["file_name"].split("/")[:-3]
+            video_folder = video_folder.join('/')
+
+            if not all_hand_pose_2d_image_space:
+                all_hand_pose_2d_image_space = load_hl_hand_bboxes(
+                    video_folder + "/_extracted"
+                )
+
+            # Add HL hand bounding boxes if we have them
+            all_hands = (
+                all_hand_pose_2d_image_space[time_stamp]
+                if time_stamp in all_hand_pose_2d_image_space.keys()
+                else []
+            )
+            if all_hands != []:
+                print("Adding hand bboxes from the hololens joints")
+                for joints in all_hands:
+                    keys = list(joints["joints"].keys())
+                    hand_label = joints["hand"]
+
+                    all_x_values = [
+                        joints["joints"][k]["projected"][0] for k in keys
+                    ]
+                    all_y_values = [
+                        joints["joints"][k]["projected"][1] for k in keys
+                    ]
+
+                    hand_bbox = [
+                        min(all_x_values),
+                        min(all_y_values),
+                        max(all_x_values),
+                        max(all_y_values),
+                    ]  # tlbr
+
+                    new_det = {
+                        "confidence_score": 1,
+                        "bbox": hand_bbox,
+                    }
+                    preds[video_name][frame][hand_label] = [new_det]
+
+                    if using_contact:
+                        con = {
+                            "obj_obj_contact_state": False,
+                            "obj_obj_contact_conf": 0,
+                            "obj_hand_contact_state": False,
+                            "obj_hand_contact_conf": 0,
+                        }
+
+                        preds[video_name][frame][hand_label] = [
+                            {**new_det, **con}
+                        ]
+    return preds 
 
 def replace_compound_label(
     preds,
