@@ -17,7 +17,7 @@ from angel_system.data.common.load_data import (
     activities_from_dive_csv,
     activities_as_dataframe,
     time_from_name,
-    sanitize_str
+    sanitize_str,
 )
 
 
@@ -99,6 +99,7 @@ def preds_to_kwcoco(
 
     return dset
 
+
 def add_activity_gt_to_kwcoco(dset, activity_config_fn, activity_gt_dir):
     """Takes an existing kwcoco file and fills in the "activity_gt"
     field on each image based on the activity annotations.
@@ -136,31 +137,38 @@ def add_activity_gt_to_kwcoco(dset, activity_config_fn, activity_gt_dir):
         gt = activities_from_dive_csv(activity_gt_fn)
         gt = activities_as_dataframe(gt)
 
-        frame_idx, time = time_from_name(im["file_name"]) 
+        frame_idx, time = time_from_name(im["file_name"])
         matching_gt = gt.loc[(gt["start"] <= time) & (gt["end"] >= time)]
-                
+
         if matching_gt.empty:
             label = "background"
             activity_label = label
         else:
             label = matching_gt.iloc[0]["class_label"]
-            activity = [x for x in activity_labels[1:-1] if sanitize_str(x["full_str"]) == sanitize_str(label)]
+            activity = [
+                x
+                for x in activity_labels[1:-1]
+                if sanitize_str(x["full_str"]) == sanitize_str(label)
+            ]
             if not activity:
                 if "timer" in label:
                     # Ignoring timer based labels
                     label = "background"
                     activity_label = label
                 else:
-                    warnings.warn(f"Label: {label} is not in the activity labels config, ignoring")
+                    warnings.warn(
+                        f"Label: {label} is not in the activity labels config, ignoring"
+                    )
                     continue
             else:
                 activity = activity[0]
                 activity_label = activity["label"]
 
         dset.imgs[gid]["activity_gt"] = activity_label
-    
-    dset.fpath = dset.fpath.split('.')[0] + "_fixed.mscoco.json"
+
+    dset.fpath = dset.fpath.split(".")[0] + "_fixed.mscoco.json"
     dset.dump(dset.fpath, newlines=True)
+
 
 def print_class_freq(dset):
     freq_per_class = dset.category_annotation_frequency()
@@ -441,9 +449,7 @@ def filter_kwcoco_conf_by_video(dset):
 
 
 def main():
-    ptg_root = (
-        "/home/local/KHQ/hannah.defazio/angel_system/angel_system/berkeley"
-    )
+    ptg_root = "/home/local/KHQ/hannah.defazio/angel_system/angel_system/berkeley"
     # ptg_root = "/data/ptg/medical/bbn/"
 
     kw = "coffee_base_results_val.mscoco.json"
@@ -456,7 +462,7 @@ def main():
         split = "train_activity"
 
     stage = "results"
-    #stage_dir = f"{ptg_root}/annotations/M2_Tourniquet/{stage}"
+    # stage_dir = f"{ptg_root}/annotations/M2_Tourniquet/{stage}"
     stage_dir = ""
     exp = "coffee_base"
     if stage == "stage1":

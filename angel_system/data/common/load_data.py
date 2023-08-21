@@ -29,6 +29,7 @@ def sanitize_str(str_: str):
     """
     return str_.lower().strip(" .")
 
+
 def Re_order(image_list, image_number):
     img_id_list = []
     for img in image_list:
