@@ -65,7 +65,7 @@ def data_loader(
 
         activity_gt = im["activity_gt"]
         if activity_gt is None:
-            activity_gt = "background" #continue
+            activity_gt = "background"  # continue
 
         image_activity_gt[gid] = act_map[sanitize_str(activity_gt)]
 
@@ -85,7 +85,7 @@ def data_loader(
     for gid, anns in dset.index.gid_to_aids.items():
         if not anns:
             print("empty image anns")
-        ann_by_image[gid] =[]
+        ann_by_image[gid] = []
         for ann_id in anns:
             ann = dset.anns[ann_id]
             ann_by_image[gid].append(ann)
