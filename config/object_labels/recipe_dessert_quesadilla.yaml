@@ -1,6 +1,5 @@
-version: "1"
+version: "2.0"
 title: "Dessert Quesadilla"
-# Note: ids 2-3 are shared wih pinwheels, ids 4-8 are shareed with oatmeal
 labels:
   # Item:
   # - id: Integer identification number of the label.
@@ -8,37 +7,45 @@ labels:
   #          label.
   - id: 0
     label: "background"
+  # Shared labels
   - id: 1
-    label: "nutella"
+    label: "hand (left)"
   - id: 2
-    label: "tortilla"
+    label: "hand (right)"
   - id: 3
-    label: "plate"
-  - id: 4
-    label: "cutting board"
+    label: "paper towel"
   - id: 5
-    label: "butter knife"
+    label: "cutting board"
   - id: 6
-    label: "banana"
+    label: "butter knife"
   - id: 7
-    label: "sliced banana"
+    label: "banana"
   - id: 8
-    label: "cinnamon"
+    label: "sliced banana"
   - id: 9
-    label: "butter knife + nutella"
+    label: "cinnamon"
   - id: 10
-    label: "tortilla + nutella"
+    label: "tortilla"
   - id: 11
+    label: "plate"
+  # Labels unique to dessert quesadilla
+  - id: 54
+    label: "nutella"
+  - id: 55
+    label: "butter knife + nutella"
+  - id: 56
+    label: "tortilla + nutella"
+  - id: 57
     label: "tortilla + cinnamon"
-  - id: 12
+  - id: 58
     label: "tortilla + nutella + sliced banana"
-  - id: 13
+  - id: 59
     label: "tortilla + nutella + cinnamon"
-  - id: 14
+  - id: 60
     label: "tortilla + nutella + sliced banana + cinnamon"
-  - id: 15
+  - id: 61
     label: "folded tortilla (semi)"
-  - id: 16
+  - id: 62
     label: "tortilla wedge"
-  - id: 17
+  - id: 63
     label: "plate + tortilla wedges"

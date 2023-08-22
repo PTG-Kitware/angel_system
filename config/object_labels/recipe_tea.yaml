@@ -1,6 +1,5 @@
-version: "1"
+version: "2.0"
 title: "Tea"
-# Note: ids 5-20 are shared with coffee
 labels:
   # Item:
   # - id: Integer identification number of the label.
@@ -8,51 +7,51 @@ labels:
   #          label.
   - id: 0
     label: "background"
+  # Shared labels
   - id: 1
-    label: "jar of honey (close)"
-  - id: 2
-    label: "jar of honey (open)"
-  - id: 3
-    label: "spoon"
-  - id: 4
-    label: "tea bag"
-  - id: 5
     label: "hand (left)"
-  - id: 6
+  - id: 2
     label: "hand (right)"
-  - id: 7
-    label: "kettle"
-  - id: 8
-    label: "kettle (open)"
-  - id: 9
-    label: "measuring cup"
-  - id: 10
-    label: "mug"
-  - id: 11
+  - id: 3
     label: "paper towel"
-  - id: 12
-    label: "switch"
-  - id: 13
-    label: "thermometer (close)"
-  - id: 14
-    label: "thermometer (open)"
-  - id: 15
-    label: "timer"
-  - id: 16
-    label: "timer (20)"
-  - id: 17
-    label: "timer (30)"
-  - id: 18
-    label: "timer (else)"
-  - id: 19
-    label: "trash can"
-  - id: 20
+  - id: 4
     label: "water"
+  - id: 12
+    label: "spoon"
+  - id: 13
+    label: "jar of honey (close)"
+  - id: 14
+    label: "jar of honey (open)"
+  - id: 15
+    label: "kettle"
+  - id: 16
+    label: "kettle (open)"
+  - id: 17
+    label: "measuring cup"
+  - id: 18
+    label: "mug"
+  - id: 19
+    label: "switch"
+  - id: 20
+    label: "thermometer (close)"
   - id: 21
-    label: "mug + tea bag"
+    label: "thermometer (open)"
   - id: 22
+    label: "timer"
+  - id: 25
+    label: "timer (else)"
+  - id: 26
+    label: "trash can"
+  # Labels unique to tea
+  - id: 93
+    label: "timer (3 min)"
+  - id: 94
+    label: "tea bag"
+  - id: 95
+    label: "mug + tea bag"
+  - id: 96
     label: "mug + water"
-  - id: 23
+  - id: 97
     label: "mug + tea bag + water"
-  - id: 24
+  - id: 98
     label: "mug + tea"

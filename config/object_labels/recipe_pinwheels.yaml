@@ -1,6 +1,5 @@
-version: "1"
+version: "2.0"
 title: "Pinwheels"
-# Note: ids 7-8 are shared with oatmeal, id 9 is shared with coffee
 labels:
   # Item:
   # - id: Integer identification number of the label.
@@ -8,37 +7,43 @@ labels:
   #          label.
   - id: 0
     label: "background"
+  # Shared labels
   - id: 1
-    label: "tortilla"
+    label: "hand (left)"
   - id: 2
-    label: "nut butter"
+    label: "hand (right)"
   - id: 3
-    label: "jelly"
-  - id: 4
-    label: "toothpick"
-  - id: 5
-    label: "dental floss"
-  - id: 6
-    label: "plate"
-  - id: 7
-    label: "cutting board"
-  - id: 8
-    label: "butter knife"
-  - id: 9
     label: "paper towel"
+  - id: 5
+    label: "cutting board"
+  - id: 6
+    label: "butter knife"
   - id: 10
-    label: "butter knife + nut butter"
+    label: "tortilla"
   - id: 11
+    label: "plate"
+  # Labels unique to pinwheels
+  - id: 81
+    label: "nut butter"
+  - id: 82
+    label: "jelly"
+  - id: 83
+    label: "toothpick"
+  - id: 84
+    label: "dental floss"
+  - id: 85
+    label: "butter knife + nut butter"
+  - id: 86
     label: "butter knife + jelly"
-  - id: 12
+  - id: 87
     label: "tortilla + nut butter"
-  - id: 13
+  - id: 88
     label: "tortilla + jelly"
-  - id: 14
+  - id: 89
     label: "tortilla + nut butter + jelly"
-  - id: 15
+  - id: 90
     label: "tortilla (rolled)"
-  - id: 16
+  - id: 91
     label: "pinwheel"
-  - id: 17
+  - id: 92
     label: "plate + pinwheels"

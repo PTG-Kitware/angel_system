@@ -1,6 +1,5 @@
-version: "1"
+version: "2.0"
 title: "Oatmeal"
-# Note: ids 12-16 are shared with coffee, ids 17-19 are shared with tea
 labels:
   # Item:
   # - id: Integer identification number of the label.
@@ -8,64 +7,65 @@ labels:
   #          label.
   - id: 0
     label: "background"
+  # Shared labels
   - id: 1
-    label: "tablespoon"
+    label: "hand (left)"
   - id: 2
-    label: "bowl"
+    label: "hand (right)"
   - id: 3
-    label: "microwave (closed)"
+    label: "paper towel"
   - id: 4
-    label: "microwave (open)"
+    label: "water"
   - id: 5
     label: "cutting board"
   - id: 6
     label: "butter knife"
   - id: 7
-    label: "oats"
+    label: "banana"
   - id: 8
-    label: "raisins"
+    label: "sliced banana"
   - id: 9
     label: "cinnamon"
-  - id: 10
-    label: "banana"
-  - id: 11
-    label: "sliced banana"
   - id: 12
-    label: "kettle"
-  - id: 13
-    label: "kettle (open)"
-  - id: 14
-    label: "measuring cup"
-  - id: 15
-    label: "paper towel"
-  - id: 16
-    label: "water"
-  - id: 17
     label: "spoon"
-  - id: 18
+  - id: 13
     label: "jar of honey (close)"
-  - id: 19
+  - id: 14
     label: "jar of honey (open)"
-  - id: 20
+  - id: 17
+    label: "measuring cup"
+  # Labels unique to oatmeal
+  - id: 64
+    label: "tablespoon"
+  - id: 65
+    label: "bowl"
+  - id: 66
+    label: "microwave (closed)"
+  - id: 67
+    label: "microwave (open)"
+  - id: 68
+    label: "oats"
+  - id: 69
+    label: "raisins"
+  - id: 70
     label: "bowl + oats"
-  - id: 21
+  - id: 71
     label: "bowl + water"
-  - id: 22
+  - id: 72
     label: "bowl + oats + water"
-  - id: 23
+  - id: 73
     label: "bowl + oats + water + raisins"
-  - id: 24
+  - id: 74
     label: "oatmeal" # "bowl + oats + water + raisins (stirred)"
-  - id: 25
+  - id: 75
     label: "oatmeal + sliced banana"
-  - id: 26
+  - id: 76
     label: "oatmeal + cinnamon"
-  - id: 27
+  - id: 77
     label: "oatmeal + honey"
-  - id: 28
+  - id: 78
     label: "oatmeal + sliced banana + cinnamon"
-  - id: 29
+  - id: 79
     label: "oatmeal + sliced banana + honey"
-  - id: 30
+  - id: 80
     label: "oatmeal + sliced banana + cinnamon + honey"
-  
