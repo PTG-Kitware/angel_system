@@ -47,7 +47,7 @@ def data_loader(
 
     if 0 not in act_map.values():
         act_map["background"] = 0
-        inv_act_map[0] = "Background"
+        inv_act_map[0] = "background"
 
     # Load object detections
     if type(dset) == str or type(dset) == PosixPath:
@@ -65,7 +65,7 @@ def data_loader(
 
         activity_gt = im["activity_gt"]
         if activity_gt is None:
-            continue
+            activity_gt = "background" #continue
 
         image_activity_gt[gid] = act_map[sanitize_str(activity_gt)]
 
@@ -82,12 +82,13 @@ def data_loader(
     act_id_to_str = {dset.cats[i]["id"]: dset.cats[i]["name"] for i in dset.cats}
 
     ann_by_image = {}
-    for i in dset.anns:
-        ann = dset.anns[i]
-        if ann["image_id"] not in ann_by_image:
-            ann_by_image[ann["image_id"]] = [ann]
-        else:
-            ann_by_image[ann["image_id"]].append(ann)
+    for gid, anns in dset.index.gid_to_aids.items():
+        if not anns:
+            print("empty image anns")
+        ann_by_image[gid] =[]
+        for ann_id in anns:
+            ann = dset.anns[ann_id]
+            ann_by_image[gid].append(ann)
 
     return (
         act_map,
@@ -124,6 +125,7 @@ def compute_feats(
     y = []
     dataset_id = []
     last_dset = 0
+
     for image_id in sorted(list(ann_by_image.keys())):
         label_vec = []
         left = []
