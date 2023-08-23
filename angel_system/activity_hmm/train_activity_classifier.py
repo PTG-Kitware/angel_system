@@ -108,6 +108,7 @@ def compute_feats(
     label_to_ind: dict,
     act_id_to_str: dict,
     ann_by_image: dict,
+    feat_version=1
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Compute features from object detections
 
@@ -167,7 +168,7 @@ def compute_feats(
             obj_hand_contact_state,
             obj_hand_contact_conf,
             label_to_ind,
-            version=1,
+            version=feat_version,
         )
 
         X.append(feature_vec.ravel())
