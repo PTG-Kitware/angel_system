@@ -7,7 +7,6 @@ from PIL import Image
 
 
 def obj_det2d_set_to_feature(
-    image,
     label_vec,
     xs,
     ys,
@@ -24,7 +23,6 @@ def obj_det2d_set_to_feature(
 ):
     """Convert ObjectDetection2dSet fields into a feature vector.
 
-    :param image: Filename of the associated image 
     :param label_to_ind:
         Dictionary mapping a label str and returns the index within the feature vector.
 
@@ -130,39 +128,6 @@ def obj_det2d_set_to_feature(
             hands_dist_x = 0
             hands_dist_y = 0
         hands_dist = (hands_dist_x, hands_dist_y)
-
-        # Temp: Plot points
-        if image and right_hand_center != [0.0,0.0] and left_hand_center != [0.0,0.0]:
-            fig, ax = plt.subplots()
-            im = Image.open(image)
-            im = np.array(im)
-            plt.imshow(im)
-
-            x, y, w, h = right_hand_bbox
-            right_rect = patches.Rectangle((x, y), w, h, linewidth=1, edgecolor='b', facecolor='none')
-            ax.add_patch(right_rect)
-            ax.plot(right_hand_center[0], right_hand_center[1], color='blue', marker='o')
-            ax.annotate("right hand", right_hand_center)
-
-            x, y, w, h = left_hand_bbox
-            left_rect = patches.Rectangle((x, y), w, h, linewidth=1, edgecolor='g', facecolor='none')
-            ax.add_patch(left_rect)
-            ax.plot(left_hand_center[0], left_hand_center[1], color='green', marker='o')
-            ax.annotate("left hand", left_hand_center)
-
-            for i in range(len(right_hand_dist)):
-                conf_i = act[i]
-                if conf_i >= 0.4:
-                    new_x = right_hand_center[0] - right_hand_dist[i][0] 
-                    new_y = right_hand_center[1] - right_hand_dist[i][1]
-
-                    ax.plot([right_hand_center[0], new_x], [right_hand_center[1], new_y], 'ok')
-                    lbl = list(label_to_ind.keys())[i]
-                    ax.annotate(f"{lbl}: x {right_hand_dist[i][0]} y {right_hand_dist[i][1]}", (new_x, new_y))
-
-            plt.show()
-            plt.waitforbuttonpress(0) # this will wait for indefinite time
-            plt.close(fig)
 
         # Remove hands from lists
         del right_hand_dist[right_hand_idx]

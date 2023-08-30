@@ -102,7 +102,6 @@ def data_loader(
 
 
 def compute_feats(
-    images, 
     act_map: dict,
     image_activity_gt: dict,
     image_id_to_dataset: dict,
@@ -113,7 +112,6 @@ def compute_feats(
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Compute features from object detections
 
-    :param images: Images in the kwcoco dataset
     :param act_map: Activity label string to id
     :param image_activity_gt: Image id to activity label string dict
     :param image_id_to_dataset: Image id to id in ``dset`` dict
@@ -158,7 +156,6 @@ def compute_feats(
                 pass
 
         feature_vec = obj_det2d_set_to_feature(
-            images[image_id]["file_name"] if image_id > 375 else None,
             label_vec,
             xs,
             ys,
