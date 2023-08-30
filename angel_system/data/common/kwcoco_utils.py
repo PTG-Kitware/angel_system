@@ -19,6 +19,7 @@ from angel_system.data.common.load_data import (
     time_from_name,
     sanitize_str,
 )
+from angel_system.berkeley.data.update_dets_utils import load_hl_hand_bboxes
 
 
 # Save
@@ -99,6 +100,108 @@ def preds_to_kwcoco(
 
     return dset
 
+def add_hl_hands_to_kwcoco(dset, using_contact=True):
+    """Add bounding boxes for the hands based on the Hololen's joint positions
+
+    :param dset: kwcoco object or a string pointing to a kwcoco file
+    :param using_contact:
+    """
+    # Load kwcoco file
+    if type(dset) == str:
+        dset_fn = dset
+        dset = kwcoco.CocoDataset(dset_fn)
+        dset.fpath = dset_fn
+        print(f"Loaded dset from file: {dset_fn}")
+
+    gid_to_aids = dset.index.gid_to_aids
+    gids = ub.argsort(ub.map_vals(len, gid_to_aids))
+
+    for video_id in ub.ProgIter(
+        dset.index.videos.keys(), desc=f"Adding hololens hands for videos in {dset_fn}"
+    ):
+        image_ids = dset.index.vidid_to_gids[video_id]
+    
+        all_hand_pose_2d_image_space = None
+
+        for gid in sorted(image_ids):
+            im = dset.imgs[gid]
+            frame_idx, time = time_from_name(im["file_name"])
+
+            aids = gid_to_aids[gid]
+            anns = ub.dict_subset(dset.anns, aids)
+
+            # Mark hand detections to be removed
+            remove_aids = []
+            for aid, ann in anns.items():
+                cat = dset.cats[ann["category_id"]]["name"]
+                if "hand" in cat:
+                    remove_aids.append(aid)
+            print(f"Removing annotations {remove_aids}")
+            dset.remove_annotations(remove_aids)
+
+            # Find HL hands
+            # <video_folder>/_extracted/images/<file_name>
+            extr_video_folder = im["file_name"].split("/")[:-2]
+            extr_video_folder = ('/').join(extr_video_folder)
+            if not all_hand_pose_2d_image_space:
+                all_hand_pose_2d_image_space = load_hl_hand_bboxes(extr_video_folder)
+
+            # Add HL hand bounding boxes if we have them
+            all_hands = (
+                all_hand_pose_2d_image_space[time]
+                if time in all_hand_pose_2d_image_space.keys()
+                else []
+            )
+            if all_hands != []:
+                print("Adding hand bboxes from the hololens joints")
+                for joints in all_hands:
+                    #import pdb; pdb.set_trace()
+                    keys = list(joints["joints"].keys())
+                    hand_label = joints["hand"]
+
+                    all_x_values = [
+                        joints["joints"][k]["projected"][0] for k in keys
+                    ]
+                    all_y_values = [
+                        joints["joints"][k]["projected"][1] for k in keys
+                    ]
+
+                    hand_bbox = [
+                        min(all_x_values),
+                        min(all_y_values),
+                        max(all_x_values),
+                        max(all_y_values),
+                    ]  # tlbr
+                    xywh = (
+                        kwimage.Boxes([hand_bbox], "tlbr")
+                        .toformat("xywh")
+                        .data[0]
+                        .tolist()
+                    )
+
+                    cat = dset.index.name_to_cat[hand_label]
+                    ann = {
+                        "area": xywh[2] * xywh[3],
+                        "image_id": im["id"],
+                        "category_id": cat["id"],
+                        "segmentation": [],
+                        "bbox": xywh,
+                        "confidence": 1,
+                    }
+
+                    if using_contact:
+                        ann["obj-obj_contact_state"] = False
+                        ann["obj-obj_contact_conf"] = 0
+
+                        ann["obj-hand_contact_state"] = False
+                        ann["obj-hand_contact_conf"] = 0
+
+                    dset.add_annotation(**ann)
+
+    fpath = dset.fpath.split('.mscoco')[0]
+    dset.fpath = f"{fpath}_plus_hl_hands.mscoco.json"
+    dset.dump(dset.fpath, newlines=True)
+    print(f"Saved predictions to {dset.fpath}")
 
 def add_activity_gt_to_kwcoco(dset, activity_config_fn, activity_gt_dir):
     """Takes an existing kwcoco file and fills in the "activity_gt"
@@ -450,9 +553,9 @@ def filter_kwcoco_conf_by_video(dset):
 
 def main():
     ptg_root = "/home/local/KHQ/hannah.defazio/angel_system/angel_system/berkeley"
-    # ptg_root = "/data/ptg/medical/bbn/"
+    ptg_root = "/data/PTG/cooking/"
 
-    kw = "coffee_base_results_val.mscoco.json"
+    kw = "coffee_base_results_val_plus_hl_hands.mscoco.json"
 
     n = kw[:-12].split("_")
     name = "_".join(n[:-1])
@@ -462,22 +565,23 @@ def main():
         split = "train_activity"
 
     stage = "results"
-    # stage_dir = f"{ptg_root}/annotations/M2_Tourniquet/{stage}"
-    stage_dir = ""
+    stage_dir = f"{ptg_root}/annotations/coffee/{stage}"
+    #stage_dir = ""
     exp = "coffee_base"
     if stage == "stage1":
         save_dir = f"{stage_dir}/visualization_1/{split}"
     else:
-        save_dir = f"{stage_dir}/{exp}/visualization/{split}"
+        save_dir = f"{stage_dir}/{exp}/visualization/with_hl_hands/{split}"
 
-    save_dir = "visualization"
+    #save_dir = "visualization"
+    print(save_dir)
     Path(save_dir).mkdir(parents=True, exist_ok=True)
 
     if stage == "stage1":
         visualize_kwcoco(f"{stage_dir}/{kw}", save_dir)
     else:
-        visualize_kwcoco(f"{kw}", save_dir)
-        # visualize_kwcoco(f"{stage_dir}/{exp}/{kw}", save_dir)
+        #visualize_kwcoco(f"{kw}", save_dir)
+        visualize_kwcoco(f"{stage_dir}/{exp}/{kw}", save_dir)
 
 
 if __name__ == "__main__":
