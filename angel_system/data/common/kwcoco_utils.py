@@ -136,7 +136,6 @@ def add_hl_hands_to_kwcoco(dset, using_contact=True):
     dset = load_kwcoco(dset)
 
     gid_to_aids = dset.index.gid_to_aids
-    gids = ub.argsort(ub.map_vals(len, gid_to_aids))
 
     for video_id in ub.ProgIter(
         dset.index.videos.keys(), desc=f"Adding hololens hands for videos in {dset.fpath}"
@@ -144,6 +143,7 @@ def add_hl_hands_to_kwcoco(dset, using_contact=True):
         image_ids = dset.index.vidid_to_gids[video_id]
     
         all_hand_pose_2d_image_space = None
+        remove_aids = []
 
         for gid in sorted(image_ids):
             im = dset.imgs[gid]
@@ -153,14 +153,11 @@ def add_hl_hands_to_kwcoco(dset, using_contact=True):
             anns = ub.dict_subset(dset.anns, aids)
 
             # Mark hand detections to be removed
-            remove_aids = []
             for aid, ann in anns.items():
                 cat = dset.cats[ann["category_id"]]["name"]
                 if "hand" in cat:
                     remove_aids.append(aid)
-            #print(f"Removing annotations {remove_aids}")
-            dset.remove_annotations(remove_aids)
-
+            
             # Find HL hands, should only run once per video
             if not all_hand_pose_2d_image_space:
                 # <video_folder>/_extracted/images/<file_name>
@@ -219,6 +216,9 @@ def add_hl_hands_to_kwcoco(dset, using_contact=True):
                         ann["obj-hand_contact_conf"] = 0
 
                     dset.add_annotation(**ann)
+        
+        #print(f"Removing annotations {remove_aids} in video {video_id}")    
+        dset.remove_annotations(remove_aids)
 
     fpath = dset.fpath.split('.mscoco')[0]
     dset.fpath = f"{fpath}_plus_hl_hands.mscoco.json"
