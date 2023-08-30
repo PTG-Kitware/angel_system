@@ -1,6 +1,7 @@
 import os
 import math
 import ast
+import warnings
 
 import ubelt as ub
 
@@ -9,11 +10,15 @@ def load_hl_hand_bboxes(extracted_dir):
     fn = extracted_dir + "/_hand_pose_2d_data.json"
 
     if not os.path.exists(fn):
+        warnings.warn(f"{fn} does not exist, ignoring")
         return {}
 
     with open(fn, "r") as f:
         hands = ast.literal_eval(f.read())
 
+    if hands == {} or hands == []:
+        warnings.warn(f"hands data in {fn} is empty!")
+        
     all_hand_pose_2d = {}
     for hand_info in hands:
         time_stamp = float(hand_info["time_sec"]) + (

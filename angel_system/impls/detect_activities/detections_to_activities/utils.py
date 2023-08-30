@@ -1,15 +1,18 @@
 from typing import Dict
 
 import numpy as np
-
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+from PIL import Image
 
 
 def obj_det2d_set_to_feature(
+    image,
     label_vec,
-    left,
-    right,
-    top,
-    bottom,
+    xs,
+    ys,
+    ws,
+    hs,
     label_confidences,
     descriptors,
     obj_obj_contact_state,
@@ -21,6 +24,7 @@ def obj_det2d_set_to_feature(
 ):
     """Convert ObjectDetection2dSet fields into a feature vector.
 
+    :param image: Filename of the associated image 
     :param label_to_ind:
         Dictionary mapping a label str and returns the index within the feature vector.
 
@@ -60,7 +64,7 @@ def obj_det2d_set_to_feature(
         for i in range(num_dets):
             label = label_vec[i]
             conf = label_confidences[i]
-            bbox = [top[i], left[i], bottom[i], right[i]]
+            bbox = [xs[i], ys[i], ws[i], hs[i]] # xywh
 
             ind = label_to_ind[label_vec[i]]
 
@@ -74,56 +78,91 @@ def obj_det2d_set_to_feature(
                 if i == hand_idx:
                     continue
                 
-                obj_bbox = bboxes[i]
+                x, y, w, h = bboxes[i]
                 obj_center = [
-                    (obj_bbox[3] - obj_bbox[1])/2,
-                    (obj_bbox[0] - obj_bbox[2])/2
+                    x + (w/2),
+                    y + (h/2)
                 ]
 
-                dist_x = hand_center[0] - obj_center[0]
-                dist_y = hand_center[1] - obj_center[1]
+                if hand_center != [0.0, 0.0]:
+                    dist_x = hand_center[0] - obj_center[0]
+                    dist_y = hand_center[1] - obj_center[1]
+                else:
+                    dist_x = 0
+                    dist_y = 0
 
                 hand_dist[i] = (dist_x, dist_y)
 
             return hand_dist
 
+        def find_hand(hand_str):
+            hand_idx = label_to_ind[hand_str]
+            hand_bbox = bboxes[hand_idx]
+            hand_conf = act[hand_idx]
+
+            x, y, w, h = hand_bbox
+            hand_center = [
+                x + (w/2),
+                y + (h/2)
+            ]
+
+            # Compute distances to the right hand
+            if hand_conf != 0:
+                hand_dist = dist_from_hand(hand_idx, hand_center)
+            else:
+                hand_dist = [(0, 0) for i in range(num_act)]
+
+            return hand_idx, hand_bbox, hand_conf, hand_center, hand_dist
+        
         # Find the right hand
-        right_hand_idx = label_to_ind["hand (right)"]
-        right_hand_bbox = bboxes[right_hand_idx]
-        right_hand_conf = act[right_hand_idx]
-
-        right_hand_center = [
-            (right_hand_bbox[3] - right_hand_bbox[1])/2,
-            (right_hand_bbox[0] - right_hand_bbox[2])/2
-        ]
-
-        # Compute distances to the right hand
-        if right_hand_conf != 0:
-            right_hand_dist = dist_from_hand(right_hand_idx, right_hand_center)
-        else:
-            right_hand_dist = [(0, 0) for i in range(num_act)]
+        ( right_hand_idx, right_hand_bbox, right_hand_conf,
+          right_hand_center, right_hand_dist ) = find_hand("hand (right)")
         
         # Find the left hand
-        left_hand_idx = label_to_ind["hand (left)"]
-        left_hand_bbox = bboxes[left_hand_idx]
-        left_hand_conf = act[left_hand_idx]
-
-        left_hand_center = [
-            (left_hand_bbox[3] - left_hand_bbox[1])/2,
-            (left_hand_bbox[0] - left_hand_bbox[2])/2
-        ]
-
-        # Compute distances to the left hand
-        if left_hand_conf != 0:
-            left_hand_dist = dist_from_hand(left_hand_idx, left_hand_center)
-        else:
-            left_hand_dist = [(0, 0) for i in range(num_act)]
+        ( left_hand_idx, left_hand_bbox, left_hand_conf,
+          left_hand_center, left_hand_dist ) = find_hand("hand (left)")
         
         # Distance between hands
-        hands_dist_x = right_hand_center[0] - left_hand_center[0]
-        hands_dist_y = right_hand_center[1] - left_hand_center[1]
-
+        if right_hand_center != [0.0, 0.0] and left_hand_center != [0.0, 0.0]:
+            hands_dist_x = right_hand_center[0] - left_hand_center[0]
+            hands_dist_y = right_hand_center[1] - left_hand_center[1]
+        else:
+            hands_dist_x = 0
+            hands_dist_y = 0
         hands_dist = (hands_dist_x, hands_dist_y)
+
+        # Temp: Plot points
+        if image and right_hand_center != [0.0,0.0] and left_hand_center != [0.0,0.0]:
+            fig, ax = plt.subplots()
+            im = Image.open(image)
+            im = np.array(im)
+            plt.imshow(im)
+
+            x, y, w, h = right_hand_bbox
+            right_rect = patches.Rectangle((x, y), w, h, linewidth=1, edgecolor='b', facecolor='none')
+            ax.add_patch(right_rect)
+            ax.plot(right_hand_center[0], right_hand_center[1], color='blue', marker='o')
+            ax.annotate("right hand", right_hand_center)
+
+            x, y, w, h = left_hand_bbox
+            left_rect = patches.Rectangle((x, y), w, h, linewidth=1, edgecolor='g', facecolor='none')
+            ax.add_patch(left_rect)
+            ax.plot(left_hand_center[0], left_hand_center[1], color='green', marker='o')
+            ax.annotate("left hand", left_hand_center)
+
+            for i in range(len(right_hand_dist)):
+                conf_i = act[i]
+                if conf_i >= 0.4:
+                    new_x = right_hand_center[0] - right_hand_dist[i][0] 
+                    new_y = right_hand_center[1] - right_hand_dist[i][1]
+
+                    ax.plot([right_hand_center[0], new_x], [right_hand_center[1], new_y], 'ok')
+                    lbl = list(label_to_ind.keys())[i]
+                    ax.annotate(f"{lbl}: x {right_hand_dist[i][0]} y {right_hand_dist[i][1]}", (new_x, new_y))
+
+            plt.show()
+            plt.waitforbuttonpress(0) # this will wait for indefinite time
+            plt.close(fig)
 
         # Remove hands from lists
         del right_hand_dist[right_hand_idx]
