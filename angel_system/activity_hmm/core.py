@@ -485,6 +485,74 @@ class ActivityHMMRos:
 
 
 class ActivityHMM(object):
+    """Models a time sequence of activities as a hidden Markov model.
+
+    We assume that at any given time, the person that we are analyzing their
+    egocentric video is engaged in one activity from a set of N possible
+    activities captured by 'class_str'. The first element of 'class_str' is
+    'background', which captures any activity not covered by the remaining
+    elements in 'class_str'. We discretize our analysis of the person's
+    progression through activities into fixed time steps of size 'dt' seconds
+    (e.g., 1 s), and we assume that the person is engaged in one and only one
+    activity within each dt-sized time window. Our task is to consider some
+    associated observations (e.g., activity classifier outputs), one set per
+    time window, and to infer what the person was most-likely doing in each
+    time window (i.e., infer the hidden states). We are looking to filter the
+    raw activity classifier outputs with additional temporal constraints that
+    we expect to hold in the real world, such as the fact that when a person is
+    engaged in an activity, they tend to continue for a particular amount of
+    time (inertia). Also, certain activity tend to follow certain other
+    activities, and some transitions between activities are very unlikely.
+
+    If the person is actually engaged in activity i at timestep s, then we
+    assume the likehoold the person will switch to activity j at timestep s+1
+    is only a function of which activity they were engaged in at timestep n
+    (i.e., the Markov property). This is encoded by an NxN transition
+    probability matrix where element (i, j) is the probability that the
+    person will transition to activity j at timestep s+1 given that they were
+    doing activity i in timestep s. The current implementation identifies
+    forbidden transitions and sets their probably to zero, and all remaining
+    allowable transitions are assumed equally probable. With this, element
+    (i, i) is the probably of remaining in the same activity between timesteps.
+
+    To define what the diagonal values for the transition probably matrix
+    should be, we consider an estimate for the median duration that one would
+    continue doing one activity. If we devide this median duration by the
+    timestep dt, we get the median duration in number of timesteps. We know the
+    probability of staying for at least the median duration is 0.5, which is
+    should be equal to t[i, i]^N because you stayed in the state for N steps.
+    Therefore, we set the transition probability to the Nth root of the median
+    duration in units of timesteps.
+
+    Further, we model the signal we get to indicate what the underlying
+    activities were can be modeled as a Gaussian mixture with matrices
+    'class_mean_conf' and 'class_std_conf'. That is, if the person is actually
+    engaged in activity i, then the signal received (e.g., from a raw activity
+    classifier) will have mean value class_mean_conf[i] with standard deviation
+    class_std_conf[i].
+
+    All of this motivates our use a Gaussian mixture hidden Markov model
+    (G-HMM) to  take raw measurements (e.g., activitiy classifications) and to
+    filter to the most-likely sequence for the true activities engaged in as a
+    function of time.
+
+    One important note is that setting the median duration, which implicitly
+    sets the diagonal values of the transition probably matrix, does not
+    gaurentee anything about the effect on the duration recovered by the G-HMM.
+    There is nothing explicit in the modeling that considers "you have been in
+    this state too long, I will push you along to another state." If there is a
+    strong signal in the raw activity confidence that indicates the person is
+    very likely still in the state, the median duration will not force them out
+    after they have been there "too long." Likewise, if the raw confidences
+    strongly indicate that the person transitions to state i and in the
+    immediate next timestep transitions to step j, the ith activity's median
+    duration setting won't preven this. Median duration only acts to tweak the
+    amount of raw confidence required to activate a transition (in a maximum-
+    likelihood sense). Another framework would be required to encode, for
+    example, that it would be extremely unlikely to remain in a specific
+    activity for less than tl seconds or more than th seconds.
+
+    """
     def __init__(
         self,
         dt,
