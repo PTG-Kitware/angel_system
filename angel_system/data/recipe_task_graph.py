@@ -94,8 +94,9 @@ def get_all_recipe_orders(labels):
     return all_possible_orders, repeated_ids
 
 
-def print_recipe_order(recipe_title, labels, all_possible_orders,
-                       repeated_ids, num_recipes):
+def print_recipe_order(
+    recipe_title, labels, all_possible_orders, repeated_ids, num_recipes
+):
     """
     Prints a list of instructions for a recipe
 
@@ -109,38 +110,40 @@ def print_recipe_order(recipe_title, labels, all_possible_orders,
     recipe_orders = random.choices(all_possible_orders, k=num_recipes)
 
     for recipe_order in recipe_orders:
-      # Hacky fix for dq order
-      if recipe_title == "Dessert Quesadilla":
-        # Remove extra clean
-        clean_1 = recipe_order.index(10)
-        clean_2 = recipe_order.index(11)
+        # Hacky fix for dq order
+        if recipe_title == "Dessert Quesadilla":
+            # Remove extra clean
+            clean_1 = recipe_order.index(10)
+            clean_2 = recipe_order.index(11)
 
-        recipe_order.pop(min(clean_1, clean_2))
+            recipe_order.pop(min(clean_1, clean_2))
 
-      print(f"\n{recipe_title}")
-      print("=" * len(recipe_title))
-      recipe_actions = [
-          al for al in recipe_order if al not in [0, len(labels) - 1] + repeated_ids
-      ]
-      for i, action_id in enumerate(recipe_actions):
-          if type(action_id) is int:
-              action = [l for l in labels if l["id"] == action_id][0]
-          elif "-" in str(action_id):
-              # The label might have a repeat index attached to it
-              action = [l for l in labels if l["id"] == int(action_id.split("-")[0])][0]
-          else:
-              warnings.warn(f"Unknown action id: {action_id}")
-              continue
+        print(f"\n{recipe_title}")
+        print("=" * len(recipe_title))
+        recipe_actions = [
+            al for al in recipe_order if al not in [0, len(labels) - 1] + repeated_ids
+        ]
+        for i, action_id in enumerate(recipe_actions):
+            if type(action_id) is int:
+                action = [l for l in labels if l["id"] == action_id][0]
+            elif "-" in str(action_id):
+                # The label might have a repeat index attached to it
+                action = [l for l in labels if l["id"] == int(action_id.split("-")[0])][
+                    0
+                ]
+            else:
+                warnings.warn(f"Unknown action id: {action_id}")
+                continue
 
-          str_ = action["full_str"]
+            str_ = action["full_str"]
 
-          print(f"{i+1}: {str_}")
+            print(f"{i+1}: {str_}")
 
-      print("\n")
-      print(f"Recipe order: {recipe_order}")
-      print(
-          "* Please copy and paste this into the 'recipe order' column of the 'PTG Cooking Data Collection' spreadsheet"
-      )
+        print("\n")
+        print(f"Recipe order: {recipe_order}")
+        print(
+            "* Please copy and paste this into the 'recipe order' column of the 'PTG Cooking Data Collection' spreadsheet"
+        )
 
 
 def main():
@@ -154,10 +157,7 @@ def main():
         help=f"Title of recipe to run. Options are {all_recipes}",
     )
     parser.add_argument(
-        "--num_recipes",
-        type=int,
-        default=1,
-        help="Number of recipe orders to print"
+        "--num_recipes", type=int, default=1, help="Number of recipe orders to print"
     )
 
     args = parser.parse_args()
@@ -190,8 +190,9 @@ def main():
                 cleaned_possible_orders.append(order)
         all_possible_orders = cleaned_possible_orders
 
-    print_recipe_order(recipe_title, labels, all_possible_orders,
-                       repeated_ids, args.num_recipes)
+    print_recipe_order(
+        recipe_title, labels, all_possible_orders, repeated_ids, args.num_recipes
+    )
 
 
 if __name__ == "__main__":
