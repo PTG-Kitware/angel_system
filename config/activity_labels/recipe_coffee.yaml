@@ -41,7 +41,7 @@ labels:
   - id: 8
     label: "scale-turn-on"
     full_str: "Turn on the kitchen scale"
-    depends:
+    depends: [7] # technically should be None but it is causing a huge slowdown
   - id: 9
     label: "place-bowl-on-scale"
     full_str: "Place a bowl on the scale"
