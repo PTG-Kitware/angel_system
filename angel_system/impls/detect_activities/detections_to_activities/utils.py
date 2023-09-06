@@ -49,9 +49,9 @@ def obj_det2d_set_to_feature(
         along with the activation features
 
         [
-            A[right hand], D[right hand, obj1] ... D[right hand, objN],
-            A[left hand], D[left hand, obj1] ... D[left hand, objN],
-            D[right hand, left hand],
+            A[right hand], D[right hand, obj1]x, D[right hand, obj1]y, ... , D[right hand, objN]y,
+            A[left hand], D[left hand, obj1]x, D[left hand, obj1]y, ... , D[left hand, objN]y,
+            D[right hand, left hand]x, D[right hand, left hand]y,
             A[obj1] ... A[objN]
         ]
         """
