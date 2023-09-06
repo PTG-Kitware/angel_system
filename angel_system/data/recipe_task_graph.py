@@ -1,11 +1,15 @@
-import os
-import yaml
-import random
-import warnings
 import argparse
+import os
+import random
+from typing import Dict
+from typing import List
+from typing import Optional
+import warnings
+import yaml
 
 import networkx as nx
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 from pathlib import Path
 
@@ -46,16 +50,17 @@ def load_recipe(recipe):
     return recipe_title, labels
 
 
-def get_all_recipe_orders(labels):
+def create_graph_from_labels(labels: List[Dict]):
     """
-    Creates a recipe graph and determines all
-    possible topological sortings of the graph
+    Creates a NetworkX Graph instance of the recipe graph given as a list of
+    label dicts.
 
-    :param labels: List of activity labels
+    See `load_recipe` for dict format expected.
 
-    :return: A tuple consisting of two elements:
-        0: List of all possible topological sortings of the recipe graph
-        1: List of ids that represent the root node of a set of repeated actions
+    :param labels: List of activity labels dictionaries that specify the graph.
+
+    :return: NetworkX Graph instance constructed, as well as a list of label
+        IDs that represent the root node of a set of repeated actions.
     """
     G = nx.DiGraph()
     repeated_ids = []
@@ -90,23 +95,64 @@ def get_all_recipe_orders(labels):
             else:
                 G.add_edge(0, act_id)
 
-    all_possible_orders = list(nx.all_topological_sorts(G))
+    return G, repeated_ids
+
+
+def get_one_recipe_order(g: nx.DiGraph, seed: Optional[int] = None) -> List:
+    """
+    Create a recipe graph from the input labels and determine a single possible
+    topological sorting of the graph.
+
+    :param g: Recipe graph as would be output from `create_graph_from_labels`.
+    :param seed: Optional random state seed integer. None means no seed will be
+        used.
+
+    :return: A list of node IDs in a random topological sorting as influenced
+        by the given seed.
+    """
+    g_prime = g.copy()
+    rng = random.Random(seed)
+    topo_sort = []
+    while len(g_prime) > 0:
+        zero_in_degree = [v for v, d in g_prime.in_degree() if d == 0]
+        rand_zid_node = rng.choice(zero_in_degree)
+        g_prime.remove_node(rand_zid_node)
+        topo_sort.append(rand_zid_node)
+    return topo_sort
+
+
+def get_all_recipe_orders(labels):
+    """
+    Creates a recipe graph and determines all
+    possible topological sortings of the graph
+
+    :param labels: List of activity labels
+
+    :return: A tuple consisting of two elements:
+        0: List of all possible topological sortings of the recipe graph
+        1: List of ids that represent the root node of a set of repeated actions
+    """
+    G, repeated_ids = create_graph_from_labels(labels)
+    all_possible_orders = list(
+        tqdm(
+            nx.all_topological_sorts(G),
+            desc="Iterating all topological orders",
+            unit=" orders",
+        )
+    )
     return all_possible_orders, repeated_ids
 
 
-def print_recipe_order(recipe_title, labels, all_possible_orders, repeated_ids):
+def print_recipe_order(recipe_title, labels, recipe_order, repeated_ids):
     """
     Prints a list of instructions for a recipe
 
     :param recipe_title: String containing the full title of the recipe
     :param labels: List of activity labels
-    :param all_possible_orders: List of all possible topological sortings of the recipe graph
+    :param recipe_order: List of IDs specifying one possible topological sorting of the recipe graph.
     :param repeated_ids: List of ids that represent the root node of a set of repeated actions.
         These ids are skipped when printing the recipe steps to avoid duplication of instructions
     """
-    # TODO: create sample bias towards regular order?
-    recipe_order = random.choice(all_possible_orders)
-
     if recipe_title == "Dessert Quesadilla":
         # Remove extra clean
         clean_1 = recipe_order.index(10)
@@ -158,12 +204,20 @@ def main():
 
     recipe_title, labels = load_recipe(args.recipe)
 
-    all_possible_orders, repeated_ids = get_all_recipe_orders(labels)
+    # -----------------------------------------------------------------------
+    # New method of just creating a single random topological sorting
+    G, repeated_ids = create_graph_from_labels(labels)
+    final_order = None
+    attempts = 0
+    while final_order is None:
+        # TODO: create sample bias towards regular order?
+        order = get_one_recipe_order(G)
+        attempts += 1
 
-    if args.recipe == "dessertquesadilla":
-        # Make sure the knife is cleaned directly before using it
-        cleaned_possible_orders = []
-        for order in all_possible_orders:
+        # Special case for dessert quesadillas -- check for knife cleaning
+        # complexity.
+        # TODO: determine a better way of doing this...
+        if args.recipe == "dessertquesadilla":
             clean_knife_n = order.index(11)
             scoop_nutella = order.index(2)
 
@@ -177,9 +231,45 @@ def main():
                 and (slice_banana == clean_knife_b + 1)
                 and (spread_nutella == scoop_nutella + 1)
             ):
-                cleaned_possible_orders.append(order)
-        all_possible_orders = cleaned_possible_orders
-    print_recipe_order(recipe_title, labels, all_possible_orders, repeated_ids)
+                print(
+                    f"Made {attempts} attempts before arriving at a valid "
+                    f"`dessertquesadilla` order."
+                )
+                final_order = order
+            # Otherwise, keep generating random orders until we find one with a
+            # valid happen-stance ordering.
+        else:
+            final_order = order
+
+    print_recipe_order(recipe_title, labels, final_order, repeated_ids)
+
+    # # -----------------------------------------------------------------------
+    # # Functional version of the previous, overly-exhaustive method.
+    # all_possible_orders, repeated_ids = get_all_recipe_orders(labels)
+    #
+    # if args.recipe == "dessertquesadilla":
+    #     # Make sure the knife is cleaned directly before using it
+    #     cleaned_possible_orders = []
+    #     for order in all_possible_orders:
+    #         clean_knife_n = order.index(11)
+    #         scoop_nutella = order.index(2)
+    #
+    #         clean_knife_b = order.index(10)
+    #         slice_banana = order.index(4)
+    #
+    #         spread_nutella = order.index(3)
+    #
+    #         if (
+    #             (scoop_nutella == clean_knife_n + 1)
+    #             and (slice_banana == clean_knife_b + 1)
+    #             and (spread_nutella == scoop_nutella + 1)
+    #         ):
+    #             cleaned_possible_orders.append(order)
+    #     all_possible_orders = cleaned_possible_orders
+    #
+    # final_order = random.choice(all_possible_orders)
+    #
+    # print_recipe_order(recipe_title, labels, final_order, repeated_ids)
 
 
 if __name__ == "__main__":
