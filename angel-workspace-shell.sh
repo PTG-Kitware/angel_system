@@ -5,6 +5,9 @@
 set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# source common functionalities
+. "${SCRIPT_DIR}/scripts/common.bash"
+
 DEFAULT_SERVICE_NAME="workspace-shell-dev-gpu"
 
 function usage()
@@ -27,11 +30,6 @@ Options:
                                 invocation of workspace products.
   -s | --service=SERVICE_NAME   Explicitly use the provide service.
 "
-}
-
-function log()
-{
-  >&2 echo "$@"
 }
 
 # Option parsing
@@ -102,8 +100,10 @@ else
   "
 fi
 
+get_docker_compose_cmd DC_CMD
+
 set +e
-docker-compose \
+"${DC_CMD[@]}" \
   --env-file "$ENV_FILE" \
   -f "$SCRIPT_DIR"/docker/docker-compose.yml \
   run --rm \
