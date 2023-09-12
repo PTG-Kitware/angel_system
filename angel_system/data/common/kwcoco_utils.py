@@ -41,6 +41,7 @@ def load_kwcoco(dset):
         print(f"Loaded dset from file: {dset_fn}")
     return dset
 
+
 def preds_to_kwcoco(
     metadata,
     preds,
@@ -125,6 +126,7 @@ def preds_to_kwcoco(
 
     return dset
 
+
 def add_hl_hands_to_kwcoco(dset, remove_existing=True, using_contact=True):
     """Add bounding boxes for the hands based on the Hololen's joint positions
 
@@ -141,10 +143,11 @@ def add_hl_hands_to_kwcoco(dset, remove_existing=True, using_contact=True):
     gid_to_aids = dset.index.gid_to_aids
 
     for video_id in ub.ProgIter(
-        dset.index.videos.keys(), desc=f"Adding hololens hands for videos in {dset.fpath}"
+        dset.index.videos.keys(),
+        desc=f"Adding hololens hands for videos in {dset.fpath}",
     ):
         image_ids = dset.index.vidid_to_gids[video_id]
-    
+
         all_hand_pose_2d_image_space = None
         remove_aids = []
 
@@ -161,12 +164,12 @@ def add_hl_hands_to_kwcoco(dset, remove_existing=True, using_contact=True):
                     cat = dset.cats[ann["category_id"]]["name"]
                     if "hand" in cat:
                         remove_aids.append(aid)
-            
+
             # Find HL hands, should only run once per video
             if not all_hand_pose_2d_image_space:
                 # <video_folder>/_extracted/images/<file_name>
                 extr_video_folder = im["file_name"].split("/")[:-2]
-                extr_video_folder = ('/').join(extr_video_folder)
+                extr_video_folder = ("/").join(extr_video_folder)
                 all_hand_pose_2d_image_space = load_hl_hand_bboxes(extr_video_folder)
 
             all_hands = (
@@ -177,17 +180,13 @@ def add_hl_hands_to_kwcoco(dset, remove_existing=True, using_contact=True):
 
             # Add HL hand bounding boxes if we have them
             if all_hands != []:
-                #print("Adding hand bboxes from the hololens joints")
+                # print("Adding hand bboxes from the hololens joints")
                 for joints in all_hands:
                     keys = list(joints["joints"].keys())
                     hand_label = joints["hand"]
 
-                    all_x_values = [
-                        joints["joints"][k]["projected"][0] for k in keys
-                    ]
-                    all_y_values = [
-                        joints["joints"][k]["projected"][1] for k in keys
-                    ]
+                    all_x_values = [joints["joints"][k]["projected"][0] for k in keys]
+                    all_y_values = [joints["joints"][k]["projected"][1] for k in keys]
 
                     hand_bbox = [
                         min(all_x_values),
@@ -220,17 +219,18 @@ def add_hl_hands_to_kwcoco(dset, remove_existing=True, using_contact=True):
                         ann["obj-hand_contact_conf"] = 0
 
                     dset.add_annotation(**ann)
-        
-        #print(f"Removing annotations {remove_aids} in video {video_id}")    
+
+        # print(f"Removing annotations {remove_aids} in video {video_id}")
         dset.remove_annotations(remove_aids)
 
-    fpath = dset.fpath.split('.mscoco')[0]
+    fpath = dset.fpath.split(".mscoco")[0]
     if remove_existing:
         dset.fpath = f"{fpath}_hl_hands_only.mscoco.json"
     else:
         dset.fpath = f"{fpath}_plus_hl_hands.mscoco.json"
     dset.dump(dset.fpath, newlines=True)
     print(f"Saved predictions to {dset.fpath}")
+
 
 def add_activity_gt_to_kwcoco(dset, activity_config_fn, activity_gt_dir):
     """Takes an existing kwcoco file and fills in the "activity_gt"
@@ -319,9 +319,9 @@ def print_class_freq(dset):
 
     print(f"MC50_CATEGORIES = {stats}")
 
+
 def class_freq_per_step(dset, activity_config_fn):
-    """Calculate the number of objects detected in each activity
-    """
+    """Calculate the number of objects detected in each activity"""
     dset = load_kwcoco(dset)
 
     # Load activity labels config
@@ -348,8 +348,8 @@ def class_freq_per_step(dset, activity_config_fn):
             freq_dict[l] = np.zeros(len(dset.cats) + 2)
 
             act_labels.append(l)
-    #freq_dict["hand (right) (HoloLens)"] = np.zeros(len(dset.cats) + 2)
-    #freq_dict["hand (left) (HoloLens)"] = np.zeros(len(dset.cats) + 2)
+    # freq_dict["hand (right) (HoloLens)"] = np.zeros(len(dset.cats) + 2)
+    # freq_dict["hand (left) (HoloLens)"] = np.zeros(len(dset.cats) + 2)
 
     label_frame_freq = np.zeros(len(act_labels))
 
@@ -371,7 +371,6 @@ def class_freq_per_step(dset, activity_config_fn):
         for aid, ann in anns.items():
             cat_id = ann["category_id"]
             cat = dset.cats[cat_id]["name"]
-            
 
             conf = ann["confidence"]
             if "hand" in cat and conf == 1:
@@ -386,7 +385,7 @@ def class_freq_per_step(dset, activity_config_fn):
 
             freq_dict[act][cat_id - 1] += 1
 
-    #import pdb; pdb.set_trace()
+    # import pdb; pdb.set_trace()
     print(freq_dict)
     print(f"Activity label freq: {label_frame_freq}")
     return freq_dict, act_labels, cat_labels, label_frame_freq
@@ -405,16 +404,14 @@ def plot_class_freq_per_step(freq_dict, act_labels, cat_labels, label_frame_freq
     MEDIUM_SIZE = 10
     BIGGER_SIZE = 8
 
-    matplotlib.rc('font', size=BIGGER_SIZE+3)  
-    matplotlib.rc('xtick', labelsize=BIGGER_SIZE) 
-    matplotlib.rc('ytick', labelsize=BIGGER_SIZE)
-    
+    matplotlib.rc("font", size=BIGGER_SIZE + 3)
+    matplotlib.rc("xtick", labelsize=BIGGER_SIZE)
+    matplotlib.rc("ytick", labelsize=BIGGER_SIZE)
 
     fig, ax = plt.subplots()
 
-
     mat = []
-    for k, v in  freq_dict.items():
+    for k, v in freq_dict.items():
         mat.append(v)
 
     mat = np.array(mat)
@@ -425,14 +422,15 @@ def plot_class_freq_per_step(freq_dict, act_labels, cat_labels, label_frame_freq
     plt.imshow(norm_mat)
     plt.colorbar()
 
-    plt.xlabel('activities')
-    plt.ylabel('object class frequency')
+    plt.xlabel("activities")
+    plt.ylabel("object class frequency")
 
     plt.xticks(range(len(act_labels)), act_labels, rotation="vertical")
     plt.yticks(range(len(cat_labels)), cat_labels)
 
-    #plt.show()
-    plt.savefig("obj_freq_per_act.png", bbox_inches='tight', dpi=300)
+    # plt.show()
+    plt.savefig("obj_freq_per_act.png", bbox_inches="tight", dpi=300)
+
 
 def visualize_kwcoco_by_contact(dset=None, save_dir=""):
     """Draw the bounding boxes from the kwcoco file on
@@ -480,7 +478,7 @@ def visualize_kwcoco_by_contact(dset=None, save_dir=""):
         using_contact = False
         for aid, ann in anns.items():
             conf = ann["confidence"]
-            #if conf < 0.4:
+            # if conf < 0.4:
             #    continue
 
             using_contact = True if "obj-obj_contact_state" in ann.keys() else False
@@ -503,8 +501,13 @@ def visualize_kwcoco_by_contact(dset=None, save_dir=""):
             if using_contact and ann["obj-hand_contact_state"]:
                 color = "b"
             rect = patches.Rectangle(
-                (x, y), w, h, linewidth=1, edgecolor=color, facecolor="none",
-                clip_on=False
+                (x, y),
+                w,
+                h,
+                linewidth=1,
+                edgecolor=color,
+                facecolor="none",
+                clip_on=False,
             )
 
             ax.add_patch(rect)
@@ -534,17 +537,53 @@ def visualize_kwcoco_by_label(dset=None, save_dir=""):
     import matplotlib.patches as patches
     import matplotlib.colors as mcolors
 
-    #colors = list(mcolors.CSS4_COLORS.keys())
-    #random.shuffle(colors)
+    # colors = list(mcolors.CSS4_COLORS.keys())
+    # random.shuffle(colors)
 
-    colors = ['yellow', 'red', 'turquoise', 'beige', 'dimgrey', 'indigo',
-    'springgreen', 'green', 'moccasin', 'darkgoldenrod', 'greenyellow',
-    'violet', 'cyan', 'darkviolet', 'darkturquoise', 'skyblue',
-    'navy', 'azure', 'lightcoral', 'grey', 'lemonchiffon',
-    'gray', 'deeppink', 'wheat', 'coral', 'olivedrab', 'lightgrey', 'blue',
-    'hotpink', 'pink', 'ghostwhite', 'aquamarine', 'orange',
-    'deepskyblue', 'darkorchid', 'olive', 'purple', 'black', 'limegreen',
-    'darkslategray', 'bisque', 'steelblue']
+    colors = [
+        "yellow",
+        "red",
+        "turquoise",
+        "beige",
+        "dimgrey",
+        "indigo",
+        "springgreen",
+        "green",
+        "moccasin",
+        "darkgoldenrod",
+        "greenyellow",
+        "violet",
+        "cyan",
+        "darkviolet",
+        "darkturquoise",
+        "skyblue",
+        "navy",
+        "azure",
+        "lightcoral",
+        "grey",
+        "lemonchiffon",
+        "gray",
+        "deeppink",
+        "wheat",
+        "coral",
+        "olivedrab",
+        "lightgrey",
+        "blue",
+        "hotpink",
+        "pink",
+        "ghostwhite",
+        "aquamarine",
+        "orange",
+        "deepskyblue",
+        "darkorchid",
+        "olive",
+        "purple",
+        "black",
+        "limegreen",
+        "darkslategray",
+        "bisque",
+        "steelblue",
+    ]
 
     empty_ims = 0
     dset = load_kwcoco(dset)
@@ -578,7 +617,7 @@ def visualize_kwcoco_by_label(dset=None, save_dir=""):
         using_contact = False
         for aid, ann in anns.items():
             conf = ann["confidence"]
-            #if conf < 0.4:
+            # if conf < 0.4:
             #    continue
 
             x, y, w, h = ann["bbox"]  # xywh
@@ -587,11 +626,16 @@ def visualize_kwcoco_by_label(dset=None, save_dir=""):
 
             label = f"{cat}: {round(conf, 2)}"
 
-            color = colors[cat_id-1]
+            color = colors[cat_id - 1]
 
             rect = patches.Rectangle(
-                (x, y), w, h, linewidth=1, edgecolor=color, facecolor="none",
-                clip_on=False
+                (x, y),
+                w,
+                h,
+                linewidth=1,
+                edgecolor=color,
+                facecolor="none",
+                clip_on=False,
             )
 
             ax.add_patch(rect)
@@ -606,10 +650,10 @@ def visualize_kwcoco_by_label(dset=None, save_dir=""):
         plt.close(fig)  # needed to remove the plot because savefig doesn't clear it
     plt.close("all")
 
+
 def imgs_to_video(imgs_dir):
-    """Convert directory of images to a video
-    """
-    video_name = imgs_dir.split('/')[-1] + ".avi"
+    """Convert directory of images to a video"""
+    video_name = imgs_dir.split("/")[-1] + ".avi"
 
     images = glob.glob(f"{imgs_dir}/images/*.png")
     images = sorted(images, key=lambda x: time_from_name(x)[0])
@@ -617,7 +661,7 @@ def imgs_to_video(imgs_dir):
     frame = cv2.imread(images[0])
     height, width, layers = frame.shape
 
-    video = cv2.VideoWriter(f"{imgs_dir}/{video_name}", 0, 15, (width,height))
+    video = cv2.VideoWriter(f"{imgs_dir}/{video_name}", 0, 15, (width, height))
 
     for image in images:
         video.write(cv2.imread(image))
@@ -766,7 +810,7 @@ def filter_kwcoco(dset):
 
 def filter_kwcoco_by_conf(dset, conf_thr=0.4):
     """Filter the kwcoco dataset by confidence
-    
+
     :param dset: kwcoco object or a string pointing to a kwcoco file
     :param conf_thr: Minimum confidence to be left in the dataset
     """
@@ -795,9 +839,9 @@ def filter_kwcoco_by_conf(dset, conf_thr=0.4):
     dset.dump(dset.fpath, newlines=True)
     print(f"Saved dset to {dset.fpath}")
 
+
 def add_background_images(dset, background_imgs):
-    """Add images without annotations to a kwcoco dataset
-    """
+    """Add images without annotations to a kwcoco dataset"""
     # Load kwcoco file
     dset = load_kwcoco(dset)
 
@@ -806,7 +850,7 @@ def add_background_images(dset, background_imgs):
     for im in ub.ProgIter(glob.glob(f"{background_imgs}/*.png"), desc="Adding images"):
         image = Image.open(im)
         w, h = image.size
-        
+
         new_im = {
             "width": w,
             "height": h,
@@ -819,8 +863,6 @@ def add_background_images(dset, background_imgs):
     dset.fpath = f"{fpath}_plus_bkgd.mscoco.json"
     dset.dump(dset.fpath, newlines=True)
     print(f"Saved dset to {dset.fpath}")
-
-
 
 
 def main():
@@ -837,18 +879,18 @@ def main():
 
     stage = "results"
     stage_dir = f"{ptg_root}/annotations/coffee/{stage}"
-    #stage_dir = ""
+    # stage_dir = ""
     exp = "coffee_base"
     save_dir = f"{stage_dir}/{exp}/visualization/conf_0.1_plus_hl_hands/{split}"
 
-    #save_dir = "visualization"
+    # save_dir = "visualization"
     print(save_dir)
     Path(save_dir).mkdir(parents=True, exist_ok=True)
 
     if stage == "stage1":
         visualize_kwcoco_by_label(f"{stage_dir}/{kw}", save_dir)
     else:
-        #visualize_kwcoco(f"{kw}", save_dir)
+        # visualize_kwcoco(f"{kw}", save_dir)
         visualize_kwcoco_by_label(f"{stage_dir}/{exp}/{kw}", save_dir)
 
 

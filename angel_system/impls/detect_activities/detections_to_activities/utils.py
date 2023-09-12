@@ -35,7 +35,7 @@ def obj_det2d_set_to_feature(
     if version == 1:
         """
         Feature vector that encodes the activation feature of each class
-        
+
         [A[obj1] ... A[objN]]
         """
         feature_vec = np.zeros(num_act)
@@ -58,11 +58,11 @@ def obj_det2d_set_to_feature(
         feature_vec = []
         act = np.zeros(num_act)
         bboxes = [[0, 0, 0, 0] for i in range(num_act)]
-        
+
         for i in range(num_dets):
             label = label_vec[i]
             conf = label_confidences[i]
-            bbox = [xs[i], ys[i], ws[i], hs[i]] # xywh
+            bbox = [xs[i], ys[i], ws[i], hs[i]]  # xywh
 
             ind = label_to_ind[label_vec[i]]
 
@@ -75,12 +75,9 @@ def obj_det2d_set_to_feature(
             for i in range(num_act):
                 if i == hand_idx:
                     continue
-                
+
                 x, y, w, h = bboxes[i]
-                obj_center = [
-                    x + (w/2),
-                    y + (h/2)
-                ]
+                obj_center = [x + (w / 2), y + (h / 2)]
 
                 if hand_center != [0.0, 0.0]:
                     dist_x = hand_center[0] - obj_center[0]
@@ -99,10 +96,7 @@ def obj_det2d_set_to_feature(
             hand_conf = act[hand_idx]
 
             x, y, w, h = hand_bbox
-            hand_center = [
-                x + (w/2),
-                y + (h/2)
-            ]
+            hand_center = [x + (w / 2), y + (h / 2)]
 
             # Compute distances to the right hand
             if hand_conf != 0:
@@ -111,15 +105,25 @@ def obj_det2d_set_to_feature(
                 hand_dist = [(0, 0) for i in range(num_act)]
 
             return hand_idx, hand_bbox, hand_conf, hand_center, hand_dist
-        
+
         # Find the right hand
-        ( right_hand_idx, right_hand_bbox, right_hand_conf,
-          right_hand_center, right_hand_dist ) = find_hand("hand (right)")
-        
+        (
+            right_hand_idx,
+            right_hand_bbox,
+            right_hand_conf,
+            right_hand_center,
+            right_hand_dist,
+        ) = find_hand("hand (right)")
+
         # Find the left hand
-        ( left_hand_idx, left_hand_bbox, left_hand_conf,
-          left_hand_center, left_hand_dist ) = find_hand("hand (left)")
-        
+        (
+            left_hand_idx,
+            left_hand_bbox,
+            left_hand_conf,
+            left_hand_center,
+            left_hand_dist,
+        ) = find_hand("hand (left)")
+
         # Distance between hands
         if right_hand_center != [0.0, 0.0] and left_hand_center != [0.0, 0.0]:
             hands_dist_x = right_hand_center[0] - left_hand_center[0]
@@ -131,10 +135,10 @@ def obj_det2d_set_to_feature(
 
         # Remove hands from lists
         del right_hand_dist[right_hand_idx]
-        del right_hand_dist[left_hand_idx-1]
+        del right_hand_dist[left_hand_idx - 1]
 
         del left_hand_dist[right_hand_idx]
-        del left_hand_dist[left_hand_idx-1]
+        del left_hand_dist[left_hand_idx - 1]
 
         act = np.delete(act, [right_hand_idx, left_hand_idx])
 
