@@ -108,6 +108,7 @@ def compute_feats(
     label_to_ind: dict,
     act_id_to_str: dict,
     ann_by_image: dict,
+    feat_version=1,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Compute features from object detections
 
@@ -128,10 +129,10 @@ def compute_feats(
 
     for image_id in sorted(list(ann_by_image.keys())):
         label_vec = []
-        left = []
-        right = []
-        top = []
-        bottom = []
+        xs = []
+        ys = []
+        ws = []
+        hs = []
         label_confidences = []
         obj_obj_contact_state = []
         obj_obj_contact_conf = []
@@ -140,10 +141,10 @@ def compute_feats(
 
         for ann in ann_by_image[image_id]:
             label_vec.append(act_id_to_str[ann["category_id"]])
-            left.append(ann["bbox"][0])
-            right.append(ann["bbox"][1])
-            top.append(ann["bbox"][2])
-            bottom.append(ann["bbox"][3])
+            xs.append(ann["bbox"][0])
+            ys.append(ann["bbox"][1])
+            ws.append(ann["bbox"][2])
+            hs.append(ann["bbox"][3])
             label_confidences.append(ann["confidence"])
 
             try:
@@ -156,10 +157,10 @@ def compute_feats(
 
         feature_vec = obj_det2d_set_to_feature(
             label_vec,
-            left,
-            right,
-            top,
-            bottom,
+            xs,
+            ys,
+            ws,
+            hs,
             label_confidences,
             None,
             obj_obj_contact_state,
@@ -167,7 +168,7 @@ def compute_feats(
             obj_hand_contact_state,
             obj_hand_contact_conf,
             label_to_ind,
-            version=1,
+            version=feat_version,
         )
 
         X.append(feature_vec.ravel())
