@@ -348,8 +348,6 @@ def class_freq_per_step(dset, activity_config_fn):
             freq_dict[l] = np.zeros(len(dset.cats) + 2)
 
             act_labels.append(l)
-    #freq_dict["hand (right) (HoloLens)"] = np.zeros(len(dset.cats) + 2)
-    #freq_dict["hand (left) (HoloLens)"] = np.zeros(len(dset.cats) + 2)
 
     label_frame_freq = np.zeros(len(act_labels))
 
@@ -391,6 +389,94 @@ def class_freq_per_step(dset, activity_config_fn):
     print(f"Activity label freq: {label_frame_freq}")
     return freq_dict, act_labels, cat_labels, label_frame_freq
 
+def intersect_per_step(dset, activity_config_fn):
+    """Calculate the number of objects detected in each activity
+    """
+    freq_dict = {}
+
+    # Load kwcoco file
+    dset = load_kwcoco(dset)
+
+    gid_to_aids = dset.index.gid_to_aids
+    gids = ub.argsort(ub.map_vals(len, gid_to_aids))
+
+    # Load activity labels config
+    with open(activity_config_fn, "r") as stream:
+        activity_config = yaml.safe_load(stream)
+    activity_labels = activity_config["labels"]
+
+    act_labels = []
+    for a in activity_labels:
+        l = a["label"]
+        if l not in ["done", "background"]:
+            freq_dict[l] = np.zeros(len(dset.cats) + 2)
+
+            act_labels.append(l)
+    
+    # Load object labels
+    cat_labels = []
+    for c_id, c in dset.cats.items():
+        cat_labels.append(c["name"])
+    cat_labels.append("hand (left) (HoloLens)")
+    cat_labels.append("hand (right) (HoloLens)")
+    
+    label_frame_freq = np.zeros(len(act_labels))
+
+    for gid in sorted(gids):
+        im = dset.imgs[gid]
+        act = im["activity_gt"]
+        if act in ["done", "background"]:
+            continue
+        if act is None:
+            continue
+
+        act_id = act_labels.index(act)
+        label_frame_freq[act_id] += 1
+        
+
+        aids = gid_to_aids[gid]
+        anns = ub.dict_subset(dset.anns, aids)
+
+        hand_id = 13
+
+        hands = [ann for ann in anns.values() if ann["category_id"] == hand_id ]
+        hand = max(hands, key=lambda x: x["confidence"]) if len(hands) >= 1 else hands
+        
+        if not hand:
+            continue
+
+        hand_bbox = kwimage.Boxes([hand["bbox"]], "xywh")
+
+        for aid, ann in anns.items():
+            cat_id = ann["category_id"]
+            if cat_id == hand_id:
+                continue
+
+            cat = dset.cats[cat_id]["name"]
+
+            conf = ann["confidence"]
+            """
+            if "hand" in cat and conf == 1:
+                # Hololens hand
+                cat = cat + " (HoloLens)"
+                if cat_id == 13:
+                    cat_id = 43
+                if cat_id == 14:
+                    cat_id = 44
+            """
+
+            bbox = kwimage.Boxes(ann["bbox"], "xywh")
+
+            iarea = hand_bbox.isect_area(bbox)
+            hand_area = hand_bbox.area 
+
+            v = iarea / hand_area
+            freq_dict[act][cat_id - 1] += v 
+
+    print(freq_dict)
+    print(f"Activity label freq: {label_frame_freq}")
+    return freq_dict, act_labels, cat_labels, label_frame_freq
+
 
 def plot_class_freq_per_step(freq_dict, act_labels, cat_labels, label_frame_freq):
     """Plot the number of objects detected, normalized by the number of frames
@@ -426,13 +512,13 @@ def plot_class_freq_per_step(freq_dict, act_labels, cat_labels, label_frame_freq
     plt.colorbar()
 
     plt.xlabel('activities')
-    plt.ylabel('object class frequency')
+    plt.ylabel('object class')
 
     plt.xticks(range(len(act_labels)), act_labels, rotation="vertical")
     plt.yticks(range(len(cat_labels)), cat_labels)
 
-    #plt.show()
-    plt.savefig("obj_freq_per_act.png", bbox_inches='tight', dpi=300)
+    plt.show()
+    #plt.savefig("obj_hand_intersect_per_act.png", bbox_inches='tight', dpi=300)
 
 def visualize_kwcoco_by_contact(dset=None, save_dir=""):
     """Draw the bounding boxes from the kwcoco file on
