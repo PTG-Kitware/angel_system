@@ -382,7 +382,7 @@ def class_freq_per_step(dset, activity_config_fn):
             cat_labels[cat_id - 1] = cat
 
             freq_dict[act][cat_id - 1] += 1
-            
+
     print(freq_dict)
     print(f"Activity label freq: {label_frame_freq}")
     return freq_dict, act_labels, cat_labels, label_frame_freq

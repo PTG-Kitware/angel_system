@@ -553,6 +553,7 @@ class ActivityHMM(object):
     activity for less than tl seconds or more than th seconds.
 
     """
+
     def __init__(
         self,
         dt,
