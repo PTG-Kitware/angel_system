@@ -108,7 +108,7 @@ def compute_feats(
     label_to_ind: dict,
     act_id_to_str: dict,
     ann_by_image: dict,
-    feat_version=1
+    feat_version=1,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Compute features from object detections
 

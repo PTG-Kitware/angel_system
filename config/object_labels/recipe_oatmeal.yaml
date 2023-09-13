@@ -1,0 +1,71 @@
+version: "2.0"
+title: "Oatmeal"
+labels:
+  # Item:
+  # - id: Integer identification number of the label.
+  # - label: Short human-readable semantic string to succinctly represent the
+  #          label.
+  - id: 0
+    label: "background"
+  # Shared labels
+  - id: 1
+    label: "hand (left)"
+  - id: 2
+    label: "hand (right)"
+  - id: 3
+    label: "paper towel"
+  - id: 4
+    label: "water"
+  - id: 5
+    label: "cutting board"
+  - id: 6
+    label: "butter knife"
+  - id: 7
+    label: "banana"
+  - id: 8
+    label: "sliced banana"
+  - id: 9
+    label: "cinnamon"
+  - id: 12
+    label: "spoon"
+  - id: 13
+    label: "jar of honey (close)"
+  - id: 14
+    label: "jar of honey (open)"
+  - id: 17
+    label: "measuring cup"
+  # Labels unique to oatmeal
+  - id: 64
+    label: "tablespoon"
+  - id: 65
+    label: "bowl"
+  - id: 66
+    label: "microwave (closed)"
+  - id: 67
+    label: "microwave (open)"
+  - id: 68
+    label: "oats"
+  - id: 69
+    label: "raisins"
+  - id: 70
+    label: "bowl + oats"
+  - id: 71
+    label: "bowl + water"
+  - id: 72
+    label: "bowl + oats + water"
+  - id: 73
+    label: "bowl + oats + water + raisins"
+  - id: 74
+    label: "oatmeal" # "bowl + oats + water + raisins (stirred)"
+  - id: 75
+    label: "oatmeal + sliced banana"
+  - id: 76
+    label: "oatmeal + cinnamon"
+  - id: 77
+    label: "oatmeal + honey"
+  - id: 78
+    label: "oatmeal + sliced banana + cinnamon"
+  - id: 79
+    label: "oatmeal + sliced banana + honey"
+  - id: 80
+    label: "oatmeal + sliced banana + cinnamon + honey"

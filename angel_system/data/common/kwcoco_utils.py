@@ -382,8 +382,7 @@ def class_freq_per_step(dset, activity_config_fn):
             cat_labels[cat_id - 1] = cat
 
             freq_dict[act][cat_id - 1] += 1
-
-    # import pdb; pdb.set_trace()
+            
     print(freq_dict)
     print(f"Activity label freq: {label_frame_freq}")
     return freq_dict, act_labels, cat_labels, label_frame_freq
@@ -471,8 +470,6 @@ def intersect_per_step(dset, activity_config_fn):
             v = iarea / hand_area
             freq_dict[act][cat_id - 1] += v
 
-    print(freq_dict)
-    print(f"Activity label freq: {label_frame_freq}")
     return freq_dict, act_labels, cat_labels, label_frame_freq
 
 
@@ -513,8 +510,8 @@ def plot_class_freq_per_step(freq_dict, act_labels, cat_labels, label_frame_freq
     plt.xticks(range(len(act_labels)), act_labels, rotation="vertical")
     plt.yticks(range(len(cat_labels)), cat_labels)
 
-    plt.show()
-    # plt.savefig("obj_hand_intersect_per_act.png", bbox_inches='tight', dpi=300)
+    # plt.show()
+    plt.savefig("obj_freq_per_act.png", bbox_inches="tight", dpi=300)
 
 
 def visualize_kwcoco_by_contact(dset=None, save_dir=""):
