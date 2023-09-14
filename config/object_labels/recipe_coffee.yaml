@@ -1,4 +1,4 @@
-version: "2.0"
+version: "2.1"
 title: "Coffee"
 labels:
   # Item:
@@ -17,7 +17,7 @@ labels:
   - id: 4
     label: "water"
   - id: 15
-    label: "kettle"
+    label: "kettle lid"
   - id: 16
     label: "kettle (open)"
   - id: 17
@@ -31,13 +31,11 @@ labels:
   - id: 21
     label: "thermometer (open)"
   - id: 22
-    label: "timer"
+    label: "timer (on)"
   - id: 23
-    label: "timer (20)"
+    label: "timer (off)"
   - id: 24
-    label: "timer (30)"
-  - id: 25
-    label: "timer (else)"
+    label: "kettle (closed)"
   - id: 26
     label: "trash can"
   # Labels unique to coffee
@@ -93,3 +91,4 @@ labels:
     label: "used paper filter + filter cone + mug"
   - id: 53
     label: "water + coffee grounds + paper filter + filter cone + mug"
+
