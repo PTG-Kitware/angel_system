@@ -1,4 +1,4 @@
-version: "2.0"
+version: "2.1"
 title: "Tea"
 labels:
   # Item:
@@ -23,7 +23,7 @@ labels:
   - id: 14
     label: "jar of honey (open)"
   - id: 15
-    label: "kettle"
+    label: "kettle lid"
   - id: 16
     label: "kettle (open)"
   - id: 17
@@ -37,14 +37,14 @@ labels:
   - id: 21
     label: "thermometer (open)"
   - id: 22
-    label: "timer"
-  - id: 25
-    label: "timer (else)"
+    label: "timer (on)"
+  - id: 23
+    label: "timer (off)"
+  - id: 24
+    label: "kettle (closed)"
   - id: 26
     label: "trash can"
   # Labels unique to tea
-  - id: 93
-    label: "timer (3 min)"
   - id: 94
     label: "tea bag"
   - id: 95
@@ -55,3 +55,4 @@ labels:
     label: "mug + tea bag + water"
   - id: 98
     label: "mug + tea"
+
