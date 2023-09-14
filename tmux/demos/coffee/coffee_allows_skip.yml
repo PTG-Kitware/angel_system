@@ -23,6 +23,7 @@ on_project_start: |
   export ROS_NAMESPACE=/debug
   export HL2_IP=${HL2_IP:-192.168.1.101}
   export CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/config
+  export BERKELEY_CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/angel_system/berkeley/configs
   export NODE_CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/src/angel_system_nodes/configs
   export MODEL_DIR=${ANGEL_WORKSPACE_DIR}/model_files
 

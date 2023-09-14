@@ -44,6 +44,7 @@ setup(
             "berkeley_object_detector = angel_system_nodes.berkeley_object_detector:main",
             "activity_from_obj_dets_classifier = angel_system_nodes.activity_from_obj_dets_classifier:main",
             "image_timestamp_relay = angel_system_nodes.image_timestamp_relay:main",
+            "activity_classifier_tcn = angel_system_nodes.activity_classifier_tcn:main",
         ],
     },
 )
