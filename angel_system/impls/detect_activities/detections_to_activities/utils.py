@@ -169,7 +169,7 @@ def obj_det2d_set_to_feature(
             A[left hand], D[left hand, obj1]x, D[left hand, obj1]y, ... , D[left hand, objN]y,
             D[right hand, left hand]x, D[right hand, left hand]y,
             A[obj1] ... A[objN],
-            B[obj1]x, B[obj1]y, B [obj1]w, B[obj1]h, ... B[objN]h
+            B[obj1]x, B[obj1]y, B [obj1]w, B[obj1]h, ... B[objN]h
         ]
         """
         feature_vec = []

@@ -323,7 +323,7 @@ def train_activity_classifier(args: argparse.Namespace):
         label_to_ind,
         act_id_to_str,
         ann_by_image,
-        feat_version=args.feat_version
+        feat_version=args.feat_version,
     )
     plot_dataset_counts(X, y, args.output_dir, "train")
 
@@ -344,7 +344,7 @@ def train_activity_classifier(args: argparse.Namespace):
         val_label_to_ind,
         val_act_id_to_str,
         val_ann_by_image,
-        feat_version=args.feat_version
+        feat_version=args.feat_version,
     )
     plot_dataset_counts(X_final_test, y_final_test, args.output_dir, "val")
 
