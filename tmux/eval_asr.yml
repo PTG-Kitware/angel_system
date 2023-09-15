@@ -19,8 +19,6 @@ root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 # on_project_start: command
 on_project_start: |
   export ROS_NAMESPACE=${ROS_NAMESPACE:-/debug}
-  export HL2_IP=${HL2_IP:-192.168.1.101}
-  export MODEL_DIR=${ANGEL_WORKSPACE_DIR}/model_files
   export CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/src/angel_system_nodes/configs
 
 # Run on project start, the first time
