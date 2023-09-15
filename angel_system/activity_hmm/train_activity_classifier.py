@@ -108,7 +108,7 @@ def compute_feats(
     label_to_ind: dict,
     act_id_to_str: dict,
     ann_by_image: dict,
-    feat_version=1,
+    feat_version=4,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Compute features from object detections
 
@@ -323,6 +323,7 @@ def train_activity_classifier(args: argparse.Namespace):
         label_to_ind,
         act_id_to_str,
         ann_by_image,
+        feat_version=args.feat_version,
     )
     plot_dataset_counts(X, y, args.output_dir, "train")
 
@@ -343,6 +344,7 @@ def train_activity_classifier(args: argparse.Namespace):
         val_label_to_ind,
         val_act_id_to_str,
         val_ann_by_image,
+        feat_version=args.feat_version,
     )
     plot_dataset_counts(X_final_test, y_final_test, args.output_dir, "val")
 
@@ -375,6 +377,9 @@ def main():
     )
     parser.add_argument(
         "--output-dir", help="", type=Path, dest="output_dir", default=""
+    )
+    parser.add_argument(
+        "--feat-version", help="", type=int, dest="feat_version", default=1
     )
     args = parser.parse_args()
 
