@@ -55,11 +55,10 @@ def obj_det2d_set_to_feature(
         Len: 204
 
         [
-            A[right hand], A[left hand], D[right hand, left hand]x, D[right hand, left hand]y,
-            A[obj1], D[right hand, obj1]x, D[right hand, obj1]y,
-            D[left hand, obj1]x, D[left hand, obj1]y,
-            ...
-            D[left hand, objN]y
+            A[right hand], D[right hand, obj1]x, D[right hand, obj1]y, ... , D[right hand, objN]y,
+            A[left hand], D[left hand, obj1]x, D[left hand, obj1]y, ... , D[left hand, objN]y,
+            D[right hand, left hand]x, D[right hand, left hand]y,
+            A[obj1] ... A[objN]
         ]
         """
         feature_vec = obj_det2d_set_to_feature_by_method(
@@ -80,12 +79,15 @@ def obj_det2d_set_to_feature(
         Len: 207
 
         [
-            A[right hand], A[left hand], D[right hand, center]x, D[right hand, center]y,
+            A[right hand],
+            D[right hand, center]x, D[right hand, center]y,
+            A[left hand],
             D[left hand, center]x, D[left hand, center]y,
-            I[right hand, left hand],
-            A[obj1], D[obj1, center]x, D[obj1, center]y, I[right hand, obj1], I[left hand, obj1]
-            ...
-            I[left hand, objN]
+            I[right hand, left hand]
+            A[obj1],
+            I[right hand, obj1],
+            I[left hand, obj1]
+            D[obj1, center]x, D[obj1, center]y
         ]
         """
         feature_vec = obj_det2d_set_to_feature_by_method(
@@ -95,32 +97,6 @@ def obj_det2d_set_to_feature(
             label_to_ind,
             use_activation=True,
             use_center_dist=True,
-            use_intersection=True
-        )
-
-    elif version == 4:
-        """
-        Feature vector that encodes the distance of each object to the hands,
-        the intersection of each object to the hands, 
-        and the activation features
-
-        Len: 285
-
-        [
-            A[right hand], A[left hand], D[right hand, left hand]x, D[right hand, left hand]y, I[right hand, left hand],
-            A[obj1], D[right hand, obj1]x, D[right hand, obj1]y, D[left hand, obj1]x, D[left hand, obj1]y,
-            I[right hand, obj1], I[left hand, obj1],
-            ...
-            I[right hand, objN] I[left hand, objN]
-        ]
-        """
-        feature_vec = obj_det2d_set_to_feature_by_method(
-            label_vec,
-            xs, ys, ws, hs,
-            label_confidences,
-            label_to_ind,
-            use_activation=True,
-            use_hand_dist=True,
             use_intersection=True
         )
     
@@ -230,6 +206,8 @@ def obj_det2d_set_to_feature_by_method(
 
         # Compute distances to the left hand
         left_hand_dist = dist_from_hand(left_hand_idx, left_hand_center) if left_hand_conf != 0 else [default_dist for i in range(num_act)]
+    else:
+        right_hand_dist = left_hand_dist = None
 
     if use_center_dist:
         image_center = kwimage.Boxes([default_bbox], "xywh").center
@@ -277,54 +255,46 @@ def obj_det2d_set_to_feature_by_method(
 
             i_left_obj = intersect(left_hand_bbox, obj_bbox)
             left_hand_intersection.append(i_left_obj)
+    else:
+        right_hand_intersection = left_hand_intersection = None
 
     #########################
     # Feature vector
     #########################
     feature_vec = []
-
-    # Add the hand info
-    if use_activation:
-        feature_vec.append(right_hand_conf)
-        feature_vec.append(left_hand_conf)
+    # Add hand data
+    for hand_conf, hand_idx, hand_dist, hand_intersection in [
+        (right_hand_conf, right_hand_idx, right_hand_dist, right_hand_intersection),
+        (left_hand_conf, left_hand_idx, left_hand_dist, left_hand_intersection)
+    ]:
+        if use_activation:
+            feature_vec.append([hand_conf])
+        if use_hand_dist:
+            hd1 = [item for ii, tupl in enumerate(hand_dist) for item in tupl if ii not in [right_hand_idx, left_hand_idx]]
+            feature_vec.append(hd1)
+        if use_center_dist:
+            feature_vec.append(distances_to_center[hand_idx])
 
     if use_hand_dist:
-        feature_vec.append(right_hand_dist[left_hand_idx][0])
-        feature_vec.append(right_hand_dist[left_hand_idx][1])
-
-    if use_center_dist:
-        feature_vec.append(distances_to_center[right_hand_idx][0])
-        feature_vec.append(distances_to_center[right_hand_idx][1])
-        feature_vec.append(distances_to_center[left_hand_idx][0])
-        feature_vec.append(distances_to_center[left_hand_idx][1])
-
+        feature_vec.append(right_hand_dist[left_hand_idx])
     if use_intersection:
-        feature_vec.append(right_hand_intersection[left_hand_idx])
+        feature_vec.append([right_hand_intersection[left_hand_intersection]])
 
-    # Add the object info
+    # Add object data
     for i in range(num_act):
         if i in [right_hand_idx, left_hand_idx]:
-            # we already have the hand info
+            # We already have the hand data
             continue
 
         if use_activation:
-            feature_vec.append(act[i])
-
-        if use_hand_dist:
-            feature_vec.append(right_hand_dist[i][0])
-            feature_vec.append(right_hand_dist[i][1])
-
-            feature_vec.append(left_hand_dist[i][0])
-            feature_vec.append(left_hand_dist[i][1])
-
-        if use_center_dist:
-            feature_vec.append(distances_to_center[i][0])
-            feature_vec.append(distances_to_center[i][1])
-
+            feature_vec.append([act[i]])
         if use_intersection:
             feature_vec.append(right_hand_intersection[i])
             feature_vec.append(left_hand_intersection[i])
+        if use_center_dist:
+            feature_vec.append(distances_to_center[i])
 
+    feature_vec = [item for sublist in feature_vec for item in sublist] # flatten
     feature_vec = np.array(feature_vec, dtype=np.float64)
 
     return feature_vec
