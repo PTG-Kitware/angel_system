@@ -14,11 +14,18 @@ def load_data(args):
     dt = 0.25
     gt = []
     for sdir in os.listdir(args.base_dir):
-        activity_gt = glob.glob('%s/%s/*.csv' % (args.base_dir, sdir))[0]
-        extracted_activity_detections = glob.glob('%s/%s/*.json' % (args.base_dir, sdir))[0]
-        gt.append([sdir, load_and_discretize_data(activity_gt,
-                                                extracted_activity_detections,
-                                                dt, 0.5)])
+        activity_gt = glob.glob("%s/%s/*.csv" % (args.base_dir, sdir))[0]
+        extracted_activity_detections = glob.glob(
+            "%s/%s/*.json" % (args.base_dir, sdir)
+        )[0]
+        gt.append(
+            [
+                sdir,
+                load_and_discretize_data(
+                    activity_gt, extracted_activity_detections, dt, 0.5
+                ),
+            ]
+        )
 
     # For the purpose of fitting mean and std outside of the HMM, we can just
     # append everything together.
@@ -43,20 +50,20 @@ def load_data(args):
     # What was loaded is activity_id ground truth, but we want step ground truth.
 
     # Map activities to steps
-    with open(args.config_fname, 'r') as stream:
+    with open(args.config_fname, "r") as stream:
         config = yaml.safe_load(stream)
 
-    dest = config['activity_mean_and_std_file']
+    dest = config["activity_mean_and_std_file"]
 
     activity_id_to_step = {}
-    for step in config['steps']:
-        if isinstance(step['activity_id'], str):
-            a_ids = [int(s) for s in step['activity_id'].split(',')]
+    for step in config["steps"]:
+        if isinstance(step["activity_id"], str):
+            a_ids = [int(s) for s in step["activity_id"].split(",")]
         else:
-            a_ids = [step['activity_id']]
+            a_ids = [step["activity_id"]]
 
         for i in a_ids:
-            activity_id_to_step[i] = step['id']
+            activity_id_to_step[i] = step["id"]
 
     activity_id_to_step[0] = 0
     steps = sorted(list(set(activity_id_to_step.values())))
@@ -65,6 +72,8 @@ def load_data(args):
     true_step = [activity_id_to_step[activity_id] for activity_id in activity_ids]
 
     return time_windows, true_step, dest
+
+
 # ----------------------------------------------------------------------------
 def fit(time_windows, true_step):
     # Fit HMM.
@@ -105,12 +114,12 @@ def fit(time_windows, true_step):
         num_steps = len(steps)
         num_activities = len(activity_id_to_step)
         class_mean_conf2 = np.zeros((num_steps, num_activities))
-        class_std_conf = np.ones((num_steps, num_activities))*0.05
+        class_std_conf = np.ones((num_steps, num_activities)) * 0.05
 
         for key in activity_id_to_step:
             class_mean_conf2[activity_id_to_step[key], key] = 1
 
-        ind = np.argmax(class_mean_conf2*class_mean_conf, axis=1)
+        ind = np.argmax(class_mean_conf2 * class_mean_conf, axis=1)
         class_mean_conf2[:] = 0
         for i, ii in enumerate(ind):
             class_mean_conf2[i, ii] = 1
@@ -118,6 +127,7 @@ def fit(time_windows, true_step):
         class_mean_conf = class_mean_conf2
 
     return class_mean_conf, class_std_conf
+
 
 # ----------------------------------------------------------------------------
 def save(dest, class_mean_conf, class_std_conf):
@@ -130,13 +140,13 @@ def main():
         "--config_fname",
         dest="config_fname",
         type=Path,
-        default='angel_system/config/tasks/task_steps_config-recipe_coffee_trimmed_v3.yaml'
+        default="angel_system/config/tasks/task_steps_config-recipe_coffee_trimmed_v3.yaml",
     )
     parser.add_argument(
         "--base_dir",
         dest="base_dir",
         type=Path,
-        default='/mnt/data10tb/ptg/hmm_training_data'
+        default="/mnt/data10tb/ptg/hmm_training_data",
     )
 
     args = parser.parse_args()
@@ -146,5 +156,5 @@ def main():
     save(dest, class_mean_conf, class_std_conf)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
