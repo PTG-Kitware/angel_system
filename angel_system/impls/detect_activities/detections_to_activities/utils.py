@@ -102,7 +102,7 @@ def obj_det2d_set_to_feature(
             use_intersection=True
         )
 
-    elif version == 4:
+    elif version == 5:
         """
         Feature vector that encodes the distance of each object from each hand,
         the intersection of each object to the hands,
@@ -117,7 +117,7 @@ def obj_det2d_set_to_feature(
             D[left hand, obj1]x, D[left hand, obj1]y, ... , D[left hand, objN]y,
             D[right hand, left hand]x, D[right hand, left hand]y,
             I[right hand, left hand]
-            A[obj1] I[right hand, obj1] I[left hand, obj1] ... I[left hand, objN]
+            A[obj1] I[right hand, obj1] I[left hand, obj1], ... , I[left hand, objN]
         ]
         """
         feature_vec = obj_det2d_set_to_feature_by_method(
