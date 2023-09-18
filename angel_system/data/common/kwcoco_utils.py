@@ -947,7 +947,13 @@ def add_background_images(dset, background_imgs):
     print(f"Saved dset to {dset.fpath}")
 
 
-def dive_csv_to_kwcoco(dive_folder, object_config_fn, using_contact=False):
+def dive_csv_to_kwcoco(dive_folder, object_config_fn):
+    """Convert object annotations in DIVE csv file(s) to a kwcoco file
+
+    :param dive_folder: Path to the csv files
+    :param object_config_fn: Path to the object label config file
+    """
+    data_dir = "/data/PTG/cooking/ros_bags/tea/tea_extracted"
     dset = kwcoco.CocoDataset()
 
     # Load object labels config
@@ -976,7 +982,9 @@ def dive_csv_to_kwcoco(dive_folder, object_config_fn, using_contact=False):
         for i, row in dive_df.iterrows():
             if i == 0:
                 continue
+
             frame = row["2: Video or Image Identifier"]
+            frame_fn = f"{data_dir}/{video_name}_extracted/images/{frame}"
             frame_num, time = time_from_name(frame)
 
             image_lookup = dset.index.file_name_to_img
@@ -984,7 +992,7 @@ def dive_csv_to_kwcoco(dive_folder, object_config_fn, using_contact=False):
                 img_id = image_lookup[frame]["id"]
             else:
                 img_id = dset.add_image(
-                    file_name=frame,
+                    file_name=frame_fn,
                     video_id=vid, 
                     frame_index=frame_num,
                     width=1280,
@@ -1011,13 +1019,6 @@ def dive_csv_to_kwcoco(dive_folder, object_config_fn, using_contact=False):
                 "bbox": xywh,
                 "confidence": 1,
             }
-
-            if using_contact:
-                ann["obj-obj_contact_state"] = False
-                ann["obj-obj_contact_conf"] = 0
-
-                ann["obj-hand_contact_state"] = False
-                ann["obj-hand_contact_conf"] = 0
 
             dset.add_annotation(**ann)
 
