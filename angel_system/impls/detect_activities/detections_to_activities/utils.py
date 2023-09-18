@@ -55,8 +55,10 @@ def obj_det2d_set_to_feature(
         Len: 204
 
         [
-            A[right hand], D[right hand, obj1]x, D[right hand, obj1]y, ... , D[right hand, objN]y,
-            A[left hand], D[left hand, obj1]x, D[left hand, obj1]y, ... , D[left hand, objN]y,
+            A[right hand],
+            D[right hand, obj1]x, D[right hand, obj1]y, ... , D[right hand, objN]y,
+            A[left hand],
+            D[left hand, obj1]x, D[left hand, obj1]y, ... , D[left hand, objN]y,
             D[right hand, left hand]x, D[right hand, left hand]y,
             A[obj1] ... A[objN]
         ]
@@ -206,6 +208,7 @@ def obj_det2d_set_to_feature_by_method(
 
         # Compute distances to the left hand
         left_hand_dist = dist_from_hand(left_hand_idx, left_hand_center) if left_hand_conf != 0 else [default_dist for i in range(num_act)]
+
     else:
         right_hand_dist = left_hand_dist = None
 
@@ -278,7 +281,7 @@ def obj_det2d_set_to_feature_by_method(
     if use_hand_dist:
         feature_vec.append(right_hand_dist[left_hand_idx])
     if use_intersection:
-        feature_vec.append([right_hand_intersection[left_hand_intersection]])
+        feature_vec.append([right_hand_intersection[left_hand_idx]])
 
     # Add object data
     for i in range(num_act):
@@ -289,8 +292,8 @@ def obj_det2d_set_to_feature_by_method(
         if use_activation:
             feature_vec.append([act[i]])
         if use_intersection:
-            feature_vec.append(right_hand_intersection[i])
-            feature_vec.append(left_hand_intersection[i])
+            feature_vec.append([right_hand_intersection[i]])
+            feature_vec.append([left_hand_intersection[i]])
         if use_center_dist:
             feature_vec.append(distances_to_center[i])
 
