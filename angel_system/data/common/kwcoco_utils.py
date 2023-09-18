@@ -947,22 +947,101 @@ def add_background_images(dset, background_imgs):
     print(f"Saved dset to {dset.fpath}")
 
 
+def dive_csv_to_kwcoco(dive_folder, object_config_fn, using_contact=False):
+    dset = kwcoco.CocoDataset()
+
+    # Load object labels config
+    with open(object_config_fn, "r") as stream:
+        object_config = yaml.safe_load(stream)
+    object_labels = object_config["labels"]
+
+    label_ver = object_config["version"]
+    dset.dataset["info"].append({"object_label_version": label_ver})
+
+    # Add categories
+    for object_label in object_labels:
+        dset.add_category(name=object_label["label"], id=object_label["id"])
+    
+    # Add boxes
+    for csv_file in ub.ProgIter(glob.glob(f"{dive_folder}/*.csv"), desc="Loading video annotations"):
+        video_name = os.path.basename(csv_file).split("_object_labels")[0]
+        
+        video_lookup = dset.index.name_to_video
+        if video_name in video_lookup:
+            vid = video_lookup[video_name]["id"]
+        else:
+            vid = dset.add_video(name=video_name)
+
+        dive_df = pd.read_csv(csv_file)
+        for i, row in dive_df.iterrows():
+            if i == 0:
+                continue
+            frame = row["2: Video or Image Identifier"]
+            frame_num, time = time_from_name(frame)
+
+            image_lookup = dset.index.file_name_to_img
+            if frame in image_lookup:
+                img_id = image_lookup[frame]["id"]
+            else:
+                img_id = dset.add_image(
+                    file_name=frame,
+                    video_id=vid, 
+                    frame_index=frame_num,
+                    width=1280,
+                    height=720,
+                )
+
+            bbox = [float(row["4-7: Img-bbox(TL_x"]), float(row["TL_y"]),
+                    float(row["BR_x"]), float(row["BR_y)"])],
+
+            xywh = (
+                kwimage.Boxes([bbox], "tlbr")
+                .toformat("xywh")
+                .data[0][0]
+                .tolist()
+            )
+
+            obj_id = row["10-11+: Repeated Species"]
+
+            ann = {
+                "area": xywh[2] * xywh[3],
+                "image_id": img_id,
+                "category_id": obj_id,
+                "segmentation": [],
+                "bbox": xywh,
+                "confidence": 1,
+            }
+
+            if using_contact:
+                ann["obj-obj_contact_state"] = False
+                ann["obj-obj_contact_conf"] = 0
+
+                ann["obj-hand_contact_state"] = False
+                ann["obj-hand_contact_conf"] = 0
+
+            dset.add_annotation(**ann)
+
+    dset.fpath = f"tea_obj_annotations.mscoco.json"
+    dset.dump(dset.fpath, newlines=True)
+    print(f"Saved dset to {dset.fpath}")
+
+
 def main():
     ptg_root = "/home/local/KHQ/hannah.defazio/angel_system/angel_system/berkeley"
     ptg_root = "/data/PTG/cooking/"
 
-    kw = "coffee_base_results_test_conf_0.1_plus_hl_hands.mscoco.json"
+    kw = "berkeley_resnet50_plus_bkgd_results_test_conf_0.1_plus_hl_hands.mscoco.json"
+    exp = "berkeley_resnet50_plus_bkgd"
+    split = "test"
+    stage = "results"
 
     n = kw[:-12].split("_")
     name = "_".join(n[:-1])
     split = n[-1]
 
-    split = "test"
-
-    stage = "results"
     stage_dir = f"{ptg_root}/annotations/coffee/{stage}"
     # stage_dir = ""
-    exp = "coffee_base"
+    
     save_dir = f"{stage_dir}/{exp}/visualization/conf_0.1_plus_hl_hands/{split}"
 
     # save_dir = "visualization"
