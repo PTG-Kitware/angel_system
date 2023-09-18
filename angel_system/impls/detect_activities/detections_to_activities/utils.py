@@ -49,8 +49,8 @@ def obj_det2d_set_to_feature(
     
     elif version == 2:
         """
-        Feature vector that encodes the distance of each object from each hand
-        along with the activation features
+        Feature vector that encodes the distance of each object from each hand,
+        and the activation features
 
         Len: 204
 
@@ -101,12 +101,40 @@ def obj_det2d_set_to_feature(
             use_center_dist=True,
             use_intersection=True
         )
+
+    elif version == 4:
+        """
+        Feature vector that encodes the distance of each object from each hand,
+        the intersection of each object to the hands,
+        and the activation features
+
+        Len: 285
+
+        [
+            A[right hand],
+            D[right hand, obj1]x, D[right hand, obj1]y, ... , D[right hand, objN]y,
+            A[left hand],
+            D[left hand, obj1]x, D[left hand, obj1]y, ... , D[left hand, objN]y,
+            D[right hand, left hand]x, D[right hand, left hand]y,
+            I[right hand, left hand]
+            A[obj1] I[right hand, obj1] I[left hand, obj1] ... I[left hand, objN]
+        ]
+        """
+        feature_vec = obj_det2d_set_to_feature_by_method(
+            label_vec,
+            xs, ys, ws, hs,
+            label_confidences,
+            label_to_ind,
+            use_activation=True,
+            use_hand_dist=True,
+            use_intersection=True
+        )
     
     else:
         raise NotImplementedError(f"Unhandled version '{version}'")
 
-    #print(f"feat {feature_vec}")
-    #print(len(feature_vec))
+    # print(f"feat {feature_vec}")
+    # print(len(feature_vec))
     return feature_vec
 
 def obj_det2d_set_to_feature_by_method(
