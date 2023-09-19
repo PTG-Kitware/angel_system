@@ -15,6 +15,7 @@ python = "^3.8,<3.10"
 easydict = "^1.9"
 einops = "^0.4.1"
 hmmlearn = ">=0.2.8"
+libtmux = ">=0.23.2"
 matplotlib = "^3.5.1"
 numpy = "^1.22.2"
 openpyxl = "^3.0.10"
@@ -32,14 +33,17 @@ torch = ">=1.10.2,<2"
 torchvision = ">=0.11.3"
 transitions = "^0.8.11"
 trimesh = {extras = ["all"], version = "^3.10.2"}
-# For UHO Activity Classifier
-# - see arisia: /data/dawei.du/ptg-activity-recognition/activity_hydra/requirements.txt
-hydra-core = "==1.1.0"
-python-dotenv = "^0.21.0"
-pytorch-lightning = "^1.7.7"
+
+## For UHO Activity Classifier
+## - see arisia: /data/dawei.du/ptg-activity-recognition/activity_hydra/requirements.txt
+#hydra-core = "==1.1.0"
+#python-dotenv = "^0.21.0"
+#pytorch-lightning = "^1.7.7"
+
 # Pinning setup tools to this known version due to torch 1.10.2 tensorboard
 # functionality assuming `distutils.version.LooseVersion` functionality.
 setuptools = ">=59.5.0"
+
 # For BBN Redis comms
 websockets = "^11.0"
 
@@ -49,7 +53,7 @@ opencv-python = "^4.7.0.72"
 iopath = ">=0.1.7,<0.1.10"
 pycocotools = "^2.0.6"
 future = "^0.18.3"
-omegaconf = ">=2.1,<=2.2.0"
+#omegaconf = ">=2.1,<=2.2.0"
 black = "22.3.0"
 
 # For Columbia ASR
@@ -61,7 +65,9 @@ pyzmq = "==25.0.0"
 kwcoco = "^0.6.2"
 kwimage = "^0.9.18"
 networkx = "^3.1"
-libtmux = "^0.23.2"
+
+# TCN Activity classifier
+tcn-hpl = {path = "python-tpl/TCN_HPL", develop = true}
 
 [tool.poetry.dev-dependencies]
 ipython = "^8.0.1"
