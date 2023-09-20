@@ -1,45 +1,42 @@
-_BASE_: "/angel_workspace/angel_system/berkeley/configs/Base-RCNN-FPN.yaml"
+#_BASE_: "/angel_workspace/angel_system/berkeley/configs/Base-RCNN-FPN.yaml"
+_BASE_: "/home/local/KHQ/hannah.defazio/angel_system/angel_system/berkeley/configs/Base-RCNN-FPN.yaml"
 MODEL:
-#  WEIGHTS: '/shared/niudt/detectron2/tools/PTG_DEMO/MC_1+3+13+25_40000/model_final.pth'
-#  WEIGHTS: '/shared/niudt/detectron2_ori/detectron2/tools/output_base_important/model_final.pth'
-#  WEIGHTS: '/shared/niudt/detectron2/tools/PTG_DEMO/MC_1+3+13+14+25/model_final.pth'
-#  WEIGHTS: '/shared/niudt/detectron2/tools/PTG_DEMO/MC_1+3+13+14+25/model_final.pth'
-#  WEIGHTS: '/shared/niudt/detectron2_ori/detectron2/tools/coco-101-rpn/model_final_f96b26.pkl'
-#WEIGHTS: '/angel_workspace/model_files/model_final_571f7c.pkl'
   WEIGHTS: "detectron2://ImageNetPretrained/MSRA/R-50.pkl"
   MASK_ON: False
   RESNETS:
     DEPTH: 50
   ROI_HEADS:
-#    NUM_CLASSES: 1203
-    NUM_CLASSES: 42
+    #NUM_CLASSES: 42 # coffee
+    NUM_CLASSES: 49 # coffee + tea
     SCORE_THRESH_TEST: 0.0001
+    NAME: StandardROIHeads
+    #NAME: StandardROIHeads_PLUS_CONTACT
 INPUT:
-  MIN_SIZE_TRAIN: (640, 672, 704, 736, 768, 800)
+  MIN_SIZE_TRAIN: (720,)
+  MAX_SIZE_TRAIN: 1280
+  MIN_SIZE_TEST: 720
+  MAX_SIZE_TEST: 1280
 DATASETS:
-  TRAIN: ("COFFEE_UCB_train",)
-  TEST: ("COFFEE_UCB_val",)
+  TRAIN: ("COFFEE_TEA_UCB_train",)
+  TEST: ("COFFEE_TEA_UCB_val",)
 TEST:
   DETECTIONS_PER_IMAGE: 300  # LVIS allows up to 300
-#SOLVER:
-#  STEPS: (120000, 160000)
-#  MAX_ITER: 180000  # 180000 * 16 / 100000 ~ 28.8 epochs
+
 DATALOADER:
   SAMPLER_TRAIN: "RepeatFactorTrainingSampler"
-  REPEAT_THRESHOLD: 0.001
+  REPEAT_THRESHOLD: 0.5
+  FILTER_EMPTY_ANNOTATIONS: True
 
-OUTPUT_DIR: '/angel_workspace/model_files/training/berkeley/resnet50'
+OUTPUT_DIR: '/data/PTG/cooking/training/object_detector/stage1/coffee+tea/berkeley/resnet50'
 
 SOLVER:
-  TOTAL_IMAGE_NUMBER: 1040
-  IMS_PER_BATCH: 1
+  #TOTAL_IMAGE_NUMBER: 1516 # coffee
+  TOTAL_IMAGE_NUMBER: 1991 # coffee + tea
+  IMS_PER_BATCH: 12
   BASE_LR: 0.001
   STEPS: (34000, 41000)
-  MAX_ITER: 64000 # 500 * 1 / 10 ~ 500 epochs
   CHECKPOINT_PERIOD: 1000
   EPOCH: 50
 
 VISUALIZER:
   CAM: False
-
-
