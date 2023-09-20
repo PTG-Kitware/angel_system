@@ -188,8 +188,10 @@ def load_MC50_json(json_file, image_root, dataset_name=None, meta=None, extra_an
             # if 'contact_state' in anno:
             # obj['contact_state'] = anno['contact_state']
 
-            obj['obj-obj_contact_state'] = anno['obj-obj_contact_state']
-            obj['obj-hand_contact_state'] = anno['obj-hand_contact_state']
+            if "obj-obj_contact_state" in anno.keys():
+                obj['obj-obj_contact_state'] = anno['obj-obj_contact_state']
+            if "obj-hand_contact_state" in anno.keys():
+                obj['obj-hand_contact_state'] = anno['obj-hand_contact_state']
             # filter out invalid polygons (< 3 points)
             valid_segm = [poly for poly in segm if len(poly) % 2 == 0 and len(poly) >= 6]
             assert len(segm) == len(

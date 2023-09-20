@@ -47,6 +47,7 @@ class DatasetMapper:
         keypoint_hflip_indices: Optional[np.ndarray] = None,
         precomputed_proposal_topk: Optional[int] = None,
         recompute_boxes: bool = False,
+        using_contact=False
     ):
         """
         NOTE: this interface is experimental.
@@ -77,6 +78,7 @@ class DatasetMapper:
         self.keypoint_hflip_indices = keypoint_hflip_indices
         self.proposal_topk          = precomputed_proposal_topk
         self.recompute_boxes        = recompute_boxes
+        self.using_contact = using_contact
         # fmt: on
         logger = logging.getLogger(__name__)
         mode = "training" if is_train else "inference"
@@ -129,7 +131,8 @@ class DatasetMapper:
             if obj.get("iscrowd", 0) == 0
         ]
         instances = utils.annotations_to_instances(
-            annos, image_shape, mask_format=self.instance_mask_format
+            annos, image_shape, mask_format=self.instance_mask_format,
+            using_contact=self.using_contact
         )
 
         # After transforms such as cropping are applied, the bounding box may no longer
