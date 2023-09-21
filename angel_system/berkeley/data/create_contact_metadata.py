@@ -2,7 +2,7 @@
 Load object detections and adds hand-object and object-object labels
 based on the ground truth annotations.
 
-This should be run on videos not used during training. 
+This should be run on videos not used during training.
 """
 import os
 import glob
@@ -53,7 +53,7 @@ def update_preds(
     for video_name in preds.keys():
         activity_only_preds[video_name] = {}
 
-        # TODO: Be able to call activity_data_loader 
+        # TODO: Be able to call activity_data_loader
         # without task specific imports
         """
         gt_activity = activity_data_loader(
@@ -253,7 +253,6 @@ def main():
             data_dirs,
             training_split[split],
             no_contact=experiment_flags["no_contact"],
-            ,
         )
         using_contact = True
         print(f"Using contact: {using_contact}")
