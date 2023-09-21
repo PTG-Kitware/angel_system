@@ -569,6 +569,7 @@ def visualize_kwcoco_by_contact(dset=None, save_dir=""):
                 tourniquet_im = image[int(y) : int(y + h), int(x) : int(x + w), ::-1]
 
                 m2_fn = fn[:-4] + "_tourniquet_chip.png"
+                B
                 m2_out = f"{save_dir}/video_{img_video_id}/images/chipped"
                 Path(m2_out).mkdir(parents=True, exist_ok=True)
                 cv2.imwrite(f"{m2_out}/{m2_fn}", tourniquet_im)
@@ -613,9 +614,21 @@ def visualize_kwcoco_by_label(dset=None, save_dir=""):
     :param dset: kwcoco object or a string pointing to a kwcoco file
     :param save_dir: Directory to save the images to
     """
+<<<<<<< HEAD
     # colors = list(mcolors.CSS4_COLORS.keys())
     # random.shuffle(colors)
+=======
+    import matplotlib.pyplot as plt
+    import matplotlib.patches as patches
+    import matplotlib.colors as mcolors
 
+    dset = load_kwcoco(dset)
+
+    colors = list(mcolors.CSS4_COLORS.keys())
+    random.shuffle(colors)
+>>>>>>> 4c196fea... wip
+
+    """
     colors = [
         "yellow",
         "red",
@@ -660,9 +673,12 @@ def visualize_kwcoco_by_label(dset=None, save_dir=""):
         "bisque",
         "steelblue",
     ]
+    """
+
+    obj_labels = [v["name"] for k, v in dset.cats.items()]
 
     empty_ims = 0
-    dset = load_kwcoco(dset)
+    
 
     gid_to_aids = dset.index.gid_to_aids
     gids = ub.argsort(ub.map_vals(len, gid_to_aids))
@@ -675,7 +691,7 @@ def visualize_kwcoco_by_label(dset=None, save_dir=""):
         #    continue
 
         fn = im["file_name"].split("/")[-1]
-        gt = im["activity_gt"]  # if hasattr(im, 'activity_gt') else ''
+        gt = im["activity_gt"] if hasattr(im, 'activity_gt') else ''
         if not gt:
             gt = ""
 
@@ -693,8 +709,8 @@ def visualize_kwcoco_by_label(dset=None, save_dir=""):
         using_contact = False
         for aid, ann in anns.items():
             conf = ann["confidence"]
-            # if conf < 0.4:
-            #    continue
+            if conf < 0.1:
+                continue
 
             x, y, w, h = ann["bbox"]  # xywh
             cat_id = ann["category_id"]
@@ -702,7 +718,7 @@ def visualize_kwcoco_by_label(dset=None, save_dir=""):
 
             label = f"{cat}: {round(conf, 2)}"
 
-            color = colors[cat_id - 1]
+            color = colors[obj_labels.index(cat)]
 
             rect = patches.Rectangle(
                 (x, y),
@@ -724,6 +740,7 @@ def visualize_kwcoco_by_label(dset=None, save_dir=""):
             f"{video_dir}/{fn}",
         )
         plt.close(fig)  # needed to remove the plot because savefig doesn't clear it
+    A
     plt.close("all")
 
 
@@ -762,6 +779,7 @@ def filter_kwcoco(dset):
     # Remove in-between categories
     remove_cats = []
     for cat_id in dset.cats:
+        A
         cat_name = dset.cats[cat_id]["name"]
         if ".5)" in cat_name or "(before)" in cat_name or "(finished)" in cat_name:
             remove_cats.append(cat_id)
@@ -930,7 +948,7 @@ def add_background_images(dset, background_imgs):
         new_im = {
             "width": w,
             "height": h,
-            "file_name": im.split("2022-11-05_whole")[-1][1:],
+            "file_name": im #im.split("2022-11-05_whole")[-1][1:],
         }
         new_gid = dset.add_image(**new_im)
 
@@ -986,7 +1004,10 @@ def dive_csv_to_kwcoco(dive_folder, object_config_fn):
     :param dive_folder: Path to the csv files
     :param object_config_fn: Path to the object label config file
     """
+    import shutil
     data_dir = "/data/PTG/cooking/ros_bags/tea/tea_extracted"
+    dst_dir = "/data/PTG/cooking/images/tea/berkeley/"
+
     dset = kwcoco.CocoDataset()
 
     # Load object labels config
@@ -1019,12 +1040,19 @@ def dive_csv_to_kwcoco(dive_folder, object_config_fn):
                 continue
 
             frame = row["2: Video or Image Identifier"]
-            frame_fn = f"{data_dir}/{video_name}_extracted/images/{frame}"
+            im_fp = f"{data_dir}/{video_name}_extracted/images/{frame}"
+            print(im_fp)
+            assert os.path.isfile(im_fp)
+
+            if not os.path.isfile(f"{dst_dir}/{frame}"):
+                shutil.copy(im_fp, dst_dir)
+
+            frame_fn = f"{dst_dir}/{frame}"
             frame_num, time = time_from_name(frame)
 
             image_lookup = dset.index.file_name_to_img
-            if frame in image_lookup:
-                img_id = image_lookup[frame]["id"]
+            if frame_fn in image_lookup:
+                img_id = image_lookup[frame_fn]["id"]
             else:
                 img_id = dset.add_image(
                     file_name=frame_fn,
@@ -1053,7 +1081,6 @@ def dive_csv_to_kwcoco(dive_folder, object_config_fn):
                 "category_id": obj_id,
                 "segmentation": [],
                 "bbox": xywh,
-                "confidence": 1,
             }
 
             dset.add_annotation(**ann)
@@ -1062,25 +1089,150 @@ def dive_csv_to_kwcoco(dive_folder, object_config_fn):
     dset.dump(dset.fpath, newlines=True)
     print(f"Saved dset to {dset.fpath}")
 
+def update_obj_labels(dset, object_config_fn):
+    """Change the object labels to match those provided 
+    in ``object_config_fn``
+    """
+    # Load kwcoco file
+    dset = load_kwcoco(dset)
+
+    new_dset = kwcoco.CocoDataset()
+
+    # Load object labels config
+    with open(object_config_fn, "r") as stream:
+        object_config = yaml.safe_load(stream)
+    object_labels = object_config["labels"]
+
+    label_ver = object_config["version"]
+    new_dset.dataset["info"].append({"object_label_version": label_ver})
+
+    # Add categories
+    for object_label in object_labels:
+        new_dset.add_category(name=object_label["label"], id=object_label["id"])
+    
+    for video_id, video in dset.index.videos.items():
+        new_dset.add_video(**video)
+
+    gid_to_aids = dset.index.gid_to_aids
+    gids = ub.argsort(ub.map_vals(len, gid_to_aids))
+
+    for gid in sorted(gids):
+        im = dset.imgs[gid]
+        new_im = im.copy()
+        
+
+        aids = gid_to_aids[gid]
+        anns = ub.dict_subset(dset.anns, aids)
+
+        # Add video
+        if hasattr(im, "video_id"):
+            old_video = dset.index.videos[im["video_id"]]["name"]
+            new_video = new_dset.index.name_to_video[old_video]
+            new_im["video_id"] = new_video["id"]
+
+        del new_im["id"]
+        new_im["file_name"] = im['file_name']
+        new_gid = new_dset.add_image(**new_im)
+
+        for aid, ann in anns.items():
+            old_cat = dset.cats[ann["category_id"]]["name"]
+
+            # Fix some deprecated labels
+            if old_cat in ["timer", "timer (20)", "timer (30)", "timer (else)"]:
+                old_cat = "timer (on)"
+            if old_cat in ["kettle"]:
+                old_cat = "kettle (closed)"
+            new_cat = new_dset.index.name_to_cat[old_cat]
+
+            new_ann = ann.copy()
+
+            del new_ann["id"]
+            new_ann["category_id"] = new_cat["id"]
+            new_ann["image_id"] = new_gid
+
+            new_dset.add_annotation(**new_ann)
+
+            
+
+    fpath = dset.fpath.split(".mscoco")[0]
+    new_dset.fpath = f"{fpath}_new_obj_labels.mscoco.json"
+    new_dset.dump(new_dset.fpath, newlines=True)
+    print(f"Saved predictions to {new_dset.fpath}")
+
+def temp(dset):
+    
+    root_dir = "/data/PTG/cooking/ros_bags/tea/tea_extracted/"
+    dst_dir = "/data/PTG/cooking/images/tea/berkeley/"
+
+    # Load kwcoco file
+    dset = load_kwcoco(dset)
+
+    gid_to_aids = dset.index.gid_to_aids
+    gids = ub.argsort(ub.map_vals(len, gid_to_aids))
+
+    for gid in sorted(gids):
+        im = dset.imgs[gid]
+        video = dset.index.videos[im["video_id"]]["name"]
+        fn = im["file_name"]
+
+        im_fp = f"{root_dir}/{video}_extracted/images/{fn}"
+        print(im_fp)
+        assert os.path.isfile(im_fp)
+
+        shutil.copy(im_fp, dst_dir)
+
+        im = dset.imgs[gid]["file_name"] = f"{dst_dir}/{fn}"
+
+        aids = gid_to_aids[gid]
+        anns = ub.dict_subset(dset.anns, aids)
+        for aid, ann in anns.items():
+            if hasattr(ann, "confidence"):
+                del dset.anns[aid]["confidence"]
+
+    dset.dump(f"{dset.fpath}_fixed_filepaths.mscoco.json", newlines=True)
+    print(f"Saved predictions to {new_dset.fpath}")
+
+def remap_category_ids_demo(dset):
+    """Adjust the category ids in a kwcoco dataset
+    (From Jon Crall)
+    """
+    # Load kwcoco file
+    dset = load_kwcoco(dset)
+
+    existing_cids = dset.categories().lookup('id')
+    cid_mapping = {cid: cid -1 for cid in existing_cids}
+
+    for cat in dset.dataset['categories']:
+        old_cid = cat['id']
+        new_cid = cid_mapping[old_cid]
+        cat['id'] = new_cid
+
+    for ann in dset.dataset['annotations']:
+        old_cid = ann['category_id']
+        new_cid = cid_mapping[old_cid]
+        ann['category_id'] = new_cid
+
+    dset._build_index()
+    dset.dump(dset.fpath, newlines=True)
+    print(f"Saved predictions to {dset.fpath}")
+
 
 def main():
     ptg_root = "/home/local/KHQ/hannah.defazio/angel_system/angel_system/berkeley"
     ptg_root = "/data/PTG/cooking/"
 
-    kw = "berkeley_resnet50_plus_bkgd_results_test_conf_0.1_plus_hl_hands.mscoco.json"
-    exp = "berkeley_resnet50_plus_bkgd"
-    split = "test"
+    kw = "coffee_and_tea_results_val.mscoco.json"
+    exp = "coffee_and_tea/tea"
+    split = "val"
     stage = "results"
 
     n = kw[:-12].split("_")
     name = "_".join(n[:-1])
-    split = n[-1]
 
-    stage_dir = f"{ptg_root}/annotations/coffee/{stage}"
+    stage_dir = f"{ptg_root}/annotations/coffee+tea/{stage}"
     # stage_dir = ""
-
-    save_dir = f"{stage_dir}/{exp}/visualization/conf_0.1_plus_hl_hands/{split}"
-
+ 
+    save_dir = f"{stage_dir}/{exp}/visualization/{split}"
     # save_dir = "visualization"
     print(save_dir)
     Path(save_dir).mkdir(parents=True, exist_ok=True)

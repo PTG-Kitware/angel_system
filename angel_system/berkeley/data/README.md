@@ -2,7 +2,10 @@ Task Recognition Training Roadmap
 =================================
 
 # Stage 1
-
+## Train the model
+```bash
+python train_net.py --config-file ../configs/MC50-InstanceSegmentation/cooking/coffee/stage1/mask_rcnn_R_50_FPN_1x_fine-tuning.yaml --num-gpus 1
+```
 
 # Stage 2
 ## Generate "ground truth" data

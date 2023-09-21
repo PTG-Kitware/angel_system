@@ -1,0 +1,110 @@
+version: "2.1"
+title: "Coffee+Tea"
+labels:
+  # Item:
+  # - id: Integer identification number of the label.
+  # - label: Short human-readable semantic string to succinctly represent the
+  #          label.
+  - id: 0
+    label: "background"
+  # Shared labels
+  - id: 1
+    label: "hand (left)"
+  - id: 2
+    label: "hand (right)"
+  - id: 3
+    label: "paper towel"
+  - id: 4
+    label: "water"
+  - id: 12
+    label: "spoon"
+  - id: 13
+    label: "jar of honey (close)"
+  - id: 14
+    label: "jar of honey (open)"
+  - id: 15
+    label: "kettle lid"
+  - id: 16
+    label: "kettle (open)"
+  - id: 17
+    label: "measuring cup"
+  - id: 18
+    label: "mug"
+  - id: 19
+    label: "switch"
+  - id: 20
+    label: "thermometer (close)"
+  - id: 21
+    label: "thermometer (open)"
+  - id: 22
+    label: "timer (on)"
+  - id: 23
+    label: "timer (off)"
+  - id: 24
+    label: "kettle (closed)"
+  - id: 26
+    label: "trash can"
+  # Labels unique to coffee
+  - id: 27
+    label: "coffee + mug"
+  - id: 28
+    label: "coffee bag"
+  - id: 29
+    label: "coffee beans + container"
+  - id: 30
+    label: "coffee beans + container + scale"
+  - id: 31
+    label: "coffee grounds + paper filter + filter cone"
+  - id: 32
+    label: "coffee grounds + paper filter + filter cone + mug"
+  - id: 33
+    label: "container"
+  - id: 34
+    label: "container + scale"
+  - id: 35
+    label: "filter cone"
+  - id: 36
+    label: "filter cone + mug"
+  - id: 37
+    label: "grinder (close)"
+  - id: 38
+    label: "grinder (open)"
+  - id: 39
+    label: "lid (grinder)"
+  - id: 40
+    label: "lid (kettle)"
+  - id: 41
+    label: "paper filter"
+  - id: 42
+    label: "paper filter (quarter)"
+  - id: 43
+    label: "paper filter (semi)"
+  - id: 44
+    label: "paper filter + filter cone"
+  - id: 45
+    label: "paper filter + filter cone + mug"
+  - id: 46
+    label: "paper filter bag"
+  - id: 47
+    label: "scale (off)"
+  - id: 48
+    label: "scale (on)"
+  - id: 50
+    label: "used paper filter"
+  - id: 51
+    label: "used paper filter + filter cone"
+  - id: 52
+    label: "used paper filter + filter cone + mug"
+  - id: 53
+    label: "water + coffee grounds + paper filter + filter cone + mug"
+  # Labels unique to tea
+  - id: 94
+    label: "tea bag"
+  - id: 95
+    label: "mug + tea bag"
+  - id: 96
+    label: "mug + water"
+  - id: 97
+    label: "mug + tea bag + water"
+  - id: 98
+    label: "mug + tea"

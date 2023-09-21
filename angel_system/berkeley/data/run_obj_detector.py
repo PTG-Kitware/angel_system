@@ -53,7 +53,7 @@ def run_obj_detector(
 
         preds[video_name] = {}
 
-        video_images = glob.glob(f"{video_folder}/_extracted/images/*.png")
+        video_images = glob.glob(f"{video_folder}_extracted/images/*.png")
         input_list = Re_order(video_images, len(video_images))
         for image_fn in ub.ProgIter(input_list, desc=f"images in {video_name}"):
             frame, time_stamp = time_from_name(image_fn)
@@ -100,18 +100,69 @@ def run_obj_detector(
 
     return preds, using_contact
 
-def coffee_main(stage):
-    model_dir = "MC50-InstanceSegmentation/cooking/coffee"
+def tea_main(stage):
+    model_dir = "MC50-InstanceSegmentation/cooking/tea"
+    model_dir = "MC50-InstanceSegmentation/cooking/coffee+tea"
     # Model
     demo = load_model(
         #config=f"{model_dir}/stage2/mask_rcnn_R_50_FPN_1x_demo.yaml",
-        config=f"{model_dir}/stage1/mask_rcnn_R_101_FPN_1x_demo.yaml",
+        config=f"{model_dir}/stage1/mask_rcnn_R_50_FPN_1x_demo.yaml",
         #conf_thr=0.4
         conf_thr=0.01,
     )
 
     # Data
-    coffee_root = "/data/hannah.defazio/ptg_nas/data_copy/"
+    tea_root = "/data/PTG/cooking/ros_bags/tea/"
+    #coffee_root = "/media/hannah.defazio/Padlock_DT6/Data/notpublic/PTG/Coffee"
+    ros_bags_dir = "tea_extracted/" # Tea specific
+
+    training_split = {
+        "train_activity": [f"kitware_tea_video_{x}" for x in [2, 4, 7, 8, 10, 11, 13, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47]],
+        "val": [f"kitware_tea_video_{x}" for x in [25, 26, 31]],
+        "test": [f"kitware_tea_video_{x}" for x in [27, 28, 29, 30, 32, 33, 34]],
+    }  # Tea specific
+
+    print("\nTraining split:")
+    for split_name, videos in training_split.items():
+        print(f"{split_name}: {len(videos)} videos")
+        print(videos)
+    print("\n")
+
+    # Add data root to splits
+    for split, videos in training_split.items():
+        new_videos = []
+        for x in videos:
+            new_videos.append(f"{tea_root}/{ros_bags_dir}/{x}")
+        training_split[split] = new_videos
+
+    # Activity data loader
+    from angel_system.data.load_kitware_cooking_data import tea_activity_data_loader
+
+    activity_data_loader = tea_activity_data_loader
+
+    # Step map
+    metadata = demo.metadata.as_dict()
+
+    return (
+        demo,
+        training_split,
+        activity_data_loader,
+        metadata,
+    )
+
+def coffee_main(stage):
+    model_dir = "MC50-InstanceSegmentation/cooking/coffee"
+    model_dir = "MC50-InstanceSegmentation/cooking/coffee+tea"
+    # Model
+    demo = load_model(
+        #config=f"{model_dir}/stage2/mask_rcnn_R_50_FPN_1x_demo.yaml",
+        config=f"{model_dir}/stage1/mask_rcnn_R_50_FPN_1x_demo.yaml",
+        #conf_thr=0.4
+        conf_thr=0.01,
+    )
+
+    # Data
+    coffee_root = "/data/users/hannah.defazio/ptg_nas/data_copy/"
     #coffee_root = "/media/hannah.defazio/Padlock_DT6/Data/notpublic/PTG/Coffee"
     ros_bags_dir = "coffee_extracted/" # Coffee specific
 
@@ -141,20 +192,18 @@ def coffee_main(stage):
         training_split[split] = new_videos
 
     # Activity data loader
-    from angel_system.data.load_kitware_coffee_data import coffee_activity_data_loader
+    from angel_system.data.load_kitware_cooking_data import coffee_activity_data_loader
 
     activity_data_loader = coffee_activity_data_loader
 
     # Step map
     metadata = demo.metadata.as_dict()
-    step_map = metadata["sub_steps"]
 
     return (
         demo,
         training_split,
         activity_data_loader,
         metadata,
-        step_map,
     )
 
 def tourniquet_main(stage, using_inter_steps, using_before_finished_task):
@@ -430,7 +479,7 @@ def tourniquet_main(stage, using_inter_steps, using_before_finished_task):
     )
 
 def main():
-    experiment_name = "coffee_base"
+    experiment_name = "coffee_and_tea"
     stage = "results"
 
     print("Experiment: ", experiment_name)
@@ -441,12 +490,11 @@ def main():
         training_split,
         activity_data_loader,
         metadata,
-        step_map,
-    ) = coffee_main(
+    ) = tea_main(
         stage,
     )
 
-    splits = ["val", "train_activity", "test"]
+    splits = ["train_activity", "test"]
 
     if not os.path.exists("temp"):
         os.mkdir("temp")

@@ -447,164 +447,65 @@ original_sub_steps['step 8'].append(sub_step)
 
 
 
+States_Pairs = [
+    ['kettle (closed)',
+        'kettle (open)'],
+    ['coffee beans + container', 'coffee beans + container + scale'],
+    ['coffee grounds + paper filter + filter cone',
+        'coffee grounds + paper filter + filter cone + mug',
+        'filter cone', 'filter cone + mug', 'paper filter + filter cone',
+        'paper filter + filter cone + mug', 'used paper filter + filter cone',
+        'used paper filter + filter cone + mug', 'water + coffee grounds + paper filter + filter cone + mug'],
+    ['coffee + mug',
+        'coffee grounds + paper filter + filter cone + mug',
+        'filter cone + mug', 'mug', 'paper filter + filter cone + mug',
+        'used paper filter + filter cone + mug', 'water + coffee grounds + paper filter + filter cone + mug'],
+    ['container', 'container + scale'],
+    ['scale (off)', 'scale (on)', 'container + scale', 'coffee beans + container + scale'],
+    ['paper filter (semi)', 'paper filter (quarter)', 'paper filter'],
+    ['coffee beans + container', 'coffee beans + container + scale'],
+    ['timer (on)', 'timer (off)'],
+    ['thermometer (open)', 'thermometer (close)'],
+    ['grinder (close)', 'grinder (open)']
+]
+    
+CONTACT_PAIRS = [
+    ['measuring cup', 'water'],
+    ['kettle (open)', 'measuring cup'], # step 1
 
+    ['mug', 'filter cone'],  # step 2
 
-contact_pairs_details = [[['measuring cup', 'water'],
-         ['measuring cup', 'kettle (open)'],
-         ['switch', 'hand']],  # step 1
+    ['paper filter', 'paper filter bag'],
+    ['paper filter (semi)', 'filter cone + mug'],
+    ['paper filter (quarter)', 'filter cone + mug'],
+    ['paper filter', 'filter cone + mug'],  # step 3
 
-         [['hand', 'filter cone'],
-          ['mug', 'filter cone'],
-          ['hand', 'filter cone + mug']],  # step 2
+    ['scale (on)', 'container'],
+    ['scale (off)', 'container'],
+    ['container + scale', 'coffee bag'],
+    ['coffee beans + container + scale', 'coffee bag'],
+    ['coffee beans + container', 'grinder (open)'],
+    ['container', 'grinder (open)'],
+    ['paper filter + filter cone + mug', 'grinder (open)'],
+    ['paper filter + filter cone', 'grinder (open)'],
+    ['coffee grounds + paper filter + filter cone', 'grinder (open)'],
+    ['coffee grounds + paper filter + filter cone + mug', 'grinder (open)'],  # step 4
 
-         [['paper filter', 'paper filter bag'],
-          ['hand', 'paper filter bag'],
-          ['hand', 'paper filter'],
-          ['hand', 'paper filter (semi)'],
-          ['hand', 'paper filter (quarter)'],
-          ['paper filter (quarter)', 'filter cone + mug'],
-          ['hand', 'paper filter + filter cone + mug']], # step 3
+    ['thermometer (open)', 'kettle (open)'],
+    # ['thermometer', 'kettle'], # step 5
 
-         [['hand', 'scale (on)'],
-          ['hand', 'scale (off)'],
-          ['hand', 'container + scale'],
-          ['scale (on)', 'container'],
-          ['scale (off)', 'container'],
-          ['container + scale', 'coffee bag'],
-          ['coffee beans + container + scale', 'coffee bag'],
-          ['coffee beans + container', 'grinder (open)'],
-          ['container', 'grinder (open)'],
-          ['hand', 'timer (else)'],
-          ['hand', 'timer (30)'],
-          ['hand', 'timer (20)'],
-          ['hand', 'grinder (close)'],
-          ['paper filter + filter cone + mug', 'grinder (open)'],
-          ['paper filter + filter cone', 'grinder (open)'],
-          ['coffee grounds + paper filter + filter cone + mug', 'grinder (open)'],
-          ['coffee grounds + paper filter + filter cone', 'grinder (open)']],  # step 4
+    ['kettle', 'coffee grounds + paper filter + filter cone + mug'],
+    ['kettle', 'water + coffee grounds + paper filter + filter cone + mug'],  # step 6 ~ 7
 
-         [['thermometer (open)', 'kettle (open)'],
-          ['thermometer (open)', 'hand'],
-         ['thermometer (close)', 'hand']], # step 5
+    ['mug', 'used paper filter + filter cone'],
+    # ['hand', 'used paper filter + filter cone'],
+    # ['hand', 'used paper filter + filter cone + mug'],
+    ['used paper filter', 'trash can'],
+    ['trash can', 'filter cone'],
+    ['hand', 'used paper filter']  # step 8
+]
 
-         [['kettle', 'coffee grounds + paper filter + filter cone + mug'],
-          # ['kettle', 'water + coffee grounds + paper filter + filter cone + mug'],
-          # ['hand', 'timer']
-          ], # step 6
+contact_pairs_details = CONTACT_PAIRS
 
-        [['kettle', 'water + coffee grounds + paper filter + filter cone + mug']
-         # ['kettle', 'used paper filter + filter cone + mug']
-         ],  # step 7
-
-         [['mug', 'used paper filter + filter cone'],
-          ['hand', 'used paper filter + filter cone'],
-          ['hand', 'used paper filter + filter cone + mug'],
-          ['used paper filter', 'trash can'],
-          ['trash can', 'filter cone'],
-          ['hand', 'used paper filter']]  # step 8
-         ]
-
-
-
-States_Pairs = [['kettle',
-                    'kettle (open)'],
-                ['coffee beans + container', 'coffee beans + container + scale'],
-                ['coffee grounds + paper filter + filter cone',
-                    'coffee grounds + paper filter + filter cone + mug',
-                    'filter cone', 'filter cone + mug', 'paper filter + filter cone',
-                    'paper filter + filter cone + mug', 'used paper filter + filter cone',
-                    'used paper filter + filter cone + mug', 'water + coffee grounds + paper filter + filter cone + mug'],
-                ['coffee + mug',
-                    'coffee grounds + paper filter + filter cone + mug',
-                    'filter cone + mug', 'mug', 'paper filter + filter cone + mug',
-                    'used paper filter + filter cone + mug', 'water + coffee grounds + paper filter + filter cone + mug'],
-                ['container', 'container + scale'],
-                ['scale (off)', 'scale (on)', 'container + scale', 'coffee beans + container + scale'],
-                ['paper filter (semi)', 'paper filter (quarter)', 'paper filter'],
-                ['coffee beans + container', 'coffee beans + container + scale'],
-                ['timer (else)', 'timer (20)', 'timer (30)'],
-                ['thermometer (open)', 'thermometer (close)'],
-                ['grinder (close)', 'grinder (open)']
-                ]
-
-
-
-CONTACT_PAIRS_v1 = [['measuring cup (empty)', 'water'],
-                         ['measuring cup (full)', 'water'],
-                         ['measuring cup (full)', 'kettle (full)'],
-                         ['measuring cup (full)', 'kettle (empty)'],
-                         ['measuring cup (empty)', 'kettle (full)'],
-                         ['measuring cup (empty)', 'kettle (empty)'],  # step 1
-
-                         ['mug', 'filter cone'], # step 2
-
-                         ['paper filter', 'paper filter bag'],
-                         ['paper filter (semi)', 'filter cone + mug'],
-                         ['paper filter (quarter)', 'filter cone + mug'],
-                         ['paper filter', 'filter cone + mug'], # step 3
-
-                         ['scale (on)', 'container'],
-                         ['scale (off)', 'container'],
-                         ['container + scale', 'coffee bag'],
-                         ['coffee beans + container + scale', 'coffee bag'],
-                         ['coffee beans + container', 'grinder'],
-                         ['container', 'grinder'],
-                         ['paper filter + filter cone + mug', 'grinder'],
-                         ['paper filter + filter cone', 'grinder'],
-                         ['coffee beans + paper filter + filter cone + mug', 'grinder'],
-                         ['coffee beans + paper filter + filter cone', 'grinder'],
-                         ['coffee grounds + paper filter + filter cone', 'grinder'],
-                         ['coffee grounds + paper filter + filter cone + mug', 'grinder'],# step 4
-
-                         ['thermometer', 'kettle (full)'],
-                         ['thermometer', 'kettle (empty)'],
-                         # ['thermometer', 'kettle'], # step 5
-
-                         ['kettle', 'coffee grounds + paper filter + filter cone + mug'],
-                         ['kettle', 'water + coffee grounds + paper filter + filter cone + mug'],
-                         ['kettle', 'used paper filter + filter cone + mug'],  # step 6 ~ 7
-
-                         ['mug', 'used paper filter + filter cone'],
-                         ['used paper filter', 'filter cone'],
-                         ['used paper filter + filter cone', 'paper towel'],
-                         ['used paper filter', 'trash can'],
-                         ['trash can', 'filter cone']# step 8
-                         ]
-                         
-CONTACT_PAIRS = [['measuring cup', 'water'],
-                    ['kettle (open)', 'measuring cup'],# step 1
-
-                    ['mug', 'filter cone'],  # step 2
-
-                    ['paper filter', 'paper filter bag'],
-                    ['paper filter (semi)', 'filter cone + mug'],
-                    ['paper filter (quarter)', 'filter cone + mug'],
-                    ['paper filter', 'filter cone + mug'],  # step 3
-
-                    ['scale (on)', 'container'],
-                    ['scale (off)', 'container'],
-                    ['container + scale', 'coffee bag'],
-                    ['coffee beans + container + scale', 'coffee bag'],
-                    ['coffee beans + container', 'grinder (open)'],
-                    ['container', 'grinder (open)'],
-                    ['paper filter + filter cone + mug', 'grinder (open)'],
-                    ['paper filter + filter cone', 'grinder (open)'],
-                    ['coffee grounds + paper filter + filter cone', 'grinder (open)'],
-                    ['coffee grounds + paper filter + filter cone + mug', 'grinder (open)'],  # step 4
-
-                    ['thermometer (open)', 'kettle (open)'],
-                    # ['thermometer', 'kettle'], # step 5
-
-                    ['kettle', 'coffee grounds + paper filter + filter cone + mug'],
-                    ['kettle', 'water + coffee grounds + paper filter + filter cone + mug'],  # step 6 ~ 7
-
-                    ['mug', 'used paper filter + filter cone'],
-                    # ['hand', 'used paper filter + filter cone'],
-                    # ['hand', 'used paper filter + filter cone + mug'],
-                    ['used paper filter', 'trash can'],
-                    ['trash can', 'filter cone'],
-                    ['hand', 'used paper filter']  # step 8
-                    ]
-
-R_class = ['paper filter bag', 'coffee bag']
+R_class = []
 allow_repeat_obj = []
