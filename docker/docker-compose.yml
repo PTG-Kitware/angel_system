@@ -75,7 +75,7 @@ services:
       - ${WORKSPACE_SHELL_HOST_DIR}/install:${ANGEL_WORKSPACE_DIR}/install
       - ${WORKSPACE_SHELL_HOST_DIR}/log:${ANGEL_WORKSPACE_DIR}/log
       - ${WORKSPACE_SHELL_HOST_DIR}/stuff:${ANGEL_WORKSPACE_DIR}/stuff
-      - ${WORKSPACE_SHELL_HOST_DIR}/ros_logs:/root/.ros/logs
+      - ${WORKSPACE_SHELL_HOST_DIR}/ros_home:/root/.ros
       - ${WORKSPACE_SHELL_HOST_DIR}/cache/torch:/root/.cache/torch
       # X11 things
       - /tmp/.X11-unix:/tmp/.X11-unix
