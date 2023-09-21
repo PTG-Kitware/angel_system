@@ -104,6 +104,7 @@ extend-exclude = '''
 (
   ^/angel_system/berkeley
   | ^/angel_system/fasterrcnn
+  | ^/python-tpl
   | ^/ros/(ROS-TCP-Endpoint|rosbag2)
   | ^/src/(ROS-TCP-Endpoint|rosbag2)  # alternative for within docker contianer
   | ^/hl2ss

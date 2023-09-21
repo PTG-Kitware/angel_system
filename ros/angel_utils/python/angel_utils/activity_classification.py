@@ -136,8 +136,7 @@ class InputBuffer:
         # NOTE: Only considering `frames` for timestamps.
         with self.__state_lock:
             if not self.frames:
-                raise RuntimeError("No data buffered for there to be a latest "
-                                   "time.")
+                raise RuntimeError("No data buffered for there to be a latest time.")
             return self.frames[-1][0]
 
     def queue_image(

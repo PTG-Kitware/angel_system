@@ -26,15 +26,20 @@ class ImageTimestampRelay(Node):
             [
                 (PARAM_INPUT_TOPIC,),
                 (PARAM_OUTPUT_TOPIC,),
-            ]
+            ],
         )
 
         self._sub = self.create_subscription(
-            Image, param_values[PARAM_INPUT_TOPIC], self.input_callback, 1,
+            Image,
+            param_values[PARAM_INPUT_TOPIC],
+            self.input_callback,
+            1,
             callback_group=MutuallyExclusiveCallbackGroup(),
         )
         self._pub = self.create_publisher(
-            Time, param_values[PARAM_OUTPUT_TOPIC], 1,
+            Time,
+            param_values[PARAM_OUTPUT_TOPIC],
+            1,
             callback_group=MutuallyExclusiveCallbackGroup(),
         )
 

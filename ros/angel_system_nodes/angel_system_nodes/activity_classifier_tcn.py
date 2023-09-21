@@ -132,7 +132,9 @@ class ActivityClassifierTCN(Node):
 
         # Load in TCN classification model and weights
         with SimpleTimer("Loading inference module", log.info):
-            mapping_file_dir = os.path.abspath(os.path.dirname(param_values[PARAM_MODEL_MAPPING]))
+            mapping_file_dir = os.path.abspath(
+                os.path.dirname(param_values[PARAM_MODEL_MAPPING])
+            )
             mapping_file_name = os.path.basename(param_values[PARAM_MODEL_MAPPING])
             self._model_device = torch.device(param_values[PARAM_MODEL_DEVICE])
             self._model = PTGLitModule.load_from_checkpoint(
@@ -147,10 +149,7 @@ class ActivityClassifierTCN(Node):
         # Load labels list from configured activity_labels YAML file.
         with open(param_values[PARAM_MODEL_OD_MAPPING]) as infile:
             det_label_list = json.load(infile)
-        self._det_label_to_id = {
-            c: i
-            for i, c in enumerate(det_label_list)
-        }
+        self._det_label_to_id = {c: i for i, c in enumerate(det_label_list)}
         # Feature version aligned with model current architecture
         self._feat_version = param_values[PARAM_MODEL_DETS_CONV_VERSION]
 
@@ -162,7 +161,9 @@ class ActivityClassifierTCN(Node):
             0,  # Not using msgs with tolerance.
             self.get_logger,
         )
-        self._buffer_max_size_nsec = int(param_values[PARAM_BUFFER_MAX_SIZE_SECONDS] * 1e9)
+        self._buffer_max_size_nsec = int(
+            param_values[PARAM_BUFFER_MAX_SIZE_SECONDS] * 1e9
+        )
 
         # Used by a _window_criterion_new_leading_frame to track previous
         # window's leading frame time.
@@ -172,15 +173,23 @@ class ActivityClassifierTCN(Node):
         # These are being purposefully being allocated before the
         # runtime-thread allocation.
         self._img_ts_subscriber = self.create_subscription(
-            Time, self._img_ts_topic, self.img_ts_callback, 1,
+            Time,
+            self._img_ts_topic,
+            self.img_ts_callback,
+            1,
             callback_group=MutuallyExclusiveCallbackGroup(),
         )
         self._det_subscriber = self.create_subscription(
-            ObjectDetection2dSet, self._det_topic, self.det_callback, 1,
+            ObjectDetection2dSet,
+            self._det_topic,
+            self.det_callback,
+            1,
             callback_group=MutuallyExclusiveCallbackGroup(),
         )
         self._activity_publisher = self.create_publisher(
-            ActivityDetection, self._act_topic, 1,
+            ActivityDetection,
+            self._act_topic,
+            1,
             callback_group=MutuallyExclusiveCallbackGroup(),
         )
 
@@ -194,9 +203,7 @@ class ActivityClassifierTCN(Node):
         self._rt_active_heartbeat = param_values[PARAM_RT_HEARTBEAT]
         # Condition that the runtime should perform processing
         self._rt_awake_evt = Event2()
-        self._rt_thread = Thread(
-            target=self.rt_loop, name="prediction_runtime"
-        )
+        self._rt_thread = Thread(target=self.rt_loop, name="prediction_runtime")
         self._rt_thread.daemon = True
         self._rt_thread.start()
 
@@ -216,7 +223,9 @@ class ActivityClassifierTCN(Node):
         and publish the `ActivityDetection` message.
         """
         if self.rt_alive() and self._buffer.queue_object_detections(msg):
-            self.get_logger().debug(f"Queueing object detections (ts={msg.header.stamp})")
+            self.get_logger().debug(
+                f"Queueing object detections (ts={msg.header.stamp})"
+            )
 
     def rt_alive(self) -> bool:
         """
@@ -236,7 +245,7 @@ class ActivityClassifierTCN(Node):
         self._rt_active.clear()
 
     def _window_criterion_correct_size(self, window: InputBuffer) -> bool:
-        window_ok = (len(window) == self._window_size)
+        window_ok = len(window) == self._window_size
         if not window_ok:
             self.get_logger().warn(
                 f"Window is not the appropriate size "
@@ -250,8 +259,7 @@ class ActivityClassifierTCN(Node):
         leading frame.
         """
         if len(window) == 0:
-            self.get_logger().warn("Window has no content, no leading frame "
-                                   "to check.")
+            self.get_logger().warn("Window has no content, no leading frame to check.")
             return False
         cur_leading_time_ns = time_to_int(window.frames[-1][0])
         prev_leading_time_ns = self._prev_leading_time_ns
@@ -260,8 +268,7 @@ class ActivityClassifierTCN(Node):
             if not window_ok:
                 # current window is earlier/same lead as before, so not a good
                 # window
-                self.get_logger().warn("Input window has duplicate leading "
-                                       "frame time.")
+                self.get_logger().warn("Input window has duplicate leading frame time.")
                 return False
             # Window is OK, save new latest leading frame time below.
         # Else:This is the first window with non-zero frames. The first history
@@ -305,9 +312,11 @@ class ActivityClassifierTCN(Node):
                         self._activity_publisher.publish(act_msg)
                     except NoActivityClassification:
                         # No ramifications, but don't publish activity message.
-                        log.warn("Runtime loop window processing function did "
-                                 "not yield an activity classification for "
-                                 "publishing.")
+                        log.warn(
+                            "Runtime loop window processing function did "
+                            "not yield an activity classification for "
+                            "publishing."
+                        )
                 else:
                     log.info("Runtime loop window criterion check(s) failed.")
                     with self._buffer:
@@ -324,9 +333,10 @@ class ActivityClassifierTCN(Node):
                             # Nothing in the buffer, nothing to clear.
                             pass
             else:
-                log.info("Runtime loop heartbeat timeout: checking alive "
-                         "status.",
-                         throttle_duration_sec=1)
+                log.info(
+                    "Runtime loop heartbeat timeout: checking alive status.",
+                    throttle_duration_sec=1,
+                )
 
         log.info("Runtime function end.")
 
@@ -367,8 +377,10 @@ class ActivityClassifierTCN(Node):
                     obj_det_vec_dtype = obj_det_vec_list[i].dtype
             # Second pass, create zero-vectors
             if obj_det_vec_ndim is None:
-                log.warn("[_process_window] No object detection messages in "
-                         "input window. Continuing.")
+                log.warn(
+                    "[_process_window] No object detection messages in "
+                    "input window. Continuing."
+                )
                 raise NoActivityClassification()
             z_vec = np.zeros(obj_det_vec_ndim, obj_det_vec_dtype)
             for i in range(len(obj_det_vec_list)):
@@ -400,10 +412,12 @@ class ActivityClassifierTCN(Node):
             activity_msg.label_vec = self._model.classes
             activity_msg.conf_vec = proba.tolist()
 
-        log.info(f"Activity classification -- "
-                 f"{activity_msg.label_vec[pred]} @ {activity_msg.conf_vec[pred]} "
-                 f"(time: {activity_msg.source_stamp_end_frame} - "
-                 f"{activity_msg.source_stamp_end_frame})")
+        log.info(
+            f"Activity classification -- "
+            f"{activity_msg.label_vec[pred]} @ {activity_msg.conf_vec[pred]} "
+            f"(time: {activity_msg.source_stamp_end_frame} - "
+            f"{activity_msg.source_stamp_end_frame})"
+        )
 
         return activity_msg
 
