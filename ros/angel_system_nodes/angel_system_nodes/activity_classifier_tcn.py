@@ -21,6 +21,7 @@ from rclpy.executors import MultiThreadedExecutor
 import torch
 
 from tcn_hpl.models.ptg_module import PTGLitModule
+from tcn_hpl.data.components.augmentations import NormalizePixelPts
 
 from angel_system.impls.detect_activities.detections_to_activities.utils import (
     obj_det2d_set_to_feature,
@@ -281,7 +282,7 @@ class ActivityClassifierTCN(Node):
         Activity classification prediction runtime function.
         """
         log = self.get_logger()
-        log.info("Runtime loop starting")
+        log.debug("Runtime loop starting")
 
         # These criterion predicates must all return true for us to proceed
         # with processing activity classification for a window.
@@ -293,13 +294,13 @@ class ActivityClassifierTCN(Node):
 
         while self._rt_active.wait(0):  # will quickly return false if cleared.
             if self._rt_awake_evt.wait_and_clear(self._rt_active_heartbeat):
-                log.info("Runtime loop awakened")
+                log.debug("Runtime loop awakened")
 
                 # We want to fire off a prediction if the current window of
                 # data is "valid" based on our registered criterion.
                 window = self._buffer.get_window(self._window_size)
                 if all(fn(window) for fn in window_processing_criterion_fn_list):
-                    log.info("Runtime loop starting processing block")
+                    log.debug("Runtime loop starting processing block")
                     # After validating a window, and before processing it, clear
                     # out older data from the buffer based on the timestamp of
                     # the first item in the current window.
@@ -318,7 +319,7 @@ class ActivityClassifierTCN(Node):
                             "publishing."
                         )
                 else:
-                    log.info("Runtime loop window criterion check(s) failed.")
+                    log.debug("Runtime loop window criterion check(s) failed.")
                     with self._buffer:
                         # Clear to at least our maximum buffer size even if we
                         # didn't process anything (if there is anything *in*
@@ -333,7 +334,7 @@ class ActivityClassifierTCN(Node):
                             # Nothing in the buffer, nothing to clear.
                             pass
             else:
-                log.info(
+                log.debug(
                     "Runtime loop heartbeat timeout: checking alive status.",
                     throttle_duration_sec=1,
                 )
@@ -372,7 +373,7 @@ class ActivityClassifierTCN(Node):
                         obj_det_msg.obj_hand_contact_conf,
                         self._det_label_to_id,
                         version=self._feat_version,
-                    ).astype(np.float32)
+                    ).ravel().astype(np.float32)
                     obj_det_vec_ndim = obj_det_vec_list[i].shape
                     obj_det_vec_dtype = obj_det_vec_list[i].dtype
             # Second pass, create zero-vectors
@@ -382,21 +383,37 @@ class ActivityClassifierTCN(Node):
                     "input window. Continuing."
                 )
                 raise NoActivityClassification()
-            z_vec = np.zeros(obj_det_vec_ndim, obj_det_vec_dtype)
+            # DEBUG: "view" what slots in the window have detection vectors
+            log.info(f"Window vector presence: "
+                     f"{[(v is not None) for v in obj_det_vec_list]}")
+            empty_vec = np.zeros(obj_det_vec_ndim, obj_det_vec_dtype)
             for i in range(len(obj_det_vec_list)):
                 if obj_det_vec_list[i] is None:
-                    obj_det_vec_list[i] = z_vec
-            obj_det_vec_t = torch.tensor(obj_det_vec_list).T.to(self._model_device)
+                    obj_det_vec_list[i] = empty_vec
+            # Shape: [window_size, feat_dim]
+            obj_det_vec_t = torch.tensor(obj_det_vec_list).to(self._model_device)
 
-        # Hannah said to look at
-        #   https://github.com/PTG-Kitware/TCN_HPL/blob/main/tcn_hpl/data/components/PTG_dataset.py#L46
-        # ¯\_(ツ)_/¯
-        mask_t = torch.ones(obj_det_vec_t.shape[1]).to(self._model_device)
+            # TODO: Generate mask such that there are 0's where we have no
+            #       detections for a frame.
+            # Hannah said to look at
+            #   https://github.com/PTG-Kitware/TCN_HPL/blob/main/tcn_hpl/data/components/PTG_dataset.py#L46
+            # ¯\_(ツ)_/¯
+            mask_t = torch.ones(len(obj_det_vec_list)).to(self._model_device)
+
+        # Shape (because of post-normalize transport): [feat_dim, window_size]
+        obj_det_vec_t_prime = NormalizePixelPts(
+            # TODO: De-hard-code
+            1280, 720,
+            ####################
+            len(self._det_label_to_id),
+            self._feat_version
+        )(obj_det_vec_t).T
 
         with SimpleTimer("[_process_window] Predicting activity proba", log.debug):
             # Invoke model with descriptor inputs
             with torch.no_grad():
-                logits = self._model(obj_det_vec_t, mask_t[None, :])
+                # model requires feats to be in shape: [feat_dim, window_size]
+                logits = self._model(obj_det_vec_t_prime, mask_t[None, :])
             # Logits access mirrors model step function argmax access here:
             #   tcn_hpl.models.ptg_module --> PTGLitModule.model_step
             # ¯\_(ツ)_/¯
