@@ -1,11 +1,40 @@
 from typing import Dict
+from typing import Tuple
 
 import kwimage
 
 import numpy as np
+import numpy.typing as npt
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from PIL import Image
+
+
+def tlbr_to_xywh(
+    top: npt.ArrayLike,
+    left: npt.ArrayLike,
+    bottom: npt.ArrayLike,
+    right: npt.ArrayLike,
+) -> Tuple[npt.ArrayLike, npt.ArrayLike, npt.ArrayLike, npt.ArrayLike]:
+    """
+    Convert array-likes of vectorized TLBR (top-left-bottom-right) box
+    coordinates into XYWH (x, y, width, height) format (similarly vectorized)
+
+    :param top: Array-like of top box coordinate values.
+    :param left: Array-like of left box coordinate values.
+    :param bottom: Array-like of bottom box coordinate values.
+    :param right: Array-like of right box coordinate values.
+
+    :return:
+    """
+    assert (
+        len(top) == len(left) == len(bottom) == len(right)
+    ), "No all input array-likes were the same length."
+    xs = np.asarray(left)
+    ys = np.asarray(top)
+    ws = np.asarray(right) - xs
+    hs = np.asarray(bottom) - ys
+    return xs, ys, ws, hs
 
 
 def obj_det2d_set_to_feature(

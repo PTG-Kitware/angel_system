@@ -50,9 +50,7 @@ windows:
   - sensor_input:
       layout: even-vertical
       panes:
-        - ros_bag_play: | #ros2 bag play <<PATH_TO_BAG_FILE>>
-            sleep 10
-            ros2 bag play ${ANGEL_WORKSPACE_DIR}/ros_bags/all_activities_51
+        - ros_bag_play: #ros2 bag play <<PATH_TO_BAG_FILE>>
 
         # Old videos were recorded in NV12
         - image_converter: ros2 run angel_datahub ImageConverter --ros-args
@@ -66,7 +64,7 @@ windows:
             -p output_topic:=PVFramesRGB_TS
 
         # Visualize RGB Images being output from the headset
-        - rqt_2d_detections: rqt -s rqt_image_view/ImageView
+        - rqt_rgb_images: rqt -s rqt_image_view/ImageView
             --args ${ROS_NAMESPACE}/PVFramesRGB
             --ros-args -p _image_transport:=raw
 
@@ -86,9 +84,6 @@ windows:
             -p topic_input_det_2d:=ObjectDetections2d
             -p topic_output_images:=pv_image_detections_2d
             -p filter_top_k:=-1
-        #- rqt_2d_detections: rqt -s rqt_image_view/ImageView
-        #    --args ${ROS_NAMESPACE}/pv_image_detections_2d
-        #    --ros-args -p _image_transport:=compressed
 
   - activity_classifier: ros2 run angel_system_nodes activity_classifier_tcn --ros-args
       -r __ns:=${ROS_NAMESPACE}

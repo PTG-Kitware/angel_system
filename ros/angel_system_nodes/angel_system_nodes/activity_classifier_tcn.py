@@ -24,7 +24,14 @@ from tcn_hpl.models.ptg_module import PTGLitModule
 from tcn_hpl.data.components.augmentations import NormalizePixelPts
 
 from angel_system.impls.detect_activities.detections_to_activities.utils import (
+    tlbr_to_xywh,
     obj_det2d_set_to_feature,
+)
+from angel_system.tcn_hpl.predict import (
+    load_module,
+    ObjectDetectionsLTRB,
+    objects_to_feats,
+    predict,
 )
 from angel_system.utils.simple_timer import SimpleTimer
 
@@ -133,19 +140,12 @@ class ActivityClassifierTCN(Node):
 
         # Load in TCN classification model and weights
         with SimpleTimer("Loading inference module", log.info):
-            mapping_file_dir = os.path.abspath(
-                os.path.dirname(param_values[PARAM_MODEL_MAPPING])
-            )
-            mapping_file_name = os.path.basename(param_values[PARAM_MODEL_MAPPING])
             self._model_device = torch.device(param_values[PARAM_MODEL_DEVICE])
-            self._model = PTGLitModule.load_from_checkpoint(
+            self._model = load_module(
                 param_values[PARAM_MODEL_WEIGHTS],
-                map_location=self._model_device,
-                # HParam overrides
-                data_dir=mapping_file_dir,
-                mapping_file_name=mapping_file_name,
-            )
-            self._model = self._model.eval()
+                param_values[PARAM_MODEL_MAPPING],
+                self._model_device,
+            ).eval()
 
         # Load labels list from configured activity_labels YAML file.
         with open(param_values[PARAM_MODEL_OD_MAPPING]) as infile:
@@ -215,7 +215,7 @@ class ActivityClassifierTCN(Node):
         if self.rt_alive() and self._buffer.queue_image(None, msg):
             self.get_logger().debug(f"Queueing image TS {msg}")
             # Inform the runtime that it should process a cycle.
-            self._rt_awake_evt.set()
+            # self._rt_awake_evt.set()
 
     def det_callback(self, msg: ObjectDetection2dSet) -> None:
         """
@@ -227,6 +227,7 @@ class ActivityClassifierTCN(Node):
             self.get_logger().debug(
                 f"Queueing object detections (ts={msg.header.stamp})"
             )
+            self._rt_awake_evt.set()
 
     def rt_alive(self) -> bool:
         """
@@ -350,75 +351,47 @@ class ActivityClassifierTCN(Node):
         """
         log = self.get_logger()
 
-        # Construct feature vector for each object detection aligned with a
-        # frame. Where there is a frame and *no* object detections, create a
-        # 0-vector of equivalent dimensionality.
-        obj_det_vec_list: List[Optional[npt.NDArray]] = [None] * len(window.obj_dets)
-        obj_det_vec_ndim = None
-        obj_det_vec_dtype = None
-        with SimpleTimer("[_process_window] Convert detections to vectors", log.debug):
-            for i, obj_det_msg in enumerate(window.obj_dets):
-                if obj_det_msg is not None:
-                    obj_det_vec_list[i] = obj_det2d_set_to_feature(
-                        obj_det_msg.label_vec,
-                        obj_det_msg.left,
-                        obj_det_msg.right,
-                        obj_det_msg.top,
-                        obj_det_msg.bottom,
-                        obj_det_msg.label_confidences,
-                        obj_det_msg.descriptors,
-                        obj_det_msg.obj_obj_contact_state,
-                        obj_det_msg.obj_obj_contact_conf,
-                        obj_det_msg.obj_hand_contact_state,
-                        obj_det_msg.obj_hand_contact_conf,
-                        self._det_label_to_id,
-                        version=self._feat_version,
-                    ).ravel().astype(np.float32)
-                    obj_det_vec_ndim = obj_det_vec_list[i].shape
-                    obj_det_vec_dtype = obj_det_vec_list[i].dtype
-            # Second pass, create zero-vectors
-            if obj_det_vec_ndim is None:
-                log.warn(
-                    "[_process_window] No object detection messages in "
-                    "input window. Continuing."
-                )
-                raise NoActivityClassification()
-            # DEBUG: "view" what slots in the window have detection vectors
-            log.info(f"Window vector presence: "
-                     f"{[(v is not None) for v in obj_det_vec_list]}")
-            empty_vec = np.zeros(obj_det_vec_ndim, obj_det_vec_dtype)
-            for i in range(len(obj_det_vec_list)):
-                if obj_det_vec_list[i] is None:
-                    obj_det_vec_list[i] = empty_vec
-            # Shape: [window_size, feat_dim]
-            obj_det_vec_t = torch.tensor(obj_det_vec_list).to(self._model_device)
+        frame_object_detections = [
+            ObjectDetectionsLTRB(
+                det_msg.left,
+                det_msg.top,
+                det_msg.right,
+                det_msg.bottom,
+                # NOTE: Detection producer node is not filling in the message
+                #       correctly. label_vec/label_confidences is only
+                #       recording max-confidence label and confidence values.
+                #       This logic will need to be updated if that ever
+                #       changes.
+                det_msg.label_vec,
+                det_msg.label_confidences,
+            )
+            if det_msg is not None
+            else None
+            for det_msg in window.obj_dets
+        ]
+        log.info(
+            f"Window vector presence: "
+            f"{[(v is not None) for v in frame_object_detections]}"
+        )
 
-            # TODO: Generate mask such that there are 0's where we have no
-            #       detections for a frame.
-            # Hannah said to look at
-            #   https://github.com/PTG-Kitware/TCN_HPL/blob/main/tcn_hpl/data/components/PTG_dataset.py#L46
-            # ¯\_(ツ)_/¯
-            mask_t = torch.ones(len(obj_det_vec_list)).to(self._model_device)
-
-        # Shape (because of post-normalize transport): [feat_dim, window_size]
-        obj_det_vec_t_prime = NormalizePixelPts(
-            # TODO: De-hard-code
-            1280, 720,
-            ####################
-            len(self._det_label_to_id),
-            self._feat_version
-        )(obj_det_vec_t).T
+        try:
+            feats, mask = objects_to_feats(
+                frame_object_detections,
+                self._det_label_to_id,
+                self._feat_version,
+                # TODO: De-hard-code
+                1280,
+                720,
+            )
+        except ValueError:
+            # feature detections were all None
+            raise NoActivityClassification()
+        feats = feats.to(self._model_device)
+        mask = mask.to(self._model_device)
 
         with SimpleTimer("[_process_window] Predicting activity proba", log.debug):
-            # Invoke model with descriptor inputs
-            with torch.no_grad():
-                # model requires feats to be in shape: [feat_dim, window_size]
-                logits = self._model(obj_det_vec_t_prime, mask_t[None, :])
-            # Logits access mirrors model step function argmax access here:
-            #   tcn_hpl.models.ptg_module --> PTGLitModule.model_step
-            # ¯\_(ツ)_/¯
-            pred = torch.argmax(logits[-1, :, :, -1], dim=1)[0].cpu()
-            proba: torch.Tensor = torch.softmax(logits[-1, :, :, -1], dim=1)[0].cpu()
+            proba = predict(self._model, feats, mask).cpu()
+            pred = torch.argmax(proba)
 
         with SimpleTimer("[_process_window] Constructing output msg", log.debug):
             activity_msg = ActivityDetection()
