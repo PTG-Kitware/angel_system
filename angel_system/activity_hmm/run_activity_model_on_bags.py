@@ -19,7 +19,7 @@ def run(args):
         print(f"Bag: {bag}")
 
         #env["ROS_NAMESPACE"] = "/kitware"
-        env["ROS_NAMESPACE"] = "-/debug"
+        env["ROS_NAMESPACE"] = "/debug"
         env["HL2_IP"] = "192.168.1.101"
         env["CONFIG_DIR"] = os.getenv("ANGEL_WORKSPACE_DIR") + "/src/angel_system_nodes/configs"
         env["MODEL_DIR"] = os.getenv("ANGEL_WORKSPACE_DIR") + "/model_files"
@@ -39,11 +39,11 @@ def run(args):
             "-p", "topic_input_images:=PVFramesNV12",
             "-p", "topic_output_images:=PVFramesRGB"], env=env)
         p3 = subprocess.Popen(["ros2", "run", "angel_system_nodes", "berkeley_object_detector", "--ros-args",
-            "-r", env["ROS_NAMESPACE"],
+            "-r", "__ns:="+env["ROS_NAMESPACE"],
             "-p", "image_topic:=PVFramesRGB",
             "-p", "det_topic:=ObjectDetections2d",
             "-p", "det_conf_threshold:=0.4",
-            "-p", "model_config:=${ANGEL_WORKSPACE_DIR}/angel_system/berkeley/configs/MC50-InstanceSegmentation/cooking/coffee/stage1/mask_rcnn_R_101_FPN_1x_demo.yaml",
+            "-p", "model_config:="+env["ANGEL_WORKSPACE_DIR"]+"/angel_system/berkeley/configs/MC50-InstanceSegmentation/cooking/coffee/stage1/mask_rcnn_R_101_FPN_1x_demo.yaml",
             "-p", "cuda_device_id:=0"], env=env)
         p4 = subprocess.Popen(["ros2", "run", "angel_debug", "Simple2dDetectionOverlay", "--ros-args",
             "-r", env["ROS_NAMESPACE"],
@@ -63,7 +63,7 @@ def run(args):
         p7 = subprocess.Popen(["ros2", "bag", "record",
             env["ROS_NAMESPACE"]+"/ActivityDetections",
             env["ROS_NAMESPACE"]+"/PVFramesRGB",
-            "-o", env["PARAM_ROS_BAG_OUT"]], cwd="./ros_bags/", env=env)
+            "-o", env["PARAM_ROS_BAG_OUT"]], cwd="/angel_workspace/ros_bags/", env=env)
         time.sleep(15)
         p8 = subprocess.Popen(["ros2", "bag", "play", env["PARAM_ROS_BAG_DIR"]], env=env).wait()
         if p8 == 0:
