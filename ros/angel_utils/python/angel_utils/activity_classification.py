@@ -121,6 +121,25 @@ class InputBuffer:
         # Same as RLock.__exit__
         self.__state_lock.release()
 
+    def __len__(self):
+        with self.__state_lock:
+            return len(self.frames)
+
+    def latest_time(self) -> Time:
+        """
+        Get the most recent timestamp of data queued in this buffer.
+
+        :raises RuntimeError: No data has yet been buffered.
+
+        :returns: Time message of the latest data queued in this buffer.
+        """
+        # NOTE: Only considering `frames` for timestamps.
+        with self.__state_lock:
+            if not self.frames:
+                raise RuntimeError("No data buffered for there to be a latest "
+                                   "time.")
+            return self.frames[-1][0]
+
     def queue_image(
         self, img_mat: npt.NDArray[np.uint8], img_header_stamp: Time
     ) -> bool:

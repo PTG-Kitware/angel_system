@@ -179,7 +179,7 @@ class BerkeleyObjectDetector(Node):
         # Publish
         self._det_publisher.publish(message)
         self._rate_tracker.tick()
-        self.get_logger().debug(
+        self.get_logger().info(
             f"Published det] message (hz: " f"{self._rate_tracker.get_rate_avg()})",
             throttle_duration_sec=1,
         )
