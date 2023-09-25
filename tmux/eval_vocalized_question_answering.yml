@@ -1,0 +1,107 @@
+#
+# Used to evaluate Question Answering with vocal processing for a specified ROS bag of data 
+# This configuration should be run by itself (e.g. not in combination with
+# another tmuxinator launch).
+#
+# NOTE: In order to query GPT, you will need to execute
+# ```
+# export OPENAI_API_KEY="YOUR API KEY"
+# export OPENAI_ORG_ID="YOUR ORG ID"
+# ```
+#
+
+name: ASR Evaluation with VAD
+root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
+
+# Optional tmux socket
+# socket_name: foo
+
+# Note that the pre and post options have been deprecated and will be replaced by
+# project hooks.
+
+# Project hooks
+
+# Runs on project start, always
+# on_project_start: command
+on_project_start: |
+  export ROS_NAMESPACE=${ROS_NAMESPACE:-/debug}
+  export CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/src/angel_system_nodes/configs
+  export NODE_RESOURCES_DIR=${ANGEL_WORKSPACE_DIR}/src/angel_system_nodes/resource
+# Run on project start, the first time
+# on_project_first_start: command
+
+# Run on project start, after the first time
+# on_project_restart: command
+
+# Run on project exit ( detaching from tmux session )
+# on_project_exit: command
+
+# Run on project stop
+# on_project_stop: command
+
+# Runs in each window and pane before window/pane specific commands. Useful for setting up interpreter versions.
+# pre_window: rbenv shell 2.0.0-p247
+
+# Pass command line options to tmux. Useful for specifying a different tmux.conf.
+# tmux_options: -f ~/.tmux.mac.conf
+tmux_options: -f <%= ENV["ANGEL_WORKSPACE_DIR"] %>/tmux/tmux.conf
+
+# Change the command to call tmux.  This can be used by derivatives/wrappers like byobu.
+# tmux_command: byobu
+
+# Specifies (by name or index) which window will be selected on project startup. If not set, the first window is used.
+# startup_window: editor
+
+# Specifies (by index) which pane of the specified window will be selected on project startup. If not set, the first pane is used.
+# startup_pane: 1
+
+# Controls whether the tmux session should be attached to automatically. Defaults to true.
+# attach: false
+
+windows:
+  # - ros_bag_play: ros2 bag play <<PATH_TO_BAG_FILE>>
+  - ros_bag_play: sleep 5; ros2 bag play /angel_workspace/ros_bags/rosbag2_2023_03_01-17_28_00/rosbag2_2023_03_01-17_28_00_0.db3
+  - vocal:
+      layout: even-vertical
+      panes:
+        - vad: ros2 run angel_system_nodes voice_activity_detector --ros-args
+            -r __ns:=${ROS_NAMESPACE}
+            -p input_audio_topic:=HeadsetAudioData
+            -p output_voice_activity_topic:=DetectedVoiceData
+            -p vad_server_url:=http://communication.cs.columbia.edu:55667/vad
+            -p vad_cadence:=3
+            -p vad_margin:=0.20
+            -p max_accumulation_length:=10
+            -p debug_mode:=True
+        - asr: ros2 run angel_system_nodes asr --ros-args
+            -r __ns:=${ROS_NAMESPACE}
+            -p audio_topic:=DetectedVoiceData
+            -p utterances_topic:=utterances_topic
+            -p asr_server_url:=http://communication.cs.columbia.edu:55667/asr
+            -p asr_req_segment_duration:=1
+            -p is_sentence_tokenize:=False
+            -p debug_mode:=True
+  - intent_detection:
+      layout: even-vertical
+      panes:
+        - gpt_intent_detection: ros2 run angel_system_nodes gpt_intent_detector --ros-args
+           -r __ns:=${ROS_NAMESPACE}
+           -p utterances_topic:=utterances_topic
+           -p expect_user_intent_topic:=expect_user_intent_topic
+           -p interp_user_intent_topic:=interp_user_intent_topic
+  - emotion_detection:
+      layout: even-vertical
+      panes:
+        - gpt_emotion_detection: ros2 run angel_system_nodes gpt_emotion_detector --ros-args
+           -r __ns:=${ROS_NAMESPACE}
+           -p expect_user_intent_topic:=expect_user_intent_topic
+           -p interp_user_intent_topic:=interp_user_intent_topic
+           -p user_emotion_topic:=gpt_emotion_topic
+  - question_answering:
+      layout: even-vertical
+      panes:
+        - gpt_emotion_detection: ros2 run angel_system_nodes question_answerer --ros-args
+           -r __ns:=${ROS_NAMESPACE}
+           -p user_emotion_topic:=gpt_emotion_topic
+           -p system_text_response_topic:=system_text_response_topic
+           -p few_shot_prompt_file:=${NODE_RESOURCES_DIR}/question_answer_site_demo_prompt

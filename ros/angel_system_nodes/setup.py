@@ -26,6 +26,7 @@ setup(
             "gpt_intent_detector = angel_system_nodes.gpt_intent_detector:main",
             "base_emotion_detector = angel_system_nodes.base_emotion_detector:main",
             "gpt_emotion_detector = angel_system_nodes.gpt_emotion_detector:main",
+            "question_answerer = angel_system_nodes.question_answerer:main",
             "intent_detector = angel_system_nodes.intent_detector:main",
             "audio_player = angel_system_nodes.audio_player:main",
             "frame_publisher = angel_system_nodes.ros_publisher:main",
