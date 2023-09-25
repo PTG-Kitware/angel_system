@@ -97,6 +97,8 @@ windows:
       -p model_dets_conv_version:=5
       -p window_size:=30
       -p buffer_max_size_seconds:=5
+      -p image_pix_width:=1280
+      -p image_pix_height:=720
 
 #  - task_monitor: ros2 run angel_system_nodes task_monitor_v2 --ros-args
 #      -r __ns:=${ROS_NAMESPACE}

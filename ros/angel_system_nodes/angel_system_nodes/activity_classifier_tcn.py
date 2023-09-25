@@ -67,6 +67,10 @@ PARAM_MODEL_DETS_CONV_VERSION = "model_dets_conv_version"
 PARAM_WINDOW_FRAME_SIZE = "window_size"
 # Maximum amount of data we will buffer in seconds.
 PARAM_BUFFER_MAX_SIZE_SECONDS = "buffer_max_size_seconds"
+# Width in pixels of the imagery that object detections were predicted from.
+PARAM_IMAGE_PIX_WIDTH = "image_pix_width"
+# Height in pixels of the imagery that object detections were predicted from.
+PARAM_IMAGE_PIX_HEIGHT = "image_pix_height"
 # Runtime thread checkin heartbeat interval in seconds.
 PARAM_RT_HEARTBEAT = "rt_thread_heartbeat"
 
@@ -131,12 +135,16 @@ class ActivityClassifierTCN(Node):
                 (PARAM_MODEL_DETS_CONV_VERSION, 2),
                 (PARAM_WINDOW_FRAME_SIZE,),
                 (PARAM_BUFFER_MAX_SIZE_SECONDS,),
+                (PARAM_IMAGE_PIX_WIDTH,),
+                (PARAM_IMAGE_PIX_HEIGHT,),
                 (PARAM_RT_HEARTBEAT, 0.1),
             ],
         )
         self._img_ts_topic = param_values[PARAM_IMG_TS_TOPIC]
         self._det_topic = param_values[PARAM_DET_TOPIC]
         self._act_topic = param_values[PARAM_ACT_TOPIC]
+        self._img_pix_width = param_values[PARAM_IMAGE_PIX_WIDTH]
+        self._img_pix_height = param_values[PARAM_IMAGE_PIX_HEIGHT]
 
         # Load in TCN classification model and weights
         with SimpleTimer("Loading inference module", log.info):
@@ -374,20 +382,22 @@ class ActivityClassifierTCN(Node):
             f"{[(v is not None) for v in frame_object_detections]}"
         )
 
-        try:
-            feats, mask = objects_to_feats(
-                frame_object_detections,
-                self._det_label_to_id,
-                self._feat_version,
-                # TODO: De-hard-code
-                1280,
-                720,
-            )
-        except ValueError:
-            # feature detections were all None
-            raise NoActivityClassification()
-        feats = feats.to(self._model_device)
-        mask = mask.to(self._model_device)
+        with SimpleTimer(
+            "[_process_window] Convert detections to feature vector", log.debug
+        ):
+            try:
+                feats, mask = objects_to_feats(
+                    frame_object_detections,
+                    self._det_label_to_id,
+                    self._feat_version,
+                    self._img_pix_width,
+                    self._img_pix_height,
+                )
+            except ValueError:
+                # feature detections were all None
+                raise NoActivityClassification()
+            feats = feats.to(self._model_device)
+            mask = mask.to(self._model_device)
 
         with SimpleTimer("[_process_window] Predicting activity proba", log.debug):
             proba = predict(self._model, feats, mask).cpu()
