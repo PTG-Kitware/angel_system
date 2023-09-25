@@ -21,6 +21,7 @@ setup(
         "console_scripts": [
             "video_listener = angel_system_nodes.video_subscriber:main",
             "asr = angel_system_nodes.asr:main",
+            "voice_activity_detector = angel_system_nodes.voice_activity_detector:main",
             "intent_detector = angel_system_nodes.intent_detector:main",
             "audio_player = angel_system_nodes.audio_player:main",
             "frame_publisher = angel_system_nodes.ros_publisher:main",

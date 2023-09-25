@@ -1,9 +1,10 @@
-import pyaudio
+import json
+import numpy as np
+import queue
 import requests
+import soundfile
 import tempfile
 import threading
-import time
-import wave
 
 from nltk.tokenize import sent_tokenize
 import rclpy
@@ -17,6 +18,12 @@ AUDIO_TOPIC = "audio_topic"
 UTTERANCES_TOPIC = "utterances_topic"
 ASR_SERVER_URL = "asr_server_url"
 ASR_REQ_SEGMENT_SECONDS_DURATION = "asr_req_segment_duration"
+IS_SENTENCE_TOKENIZE = "is_sentence_tokenize"
+DEBUG_MODE = "debug_mode"
+
+# TODO (derekahmed) We should figure out how this value was derived
+# and make this a constant accordingly.
+WAV_SAMPLE_WIDTH = 4  # Derived from audio_player.py
 
 
 class ASR(Node):
@@ -29,6 +36,8 @@ class ASR(Node):
             UTTERANCES_TOPIC,
             ASR_SERVER_URL,
             ASR_REQ_SEGMENT_SECONDS_DURATION,
+            IS_SENTENCE_TOKENIZE,
+            DEBUG_MODE,
         ]
         set_parameters = self.declare_parameters(
             namespace="",
@@ -52,9 +61,15 @@ class ASR(Node):
         self._asr_server_url = (
             self.get_parameter(ASR_SERVER_URL).get_parameter_value().string_value
         )
-        self.segmentation_duration = self.get_parameter(
+        self._segmentation_duration = self.get_parameter(
             ASR_REQ_SEGMENT_SECONDS_DURATION
         ).value
+        self._is_sentence_tokenize_mode = (
+            self.get_parameter(IS_SENTENCE_TOKENIZE).get_parameter_value().bool_value
+        )
+        self._debug_mode = (
+            self.get_parameter(DEBUG_MODE).get_parameter_value().bool_value
+        )
         self.log.info(
             f"Audio topic: "
             f"({type(self._audio_topic).__name__}) "
@@ -72,19 +87,27 @@ class ASR(Node):
         )
         self.log.info(
             f"Columbia ASR Server Request Segmentation Duration: "
-            f"({type(self.segmentation_duration).__name__}) "
-            f"{self.segmentation_duration}"
+            f"({type(self._segmentation_duration).__name__}) "
+            f"{self._segmentation_duration}"
+        )
+        self.log.info(
+            f"Is Sentence Tokenization On: "
+            f"({type(self._is_sentence_tokenize_mode).__name__}) "
+            f"{self._is_sentence_tokenize_mode}"
+        )
+        self.log.info(
+            f"Is Debugging On: "
+            f"({type(self._debug_mode).__name__}) "
+            f"{self._debug_mode}"
         )
 
+        # Handle subscription/publication topics.
         self.subscription = self.create_subscription(
             HeadsetAudioData, self._audio_topic, self.listener_callback, 1
         )
+        self._publisher = self.create_publisher(Utterance, self._utterances_topic, 1)
 
-        # TODO(derekahmed): Add internal buffering to reduce publisher queue
-        # size to 1.
-        self._publisher = self.create_publisher(Utterance, self._utterances_topic, 10)
-
-        self.audio_stream = bytearray()
+        self.audio_stream = []
         self.t = threading.Thread()
         self.prev_timestamp = None
         self.audio_stream_duration = 0.0
@@ -99,87 +122,103 @@ class ASR(Node):
         # this external server.
         self.asr_server_lock = threading.RLock()
 
+        self.message_queue = queue.Queue()
+        self.handler_thread = threading.Thread(target=self.process_message_queue)
+        self.handler_thread.start()
+
     def listener_callback(self, msg):
-        with self.audio_stream_lock:
-            # Check that this message comes temporally after the previous message.
-            message_order_valid = False
-            if self.prev_timestamp is None:
-                message_order_valid = True
-            else:
-                if msg.header.stamp.sec > self.prev_timestamp.sec:
+        self.message_queue.put(msg)
+
+    def process_message_queue(self):
+        while True:
+            msg = self.message_queue.get()
+            with self.audio_stream_lock:
+                # Check that this message comes temporally after the previous message.
+                message_order_valid = False
+                if self.prev_timestamp is None:
                     message_order_valid = True
-                elif msg.header.stamp.sec == self.prev_timestamp.sec:
-                    # Seconds are same, so check nanoseconds.
-                    if msg.header.stamp.nanosec > self.prev_timestamp.nanosec:
+                else:
+                    if msg.header.stamp.sec > self.prev_timestamp.sec:
                         message_order_valid = True
+                    elif msg.header.stamp.sec == self.prev_timestamp.sec:
+                        # Seconds are same, so check nanoseconds.
+                        if msg.header.stamp.nanosec > self.prev_timestamp.nanosec:
+                            message_order_valid = True
 
-            if message_order_valid:
-                self.audio_stream.extend(msg.data)
-                self.audio_stream_duration += msg.sample_duration
-            else:
-                self.log.info(
-                    "Warning! Out of order messages.\n"
-                    + f"Prev: {self.prev_timestamp} \nCurr: {msg.header.stamp}"
-                )
-                return
+                if message_order_valid:
+                    self.audio_stream.extend(msg.data)
+                    self.audio_stream_duration += msg.sample_duration
+                else:
+                    self.log.info(
+                        "Warning! Out of order messages.\n"
+                        + f"Prev: {self.prev_timestamp} \nCurr: {msg.header.stamp}"
+                    )
+                    return
 
-            self.prev_timestamp = msg.header.stamp
-            if self.audio_stream_duration >= self.segmentation_duration and not (
-                self.t.is_alive()
-            ):
-                # Make a copy of the current data so we can run ASR
-                # while more data is accumulated.
-                audio_data = self.audio_stream
+                self.prev_timestamp = msg.header.stamp
+                if self.audio_stream_duration >= self._segmentation_duration and not (
+                    self.t.is_alive()
+                ):
+                    # Make a copy of the current data so we can run ASR
+                    # while more data is accumulated.
+                    audio_data = self.audio_stream
 
-                # Remove the data that we just copied from the stream.
-                self.audio_stream = bytearray()
-                self.audio_stream_duration = 0.0
+                    # Remove the data that we just copied from the stream.
+                    self.audio_stream = []
+                    self.audio_stream_duration = 0.0
 
-                # Start the ASR server request thread.
-                self.log.info("Spawning ASR request thread.")
-                self.t = threading.Thread(
-                    target=self.asr_server_request_thread,
-                    args=(audio_data, msg.channels, msg.sample_rate),
-                )
-                self.t.start()
+                    # Start the ASR server request thread.
+                    self.log.info("Spawning ASR request thread.")
+                    self.t = threading.Thread(
+                        target=self.asr_server_request_thread,
+                        args=(audio_data, msg.channels, msg.sample_rate),
+                    )
+                    self.t.start()
 
     def asr_server_request_thread(self, audio_data, num_channels, sample_rate):
         with self.asr_server_lock:
-            temp_file = tempfile.NamedTemporaryFile(suffix=".wav", delete=True)
+            temp_file = tempfile.NamedTemporaryFile(
+                suffix=".wav", delete=(not self._debug_mode)
+            )
             self.log.info(f"Writing audio to temporary file: {temp_file.name}")
-            wav_write = wave.open(temp_file, "wb")
-            wav_write.setnchannels(num_channels)
-            # TODO (derekahmed) We should figure out how this value was derived
-            # and make this a constant accordingly.
-            wav_write.setsampwidth(4)  # Derived from audio_player.py
-            wav_write.setframerate(sample_rate)
-            wav_write.writeframes(audio_data)
+            channels_data = []
+            for channel_i in range(num_channels):
+                channels_data.append(audio_data[channel_i::num_channels])
+            channels_data = np.array(channels_data).T
+            soundfile.write(temp_file, channels_data, sample_rate)
 
             with open(temp_file.name, "rb") as temp_file:
                 response = requests.post(
-                    self._asr_server_url, files={"audio_data": temp_file}
+                    self._asr_server_url,
+                    files={"audio_data": temp_file},
+                    params={"preprocessing": "mfcc_up"},
                 )
-            temp_file.close()
+            if not self._debug_mode:
+                temp_file.close()
 
             if not response.ok:
                 self.log.error("ASR Server Response contains an error.")
                 return
             if response:
-                self.log.info("Complete ASR text is:\n" + f'"{response.text}"')
-                for sentence in sent_tokenize(response.text):
+                response_text = json.loads(response.text)["text"]
+                self.log.info("Complete ASR text is:\n" + f'"{response_text}"')
+                if self._is_sentence_tokenize_mode:
+                    for sentence in sent_tokenize(response_text):
+                        utterance_msg = Utterance()
+                        utterance_msg.value = sentence
+                        self.log.info("Publishing message: " + f'"{sentence}"')
+                        self._publisher.publish(utterance_msg)
+                else:
                     utterance_msg = Utterance()
-                    utterance_msg.value = sentence
-                    self.log.info("Publishing message: " + f'"{sentence}"')
+                    utterance_msg.value = response_text
+                    self.log.info("Publishing message: " + f'"{response_text}"')
                     self._publisher.publish(utterance_msg)
 
 
 def main():
     rclpy.init()
-
     asr = ASR()
-
     rclpy.spin(asr)
-
     asr.destroy_node()
     rclpy.shutdown()
 

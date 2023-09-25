@@ -2297,6 +2297,17 @@ tests = ["coverage (>=5.3.1)", "pytest (>=6.2.5)", "pytest-cov (>=2.0.0,<2.6.0)"
 tests-strict = ["coverage (==5.3.1)", "pytest (==6.2.5)", "pytest-cov (==2.0.0)", "pytest-cov (==2.12.1)", "timerit (==0.3.0)", "xdoctest (==1.0.1)"]
 
 [[package]]
+name = "libtmux"
+version = "0.23.2"
+description = "Typed scripting library / ORM / API wrapper for tmux"
+optional = false
+python-versions = ">=3.7,<4.0"
+files = [
+    {file = "libtmux-0.23.2-py3-none-any.whl", hash = "sha256:de7313063172474b37d9d155fc192de6c534533b901f717dc1d7adf2e33a0165"},
+    {file = "libtmux-0.23.2.tar.gz", hash = "sha256:eb3e8fb803e4e7c9ce515c93a95145aa6a0b58ddb2ae532daf9fad879609971d"},
+]
+
+[[package]]
 name = "lightning-utilities"
 version = "0.8.0"
 description = "PyTorch Lightning Sample project."
@@ -4964,6 +4975,29 @@ files = [
 ]
 
 [[package]]
+name = "soundfile"
+version = "0.12.1"
+description = "An audio library based on libsndfile, CFFI and NumPy"
+optional = false
+python-versions = "*"
+files = [
+    {file = "soundfile-0.12.1-py2.py3-none-any.whl", hash = "sha256:828a79c2e75abab5359f780c81dccd4953c45a2c4cd4f05ba3e233ddf984b882"},
+    {file = "soundfile-0.12.1-py2.py3-none-macosx_10_9_x86_64.whl", hash = "sha256:d922be1563ce17a69582a352a86f28ed8c9f6a8bc951df63476ffc310c064bfa"},
+    {file = "soundfile-0.12.1-py2.py3-none-macosx_11_0_arm64.whl", hash = "sha256:bceaab5c4febb11ea0554566784bcf4bc2e3977b53946dda2b12804b4fe524a8"},
+    {file = "soundfile-0.12.1-py2.py3-none-manylinux_2_17_x86_64.whl", hash = "sha256:2dc3685bed7187c072a46ab4ffddd38cef7de9ae5eb05c03df2ad569cf4dacbc"},
+    {file = "soundfile-0.12.1-py2.py3-none-manylinux_2_31_x86_64.whl", hash = "sha256:074247b771a181859d2bc1f98b5ebf6d5153d2c397b86ee9e29ba602a8dfe2a6"},
+    {file = "soundfile-0.12.1-py2.py3-none-win32.whl", hash = "sha256:59dfd88c79b48f441bbf6994142a19ab1de3b9bb7c12863402c2bc621e49091a"},
+    {file = "soundfile-0.12.1-py2.py3-none-win_amd64.whl", hash = "sha256:0d86924c00b62552b650ddd28af426e3ff2d4dc2e9047dae5b3d8452e0a49a77"},
+    {file = "soundfile-0.12.1.tar.gz", hash = "sha256:e8e1017b2cf1dda767aef19d2fd9ee5ebe07e050d430f77a0a7c66ba08b8cdae"},
+]
+
+[package.dependencies]
+cffi = ">=1.0"
+
+[package.extras]
+numpy = ["numpy"]
+
+[[package]]
 name = "soupsieve"
 version = "2.4.1"
 description = "A modern CSS selector implementation for Beautiful Soup."
@@ -6153,4 +6187,4 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8,<3.10"
-content-hash = "007475b94f04b6adc41f4e698c149833392c5759b01d7f6cdb0bab55490cce0b"
+content-hash = "a67f25589b863fd39d6d97f4f02a7167c7951255356483c26a6a3506f60b6b11"
