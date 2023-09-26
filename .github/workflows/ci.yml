@@ -37,7 +37,7 @@ jobs:
     container: pyfound/black:latest_release
     steps:
       # Check out repository under $GITHUB_WORKSPACE so our job can access it.
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Lint python code
         run: |
           black --version
@@ -47,7 +47,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # Check out repository under $GITHUB_WORKSPACE so our job can access it.
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       # TODO: Make use of build docker image somehow below this point
       # setup-python with poetry requires poetry to already be installed
       - run: |
