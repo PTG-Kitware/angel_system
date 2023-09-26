@@ -204,9 +204,11 @@ def predict(
     We assume that input features normalized before being provided to this
     function. See :ref:`normalize_detection_features`.
 
-    The "prediction" of this result is:
-        >>> proba = predict(model, window_feats, mask)
-        >>> pred = torch.argmax(proba)
+    The "prediction" of this result can be determined via the `argmax`
+    function::
+
+        proba = predict(model, window_feats, mask)
+        pred = torch.argmax(proba)
 
     :param model: PTGLitModule instance to use.
     :param window_feats: Window (sequence) of *normalized* object detection
