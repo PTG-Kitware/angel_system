@@ -46,6 +46,13 @@ class InputWindow:
         return len(self.frames)
 
 
+# TODO: A more generic version of InputBuffer
+#       Want to be able to input a description of the data to be buffered:
+#           - key name of that data
+#           - how to to get the timestamp for data of that type
+#           - if the type is the "key-frame" type (there can only be one)
+
+
 @dataclass
 class InputBuffer:
     """
@@ -71,6 +78,10 @@ class InputBuffer:
     ahead in time).
 
     NOTE: `__post_init__` is a thing if we need it.
+
+    :param hand_msg_tolerance_nsec: Integer nanoseconds tolerance around a
+        key-frame to consider other data to be matched/associated against that
+        key-frame.
     """
 
     # Tolerance in nanoseconds for associating hand-pose messages to a frame.
@@ -109,6 +120,24 @@ class InputBuffer:
     def __exit__(self, exc_type, exc_val, exc_tb):
         # Same as RLock.__exit__
         self.__state_lock.release()
+
+    def __len__(self):
+        with self.__state_lock:
+            return len(self.frames)
+
+    def latest_time(self) -> Time:
+        """
+        Get the most recent timestamp of data queued in this buffer.
+
+        :raises RuntimeError: No data has yet been buffered.
+
+        :returns: Time message of the latest data queued in this buffer.
+        """
+        # NOTE: Only considering `frames` for timestamps.
+        with self.__state_lock:
+            if not self.frames:
+                raise RuntimeError("No data buffered for there to be a latest time.")
+            return self.frames[-1][0]
 
     def queue_image(
         self, img_mat: npt.NDArray[np.uint8], img_header_stamp: Time
@@ -186,7 +215,7 @@ class InputBuffer:
 
     def get_window(self, window_size: int) -> InputWindow:
         """
-        Get a window buffered data as it is associated to frame data.
+        Get a window of buffered data as it is associated to frame data.
 
         Data other than the image frames may not have direct association to a
         particular frame, e.g. "missing" for that frame. In those cases there

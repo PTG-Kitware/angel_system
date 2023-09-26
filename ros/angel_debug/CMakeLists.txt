@@ -16,6 +16,7 @@ find_package( rclcpp REQUIRED )
 find_package( rclcpp_components REQUIRED )
 find_package( sensor_msgs REQUIRED )
 find_package( cv_bridge REQUIRED )
+find_package( image_transport REQUIRED )
 find_package( OpenCV REQUIRED COMPONENTS core )
 find_package( angel_msgs REQUIRED )
 find_package( angel_utils REQUIRED )
@@ -35,6 +36,7 @@ ament_target_dependencies( angel_debug
   rclcpp_components
   sensor_msgs
   cv_bridge
+  image_transport
   OpenCV
   angel_msgs
   angel_utils

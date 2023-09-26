@@ -73,6 +73,7 @@ SERVICE_NAME="${ARG_SERVICE_NAME:-${DEFAULT_SERVICE_NAME}}"
 
 # Create a permissions file for xauthority.
 XAUTH_DIR="${SCRIPT_DIR}/.container_xauth"
+mkdir -p "${XAUTH_DIR}"
 # Exporting to be used in replacement in docker-compose file.
 XAUTH_FILEPATH="$(mktemp "${XAUTH_DIR}/local-XXXXXX.xauth")"
 export XAUTH_FILEPATH

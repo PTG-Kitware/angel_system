@@ -41,7 +41,7 @@ RUN apt-get -y update \
  && rm -rf /var/lib/apt/lists/*
 
 # For the demo-ui
-RUN curl -sL https://deb.nodesource.com/setup_14.x | bash - 
+RUN curl -sL https://deb.nodesource.com/setup_14.x | bash -
 RUN apt-get install -y nodejs && node -v && npm -v
 
 # Env vars for the nvidia-container-runtime.
@@ -49,11 +49,14 @@ ENV NVIDIA_VISIBLE_DEVICES all
 ENV NVIDIA_DRIVER_CAPABILITIES graphics,utility,compute
 
 # Bring in poetry for standard python package installation.
-# NODE: Installing "dev" dependencies here because why not. Stop if the desire
-#       becomes to create a minimal image.
+# Specifying a separate virtual environment that will be natively "activated".
+# NOTE: I have some misgivings about making "~/.local/" a "venv", but we have
+#       not observed adverse effects yet...
+ENV VIRTUAL_ENV=/root/.local
 ENV PATH=/root/.local/bin:${PATH}
 ENV POETRY_VERSION=1.5.1
-RUN pip3 install --user pip==23.0 \
+RUN python3 -m venv --system-site-packages "${VIRTUAL_ENV}"\
+ && pip3 install pip==23.0 \
  && (curl -sSL 'https://install.python-poetry.org' | python3 -) \
  && poetry config virtualenvs.create false
 
@@ -88,6 +91,7 @@ RUN apt-get -y update \
 
 # Install tracked python dependencies
 COPY poetry.lock pyproject.toml docker/workspace_build_pydep_install.sh "${ANGEL_WORKSPACE_DIR}"/
+COPY ./python-tpl "${ANGEL_WORKSPACE_DIR}/python-tpl"
 RUN cd "${ANGEL_WORKSPACE_DIR}" \
  && "${ANGEL_WORKSPACE_DIR}/workspace_build_pydep_install.sh"
 RUN python3 -m nltk.downloader punkt
@@ -98,15 +102,14 @@ RUN python3 -m nltk.downloader punkt
 #   in the library and not with the libraries dependencies.
 COPY ./angel_system "${ANGEL_WORKSPACE_DIR}"/angel_system
 RUN cd "${ANGEL_WORKSPACE_DIR}" \
- && pip install --no-deps --user -e .
+ && pip install --no-deps -e .
 
-# Load in any model files the workspace will require at runtime.
-# TODO
-
+# Build the ROS workspace.
 COPY ./ros "${ANGEL_WORKSPACE_DIR}/src"
 COPY docker/workspace_build_ros.sh "${ANGEL_WORKSPACE_DIR}"/
 RUN "${ANGEL_WORKSPACE_DIR}/workspace_build_ros.sh"
 
+# Build the required NPM envirnment for the Engineering UI.
 COPY docker/workspace_build_npm_install.sh "${ANGEL_WORKSPACE_DIR}"/
 RUN cd "${ANGEL_WORKSPACE_DIR}"/src/angel_utils/demo_ui/ \
  && "${ANGEL_WORKSPACE_DIR}/workspace_build_npm_install.sh"

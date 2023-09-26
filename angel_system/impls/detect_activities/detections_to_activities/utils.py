@@ -1,11 +1,40 @@
 from typing import Dict
+from typing import Tuple
 
 import kwimage
 
 import numpy as np
+import numpy.typing as npt
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from PIL import Image
+
+
+def tlbr_to_xywh(
+    top: npt.ArrayLike,
+    left: npt.ArrayLike,
+    bottom: npt.ArrayLike,
+    right: npt.ArrayLike,
+) -> Tuple[npt.ArrayLike, npt.ArrayLike, npt.ArrayLike, npt.ArrayLike]:
+    """
+    Convert array-likes of vectorized TLBR (top-left-bottom-right) box
+    coordinates into XYWH (x, y, width, height) format (similarly vectorized)
+
+    :param top: Array-like of top box coordinate values.
+    :param left: Array-like of left box coordinate values.
+    :param bottom: Array-like of bottom box coordinate values.
+    :param right: Array-like of right box coordinate values.
+
+    :return:
+    """
+    assert (
+        len(top) == len(left) == len(bottom) == len(right)
+    ), "No all input array-likes were the same length."
+    xs = np.asarray(left)
+    ys = np.asarray(top)
+    ws = np.asarray(right) - xs
+    hs = np.asarray(bottom) - ys
+    return xs, ys, ws, hs
 
 
 def obj_det2d_set_to_feature(
@@ -41,12 +70,15 @@ def obj_det2d_set_to_feature(
         """
         feature_vec = obj_det2d_set_to_feature_by_method(
             label_vec,
-            xs, ys, ws, hs,
+            xs,
+            ys,
+            ws,
+            hs,
             label_confidences,
             label_to_ind,
-            use_activation=True
+            use_activation=True,
         )
-    
+
     elif version == 2:
         """
         Feature vector that encodes the distance of each object from each hand,
@@ -65,17 +97,20 @@ def obj_det2d_set_to_feature(
         """
         feature_vec = obj_det2d_set_to_feature_by_method(
             label_vec,
-            xs, ys, ws, hs,
+            xs,
+            ys,
+            ws,
+            hs,
             label_confidences,
             label_to_ind,
             use_activation=True,
-            use_hand_dist=True
+            use_hand_dist=True,
         )
 
     elif version == 3:
         """
         Feature vector that encodes the distance of each object to the center of the frame,
-        the intersection of each object to the hands, 
+        the intersection of each object to the hands,
         and the activation features
 
         Len: 207
@@ -94,12 +129,15 @@ def obj_det2d_set_to_feature(
         """
         feature_vec = obj_det2d_set_to_feature_by_method(
             label_vec,
-            xs, ys, ws, hs,
+            xs,
+            ys,
+            ws,
+            hs,
             label_confidences,
             label_to_ind,
             use_activation=True,
             use_center_dist=True,
-            use_intersection=True
+            use_intersection=True,
         )
 
     elif version == 5:
@@ -122,20 +160,24 @@ def obj_det2d_set_to_feature(
         """
         feature_vec = obj_det2d_set_to_feature_by_method(
             label_vec,
-            xs, ys, ws, hs,
+            xs,
+            ys,
+            ws,
+            hs,
             label_confidences,
             label_to_ind,
             use_activation=True,
             use_hand_dist=True,
-            use_intersection=True
+            use_intersection=True,
         )
-    
+
     else:
         raise NotImplementedError(f"Unhandled version '{version}'")
 
     # print(f"feat {feature_vec}")
     # print(len(feature_vec))
     return feature_vec
+
 
 def obj_det2d_set_to_feature_by_method(
     label_vec,
@@ -148,15 +190,15 @@ def obj_det2d_set_to_feature_by_method(
     use_activation=False,
     use_hand_dist=False,
     use_center_dist=False,
-    use_intersection=False
-    ):
+    use_intersection=False,
+):
     #########################
     # Default values
     #########################
-    default_dist = (0, 0)#(1280 * 2, 720 * 2)
-    default_center_dist = (0, 0) #(1280, 720)
-    default_bbox = [0, 0, 0, 0]#[0, 0, 1280, 720]
-    default_center = ([[0]], [[0]])#kwimage.Boxes([default_bbox], "xywh").center
+    default_dist = (0, 0)  # (1280 * 2, 720 * 2)
+    default_center_dist = (0, 0)  # (1280, 720)
+    default_bbox = [0, 0, 0, 0]  # [0, 0, 1280, 720]
+    default_center = ([[0]], [[0]])  # kwimage.Boxes([default_bbox], "xywh").center
 
     #########################
     # Data
@@ -212,30 +254,32 @@ def obj_det2d_set_to_feature_by_method(
     # Hands
     #########################
     # Find the right hand
-    (
-        right_hand_idx,
-        right_hand_bbox,
-        right_hand_conf,
-        right_hand_center
-    ) = find_hand("hand (right)")
+    (right_hand_idx, right_hand_bbox, right_hand_conf, right_hand_center) = find_hand(
+        "hand (right)"
+    )
 
     # Find the left hand
-    (
-        left_hand_idx,
-        left_hand_bbox,
-        left_hand_conf,
-        left_hand_center
-    ) = find_hand("hand (left)")
+    (left_hand_idx, left_hand_bbox, left_hand_conf, left_hand_center) = find_hand(
+        "hand (left)"
+    )
 
     #########################
     # Distances
     #########################
     if use_hand_dist:
         # Compute distances to the right hand
-        right_hand_dist = dist_from_hand(right_hand_idx, right_hand_center) if right_hand_conf != 0 else [default_dist for i in range(num_act)]
+        right_hand_dist = (
+            dist_from_hand(right_hand_idx, right_hand_center)
+            if right_hand_conf != 0
+            else [default_dist for i in range(num_act)]
+        )
 
         # Compute distances to the left hand
-        left_hand_dist = dist_from_hand(left_hand_idx, left_hand_center) if left_hand_conf != 0 else [default_dist for i in range(num_act)]
+        left_hand_dist = (
+            dist_from_hand(left_hand_idx, left_hand_center)
+            if left_hand_conf != 0
+            else [default_dist for i in range(num_act)]
+        )
 
     else:
         right_hand_dist = left_hand_dist = None
@@ -243,7 +287,7 @@ def obj_det2d_set_to_feature_by_method(
     if use_center_dist:
         image_center = kwimage.Boxes([default_bbox], "xywh").center
         default_center_dist = [image_center[0][0][0] * 2, image_center[1][0][0] * 2]
-        
+
         distances_to_center = []
         for i in range(num_act):
             obj_conf = act[i]
@@ -263,8 +307,12 @@ def obj_det2d_set_to_feature_by_method(
     # Intersection
     #########################
     if use_intersection:
+
         def intersect(hand_bbox, bbox):
-            if list(hand_bbox.data[0]) == default_bbox or list(bbox.data[0]) == default_bbox:
+            if (
+                list(hand_bbox.data[0]) == default_bbox
+                or list(bbox.data[0]) == default_bbox
+            ):
                 # one or both of the boxes are missing
                 return 0
 
@@ -296,12 +344,17 @@ def obj_det2d_set_to_feature_by_method(
     # Add hand data
     for hand_conf, hand_idx, hand_dist, hand_intersection in [
         (right_hand_conf, right_hand_idx, right_hand_dist, right_hand_intersection),
-        (left_hand_conf, left_hand_idx, left_hand_dist, left_hand_intersection)
+        (left_hand_conf, left_hand_idx, left_hand_dist, left_hand_intersection),
     ]:
         if use_activation:
             feature_vec.append([hand_conf])
         if use_hand_dist:
-            hd1 = [item for ii, tupl in enumerate(hand_dist) for item in tupl if ii not in [right_hand_idx, left_hand_idx]]
+            hd1 = [
+                item
+                for ii, tupl in enumerate(hand_dist)
+                for item in tupl
+                if ii not in [right_hand_idx, left_hand_idx]
+            ]
             feature_vec.append(hd1)
         if use_center_dist:
             feature_vec.append(distances_to_center[hand_idx])
@@ -325,7 +378,7 @@ def obj_det2d_set_to_feature_by_method(
         if use_center_dist:
             feature_vec.append(distances_to_center[i])
 
-    feature_vec = [item for sublist in feature_vec for item in sublist] # flatten
+    feature_vec = [item for sublist in feature_vec for item in sublist]  # flatten
     feature_vec = np.array(feature_vec, dtype=np.float64)
 
     return feature_vec

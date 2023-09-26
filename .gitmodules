@@ -8,3 +8,7 @@
 [submodule "hl2ss"]
 	path = hl2ss
 	url = https://github.com/VIDA-NYU/hl2ss.git
+[submodule "python-tpl/TCN_HPL"]
+	path = python-tpl/TCN_HPL
+	url = https://github.com/PTG-Kitware/TCN_HPL.git
+	branch = main

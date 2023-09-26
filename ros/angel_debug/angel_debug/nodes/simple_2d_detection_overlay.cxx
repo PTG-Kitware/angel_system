@@ -7,6 +7,7 @@
 // ROS2 things
 #include <builtin_interfaces/msg/time.hpp>
 #include <cv_bridge/cv_bridge.h>
+#include <image_transport/image_transport.hpp>
 #include <rcl_interfaces/msg/parameter_descriptor.hpp>
 #include <rcl_interfaces/msg/parameter_type.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -116,9 +117,13 @@ private:
   // Measure and report receive/publish FPS - 2D Object Detections
   RateTracker m_det_rate_tracker;
 
+  std::shared_ptr< image_transport::ImageTransport > m_img_transport;
+
   rclcpp::Subscription< sensor_msgs::msg::Image >::SharedPtr m_sub_input_image;
   rclcpp::Subscription< ObjectDetection2dSet >::SharedPtr m_sub_input_det_2d;
-  rclcpp::Publisher< sensor_msgs::msg::Image >::SharedPtr m_pub_overlay_image;
+  std::shared_ptr< image_transport::Publisher > m_pub_overlay_image;
+  // TODO: Just add a compressed output topic here? In construction below, just
+  //       know to add the `/compressed` suffix.
 
   // Simple counter for image messages received.
   size_t m_image_count = 0;
@@ -169,19 +174,34 @@ Simple2dDetectionOverlay
   filter_top_k =
     get_parameter( PARAM_FILTER_TOP_K ).get_value< int >();
 
-  RCLCPP_INFO( log, "Creating subscribers and publishers" );
+  std::shared_ptr< Simple2dDetectionOverlay > node_handle = {
+    this,
+    []( auto * ){}
+  };
+
+  // Empty deleter to prevent double deletion of this class when this goes
+  // out of scope
+  m_img_transport = std::make_shared< image_transport::ImageTransport >(
+    node_handle );
+
+  RCLCPP_INFO( log, "Creating subscribers and publishers -- Input image" );
   // Alternative "best effort" QoS: rclcpp::SensorDataQoS().keep_last( 1 )
   m_sub_input_image = this->create_subscription< sensor_msgs::msg::Image >(
     topic_input_images, 1,
     std::bind( &Simple2dDetectionOverlay::collect_images, this, _1 )
     );
+  RCLCPP_INFO( log, "Creating subscribers and publishers -- Input detections" );
   m_sub_input_det_2d = this->create_subscription< ObjectDetection2dSet >(
     topic_input_detections_2d, 1,
     std::bind( &Simple2dDetectionOverlay::collect_detections, this, _1 )
     );
-  m_pub_overlay_image = this->create_publisher< sensor_msgs::msg::Image >(
-    topic_output_image, 1
+  RCLCPP_INFO( log, "Creating subscribers and publishers -- Output image" );
+  // Do we have to keep `it` around for `m_pub_overlay_image` to continue
+  // working?
+  m_pub_overlay_image = std::make_shared< image_transport::Publisher >(
+    m_img_transport->advertise( topic_output_image, 1 )
     );
+  RCLCPP_INFO( log, "Creating subscribers and publishers -- Done" );
 }
 
 // ----------------------------------------------------------------------------
@@ -371,10 +391,9 @@ Simple2dDetectionOverlay
                 cv::FONT_HERSHEY_COMPLEX, line_thickness, COLOR_TEXT,
                 line_thickness );
     }
-    
+
   }
 
-  // TODO Use image-transport
   auto out_img_msg = img_ptr->toImageMsg();
   m_pub_overlay_image->publish( *out_img_msg );
 

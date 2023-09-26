@@ -1,6 +1,7 @@
 import time
 from threading import Event, Thread
 
+from builtin_interfaces.msg import Time
 from cv_bridge import CvBridge
 from geometry_msgs.msg import (
     Point,
@@ -35,7 +36,8 @@ BRIDGE = CvBridge()
 # Value copied from hl2ss/viewer/cient_pv.py example
 PV_BITRATE = 5 * 1024 * 1024
 
-PARAM_PV_IMAGES_TOPIC = "image_topic"
+PARAM_PV_IMAGES_TOPIC = "image_topic"  # for publishing image data.
+PARAM_PV_IMAGES_TS_TOPIC = "image_ts_topic"  # for image timestamp publishing only.
 PARAM_HAND_POSE_TOPIC = "hand_pose_topic"
 PARAM_AUDIO_TOPIC = "audio_topic"
 PARAM_SM_TOPIC = "sm_topic"
@@ -64,6 +66,7 @@ class HL2SSROSBridge(Node):
             self,
             [
                 (PARAM_PV_IMAGES_TOPIC,),
+                (PARAM_PV_IMAGES_TS_TOPIC,),
                 (PARAM_HAND_POSE_TOPIC,),
                 (PARAM_AUDIO_TOPIC,),
                 (PARAM_SM_TOPIC,),
@@ -78,6 +81,7 @@ class HL2SSROSBridge(Node):
         )
 
         self._image_topic = param_values[PARAM_PV_IMAGES_TOPIC]
+        self._image_ts_topic = param_values[PARAM_PV_IMAGES_TS_TOPIC]
         self._hand_pose_topic = param_values[PARAM_HAND_POSE_TOPIC]
         self._audio_topic = param_values[PARAM_AUDIO_TOPIC]
         self._sm_topic = param_values[PARAM_SM_TOPIC]
@@ -117,6 +121,9 @@ class HL2SSROSBridge(Node):
             # Create frame publisher
             self.ros_frame_publisher = self.create_publisher(
                 Image, self._image_topic, 1
+            )
+            self.ros_frame_ts_publisher = self.create_publisher(
+                Time, self._image_ts_topic, 1
             )
             self.connect_hl2ss_pv()
             log.info("PV client connected!")
@@ -361,8 +368,9 @@ class HL2SSROSBridge(Node):
             data = self.hl2ss_pv_client.get_next_packet()
 
             try:
+                stamp = self.get_clock().now().to_msg()
                 image_msg = BRIDGE.cv2_to_imgmsg(data.payload.image, encoding="bgr8")
-                image_msg.header.stamp = self.get_clock().now().to_msg()
+                image_msg.header.stamp = stamp
                 image_msg.header.frame_id = "PVFramesBGR"
             except TypeError as e:
                 log.warning(f"{e}")
@@ -370,6 +378,7 @@ class HL2SSROSBridge(Node):
 
             # Publish the image msg
             self.ros_frame_publisher.publish(image_msg)
+            self.ros_frame_ts_publisher.publish(image_msg.header.stamp)
 
             # Publish the corresponding headset pose msg
             world_matrix = [float(x) for x in data.pose.flatten()]

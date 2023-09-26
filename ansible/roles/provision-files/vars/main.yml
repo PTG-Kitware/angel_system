@@ -69,7 +69,7 @@ girder_file_downloads:
     # Tourniquet activity detection
     - file_id: 6455411e58fefcae81a9efc5
       sha512: e3d44527b572cb95f1869ec33214cbaf9c721aae18f14bc9db73ea8ed5c9c9d6c52975ebc0884acd3402e8ec66fcfd6168ff5744c5a9e31069049d23a97c5fce
-      dest: "{{ stage_dirs.model_files }}/recipe_m2_apply_tourniquet_v0.052.pkl" 
+      dest: "{{ stage_dirs.model_files }}/recipe_m2_apply_tourniquet_v0.052.pkl"
     # Tourniquet object detection
     - file_id: 645a94db58fefcae81a9f73a
       sha512: 2f07f3ec2759c729d70d89cd31266e000226208fbdcf25e50018cbb6c85e5c5a51378b73049334d5472f8dfe000040dbc740e65e093c6cd114d83e96bfcdab6d
@@ -77,7 +77,19 @@ girder_file_downloads:
     - file_id: 645a946058fefcae81a9f737
       sha512: 7382a33fe69bdb97ae218a30a5797404ef6573637a6bf28e04041f7c87b056bbb1d3e2dfb6ea8ceb869a6d73aff9e53e0d11a43e62e7c132964394bd0e033ff8
       dest: "{{ stage_dirs.model_files }}/tourniquet_stage2_interstitial.pth"
-    
+    # Activity TCN input object detection label mapping
+    - file_id: 650ba52ffed5ca0b78984cae
+      sha512: 296a90cbb4a5c52ab8a4534463e6d643d46bcdfcb9d759fdd987b10379d4dc299075ddbd831b16356a889c75522767068cb2d884fb0e173bf347d0bc61752bc2
+      dest: "{{ stage_dirs.model_files }}/activity_tcn-coffee-det_label_mapping.json"
+    # Activity TCN classifier model weights
+    - file_id: 650a1393fed5ca0b78984bb5
+      sha512: 7fc3198da1c7926a966f50aac0ba0c9c775b527c20c66bc0becb27e890b0016b18553297664c07aa687e281a0562653af2e9dd0a11aeb5dda4fc7e2607732d85
+      dest: "{{ stage_dirs.model_files }}/activity_tcn-coffee-checkpoint.ckpt"
+    # Activity TCN classifier model label mapping
+    - file_id: 650a2e74fed5ca0b78984bb8
+      sha512: 324c4321bc41fa8b3ac5a656a84d4bb7b7cd90108b3e2c9f38eec0997c4f7375a92ee898fbf781d48e62be6f9321ea9b1f71d456e8ccaa30180bc418078a3bd0
+      dest: "{{ stage_dirs.model_files }}/activity_tcn-coffee-mapping.txt"
+
 
 # List of git repositories to check out at a specific ref and then archive.
 # Destination files will be written as GZipped TAR files, so please suffix

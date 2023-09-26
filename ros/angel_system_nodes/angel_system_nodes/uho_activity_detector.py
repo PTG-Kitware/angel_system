@@ -570,7 +570,7 @@ class UHOActivityDetector(Node):
         self._rt_active.clear()  # make RT active flag "False"
         self._rt_thread.join()
         print("Shutting down runtime thread... Done")
-        super()
+        super().destroy_node()
 
 
 def main():
