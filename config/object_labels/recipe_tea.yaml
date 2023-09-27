@@ -1,4 +1,4 @@
-version: "2.1"
+version: "2.2"
 title: "Tea"
 labels:
   # Item:
@@ -15,44 +15,51 @@ labels:
   - id: 3
     label: "paper towel"
   - id: 4
-    label: "water"
-  - id: 12
-    label: "spoon"
-  - id: 13
-    label: "jar of honey (close)"
-  - id: 14
-    label: "jar of honey (open)"
-  - id: 15
-    label: "kettle lid"
-  - id: 16
-    label: "kettle (open)"
-  - id: 17
-    label: "measuring cup"
+    label: "paper towel sheet"
+  - id: 5
+    label: "water jug lid"
+  - id: 6
+    label: "water jug (open)"
+  - id: 7
+    label: "water jug (closed)"
   - id: 18
-    label: "mug"
+    label: "kettle lid"
   - id: 19
-    label: "switch"
+    label: "kettle (open)"
   - id: 20
-    label: "thermometer (close)"
-  - id: 21
-    label: "thermometer (open)"
-  - id: 22
-    label: "timer (on)"
-  - id: 23
-    label: "timer (off)"
-  - id: 24
     label: "kettle (closed)"
+  - id: 21
+    label: "spoon"
+  - id: 22
+    label: "jar of honey (open)"
+  - id: 23
+    label: "jar of honey (closed)"
+  - id: 24
+    label: "measuring cup"
   - id: 26
+    label: "mug"
+  - id: 27
+    label: "kettle switch"
+  - id: 28
+    label: "thermometer (open)"
+  - id: 29
+    label: "thermometer (closed)"
+  - id: 30
+    label: "timer (on)"
+  - id: 31
+    label: "timer (off)"
+  - id: 32
     label: "trash can"
   # Labels unique to tea
-  - id: 94
-    label: "tea bag"
-  - id: 95
+  - id: 115
+    label: "tea bag (dry)"
+  - id: 116
+    label: "tea bag (wet)"
+  - id: 117
     label: "mug + tea bag"
-  - id: 96
+  - id: 118
     label: "mug + water"
-  - id: 97
+  - id: 119
     label: "mug + tea bag + water"
-  - id: 98
+  - id: 120
     label: "mug + tea"
-

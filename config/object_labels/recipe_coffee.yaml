@@ -1,4 +1,4 @@
-version: "2.1"
+version: "2.2"
 title: "Coffee"
 labels:
   # Item:
@@ -15,80 +15,89 @@ labels:
   - id: 3
     label: "paper towel"
   - id: 4
-    label: "water"
-  - id: 15
-    label: "kettle lid"
-  - id: 16
-    label: "kettle (open)"
-  - id: 17
-    label: "measuring cup"
+    label: "paper towel sheet"
+  - id: 5
+    label: "water jug lid"
+  - id: 6
+    label: "water jug (open)"
+  - id: 7
+    label: "water jug (closed)"
   - id: 18
-    label: "mug"
+    label: "kettle lid"
   - id: 19
-    label: "switch"
+    label: "kettle (open)"
   - id: 20
-    label: "thermometer (close)"
-  - id: 21
-    label: "thermometer (open)"
-  - id: 22
-    label: "timer (on)"
-  - id: 23
-    label: "timer (off)"
-  - id: 24
     label: "kettle (closed)"
+  - id: 24
+    label: "measuring cup"
+  - id: 25
+    label: "container" # prep bowl
   - id: 26
+    label: "mug"
+  - id: 27
+    label: "kettle switch"
+  - id: 28
+    label: "thermometer (open)"
+  - id: 29
+    label: "thermometer (closed)"
+  - id: 30
+    label: "timer (on)"
+  - id: 31
+    label: "timer (off)"
+  - id: 32
     label: "trash can"
   # Labels unique to coffee
-  - id: 27
-    label: "coffee + mug"
-  - id: 28
-    label: "coffee bag"
-  - id: 29
-    label: "coffee beans + container"
-  - id: 30
-    label: "coffee beans + container + scale"
-  - id: 31
-    label: "coffee grounds + paper filter + filter cone"
-  - id: 32
-    label: "coffee grounds + paper filter + filter cone + mug"
   - id: 33
-    label: "container"
+    label: "coffee + mug"
   - id: 34
-    label: "container + scale"
+    label: "coffee bag"
   - id: 35
-    label: "filter cone"
+    label: "coffee beans + container"
   - id: 36
-    label: "filter cone + mug"
+    label: "coffee beans + container + scale"
   - id: 37
-    label: "grinder (close)"
+    label: "coffee grounds + paper filter (quarter - open) + dripper"
   - id: 38
-    label: "grinder (open)"
+    label: "coffee grounds + paper filter (quarter - open) + dripper + mug"
   - id: 39
-    label: "lid (grinder)"
+    label: "container + scale"
   - id: 40
-    label: "lid (kettle)"
+    label: "dripper" # previously filter cone
   - id: 41
-    label: "paper filter"
+    label: "dripper + mug"
   - id: 42
-    label: "paper filter (quarter)"
+    label: "grinder lid"
   - id: 43
-    label: "paper filter (semi)"
+    label: "grinder (open)"
   - id: 44
-    label: "paper filter + filter cone"
+    label: "grinder (closed)"
   - id: 45
-    label: "paper filter + filter cone + mug"
+    label: "paper filter"
   - id: 46
-    label: "paper filter bag"
+    label: "paper filter (semi)"
   - id: 47
-    label: "scale (off)"
+    label: "paper filter (quarter)"
   - id: 48
-    label: "scale (on)"
+    label: "paper filter (quarter - open)"
+  - id: 49
+    label: "paper filter (quarter) + dripper"
   - id: 50
-    label: "used paper filter"
+    label: "paper filter (quarter) + dripper + mug"
   - id: 51
-    label: "used paper filter + filter cone"
+    label: "paper filter (quarter - open) + dripper"
   - id: 52
-    label: "used paper filter + filter cone + mug"
+    label: "paper filter (quarter - open) + dripper + mug"
   - id: 53
-    label: "water + coffee grounds + paper filter + filter cone + mug"
-
+    label: "paper filter bag"
+  - id: 54
+    label: "stack of paper filters"
+  - id: 55
+    label: "scale (on)"
+  - id: 56
+    label: "scale (off)"
+  - id: 57
+    label: "used paper filter"
+  - id: 58
+    label: "used paper filter + dripper"
+  - id: 59
+    label: "used paper filter + dripper + mug"
