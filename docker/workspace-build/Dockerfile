@@ -93,7 +93,11 @@ RUN apt-get -y update \
 COPY poetry.lock pyproject.toml docker/workspace_build_pydep_install.sh "${ANGEL_WORKSPACE_DIR}"/
 COPY ./python-tpl "${ANGEL_WORKSPACE_DIR}/python-tpl"
 RUN cd "${ANGEL_WORKSPACE_DIR}" \
- && "${ANGEL_WORKSPACE_DIR}/workspace_build_pydep_install.sh"
+ && "${ANGEL_WORKSPACE_DIR}/workspace_build_pydep_install.sh" \
+    # Cleaning up quite a bit of space by clearing the built-up caches of \
+    # wheels and stuff.
+ && rm -r ${HOME}/.cache/pip \
+          ${HOME}/.cache/pypoetry
 RUN python3 -m nltk.downloader punkt
 
 # Build the angel_system python package
