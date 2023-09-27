@@ -1,4 +1,4 @@
-version: "2.0"
+version: "2.1"
 title: "Pinwheels"
 labels:
   # Item:
@@ -14,37 +14,60 @@ labels:
     label: "hand (right)"
   - id: 3
     label: "paper towel"
-  - id: 5
+  - id: 4
+    label: "paper towel sheet"
+  - id: 8
     label: "cutting board"
-  - id: 6
+  - id: 9
     label: "butter knife"
-  - id: 10
+  - id: 15
     label: "tortilla"
-  - id: 11
-    label: "plate"
+  - id: 16
+    label: "tortilla bag"
+  - id: 17
+    label: "plate (empty)"
+  - id: 25
+    label: "container" # prep bowl
   # Labels unique to pinwheels
-  - id: 81
-    label: "nut butter"
-  - id: 82
-    label: "jelly"
-  - id: 83
+  - id: 94
+    label: "nut butter jar lid"
+  - id: 95
+    label: "nut butter jar (open)"
+  - id: 96
+    label: "nut butter jar (closed)"
+  - id: 97
+    label: "jelly jar lid"
+  - id: 98
+    label: "jelly jar (open)"
+  - id: 99
+    label: "jelly jar (closed)"
+  - id: 100
+    label: "box of toothpicks (open)"
+  - id: 101
+    label: "container + box of toothpicks (open)"
+  - id: 102
     label: "toothpick"
-  - id: 84
-    label: "dental floss"
-  - id: 85
+  - id: 103
+    label: "box of dental floss (open)"
+  - id: 104
+    label: "box of dental floss (closed)"
+  - id: 105
+    label: "dental floss string"
+  - id: 106
     label: "butter knife + nut butter"
-  - id: 86
+  - id: 107
     label: "butter knife + jelly"
-  - id: 87
+  - id: 108
     label: "tortilla + nut butter"
-  - id: 88
+  - id: 109
     label: "tortilla + jelly"
-  - id: 89
+  - id: 110
     label: "tortilla + nut butter + jelly"
-  - id: 90
+  - id: 111
     label: "tortilla (rolled)"
-  - id: 91
-    label: "pinwheel"
-  - id: 92
-    label: "plate + pinwheels"
-
+  - id: 112
+    label: "tortilla (rolled) + toothpick(s)"
+  - id: 113
+    label: "pinwheel + toothpick"
+  - id: 114
+    label: "plate + pinwheel(s) + toothpick"

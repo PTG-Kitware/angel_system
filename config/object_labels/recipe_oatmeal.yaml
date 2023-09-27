@@ -1,4 +1,4 @@
-version: "2.0"
+version: "2.1"
 title: "Oatmeal"
 labels:
   # Item:
@@ -15,58 +15,79 @@ labels:
   - id: 3
     label: "paper towel"
   - id: 4
-    label: "water"
+    label: "paper towel sheet"
   - id: 5
-    label: "cutting board"
+    label: "water jug lid"
   - id: 6
-    label: "butter knife"
+    label: "water jug (open)"
   - id: 7
-    label: "banana"
+    label: "water jug (closed)"
   - id: 8
-    label: "sliced banana"
+    label: "cutting board"
   - id: 9
-    label: "cinnamon"
+    label: "butter knife"
+  - id: 10
+    label: "banana"
+  - id: 11
+    label: "banana (peeled)"
   - id: 12
-    label: "spoon"
+    label: "sliced banana"
   - id: 13
-    label: "jar of honey (close)"
+    label: "cinnamon (open)"
   - id: 14
+    label: "cinnamon (closed)"
+  - id: 21
+    label: "spoon"
+  - id: 22
     label: "jar of honey (open)"
-  - id: 17
+  - id: 23
+    label: "jar of honey (closed)"
+  - id: 24
     label: "measuring cup"
+  - id: 25
+    label: "container" # prep bowl
   # Labels unique to oatmeal
-  - id: 64
-    label: "tablespoon"
-  - id: 65
-    label: "bowl"
-  - id: 66
-    label: "microwave (closed)"
-  - id: 67
-    label: "microwave (open)"
-  - id: 68
-    label: "oats"
-  - id: 69
-    label: "raisins"
-  - id: 70
-    label: "bowl + oats"
-  - id: 71
-    label: "bowl + water"
   - id: 72
-    label: "bowl + oats + water"
+    label: "tablespoon"
   - id: 73
-    label: "bowl + oats + water + raisins"
+    label: "tablespoon + oats"
   - id: 74
-    label: "oatmeal" # "bowl + oats + water + raisins (stirred)"
+    label: "bowl"
   - id: 75
-    label: "oatmeal + sliced banana"
+    label: "microwave (open)"
   - id: 76
-    label: "oatmeal + cinnamon"
+    label: "microwave (closed)"
   - id: 77
-    label: "oatmeal + honey"
+    label: "container of oats lid"
   - id: 78
-    label: "oatmeal + sliced banana + cinnamon"
+    label: "container of oats (open)"
   - id: 79
-    label: "oatmeal + sliced banana + honey"
+    label: "container of oats (closed)"
   - id: 80
+    label: "box of raisins"
+  - id: 81
+    label: "raisins"
+  - id: 82
+    label: "container + raisins"
+  - id: 83
+    label: "bowl + oats"
+  - id: 84
+    label: "bowl + water"
+  - id: 85
+    label: "bowl + oats + water"
+  - id: 86
+    label: "bowl + oats + water + raisins"
+  - id: 87
+    label: "oatmeal" # "bowl + oats + water + raisins (stirred)"
+  - id: 88
+    label: "oatmeal + sliced banana"
+  - id: 89
+    label: "oatmeal + cinnamon"
+  - id: 90
+    label: "oatmeal + honey"
+  - id: 91
+    label: "oatmeal + sliced banana + cinnamon"
+  - id: 92
+    label: "oatmeal + sliced banana + honey"
+  - id: 93
     label: "oatmeal + sliced banana + cinnamon + honey"
-
