@@ -368,7 +368,7 @@ def transform_keypoint_annotations(keypoints, transforms, image_size, keypoint_h
     return keypoints
 
 
-def annotations_to_instances(annos, image_size, mask_format="polygon"):
+def annotations_to_instances(annos, image_size, mask_format="polygon", using_contact=False):
     """
     Create an :class:`Instances` object used by the models,
     from instance annotations in the dataset dict.
@@ -398,21 +398,22 @@ def annotations_to_instances(annos, image_size, mask_format="polygon"):
     classes = torch.tensor(classes, dtype=torch.int64)
     target.gt_classes = classes
 
-    obj_obj_contact_state = [(int(obj["obj-obj_contact_state"]) + 1) for obj in annos]
-    for obj in annos:
-        if int(obj["obj-obj_contact_state"]) != 0:
-            if int(obj["obj-obj_contact_state"]) != 1:
-                print('error!!' *50)
-    obj_obj_contact_state = torch.tensor(obj_obj_contact_state, dtype=torch.int64)
-    target.gt_obj_obj_contact_state = obj_obj_contact_state
+    if using_contact:
+        obj_obj_contact_state = [(int(obj["obj-obj_contact_state"]) + 1) for obj in annos]
+        for obj in annos:
+            if int(obj["obj-obj_contact_state"]) != 0:
+                if int(obj["obj-obj_contact_state"]) != 1:
+                    print('error!!' *50)
+        obj_obj_contact_state = torch.tensor(obj_obj_contact_state, dtype=torch.int64)
+        target.gt_obj_obj_contact_state = obj_obj_contact_state
 
-    obj_hand_contact_state = [(int(obj["obj-hand_contact_state"]) + 1) for obj in annos]
-    for obj in annos:
-        if int(obj["obj-hand_contact_state"]) != 0:
-            if int(obj["obj-hand_contact_state"]) != 1:
-                print('error!!' *50)
-    obj_hand_contact_state = torch.tensor(obj_hand_contact_state, dtype=torch.int64)
-    target.gt_obj_hand_contact_state = obj_hand_contact_state
+        obj_hand_contact_state = [(int(obj["obj-hand_contact_state"]) + 1) for obj in annos]
+        for obj in annos:
+            if int(obj["obj-hand_contact_state"]) != 0:
+                if int(obj["obj-hand_contact_state"]) != 1:
+                    print('error!!' *50)
+        obj_hand_contact_state = torch.tensor(obj_hand_contact_state, dtype=torch.int64)
+        target.gt_obj_hand_contact_state = obj_hand_contact_state
 
     if len(annos) and "segmentation" in annos[0]:
         segms = [obj["segmentation"] for obj in annos]

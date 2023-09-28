@@ -43,8 +43,8 @@ from detectron2.evaluation import (
 
 from detectron2.modeling import GeneralizedRCNNWithTTA
 # os.environ['CUDA_VISIBLE_DEVICES'] = '0, 2, 3, 4, 6, 7, 8, 9'
-#os.environ['CUDA_VISIBLE_DEVICES'] = '0, 1, 2, 3'
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0, 1, 2, 3'
+#os.environ['CUDA_VISIBLE_DEVICES'] = '3'
 
 def build_evaluator(cfg, dataset_name, output_folder=None):
     """
@@ -120,6 +120,7 @@ class Trainer(DefaultTrainer):
 class TrainerAug(Trainer):
     @classmethod
     def build_train_loader(cls, cfg):
+        """
         augs = [
             # TODO: Adjust zed camera images
 
@@ -137,15 +138,24 @@ class TrainerAug(Trainer):
             #T.Resize(shape=(428, 760), interp=Image.BILINEAR) # bring everything back to the right size
             T.Resize(shape=(720, 1280), interp=Image.BILINEAR) # bring everything back to the right size
         ]
-        mapper = DatasetMapper(cfg, is_train=True, augmentations=augs)
+        """
+        augs=[]
+        using_contact = True if cfg.MODEL.ROI_HEADS.NAME == "StandardROIHeads_PLUS_CONTACT" else False
+        print(f"Using contact: {using_contact}")
+        
+        mapper = DatasetMapper(cfg, is_train=True, augmentations=augs, using_contact=using_contact)
         return build_detection_train_loader(cfg, mapper=mapper)
 
     @classmethod
     def build_test_loader(cls, cfg, dataset_name):
         augs = [
-            T.Resize(shape=(428, 760), interp=Image.BILINEAR) # bring everything back to the right size
+            T.Resize(shape=(720, 1280), interp=Image.BILINEAR) # bring everything back to the right size
+            #T.Resize(shape=(428, 760), interp=Image.BILINEAR) # bring everything back to the right size
         ]
-        mapper = DatasetMapper(cfg, is_train=False, augmentations=augs)
+        using_contact = True if cfg.MODEL.ROI_HEADS.NAME == "StandardROIHeads_PLUS_CONTACT" else False
+        print(f"Using contact: {using_contact}")
+        
+        mapper = DatasetMapper(cfg, is_train=False, augmentations=augs, using_contact=using_contact)
         return build_detection_test_loader(cfg, dataset_name, mapper=mapper)
 
 def setup(args):
