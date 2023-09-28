@@ -7,11 +7,17 @@ import kwimage
 import textwrap
 import warnings
 import random
+import matplotlib
 
 import numpy as np
 import ubelt as ub
 import pandas as pd
 import ubelt as ub
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+import matplotlib.colors as mcolors
+
+from sklearn.preprocessing import normalize
 
 from pathlib import Path
 from PIL import Image
@@ -477,11 +483,6 @@ def plot_class_freq_per_step(freq_dict, act_labels, cat_labels, label_frame_freq
     """Plot the number of objects detected, normalized by the number of frames
     per activity
     """
-    import matplotlib
-    import matplotlib.pyplot as plt
-    import numpy as np
-    from sklearn.preprocessing import normalize
-
     SMALL_SIZE = 8
     MEDIUM_SIZE = 10
     BIGGER_SIZE = 8
@@ -521,9 +522,6 @@ def visualize_kwcoco_by_contact(dset=None, save_dir=""):
     :param dset: kwcoco object or a string pointing to a kwcoco file
     :param save_dir: Directory to save the images to
     """
-    import matplotlib.pyplot as plt
-    import matplotlib.patches as patches
-
     red_patch = patches.Patch(color="r", label="obj")
     green_patch = patches.Patch(color="g", label="obj-obj contact")
     blue_patch = patches.Patch(color="b", label="obj-hand contact")
@@ -615,10 +613,6 @@ def visualize_kwcoco_by_label(dset=None, save_dir=""):
     :param dset: kwcoco object or a string pointing to a kwcoco file
     :param save_dir: Directory to save the images to
     """
-    import matplotlib.pyplot as plt
-    import matplotlib.patches as patches
-    import matplotlib.colors as mcolors
-
     # colors = list(mcolors.CSS4_COLORS.keys())
     # random.shuffle(colors)
 
@@ -946,6 +940,43 @@ def add_background_images(dset, background_imgs):
     dset.dump(dset.fpath, newlines=True)
     print(f"Saved dset to {dset.fpath}")
 
+def draw_activity_preds(dset, save_dir="."):
+    # Load kwcoco file
+    dset = load_kwcoco(dset)
+
+    gid_to_aids = dset.index.gid_to_aids
+    gids = ub.argsort(ub.map_vals(len, gid_to_aids))
+
+    for gid in sorted(gids):
+        im = dset.imgs[gid]
+        img_video_id = im["video_id"]
+
+        fn = im["file_name"].split("/")[-1]
+
+        gt = im["activity_gt"]
+        if type(gt) is int:
+            gt = dset.dataset["info"][0]["activity_labels"][str(gt)]
+        pred = im["activity_pred"]
+        if type(pred) is int:
+            pred = dset.dataset["info"][0]["activity_labels"][str(pred)]
+
+        fig, ax = plt.subplots()
+        title = f"GT: {gt}\nPRED: {pred}"
+        plt.title("\n".join(textwrap.wrap(title, 55)))
+
+        image = Image.open(im["file_name"])
+        image = np.array(image)
+
+        ax.imshow(image)
+
+        video_dir = f"{save_dir}/video_{img_video_id}/images/"
+        Path(video_dir).mkdir(parents=True, exist_ok=True)
+
+        plt.savefig(
+            f"{video_dir}/{fn}",
+        )
+        plt.close(fig)  # needed to remove the plot because savefig doesn't clear it
+    plt.close("all")
 
 def dive_csv_to_kwcoco(dive_folder, object_config_fn):
     """Convert object annotations in DIVE csv file(s) to a kwcoco file
