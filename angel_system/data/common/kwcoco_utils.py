@@ -614,10 +614,6 @@ def visualize_kwcoco_by_label(dset=None, save_dir=""):
     :param dset: kwcoco object or a string pointing to a kwcoco file
     :param save_dir: Directory to save the images to
     """
-<<<<<<< HEAD
-    # colors = list(mcolors.CSS4_COLORS.keys())
-    # random.shuffle(colors)
-=======
     import matplotlib.pyplot as plt
     import matplotlib.patches as patches
     import matplotlib.colors as mcolors
@@ -626,59 +622,10 @@ def visualize_kwcoco_by_label(dset=None, save_dir=""):
 
     colors = list(mcolors.CSS4_COLORS.keys())
     random.shuffle(colors)
->>>>>>> 4c196fea... wip
-
-    """
-    colors = [
-        "yellow",
-        "red",
-        "turquoise",
-        "beige",
-        "dimgrey",
-        "indigo",
-        "springgreen",
-        "green",
-        "moccasin",
-        "darkgoldenrod",
-        "greenyellow",
-        "violet",
-        "cyan",
-        "darkviolet",
-        "darkturquoise",
-        "skyblue",
-        "navy",
-        "azure",
-        "lightcoral",
-        "grey",
-        "lemonchiffon",
-        "gray",
-        "deeppink",
-        "wheat",
-        "coral",
-        "olivedrab",
-        "lightgrey",
-        "blue",
-        "hotpink",
-        "pink",
-        "ghostwhite",
-        "aquamarine",
-        "orange",
-        "deepskyblue",
-        "darkorchid",
-        "olive",
-        "purple",
-        "black",
-        "limegreen",
-        "darkslategray",
-        "bisque",
-        "steelblue",
-    ]
-    """
 
     obj_labels = [v["name"] for k, v in dset.cats.items()]
 
     empty_ims = 0
-    
 
     gid_to_aids = dset.index.gid_to_aids
     gids = ub.argsort(ub.map_vals(len, gid_to_aids))
@@ -691,7 +638,7 @@ def visualize_kwcoco_by_label(dset=None, save_dir=""):
         #    continue
 
         fn = im["file_name"].split("/")[-1]
-        gt = im["activity_gt"] if hasattr(im, 'activity_gt') else ''
+        gt = im["activity_gt"] if hasattr(im, "activity_gt") else ""
         if not gt:
             gt = ""
 
@@ -948,7 +895,7 @@ def add_background_images(dset, background_imgs):
         new_im = {
             "width": w,
             "height": h,
-            "file_name": im #im.split("2022-11-05_whole")[-1][1:],
+            "file_name": im,  # im.split("2022-11-05_whole")[-1][1:],
         }
         new_gid = dset.add_image(**new_im)
 
@@ -1005,6 +952,7 @@ def dive_csv_to_kwcoco(dive_folder, object_config_fn):
     :param object_config_fn: Path to the object label config file
     """
     import shutil
+
     data_dir = "/data/PTG/cooking/ros_bags/tea/tea_extracted"
     dst_dir = "/data/PTG/cooking/images/tea/berkeley/"
 
@@ -1089,8 +1037,9 @@ def dive_csv_to_kwcoco(dive_folder, object_config_fn):
     dset.dump(dset.fpath, newlines=True)
     print(f"Saved dset to {dset.fpath}")
 
+
 def update_obj_labels(dset, object_config_fn):
-    """Change the object labels to match those provided 
+    """Change the object labels to match those provided
     in ``object_config_fn``
     """
     # Load kwcoco file
@@ -1109,7 +1058,7 @@ def update_obj_labels(dset, object_config_fn):
     # Add categories
     for object_label in object_labels:
         new_dset.add_category(name=object_label["label"], id=object_label["id"])
-    
+
     for video_id, video in dset.index.videos.items():
         new_dset.add_video(**video)
 
@@ -1119,7 +1068,6 @@ def update_obj_labels(dset, object_config_fn):
     for gid in sorted(gids):
         im = dset.imgs[gid]
         new_im = im.copy()
-        
 
         aids = gid_to_aids[gid]
         anns = ub.dict_subset(dset.anns, aids)
@@ -1131,7 +1079,7 @@ def update_obj_labels(dset, object_config_fn):
             new_im["video_id"] = new_video["id"]
 
         del new_im["id"]
-        new_im["file_name"] = im['file_name']
+        new_im["file_name"] = im["file_name"]
         new_gid = new_dset.add_image(**new_im)
 
         for aid, ann in anns.items():
@@ -1152,15 +1100,13 @@ def update_obj_labels(dset, object_config_fn):
 
             new_dset.add_annotation(**new_ann)
 
-            
-
     fpath = dset.fpath.split(".mscoco")[0]
     new_dset.fpath = f"{fpath}_new_obj_labels.mscoco.json"
     new_dset.dump(new_dset.fpath, newlines=True)
     print(f"Saved predictions to {new_dset.fpath}")
 
+
 def temp(dset):
-    
     root_dir = "/data/PTG/cooking/ros_bags/tea/tea_extracted/"
     dst_dir = "/data/PTG/cooking/images/tea/berkeley/"
 
@@ -1192,6 +1138,7 @@ def temp(dset):
     dset.dump(f"{dset.fpath}_fixed_filepaths.mscoco.json", newlines=True)
     print(f"Saved predictions to {new_dset.fpath}")
 
+
 def remap_category_ids_demo(dset):
     """Adjust the category ids in a kwcoco dataset
     (From Jon Crall)
@@ -1199,18 +1146,18 @@ def remap_category_ids_demo(dset):
     # Load kwcoco file
     dset = load_kwcoco(dset)
 
-    existing_cids = dset.categories().lookup('id')
-    cid_mapping = {cid: cid -1 for cid in existing_cids}
+    existing_cids = dset.categories().lookup("id")
+    cid_mapping = {cid: cid - 1 for cid in existing_cids}
 
-    for cat in dset.dataset['categories']:
-        old_cid = cat['id']
+    for cat in dset.dataset["categories"]:
+        old_cid = cat["id"]
         new_cid = cid_mapping[old_cid]
-        cat['id'] = new_cid
+        cat["id"] = new_cid
 
-    for ann in dset.dataset['annotations']:
-        old_cid = ann['category_id']
+    for ann in dset.dataset["annotations"]:
+        old_cid = ann["category_id"]
         new_cid = cid_mapping[old_cid]
-        ann['category_id'] = new_cid
+        ann["category_id"] = new_cid
 
     dset._build_index()
     dset.dump(dset.fpath, newlines=True)
@@ -1231,7 +1178,7 @@ def main():
 
     stage_dir = f"{ptg_root}/annotations/coffee+tea/{stage}"
     # stage_dir = ""
- 
+
     save_dir = f"{stage_dir}/{exp}/visualization/{split}"
     # save_dir = "visualization"
     print(save_dir)
