@@ -7,11 +7,17 @@ import kwimage
 import textwrap
 import warnings
 import random
+import matplotlib
 
 import numpy as np
 import ubelt as ub
 import pandas as pd
 import ubelt as ub
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+import matplotlib.colors as mcolors
+
+from sklearn.preprocessing import normalize
 
 from pathlib import Path
 from PIL import Image
@@ -477,11 +483,6 @@ def plot_class_freq_per_step(freq_dict, act_labels, cat_labels, label_frame_freq
     """Plot the number of objects detected, normalized by the number of frames
     per activity
     """
-    import matplotlib
-    import matplotlib.pyplot as plt
-    import numpy as np
-    from sklearn.preprocessing import normalize
-
     SMALL_SIZE = 8
     MEDIUM_SIZE = 10
     BIGGER_SIZE = 8
@@ -521,9 +522,6 @@ def visualize_kwcoco_by_contact(dset=None, save_dir=""):
     :param dset: kwcoco object or a string pointing to a kwcoco file
     :param save_dir: Directory to save the images to
     """
-    import matplotlib.pyplot as plt
-    import matplotlib.patches as patches
-
     red_patch = patches.Patch(color="r", label="obj")
     green_patch = patches.Patch(color="g", label="obj-obj contact")
     blue_patch = patches.Patch(color="b", label="obj-hand contact")
@@ -615,10 +613,6 @@ def visualize_kwcoco_by_label(dset=None, save_dir=""):
     :param dset: kwcoco object or a string pointing to a kwcoco file
     :param save_dir: Directory to save the images to
     """
-    import matplotlib.pyplot as plt
-    import matplotlib.patches as patches
-    import matplotlib.colors as mcolors
-
     # colors = list(mcolors.CSS4_COLORS.keys())
     # random.shuffle(colors)
 
@@ -947,22 +941,144 @@ def add_background_images(dset, background_imgs):
     print(f"Saved dset to {dset.fpath}")
 
 
+def draw_activity_preds(dset, save_dir="."):
+    # Load kwcoco file
+    dset = load_kwcoco(dset)
+
+    gid_to_aids = dset.index.gid_to_aids
+    gids = ub.argsort(ub.map_vals(len, gid_to_aids))
+
+    for gid in sorted(gids):
+        im = dset.imgs[gid]
+        img_video_id = im["video_id"]
+
+        fn = im["file_name"].split("/")[-1]
+
+        gt = im["activity_gt"]
+        if type(gt) is int:
+            gt = dset.dataset["info"][0]["activity_labels"][str(gt)]
+        pred = im["activity_pred"]
+        if type(pred) is int:
+            pred = dset.dataset["info"][0]["activity_labels"][str(pred)]
+
+        fig, ax = plt.subplots()
+        title = f"GT: {gt}\nPRED: {pred}"
+        plt.title("\n".join(textwrap.wrap(title, 55)))
+
+        image = Image.open(im["file_name"])
+        image = np.array(image)
+
+        ax.imshow(image)
+
+        video_dir = f"{save_dir}/video_{img_video_id}/images/"
+        Path(video_dir).mkdir(parents=True, exist_ok=True)
+
+        plt.savefig(
+            f"{video_dir}/{fn}",
+        )
+        plt.close(fig)  # needed to remove the plot because savefig doesn't clear it
+    plt.close("all")
+
+
+def dive_csv_to_kwcoco(dive_folder, object_config_fn):
+    """Convert object annotations in DIVE csv file(s) to a kwcoco file
+
+    :param dive_folder: Path to the csv files
+    :param object_config_fn: Path to the object label config file
+    """
+    data_dir = "/data/PTG/cooking/ros_bags/tea/tea_extracted"
+    dset = kwcoco.CocoDataset()
+
+    # Load object labels config
+    with open(object_config_fn, "r") as stream:
+        object_config = yaml.safe_load(stream)
+    object_labels = object_config["labels"]
+
+    label_ver = object_config["version"]
+    dset.dataset["info"].append({"object_label_version": label_ver})
+
+    # Add categories
+    for object_label in object_labels:
+        dset.add_category(name=object_label["label"], id=object_label["id"])
+
+    # Add boxes
+    for csv_file in ub.ProgIter(
+        glob.glob(f"{dive_folder}/*.csv"), desc="Loading video annotations"
+    ):
+        video_name = os.path.basename(csv_file).split("_object_labels")[0]
+
+        video_lookup = dset.index.name_to_video
+        if video_name in video_lookup:
+            vid = video_lookup[video_name]["id"]
+        else:
+            vid = dset.add_video(name=video_name)
+
+        dive_df = pd.read_csv(csv_file)
+        for i, row in dive_df.iterrows():
+            if i == 0:
+                continue
+
+            frame = row["2: Video or Image Identifier"]
+            frame_fn = f"{data_dir}/{video_name}_extracted/images/{frame}"
+            frame_num, time = time_from_name(frame)
+
+            image_lookup = dset.index.file_name_to_img
+            if frame in image_lookup:
+                img_id = image_lookup[frame]["id"]
+            else:
+                img_id = dset.add_image(
+                    file_name=frame_fn,
+                    video_id=vid,
+                    frame_index=frame_num,
+                    width=1280,
+                    height=720,
+                )
+
+            bbox = (
+                [
+                    float(row["4-7: Img-bbox(TL_x"]),
+                    float(row["TL_y"]),
+                    float(row["BR_x"]),
+                    float(row["BR_y)"]),
+                ],
+            )
+
+            xywh = kwimage.Boxes([bbox], "tlbr").toformat("xywh").data[0][0].tolist()
+
+            obj_id = row["10-11+: Repeated Species"]
+
+            ann = {
+                "area": xywh[2] * xywh[3],
+                "image_id": img_id,
+                "category_id": obj_id,
+                "segmentation": [],
+                "bbox": xywh,
+                "confidence": 1,
+            }
+
+            dset.add_annotation(**ann)
+
+    dset.fpath = f"tea_obj_annotations.mscoco.json"
+    dset.dump(dset.fpath, newlines=True)
+    print(f"Saved dset to {dset.fpath}")
+
+
 def main():
     ptg_root = "/home/local/KHQ/hannah.defazio/angel_system/angel_system/berkeley"
     ptg_root = "/data/PTG/cooking/"
 
-    kw = "coffee_base_results_test_conf_0.1_plus_hl_hands.mscoco.json"
+    kw = "berkeley_resnet50_plus_bkgd_results_test_conf_0.1_plus_hl_hands.mscoco.json"
+    exp = "berkeley_resnet50_plus_bkgd"
+    split = "test"
+    stage = "results"
 
     n = kw[:-12].split("_")
     name = "_".join(n[:-1])
     split = n[-1]
 
-    split = "test"
-
-    stage = "results"
     stage_dir = f"{ptg_root}/annotations/coffee/{stage}"
     # stage_dir = ""
-    exp = "coffee_base"
+
     save_dir = f"{stage_dir}/{exp}/visualization/conf_0.1_plus_hl_hands/{split}"
 
     # save_dir = "visualization"
