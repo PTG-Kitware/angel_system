@@ -940,6 +940,7 @@ def add_background_images(dset, background_imgs):
     dset.dump(dset.fpath, newlines=True)
     print(f"Saved dset to {dset.fpath}")
 
+
 def draw_activity_preds(dset, save_dir="."):
     # Load kwcoco file
     dset = load_kwcoco(dset)
@@ -978,6 +979,7 @@ def draw_activity_preds(dset, save_dir="."):
         plt.close(fig)  # needed to remove the plot because savefig doesn't clear it
     plt.close("all")
 
+
 def dive_csv_to_kwcoco(dive_folder, object_config_fn):
     """Convert object annotations in DIVE csv file(s) to a kwcoco file
 
@@ -998,11 +1000,13 @@ def dive_csv_to_kwcoco(dive_folder, object_config_fn):
     # Add categories
     for object_label in object_labels:
         dset.add_category(name=object_label["label"], id=object_label["id"])
-    
+
     # Add boxes
-    for csv_file in ub.ProgIter(glob.glob(f"{dive_folder}/*.csv"), desc="Loading video annotations"):
+    for csv_file in ub.ProgIter(
+        glob.glob(f"{dive_folder}/*.csv"), desc="Loading video annotations"
+    ):
         video_name = os.path.basename(csv_file).split("_object_labels")[0]
-        
+
         video_lookup = dset.index.name_to_video
         if video_name in video_lookup:
             vid = video_lookup[video_name]["id"]
@@ -1024,21 +1028,22 @@ def dive_csv_to_kwcoco(dive_folder, object_config_fn):
             else:
                 img_id = dset.add_image(
                     file_name=frame_fn,
-                    video_id=vid, 
+                    video_id=vid,
                     frame_index=frame_num,
                     width=1280,
                     height=720,
                 )
 
-            bbox = [float(row["4-7: Img-bbox(TL_x"]), float(row["TL_y"]),
-                    float(row["BR_x"]), float(row["BR_y)"])],
-
-            xywh = (
-                kwimage.Boxes([bbox], "tlbr")
-                .toformat("xywh")
-                .data[0][0]
-                .tolist()
+            bbox = (
+                [
+                    float(row["4-7: Img-bbox(TL_x"]),
+                    float(row["TL_y"]),
+                    float(row["BR_x"]),
+                    float(row["BR_y)"]),
+                ],
             )
+
+            xywh = kwimage.Boxes([bbox], "tlbr").toformat("xywh").data[0][0].tolist()
 
             obj_id = row["10-11+: Repeated Species"]
 
@@ -1073,7 +1078,7 @@ def main():
 
     stage_dir = f"{ptg_root}/annotations/coffee/{stage}"
     # stage_dir = ""
-    
+
     save_dir = f"{stage_dir}/{exp}/visualization/conf_0.1_plus_hl_hands/{split}"
 
     # save_dir = "visualization"
