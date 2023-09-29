@@ -31,8 +31,16 @@ var chart = new Chart(ctx, {
           }
         }
     },
-    title: {
-      display: false,
+    plugins: {
+      title: {
+        display: true,
+        text: 'Activity',
+        color: barColors,
+        font:{
+          size: 15
+        },
+        position: 'top'
+      }
     },
     maintainAspectRatio: false
   }
@@ -53,6 +61,13 @@ $.get( "/topics")
 
     chart.data.labels = xValues;
     chart.data.datasets[0].data = yValues;
+
+    // Display highest conf in title
+    max_val = Math.max(...yValues);
+    max_idx = yValues.indexOf(max_val);
+
+    new_title = xValues[max_idx];
+    chart.options.plugins.title.text = new_title;
 
     chart.update('none'); // don't animate
   });

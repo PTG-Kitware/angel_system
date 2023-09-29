@@ -7,7 +7,7 @@
 
   <script src="src/third_party/Chart.js/3.9.0/chart.js"></script>
   <script type="text/javascript">
-    Chart.defaults.font.size = 25;
+    Chart.defaults.font.size = 20;
     Chart.defaults.font.family = "Roboto","sans-serif";
     Chart.defaults.plugins.legend.display = false;
   </script>
@@ -23,6 +23,9 @@
 <body>
   <div id="header">
     <img src="static/Kitware Logo Stacked.png" alt="kitware"/>
+    <div id="status">
+      <p class="text body-text">Rosbridge Websocket Status: <span id="status-msg">N/A</span></p>
+    </div>
   </div> 
   
   <div id="blue-arrow" class="highlighted-body">
@@ -40,20 +43,22 @@
     </div>
   </div>
   
-  <div id="bottom-row">
+  <div id="middle-row">
     <div id="charts">
       <div id="activity">
-        <div class="highlighted-title">
-          <span class="text title-hex">Task Step Confidence</span>
-        </div>
-
-        <canvas id="task-step-conf-chart"></canvas>
-
         <div class="highlighted-title">
           <span class="text title-hex">Activity Classification</span>
         </div>
         
         <canvas id="activity-conf-chart"></canvas>
+      </div>
+
+      <div id="step">
+        <div class="highlighted-title">
+          <span class="text title-hex">Task Step Confidence</span>
+        </div>
+
+        <canvas id="task-step-conf-chart"></canvas>
       </div>
 
       <div id="task-complete">
@@ -64,25 +69,18 @@
         <canvas id="task-complete-chart"></canvas>
       </div>
     </div>
-    
-    <div id="bottom-right">
-      <div id="status">
-        <div class="highlighted-title">
-          <span class="text title-hex">Status</span>
-        </div>
+  </div>
 
-        <p class="text body-text">Rosbridge Websocket Status: <span id="status-msg">N/A</span></p>
+  <!-- FOLD -->
+
+  <div id="bottom-row">
+    <div id="errors">
+      <div class="highlighted-title">
+        <span class="text title-hex">Error Messages</span>
       </div>
 
-      <div id="errors">
-        <div class="highlighted-title">
-          <span class="text title-hex">Errors</span>
-        </div>
-
-        <div id="error-msgs"></div>
-      </div>
+      <div id="error-msgs"></div>
     </div>
-
   </div>
 
   <script type="text/javascript" src="src/hl_image.js"></script>
