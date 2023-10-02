@@ -48,6 +48,7 @@ PARAM_PV_HEIGHT = "pv_height"
 PARAM_PV_FRAMERATE = "pv_framerate"
 PARAM_SM_FREQ = "sm_freq"
 PARAM_RM_DEPTH_AHAT_TOPIC = "rm_depth_AHAT"
+PARAM_RM_DEPTH_LONGTHROW_TOPIC = "rm_depth_LONGTHROW"
 
 # Pass string for any of the ROS topic params to disable that stream
 DISABLE_TOPIC_STR = "disable"
@@ -77,6 +78,7 @@ class HL2SSROSBridge(Node):
                 (PARAM_PV_FRAMERATE,),
                 (PARAM_SM_FREQ,),
                 (PARAM_RM_DEPTH_AHAT_TOPIC,),
+                (PARAM_RM_DEPTH_LONGTHROW_TOPIC,),
             ],
         )
 
@@ -92,6 +94,7 @@ class HL2SSROSBridge(Node):
         self.pv_framerate = param_values[PARAM_PV_FRAMERATE]
         self.sm_freq = param_values[PARAM_SM_FREQ]
         self._rm_depth_AHAT_topic = param_values[PARAM_RM_DEPTH_AHAT_TOPIC]
+        self._rm_depth_LONGTHROW_topic = param_values[PARAM_RM_DEPTH_LONGTHROW_TOPIC]
 
         # Define HL2SS server ports
         self.pv_port = hl2ss.StreamPort.PERSONAL_VIDEO
@@ -99,6 +102,7 @@ class HL2SSROSBridge(Node):
         self.audio_port = hl2ss.StreamPort.MICROPHONE
         self.sm_port = hl2ss.IPCPort.SPATIAL_MAPPING
         self.rm_depth_AHAT_port = hl2ss.StreamPort.RM_DEPTH_AHAT
+        self.rm_depth_LONGTHROW_port = hl2ss.StreamPort.RM_DEPTH_LONGTHROW
 
         self._head_pose_topic_enabled = False
         if self._head_pose_topic != DISABLE_TOPIC_STR:
@@ -183,6 +187,15 @@ class HL2SSROSBridge(Node):
             self._sm_thread.daemon = True
             self._sm_thread.start()
         if self._rm_depth_AHAT_topic != DISABLE_TOPIC_STR:
+            # Check that the longthrow sensor topic is not also enabled. Issue
+            # a warning and disable it so that both streams are not configured.
+            if self._rm_depth_LONGTHROW_topic != DISABLE_TOPIC_STR:
+                log.warning(
+                    "WARNING! Using AHAT and LONGTHROW simultaneously is not supported."
+                    + "Disabling the LONGTHROW sensor"
+                )
+                self._rm_depth_LONGTHROW_topic = DISABLE_TOPIC_STR
+
             # Create frame publisher
             self.ros_depth_ahat_publisher = self.create_publisher(
                 Image, self._rm_depth_AHAT_topic, 1
@@ -199,6 +212,23 @@ class HL2SSROSBridge(Node):
             )
             self._rm_depth_ahat_thread.daemon = True
             self._rm_depth_ahat_thread.start()
+        if self._rm_depth_LONGTHROW_topic != DISABLE_TOPIC_STR:
+            # Create frame publisher
+            self.ros_depth_lt_publisher = self.create_publisher(
+                Image, self._rm_depth_LONGTHROW_topic, 1
+            )
+            self.connect_hl2ss_rm_depth_longthrow()
+            log.info("RM Depth LONGTHROW client connected!")
+
+            # Start the frame publishing thread
+            self._rm_depth_lt_active = Event()
+            self._rm_depth_lt_active.set()
+            self._rm_depth_lt_rate_tracker = RateTracker()
+            self._rm_depth_lt_thread = Thread(
+                target=self.rm_depth_lt_publisher, name="publish_rm_depth_longthrow"
+            )
+            self._rm_depth_lt_thread.daemon = True
+            self._rm_depth_lt_thread.start()
 
         log.info("Initialization complete.")
 
@@ -291,13 +321,33 @@ class HL2SSROSBridge(Node):
 
         self.hl2ss_rm_depth_ahat_client = hl2ss.rx_decoded_rm_depth_ahat(
             self.ip_addr,
-            self.pv_port,
+            self.pv_port,  # TODO: is the right port??
             hl2ss.ChunkSize.RM_DEPTH_AHAT,
             mode,
             profile,
-            PV_BITRATE,
+            PV_BITRATE,  # TODO: is this right?
         )
         self.hl2ss_rm_depth_ahat_client.open()
+
+    def connect_hl2ss_rm_depth_longthrow(self) -> None:
+        """
+        Creates the HL2SS RM Depth LONGTHROW client and connects it to the
+        server on the headset.
+        """
+        # Operating mode
+        # 1: video + rig pose
+        mode = hl2ss.StreamMode.MODE_1
+        # PNG filter
+        png_filter = hl2ss.PngFilterMode.Paeth
+
+        self.hl2ss_rm_depth_lt_client = hl2ss.rx_decoded_rm_depth_longthrow(
+            self.ip_addr,
+            self.rm_depth_LONGTHROW_port,
+            hl2ss.ChunkSize.RM_DEPTH_LONGTHROW,
+            mode,
+            png_filter
+        )
+        self.hl2ss_rm_depth_lt_client.open()
 
     def shutdown_clients(self) -> None:
         """
@@ -351,6 +401,15 @@ class HL2SSROSBridge(Node):
 
             self.hl2ss_rm_depth_ahat_client.close()
             log.info("RM Depth AHAT client disconnected")
+
+        if self._rm_depth_LONGTHROW_topic != DISABLE_TOPIC_STR:
+            # Stop SM publishing thread
+            self._rm_depth_lt_active.clear()
+            self._rm_depth_lt_thread.join()
+            log.info("RM Depth LONGTHROW thread closed")
+
+            self.hl2ss_rm_depth_lt_client.close()
+            log.info("RM Depth LONGTHROW client disconnected")
 
     def pv_publisher(self) -> None:
         """
@@ -557,10 +616,8 @@ class HL2SSROSBridge(Node):
 
     def rm_depth_ahat_publisher(self) -> None:
         """
-        Main thread that gets depth frames from the HL2SS RM Depth AHAT client and publishes
-        them to the rm_depth_ahat topic. For each image message published, a corresponding
-        HeadsetPoseData message is published with the same header info and the world
-        matrix for that image.
+        Main thread that gets depth frames from the HL2SS RM Depth AHAT client
+        and publishes them to the rm_depth_ahat topic.
         """
         log = self.get_logger()
 
@@ -576,6 +633,7 @@ class HL2SSROSBridge(Node):
 
             # TODO: What is AB portion of data.payload (related to IR?), absolute? Albedo?
             # Should it be included here as a part of the depth message?
+            # [Josh] AB is absolute brightness.
             try:
                 # Assume BGR because AHAT shares the same video encoding profile as PV
                 # Payload contains 16-bit Depth and 16-bit AB, so use BGR16
@@ -585,6 +643,7 @@ class HL2SSROSBridge(Node):
                 rm_depth_ahat_msg.header.stamp = (
                     self.get_cloc_rm_depth_audio_activek().now().to_msg()
                 )
+                audio_msg.header.stamp = self.get_clock().now().to_msg()
                 rm_depth_ahat_msg.header.frame_id = "RMDepthAHATFrames"
             except TypeError as e:
                 log.warning(f"{e}")
@@ -597,6 +656,46 @@ class HL2SSROSBridge(Node):
             log.debug(
                 f"Published RM Depth AHAT message (hz: "
                 f"{self._rm_depth_ahat_rate_tracker.get_rate_avg()})",
+                throttle_duration_sec=1,
+            )
+
+    def rm_depth_lt_publisher(self) -> None:
+        """
+        Main thread that gets depth frames from the HL2SS RM Depth LONGTHROW
+        client and publishes them to the rm_depth_longthrow topic. For each
+        image message published, a corresponding HeadsetPoseData message is
+        published with the same header info and the world matrix for that
+        image.
+        """
+        log = self.get_logger()
+
+        # `.wait(0)` will quickly return false if cleared.
+        while self._rm_depth_lt_active.wait(0):
+            data = self.hl2ss_rm_depth_lt_client.get_next_packet()
+
+            log.info(
+                f"Received RM Depth LONGTHROW message. Pose at time "
+                f"{data.timestamp} recorded."
+            )
+            try:
+                rm_depth_lt_msg = BRIDGE.cv2_to_imgmsg(
+                    data.payload.depth, encoding="mono16"
+                )
+                rm_depth_lt_msg.header.stamp = (
+                    self.get_clock().now().to_msg()
+                )
+                rm_depth_lt_msg.header.frame_id = "RMDepthLONGTHROWFrames"
+            except TypeError as e:
+                log.warning(f"{e}")
+                return
+
+            # Publish the RM Depth LONGTHROW msg
+            self.ros_depth_lt_publisher.publish(rm_depth_lt_msg)
+
+            self._rm_depth_lt_rate_tracker.tick()
+            log.debug(
+                f"Published RM Depth LONGTHROW message (hz: "
+                f"{self._rm_depth_lt_rate_tracker.get_rate_avg()})",
                 throttle_duration_sec=1,
             )
 
