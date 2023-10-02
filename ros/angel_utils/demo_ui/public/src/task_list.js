@@ -27,8 +27,16 @@ var task_step_conf_chart = new Chart(task_step_conf_ctx, {
                 }
             }
         },
-        title: {
-            display: false
+        plugins: {
+          title: {
+            display: true,
+            text: 'Step',
+            color: barColors,
+            font:{
+              size: 15
+            },
+            position: 'top'
+          }
         },
         maintainAspectRatio: false
     }
@@ -140,6 +148,13 @@ $.get("/topics")
     task_step_conf_chart.data.datasets[0].data = m.hmm_step_confidence;
     task_step_conf_chart.data.datasets[0].backgroundColor = colors;
     task_step_conf_chart.update('none'); // don't animate
+
+    // Display highest conf in title
+    max_val = Math.max(...task_step_conf_chart.data.datasets[0].data);
+    max_idx = task_step_conf_chart.data.datasets[0].data.indexOf(max_val);
+
+    new_title = task_step_conf_chart.data.labels[max_idx];
+    task_complete_chart.options.plugins.title.text = new_title;
 
     // Update task completion chart
     task_complete_chart.data.datasets[0].data = [m.task_complete_confidence];

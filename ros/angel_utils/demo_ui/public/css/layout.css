@@ -18,12 +18,12 @@
 
 html,
 body {
-  height: 99%;
-}
-
-body {
   display: flex;
   flex-direction: column;
+  overflow-y: scroll;
+  margin-left: 0px;
+  margin-right: 0px;
+  margin-top: 0px;
 }
 
 .content {
@@ -37,7 +37,7 @@ body {
   font-family: "Roboto",sans-serif;
 }
 .body-text {
-  font-size: clamp(1.1rem,1.1vw,1.9rem);
+  font-size: clamp(1rem,1vw,1.7rem);
   font-weight: 300;
   line-height: 1;
 
@@ -50,33 +50,40 @@ body {
 /* MENU         */
 /* ------------ */
 #header { /* main menu */
-  padding: 10px;
   background: var(--light-gray-3);
   position: relative;
-  height: 8%;
-  max-height: 5vh;
+  display: flex;
+  height: 10%;
+  max-height: 6vh;
 }
 #header img { /* kitware logo */
-  height: 98%;
+  height: 5%;
+  max-height: 5vh;
   width: auto; /* keep aspect ratio */
   float: top;
+  padding: 5px;
+  
+}
+#status { /* kitware logo */
+  margin-left: auto; 
+  margin-right: 10px;
 }
 
 /* ------------ */
 /* TITLE        */
 /* ------------ */
 .highlighted-title {
-  padding: 0 0 20px 0;
+  padding: 0 0 10px 0;
   position: relative;
   margin: 0 auto;
 
   margin-bottom: 4px;
-  max-width: 20vw;
+  max-width: 15vw;
 
   overflow: hidden;
   text-overflow: clip;
 
-  max-height: 15%;
+  max-height: 10%;
 
 }
 .icon-hex {
@@ -90,9 +97,9 @@ body {
   width: 49px;
   height: 49px;
   clip-path: var(--hex-full);
-  background-color: var(--kit-green);
-  
+  background-color: var(--kit-green); 
 }
+
 .title-hex {
   position: relative;
   background-color: var(--kit-light-blue);
@@ -104,12 +111,12 @@ body {
   /* Paired with hexagon
   clip-path: polygon(15px 0, calc(100% - 15px) 0, 100% 50%, calc(100% - 15px) 100%, 15px 100%, 0% 50%); */
   padding: 0 2rem 0 2rem;
-  width: 75%;
-  max-width: 85%;
+  width: 70%;
+  max-width: 80%;
   
-  font-size: 1.4rem;
+  font-size: 1.2rem;
   font-weight: 550;
-  line-height: 1.5;
+  line-height: 1.3;
   color: var(--kit-dark-blue);
 }
 
@@ -118,14 +125,14 @@ body {
 /* ------------ */
 .highlighted-body { /* blue arrow */
   margin-top: 10px;
+  margin-bottom: 10px;
 
   content: "";
 
   clear: both;
   
-  padding: 10px;
   width: 99%;
-  height: 43%;
+  height: 50%;
   max-height: 45vh;
 
   background-color: var(--kit-blue);
@@ -144,6 +151,7 @@ body {
   padding: 10px;
   width: 40%;
   max-width: 45vw;
+  max-height: 42vh;
 
   text-align: center;
 
@@ -234,10 +242,10 @@ body {
 #HL-live{
   float: left;
   padding: 10px;
-  margin-left: 30px;
-  margin-right: 10px;
   width: 45%;
   max-width: 40vw;
+  margin-left: auto; 
+  margin-right: 226.0015px;
 }
 
 .live-img {
@@ -249,16 +257,18 @@ body {
 }
 
 /* ------------ */
-/* BOTTOM ROW   */
+/* MIDDLE ROW   */
 /* ------------ */
-#bottom-row {
+#middle-row {
   left: 0;
   position: relative;
   display: flex;
-  margin-top: 10px;
-  width: 99%;
-  height: 43%;
-  max-height: 45vh;
+  width: 95%;
+  height: 99%;
+  max-height: 50vh;
+
+  margin-left: 10px;
+  margin-right: 10px;
 
   content: "";
 
@@ -270,39 +280,68 @@ body {
 #charts {
   position: relative;
   display: flex;
-  
-  width: 75%;
-  max-width: 77vw;
+
+  width: 99%;
+  height: 90%;
+
+  margin-bottom: 40px;
 }
 
 #activity {
   text-align: center;
 
-  margin-left: 60px;
-
   width: 70%;
+  height: 99%;
 }
 #activity-conf-chart { /* chart */
-  
+  height: 60%;
+  max-height: 40vh;
+}
+
+#step {
+  text-align: center;
+
+  margin-left: 50px;
+
+  width: 70%;
+  height: 99%;
+}
+#task-step-conf-chart {
+  height: 60%;
+  max-height: 40vh;
 }
 
 #task-complete {
-  margin-left: 70px;
+  margin-left: 50px;
   text-align: center;
 
-  width: 25%;
+  width: 15%;
+  height: 99%;
+
+  margin-right: 10px;
 }
 #task-complete-chart { /* chart */
-  margin-bottom: 25px; /* matches font size of x axis */
+  height: 60%;
+  max-height: 40vh;
 }
 
-#bottom-right {
-  display: inline-block;
+/* ------------ */
+/* BOTTOM       */
+/* ------------ */
+#bottom-row {
+  position: relative;
+  display: flex;
+  padding: 10px;
+ 
+  width: 95%;
+  height: 99%;
+  max-height: 40vh;
 
-  width: 24%;
-  max-width: 22vw;
+  content: "";
 
-  margin-left: 70px;
+  clear: both;
+
+  text-align: center;
 }
 
 /* ------------ */
@@ -310,11 +349,13 @@ body {
 /* ------------ */
 #errors {
   height:100%;
+  width: 30%;
   position: relative;
+  display: flex;
 }
 #error-msgs {
   max-height:100%;
-  height: 70%;
+  height: 60%;
 
   overflow: scroll;
   scrollbar-color: var(--dark-gray-30) white;
@@ -349,7 +390,7 @@ body {
   overflow: hidden;
   background-color: var(--kit-light-blue);
   text-align: left;
-  font-size: clamp(1rem,1vw,1.5rem);;
+  font-size: clamp(1rem,1vw,1.5rem);
 }
 
 .collapsible:after {
