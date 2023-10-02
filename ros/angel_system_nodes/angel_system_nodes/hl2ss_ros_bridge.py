@@ -49,6 +49,7 @@ PARAM_PV_FRAMERATE = "pv_framerate"
 PARAM_SM_FREQ = "sm_freq"
 PARAM_RM_DEPTH_AHAT_TOPIC = "rm_depth_AHAT"
 PARAM_RM_DEPTH_LONGTHROW_TOPIC = "rm_depth_LONGTHROW"
+PARAM_RM_DEPTH_HEAD_POSE_TOPIC = "depth_head_pose_topic"
 
 # Pass string for any of the ROS topic params to disable that stream
 DISABLE_TOPIC_STR = "disable"
@@ -79,6 +80,7 @@ class HL2SSROSBridge(Node):
                 (PARAM_SM_FREQ,),
                 (PARAM_RM_DEPTH_AHAT_TOPIC,),
                 (PARAM_RM_DEPTH_LONGTHROW_TOPIC,),
+                (PARAM_RM_DEPTH_HEAD_POSE_TOPIC,),
             ],
         )
 
@@ -95,6 +97,7 @@ class HL2SSROSBridge(Node):
         self.sm_freq = param_values[PARAM_SM_FREQ]
         self._rm_depth_AHAT_topic = param_values[PARAM_RM_DEPTH_AHAT_TOPIC]
         self._rm_depth_LONGTHROW_topic = param_values[PARAM_RM_DEPTH_LONGTHROW_TOPIC]
+        self._lt_head_pose_topic = param_values[PARAM_RM_DEPTH_HEAD_POSE_TOPIC]
 
         # Define HL2SS server ports
         self.pv_port = hl2ss.StreamPort.PERSONAL_VIDEO
@@ -121,6 +124,24 @@ class HL2SSROSBridge(Node):
                 log.warn(
                     "Warning! Image topic is not configured, so head pose data will not be published."
                 )
+        self._lt_head_pose_topic_enabled = False
+        if self._head_pose_topic != DISABLE_TOPIC_STR:
+            self._lt_head_pose_topic_enabled = True
+            # Establishing head-pose publisher before starting the _pv_thread
+            # to avoid a race condition (this publisher can be used in that
+            # thread
+            log.info("Creating LONGTHROW head pose publisher")
+            self.ros_lt_head_pose_publisher = self.create_publisher(
+                HeadsetPoseData, self._lt_head_pose_topic, 1
+            )
+
+            # Check to make sure image topic is valid, otherwise the image thread
+            # will not be running, which is where head pose data is fetched.
+            if self._rm_depth_LONGTHROW_topic == DISABLE_TOPIC_STR:
+                log.warn(
+                    "Warning! Depth imagetopic is not configured, so head pose data will not be published."
+                )
+
         if self._image_topic != DISABLE_TOPIC_STR:
             # Create frame publisher
             self.ros_frame_publisher = self.create_publisher(
@@ -230,6 +251,7 @@ class HL2SSROSBridge(Node):
             self._rm_depth_lt_thread.daemon = True
             self._rm_depth_lt_thread.start()
 
+
         log.info("Initialization complete.")
 
     def connect_hl2ss_pv(self) -> None:
@@ -255,6 +277,7 @@ class HL2SSROSBridge(Node):
             self.ip_addr, self.pv_port, self.pv_width, self.pv_height, self.pv_framerate
         )
         self.camera_intrinsics = [float(x) for x in pv_cam_params.intrinsics.flatten()]
+        print(self.camera_intrinsics)
 
         self.hl2ss_pv_client = hl2ss.rx_decoded_pv(
             self.ip_addr,
@@ -691,6 +714,16 @@ class HL2SSROSBridge(Node):
 
             # Publish the RM Depth LONGTHROW msg
             self.ros_depth_lt_publisher.publish(rm_depth_lt_msg)
+
+            # Cannot publish head poses if it was not enabled.
+            if self._lt_head_pose_topic_enabled:
+                world_matrix = [float(x) for x in data.pose.flatten()]
+
+                lt_headset_pose_msg = HeadsetPoseData()
+                # same timestamp/frame_id as image
+                lt_headset_pose_msg.header = rm_depth_lt_msg.header
+                lt_headset_pose_msg.world_matrix = world_matrix
+                self.ros_lt_head_pose_publisher.publish(lt_headset_pose_msg)
 
             self._rm_depth_lt_rate_tracker.tick()
             log.debug(
