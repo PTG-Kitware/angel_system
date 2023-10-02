@@ -55,6 +55,19 @@ PARAM_RM_DEPTH_HEAD_POSE_TOPIC = "depth_head_pose_topic"
 DISABLE_TOPIC_STR = "disable"
 
 
+# TODO: Find a better place to put this
+# This was taken from a newer version of hl2ss.
+# Eventually we should probably just update to a newer version of HL2ss
+def create_pv_intrinsics(focal_length, principal_point):
+    return np.array([
+            [-focal_length[0], 0, 0, 0],
+            [0, focal_length[1], 0, 0],
+            [principal_point[0], principal_point[1], 1, 0],
+            [0, 0, 0, 1]
+        ], dtype=np.float32
+    )
+
+
 class HL2SSROSBridge(Node):
     """
     ROS node that uses HL2SS client/server library to convert HL2SS data to
@@ -272,13 +285,6 @@ class HL2SSROSBridge(Node):
 
         hl2ss.start_subsystem_pv(self.ip_addr, self.pv_port)
 
-        # Get the camera parameters for this configuration
-        pv_cam_params = hl2ss.download_calibration_pv(
-            self.ip_addr, self.pv_port, self.pv_width, self.pv_height, self.pv_framerate
-        )
-        self.camera_intrinsics = [float(x) for x in pv_cam_params.intrinsics.flatten()]
-        print(self.camera_intrinsics)
-
         self.hl2ss_pv_client = hl2ss.rx_decoded_pv(
             self.ip_addr,
             self.pv_port,
@@ -462,16 +468,23 @@ class HL2SSROSBridge(Node):
             self.ros_frame_publisher.publish(image_msg)
             self.ros_frame_ts_publisher.publish(image_msg.header.stamp)
 
-            # Publish the corresponding headset pose msg
-            world_matrix = [float(x) for x in data.pose.flatten()]
-
             # Cannot publish head poses if it was not enabled.
             if self._head_pose_topic_enabled:
+                world_matrix = [float(x) for x in data.pose.flatten()]
+
+                # Create a new camera intrinsics matrix. Focal length and principal
+                # point can change between frames due to auto focus on the camera.
+                pv_intrinsics = create_pv_intrinsics(
+                    data.payload.focal_length,
+                    data.payload.principal_point
+                )
                 headset_pose_msg = HeadsetPoseData()
                 # same timestamp/frame_id as image
                 headset_pose_msg.header = image_msg.header
                 headset_pose_msg.world_matrix = world_matrix
-                headset_pose_msg.projection_matrix = self.camera_intrinsics
+                headset_pose_msg.projection_matrix = [float(x) for x in pv_intrinsics.flatten()]
+
+                # Publish the corresponding headset pose msg
                 self.ros_head_pose_publisher.publish(headset_pose_msg)
 
             self._pv_rate_tracker.tick()
@@ -696,7 +709,7 @@ class HL2SSROSBridge(Node):
         while self._rm_depth_lt_active.wait(0):
             data = self.hl2ss_rm_depth_lt_client.get_next_packet()
 
-            log.info(
+            log.debug(
                 f"Received RM Depth LONGTHROW message. Pose at time "
                 f"{data.timestamp} recorded."
             )
