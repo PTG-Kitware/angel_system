@@ -78,7 +78,7 @@ labels:
   - id: 47
     label: "paper filter (quarter)"
   - id: 48
-    label: "paper filter (quarter - open)"
+    label: "used paper filter (quarter) + dripper"
   - id: 49
     label: "paper filter (quarter) + dripper"
   - id: 50
@@ -96,8 +96,10 @@ labels:
   - id: 56
     label: "scale (off)"
   - id: 57
-    label: "used paper filter"
+    label: "used paper filter" # out of the mug completely
   - id: 58
-    label: "used paper filter + dripper"
+    label: "used paper filter (quarter - open) + dripper"
   - id: 59
-    label: "used paper filter + dripper + mug"
+    label: "used paper filter (quarter - open) + dripper + mug"
+  - id: 121
+    label: "used paper filter (quarter) + dripper + mug"
