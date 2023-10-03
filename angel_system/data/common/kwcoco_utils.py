@@ -945,16 +945,14 @@ def draw_activity_preds(dset, save_dir="."):
     plt.close("all")
 
 
-def dive_csv_to_kwcoco(dive_folder, object_config_fn):
+def dive_csv_to_kwcoco(dive_folder, object_config_fn,
+                        data_dir, dst_dir, output_dir=""):
     """Convert object annotations in DIVE csv file(s) to a kwcoco file
 
     :param dive_folder: Path to the csv files
     :param object_config_fn: Path to the object label config file
     """
     import shutil
-
-    data_dir = "/data/PTG/cooking/ros_bags/tea/tea_extracted"
-    dst_dir = "/data/PTG/cooking/images/tea/berkeley/"
 
     dset = kwcoco.CocoDataset()
 
@@ -964,7 +962,8 @@ def dive_csv_to_kwcoco(dive_folder, object_config_fn):
     object_labels = object_config["labels"]
 
     label_ver = object_config["version"]
-    dset.dataset["info"].append({"object_label_version": label_ver})
+    title = object_config["title"]
+    dset.dataset["info"].append({f"{title} object_label_version": label_ver})
 
     # Add categories
     for object_label in object_labels:
@@ -989,13 +988,11 @@ def dive_csv_to_kwcoco(dive_folder, object_config_fn):
 
             frame = row["2: Video or Image Identifier"]
             im_fp = f"{data_dir}/{video_name}_extracted/images/{frame}"
-            print(im_fp)
-            assert os.path.isfile(im_fp)
-
-            if not os.path.isfile(f"{dst_dir}/{frame}"):
-                shutil.copy(im_fp, dst_dir)
 
             frame_fn = f"{dst_dir}/{frame}"
+            if not os.path.isfile(frame_fn):
+                shutil.copy(im_fp, dst_dir)
+
             frame_num, time = time_from_name(frame)
 
             image_lookup = dset.index.file_name_to_img
@@ -1033,7 +1030,7 @@ def dive_csv_to_kwcoco(dive_folder, object_config_fn):
 
             dset.add_annotation(**ann)
 
-    dset.fpath = f"tea_obj_annotations.mscoco.json"
+    dset.fpath = f"{output_dir}/{title}_obj_annotations_v{version}.mscoco.json"
     dset.dump(dset.fpath, newlines=True)
     print(f"Saved dset to {dset.fpath}")
 
@@ -1162,34 +1159,3 @@ def remap_category_ids_demo(dset):
     dset._build_index()
     dset.dump(dset.fpath, newlines=True)
     print(f"Saved predictions to {dset.fpath}")
-
-
-def main():
-    ptg_root = "/home/local/KHQ/hannah.defazio/angel_system/angel_system/berkeley"
-    ptg_root = "/data/PTG/cooking/"
-
-    kw = "coffee_and_tea_results_val.mscoco.json"
-    exp = "coffee_and_tea/tea"
-    split = "val"
-    stage = "results"
-
-    n = kw[:-12].split("_")
-    name = "_".join(n[:-1])
-
-    stage_dir = f"{ptg_root}/annotations/coffee+tea/{stage}"
-    # stage_dir = ""
-
-    save_dir = f"{stage_dir}/{exp}/visualization/{split}"
-    # save_dir = "visualization"
-    print(save_dir)
-    Path(save_dir).mkdir(parents=True, exist_ok=True)
-
-    if stage == "stage1":
-        visualize_kwcoco_by_label(f"{stage_dir}/{kw}", save_dir)
-    else:
-        # visualize_kwcoco(f"{kw}", save_dir)
-        visualize_kwcoco_by_label(f"{stage_dir}/{exp}/{kw}", save_dir)
-
-
-if __name__ == "__main__":
-    main()
