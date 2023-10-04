@@ -7,6 +7,7 @@ import cv2
 import numpy as np
 import rclpy
 from rclpy.node import Node
+from geometry_msgs.msg import Point
 from sensor_msgs.msg import Image
 
 from angel_msgs.msg import (
@@ -248,16 +249,11 @@ class HL2SSTester(Node):
         # Preprocess frames
         depth_payload = np.frombuffer(depth_image.data, dtype="uint16")
         depth_payload = depth_payload.reshape((depth_image.height, depth_image.width))
-        print("DEPTH IMAGE")
-        print(depth_payload, self.scale)
         depth = rm_depth_normalize(depth_payload, self.scale)
-        depth[depth > max_depth] = 0  # Depth buffer image (288, 320, 1).
-        print("depth shape: ", depth.shape)  # Depth is distance in meters?
+        depth[depth > max_depth] = 0  # Depth buffer image (288, 320, 1). (H, W)
 
         # Build pointcloud
-        print("xy1", self.xy1.shape)
         points = rm_depth_to_points(depth, self.xy1)  # depth * xy1
-        print("pointcloud", points.shape)
 
         # Create depth camera to world transformation matrix
         depth_to_world = (
@@ -265,10 +261,10 @@ class HL2SSTester(Node):
             hl2ss_3dcv.reference_to_world(depth_pose)
         )
         # Transform depth camera coordinates to world coordinate system
-        points = transform(points, depth_to_world)
         # This is the 3D world coordinate of every pixel in the depth image
         # (I THINK)
-        print("world points", points.shape)
+        points = transform(points, depth_to_world)
+        #print("world points", points.shape)
 
         # Create world coordinate system to image space transformation matrix
         world_to_image = (
@@ -276,25 +272,29 @@ class HL2SSTester(Node):
             hl2ss_3dcv.rignode_to_camera(pv_extrinsics) @
             hl2ss_3dcv.camera_to_image(pv_intrinsics)
         )
+
         # Project 3D world coordinates of depth camera to image space
-        pixels = project(points, world_to_image)
         # This is the image space pixel coordinate of every point in the depth
         # image
-        print("pixels", pixels.shape)
+        pixels = project(points, world_to_image)
 
         map_u = pixels[:, :, 0]  # X coordinates
         map_v = pixels[:, :, 1]  # Y coordinates
-        print("map u", map_u.shape)
-        print("map v", map_v.shape)
-
-        # If this works, then we have the index of the depth camera coordinates
-        # corresponding to our PV camera coordinates. Then, we can lookup the
-        # the world coordinates of this in the `points` array.
 
         image_to_world = np.linalg.inv(world_to_image)
 
+        # Start creating the 3D detection set message
+        det_3d_set_msg = ObjectDetection3dSet()
+        det_3d_set_msg.header.stamp = self.get_clock().now().to_msg()
+        det_3d_set_msg.header.frame_id = detection.header.frame_id
+        det_3d_set_msg.source_stamp = detection.source_stamp
+
         # Convert the 2d detections to 3d
+        det_conf_mat = to_confidence_matrix(detection)
         for i in range(detection.num_detections):
+            object_type = sorted(zip(det_conf_mat[i], detection.label_vec))[-1][1]
+            print(object_type)
+
             # Get pixel positions of detected object box and form into box corners
             min_vertex0 = detection.left[i]
             min_vertex1 = detection.top[i]
@@ -312,6 +312,8 @@ class HL2SSTester(Node):
             cx = pv_intrinsics[2][0]
             cy = pv_intrinsics[2][1]
 
+            map_to_3d_successful = True
+            world_coordinates = []
             for p in pixel_coordinates:
                 x = ux = p[0]
                 y = uy = p[1]
@@ -325,12 +327,19 @@ class HL2SSTester(Node):
                 frame[x][y] = 255.0
                 nonzero = np.nonzero(frame)
                 # 3. Remap
-                frame_mapped = cv2.remap(frame, map_u, map_v, cv2.INTER_NEAREST)
+                frame_mapped = cv2.remap(frame, map_u, map_v, cv2.INTER_CUBIC)
                 # 4. Find the non-zero value, get its index (x', y');
                 nonzero_x, nonzero_y = np.nonzero(frame_mapped)
                 if len(nonzero_x) == 0 or len(nonzero_y) == 0:
                     # No corresponding depth point found
-                    continue
+                    map_to_3d_successful = False
+                    break
+
+                # If this works, then we have the index of the depth camera
+                # coordinates corresponding to our PV camera coordinates. Then,
+                # we can lookup the the world coordinates of this in the
+                # `points` array.
+
                 # 5. Get depth info at the position of (x', y').
                 point_depth = depth[nonzero_x[0], nonzero_y[0]]
                 Z = point_depth[0]
@@ -351,6 +360,40 @@ class HL2SSTester(Node):
                 world_points2 = transform(image_points, image_to_world)
                 print(world_points2)
 
+                world_coordinates.append(points[nonzero_x[0], nonzero_y[0]])
+
+            if not map_to_3d_successful:
+                # TODO: another option is if we do get a valid depth from one
+                # of the four corners, just use the depth for that one that is
+                # valid for the others
+                print(f"failed to map detection at {i}")
+                continue
+
+            print(f"Detection {i} mapped successfully!")
+            # Since we were able to find this object's 3D position,
+            # add it to 3d detection message
+            det_3d_set_msg.object_labels.append(object_type)
+            det_3d_set_msg.num_objects += 1
+
+            for p in range(4):
+                point_3d = Point()
+
+                log.info(f"Scene position {world_coordinates[p]}")
+                point_3d.x = float(world_coordinates[p][0])
+                point_3d.y = float(world_coordinates[p][1])
+                point_3d.z = float(world_coordinates[p][2])
+
+                if p == 0:
+                    det_3d_set_msg.left.append(point_3d)
+                elif p == 1:
+                    det_3d_set_msg.top.append(point_3d)
+                elif p == 2:
+                    det_3d_set_msg.right.append(point_3d)
+                elif p == 3:
+                    det_3d_set_msg.bottom.append(point_3d)
+
+        # Publish the 3d object detection message
+        self._object_3d_publisher.publish(det_3d_set_msg)
 
 def main():
     rclpy.init()
