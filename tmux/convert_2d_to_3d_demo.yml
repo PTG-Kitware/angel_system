@@ -97,7 +97,7 @@ windows:
       -p object_vocab_list:=${MODEL_DIR}/fasterrcnn_label_list.txt
       -p model_checkpoint:=${MODEL_DIR}/fasterrcnn_res101_vg.pth
 
-  - hl2ss_test: ros2 run angel_system_nodes hl2ss_tester --ros-args
+  - hl2ss_test: ros2 run angel_system_nodes convert_2d_dets_to_3d_dets --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p depth_image_topic:=RMDepthLongThrow
       -p depth_head_pose_topic:=LTHeadPoseData

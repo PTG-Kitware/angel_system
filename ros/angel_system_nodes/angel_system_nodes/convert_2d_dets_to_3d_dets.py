@@ -105,7 +105,7 @@ def block_to_list(points):
 # HL2SS HELPER FUNCTIONS THAT SHOULD EVENTUALLY MOVE SOMEWHERE ELSE ***********
 
 
-class HL2SSTester(Node):
+class Convert2dDetsTo3dDets(Node):
     """
     Node that will be used to convert 2d object detections to 3d object
     detections.
@@ -398,14 +398,13 @@ class HL2SSTester(Node):
 def main():
     rclpy.init()
 
-    activity_detector = HL2SSTester()
-
-    rclpy.spin(activity_detector)
+    conversion_node = Convert2dDetsTo3dDets()
+    rclpy.spin(conversion_node)
 
     # Destroy the node explicitly
     # (optional - otherwise it will be done automatically
     # when the garbage collector destroys the node object)
-    activity_detector.destroy_node()
+    conversion_node.destroy_node()
 
     rclpy.shutdown()
 
