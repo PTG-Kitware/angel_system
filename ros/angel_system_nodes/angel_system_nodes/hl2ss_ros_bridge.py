@@ -26,7 +26,7 @@ from angel_msgs.msg import (
 )
 from angel_utils import declare_and_get_parameters, RateTracker
 from angel_utils.hand import JOINT_LIST
-from hl2ss.viewer import hl2ss
+from hl2ss.viewer import hl2ss, hl2ss_3dcv
 
 
 BRIDGE = CvBridge()
@@ -368,6 +368,13 @@ class HL2SSROSBridge(Node):
         mode = hl2ss.StreamMode.MODE_1
         # PNG filter
         png_filter = hl2ss.PngFilterMode.Paeth
+
+        # Download the calibration info, if needed
+        hl2ss_3dcv.get_calibration_rm(
+            self.ip_addr,
+            self.rm_depth_LONGTHROW_port,
+            "/angel_workspace/calibration"
+        )
 
         self.hl2ss_rm_depth_lt_client = hl2ss.rx_decoded_rm_depth_longthrow(
             self.ip_addr,
