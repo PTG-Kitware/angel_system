@@ -146,7 +146,7 @@ def obj_det2d_set_to_feature(
         the intersection of each object to the hands,
         and the activation features
 
-        Len: 285
+        Len: 1 + ((N-2)*2) + 1 + ((N-2)*2) + 2 + 1 + (3 * (N-2)), where N is the number of object classes
 
         [
             A[right hand],
