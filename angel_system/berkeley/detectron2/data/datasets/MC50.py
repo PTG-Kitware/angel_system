@@ -244,8 +244,8 @@ def _get_lvis_instances_meta_v0_5():
 
 
 def _get_MC50_instances_meta_v1():
-    from detectron2.data.datasets.kitware_cooking import ALL_COOOKING_CATEGORIES
-    MC50_CATEGORIES = ALL_COOOKING_CATEGORIES['KITWARE_COOKING_COFFEE']
+    from detectron2.data.datasets.kitware_cooking import ALL_COOKING_CATEGORIES
+    MC50_CATEGORIES = ALL_COOKING_CATEGORIES['KITWARE_COOKING_COFFEE']
     # assert len(LVIS_V1_CATEGORIES) == 20
     cat_ids = [k["id"] for k in MC50_CATEGORIES]
     assert min(cat_ids) == 1 and max(cat_ids) == len(
