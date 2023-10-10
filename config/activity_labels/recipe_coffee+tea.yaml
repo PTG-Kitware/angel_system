@@ -1,0 +1,141 @@
+version: "1.0"
+title: "Pour-over coffee and Tea"
+labels:
+  # Item:
+  # - id: Integer identification number of the label.
+  # - label: Short human-readable semantic string to succinctly represent the
+  #          label.
+  # - full_str: Complete sentence that fully represents the label.
+  # - depends: List of ids that the item depends on
+  # - repeat: Optional field that indicated that the item must be repeated X times
+  - id: 0
+    label: "background"
+  # Shared labels
+  - id: 1
+    label: "measure-12oz-water"
+    full_str: "Measure 12 ounces of water in the liquid measuring cup"
+    depends:
+  - id: 2
+    label: "pour-water-kettle"
+    full_str: "Pour the water from the liquid measuring cup into the electric kettle"
+    depends: [1]
+  - id: 3
+    label: "thermometer-turn-on"
+    full_str: "Turn on the thermometer"
+    depends:
+  - id: 4
+    label: "thermometer-in-water"
+    full_str: "Place the end of the thermometer into the water."
+    depends: [2, 3, 6]
+  - id: 5
+    label: "check-thermometer"
+    full_str: "Check the temperature displayed on the thermometer."
+    depends: [4]
+  - id: 6
+    label: "turn-on-kettle"
+    full_str: "Turn on the kettle"
+    depends: [2]
+  # Labels unique to coffee
+  - id: 7
+    label: "place-dipper-on-mug"
+    full_str: "Place the dripper on top of the mug"
+    depends:
+  - id: 8
+    label: "filter-fold-half"
+    full_str: Take the coffee filter and fold it in half to create a semi-circle
+    depends:
+  - id: 9
+    label: "filter-fold-quarter"
+    full_str: "Fold the filter in half again to create a quarter-circle"
+    depends: [8]
+  - id: 10
+    label: "place-filter"
+    full_str: "Place the folded filter into the dripper such that the the point of the quarter-circle rests in the center of the dripper"
+    depends: [9]
+  - id: 11
+    label: "spread-filter"
+    full_str: "Spread the filter open to create a cone inside the dripper"
+    depends: [10]
+  - id: 12
+    label: "scale-turn-on"
+    full_str: "Turn on the kitchen scale"
+    depends:
+  - id: 13
+    label: "place-bowl-on-scale"
+    full_str: "Place a bowl on the scale"
+    depends: [12]
+  - id: 14
+    label: "zero-scale"
+    full_str: "Zero the scale"
+    depends: [13]
+  - id: 15
+    label: "measure-coffee-beans"
+    full_str: "Add coffee beans to the bowl until the scale reads 25 grams"
+    depends: [14]
+  - id: 16
+    label: "pour-coffee-grinder"
+    full_str: "Pour the measured coffee beans into the coffee grinder"
+    depends: [15]
+  - id: 17
+    label: "grind-beans"
+    full_str: "Grind the coffee beans by pressing and holding down on the black part of the lid"
+    depends: [16]
+  - id: 18
+    label: "pour-beans-filter"
+    #full_str: "Transfer the grounds to the filter cone"
+    full_str: "pour the grounded coffee beans into the filter cone prepared in step 2"
+    depends: [11, 17]
+  - id: 19
+    label: "pour-water-grounds-wet"
+    #full_str: "Pour a small amount of water over the grounds in order to wet the grounds. Wait about 30 seconds."
+    full_str: "Pour a small amount of water over the grounds in order to wet the grounds"
+    depends: [18, 7, 5]
+  - id: 20
+    label: "pour-water-grounds-circular"
+    full_str: "slowly pour the water over the grounds in a circular motion. do not overfill beyond the top of the paper filter"
+    depends: [19]
+  - id: 21
+    label: "water-drain"
+    full_str: "Allow the rest of the water in the dripper to drain"
+    depends: [20]
+  - id: 22
+    label: "remove-dripper"
+    full_str: "Remove the dripper from the cup"
+    depends: [21]
+  - id: 23
+    label: "remove-grounds"
+    full_str: "Remove the coffee grounds and paper filter from the dripper. "
+    depends: [21]
+  - id: 24
+    label: "discard-grounds"
+    full_str: "Discard the coffee grounds and paper filter"
+    depends: [23]
+  # Labels unique to tea
+  - id: 25
+    label: "tea-bag-in-mug"
+    full_str: "Place tea bag in mug"
+    depends:
+  - id: 26
+    label: "pour-water-mug"
+    full_str: "Pour water from the electric kettle into the mug"
+    depends: [5]
+  - id: 27
+    label: "steep"
+    full_str: "Steep for 3 minutes"
+    depends: [25, 26]
+  - id: 28
+    label: "remove-tea-bag"
+    full_str: "Remove tea bag from mug"
+    depends: [27]
+  - id: 29
+    label: "discard-tea-bag"
+    full_str: "Discard tea bag"
+    depends: [28]
+  - id: 30
+    label: "add-honey"
+    full_str: "Add honey to mug"
+    depends:
+  - id: 31
+    label: "stir"
+    full_str: "Stir"
+    depends: [26, 30]
