@@ -246,6 +246,8 @@ labels:
     label: "plate + pinwheel(s) + toothpick"
   - id: 123
     label: "tortilla (partially rolled)"
+  - id: 124:
+    label: "tortilla end"
   # Labels unique to tea
   - id: 115
     label: "tea bag (dry)"

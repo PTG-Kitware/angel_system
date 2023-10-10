@@ -73,3 +73,5 @@ labels:
     label: "plate + pinwheel(s) + toothpick"
   - id: 123
     label: "tortilla (partially rolled)"
+  - id: 124:
+    label: "tortilla end"
