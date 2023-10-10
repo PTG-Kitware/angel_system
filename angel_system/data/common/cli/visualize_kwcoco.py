@@ -2,7 +2,7 @@ import argparse
 
 from pathlib import Path
 
-from data.common.kwcoco_utils import visualize_kwcoco_by_label
+from angel_system.data.common.kwcoco_utils import visualize_kwcoco_by_label
 
 
 def main():

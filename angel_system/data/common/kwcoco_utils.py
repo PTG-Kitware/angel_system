@@ -238,7 +238,7 @@ def add_hl_hands_to_kwcoco(dset, remove_existing=True, using_contact=True):
     print(f"Saved predictions to {dset.fpath}")
 
 
-def add_activity_gt_to_kwcoco(dset, activity_config_fn, activity_gt_dir):
+def add_activity_gt_to_kwcoco(dset):
     """Takes an existing kwcoco file and fills in the "activity_gt"
     field on each image based on the activity annotations.
 
@@ -252,55 +252,75 @@ def add_activity_gt_to_kwcoco(dset, activity_config_fn, activity_gt_dir):
     # Load kwcoco file
     dset = load_kwcoco(dset)
 
-    # Load activity labels config
-    with open(activity_config_fn, "r") as stream:
-        activity_config = yaml.safe_load(stream)
-    activity_labels = activity_config["labels"]
+    data_dir = "/data/PTG/cooking/"
+    activity_gt_dir = f"{data_dir}/activity_anns"
 
-    gid_to_aids = dset.index.gid_to_aids
-    gids = ub.argsort(ub.map_vals(len, gid_to_aids))
+    for video_id in dset.index.videos.keys():
+        video = dset.index.videos[video_id]
+        video_name = video["name"]
+        print(video_name)
+        if "_extracted" in video_name:
+            video_name = video_name.split("_extracted")[0]
+        video_recipe = "tea" if "tea" in video_name else "coffee"
 
-    # Update the activity gt for each image
-    for gid in ub.ProgIter(sorted(gids), desc="Adding activity ground truth to images"):
-        im = dset.imgs[gid]
+        with open(f"../config/activity_labels/recipe_{video_recipe}.yaml", "r") as stream:
+            recipe_activity_config = yaml.safe_load(stream)
+        recipe_activity_labels = recipe_activity_config["labels"]
 
-        video_id = im["video_id"]
-        video_name = dset.index.videos[video_id]["name"]
-
-        activity_gt_fn = f"{activity_gt_dir}/{video_name}.csv"
-        gt = activities_from_dive_csv(activity_gt_fn)
-        gt = activities_as_dataframe(gt)
-
-        frame_idx, time = time_from_name(im["file_name"])
-        matching_gt = gt.loc[(gt["start"] <= time) & (gt["end"] >= time)]
-
-        if matching_gt.empty:
-            label = "background"
-            activity_label = label
+        recipe_activity_gt_dir = f"{activity_gt_dir}/{video_recipe}_labels/"
+        if video_recipe == "coffee":
+            activity_gt_fn = f"{recipe_activity_gt_dir}/{video_name}_activity_labels_v_1.1.csv"
+            gt = activities_from_dive_csv(activity_gt_fn)
         else:
-            label = matching_gt.iloc[0]["class_label"]
-            activity = [
-                x
-                for x in activity_labels[1:-1]
-                if sanitize_str(x["full_str"]) == sanitize_str(label)
-            ]
-            if not activity:
-                if "timer" in label:
-                    # Ignoring timer based labels
-                    label = "background"
-                    activity_label = label
-                else:
-                    warnings.warn(
-                        f"Label: {label} is not in the activity labels config, ignoring"
-                    )
-                    continue
+            activity_gt_fn = f"{recipe_activity_gt_dir}/{video_name}_activity_labels_v_1.csv"
+            gt = activities_from_dive_csv(activity_gt_fn)
+        gt = objs_as_dataframe(gt)
+        
+        image_ids = dset.index.vidid_to_gids[video_id]
+
+        # Update the activity gt for each image
+        for gid in sorted(image_ids):
+            im = dset.imgs[gid]
+            frame_idx, time = time_from_name(im["file_name"])
+            
+            matching_gt = gt.loc[(gt["start"] <= time) & (gt["end"] >= time)]
+
+            if matching_gt.empty:
+                label = "background"
+                activity_label = label
             else:
-                activity = activity[0]
-                activity_label = activity["label"]
+                label = matching_gt.iloc[0]["class_label"]
+                if type(label) == float or type(label) == int:
+                    label = int(label)
+                label = str(label)
+                
+                try:
+                    activity = [
+                        x
+                        for x in recipe_activity_labels
+                        if int(x["id"]) == int(float(label))
+                    ]
+                except:
+                    activity = []
 
-        dset.imgs[gid]["activity_gt"] = activity_label
+                if not activity:
+                    if "timer" in label:
+                            # Ignoring timer based labels
+                            label = "background"
+                            activity_label = label
+                    else:
+                        warnings.warn(
+                            f"Label: {label} is not in the activity labels config, ignoring"
+                        )
+                        print(f"LABEL: {label}, {type(label)}")
+                        continue
+                else:
+                    activity = activity[0]
+                    activity_label = activity["label"]
 
-    dset.fpath = dset.fpath.split(".")[0] + "_fixed.mscoco.json"
+            dset.imgs[gid]["activity_gt"] = activity_label
+
+    #dset.fpath = dset.fpath.split(".")[0] + "_fixed.mscoco.json"
     dset.dump(dset.fpath, newlines=True)
 
 
@@ -633,12 +653,10 @@ def visualize_kwcoco_by_label(dset=None, save_dir=""):
     for gid in sorted(gids):
         im = dset.imgs[gid]
 
-        img_video_id = im["video_id"]
-        # if img_video_id == 3:
-        #    continue
+        img_video_id = im.get("video_id", None)
 
         fn = im["file_name"].split("/")[-1]
-        gt = im["activity_gt"] if hasattr(im, "activity_gt") else ""
+        gt = im.get("activity_gt", "")
         if not gt:
             gt = ""
 
@@ -655,7 +673,7 @@ def visualize_kwcoco_by_label(dset=None, save_dir=""):
         anns = ub.dict_subset(dset.anns, aids)
         using_contact = False
         for aid, ann in anns.items():
-            conf = ann["confidence"]
+            conf = ann.get("confidence", 1)
             if conf < 0.1:
                 continue
 
@@ -680,14 +698,14 @@ def visualize_kwcoco_by_label(dset=None, save_dir=""):
             ax.add_patch(rect)
             ax.annotate(label, (x, y), color="black", annotation_clip=False)
 
-        video_dir = f"{save_dir}/video_{img_video_id}/images/"
+        video_dir = f"{save_dir}/video_{img_video_id}/images/" if img_video_id is not None else f"{save_dir}/images/"
         Path(video_dir).mkdir(parents=True, exist_ok=True)
 
         plt.savefig(
             f"{video_dir}/{fn}",
         )
         plt.close(fig)  # needed to remove the plot because savefig doesn't clear it
-    A
+    
     plt.close("all")
 
 
@@ -708,146 +726,6 @@ def imgs_to_video(imgs_dir):
 
     cv2.destroyAllWindows()
     video.release()
-
-
-def filter_kwcoco(dset):
-    """Remove the inbetween classes from the kwcoco dataset
-
-    :param dset: kwcoco object or a string pointing to a kwcoco file
-    """
-    experiment_name = "m2_all_data_cleaned_fixed_with_steps"
-    stage = "stage2"
-
-    print("Experiment: ", experiment_name)
-    print("Stage: ", stage)
-
-    dset = load_kwcoco(dset)
-
-    # Remove in-between categories
-    remove_cats = []
-    for cat_id in dset.cats:
-        A
-        cat_name = dset.cats[cat_id]["name"]
-        if ".5)" in cat_name or "(before)" in cat_name or "(finished)" in cat_name:
-            remove_cats.append(cat_id)
-
-    print(f"removing cat ids: {remove_cats}")
-    dset.remove_categories(remove_cats)
-
-    # Remove images with these
-    gid_to_aids = dset.index.gid_to_aids
-    gids = ub.argsort(ub.map_vals(len, gid_to_aids))
-
-    remove_images = []
-    remove_anns = []
-    for gid in sorted(gids):
-        im = dset.imgs[gid]
-
-        fn = im["file_name"].split("/")[-1]
-        gt = im["activity_gt"]
-
-        if gt == "not started" or "in between" in gt or gt == "finished":
-            remove_images.append(gid)
-
-        """
-        aids = gid_to_aids[gid]
-        anns = ub.dict_subset(dset.anns, aids)
-
-        for aid, ann in anns.items():
-            conf = ann['confidence']
-            if conf < 0.4:
-                remove_anns.append(aid)
-        """
-
-    # print(f'removing {len(remove_anns)} annotations')
-    # dset.remove_annotations(remove_anns)
-
-    print(f"removing {len(remove_images)} images (and associated annotations)")
-    dset.remove_images(remove_images)
-
-    # Save to a new dataset to adjust ids
-    new_dset = kwcoco.CocoDataset()
-    new_cats = [
-        {"id": 1, "name": "tourniquet_tourniquet (step 1)"},
-        {"id": 2, "name": "tourniquet_tourniquet (step 2)"},
-        {"id": 3, "name": "tourniquet_tourniquet (step 3)"},
-        {"id": 4, "name": "tourniquet_tourniquet (step 4)"},
-        {"id": 5, "name": "tourniquet_tourniquet (step 5)"},
-        {"id": 6, "name": "tourniquet_tourniquet (step 6)"},
-        {"id": 7, "name": "tourniquet_tourniquet (step 7)"},
-        {"id": 8, "name": "tourniquet_tourniquet (step 8)"},
-        {"id": 9, "name": "tourniquet_label (step 1)"},
-        {"id": 10, "name": "tourniquet_label (step 2)"},
-        {"id": 11, "name": "tourniquet_label (step 3)"},
-        {"id": 12, "name": "tourniquet_label (step 4)"},
-        {"id": 13, "name": "tourniquet_label (step 5)"},
-        {"id": 14, "name": "tourniquet_label (step 6)"},
-        {"id": 15, "name": "tourniquet_label (step 7)"},
-        {"id": 16, "name": "tourniquet_label (step 8)"},
-        {"id": 17, "name": "tourniquet_windlass (step 1)"},
-        {"id": 18, "name": "tourniquet_windlass (step 2)"},
-        {"id": 19, "name": "tourniquet_windlass (step 3)"},
-        {"id": 20, "name": "tourniquet_windlass (step 4)"},
-        {"id": 21, "name": "tourniquet_windlass (step 5)"},
-        {"id": 22, "name": "tourniquet_windlass (step 6)"},
-        {"id": 23, "name": "tourniquet_windlass (step 7)"},
-        {"id": 24, "name": "tourniquet_windlass (step 8)"},
-        {"id": 25, "name": "tourniquet_pen (step 1)"},
-        {"id": 26, "name": "tourniquet_pen (step 2)"},
-        {"id": 27, "name": "tourniquet_pen (step 3)"},
-        {"id": 28, "name": "tourniquet_pen (step 4)"},
-        {"id": 29, "name": "tourniquet_pen (step 5)"},
-        {"id": 30, "name": "tourniquet_pen (step 6)"},
-        {"id": 31, "name": "tourniquet_pen (step 7)"},
-        {"id": 32, "name": "tourniquet_pen (step 8)"},
-        {"id": 33, "name": "hand (step 1)"},
-        {"id": 34, "name": "hand (step 2)"},
-        {"id": 35, "name": "hand (step 3)"},
-        {"id": 36, "name": "hand (step 4)"},
-        {"id": 37, "name": "hand (step 5)"},
-        {"id": 38, "name": "hand (step 6)"},
-        {"id": 39, "name": "hand (step 7)"},
-        {"id": 40, "name": "hand (step 8)"},
-    ]
-    for new_cat in new_cats:
-        new_dset.add_category(name=new_cat["name"], id=new_cat["id"])
-
-    for video_id, video in dset.index.videos.items():
-        new_dset.add_video(**video)
-
-    gid_to_aids = dset.index.gid_to_aids
-    gids = ub.argsort(ub.map_vals(len, gid_to_aids))
-
-    for gid in sorted(gids):
-        im = dset.imgs[gid]
-        new_im = im.copy()
-
-        aids = gid_to_aids[gid]
-        anns = ub.dict_subset(dset.anns, aids)
-
-        old_video = dset.index.videos[im["video_id"]]["name"]
-        new_video = new_dset.index.name_to_video[old_video]
-
-        del new_im["id"]
-        new_im["video_id"] = new_video["id"]
-        new_gid = new_dset.add_image(**new_im)
-
-        for aid, ann in anns.items():
-            old_cat = dset.cats[ann["category_id"]]["name"]
-            new_cat = new_dset.index.name_to_cat[old_cat]
-
-            new_ann = ann.copy()
-            del new_ann["id"]
-            new_ann["category_id"] = new_cat["id"]
-            new_ann["image_id"] = new_gid
-
-            new_dset.add_annotation(**new_ann)
-
-    fpath = dset.fpath.split(".mscoco")[0]
-    new_dset.fpath = f"{fpath}_filtered.mscoco.json"
-    new_dset.dump(new_dset.fpath, newlines=True)
-    print(f"Saved predictions to {new_dset.fpath}")
-
 
 def filter_kwcoco_by_conf(dset, conf_thr=0.4):
     """Filter the kwcoco dataset by confidence
@@ -881,30 +759,42 @@ def filter_kwcoco_by_conf(dset, conf_thr=0.4):
     print(f"Saved dset to {dset.fpath}")
 
 
-def add_background_images(dset, background_imgs):
+def background_images_dset(background_imgs):
     """Add images without annotations to a kwcoco dataset"""
     # Load kwcoco file
-    dset = load_kwcoco(dset)
+    import shutil
+    dset = kwcoco.CocoDataset()
+
+    for video in sorted(glob.glob(f"{background_imgs}/*/")):
+        video_name = os.path.basename(os.path.normpath(video))
+        video_lookup = dset.index.name_to_video
+        if video_name in video_lookup:
+            vid = video_lookup[video_name]["id"]
+        else:
+            vid = dset.add_video(name=video_name)
+    
+        for im in ub.ProgIter(glob.glob(f"{video}/*.png"), desc="Adding images"):
+            new_dir = f"{video}/../" 
+            fn = os.path.basename(im)
+            frame_num, time = time_from_name(fn)
+            shutil.copy(im, new_dir)
+            
+            image = Image.open(im)
+            w, h = image.size
+
+            new_im = {
+                "width": w,
+                "height": h,
+                "file_name": os.path.abspath(f"{new_dir}/{fn}"),
+                "video_id": vid,
+                "frame_index": frame_num,
+            }
+            new_gid = dset.add_image(**new_im)
 
     print(f"Images: {len(dset.imgs)}")
-
-    for im in ub.ProgIter(glob.glob(f"{background_imgs}/*.png"), desc="Adding images"):
-        image = Image.open(im)
-        w, h = image.size
-
-        new_im = {
-            "width": w,
-            "height": h,
-            "file_name": im,  # im.split("2022-11-05_whole")[-1][1:],
-        }
-        new_gid = dset.add_image(**new_im)
-
-    print(f"Images: {len(dset.imgs)}")
-    fpath = dset.fpath.split(".json")[0]
-    dset.fpath = f"{fpath}_plus_bkgd.mscoco.json"
+    dset.fpath = f"{background_imgs}/bkgd.mscoco.json"
     dset.dump(dset.fpath, newlines=True)
     print(f"Saved dset to {dset.fpath}")
-
 
 def draw_activity_preds(dset, save_dir="."):
     # Load kwcoco file
@@ -962,17 +852,20 @@ def dive_csv_to_kwcoco(dive_folder, object_config_fn,
     object_labels = object_config["labels"]
 
     label_ver = object_config["version"]
-    title = object_config["title"]
-    dset.dataset["info"].append({f"{title} object_label_version": label_ver})
+    title = object_config["title"].lower()
+    dset.dataset["info"].append({f"{title}_object_label_version": label_ver})
 
     # Add categories
     for object_label in object_labels:
+        if object_label["label"] == "background":
+            continue
         dset.add_category(name=object_label["label"], id=object_label["id"])
 
     # Add boxes
     for csv_file in ub.ProgIter(
         glob.glob(f"{dive_folder}/*.csv"), desc="Loading video annotations"
     ):
+        print(csv_file)
         video_name = os.path.basename(csv_file).split("_object_labels")[0]
 
         video_lookup = dset.index.name_to_video
@@ -982,6 +875,7 @@ def dive_csv_to_kwcoco(dive_folder, object_config_fn,
             vid = dset.add_video(name=video_name)
 
         dive_df = pd.read_csv(csv_file)
+        print(f"Loaded {csv_file}")
         for i, row in dive_df.iterrows():
             if i == 0:
                 continue
@@ -993,7 +887,9 @@ def dive_csv_to_kwcoco(dive_folder, object_config_fn,
             if not os.path.isfile(frame_fn):
                 shutil.copy(im_fp, dst_dir)
 
-            frame_num, time = time_from_name(frame)
+            # Temp for coffee
+            splits = frame.split("-")
+            frame_num, time = time_from_name(splits[-1])
 
             image_lookup = dset.index.file_name_to_img
             if frame_fn in image_lookup:
@@ -1030,7 +926,7 @@ def dive_csv_to_kwcoco(dive_folder, object_config_fn,
 
             dset.add_annotation(**ann)
 
-    dset.fpath = f"{output_dir}/{title}_obj_annotations_v{version}.mscoco.json"
+    dset.fpath = f"{output_dir}/{title}_obj_annotations_v{label_ver}.mscoco.json"
     dset.dump(dset.fpath, newlines=True)
     print(f"Saved dset to {dset.fpath}")
 
