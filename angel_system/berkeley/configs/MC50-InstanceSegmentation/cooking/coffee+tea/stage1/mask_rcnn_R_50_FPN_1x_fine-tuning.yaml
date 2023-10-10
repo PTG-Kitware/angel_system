@@ -6,7 +6,7 @@ MODEL:
   RESNETS:
     DEPTH: 50
   ROI_HEADS:
-    NUM_CLASSES: 49 # coffee + tea
+    NUM_CLASSES: 56 # coffee + tea
     SCORE_THRESH_TEST: 0.0001
     NAME: StandardROIHeads
     #NAME: StandardROIHeads_PLUS_CONTACT
@@ -24,12 +24,12 @@ TEST:
 DATALOADER:
   SAMPLER_TRAIN: "RepeatFactorTrainingSampler"
   REPEAT_THRESHOLD: 0.5
-  FILTER_EMPTY_ANNOTATIONS: True
+  FILTER_EMPTY_ANNOTATIONS: False
 
 OUTPUT_DIR: '/data/PTG/cooking/training/object_detector/stage1/coffee+tea/berkeley/resnet50'
 
 SOLVER:
-  TOTAL_IMAGE_NUMBER: 1991 # coffee + tea
+  TOTAL_IMAGE_NUMBER: 2143 # coffee + tea
   IMS_PER_BATCH: 12
   BASE_LR: 0.001
   STEPS: (34000, 41000)

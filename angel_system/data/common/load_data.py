@@ -160,12 +160,15 @@ def activities_from_dive_csv(filepath: str) -> List[Activity]:
 
     for row in df.iterrows():
         i, s = row
+        if "#" in str(s[0]):
+            continue
         a_id = int(s[0])
         frame, time = time_from_name(s[1])
 
         if a_id not in id_to_activity:
+            cls_lbl = int(float(s[9]))
             id_to_activity[a_id] = Activity(
-                sanitize_str(s[9]),  # class label
+                cls_lbl,  # class label
                 time,  # start
                 np.inf,  # end
                 frame,  # start frame
