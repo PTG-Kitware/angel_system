@@ -1,6 +1,6 @@
 import argparse
 
-from data.common.kwcoco_utils import add_background_images
+from angel_system.data.common.kwcoco_utils import add_background_images
 
 
 def main():
