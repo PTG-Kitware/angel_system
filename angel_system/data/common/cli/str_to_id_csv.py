@@ -13,8 +13,8 @@ from angel_system.data.common.load_data import (
 
 
 def str_to_id(activity_config_fn, activity_gt_dir):
-    """Replace the full string activity label with the 
-    activity id specified by ``activity_config_fn`` in the 
+    """Replace the full string activity label with the
+    activity id specified by ``activity_config_fn`` in the
     csv file(s) inside ``activity_gt_dir``
     """
     with open(activity_config_fn, "r") as stream:
@@ -25,9 +25,11 @@ def str_to_id(activity_config_fn, activity_gt_dir):
     print(activity_labels)
     for csv_file in glob.glob(f"{activity_gt_dir}/*.csv"):
         drop_rows = []
-        with open(csv_file, "r", newline='') as csvfile_in, open(f"{csv_file[:-4]}_activity_labels_v_{activity_version}.csv",  "w", newline='') as csvfile_out:
-            spamreader = csv.reader(csvfile_in, delimiter=',')
-            spamwriter = csv.writer(csvfile_out, delimiter=',')
+        with open(csv_file, "r", newline="") as csvfile_in, open(
+            f"{csv_file[:-4]}_activity_labels_v_{activity_version}.csv", "w", newline=""
+        ) as csvfile_out:
+            spamreader = csv.reader(csvfile_in, delimiter=",")
+            spamwriter = csv.writer(csvfile_out, delimiter=",")
 
             for row in spamreader:
                 if "#" in row[0]:
@@ -48,7 +50,7 @@ def str_to_id(activity_config_fn, activity_gt_dir):
                     continue
                 else:
                     activity = activity[0]
-            
+
                     row[-2] = str(activity["id"])
                     spamwriter.writerow(row)
 
@@ -71,6 +73,7 @@ def main():
     args = parser.parse_args()
 
     str_to_id(args.activity_config_fn, args.activity_gt_dir)
+
 
 if __name__ == "__main__":
     main()

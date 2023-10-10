@@ -2,6 +2,7 @@ import argparse
 
 from data.common.kwcoco_utils import add_background_images
 
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -20,6 +21,7 @@ def main():
     args = parser.parse_args()
 
     add_background_images(args.dset, args.images_dir)
+
 
 if __name__ == "__main__":
     main()

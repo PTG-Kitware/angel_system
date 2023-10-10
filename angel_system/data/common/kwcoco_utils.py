@@ -263,26 +263,32 @@ def add_activity_gt_to_kwcoco(dset):
             video_name = video_name.split("_extracted")[0]
         video_recipe = "tea" if "tea" in video_name else "coffee"
 
-        with open(f"../config/activity_labels/recipe_{video_recipe}.yaml", "r") as stream:
+        with open(
+            f"../config/activity_labels/recipe_{video_recipe}.yaml", "r"
+        ) as stream:
             recipe_activity_config = yaml.safe_load(stream)
         recipe_activity_labels = recipe_activity_config["labels"]
 
         recipe_activity_gt_dir = f"{activity_gt_dir}/{video_recipe}_labels/"
         if video_recipe == "coffee":
-            activity_gt_fn = f"{recipe_activity_gt_dir}/{video_name}_activity_labels_v_1.1.csv"
+            activity_gt_fn = (
+                f"{recipe_activity_gt_dir}/{video_name}_activity_labels_v_1.1.csv"
+            )
             gt = activities_from_dive_csv(activity_gt_fn)
         else:
-            activity_gt_fn = f"{recipe_activity_gt_dir}/{video_name}_activity_labels_v_1.csv"
+            activity_gt_fn = (
+                f"{recipe_activity_gt_dir}/{video_name}_activity_labels_v_1.csv"
+            )
             gt = activities_from_dive_csv(activity_gt_fn)
         gt = objs_as_dataframe(gt)
-        
+
         image_ids = dset.index.vidid_to_gids[video_id]
 
         # Update the activity gt for each image
         for gid in sorted(image_ids):
             im = dset.imgs[gid]
             frame_idx, time = time_from_name(im["file_name"])
-            
+
             matching_gt = gt.loc[(gt["start"] <= time) & (gt["end"] >= time)]
 
             if matching_gt.empty:
@@ -293,7 +299,7 @@ def add_activity_gt_to_kwcoco(dset):
                 if type(label) == float or type(label) == int:
                     label = int(label)
                 label = str(label)
-                
+
                 try:
                     activity = [
                         x
@@ -305,9 +311,9 @@ def add_activity_gt_to_kwcoco(dset):
 
                 if not activity:
                     if "timer" in label:
-                            # Ignoring timer based labels
-                            label = "background"
-                            activity_label = label
+                        # Ignoring timer based labels
+                        label = "background"
+                        activity_label = label
                     else:
                         warnings.warn(
                             f"Label: {label} is not in the activity labels config, ignoring"
@@ -320,7 +326,7 @@ def add_activity_gt_to_kwcoco(dset):
 
             dset.imgs[gid]["activity_gt"] = activity_label
 
-    #dset.fpath = dset.fpath.split(".")[0] + "_fixed.mscoco.json"
+    # dset.fpath = dset.fpath.split(".")[0] + "_fixed.mscoco.json"
     dset.dump(dset.fpath, newlines=True)
 
 
@@ -698,14 +704,18 @@ def visualize_kwcoco_by_label(dset=None, save_dir=""):
             ax.add_patch(rect)
             ax.annotate(label, (x, y), color="black", annotation_clip=False)
 
-        video_dir = f"{save_dir}/video_{img_video_id}/images/" if img_video_id is not None else f"{save_dir}/images/"
+        video_dir = (
+            f"{save_dir}/video_{img_video_id}/images/"
+            if img_video_id is not None
+            else f"{save_dir}/images/"
+        )
         Path(video_dir).mkdir(parents=True, exist_ok=True)
 
         plt.savefig(
             f"{video_dir}/{fn}",
         )
         plt.close(fig)  # needed to remove the plot because savefig doesn't clear it
-    
+
     plt.close("all")
 
 
@@ -726,6 +736,7 @@ def imgs_to_video(imgs_dir):
 
     cv2.destroyAllWindows()
     video.release()
+
 
 def filter_kwcoco_by_conf(dset, conf_thr=0.4):
     """Filter the kwcoco dataset by confidence
@@ -763,6 +774,7 @@ def background_images_dset(background_imgs):
     """Add images without annotations to a kwcoco dataset"""
     # Load kwcoco file
     import shutil
+
     dset = kwcoco.CocoDataset()
 
     for video in sorted(glob.glob(f"{background_imgs}/*/")):
@@ -772,13 +784,13 @@ def background_images_dset(background_imgs):
             vid = video_lookup[video_name]["id"]
         else:
             vid = dset.add_video(name=video_name)
-    
+
         for im in ub.ProgIter(glob.glob(f"{video}/*.png"), desc="Adding images"):
-            new_dir = f"{video}/../" 
+            new_dir = f"{video}/../"
             fn = os.path.basename(im)
             frame_num, time = time_from_name(fn)
             shutil.copy(im, new_dir)
-            
+
             image = Image.open(im)
             w, h = image.size
 
@@ -795,6 +807,7 @@ def background_images_dset(background_imgs):
     dset.fpath = f"{background_imgs}/bkgd.mscoco.json"
     dset.dump(dset.fpath, newlines=True)
     print(f"Saved dset to {dset.fpath}")
+
 
 def draw_activity_preds(dset, save_dir="."):
     # Load kwcoco file
@@ -835,8 +848,7 @@ def draw_activity_preds(dset, save_dir="."):
     plt.close("all")
 
 
-def dive_csv_to_kwcoco(dive_folder, object_config_fn,
-                        data_dir, dst_dir, output_dir=""):
+def dive_csv_to_kwcoco(dive_folder, object_config_fn, data_dir, dst_dir, output_dir=""):
     """Convert object annotations in DIVE csv file(s) to a kwcoco file
 
     :param dive_folder: Path to the csv files

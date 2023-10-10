@@ -25,5 +25,6 @@ def main():
 
     visualize_kwcoco_by_label(args.dset, args.save_dir)
 
+
 if __name__ == "__main__":
     main()
