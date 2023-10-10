@@ -91,3 +91,5 @@ labels:
     label: "oatmeal + sliced banana + honey"
   - id: 93
     label: "oatmeal + sliced banana + cinnamon + honey"
+  - id: 122
+    label: "oatmeal + cinnamon + honey"

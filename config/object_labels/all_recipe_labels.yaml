@@ -199,6 +199,8 @@ labels:
     label: "oatmeal + sliced banana + honey"
   - id: 93
     label: "oatmeal + sliced banana + cinnamon + honey"
+  - id: 122
+    label: "oatmeal + cinnamon + honey"
   # Labels unique to pinwheels
   - id: 94
     label: "nut butter jar lid"
@@ -242,6 +244,8 @@ labels:
     label: "pinwheel + toothpick"
   - id: 114
     label: "plate + pinwheel(s) + toothpick"
+  - id: 123
+    label: "tortilla (partially rolled)"
   # Labels unique to tea
   - id: 115
     label: "tea bag (dry)"
@@ -255,5 +259,6 @@ labels:
     label: "mug + tea bag + water"
   - id: 120
     label: "mug + tea"
-  - id: 121
-    label: "used paper filter (quarter) + dripper + mug"
+  
+
+  
