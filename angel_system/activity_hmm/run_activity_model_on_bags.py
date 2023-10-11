@@ -4,6 +4,7 @@ import argparse
 import libtmux
 import time
 from pathlib import Path
+import signal
 
 
 def run(args):
@@ -17,47 +18,79 @@ def run(args):
         done = False
         print(f"Bag: {bag}")
 
+        #env["ROS_NAMESPACE"] = "/kitware"
+        env["ROS_NAMESPACE"] = "/debug"
+        env["HL2_IP"] = "192.168.1.101"
+        env["CONFIG_DIR"] = os.getenv("ANGEL_WORKSPACE_DIR") + "/src/angel_system_nodes/configs"
+        env["MODEL_DIR"] = os.getenv("ANGEL_WORKSPACE_DIR") + "/model_files"
+
         env["PARAM_ROS_BAG_DIR"] = f"{args.bags_dir}/{bag}"
         env["PARAM_ACTIVITY_MODEL"] = args.activity_model
         output_bag = f"{bag}_{model_name}"
         env["PARAM_ROS_BAG_OUT"] = output_bag
 
-        start = subprocess.Popen(["tmuxinator", "start", tmux_script], env=env)
-        time.sleep(1)
-        try:
-            session = server.sessions.get(session_name="record-ros-bag-activity-only")
-            print(session)
-        except:
-            return
-        ros2_bag = session.windows.get(window_name="ros2_bag")
-        ros2_bag_pane = ros2_bag.panes[0]
+        p1 = subprocess.Popen(["rqt", 
+            "-s", "rqt_image_view/ImageView", 
+            "--args", env["ROS_NAMESPACE"]+"/PVFramesRGB",
+            "--ros-args", 
+            "-p", "_image_transport:=raw"], env=env)
+        p2 = subprocess.Popen(["ros2", "run", "angel_datahub", "ImageConverter", "--ros-args",
+            "-r", env["ROS_NAMESPACE"],
+            "-p", "topic_input_images:=PVFramesNV12",
+            "-p", "topic_output_images:=PVFramesRGB"], env=env)
+        p3 = subprocess.Popen(["ros2", "run", "angel_system_nodes", "berkeley_object_detector", "--ros-args",
+            "-r", "__ns:="+env["ROS_NAMESPACE"],
+            "-p", "image_topic:=PVFramesRGB",
+            "-p", "det_topic:=ObjectDetections2d",
+            "-p", "det_conf_threshold:=0.4",
+            "-p", "model_config:="+env["ANGEL_WORKSPACE_DIR"]+"/angel_system/berkeley/configs/MC50-InstanceSegmentation/cooking/coffee/stage1/mask_rcnn_R_101_FPN_1x_demo.yaml",
+            "-p", "cuda_device_id:=0"], env=env)
+        p4 = subprocess.Popen(["ros2", "run", "angel_debug", "Simple2dDetectionOverlay", "--ros-args",
+            "-r", env["ROS_NAMESPACE"],
+            "-p", "topic_input_images:=PVFramesRGB",
+            "-p", "topic_input_det_2d:=ObjectDetections2d",
+            "-p", "topic_output_images:=pv_image_detections_2d",
+            "-p", "filter_top_k:=5"], env=env)
+        p5 = subprocess.Popen(["ros2", "run", "image_transport", "republish", "raw", "compressed", "--ros-args",
+            "-r", env["ROS_NAMESPACE"],
+            "--remap", "in:=pv_image_detections_2d",
+            "--remap", "out/compressed:=pv_image_detections_2d/compressed"], env=env)
+        p6 = subprocess.Popen(["ros2", "run", "angel_system_nodes", "activity_from_obj_dets_classifier", "--ros-args",
+            "-r", env["ROS_NAMESPACE"],
+            "-p", "det_topic:=ObjectDetections2d",
+            "-p", "act_topic:=ActivityDetections",
+            "-p", "classifier_file:=${MODEL_DIR}/recipe_m2_apply_tourniquet_v0.052.pkl"], env=env)
+        p7 = subprocess.Popen(["ros2", "bag", "record",
+            env["ROS_NAMESPACE"]+"/ActivityDetections",
+            env["ROS_NAMESPACE"]+"/PVFramesRGB",
+            "-o", env["PARAM_ROS_BAG_OUT"]], cwd="/angel_workspace/ros_bags/", env=env)
+        time.sleep(15)
+        p8 = subprocess.Popen(["ros2", "bag", "play", env["PARAM_ROS_BAG_DIR"]], env=env).wait()
+        if p8 == 0:
+            print("'ros2 bag play' command succeeded.")
+        else:
+            print(f"WARNING: 'ros2 bag play' command failed. error code {p8}")
 
-        ros_bag_record = session.windows.get(window_name="ros_bag_record")
-        ros_bag_record_pane = ros_bag_record.panes[0]
+        # Kill recording process, then wait 30sec for it to fully end
+        p7.send_signal(signal.SIGINT)
 
-        # Wait until bag is done playing
-        while not done:
-            stdout = ros2_bag_pane.capture_pane()
-
-            if "done" in stdout:
-                done = True
-            else:
-                time.sleep(60)
-
-        ros_bag_record_pane.send_keys("C-c")
-        time.sleep(30)
-
-        # Wait until new bag is written
+        # Wait some more until new bag is written
         finished_recording = False
         while not finished_recording:
             finished_recording = os.path.exists(
                 f"{args.bags_dir}/{output_bag}/metadata.yaml"
             )
-            time.sleep(60)
+            time.sleep(10)
 
         # Kill session
-        session.kill_session()
-        stop = subprocess.Popen(["tmuxinator", "stop", tmux_script])
+        p1.kill()
+        p2.kill()
+        p3.kill()
+        p4.kill()
+        p5.kill()
+        p6.kill()
+        p7.kill()
+        p8.kill()
 
 
 def main():
@@ -85,11 +118,11 @@ def main():
     # Add pre-defined dataset splits
     if args.split:
         if args.split == "alex" or args.split == "train":
-            args.bags.append(range(1, 23) + range(25, 41) + range(46, 51))
+            args.bags.extend([*range(1, 23), *range(25, 41), *range(46, 51)])
         if args.split == "hannah" or args.split == "val":
-            args.bags.append([23, 24, 41, 42, 43, 44, 45])
+            args.bags.extend([23, 24, 41, 42, 43, 44, 45])
         if args.split == "brian" or args.split == "test":
-            args.bags.append([51, 52, 53, 54])
+            args.bags.extend([51, 52, 53, 54])
 
     # Reformat bag names
     args.bags = [f"all_activities_{bag_id}" for bag_id in args.bags]
