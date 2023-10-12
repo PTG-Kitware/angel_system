@@ -10,6 +10,7 @@ labels:
   # - repeat: Optional field that indicated that the item must be repeated X times
   - id: 0
     label: "background"
+    full_str: "background"
   - id: 1
     label: "measure-12oz-water"
     full_str: "Measure 12 ounces of water in the liquid measuring cup"
