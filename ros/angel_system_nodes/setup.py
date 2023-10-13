@@ -29,6 +29,7 @@ setup(
             "feedback_generator = angel_system_nodes.feedback_generator:main",
             "annotation_event_monitor = angel_system_nodes.annotation_event_monitor:main",
             "intent_to_command = angel_system_nodes.intent_to_command:main",
+<<<<<<< HEAD
             # Data Publishers
             "frame_publisher = angel_system_nodes.data_publishers.ros_publisher:main",
             "generate_images = angel_system_nodes.data_publishers.generate_images:main",
@@ -55,6 +56,7 @@ setup(
             "berkeley_task_monitor = angel_system_nodes.task_monitoring.berkeley_task_monitor:main",
             "task_monitor_v1 = angel_system_nodes.task_monitoring.task_monitor_v1:main",
             "task_monitor_v2 = angel_system_nodes.task_monitoring.task_monitor_v2:main",
+            "dummy_multi_task_monitor= angel_system_nodes.dummy_multi_task_monitor:main",
         ],
     },
 )
