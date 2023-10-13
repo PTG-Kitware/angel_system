@@ -130,18 +130,72 @@ dq_ros_bags_dir = (
 
 dq_training_split = {
     "train_activity": [
-        f"{dq_ros_bags_dir}/kitware_dessert_quesadilla_video_{x}_extracted" for x in []
+        f"{dq_ros_bags_dir}/kitware_dessert_quesadilla_video_{x}_extracted" for x in [7, 9, 10, 13, 14, 15, 16, 17, 18, 19, 23, 25, 27, 29, 30, 31, 32, 33, 34, 38, 40, 41]
     ],
     "val": [
-        f"{dq_ros_bags_dir}/kitware_dessert_quesadilla_video_{x}_extracted" for x in []
+        f"{dq_ros_bags_dir}/kitware_dessert_quesadilla_video_{x}_extracted" for x in [11, 20, 24, 44]
     ],
     "test": [
-        f"{dq_ros_bags_dir}/kitware_dessert_quesadilla_video_{x}_extracted" for x in []
+        f"{dq_ros_bags_dir}/kitware_dessert_quesadilla_video_{x}_extracted" for x in [8, 12, 22, 26, 28, 35, 42, 43]
     ],
 }
 
 dq_obj_dets_dir = f"{objects_dir}/dessert_quesadilla"
 dq_obj_config = f"{object_config_path}/recipe_dessert_quesadilla.yaml"
+
+# Oatmeal
+# ---
+oatmeal_activity_gt_dir = f"{activity_gt_dir}/oatmeal_labels/"
+oatmeal_activity_config_fn = f"{activity_config_path}/recipe_oatmeal.yaml"
+
+oatmeal_ros_bags_dir = f"{ros_bags_dir}/oatmeal/oatmeal_extracted/"  # oatmeal specific
+
+oatmeal_training_split = {
+    "train_activity": [
+        f"{oatmeal_ros_bags_dir}/kitware_oatmeal_video_{x}_extracted"
+        for x in [
+        11, 12, 13, 14, 15, 19, 22, 26, 29, 34, 35, 36, 39, 42, 43, 46, 47, 53, 54, 55, 57, 58, 59, 60, 61]
+    ],
+    "val": [
+        f"{oatmeal_ros_bags_dir}/kitware_oatmeal_video_{x}_extracted" for x in [31, 40, 49, 56]
+    ],
+    "test": [
+        f"{oatmeal_ros_bags_dir}/kitware_oatmeal_video_{x}_extracted"
+        for x in [16, 17, 18, 25, 32, 33, 38, 45]
+    ],
+}
+
+oatmeal_obj_dets_dir = f"{objects_dir}/oatmeal"
+oatmeal_obj_config = f"{object_config_path}/recipe_oatmeal.yaml"
+
+# Pinwheels
+# ---------
+pinwheels_activity_gt_dir = f"{activity_gt_dir}/pinwheels_labels/"
+pinwheels_activity_config_fn = f"{activity_config_path}/recipe_pinwheel.yaml"
+
+pinwheels_ros_bags_dir = f"{ros_bags_dir}/pinwheels/pinwheels_extracted/"
+
+pinwheels_training_split = {
+    "train_activity": [
+        f"{pinwheels_ros_bags_dir}/kitware_pinwheel_video_{x}_extracted"
+        for x in [
+            3, 11, 13, 14, 15, 17, 18, 19, 31, 35, 36, 37, 38, 39, 40, 42, 43, 46, 47, 48, 49, 50, 51, 52, 53, 56, 58
+        ]
+    ],
+    "val": [
+        f"{pinwheels_ros_bags_dir}/kitware_pinwheel_video_{x}_extracted"
+        for x in [
+            20, 33, 54, 57
+        ]
+    ],
+    "test": [
+        f"{pinwheels_ros_bags_dir}/kitware_pinwheel_video_{x}_extracted"
+        for x in [9, 12, 16, 32, 34, 44, 45]
+    ],
+}
+
+pinwheels_obj_dets_dir = f"{objects_dir}/pinwheels"
+pinwheels_obj_config = f"{object_config_path}/recipe_pinwheels.yaml"
 
 # All
 # ---
@@ -182,6 +236,28 @@ def grab_data(recipe, machine):
                 dq_training_split,
                 dq_obj_dets_dir,
                 dq_obj_config,
+            )
+        elif recipe == "oatmeal":
+            return (
+                ptg_root,
+                data_dir,
+                oatmeal_activity_config_fn,
+                oatmeal_activity_gt_dir,
+                oatmeal_ros_bags_dir,
+                oatmeal_training_split,
+                oatmeal_obj_dets_dir,
+                oatmeal_obj_config,
+            )
+        elif recipe == "pinwheel":
+             return (
+                ptg_root,
+                data_dir,
+                pinwheels_activity_config_fn,
+                pinwheels_activity_gt_dir,
+                pinwheels_ros_bags_dir,
+                pinwheels_training_split,
+                pinwheels_obj_dets_dir,
+                pinwheels_obj_config,
             )
         else:
             raise NotImplementedError
