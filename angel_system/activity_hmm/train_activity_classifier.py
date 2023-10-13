@@ -133,16 +133,13 @@ def compute_feats(
     last_dset = 0
 
     for image_id in sorted(list(ann_by_image.keys())):
+        
         label_vec = []
         xs = []
         ys = []
         ws = []
         hs = []
         label_confidences = []
-        obj_obj_contact_state = []
-        obj_obj_contact_conf = []
-        obj_hand_contact_state = []
-        obj_hand_contact_conf = []
 
         for ann in ann_by_image[image_id]:
             label_vec.append(act_id_to_str[ann["category_id"]])
@@ -152,13 +149,11 @@ def compute_feats(
             hs.append(ann["bbox"][3])
             label_confidences.append(ann["confidence"])
 
-            try:
-                obj_obj_contact_state.append(ann["obj-obj_contact_state"])
-                obj_obj_contact_conf.append(ann["obj-obj_contact_conf"])
-                obj_hand_contact_state.append(ann["obj-hand_contact_state"])
-                obj_hand_contact_conf.append(ann["obj-hand_contact_conf"])
-            except KeyError:
-                pass
+        
+        #print(image_id)
+        #if image_id == 58340:   
+        #    # kitware_tea_video_26_extracted/images/frame_00640_01690479735_293195192.png
+        #    import pdb; pdb.set_trace()
 
         feature_vec = obj_det2d_set_to_feature(
             label_vec,
@@ -168,10 +163,6 @@ def compute_feats(
             hs,
             label_confidences,
             None,
-            obj_obj_contact_state,
-            obj_obj_contact_conf,
-            obj_hand_contact_state,
-            obj_hand_contact_conf,
             label_to_ind,
             version=feat_version,
         )
