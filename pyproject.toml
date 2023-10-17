@@ -113,8 +113,9 @@ extend-exclude = '''
   | ^/angel_system/fasterrcnn
   | ^/python-tpl
   | ^/ros/(ROS-TCP-Endpoint|rosbag2)
-  | ^/src/(ROS-TCP-Endpoint|rosbag2)  # alternative for within docker contianer
+  | ^/src/(ROS-TCP-Endpoint|rosbag2)  # alternative for within docker container
   | ^/hl2ss
+  | ^/install  # container-environment location derivative to source tree
 )
 '''
 
