@@ -1,5 +1,7 @@
 # Get all of the task graphs for the current tasks.
-# Request
+
+# This field is required b/c the ROS TCP bridge cannot handle deserializing an
+# empty request
 uint8 test
 ---
 # Response

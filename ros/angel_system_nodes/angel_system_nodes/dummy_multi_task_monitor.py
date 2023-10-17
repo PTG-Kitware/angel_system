@@ -217,18 +217,21 @@ class DummyMultiTaskMonitor(Node):
         and return it.
         """
         log = self.get_logger()
-        log.debug("Received request for the current task graph")
-        task_g = TaskGraph()
+        log.info("Received request for the current task graph")
 
-        with self._hmm_lock:
-            task_g.task_steps = self._hmm.model.class_str[1:]  # exclude background
-            # TODO: support different task levels?
-            task_g.task_levels = [0] * len(self._hmm.model.class_str)
+        task_graphs = []  # List of TaskGraphs
+        task_titles = []  # List of task titles associated with the graphs
+        for task_id, task in self._task_state_dict.items():
+            task_g = TaskGraph()
+            task_g.task_steps = task.steps
+            task_g.task_levels = [0] * len(task.steps)
 
-        response.task_graph = task_g
+            task_graphs.append(task_g)
+            task_titles.append(task.task_title)
 
-        response.task_title = self._task_title
-        log.debug("Received request for the current task graph -- Done")
+        response.task_graphs = task_graphs
+        response.task_titles = task_titles
+        log.info("Received request for the current task graph -- Done")
         return response
 
     def monitor_keypress(self):
