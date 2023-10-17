@@ -1,5 +1,6 @@
 # Get all of the task graphs for the current tasks.
-# Request (empty)
+# Request
+uint8 test
 ---
 # Response
 # List of task titles to monitor
