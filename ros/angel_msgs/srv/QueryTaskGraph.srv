@@ -1,6 +1,9 @@
-# Get the full task graph for the current task.
-uint8 test
+# Get all of the task graphs for the current tasks.
+# Request (empty)
 ---
-string task_title
+# Response
+# List of task titles to monitor
+string[] task_titles
 
-angel_msgs/TaskGraph task_graph
+# List of TaskGraphs - must be equal in length to `task_titles`
+angel_msgs/TaskGraph[] task_graphs
