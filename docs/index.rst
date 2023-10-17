@@ -12,6 +12,7 @@ Welcome to ANGEL System's documentation!
 
    algorithms/index
    system/index
+   python_tpl
 
 
 Indices and tables
