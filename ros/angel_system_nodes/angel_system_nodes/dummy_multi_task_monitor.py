@@ -1,28 +1,21 @@
 from dataclasses import dataclass, field
 from threading import (
-    Event,
-    RLock,
     Thread,
 )
-import time
-from typing import cast
 from typing import Dict
 from typing import List
-from typing import Optional
 from typing import Set
+import yaml
 
 from builtin_interfaces.msg import Time
 import numpy as np
-import numpy.typing as npt
 from pynput import keyboard
 import rclpy
 from rclpy.node import Node
-import yaml
 
 from angel_msgs.msg import (
-    AruiUserNotification,
-    TaskUpdate,
     TaskGraph,
+    TaskUpdate,
 )
 from angel_msgs.srv import QueryTaskGraph
 from angel_utils import declare_and_get_parameters
@@ -137,11 +130,11 @@ class DummyMultiTaskMonitor(Node):
         # Store module for local use.
         self._keyboard = keyboard
         # Start the keyboard monitoring thread
-        log.info(f"Starting keyboard threads")
+        log.info("Starting keyboard threads")
         self._keyboard_t = Thread(target=self.monitor_keypress)
         self._keyboard_t.daemon = True
         self._keyboard_t.start()
-        log.info(f"Starting keyboard threads... done")
+        log.info("Starting keyboard threads... done")
 
     def _clean_skipped_cache(self, current_hmm_step_id: int) -> None:
         """
