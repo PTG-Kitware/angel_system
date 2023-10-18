@@ -71,6 +71,7 @@ networkx = "^3.1"
 
 # TCN Activity classifier
 tcn-hpl = {path = "python-tpl/TCN_HPL", develop = true}
+vadersentiment = "^3.3.2"
 
 [tool.poetry.dev-dependencies]
 ipython = "^8.0.1"
