@@ -1,3 +1,4 @@
+from collections import namedtuple
 from typing import Any
 from typing import Dict
 from typing import Sequence
@@ -68,3 +69,31 @@ def declare_and_get_parameters(
         log.info(f"- {p.name} = ({p.type_}) {p.value}")
 
     return {p.name: p.value for p in parameters}
+
+
+def declare_and_get_parameters_nt(
+    node: rclpy.node.Node,
+    name_default_tuples: Sequence[Union[Tuple[str], Tuple[str, Any]]],
+    namespace="",
+):
+    """
+    Name-tuple returning version of `declare_and_get_parameters`.
+
+    See also: ``declare_and_get_parameters``
+
+    :param node: Node instance to declare parameters into and get values out of.
+    :param name_default_tuples: Parameters with optional default values.
+    :param namespace: Namespace value to be passed into
+        `node.declare_parameters`.
+
+    :raises ValueError: Some input parameters were not given default values and
+        were not set.
+
+    :returns: Dictionary of parameter names to their input or default values.
+    """
+    param_values = declare_and_get_parameters(node, name_default_tuples, namespace)
+    return namedtuple(
+        "ParamContainer",
+        field_names=param_values.keys(),
+        defaults=param_values.values(),
+    )
