@@ -6,7 +6,7 @@ import threading
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 from angel_msgs.msg import InterpretedAudioUserEmotion, InterpretedAudioUserIntent
-
+from angel_utils import declare_and_get_parameters
 
 IN_EXPECT_USER_INTENT_TOPIC = "expect_user_intent_topic"
 IN_INTERP_USER_INTENT_TOPIC = "interp_user_intent_topic"
