@@ -40,6 +40,7 @@ class TaskStateInformation:
     """
     Stores relevant task state information for a single task.
     """
+
     task_title: str
     n_steps: int
 
@@ -115,7 +116,9 @@ class DummyMultiTaskMonitor(Node):
             )
 
             # Load the list of task steps
-            task_state_info.steps = [step["description"] for step in task_config["steps"]]
+            task_state_info.steps = [
+                step["description"] for step in task_config["steps"]
+            ]
 
             self._task_state_dict[t["id"]] = task_state_info
 
@@ -297,7 +300,9 @@ class DummyMultiTaskMonitor(Node):
         task_state.current_step_id = new_step_id
         task_state.current_step = task_state.steps[new_step_id]
 
-        log.info(f"Advanced task {task_id} to step {new_step_id}: {task_state.current_step}")
+        log.info(
+            f"Advanced task {task_id} to step {new_step_id}: {task_state.current_step}"
+        )
         self.publish_task_state_message(task_id)
 
     def on_press(self, key):
