@@ -12,3 +12,6 @@
 	path = python-tpl/TCN_HPL
 	url = https://github.com/PTG-Kitware/TCN_HPL.git
 	branch = main
+[submodule "python-tpl/yolov7"]
+	path = python-tpl/yolov7
+	url = https://github.com/cameron-a-johnson/yolov7.git

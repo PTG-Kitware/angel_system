@@ -11,6 +11,22 @@ class RateTracker:
     and [here (header)](ros/angel_utils/include/angel_utils/rate_tracker.hpp).
     Changes to this API and implementation should be reflected there.
 
+    How to Use
+    ----------
+    Create an instance outside the area that is looping.
+    We will want to call a member function of this instance inside the looped
+    area for rate statistics aggregation and logging.
+    "Tick" the instance inside the looped section to register that looping is
+    happening.
+
+    E.g.::
+
+        rate_tracker = RateTracker()
+
+        while True:
+            self.rate_tracker.tick()
+            print(f"Rate measured to be: {rate_tracker.get_rate_avg()}")
+
     :param window_size: Number of tick delta's to retain to compute moving
         averages.
     """

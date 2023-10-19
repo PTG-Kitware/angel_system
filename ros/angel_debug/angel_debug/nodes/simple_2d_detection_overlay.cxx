@@ -325,54 +325,55 @@ Simple2dDetectionOverlay
   int line_thickness = thickness_for_drawing( img_ptr->image );
   RCLCPP_DEBUG( log, "Using line thickness: %d", line_thickness );
 
+  // Temp variables for recording the maximally confident label and the
+  // confidence value for each detection.
   cv::Point max_point;  // Only x will be populated due to single row scan.
-  std::string max_label;
-  double maxVal;
+  double max_conf;
 
-  std::vector<std::string> all_labels;
-  std::vector<double> all_dets;
+  /// Labels of the most confident class per detection.
+  /// Shape: [n_dets]
+  std::vector< std::string > max_label_vec;
+  /// Confidence values of the most confident class per detection.
+  /// Shape: [n_dets]
+  std::vector< double > max_conf_vec;
   for( size_t i = 0; i < num_detections; ++i )
   {
     // Determine the label for each detection based on max confidence item.
-    cv::minMaxLoc( det_label_conf_mat.row( i ), NULL, &maxVal, NULL, &max_point );
-    max_label = det_set->label_vec[ max_point.x ];
-
-    all_labels.push_back(max_label);
-    all_dets.push_back(maxVal);
+    // Only `max_point.x` is populated b/c operating on a single row.
+    cv::minMaxLoc( det_label_conf_mat.row( i ), NULL, &max_conf, NULL, &max_point );
+    // Record the label and confidence value for the most confident class.
+    max_label_vec.push_back( det_set->label_vec[ max_point.x ] );
+    max_conf_vec.push_back( max_conf );
   }
 
-  // Find top k results
-  std::vector<std::string> top_k_labels;
-  std::vector<double> top_k_dets;
-  std::vector<size_t> indices(all_dets.size());
-  std::iota(indices.begin(), indices.end(), 0);
+  /// Number of detections to draw.
+  size_t draw_n = max_conf_vec.size();
+  /// Indices of the detections to draw.
+  std::vector< size_t > draw_indices(max_conf_vec.size());
+  std::iota( draw_indices.begin(), draw_indices.end(), 0 );
 
-  if( filter_top_k != -1 )
+  // Find top k results
+  // If filtering by top-k, sort the beginning `k` portion of `draw_indices`
+  // based on detection confidence score in descending order, reducing the
+  // `draw_n` value to `k`.
+  if( filter_top_k > -1 )
   {
     RCLCPP_DEBUG( log, "Top k: %d", filter_top_k );
 
-    int k = std::min((int)all_dets.size(), filter_top_k);
-    std::partial_sort(indices.begin(), indices.begin() + k, indices.end(),
-                      [&](size_t A, size_t B) {
-                        return all_dets[A] > all_dets[B];
-                      });
-
-    for( int idx = 0; idx < k; ++idx )
-    {
-      top_k_labels.push_back(all_labels[indices[idx]]);
-      top_k_dets.push_back(all_dets[indices[idx]]);
-    }
-  }
-  else
-  {
-    top_k_labels = all_labels;
-    top_k_dets = all_dets;
+    // Arg-sort the top-k highest confidence detections.
+    draw_n = std::min( max_conf_vec.size(), (size_t)filter_top_k );
+    std::partial_sort( draw_indices.begin(), draw_indices.begin() + draw_n, draw_indices.end(),
+                       [&]( size_t A, size_t B )
+                       {
+                         return max_conf_vec[A] > max_conf_vec[B];
+                       } );
   }
 
   // Draw the stuff
-  for( size_t i = 0; i < top_k_dets.size(); ++i )
+  size_t idx;
+  for( size_t i = 0; i < draw_n; ++i )
   {
-    auto idx = indices.at(i);
+    idx = draw_indices.at(i);
     cv::Point pt_ul = { (int) round( det_set->left[ idx ] ),
                         (int) round( det_set->top[ idx ] ) },
               pt_br = { (int) round( det_set->right[ idx ] ),
@@ -380,16 +381,16 @@ Simple2dDetectionOverlay
     cv::rectangle( img_ptr->image, pt_ul, pt_br,
                    COLOR_BOX, line_thickness, cv::LINE_8 );
 
-    std::string line = det_set->label_vec[ idx ];
+    std::string line = max_label_vec[ idx ];
     int line_len = line.length();
     for (int i=0; i<line_len; i+=MAX_LINE_LEN)
     {
       std::string split_line = line.substr(
         i, std::min(MAX_LINE_LEN, line_len-i));
-      cv::Point line_loc = {pt_ul.x, pt_ul.y+ i*(line_thickness+1)};
+      cv::Point line_loc = {pt_ul.x, pt_ul.y + i * (line_thickness + 1)};
       cv::putText( img_ptr->image, split_line, line_loc,
-                cv::FONT_HERSHEY_COMPLEX, line_thickness, COLOR_TEXT,
-                line_thickness );
+                   cv::FONT_HERSHEY_COMPLEX, line_thickness, COLOR_TEXT,
+                   line_thickness );
     }
 
   }

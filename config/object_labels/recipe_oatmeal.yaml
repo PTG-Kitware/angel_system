@@ -46,6 +46,8 @@ labels:
     label: "measuring cup"
   - id: 25
     label: "container" # prep bowl
+  - id: 32
+    label: "trash can"
   # Labels unique to oatmeal
   - id: 72
     label: "tablespoon"

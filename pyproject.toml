@@ -62,6 +62,7 @@ black = "22.3.0"
 # For Columbia ASR
 nltk = "^3.8.1"
 soundfile = "^0.12.1"
+vadersentiment = "^3.3.2"
 
 # For BBN ZMQ client
 pyzmq = "==25.0.0"
@@ -71,7 +72,9 @@ networkx = "^3.1"
 
 # TCN Activity classifier
 tcn-hpl = {path = "python-tpl/TCN_HPL", develop = true}
-vadersentiment = "^3.3.2"
+
+# Yolo v7 object detection
+yolov7 = {path = "python-tpl/yolov7", develop = true}
 
 [tool.poetry.dev-dependencies]
 ipython = "^8.0.1"
@@ -110,8 +113,9 @@ extend-exclude = '''
   | ^/angel_system/fasterrcnn
   | ^/python-tpl
   | ^/ros/(ROS-TCP-Endpoint|rosbag2)
-  | ^/src/(ROS-TCP-Endpoint|rosbag2)  # alternative for within docker contianer
+  | ^/src/(ROS-TCP-Endpoint|rosbag2)  # alternative for within docker container
   | ^/hl2ss
+  | ^/install  # container-environment location derivative to source tree
 )
 '''
 

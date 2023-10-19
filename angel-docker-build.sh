@@ -59,7 +59,14 @@ git_status="$(git status --porcelain "${warn_build_spaces[@]}")"
 # Check if there are ignored files in the workspace that should not be there.
 git_clean_dr_cmd=( git clean "${warn_build_spaces[@]}" -Xdn )
 git_clean_dr="$("${git_clean_dr_cmd[@]}")"
-if [[ -n "${git_status}" ]] || [[ -n "${git_clean_dr}" ]]
+# Check for unclean files in submodules not caught by the above.
+# Quiet version is for checking, non-quiet version is for reporting (it's
+# informational).
+git_sm_clean_dr_cmd=( git submodule foreach --recursive git clean -xdn )
+git_sm_q_clean_dr_cmd=( git submodule --quiet foreach --recursive git clean -xdn )
+git_sm_clean_dr="$(${git_sm_clean_dr_cmd[@]})"
+git_sm_q_clean_dr="$(${git_sm_q_clean_dr_cmd[@]})"
+if [[ -n "${git_status}" ]] || [[ -n "${git_clean_dr}" ]] || [[ -n "${git_sm_q_clean_dr}" ]]
 then
   log "WARNING: Docker/ROS workspace subtree is modified and/or un-clean."
   if [[ -n "${git_status}" ]]
@@ -71,6 +78,11 @@ then
   then
     log "WARNING: -- There are unexpected ignored files (check \`${git_clean_dr_cmd[@]}\`)."
     log "${git_clean_dr}"
+  fi
+  if [[ -n "${git_sm_q_clean_dr}" ]]
+  then
+    log "WARNING: -- Submodules have unclean states (check \`${git_sm_clean_dr_cmd[@]}\`).)"
+    log "${git_sm_clean_dr}"
   fi
   if [[ -n "$FORCE_BUILD" ]]
   then
