@@ -19,7 +19,12 @@ from angel_utils import RateTracker
 from yolov7.detect_ptg import load_model, preprocess_bgr_img, predict_image
 from yolov7.models.experimental import attempt_load
 import yolov7.models.yolo
-from yolov7.utils.general import check_img_size, non_max_suppression, scale_coords, xyxy2xywh
+from yolov7.utils.general import (
+    check_img_size,
+    non_max_suppression,
+    scale_coords,
+    xyxy2xywh,
+)
 from yolov7.utils.torch_utils import select_device, TracedModel
 from yolov7.utils.plots import plot_one_box
 from yolov7.utils.datasets import letterbox
@@ -51,36 +56,29 @@ class YoloObjectDetector(Node):
                 ("net_checkpoint",),
                 ##################################
                 # Defaulted parameters
-                ("inference_img_size", 1280),   # inference size (pixels)
-                ("det_conf_threshold", 0.7),    # object confidence threshold
-                ("iou_threshold", 0.45),        # IOU threshold for NMS
-                ("cuda_device_id", "0"),        # cuda device, i.e. 0 or 0,1,2,3 or cpu
-                ("no_trace", True),             # don`t trace model
-                ("agnostic_nms", False),        # class-agnostic NMS
-            ]
+                ("inference_img_size", 1280),  # inference size (pixels)
+                ("det_conf_threshold", 0.7),  # object confidence threshold
+                ("iou_threshold", 0.45),  # IOU threshold for NMS
+                ("cuda_device_id", "0"),  # cuda device, i.e. 0 or 0,1,2,3 or cpu
+                ("no_trace", True),  # don`t trace model
+                ("agnostic_nms", False),  # class-agnostic NMS
+            ],
         )
-        self._image_topic = param_values['image_topic']
-        self._det_topic = param_values['det_topic']
-        self._model_ckpt_fp = Path(param_values['net_checkpoint'])
+        self._image_topic = param_values["image_topic"]
+        self._det_topic = param_values["det_topic"]
+        self._model_ckpt_fp = Path(param_values["net_checkpoint"])
 
-        self._inference_img_size = param_values['inference_img_size']
-        self._det_conf_thresh = param_values['det_conf_threshold']
-        self._iou_thr = param_values['iou_threshold']
-        self._cuda_device_id = param_values['cuda_device_id']
-        self._no_trace = param_values['no_trace']
-        self._agnostic_nms = param_values['agnostic_nms']
+        self._inference_img_size = param_values["inference_img_size"]
+        self._det_conf_thresh = param_values["det_conf_threshold"]
+        self._iou_thr = param_values["iou_threshold"]
+        self._cuda_device_id = param_values["cuda_device_id"]
+        self._no_trace = param_values["no_trace"]
+        self._agnostic_nms = param_values["agnostic_nms"]
 
         # Model
         self.model: Union[yolov7.models.yolo.Model, TracedModel]
-        (
-            self.device,
-            self.model,
-            self.stride,
-            self.imgsz,
-        ) = load_model(
-            str(self._cuda_device_id),
-            self._model_ckpt_fp,
-            self._inference_img_size
+        (self.device, self.model, self.stride, self.imgsz) = load_model(
+            str(self._cuda_device_id), self._model_ckpt_fp, self._inference_img_size
         )
 
         # Initialize ROS hooks
@@ -101,7 +99,9 @@ class YoloObjectDetector(Node):
         if not self._no_trace:
             self.model = TracedModel(self.model, self.device, self._inference_img_size)
 
-        self.half = half = self.device.type != 'cpu'  # half precision only supported on CUDA
+        self.half = half = (
+            self.device.type != "cpu"
+        )  # half precision only supported on CUDA
         if half:
             self.model.half()  # to FP16
 
@@ -169,7 +169,7 @@ class YoloObjectDetector(Node):
 
             dflt_conf_vec[cls_id] = conf
             msg.label_confidences.extend(dflt_conf_vec)  # copies data into array
-            dflt_conf_vec[cls_id] = 0.  # reset before next passthrough
+            dflt_conf_vec[cls_id] = 0.0  # reset before next passthrough
 
         msg.num_detections = n_dets
 
