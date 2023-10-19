@@ -81,10 +81,6 @@ girder_file_downloads:
     - file_id: 65300c3bdd4f924baed358ea
       sha512: d352d0dda78d33fa60b4ce755e4603381ee54d5bbc821da024bbc10bf75240def3d1ed9dc035481802551c386bfad235ce99933992835a2ac825def26a37fdae
       dest: "{{ stage_dirs.model_files }}/yolov7-combined_objects-weights.pt"
-    # YOLO v7 Combined Objects config
-    - file_id: 65300c8bdd4f924baed358ed
-      sha512: bd60c5301c989270bf7221481033878f6d54d96b19d68f48a55acdd23805b3799a955d1ef5a6f3d19f43cfe18a7751bf1b3f82e3bc811887c8b1fd200aa69e4a
-      dest: "{{ stage_dirs.model_files }}/yolov7-combined_objects-config.yml"
     # Activity TCN input object detection label mapping
     - file_id: 650ba52ffed5ca0b78984cae
       sha512: 296a90cbb4a5c52ab8a4534463e6d643d46bcdfcb9d759fdd987b10379d4dc299075ddbd831b16356a889c75522767068cb2d884fb0e173bf347d0bc61752bc2

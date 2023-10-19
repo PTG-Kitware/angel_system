@@ -1,5 +1,5 @@
 from pathlib import Path
-import time
+from typing import Union
 
 from cv_bridge import CvBridge
 import kwimage
@@ -16,8 +16,9 @@ from angel_system.utils.simple_timer import SimpleTimer
 from angel_msgs.msg import ObjectDetection2dSet
 from angel_utils import RateTracker
 
-from yolov7.detect_ptg import load_model, preprocess_bgr_img
+from yolov7.detect_ptg import load_model, preprocess_bgr_img, predict_image
 from yolov7.models.experimental import attempt_load
+import yolov7.models.yolo
 from yolov7.utils.general import check_img_size, non_max_suppression, scale_coords, xyxy2xywh
 from yolov7.utils.torch_utils import select_device, TracedModel
 from yolov7.utils.plots import plot_one_box
@@ -47,10 +48,9 @@ class YoloObjectDetector(Node):
                 # Required parameter (no defaults)
                 ("image_topic",),
                 ("det_topic",),
-                ("net_weights",),
-                ("net_config",),
-                ############################
-                # Defaulted hyper-parameters
+                ("net_checkpoint",),
+                ##################################
+                # Defaulted parameters
                 ("inference_img_size", 1280),   # inference size (pixels)
                 ("det_conf_threshold", 0.7),    # object confidence threshold
                 ("iou_threshold", 0.45),        # IOU threshold for NMS
@@ -61,8 +61,7 @@ class YoloObjectDetector(Node):
         )
         self._image_topic = param_values['image_topic']
         self._det_topic = param_values['det_topic']
-        self._model_weights_fp = Path(param_values['net_weights'])
-        self._model_config_fp = Path(param_values['net_config'])
+        self._model_ckpt_fp = Path(param_values['net_checkpoint'])
 
         self._inference_img_size = param_values['inference_img_size']
         self._det_conf_thresh = param_values['det_conf_threshold']
@@ -72,6 +71,7 @@ class YoloObjectDetector(Node):
         self._agnostic_nms = param_values['agnostic_nms']
 
         # Model
+        self.model: Union[yolov7.models.yolo.Model, TracedModel]
         (
             self.device,
             self.model,
@@ -79,27 +79,23 @@ class YoloObjectDetector(Node):
             self.imgsz,
         ) = load_model(
             str(self._cuda_device_id),
-            self._model_weights_fp,
+            self._model_ckpt_fp,
             self._inference_img_size
         )
 
-        self._pred_rate_tracker = RateTracker()
-
         # Initialize ROS hooks
-        self._subscription_cb_group = MutuallyExclusiveCallbackGroup()
         self._subscription = self.create_subscription(
             Image,
             self._image_topic,
             self.listener_callback,
             1,
-            callback_group=self._subscription_cb_group,
+            callback_group=MutuallyExclusiveCallbackGroup(),
         )
-        self._publisher_cb_group = MutuallyExclusiveCallbackGroup()
         self._det_publisher = self.create_publisher(
             ObjectDetection2dSet,
             self._det_topic,
             1,
-            callback_group=self._publisher_cb_group,
+            callback_group=MutuallyExclusiveCallbackGroup(),
         )
 
         if not self._no_trace:
@@ -119,110 +115,75 @@ class YoloObjectDetector(Node):
         """
         log = self.get_logger()
 
-        t_start = time.monotonic()
-
         # Convert ROS img msg to CV2 image
         img0 = BRIDGE.imgmsg_to_cv2(image, desired_encoding="bgr8")
-        img = preprocess_bgr_img(img0, self.imgsz, self.stride, self.device, self.half)
-        t_end_img = time.monotonic()
+        height, width = img0.shape[:2]
 
-        # Predict
-        with torch.no_grad():   # Calculating gradients would cause a GPU memory leak
-            pred = self.model(img, augment=False)[0]
-        t_end_pred = time.monotonic()
+        # img = preprocess_bgr_img(img0, self.imgsz, self.stride, self.device, self.half)
+        # t_end_img = time.monotonic()
+        #
+        # # Predict
+        # with torch.no_grad():   # Calculating gradients would cause a GPU memory leak
+        #     pred = self.model(img, augment=False)[0]
+        # t_end_pred = time.monotonic()
+        #
+        # # Apply NMS
+        # pred_nms = non_max_suppression(
+        #     pred,
+        #     self._det_conf_thresh,
+        #     self._iou_thr,
+        #     classes=None,
+        #     agnostic=self._agnostic_nms
+        # )
+        # t_end_nms = time.monotonic()
 
-        # Apply NMS
-        pred = non_max_suppression(
-            pred,
+        msg = ObjectDetection2dSet()
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.header.frame_id = image.header.frame_id
+        msg.source_stamp = image.header.stamp
+        msg.label_vec[:] = self.model.names
+
+        n_classes = len(self.model.names)
+        n_dets = 0
+
+        dflt_conf_vec = np.zeros(n_classes, dtype=np.float64)
+
+        for xyxy, conf, cls_id in predict_image(
+            img0,
+            self.device,
+            self.model,
+            self.stride,
+            self.imgsz,
+            self.half,
+            False,
             self._det_conf_thresh,
             self._iou_thr,
-            classes=[],
-            agnostic=self._agnostic_nms
-        )
-        t_end_nms = time.monotonic()
+            None,
+            self._agnostic_nms,
+        ):
+            n_dets += 1
+            msg.left.append(xyxy[0])
+            msg.top.append(xyxy[1])
+            msg.right.append(xyxy[2])
+            msg.bottom.append(xyxy[3])
 
-        t_end = time.monotonic()
-        # log.info(
-        #     "\n"
-        #     f"Start      --> Prediction: {t_end_pred - t_start}\n"
-        #     f"Prediction -->        NMS: {t_end_nms - t_end_pred}\n"
-        #     f"Total      -->           : {t_end - t_start}",
-        #     throttle_duration_sec=1,
-        # )
+            dflt_conf_vec[cls_id] = conf
+            msg.label_confidences.extend(dflt_conf_vec)  # copies data into array
+            dflt_conf_vec[cls_id] = 0.  # reset before next passthrough
 
-        self._pred_rate_tracker.tick()
-        log.info(
-            f"Objects predicted (hz: "
-            f"{self._pred_rate_tracker.get_rate_avg()})",
-            throttle_duration_sec=1,
-        )
+        msg.num_detections = n_dets
 
-        # if pred is not None:
-        #     # Publish detection set message
-        #     self.publish_det_message(pred, image.header)
+        # EXAMPLE: Getting max conf labels for each detection:
+        # np.asarray(msg.label_vec)[
+        #   np.asarray(msg.label_confidences).reshape(msg.num_detections, len(msg.label_vec)).argmax(axis=1)
+        # ]
 
-    def publish_det_message(self, pred, image_header):
-        """
-        Forms and sends a `angel_msgs/ObjectDetection2dSet` message
-        """
-        message = ObjectDetection2dSet()
+        self._det_publisher.publish(msg)
 
-        # Populate message header
-        message.header.stamp = self.get_clock().now().to_msg()
-        message.header.frame_id = image_header.frame_id
-        message.source_stamp = image_header.stamp
-
-        # Load bboxes
-        message.label_vec = []
-        label_confidences = []
-
-        message.left = []
-        message.right = []
-        message.top = []
-        message.bottom = []
-
-        # Process detections
-        for i, det in enumerate(pred):  # detections per image
-            if not len(det):
-                continue
-
-            # Rescale boxes from img_size to img0 size
-            det[:, :4] = scale_coords(img.shape[2:], det[:, :4], img0.shape).round()
-
-            for *xyxy, conf, cls_id in reversed(det):
-                message.label_vec.append(cls_id)
-                label_confidences.append(conf)
-
-                gn = torch.tensor(img0.shape)[[1, 0, 1, 0]]  # normalization gain whwh
-                norm_xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
-                cxywh = [norm_xywh[0] * width, norm_xywh[1] * height,
-                        norm_xywh[2] * width, norm_xywh[3] * height] # center xy, wh
-                xywh = [cxywh[0] - (cxywh[2] / 2), cxywh[1] - (cxywh[3] / 2),
-                        cxywh[2], cxywh[3]]
-
-                tlbr = kwimage.Boxes([xywh], "xywh").toformat("tlbr").data[0][0].tolist()
-                tl_x, tl_y, br_x, br_y = tlbr
-                message.left.append(tl_x)
-                message.right.append(br_x)
-                message.top.append(tl_y)
-                message.bottom.append(br_y)
-
-        message.num_detections = len(message.label_vec)
-
-        if message.num_detections == 0:
-            self.get_logger().debug("No detections, nothing to publish")
-            self._det_publisher.publish(message)
-            return
-
-        message.label_confidences = (
-            np.asarray(label_confidences, dtype=np.float64).ravel().tolist()
-        )
-
-        # Publish
-        self._det_publisher.publish(message)
         self._rate_tracker.tick()
-        self.get_logger().info(
-            f"Published det] message (hz: " f"{self._rate_tracker.get_rate_avg()})",
+        log.info(
+            f"Objects predicted & published (hz: "
+            f"{self._rate_tracker.get_rate_avg()})",
             throttle_duration_sec=1,
         )
 

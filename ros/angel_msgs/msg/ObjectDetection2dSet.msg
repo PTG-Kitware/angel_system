@@ -7,6 +7,13 @@
 # Box [left,right,top,bottom] origin is coordinate is the upper-left of the
 # source image.
 #
+# Example: Getting the max-conf labels for each detection (Python)
+# >>> np.asarray(msg.label_vec)[
+# ...     np.asarray(msg.label_confidences)
+# ...     .reshape(msg.num_detections, len(msg.label_vec))
+# ...     .argmax(axis=1)
+# ... ]
+#
 
 # Header frame_id should indicate the source these detections were predicted
 # over.
@@ -37,6 +44,10 @@ float32[] bottom
 # This is a flattened 2D row-major matrix with shape:
 #   [num_detections, len(label_vec)]
 float64[] label_confidences
+
+###############################################################################
+# DEPRECATED
+#
 
 # Vector length of each descriptor.
 int32 descriptor_dim
