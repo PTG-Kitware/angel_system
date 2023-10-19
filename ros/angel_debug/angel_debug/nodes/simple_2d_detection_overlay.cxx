@@ -380,7 +380,7 @@ Simple2dDetectionOverlay
     cv::rectangle( img_ptr->image, pt_ul, pt_br,
                    COLOR_BOX, line_thickness, cv::LINE_8 );
 
-    std::string line = det_set->label_vec[ idx ];
+    std::string line = top_k_labels[i];
     int line_len = line.length();
     for (int i=0; i<line_len; i+=MAX_LINE_LEN)
     {
