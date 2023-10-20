@@ -2,32 +2,20 @@ from pathlib import Path
 from typing import Union
 
 from cv_bridge import CvBridge
-import kwimage
 import numpy as np
 import rclpy
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup, ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from sensor_msgs.msg import Image
-import torch
-
-from angel_system.utils.simple_timer import SimpleTimer
 
 from angel_msgs.msg import ObjectDetection2dSet
 from angel_utils import RateTracker
 
-from yolov7.detect_ptg import load_model, preprocess_bgr_img, predict_image
+from yolov7.detect_ptg import load_model, predict_image
 from yolov7.models.experimental import attempt_load
 import yolov7.models.yolo
-from yolov7.utils.general import (
-    check_img_size,
-    non_max_suppression,
-    scale_coords,
-    xyxy2xywh,
-)
-from yolov7.utils.torch_utils import select_device, TracedModel
-from yolov7.utils.plots import plot_one_box
-from yolov7.utils.datasets import letterbox
+from yolov7.utils.torch_utils import TracedModel
 
 from angel_utils import declare_and_get_parameters
 
@@ -79,6 +67,10 @@ class YoloObjectDetector(Node):
         self.model: Union[yolov7.models.yolo.Model, TracedModel]
         (self.device, self.model, self.stride, self.imgsz) = load_model(
             str(self._cuda_device_id), self._model_ckpt_fp, self._inference_img_size
+        )
+        log.info(
+            f"Loaded model with classes:\n"
+            + "\n".join(f'\t- "{n}"' for n in self.model.names)
         )
 
         # Initialize ROS hooks

@@ -5,11 +5,11 @@ trainer.predict(model=model, dataloaders=dataloaders, ckpt_path=cfg.ckpt_path)
 """
 
 import json
-import os
 from threading import Event, Thread
 from typing import Callable
 from typing import List
 from typing import Optional
+from typing import Tuple
 
 from builtin_interfaces.msg import Time
 import numpy as np
@@ -20,13 +20,6 @@ from rclpy.node import Node
 from rclpy.executors import MultiThreadedExecutor
 import torch
 
-from tcn_hpl.models.ptg_module import PTGLitModule
-from tcn_hpl.data.components.augmentations import NormalizePixelPts
-
-from angel_system.impls.detect_activities.detections_to_activities.utils import (
-    tlbr_to_xywh,
-    obj_det2d_set_to_feature,
-)
 from angel_system.tcn_hpl.predict import (
     load_module,
     ObjectDetectionsLTRB,
@@ -39,7 +32,7 @@ from angel_msgs.msg import (
     ObjectDetection2dSet,
     ActivityDetection,
 )
-from angel_utils import declare_and_get_parameters
+from angel_utils import declare_and_get_parameters, RateTracker
 from angel_utils.activity_classification import InputWindow, InputBuffer
 from angel_utils.conversion import time_to_int
 
@@ -82,7 +75,23 @@ class NoActivityClassification(Exception):
     """
 
 
-class Event2(Event):
+def obj_det_msg_to_max_lbl_conf(
+    msg: ObjectDetection2dSet,
+) -> Tuple[List[str], List[float]]:
+    """
+    Get out a tuple of the maximally confident class label and
+    confidence value for each detection as a tuple of two lists for
+    expansion into the `ObjectDetectionsLTRB` constructor
+    """
+    mat_shape = (msg.num_detections, len(msg.label_vec))
+    conf_mat = np.asarray(msg.label_confidences).reshape(mat_shape)
+    max_conf_idxs = conf_mat.argmax(axis=1)
+    max_confs = conf_mat[np.arange(conf_mat.shape[0]), max_conf_idxs]
+    max_labels = np.asarray(msg.label_vec)[max_conf_idxs]
+    return max_labels, max_confs
+
+
+class WaitAndClearEvent(Event):
     """
     Simple subclass that adds a wait-and-clear method to simultaneously wait
     for the lock and clear the set flag upon successful waiting.
@@ -202,6 +211,8 @@ class ActivityClassifierTCN(Node):
             callback_group=MutuallyExclusiveCallbackGroup(),
         )
 
+        self._rate_tracker = RateTracker()
+
         # Start windowed prediction runtime thread.
         log.info("Starting runtime thread...")
         # On/Off Switch for runtime loop
@@ -211,7 +222,7 @@ class ActivityClassifierTCN(Node):
         # to check if it is supposed to still be alive.
         self._rt_active_heartbeat = param_values[PARAM_RT_HEARTBEAT]
         # Condition that the runtime should perform processing
-        self._rt_awake_evt = Event2()
+        self._rt_awake_evt = WaitAndClearEvent()
         self._rt_thread = Thread(target=self.rt_loop, name="prediction_runtime")
         self._rt_thread.daemon = True
         self._rt_thread.start()
@@ -359,6 +370,8 @@ class ActivityClassifierTCN(Node):
         """
         log = self.get_logger()
 
+        # TCN wants to know the label and confidence for the maximally
+        # confident class only. Input object detection messages
         frame_object_detections = [
             ObjectDetectionsLTRB(
                 det_msg.left,
@@ -370,14 +383,15 @@ class ActivityClassifierTCN(Node):
                 #       recording max-confidence label and confidence values.
                 #       This logic will need to be updated if that ever
                 #       changes.
-                det_msg.label_vec,
-                det_msg.label_confidences,
+                # det_msg.label_vec,
+                # det_msg.label_confidences,
+                *obj_det_msg_to_max_lbl_conf(det_msg),
             )
             if det_msg is not None
             else None
             for det_msg in window.obj_dets
         ]
-        log.info(
+        log.debug(
             f"Window vector presence: "
             f"{[(v is not None) for v in frame_object_detections]}"
         )
@@ -415,8 +429,15 @@ class ActivityClassifierTCN(Node):
         log.info(
             f"Activity classification -- "
             f"{activity_msg.label_vec[pred]} @ {activity_msg.conf_vec[pred]} "
-            f"(time: {activity_msg.source_stamp_end_frame} - "
-            f"{activity_msg.source_stamp_end_frame})"
+            f"(time: {time_to_int(activity_msg.source_stamp_end_frame)} - "
+            f"{time_to_int(activity_msg.source_stamp_end_frame)})"
+        )
+
+        self._rate_tracker.tick()
+        log.info(
+            f"Activity classification rate (hz: "
+            f"{self._rate_tracker.get_rate_avg()})",
+            throttle_duration_sec=1,
         )
 
         return activity_msg

@@ -154,7 +154,8 @@ class InputBuffer:
             ):
                 self.get_logger_fn().warn(
                     f"Input image frame was NOT after the previous latest: "
-                    f"(prev) {self.frames[-1][0]} !< {img_header_stamp} (new)"
+                    f"(prev) {time_to_int(self.frames[-1][0])} "
+                    f"!< {time_to_int(img_header_stamp)} (new)"
                 )
                 return False
             self.frames.append((img_header_stamp, img_mat))
