@@ -76,7 +76,7 @@ class NoActivityClassification(Exception):
 
 
 def obj_det_msg_to_max_lbl_conf(
-    msg: ObjectDetection2dSet
+    msg: ObjectDetection2dSet,
 ) -> Tuple[List[str], List[float]]:
     """
     Get out a tuple of the maximally confident class label and
@@ -385,7 +385,7 @@ class ActivityClassifierTCN(Node):
                 #       changes.
                 # det_msg.label_vec,
                 # det_msg.label_confidences,
-                *obj_det_msg_to_max_lbl_conf(det_msg)
+                *obj_det_msg_to_max_lbl_conf(det_msg),
             )
             if det_msg is not None
             else None

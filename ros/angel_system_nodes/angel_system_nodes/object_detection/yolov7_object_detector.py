@@ -68,8 +68,10 @@ class YoloObjectDetector(Node):
         (self.device, self.model, self.stride, self.imgsz) = load_model(
             str(self._cuda_device_id), self._model_ckpt_fp, self._inference_img_size
         )
-        log.info(f"Loaded model with classes:\n" +
-                 '\n'.join(f'\t- "{n}"' for n in self.model.names))
+        log.info(
+            f"Loaded model with classes:\n"
+            + "\n".join(f'\t- "{n}"' for n in self.model.names)
+        )
 
         # Initialize ROS hooks
         self._subscription = self.create_subscription(
