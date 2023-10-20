@@ -58,7 +58,7 @@ class ObjectDetectionsLTRB:
     top: Tuple[float]
     right: Tuple[float]
     bottom: Tuple[float]
-    labels: Tuple[float]
+    labels: Tuple[str]
     confidences: Tuple[float]
 
 

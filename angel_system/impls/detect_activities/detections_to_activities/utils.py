@@ -192,6 +192,25 @@ def obj_det2d_set_to_feature_by_method(
     use_center_dist=False,
     use_intersection=False,
 ):
+    """
+    `label_vec`, `xs`, `ys`, `ws`, hs` are to all be parallel in association
+    and describe the object detections to create an embedding from.
+
+    :param label_vec: Object label of the most confident class for each
+        detection.
+    :param xs: Upper-left X coordinate for each detection.
+    :param ys: Upper-left Y coordinate for each detection.
+    :param ws: Pixel width for each detection.
+    :param hs: Pixel height for each detection.
+    :param label_confidences: Confidence value of the most confident class for
+        each detection.
+    :param label_to_ind: Mapping of detection class indices
+    :param use_activation:
+    :param use_hand_dist:
+    :param use_center_dist:
+    :param use_intersection:
+    :return:
+    """
     #########################
     # Default values
     #########################
@@ -204,21 +223,19 @@ def obj_det2d_set_to_feature_by_method(
     # Data
     #########################
     num_act = len(label_to_ind)
-    num_dets = len(label_vec)
 
     act = np.zeros(num_act)
     bboxes = [default_bbox for i in range(num_act)]
 
-    for i in range(num_dets):
-        label = label_vec[i]
-        conf = label_confidences[i]
-        bbox = [xs[i], ys[i], ws[i], hs[i]]  # xywh
-
-        ind = label_to_ind[label_vec[i]]
-
-        if conf > act[ind]:
-            act[ind] = conf
-            bboxes[ind] = bbox
+    # Record the most confident detection for each object class as recorded in
+    # `label_to_ind` (confidence & bbox)
+    for i, label in enumerate(label_vec):
+        if label in label_to_ind:
+            conf = label_confidences[i]
+            ind = label_to_ind[label]
+            if conf > act[ind]:
+                act[ind] = conf
+                bboxes[ind] = [xs[i], ys[i], ws[i], hs[i]]  # xywh
 
     #########################
     # util functions
