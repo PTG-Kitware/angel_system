@@ -1,5 +1,5 @@
 version: "1.0"
-title: "All Recipes"
+title: "Coffee + Tea + Dessert Quesadilla + Oatmeal"
 labels:
   # Item:
   # - id: Integer identification number of the label.
@@ -10,7 +10,6 @@ labels:
   # - repeat: Optional field that indicated that the item must be repeated X times
   - id: 0
     label: "background"
-    full_str: "background"
   # Shared labels
   - id: 1
     label: "pour-water-kettle"
@@ -37,182 +36,144 @@ labels:
   - id: 8 # same action, different amounts
     label: "measure-half-cup-water"
     full_str: "Measure 1/2 cup water in the liquid measuring cup."
-  - id: 9
+  - id: 9 # same action, different amounts
     label: "measure-12oz-water"
     full_str: "Measure 12 ounces of water in the liquid measuring cup"
   - id: 10 # same action, different ingredient
     label: "scoop-nutella"
     full_str: "Use the butter knife to scoop nutella from the jar"
-  - id: 11
-    label: "scoop-nutbutter"
-    full_str: "Use the butter knife to scoop nut butter from the jar"
-  - id: 12
-    label: "scoop-jelly"
-    full_str: "Use the butter knife to scoop jelly from the jar"
-  - id: 13 # same action, different ingredient
+  - id: 11 # same action, different ingredient
     label: "spread-nutella-tortilla"
     full_str: "Spread nutella onto tortilla, leaving ½ inch uncovered at the edges"
-  - id: 14
-    label: "spread-nutbutter-tortilla"
-    full_str: "Spread nut butter onto tortilla, leaving ½ inch uncovered at the edges"
-  - id: 15
-    label: "spread-jelly-tortilla"
-    full_str: "Spread jelly onto tortilla, leaving ½ inch uncovered at the edges"
-  - id: 16  # same action, different applications
+  - id: 12 # same action, different applications
     label: "dq-top-banana-slices"
     full_str: "Top with banana slices."
-  - id: 17
+  - id: 13 # same action, different applications
     label: "oatmeal-top-banana-slices"
     full_str: "Top with banana slices."
-  - id: 18 # same action, different applications
+  - id: 14 # same action, different applications
     label: "dq-sprinkle-cinnamon"
     full_str: "Sprinkle small amount of cinnamon onto tortilla"
-  - id: 19 
+  - id: 15 # same action, different applications
     label: "oatmeal-sprinkle-cinnamon"
     full_str: "sprinkle with cinnamon"
-  - id: 20 # same action, different applications
+  - id: 16
     label: "tea-add-honey"
     full_str: "Add honey to mug"
-  - id: 21
+  - id: 17
     label: "oatmeal-drizzle-honey"
     full_str: "drizzle with honey"
-  - id: 22 # same action, different ingredient
+  - id: 18 # same action, different ingredient
     label: "dq-clean-knife"
     full_str: "Clean the knife by wiping with a paper towel."
-  - id: 23 
-    label: "pinwheel-clean-knife"
-    full_str: "Clean the knife by wiping with a paper towel."
-  - id: 24 # same action, different applications
+  - id: 19
     label: "tea-stir"
     full_str: "Stir" 
-  - id: 25
+  - id: 20
     label: "oatmeal-stir"
     full_str: "Stir"
   # Labels unique to coffee 
-  - id: 26
+  - id: 21
     label: "place-dipper-on-mug"
     full_str: "Place the dripper on top of the mug"
-  - id: 27
+  - id: 22
     label: "filter-fold-half"
     full_str: Take the coffee filter and fold it in half to create a semi-circle
-  - id: 28
+  - id: 23
     label: "filter-fold-quarter"
     full_str: "Fold the filter in half again to create a quarter-circle"
-  - id: 29
+  - id: 24
     label: "place-filter"
     full_str: "Place the folded filter into the dripper such that the the point of the quarter-circle rests in the center of the dripper"
-  - id: 30
+  - id: 25
     label: "spread-filter"
     full_str: "Spread the filter open to create a cone inside the dripper"
-  - id: 31
+  - id: 26
     label: "scale-turn-on"
     full_str: "Turn on the kitchen scale"
-  - id: 32
+  - id: 27
     label: "place-bowl-on-scale"
     full_str: "Place a bowl on the scale"
-  - id: 33
+  - id: 28
     label: "zero-scale"
     full_str: "Zero the scale"
-  - id: 34
+  - id: 29
     label: "measure-coffee-beans"
     full_str: "Add coffee beans to the bowl until the scale reads 25 grams"
-  - id: 35
+  - id: 30
     label: "pour-coffee-grinder"
     full_str: "Pour the measured coffee beans into the coffee grinder"
-  - id: 36
+  - id: 31
     label: "grind-beans"
     full_str: "Grind the coffee beans by pressing and holding down on the black part of the lid"
-  - id: 37
+  - id: 32
     label: "pour-beans-filter"
     #full_str: "Transfer the grounds to the filter cone"
     full_str: "pour the grounded coffee beans into the filter cone prepared in step 2"
-  - id: 38
+  - id: 33
     label: "pour-water-grounds-wet"
     #full_str: "Pour a small amount of water over the grounds in order to wet the grounds. Wait about 30 seconds."
     full_str: "Pour a small amount of water over the grounds in order to wet the grounds"
-  - id: 39
+  - id: 34
     label: "pour-water-grounds-circular"
     full_str: "slowly pour the water over the grounds in a circular motion. do not overfill beyond the top of the paper filter"
-  - id: 40
+  - id: 35
     label: "water-drain"
     full_str: "Allow the rest of the water in the dripper to drain"
-  - id: 41
+  - id: 36
     label: "remove-dripper"
     full_str: "Remove the dripper from the cup"
-  - id: 42
+  - id: 37
     label: "remove-grounds"
     full_str: "Remove the coffee grounds and paper filter from the dripper. "
-  - id: 43
+  - id: 38
     label: "discard-grounds"
     full_str: "Discard the coffee grounds and paper filter"
   # Labels unique to dessert quesadilla
-  - id: 44
+  - id: 39
     label: "fold-tortilla-half"
     full_str: "Fold tortilla in half into semi-cirlce"
-  - id: 45
+  - id: 40
     label: "slice-tortilla-half"
     full_str: "Slice tortilla in half using butter knife to create two triangular wedges"
-  - id: 46
+  - id: 41
     label: "place-tortilla-wedge"
     full_str: "Place tortilla wedge on the plate"
     repeat: 2
   # Labels unique to oatmeal
-  - id: 47
+  - id: 42
     label: "pour-water-bowl"
     full_str: "Pour the water from the liquid measuring cup into the microwave safe bowl."
-  - id: 48
+  - id: 43
     label: "measure-1-tbsp-oats"
     full_str: "Measure 1 Tablespoon of quick-cook oats and place in a microwave-safe bowl."
     repeat: 4
-  - id: 49
+  - id: 44
     label: "add-raisins"
     full_str: "Add handful of raisins"
-  - id: 50
-    label: "microwave"
-    full_str: "Microwave"
+  - id: 45 # same action but different amount of time
+    label: "microwave-30-sec"
+    full_str: "Microwave for 30 seconds."
+  - id: 46 # same action but different amount of time
+    label: "microwave-60-sec"
+    full_str: "Microwave for 60 seconds"
+  - id: 47
+    label: "stir-again"
+    full_str: "Stir"
   # Labels unique to tea
-  - id: 51
+  - id: 48
     label: "tea-bag-in-mug"
     full_str: "Place tea bag in mug"
-  - id: 52
+  - id: 49
     label: "pour-water-mug"
     full_str: "Pour water from the electric kettle into the mug"
-  - id: 53
+  - id: 50
     label: "steep"
     full_str: "Steep for 3 minutes"
-  - id: 54
+  - id: 51
     label: "remove-tea-bag"
     full_str: "Remove tea bag from mug"
-  - id: 55
+  - id: 52
     label: "discard-tea-bag"
     full_str: "Discard tea bag"
-  # Labels unique to pinwheel
-  - id: 56
-    label: "roll-tortilla"
-    full_str: "Roll the tortilla from one end to the other into a log shape, about 1.5 inches thick.  Roll it tight enough to prevent gaps, but not so tight that the filling leaks"
-  - id: 57
-    label: "insert-toothpick"
-    full_str: "Insert a toothpick into the tortilla. The toothpick should be placed such that 5 total toothpicks can be placed about 1 inch apart."
-    repeat: 5
-  - id: 58
-    label: "trim-tortilla"
-    full_str: "Trim one end of the tortilla roll leaving ½” margin from the toothpick"
-    repeat: 2
-  - id: 59
-    label: "discard-tortilla-ends"
-    full_str: "Discard both ends of the tortilla"
-  - id: 60
-    label: "place-floss-between-toothpicks"
-    full_str: "Slide floss under the tortilla, perpendicular to the length of the roll.  Place the floss halfway between two toothpicks."
-  # TODO: How to represent slicing the pinwheels so they can be repeated
-  # with plating each pinwheel optionally after each slice
-  - id: 61
-    label: "cross-floss"
-    full_str: "Cross the two ends of the floss over the top of the tortilla roll."
-  - id: 62
-    label: "floss-slice-tortilla"
-    full_str: "Holding one end of the floss in each hand, pull the floss ends in opposite directions to slice."
-    repeat: 4
-  - id: 63
-    label: "plate-pinwheels"
-    full_str: "Place the pinwheels on a plate."
+

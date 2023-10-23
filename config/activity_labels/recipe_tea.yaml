@@ -51,11 +51,11 @@ labels:
     full_str: "Discard tea bag"
     depends: [9]
   - id: 11
-    label: "add-honey"
+    label: "tea-add-honey"
     full_str: "Add honey to mug"
     depends:
   - id: 12
-    label: "stir"
+    label: "tea-stir"
     full_str: "Stir"
     depends: [7, 11]
   - id: 13
