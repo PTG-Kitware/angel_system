@@ -1,0 +1,44 @@
+{"Name": "Tea", "Steps":[
+    {
+        "StepDesc": "Measure 12 ounces of cold water and transfer to a kettle.",
+        "RequiredItems": [ "water", "kettle", "measuring cup" ],
+        "SubSteps": [],
+        "CurrSubStepIndex": -1
+    },
+    {
+        "StepDesc": "Place tea bag in mug.",
+        "RequiredItems": [ "mug", "tea bag" ],
+        "SubSteps": [],
+        "CurrSubStepIndex": -1
+    },
+    {
+        "StepDesc": "Check the temperature of the water.",
+        "RequiredItems": [ "thermometer", "water" ],
+        "SubSteps": [],
+        "CurrSubStepIndex": -1
+    },
+    {
+        "StepDesc": "Pour water into mug.",
+        "RequiredItems": [ "water", "mug" ],
+        "SubSteps": [],
+        "CurrSubStepIndex": -1
+    },
+    {
+        "StepDesc": "Steep for 3 minutes.",
+        "RequiredItems": [],
+        "SubSteps": [],
+        "CurrSubStepIndex": -1
+    },
+    {
+        "StepDesc": "Discard tea bag.",
+        "RequiredItems": [ "tea bag" ],
+        "SubSteps": [],
+        "CurrSubStepIndex": -1
+    },
+    {
+        "StepDesc": "Add honey and stir.",
+        "RequiredItems": [ "honey", "mug" ],
+        "SubSteps": [],
+        "CurrSubStepIndex": -1
+    }],
+    "CurrStepIndex":0,"PrevStepIndex":-1,"NextStepIndex":1}

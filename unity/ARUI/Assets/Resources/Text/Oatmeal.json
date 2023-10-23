@@ -1,0 +1,44 @@
+{"Name": "Oatmeal", "Steps":[
+    {
+        "StepDesc": "Measure 4 Tablespoons of quick-cook oats and place in a microwave-safe bowl.",
+        "RequiredItems": [ "oats", "bowl" ],
+        "SubSteps": [],
+        "CurrSubStepIndex": -1
+    },
+    {
+        "StepDesc": "Add 1/2 cup water.",
+        "RequiredItems": [ "water" ],
+        "SubSteps": [],
+        "CurrSubStepIndex": -1
+    },
+    {
+        "StepDesc": "Microwave for 30 seconds.",
+        "RequiredItems": [ "bowl", "microwave" ],
+        "SubSteps": [],
+        "CurrSubStepIndex": -1
+    },
+    {
+        "StepDesc": "Add handful of raisins and stir.",
+        "RequiredItems": [ "raisins", "bowl" ],
+        "SubSteps": [],
+        "CurrSubStepIndex": -1
+    },
+    {
+        "StepDesc": "Microwave for 60 more seconds then stir.",
+        "RequiredItems": [ "microwave", "bowl" ],
+        "SubSteps": [],
+        "CurrSubStepIndex": -1
+    },
+    {
+        "StepDesc": "Top with banana slices.",
+        "RequiredItems": [ "banana slices", "bowl" ],
+        "SubSteps": [],
+        "CurrSubStepIndex": -1
+    },
+    {
+        "StepDesc": "Sprinkle with cinnamon and drizzle with honey before serving.",
+        "RequiredItems": [ "cinnamon", "bowl", "honey" ],
+        "SubSteps": [],
+        "CurrSubStepIndex": -1
+    }],
+    "CurrStepIndex":0,"PrevStepIndex":-1,"NextStepIndex":1}

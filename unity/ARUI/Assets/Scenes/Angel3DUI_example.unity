@@ -182,6 +182,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3d674ff7b4a94e04d9a5dad6a0718a37, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  Automate: 1
 --- !u!1 &450324605
 GameObject:
   m_ObjectHideFlags: 0
@@ -345,7 +346,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 81980225b99f44f3195a30bcc5317c16, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  SkipNotificationMessage: 'You are skipping the current task:'
+  PrintVMDebug: 0
+  IsGuidanceActive: 1
 --- !u!1001 &1200407600
 PrefabInstance:
   m_ObjectHideFlags: 0
