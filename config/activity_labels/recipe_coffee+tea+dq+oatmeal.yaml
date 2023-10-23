@@ -1,4 +1,4 @@
-version: "1.0"
+version: "2.0"
 title: "Coffee + Tea + Dessert Quesadilla + Oatmeal"
 labels:
   # Item:
@@ -151,29 +151,23 @@ labels:
   - id: 44
     label: "add-raisins"
     full_str: "Add handful of raisins"
-  - id: 45 # same action but different amount of time
-    label: "microwave-30-sec"
-    full_str: "Microwave for 30 seconds."
-  - id: 46 # same action but different amount of time
-    label: "microwave-60-sec"
-    full_str: "Microwave for 60 seconds"
-  - id: 47
-    label: "stir-again"
-    full_str: "Stir"
+  - id: 45
+    label: "microwave"
+    full_str: "Microwave."
   # Labels unique to tea
-  - id: 48
+  - id: 46
     label: "tea-bag-in-mug"
     full_str: "Place tea bag in mug"
-  - id: 49
+  - id: 47
     label: "pour-water-mug"
     full_str: "Pour water from the electric kettle into the mug"
-  - id: 50
+  - id: 48
     label: "steep"
     full_str: "Steep for 3 minutes"
-  - id: 51
+  - id: 49
     label: "remove-tea-bag"
     full_str: "Remove tea bag from mug"
-  - id: 52
+  - id: 50
     label: "discard-tea-bag"
     full_str: "Discard tea bag"
 
