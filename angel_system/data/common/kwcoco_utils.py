@@ -634,6 +634,7 @@ def visualize_kwcoco_by_contact(dset=None, save_dir=""):
         plt.close(fig)  # needed to remove the plot because savefig doesn't clear it
     plt.close("all")
 
+
 def visualize_kwcoco_by_label(dset=None, save_dir=""):
     """Draw the bounding boxes from the kwcoco file on
     the associated images
@@ -666,10 +667,10 @@ def visualize_kwcoco_by_label(dset=None, save_dir=""):
         gt = im.get("activity_gt", "")
         if not gt:
             gt = ""
-        #act_pred = im.get("activity_pred", "")
+        # act_pred = im.get("activity_pred", "")
 
         fig, ax = plt.subplots()
-        #title = f"GT: {gt}, PRED: {act_pred}"
+        # title = f"GT: {gt}, PRED: {act_pred}"
         plt.title("\n".join(textwrap.wrap(gt, 55)))
 
         image = Image.open(im["file_name"])
@@ -683,7 +684,7 @@ def visualize_kwcoco_by_label(dset=None, save_dir=""):
         using_contact = False
         for aid, ann in anns.items():
             conf = ann.get("confidence", 1)
-            #if conf < 0.1:
+            # if conf < 0.1:
             #    continue
 
             x, y, w, h = ann["bbox"]  # xywh
@@ -721,6 +722,7 @@ def visualize_kwcoco_by_label(dset=None, save_dir=""):
 
     plt.close("all")
 
+
 def squish_conf_vals(dset):
     # Load kwcoco file
     dset = load_kwcoco(dset)
@@ -737,12 +739,14 @@ def squish_conf_vals(dset):
         for aid, ann in anns.items():
             conf = ann["confidence"]
 
-            #v = ((conf - 0.95) / 0.05) * 0.9 + 0.1
-            new_conf = 1 if conf >= 0.1 else 0 #max(v, 0.1)
+            # v = ((conf - 0.95) / 0.05) * 0.9 + 0.1
+            new_conf = 1 if conf >= 0.1 else 0  # max(v, 0.1)
 
             dset.anns[aid]["confidence"] = new_conf
-    
-    dset.fpath = dset.fpath.split(".mscoco.json")[0] + "_0.1_conf_to_1.mscoco.json"#"_squished_conf.mscoco.json"
+
+    dset.fpath = (
+        dset.fpath.split(".mscoco.json")[0] + "_0.1_conf_to_1.mscoco.json"
+    )  # "_squished_conf.mscoco.json"
     dset.dump(dset.fpath, newlines=True)
     print(f"Saved dset to {dset.fpath}")
 
@@ -752,8 +756,8 @@ def reorder_images(dset):
     data_dir = "/data/PTG/cooking/"
     ros_bags_dir = f"{data_dir}/ros_bags/"
     coffee_ros_bags_dir = f"{ros_bags_dir}/coffee/coffee_extracted/"
-    tea_ros_bags_dir = f"{ros_bags_dir}/tea/tea_extracted/" 
-    
+    tea_ros_bags_dir = f"{ros_bags_dir}/tea/tea_extracted/"
+
     # Load kwcoco file
     dset = load_kwcoco(dset)
     gid_to_aids = dset.index.gid_to_aids
@@ -776,7 +780,7 @@ def reorder_images(dset):
             images_dir = f"{tea_ros_bags_dir}/{video_name}_extracted/images"
         else:
             images_dir = f"{coffee_ros_bags_dir}/{video_name}_extracted/images"
-        
+
         images = glob.glob(f"{images_dir}/*.png")
         if not images:
             warnings.warn(f"No images found in {video_name}")
@@ -1099,7 +1103,9 @@ def update_obj_labels(dset, object_config_fn):
             if old_cat in ["coffee grounds + paper filter + filter cone"]:
                 old_cat = "coffee grounds + paper filter (quarter - open) + dripper"
             if old_cat in ["coffee grounds + paper filter + filter cone + mug"]:
-                old_cat = "coffee grounds + paper filter (quarter - open) + dripper + mug"
+                old_cat = (
+                    "coffee grounds + paper filter (quarter - open) + dripper + mug"
+                )
             if old_cat in ["paper filter + filter cone"]:
                 old_cat = "paper filter (quarter) + dripper"
             if old_cat in ["paper filter + filter cone + mug"]:

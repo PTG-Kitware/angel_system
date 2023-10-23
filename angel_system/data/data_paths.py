@@ -130,13 +130,39 @@ dq_ros_bags_dir = (
 
 dq_training_split = {
     "train_activity": [
-        f"{dq_ros_bags_dir}/kitware_dessert_quesadilla_video_{x}_extracted" for x in [7, 9, 10, 13, 14, 15, 16, 17, 18, 19, 23, 25, 27, 29, 30, 31, 32, 33, 34, 38, 40, 41]
+        f"{dq_ros_bags_dir}/kitware_dessert_quesadilla_video_{x}_extracted"
+        for x in [
+            7,
+            9,
+            10,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            23,
+            25,
+            27,
+            29,
+            30,
+            31,
+            32,
+            33,
+            34,
+            38,
+            40,
+            41,
+        ]
     ],
     "val": [
-        f"{dq_ros_bags_dir}/kitware_dessert_quesadilla_video_{x}_extracted" for x in [11, 20, 24, 44]
+        f"{dq_ros_bags_dir}/kitware_dessert_quesadilla_video_{x}_extracted"
+        for x in [11, 20, 24, 44]
     ],
     "test": [
-        f"{dq_ros_bags_dir}/kitware_dessert_quesadilla_video_{x}_extracted" for x in [8, 12, 22, 26, 28, 35, 42, 43]
+        f"{dq_ros_bags_dir}/kitware_dessert_quesadilla_video_{x}_extracted"
+        for x in [8, 12, 22, 26, 28, 35, 42, 43]
     ],
 }
 
@@ -154,10 +180,36 @@ oatmeal_training_split = {
     "train_activity": [
         f"{oatmeal_ros_bags_dir}/kitware_oatmeal_video_{x}_extracted"
         for x in [
-        11, 12, 13, 14, 15, 19, 22, 26, 29, 34, 35, 36, 39, 42, 43, 46, 47, 53, 54, 55, 57, 58, 59, 60, 61]
+            11,
+            12,
+            13,
+            14,
+            15,
+            19,
+            22,
+            26,
+            29,
+            34,
+            35,
+            36,
+            39,
+            42,
+            43,
+            46,
+            47,
+            53,
+            54,
+            55,
+            57,
+            58,
+            59,
+            60,
+            61,
+        ]
     ],
     "val": [
-        f"{oatmeal_ros_bags_dir}/kitware_oatmeal_video_{x}_extracted" for x in [31, 40, 49, 56]
+        f"{oatmeal_ros_bags_dir}/kitware_oatmeal_video_{x}_extracted"
+        for x in [31, 40, 49, 56]
     ],
     "test": [
         f"{oatmeal_ros_bags_dir}/kitware_oatmeal_video_{x}_extracted"
@@ -179,14 +231,38 @@ pinwheels_training_split = {
     "train_activity": [
         f"{pinwheels_ros_bags_dir}/kitware_pinwheel_video_{x}_extracted"
         for x in [
-            3, 11, 13, 14, 15, 17, 18, 19, 31, 35, 36, 37, 38, 39, 40, 42, 43, 46, 47, 48, 49, 50, 51, 52, 53, 56, 58
+            3,
+            11,
+            13,
+            14,
+            15,
+            17,
+            18,
+            19,
+            31,
+            35,
+            36,
+            37,
+            38,
+            39,
+            40,
+            42,
+            43,
+            46,
+            47,
+            48,
+            49,
+            50,
+            51,
+            52,
+            53,
+            56,
+            58,
         ]
     ],
     "val": [
         f"{pinwheels_ros_bags_dir}/kitware_pinwheel_video_{x}_extracted"
-        for x in [
-            20, 33, 54, 57
-        ]
+        for x in [20, 33, 54, 57]
     ],
     "test": [
         f"{pinwheels_ros_bags_dir}/kitware_pinwheel_video_{x}_extracted"
@@ -249,7 +325,7 @@ def grab_data(recipe, machine):
                 oatmeal_obj_config,
             )
         elif recipe == "pinwheel":
-             return (
+            return (
                 ptg_root,
                 data_dir,
                 pinwheels_activity_config_fn,
