@@ -59,7 +59,7 @@ public class SpaceManagement : Singleton<SpaceManagement>
         catch (DllNotFoundException ex)
         {
             loaded = false;
-            AngelARUI.Instance.LogDebugMessage("VM DLL not found: \n" + ex.Message, true);
+            AngelARUI.Instance.DebugLogMessage("VM DLL not found: \n" + ex.Message, true);
         }
 
         return loaded;

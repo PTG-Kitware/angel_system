@@ -114,13 +114,13 @@ public class OrbMessageContainer : MonoBehaviour
     {
         // Update eye tracking flag
         if (_isLookingAtMessage && EyeGazeManager.Instance.CurrentHit != EyeTarget.orbMessage
-            && EyeGazeManager.Instance.CurrentHit != EyeTarget.orbtasklistButton
-            && EyeGazeManager.Instance.CurrentHit != EyeTarget.pieCollider)
+            && EyeGazeManager.Instance.CurrentHit != EyeTarget.orbtasklistButton && EyeGazeManager.Instance.CurrentHit != EyeTarget.pieCollider
+            )
             _isLookingAtMessage = false;
 
         else if (!_isLookingAtMessage && (EyeGazeManager.Instance.CurrentHit == EyeTarget.orbMessage
-            || EyeGazeManager.Instance.CurrentHit == EyeTarget.orbtasklistButton)
-            || EyeGazeManager.Instance.CurrentHit == EyeTarget.pieCollider)
+            || EyeGazeManager.Instance.CurrentHit == EyeTarget.orbtasklistButton || EyeGazeManager.Instance.CurrentHit == EyeTarget.pieCollider))
+            
             _isLookingAtMessage = true;
 
         if (!IsMessageContainerActive || IsMessageLerping) return;
@@ -163,13 +163,10 @@ public class OrbMessageContainer : MonoBehaviour
             _allPies[pieIndex].TaskName = currentSelectedTasks[taskName].Name;
             _allPies[pieIndex].SetTaskMessage(currentSelectedTasks[taskName].CurrStepIndex,
                 currentSelectedTasks[taskName].Steps.Count,
-                currentSelectedTasks[taskName].Steps[currentSelectedTasks[taskName].CurrStepIndex].StepDesc);
+                currentSelectedTasks[taskName].Steps[currentSelectedTasks[taskName].CurrStepIndex].StepDesc, currentTaskID);
             _allPies[pieIndex].UpdateMessageVisibility(currentTaskID);
             pieIndex++;
         }
-
-        HandleUpdateActiveTaskEvent(currentSelectedTasks, currentTaskID);
-     
     }
 
     #region Message and Notification Updates
@@ -190,22 +187,6 @@ public class OrbMessageContainer : MonoBehaviour
     }
 
     #endregion
-
-    //private void ToggleOrbTaskList() => SetOrbListActive(!_prevText.gameObject.activeSelf);
-    private void SetOrbListActive(bool active)
-    {
-        //_prevText.gameObject.SetActive(active);
-        //_nextText.gameObject.SetActive(active);
-
-        //if (active)
-        //{
-        //    _textContainer.MessageCollider.size = new Vector3(_textContainer.MessageCollider.size.x, 0.08f, _textContainer.MessageCollider.size.z);
-        //}
-        //else
-        //{
-        //    _textContainer.MessageCollider.size = new Vector3(_textContainer.MessageCollider.size.x, 0.05f, _textContainer.MessageCollider.size.z);
-        //}
-    }
 
     /// <summary>
     /// Turn on or off message fading
@@ -285,33 +266,18 @@ public class OrbMessageContainer : MonoBehaviour
                 OrbPie ob = taskNameToOrbPie[task];
                 if (currentSelectedTasks[task].CurrStepIndex >= currentSelectedTasks[task].Steps.Count) {
                     ob.SetTaskMessage(currentSelectedTasks[task].Steps.Count -1,
-                currentSelectedTasks[task].Steps.Count, "Done");
-                    AngelARUI.Instance.TryGetUserFeedbackOnUserIntent("Did you finish task '"+task+"'?", () => SetTaskAsDone(task));
+                currentSelectedTasks[task].Steps.Count, "Done", currentTaskID);
                 } else
                 {
                     ob.SetTaskMessage(currentSelectedTasks[task].CurrStepIndex,
                 currentSelectedTasks[task].Steps.Count,
-                    currentSelectedTasks[task].Steps[currentSelectedTasks[task].CurrStepIndex].StepDesc);
+                    currentSelectedTasks[task].Steps[currentSelectedTasks[task].CurrStepIndex].StepDesc, currentTaskID);
                 }
 
                 float ratio = Mathf.Min(1,(float)currentSelectedTasks[task].CurrStepIndex / (float)(currentSelectedTasks[task].Steps.Count - 1));
                 ob.UpdateCurrentTaskStatus(ratio, currentTaskID);
             }
         }
-
-        if (currentSelectedTasks[currentTaskID].CurrStepIndex < currentSelectedTasks[currentTaskID].Steps.Count)
-            AudioManager.Instance.PlayText(currentSelectedTasks[currentTaskID].Steps[currentSelectedTasks[currentTaskID].CurrStepIndex].StepDesc);
-
-    }
-
-    /// <summary>
-    /// Mark the task with the given ID as done 
-    /// </summary>
-    /// <param name="taskID"></param>
-    private void SetTaskAsDone(string taskID)
-    {
-        AudioManager.Instance.PlaySound(transform.position,SoundType.taskDone);
-        DataProvider.Instance.RemoveTaskFromSelected(taskID);
     }
 
     #region Update UI

@@ -100,7 +100,7 @@ public class ConfirmationDialogue : MonoBehaviour
         if (isConfirmed)
             _selectEvent.Invoke();
         else
-            AngelARUI.Instance.LogDebugMessage("The user did not confirm the dialogue", true);
+            AngelARUI.Instance.DebugLogMessage("The user did not confirm the dialogue", true);
 
         StopCoroutine(DecreaseTime());
         Destroy(this.gameObject);

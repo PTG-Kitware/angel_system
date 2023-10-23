@@ -8,12 +8,16 @@ using UnityEngine.Events;
 
 public enum SusbcriberType
 {
-    UpdateTask, UpdateStep, UpdateActiveTask
+    TaskListChanged, CurrentStepChanged, ObservedTaskChanged
 }
 
 public class DataProvider : Singleton<DataProvider>
 {
     private Dictionary<string, string> _manual = null; // Don't write to manual, only read! Manual should be only set once.
+    public bool ManualInitialized
+    {
+        get => _manual != null;
+    }
 
     private Dictionary<string, TaskList> _currentSelectedTasks = new Dictionary<string, TaskList>();
     public Dictionary<string, TaskList> CurrentSelectedTasks => _currentSelectedTasks;
@@ -23,29 +27,29 @@ public class DataProvider : Singleton<DataProvider>
 
     private Dictionary<string, CVDetectedObj> DetectedObjects = new Dictionary<string, CVDetectedObj>();
 
-    #region Data Update Event Handling
+    #region Data Change Event Handling
 
-    private List<UnityEvent> UpdateTasksSubscribers = new List<UnityEvent>(); /// <Events are triggered if task list changed (add or removal of tasks)
-    private List<UnityEvent> UpdateStepSubscribers = new List<UnityEvent>();  /// <Events are triggered if step changed at any task list
-    private List<UnityEvent> UpdateActiveTaskSubscribers = new List<UnityEvent>(); /// <Events are triggered if active task by user was detected 
-                                                                                                                                                                 
+    private List<UnityEvent> TaskListChangedSubscribers = new List<UnityEvent>(); /// <Events are triggered if task list changed (add or removal of tasks)
+    private List<UnityEvent> CurrentStepChangedSubscribers = new List<UnityEvent>();  /// <Events are triggered if step changed at any task list
+    private List<UnityEvent> ObservedTaskChangedSubscribers = new List<UnityEvent>(); /// <Events are triggered if active task by user was detected 
+
     private void PublishToSubscribers(SusbcriberType type)
     {
-        if (type.Equals(SusbcriberType.UpdateTask))
+        if (type.Equals(SusbcriberType.TaskListChanged))
         {
-            foreach (var subscriber in UpdateTasksSubscribers)
+            foreach (var subscriber in TaskListChangedSubscribers)
             {
                 subscriber.Invoke();
             }
-        } else if (type.Equals(SusbcriberType.UpdateActiveTask))
+        } else if (type.Equals(SusbcriberType.ObservedTaskChanged))
         {
-            foreach (var subscriber in UpdateActiveTaskSubscribers)
+            foreach (var subscriber in ObservedTaskChangedSubscribers)
             {
                 subscriber.Invoke();
             }
         } else
         {
-            foreach (var subscriber in UpdateStepSubscribers)
+            foreach (var subscriber in CurrentStepChangedSubscribers)
             {
                 subscriber.Invoke();
             }
@@ -60,14 +64,14 @@ public class DataProvider : Singleton<DataProvider>
         UnityEvent newDataUpdateEvent = new UnityEvent();
         newDataUpdateEvent.AddListener(subscriberEvent);
 
-        if (type.Equals(SusbcriberType.UpdateTask))
-            UpdateTasksSubscribers.Add(newDataUpdateEvent);
+        if (type.Equals(SusbcriberType.TaskListChanged))
+            TaskListChangedSubscribers.Add(newDataUpdateEvent);
 
-        else if (type.Equals(SusbcriberType.UpdateActiveTask))
-            UpdateActiveTaskSubscribers.Add(newDataUpdateEvent);
+        else if (type.Equals(SusbcriberType.ObservedTaskChanged))
+            ObservedTaskChangedSubscribers.Add(newDataUpdateEvent);
 
         else
-            UpdateStepSubscribers.Add(newDataUpdateEvent);
+            CurrentStepChangedSubscribers.Add(newDataUpdateEvent);
     }
 
     #endregion
@@ -75,39 +79,37 @@ public class DataProvider : Singleton<DataProvider>
     #region Task List Data 
     /// <summary>
     /// Initialize the task manual. Can only be set once at start and contains the file names of all tasks
-    /// Go to the resources folder and load a new tasklist
-    /// json file. The name of the file should be in the form
-    /// (recipename).json and we will look in 'Resources/Text'
+    /// jsonTaskLists is a list of json strings 
     /// </summary>
-    /// <param name="filenamesWithoutExtension"></param>
-    public void InitManual(List<string> filenamesWithoutExtension)
+    /// <param name="jsonTaskLists"></param>
+    public void InitManual(Dictionary<string, string> jsonTaskLists)
     {
-        if (_manual != null) return;
+        if (ManualInitialized || jsonTaskLists == null || jsonTaskLists.Keys.Count == 0) 
+            return;
         else
             _manual = new Dictionary<string, string>();
 
-        foreach (string filename in filenamesWithoutExtension)
+        foreach (string taskID in jsonTaskLists.Keys)
         {
-            var jsonTextFile = Resources.Load<TextAsset>("Text/" + filename);
-            AngelARUI.Instance.LogDebugMessage("DATA PROVIDER: loaded task from json: " + jsonTextFile.text, true);
-
-            _manual.Add(filename, jsonTextFile.text);
+            _manual.Add(taskID, jsonTaskLists[taskID]);
+            AngelARUI.Instance.DebugLogMessage("DATA PROVIDER: loaded task from json: " + jsonTaskLists[taskID], true);
         }
     }
 
     /// <summary>
     /// Set the list of all tasks that the has to do.
     ///
-    /// Nothing changes if tasksToBe is null or empty or longer than the manual, else an event
-    /// is published to all subscribers that the task list changed.
+    /// Nothing changes if tasksToBe is null,empty orrlonger than the manual or if tasksToBe is the same as 
+    /// the current one, else an event is published to all subscribers that the task list changed.
     /// </summary>
     /// <param name="tasksToBe"></param>
     public void SetSelectedTasksFromManual(List<string> tasksToBe)
     {
-        if (_manual==null || tasksToBe == null || tasksToBe.Count > _manual.Keys.Count) return;
+        if (!ManualInitialized || tasksToBe == null || tasksToBe.Count > _manual.Keys.Count) return;
 
         Dictionary<string, TaskList> copy = new Dictionary<string, TaskList>(_currentSelectedTasks);
 
+        bool listChanged = false;
         //Add potential new ones that have not been selected before and existing tasks
         foreach (string taskID in tasksToBe)
         {
@@ -117,6 +119,7 @@ public class DataProvider : Singleton<DataProvider>
                 {
                     TaskList task = JsonUtility.FromJson<TaskList>(_manual[taskID]);
                     copy.Add(taskID, task);
+                    listChanged = true;
                 }
             }
         }
@@ -124,36 +127,46 @@ public class DataProvider : Singleton<DataProvider>
         //Check if tasks were removed from new list
         foreach (string taskID in _currentSelectedTasks.Keys)
         {
-            if (!tasksToBe.Contains(taskID)) //check if it exists in manual
+            if (!tasksToBe.Contains(taskID))
+            {//check if it exists in manual 
                 copy.Remove(taskID);
+                listChanged = true;
+            }
         }
 
-        if (copy.Keys.Count>0 && (_currentObservedTask.Equals("") || !copy.ContainsKey(_currentObservedTask))) //Set the a random initial value for the currentObservedTask
-            SetCurrentlyObservedTask(copy.First().Key);
-            
+        if (!listChanged) return; //Do nothing if the currently observed task list did not change
+
+        //Set new currently selected task
         _currentSelectedTasks = copy;
 
-        string debug = "DATA PROVIDER: selected tasks changed to: ";
+        //Update currently observed task
+        if (copy.Keys.Count > 0 && (_currentObservedTask.Equals("") || !copy.ContainsKey(_currentObservedTask))) //Set the a random initial value for the currentObservedTask
+            SetCurrentObservedTask(copy.First().Key);
+
+        string debug = "DATA PROVIDER: selected tasks set to: ";
         foreach (string taskID in _currentSelectedTasks.Keys)
             debug += taskID + ", ";
-        AngelARUI.Instance.LogDebugMessage(debug, true);
-        PublishToSubscribers(SusbcriberType.UpdateTask);
+        AngelARUI.Instance.DebugLogMessage(debug, true);
+        PublishToSubscribers(SusbcriberType.TaskListChanged);
     }
 
     /// <summary>
     /// Set the task that is currently observed by the task monitor
     ///
     /// Nothing happens if the taskID is not present in the current list of selected tasks by the user,
-    /// else an event is published to all subscribers that the currenlty observed task changed.
+    /// or taskID is the same as the currentlyObservedTask, else an event is published to all subscribers that the currenlty observed task changed.
     /// </summary>
     /// <param name="taskID"></param>
-    public void SetCurrentlyObservedTask(string taskID)
+    public void SetCurrentObservedTask(string taskID)
     {
-        if (_manual == null || _currentSelectedTasks == null || !_currentSelectedTasks.ContainsKey(taskID)) return;
+        if (!ManualInitialized || _currentSelectedTasks == null 
+            || !_currentSelectedTasks.ContainsKey(taskID)
+            || _currentObservedTask == taskID) return;
+
         _currentObservedTask = taskID;
 
-        AngelARUI.Instance.LogDebugMessage("DATA PROVIDER: currently observed event: "+ taskID, true);
-        PublishToSubscribers(SusbcriberType.UpdateActiveTask);
+        AngelARUI.Instance.DebugLogMessage("DATA PROVIDER: currently observed event: "+ taskID, true);
+        PublishToSubscribers(SusbcriberType.ObservedTaskChanged);
     }
 
     /// <summary>
@@ -163,14 +176,17 @@ public class DataProvider : Singleton<DataProvider>
     /// set to the last step in the task list.
     ///
     /// Nothing happens if taskID is not present in the the currently selected tasks
-    /// or the user did not select any task, else an event is published to all subscribers
+    /// or the user did not select any task or 'stepIndex' is the same as the currnetStepIndex of 
+    /// the given task, else an event is published to all subscribers
     /// that the current step index changed.
     /// </summary>
     /// <param name="taskID">id of task list</param>
     /// <param name="stepIndex">index of current step in the task list given by taskID</param>
     public void SetCurrentStep(string taskID, int stepIndex)
     {
-        if (_manual == null || _currentSelectedTasks == null || !_currentSelectedTasks.ContainsKey(taskID)) return;
+        if (!ManualInitialized || _currentSelectedTasks == null 
+            || !_currentSelectedTasks.ContainsKey(taskID)
+            || _currentSelectedTasks[taskID].CurrStepIndex == stepIndex) return;
 
         if (stepIndex <= 0)
         {
@@ -197,17 +213,17 @@ public class DataProvider : Singleton<DataProvider>
             _currentSelectedTasks[taskID].NextStepIndex = stepIndex + 1;
         }
 
-        AngelARUI.Instance.LogDebugMessage("DATA PROVIDER: current step index changed for: " + taskID +" - ID: "+ stepIndex, true);
-        PublishToSubscribers(SusbcriberType.UpdateStep);
+        AngelARUI.Instance.DebugLogMessage("DATA PROVIDER: current step index changed for: " + taskID +" - ID: "+ stepIndex, true);
+        PublishToSubscribers(SusbcriberType.CurrentStepChanged);
     }
 
     /// <summary>
     /// Proceed to the next step at the given task. Nothing happens if the taskID is not currently selected
     /// </summary>
     /// <param name="taskID"></param>
-    public void GoToNextStep(string taskID)
+    private void GoToNextStep(string taskID)
     {
-        if (_manual == null || _currentSelectedTasks == null || !_currentSelectedTasks.ContainsKey(taskID)) return;
+        if (!ManualInitialized || _currentSelectedTasks == null || !_currentSelectedTasks.ContainsKey(taskID)) return;
         int potentialStepIndex = _currentSelectedTasks[taskID].CurrStepIndex + 1;
 
         SetCurrentStep(taskID, potentialStepIndex);
@@ -217,25 +233,12 @@ public class DataProvider : Singleton<DataProvider>
     /// Proceed to the previous step at the given task. Nothing happens if the taskID is not currently selected
     /// </summary>
     /// <param name="taskID"></param>
-    public void GoToPreviousStep(string taskID)
+    private void GoToPreviousStep(string taskID)
     {
         if (_manual == null || _currentSelectedTasks == null || !_currentSelectedTasks.ContainsKey(taskID)) return;
         int potentialStepIndex = _currentSelectedTasks[taskID].CurrStepIndex -1;
 
         SetCurrentStep(taskID, potentialStepIndex);
-    }
-
-    /// <summary>
-    /// Remove the given task from the currently selected tasklist (e.g.,if task is done)
-    /// </summary>
-    /// <param name="taskID"></param>
-    public void RemoveTaskFromSelected(string taskID)
-    {
-        if (!_currentSelectedTasks.ContainsKey(taskID)) return;
-
-        List<string> copy = new List<string>(_currentSelectedTasks.Keys);
-        copy.Remove(taskID);
-        SetSelectedTasksFromManual(copy);
     }
 
     #endregion

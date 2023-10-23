@@ -17,28 +17,14 @@ MonoBehaviour:
   recognitionConfidenceLevel: 2
   speechCommands:
   - localizationKey: 
-    keyword: Stop
+    keyword: stop
     keyCode: 0
     action:
       id: 0
       description: 
       axisConstraint: 0
   - localizationKey: 
-    keyword: Menu
-    keyCode: 0
-    action:
-      id: 0
-      description: 
-      axisConstraint: 0
-  - localizationKey: 
-    keyword: next
-    keyCode: 0
-    action:
-      id: 0
-      description: 
-      axisConstraint: 0
-  - localizationKey: 
-    keyword: previous
+    keyword: mute
     keyCode: 0
     action:
       id: 0

@@ -176,7 +176,7 @@ public class AudioManager : Singleton<AudioManager>, IMixedRealitySpeechHandler
         yield return new WaitForEndOfFrame();
 
         string cappedText = Utils.GetCappedText(text, 50);
-        AngelARUI.Instance.LogDebugMessage("Orb says: " + cappedText, true);
+        AngelARUI.Instance.DebugLogMessage("Orb says: " + cappedText, true);
         _tTos.StartSpeaking(cappedText);
         _currentlyPlayingText = _tTos.AudioSource;
 
@@ -219,34 +219,10 @@ public class AudioManager : Singleton<AudioManager>, IMixedRealitySpeechHandler
             if (_tTos)
                 _tTos.StopSpeaking();
 
-            AngelARUI.Instance.LogDebugMessage("User triggered: Orb stopped speaking", true);
+            AngelARUI.Instance.DebugLogMessage("User triggered: Orb stopped speaking", true);
         }
 
-        if (eventData.Command.Keyword.ToLower().Equals("menu"))
-        {
-            ManualManager.Instance.SetMenuActive(!ManualManager.Instance.MenuActive);
-
-            AngelARUI.Instance.LogDebugMessage("User triggered: Toggle Menu", true);
-        }
-
-        if (eventData.Command.Keyword.ToLower().Equals("next"))
-        {
-            OrbPie pie = EyeGazeManager.Instance.CurrentHitObj.transform.parent.parent.GetComponent<OrbPie>();
-            if (pie != null && pie.TaskName.Length > 0)
-            {
-                DataProvider.Instance.GoToNextStep(pie.TaskName);
-                AngelARUI.Instance.LogDebugMessage("User triggered: Next Step of task: " + pie.TaskName, true);
-            }
-        }
-
-        if (eventData.Command.Keyword.ToLower().Equals("previous"))
-        {
-            OrbPie pie = EyeGazeManager.Instance.CurrentHitObj.transform.parent.parent.GetComponent<OrbPie>();
-            if (pie != null && pie.TaskName.Length > 0)
-            {
-                DataProvider.Instance.GoToPreviousStep(pie.TaskName);
-                AngelARUI.Instance.LogDebugMessage("User triggered: Previous Step of task: " + pie.TaskName, true);
-            }
-        }
+        if (eventData.Command.Keyword.ToLower().Equals("mute"))
+            MuteAudio(!_isMute);
     }
 }

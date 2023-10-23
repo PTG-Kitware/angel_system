@@ -42,9 +42,9 @@ public class MultiTaskList : Singleton<MultiTaskList>
         curr.multiListInstance.ListContainer = this.gameObject;
         curr.multiListInstance.index = 0;
         //Register subscribers
-        DataProvider.Instance.RegisterDataSubscriber(() => HandleDataUpdateEvent(), SusbcriberType.UpdateTask);
-        DataProvider.Instance.RegisterDataSubscriber(() => HandleDataUpdateEvent(), SusbcriberType.UpdateActiveTask);
-        DataProvider.Instance.RegisterDataSubscriber(() => HandleDataUpdateEvent(), SusbcriberType.UpdateStep);
+        DataProvider.Instance.RegisterDataSubscriber(() => HandleDataUpdateEvent(), SusbcriberType.TaskListChanged);
+        DataProvider.Instance.RegisterDataSubscriber(() => HandleDataUpdateEvent(), SusbcriberType.ObservedTaskChanged);
+        DataProvider.Instance.RegisterDataSubscriber(() => HandleDataUpdateEvent(), SusbcriberType.CurrentStepChanged);
         //Set inactive by default
         ToggleOverview(false);
     }
@@ -151,7 +151,10 @@ public class MultiTaskList : Singleton<MultiTaskList>
                 SetupCurrTaskOverview currSetup = _containers[0].setupInstance;
                 if (pair.Value.CurrStepIndex != -1)
                 {
-                    currSetup.SetupCurrTask(pair.Value.Steps[pair.Value.CurrStepIndex], this.GetComponent<TasklistPositionManager>());
+                    if (pair.Value.CurrStepIndex >= pair.Value.Steps.Count)
+                        currSetup.SetupCurrTask(pair.Value.Steps[pair.Value.Steps.Count-1], this.GetComponent<TasklistPositionManager>());
+                    else
+                        currSetup.SetupCurrTask(pair.Value.Steps[pair.Value.CurrStepIndex], this.GetComponent<TasklistPositionManager>());
                 }
                 if (pair.Value.NextStepIndex != -1)
                 {
@@ -182,7 +185,10 @@ public class MultiTaskList : Singleton<MultiTaskList>
                 SetupCurrTaskOverview currSetup = curr.setupInstance;
                 if (pair.Value.CurrStepIndex != -1)
                 {
-                    currSetup.SetupCurrTask(pair.Value.Steps[pair.Value.CurrStepIndex]);
+                    if (pair.Value.CurrStepIndex >= pair.Value.Steps.Count)
+                        currSetup.SetupCurrTask(pair.Value.Steps[pair.Value.Steps.Count - 1]);
+                    else
+                        currSetup.SetupCurrTask(pair.Value.Steps[pair.Value.CurrStepIndex]);
                 }
                 if (pair.Value.NextStepIndex != -1)
                 {

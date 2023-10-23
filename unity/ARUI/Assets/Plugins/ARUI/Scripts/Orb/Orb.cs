@@ -47,8 +47,6 @@ public class Orb : Singleton<Orb>
     private bool _lazyLookAtRunning = false;                 /// <used for lazy look at disable
     private bool _lazyFollowStarted = false;                 /// <used for lazy following
 
-    private bool _guidanceIsActive = true;
-
     /// <summary>
     /// Get all orb references from prefab
     /// </summary>
@@ -83,20 +81,6 @@ public class Orb : Singleton<Orb>
     /// </summary>
     private void Update()
     {
-        _orbHandle.IsActive = (_orbBehavior == OrbMovementBehavior.Fixed);
-        _followSolver.IsPaused = (_orbBehavior == OrbMovementBehavior.Fixed || _face.UserIsGrabbing);
-
-        float distance = Vector3.Distance(_followSolver.transform.position, AngelARUI.Instance.ARCamera.transform.position);
-        if (distance > 0.8)
-            _followSolver.transform.localScale = new Vector3(distance * 1.1f, distance * 1.1f, distance * 1.1f);
-        else
-            _followSolver.transform.localScale = new Vector3(1, 1, 1);
-
-        if (_guidanceIsActive != AngelARUI.Instance.IsGuidanceActive)
-            ToggleOrbGuidance();
-
-        if (!_guidanceIsActive) return;
-
         // Update eye tracking flag
         if (_isLookingAtOrb && EyeGazeManager.Instance.CurrentHit != EyeTarget.orbFace)
             SetIsLookingAtFace(false);
@@ -106,15 +90,17 @@ public class Orb : Singleton<Orb>
         if (_isLookingAtOrb || _messageContainer.IsLookingAtMessage)
             _face.MessageNotificationEnabled = false;
 
+        _orbHandle.IsActive = (_orbBehavior == OrbMovementBehavior.Fixed);
+        _followSolver.IsPaused = (_orbBehavior == OrbMovementBehavior.Fixed || _face.UserIsGrabbing);
+
+        float distance = Vector3.Distance(_followSolver.transform.position, AngelARUI.Instance.ARCamera.transform.position);
+        if (distance > 0.8)
+            _followSolver.transform.localScale = new Vector3(distance * 1.1f, distance * 1.1f, distance * 1.1f);
+        else
+            _followSolver.transform.localScale = new Vector3(1, 1, 1);
+
         if (DataProvider.Instance.CurrentSelectedTasks.Keys.Count > 0)
             UpdateMessageVisibility();
-    }
-
-    private void ToggleOrbGuidance()
-    {
-        _face.SetOrbGuidance(AngelARUI.Instance.IsGuidanceActive);
-        _messageContainer.gameObject.SetActive(AngelARUI.Instance.IsGuidanceActive);
-        _guidanceIsActive = AngelARUI.Instance.IsGuidanceActive;
     }
 
     #region Visibility, Position Updates and eye/collision event handler
@@ -125,12 +111,11 @@ public class Orb : Singleton<Orb>
     /// </summary>
     private void UpdateMessageVisibility()
     {
-        if ((IsLookingAtOrb(false) && !_messageContainer.IsMessageContainerActive && !_messageContainer.IsMessageFading && !ManualManager.Instance.MenuActive))
+        if ((IsLookingAtOrb(false) && !_messageContainer.IsMessageContainerActive && !_messageContainer.IsMessageFading))
         { //Set the message visible!
             _messageContainer.IsMessageContainerActive = true;
         }
-        else if ( (ManualManager.Instance.MenuActive && _messageContainer.IsMessageContainerActive)
-            || (!_messageContainer.IsLookingAtMessage && !IsLookingAtOrb(false) && _followSolver.IsOutOfFOV))
+        else if (!_messageContainer.IsLookingAtMessage && !IsLookingAtOrb(false) && _followSolver.IsOutOfFOV)
         {
             _messageContainer.IsMessageContainerActive = false;
         }
@@ -316,9 +301,9 @@ public class Orb : Singleton<Orb>
     /// </summary>
     private void ListenToDataEvents()
     {
-        DataProvider.Instance.RegisterDataSubscriber(() => HandleUpdateTaskListEvent(), SusbcriberType.UpdateTask);
-        DataProvider.Instance.RegisterDataSubscriber(() => HandleUpdateActiveTaskEvent(), SusbcriberType.UpdateActiveTask);
-        DataProvider.Instance.RegisterDataSubscriber(() => HandleUpdateActiveStepEvent(), SusbcriberType.UpdateStep);
+        DataProvider.Instance.RegisterDataSubscriber(() => HandleUpdateTaskListEvent(), SusbcriberType.TaskListChanged);
+        DataProvider.Instance.RegisterDataSubscriber(() => HandleUpdateActiveTaskEvent(), SusbcriberType.ObservedTaskChanged);
+        DataProvider.Instance.RegisterDataSubscriber(() => HandleUpdateActiveStepEvent(), SusbcriberType.CurrentStepChanged);
     }
 
     /// <summary>

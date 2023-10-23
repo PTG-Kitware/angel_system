@@ -271,7 +271,7 @@ public class ProcessObjectVisibility : Singleton<ProcessObjectVisibility>
 
         if (!visibleNonControllables.Contains(vmc))
         {
-            AngelARUI.Instance.LogDebugMessage("Registered: " + vmc.gameObject.name, true);
+            AngelARUI.Instance.DebugLogMessage("Registered: " + vmc.gameObject.name, true);
             visibleNonControllables.Add(vmc);
         }
          
@@ -282,34 +282,66 @@ public class ProcessObjectVisibility : Singleton<ProcessObjectVisibility>
     {
         if (!visibleNonControllables.Contains(vmc)) return;
 
-        AngelARUI.Instance.LogDebugMessage("Deregistered: " + vmc.gameObject.name, true);
+        AngelARUI.Instance.DebugLogMessage("Deregistered: " + vmc.gameObject.name, true);
 
         visibleNonControllables.Remove(vmc);
         assignedColors.Remove(vmc.Color);
     }
 
-    private void PositionInView()
+    #region Getter and Setter
+
+    /// <summary>
+    /// TODO
+    /// </summary>
+    /// <returns></returns>
+    public Dictionary<VMNonControllable, List<Rect>> GetAllRects()
     {
-        const float DISTANCE_FROM_CAM = 50;
-        Vector2 padding = new Vector2(0.01f, 0.1f); //Distance we want to keep from the viewport borders.
+        Dictionary<VMNonControllable, List<Rect>> rects = new Dictionary<VMNonControllable, List<Rect>>();
+        if (AABBsPerNonControllable == null) return rects;
 
-        Bounds bounds = GetComponent<MeshFilter>().mesh.bounds;    //Get the bounds of the model - these are in local space of the model, axis aligned.
-                                                                   //Calculate the max width the object is allowed to have in world space, based on the padding we decided.
-        float maxWidth = Vector3.Distance(Camera.main.ViewportToWorldPoint(new Vector3(padding.x, 0.5f, DISTANCE_FROM_CAM)),
-            Camera.main.ViewportToWorldPoint(new Vector3(1f - padding.x, 0.5f, DISTANCE_FROM_CAM)));
-        //Calculate the scale based on width only - you will have to check if the model is tall instead of wide and check against the aspect of the camera, and act accordingly.
-        float scale = (maxWidth / bounds.size.x);
-        //Apply the scale to the model.
-        transform.localScale = Vector3.one * scale;
+        foreach (var item in AABBsPerNonControllable.Keys)
+        {
+            if (!item.IsDestroyed)
+                rects.Add((VMNonControllable)item, AABBsPerNonControllable[item]);
+        }
 
-        //Position the model at the desired distance.
-        Vector3 desiredPosition = DISTANCE_FROM_CAM * Camera.main.transform.forward + Camera.main.transform.position;
-        //The max width we calculated is for the entirety of the model in the viewport, so we need to position it so the front of the model is at the desired distance, not the center.
-        //You will also have to keep rotation of the camera and the model in mind.
-        transform.position = desiredPosition + new Vector3(0, 0, bounds.extents.z * scale);
+        return rects;
     }
 
+    /// <summary>
+    /// TODO
+    /// 00 is LL
+    /// </summary>
+    /// <param name="x"></param>
+    /// <param name="y"></param>
+    /// <returns></returns>
+    private int GetObjectID(int x, int y)
+    {
+        //00 is LL
+        int Ycorrected = _imageTex.height - y;
+        Color value = _imageTex.GetPixel(x, Ycorrected);
 
+        if (value.a != 0 && value != Color.black)
+        {
+            foreach (var item in assignedColors)
+            {
+                if (Utils.IsSameColor(value, item, 0.02f))
+                {
+                    value = item;
+                    break;
+                }
+            }
+        }
+
+        if (colorIDs.ContainsKey(value))
+            return colorIDs[value];
+        else
+            return -1;
+    }
+
+    #endregion
+
+#if UNITY_EDITOR
     private void OnGUI()
     {
         if (!AngelARUI.Instance.PrintVMDebug) return;
@@ -342,48 +374,5 @@ public class ProcessObjectVisibility : Singleton<ProcessObjectVisibility>
 
     }
 
-    public Dictionary<VMNonControllable, List<Rect>> GetAllRects() {
-        Dictionary<VMNonControllable, List<Rect>> rects = new Dictionary<VMNonControllable, List<Rect>>();
-        if (AABBsPerNonControllable == null) return rects;
-
-        foreach (var item in AABBsPerNonControllable.Keys)
-        {
-            if (!item.IsDestroyed)
-                rects.Add((VMNonControllable)item, AABBsPerNonControllable[item]);
-        }
-
-        return rects;
-    }
-
-    /// <summary>
-    /// 00 is LL
-    /// </summary>
-    /// <param name="x"></param>
-    /// <param name="y"></param>
-    /// <returns></returns>
-    private int GetObjectID(int x, int y)
-    {
-        //00 is LL
-        int Ycorrected = _imageTex.height - y;
-        Color value = _imageTex.GetPixel(x, Ycorrected);
-
-        if (value.a != 0 && value!= Color.black)
-        {
-            foreach (var item in assignedColors)
-            {
-                if (Utils.IsSameColor(value, item, 0.02f))
-                {
-                    value = item;
-                    break;
-                }
-            }
-        }
-        
-        if (colorIDs.ContainsKey(value))
-            return colorIDs[value];
-        else
-            return -1;
-        
-    }
-
+#endif
 }

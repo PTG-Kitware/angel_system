@@ -136,12 +136,23 @@ public class OrbPie : MonoBehaviour
             _pieText.SetActive(false);
     }
 
-    public void SetTaskMessage(int stepIndex, int total, string message)
+    public void SetTaskMessage(int stepIndex, int total, string message, string currentTaskID)
     {
-        AngelARUI.Instance.LogDebugMessage("Set step message: '" + message + "' for task: " + TaskName, true);
-        _currentStepText.text = Utils.SplitTextIntoLines(TaskName + " (" + (stepIndex + 1) + "/" + total + ") : " +
-            message,150);
+        AngelARUI.Instance.DebugLogMessage("Set step message: '" + message + "' for task: " + TaskName, true);
 
+        string newPotentialMessage = Utils.SplitTextIntoLines(TaskName + " (" + (stepIndex + 1) + "/" + total + ") : " +
+            message, 150);
+
+        //Play sound if task is finised and play task messag in case it was not played before
+        if (message.Contains("Done!") && !_currentStepText.text.Contains("Done!"))
+        {
+            AudioManager.Instance.PlaySound(transform.position, SoundType.taskDone);
+        } else if (currentTaskID.Equals(TaskName) && !newPotentialMessage.ToLower().Equals(_currentStepText.text.ToLower()))
+        {
+            AudioManager.Instance.PlayText(message);
+        }
+
+        _currentStepText.text = newPotentialMessage;
         //_prevText.text = "";
         //        _nextText.text = "";
         //        if (previousMessage.Length > 0)
