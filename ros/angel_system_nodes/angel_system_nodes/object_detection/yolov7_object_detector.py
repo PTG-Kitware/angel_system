@@ -6,6 +6,7 @@ import numpy as np
 import rclpy
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup, ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
+import rclpy.logging
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 
@@ -182,6 +183,7 @@ class YoloObjectDetector(Node):
 
 def main():
     rclpy.init()
+    log = rclpy.logging.get_logger("main")
 
     node = YoloObjectDetector()
 
@@ -195,14 +197,14 @@ def main():
     try:
         executor.spin()
     except KeyboardInterrupt:
-        node.get_logger().debug("Keyboard interrupt, shutting down.\n")
+        log.info("Keyboard interrupt, shutting down.\n")
+    finally:
+        # Destroy the node explicitly
+        # (optional - otherwise it will be done automatically
+        # when the garbage collector destroys the node object)
+        node.destroy_node()
 
-    # Destroy the node explicitly
-    # (optional - otherwise it will be done automatically
-    # when the garbage collector destroys the node object)
-    node.destroy_node()
-
-    rclpy.shutdown()
+        rclpy.shutdown()
 
 
 if __name__ == "__main__":

@@ -3,8 +3,8 @@ TCN config: https://github.com/PTG-Kitware/TCN_HPL/blob/c987b3d4f65ff7d4f9696333
 Use get_hydra_config to get cfg dict, use eval.py content as how-to-call example using
 trainer.predict(model=model, dataloaders=dataloaders, ckpt_path=cfg.ckpt_path)
 """
-
 import json
+from pathlib import Path
 from threading import Event, Thread
 from typing import Callable
 from typing import List
@@ -13,9 +13,9 @@ from typing import Tuple
 
 from builtin_interfaces.msg import Time
 import numpy as np
-import numpy.typing as npt
 import rclpy
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
+import rclpy.logging
 from rclpy.node import Node
 from rclpy.executors import MultiThreadedExecutor
 import torch
@@ -25,6 +25,7 @@ from angel_system.tcn_hpl.predict import (
     ObjectDetectionsLTRB,
     objects_to_feats,
     predict,
+    ResultsCollector,
 )
 from angel_system.utils.simple_timer import SimpleTimer
 
@@ -66,6 +67,12 @@ PARAM_IMAGE_PIX_WIDTH = "image_pix_width"
 PARAM_IMAGE_PIX_HEIGHT = "image_pix_height"
 # Runtime thread checkin heartbeat interval in seconds.
 PARAM_RT_HEARTBEAT = "rt_thread_heartbeat"
+# Where we should output an MS-COCO file with our activity predictions in it
+# per frame. NOTE: activity format is very custom, pending common utilities.
+# If no value or an empty string is provided, we will not accumulate
+# predictions. If a path is provided, we will accumulate and output at node
+# closure.
+PARAM_OUTPUT_COCO_FILEPATH = "output_predictions_kwcoco"
 
 
 class NoActivityClassification(Exception):
@@ -147,6 +154,7 @@ class ActivityClassifierTCN(Node):
                 (PARAM_IMAGE_PIX_WIDTH,),
                 (PARAM_IMAGE_PIX_HEIGHT,),
                 (PARAM_RT_HEARTBEAT, 0.1),
+                (PARAM_OUTPUT_COCO_FILEPATH, ""),
             ],
         )
         self._img_ts_topic = param_values[PARAM_IMG_TS_TOPIC]
@@ -170,6 +178,21 @@ class ActivityClassifierTCN(Node):
         self._det_label_to_id = {c: i for i, c in enumerate(det_label_list)}
         # Feature version aligned with model current architecture
         self._feat_version = param_values[PARAM_MODEL_DETS_CONV_VERSION]
+
+        # Setup optional results output to a COCO file at end of runtime.
+        tmp = param_values[PARAM_OUTPUT_COCO_FILEPATH]
+        self._output_kwcoco_path: Optional[Path] = Path(tmp) if tmp else None
+        self._results_collector: Optional[ResultsCollector] = None
+        if self._output_kwcoco_path:
+            log.info(
+                f"Collecting predictions and outputting to: "
+                f"{self._output_kwcoco_path}"
+            )
+            self._results_collector = ResultsCollector(
+                self._output_kwcoco_path,
+                {i: c for i, c in enumerate(self._model.classes)}
+            )
+            self._results_collector.set_video("ROS2 Stream")
 
         # Input data buffer for temporal windowing.
         # Data should be tuple pairing a timestamp (ROS Time) of the source
@@ -330,6 +353,7 @@ class ActivityClassifierTCN(Node):
 
                     try:
                         act_msg = self._process_window(window)
+                        self._collect_results(act_msg)
                         self._activity_publisher.publish(act_msg)
                     except NoActivityClassification:
                         # No ramifications, but don't publish activity message.
@@ -442,16 +466,51 @@ class ActivityClassifierTCN(Node):
 
         return activity_msg
 
+    def _collect_results(self, msg: ActivityDetection):
+        """
+        Collect into our ResultsCollector instance from the produced activity
+        classification message if we were initialized to do that.
+
+        This method does nothing if this node has not been initialized to
+        collect results.
+
+        :param msg: ROS2 activity classification message that would be output.
+        """
+        rc = self._results_collector
+        if rc is not None:
+            # Assigning result to the "id" if the last frame in the window.
+            frame_index = time_to_int(msg.source_stamp_end_frame)
+            pred_cls_idx = int(np.argmax(msg.conf_vec))
+            rc.collect(
+                frame_index=frame_index,
+                name=f"ros-frame-nsec-{frame_index}",
+                activity_pred=pred_cls_idx,
+                activity_conf_vec=list(msg.conf_vec),
+            )
+
+    def _save_results(self):
+        """
+        Save results if we have been initialized to do that.
+
+        This method does nothing if this node has not been initialized to
+        collect results.
+        """
+        rc = self._results_collector
+        if rc is not None:
+            self._results_collector.write_file()
+
     def destroy_node(self):
         print("Shutting down runtime thread...")
         self._rt_active.clear()  # make RT active flag "False"
         self._rt_thread.join()
         print("Shutting down runtime thread... Done")
+        self._save_results()
         super().destroy_node()
 
 
 def main():
     rclpy.init()
+    log = rclpy.logging.get_logger("main")
 
     activity_classifier = ActivityClassifierTCN()
 
@@ -460,15 +519,17 @@ def main():
     try:
         executor.spin()
     except KeyboardInterrupt:
+        log.info("Keyboard interrupt, shutting down.\n")
+    finally:
+        log.info("Stopping node runtime")
         activity_classifier.rt_stop()
-        activity_classifier.get_logger().info("Keyboard interrupt, shutting down.\n")
 
-    # Destroy the node explicitly
-    # (optional - otherwise it will be done automatically
-    # when the garbage collector destroys the node object)
-    activity_classifier.destroy_node()
+        # Destroy the node explicitly
+        # (optional - otherwise it will be done automatically
+        # when the garbage collector destroys the node object)
+        activity_classifier.destroy_node()
 
-    rclpy.shutdown()
+        rclpy.shutdown()
 
 
 if __name__ == "__main__":
