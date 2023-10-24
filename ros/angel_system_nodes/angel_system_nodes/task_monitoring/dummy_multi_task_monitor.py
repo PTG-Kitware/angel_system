@@ -136,18 +136,6 @@ class DummyMultiTaskMonitor(Node):
         self._keyboard_t.start()
         log.info("Starting keyboard threads... done")
 
-    def _clean_skipped_cache(self, current_hmm_step_id: int) -> None:
-        """
-        Clear the error cache any IDs greater than the given.
-        """
-        s = np.asarray(list(self._steps_skipped_cache))
-        to_remove_ids = s[s > current_hmm_step_id]
-        if to_remove_ids.size:
-            self.get_logger().info(
-                f"Clearing step IDs from skipped cache: " f"{to_remove_ids.tolist()}"
-            )
-        [self._steps_skipped_cache.remove(_id) for _id in to_remove_ids]
-
     def publish_task_state_message(
         self,
         task_id: int,
