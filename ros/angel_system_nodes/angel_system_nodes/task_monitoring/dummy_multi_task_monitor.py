@@ -19,7 +19,11 @@ from angel_msgs.msg import (
 )
 from angel_msgs.srv import QueryTaskGraph
 from angel_utils import declare_and_get_parameters
-from angel_utils.conversion import time_to_int, nano_to_ros_time
+from angel_utils.conversion import (
+    nano_to_ros_time,
+    SEC_TO_NANO,
+    time_to_int,
+)
 
 
 PARAM_CONFIG_FILE = "config_file"
@@ -55,7 +59,7 @@ class TaskStateInformation:
     # This may be removed from if step progress regresses.
     steps_skipped_cache: Set[int] = field(default_factory=set)
     # Track the latest activity classification end time sent to the HMM
-    # Time is in floating-point seconds up to nanosecond precision.
+    # Time is in integer nanoseconds.
     latest_act_classification_end_time = None
     # List of task steps
     steps: List[str] = field(default_factory=list)
@@ -156,7 +160,7 @@ class DummyMultiTaskMonitor(Node):
         message.task_name = task_state.task_title
         if task_state.latest_act_classification_end_time is not None:
             message.latest_sensor_input_time = nano_to_ros_time(
-                int(task_state.latest_act_classification_end_time * 1e9)
+                task_state.latest_act_classification_end_time
             )
         else:
             # Fill in a default time of 0.0 seconds.
@@ -242,13 +246,15 @@ class DummyMultiTaskMonitor(Node):
             # No classifications received yet
             # Set time window to now + 1 second
             start_time = (
-                time_to_int(self.get_clock().now().to_msg()) * 1e-9
+                time_to_int(self.get_clock().now().to_msg())
             )  # time_to_int returns ns
-            end_time = start_time + 1  # 1 second later
+            end_time = start_time + SEC_TO_NANO  # 1 second later
         else:
             # Assuming ~30Hz frame rate, so set start one frame later
-            start_time = task_state.latest_act_classification_end_time + (1 / 30.0)
-            end_time = start_time + 1  # 1 second later
+            start_time = (
+                task_state.latest_act_classification_end_time + int((1 / 30.0) * SEC_TO_NANO)
+            )
+            end_time = start_time + SEC_TO_NANO  # 1 second later
 
         task_state.latest_act_classification_end_time = end_time
 
