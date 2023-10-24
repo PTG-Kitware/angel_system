@@ -8,7 +8,9 @@ title: "Multi task example"
 tasks:
   # Item format:
   # - id: Identifying integer for the task.
-  # - config_file: The task config file representing this task.
+  # - config_file: Path to the task config file representing this task.
+  #   It is expected that these paths are relative to where this tool is run.
+  #   (i.e. relative to $(ANGEL_WORKSPACE)).
   - id: 0
     config_file: "./config/tasks/task_steps_config-recipe_coffee_trimmed_v3_allows_skip.yaml"
   - id: 1
