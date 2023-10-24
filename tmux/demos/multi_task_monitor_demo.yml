@@ -48,13 +48,6 @@ windows:
   - datahub: ros2 run ros_tcp_endpoint default_server_endpoint --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p ROS_IP:=0.0.0.0
-  # HL2SS connection
-  #- hl2ss_bridge: ros2 run angel_system_nodes hl2ss_ros_bridge --ros-args
-  #    -r __ns:=${ROS_NAMESPACE}
-  #    -p ip_addr:=${HL2_IP}
-  #    -p image_topic:=PVFramesBGR
-  #    -p hand_pose_topic:=HandJointPoseData
-  #    -p audio_topic:=HeadsetAudioData
 
   - multi_task_monitor: ros2 run angel_system_nodes dummy_multi_task_monitor --ros-args
       -r __ns:=${ROS_NAMESPACE}
