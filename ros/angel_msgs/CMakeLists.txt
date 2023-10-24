@@ -40,6 +40,7 @@ set( message_files
   msg/ObjectDetection3dSet.msg
   msg/SpatialMesh.msg
   msg/SystemCommands.msg
+  msg/SystemTextResponse.msg
   msg/TaskGraph.msg
   msg/TaskItem.msg
   msg/TaskNode.msg

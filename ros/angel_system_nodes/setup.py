@@ -24,6 +24,7 @@ setup(
             "gpt_intent_detector = angel_system_nodes.gpt_intent_detector:main",
             "base_emotion_detector = angel_system_nodes.base_emotion_detector:main",
             "gpt_emotion_detector = angel_system_nodes.gpt_emotion_detector:main",
+            "question_answerer = angel_system_nodes.question_answerer:main",
             "intent_detector = angel_system_nodes.intent_detector:main",
             "spatial_mapper = angel_system_nodes.spatial_mapper:main",
             "feedback_generator = angel_system_nodes.feedback_generator:main",
