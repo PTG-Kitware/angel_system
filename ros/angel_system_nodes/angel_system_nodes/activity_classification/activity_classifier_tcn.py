@@ -27,6 +27,7 @@ from angel_system.tcn_hpl.predict import (
     predict,
     ResultsCollector,
 )
+from angel_system.utils.event import WaitAndClearEvent
 from angel_system.utils.simple_timer import SimpleTimer
 
 from angel_msgs.msg import (
@@ -96,36 +97,6 @@ def obj_det_msg_to_max_lbl_conf(
     max_confs = conf_mat[np.arange(conf_mat.shape[0]), max_conf_idxs]
     max_labels = np.asarray(msg.label_vec)[max_conf_idxs]
     return max_labels, max_confs
-
-
-class WaitAndClearEvent(Event):
-    """
-    Simple subclass that adds a wait-and-clear method to simultaneously wait
-    for the lock and clear the set flag upon successful waiting.
-    """
-
-    def wait_and_clear(self, timeout=None):
-        """Block until the internal flag is true, then clear the flag if it was
-        set.
-
-        If the internal flag is true on entry, return immediately. Otherwise,
-        block until another thread calls set() to set the flag to true, or until
-        the optional timeout occurs.
-
-        When the timeout argument is present and not None, it should be a
-        floating point number specifying a timeout for the operation in seconds
-        (or fractions thereof).
-
-        This method returns the internal flag on exit, so it will always return
-        True except if a timeout is given and the operation times out.
-
-        """
-        with self._cond:
-            signaled = self._flag
-            if not signaled:
-                signaled = self._cond.wait(timeout)
-            self._flag = False
-            return signaled
 
 
 class ActivityClassifierTCN(Node):
@@ -255,7 +226,7 @@ class ActivityClassifierTCN(Node):
         Capture a detection source image timestamp message.
         """
         if self.rt_alive() and self._buffer.queue_image(None, msg):
-            self.get_logger().debug(f"Queueing image TS {msg}")
+            self.get_logger().info(f"Queueing image TS {msg}")
             # Inform the runtime that it should process a cycle.
             # self._rt_awake_evt.set()
 
@@ -266,7 +237,7 @@ class ActivityClassifierTCN(Node):
         and publish the `ActivityDetection` message.
         """
         if self.rt_alive() and self._buffer.queue_object_detections(msg):
-            self.get_logger().debug(
+            self.get_logger().info(
                 f"Queueing object detections (ts={msg.header.stamp})"
             )
             self._rt_awake_evt.set()
@@ -337,13 +308,11 @@ class ActivityClassifierTCN(Node):
 
         while self._rt_active.wait(0):  # will quickly return false if cleared.
             if self._rt_awake_evt.wait_and_clear(self._rt_active_heartbeat):
-                log.debug("Runtime loop awakened")
 
                 # We want to fire off a prediction if the current window of
                 # data is "valid" based on our registered criterion.
                 window = self._buffer.get_window(self._window_size)
                 if all(fn(window) for fn in window_processing_criterion_fn_list):
-                    log.debug("Runtime loop starting processing block")
                     # After validating a window, and before processing it, clear
                     # out older data from the buffer based on the timestamp of
                     # the first item in the current window.
@@ -352,6 +321,10 @@ class ActivityClassifierTCN(Node):
                     self._buffer.clear_before(clear_before_ns)
 
                     try:
+                        log.info(
+                            f"Processing window with final image TS: "
+                            f"{window.frames[-1][0]}"
+                        )
                         act_msg = self._process_window(window)
                         self._collect_results(act_msg)
                         self._activity_publisher.publish(act_msg)
@@ -420,35 +393,31 @@ class ActivityClassifierTCN(Node):
             f"{[(v is not None) for v in frame_object_detections]}"
         )
 
-        with SimpleTimer(
-            "[_process_window] Convert detections to feature vector", log.debug
-        ):
-            try:
-                feats, mask = objects_to_feats(
-                    frame_object_detections,
-                    self._det_label_to_id,
-                    self._feat_version,
-                    self._img_pix_width,
-                    self._img_pix_height,
-                )
-            except ValueError:
-                # feature detections were all None
-                raise NoActivityClassification()
-            feats = feats.to(self._model_device)
-            mask = mask.to(self._model_device)
+        try:
+            feats, mask = objects_to_feats(
+                frame_object_detections,
+                self._det_label_to_id,
+                self._feat_version,
+                self._img_pix_width,
+                self._img_pix_height,
+            )
+        except ValueError:
+            # feature detections were all None
+            raise NoActivityClassification()
+        feats = feats.to(self._model_device)
+        mask = mask.to(self._model_device)
 
-        with SimpleTimer("[_process_window] Predicting activity proba", log.debug):
-            proba = predict(self._model, feats, mask).cpu()
-            pred = torch.argmax(proba)
+        proba = predict(self._model, feats, mask).cpu()
+        pred = torch.argmax(proba)
 
-        with SimpleTimer("[_process_window] Constructing output msg", log.debug):
-            activity_msg = ActivityDetection()
-            activity_msg.header.frame_id = "Activity Classification"
-            activity_msg.header.stamp = self.get_clock().now().to_msg()
-            activity_msg.source_stamp_start_frame = window.frames[0][0]
-            activity_msg.source_stamp_end_frame = window.frames[-1][0]
-            activity_msg.label_vec = self._model.classes
-            activity_msg.conf_vec = proba.tolist()
+        # Prepare output message
+        activity_msg = ActivityDetection()
+        activity_msg.header.frame_id = "Activity Classification"
+        activity_msg.header.stamp = self.get_clock().now().to_msg()
+        activity_msg.source_stamp_start_frame = window.frames[0][0]
+        activity_msg.source_stamp_end_frame = window.frames[-1][0]
+        activity_msg.label_vec = self._model.classes
+        activity_msg.conf_vec = proba.tolist()
 
         log.info(
             f"Activity classification -- "
@@ -461,7 +430,6 @@ class ActivityClassifierTCN(Node):
         log.info(
             f"Activity classification rate (hz: "
             f"{self._rate_tracker.get_rate_avg()})",
-            throttle_duration_sec=1,
         )
 
         return activity_msg
