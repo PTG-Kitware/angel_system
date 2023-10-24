@@ -245,14 +245,14 @@ class DummyMultiTaskMonitor(Node):
         if task_state.latest_act_classification_end_time is None:
             # No classifications received yet
             # Set time window to now + 1 second
-            start_time = (
-                time_to_int(self.get_clock().now().to_msg())
+            start_time = time_to_int(
+                self.get_clock().now().to_msg()
             )  # time_to_int returns ns
             end_time = start_time + SEC_TO_NANO  # 1 second later
         else:
             # Assuming ~30Hz frame rate, so set start one frame later
-            start_time = (
-                task_state.latest_act_classification_end_time + int((1 / 30.0) * SEC_TO_NANO)
+            start_time = task_state.latest_act_classification_end_time + int(
+                (1 / 30.0) * SEC_TO_NANO
             )
             end_time = start_time + SEC_TO_NANO  # 1 second later
 
