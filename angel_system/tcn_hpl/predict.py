@@ -258,9 +258,7 @@ class ResultsCollector:
         self._collection: Dict[int, ResultElement] = {}
         self._dset = dset = kwcoco.CocoDataset()
         dset.fpath = output_filepath.as_posix()
-        dset.dataset["info"].append({
-            "activity_labels": id_to_action
-        })
+        dset.dataset["info"].append({"activity_labels": id_to_action})
         self._vid: Optional[int] = None
 
     def set_video(self, video_name):
@@ -289,8 +287,7 @@ class ResultsCollector:
         """
         if self._vid is None:
             raise RuntimeError(
-                "No video set before results collection. See `set_video` "
-                "method."
+                "No video set before results collection. See `set_video` method."
             )
         packet = dict(
             video_id=self._vid,

@@ -190,7 +190,7 @@ class ActivityClassifierTCN(Node):
             )
             self._results_collector = ResultsCollector(
                 self._output_kwcoco_path,
-                {i: c for i, c in enumerate(self._model.classes)}
+                {i: c for i, c in enumerate(self._model.classes)},
             )
             self._results_collector.set_video("ROS2 Stream")
 
