@@ -51,20 +51,19 @@ class ImageTimestampRelay(Node):
 def main():
     rclpy.init()
 
-    activity_classifier = ImageTimestampRelay()
+    node = ImageTimestampRelay()
 
     executor = MultiThreadedExecutor(num_threads=2)
-    executor.add_node(activity_classifier)
+    executor.add_node(node)
     try:
         executor.spin()
     except KeyboardInterrupt:
-        activity_classifier.rt_stop()
-        activity_classifier.get_logger().info("Keyboard interrupt, shutting down.\n")
+        node.get_logger().info("Keyboard interrupt, shutting down.\n")
 
     # Destroy the node explicitly
     # (optional - otherwise it will be done automatically
     # when the garbage collector destroys the node object)
-    activity_classifier.destroy_node()
+    node.destroy_node()
 
     rclpy.shutdown()
 
