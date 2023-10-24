@@ -55,7 +55,7 @@ setup(
             "berkeley_task_monitor = angel_system_nodes.task_monitoring.berkeley_task_monitor:main",
             "task_monitor_v1 = angel_system_nodes.task_monitoring.task_monitor_v1:main",
             "task_monitor_v2 = angel_system_nodes.task_monitoring.task_monitor_v2:main",
-            "dummy_multi_task_monitor= angel_system_nodes.dummy_multi_task_monitor:main",
+            "dummy_multi_task_monitor= angel_system_nodes.task_monitoring.dummy_multi_task_monitor:main",
         ],
     },
 )
