@@ -101,7 +101,7 @@ class DummyMultiTaskMonitor(Node):
             with open(t["config_file"], "r") as f:
                 task_config = yaml.safe_load(f)
 
-            n_steps = task_config["steps"][-1]["id"]
+            n_steps = len(task_config["steps"])
 
             task_state_info = TaskStateInformation(
                 f"{t['id']}_{task_config['title']}",
