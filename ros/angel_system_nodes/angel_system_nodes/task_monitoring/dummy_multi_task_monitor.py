@@ -127,8 +127,6 @@ class DummyMultiTaskMonitor(Node):
             QueryTaskGraph, self._query_task_graph_topic, self.query_task_graph_callback
         )
 
-        # Store module for local use.
-        self._keyboard = keyboard
         # Start the keyboard monitoring thread
         log.info("Starting keyboard threads")
         self._keyboard_t = Thread(target=self.monitor_keypress)
@@ -225,7 +223,7 @@ class DummyMultiTaskMonitor(Node):
             f" between tasks."
         )
         # Collect events until released
-        with self._keyboard.Listener(on_press=self.on_press) as listener:
+        with keyboard.Listener(on_press=self.on_press) as listener:
             listener.join()
 
     def advance_step(self, task_id: int, forward: bool) -> None:
@@ -291,34 +289,34 @@ class DummyMultiTaskMonitor(Node):
         Callback function for keypress events. Uses the number keys to advance
         between tasks.
         """
-        if key == self._keyboard.KeyCode.from_char("1"):
+        if key == keyboard.KeyCode.from_char("1"):
             task_id = 0
             forward = True
-        elif key == self._keyboard.KeyCode.from_char("2"):
+        elif key == keyboard.KeyCode.from_char("2"):
             task_id = 0
             forward = False
-        elif key == self._keyboard.KeyCode.from_char("3"):
+        elif key == keyboard.KeyCode.from_char("3"):
             task_id = 1
             forward = True
-        elif key == self._keyboard.KeyCode.from_char("4"):
+        elif key == keyboard.KeyCode.from_char("4"):
             task_id = 1
             forward = False
-        elif key == self._keyboard.KeyCode.from_char("5"):
+        elif key == keyboard.KeyCode.from_char("5"):
             task_id = 2
             forward = True
-        elif key == self._keyboard.KeyCode.from_char("6"):
+        elif key == keyboard.KeyCode.from_char("6"):
             task_id = 2
             forward = False
-        elif key == self._keyboard.KeyCode.from_char("7"):
+        elif key == keyboard.KeyCode.from_char("7"):
             task_id = 3
             forward = True
-        elif key == self._keyboard.KeyCode.from_char("8"):
+        elif key == keyboard.KeyCode.from_char("8"):
             task_id = 3
             forward = False
-        elif key == self._keyboard.KeyCode.from_char("9"):
+        elif key == keyboard.KeyCode.from_char("9"):
             task_id = 4
             forward = True
-        elif key == self._keyboard.KeyCode.from_char("0"):
+        elif key == keyboard.KeyCode.from_char("0"):
             task_id = 4
             forward = False
         else:
