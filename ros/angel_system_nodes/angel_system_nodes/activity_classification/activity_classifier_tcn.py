@@ -79,6 +79,9 @@ PARAM_OUTPUT_COCO_FILEPATH = "output_predictions_kwcoco"
 # for activity classification. This should not be used simultaneously when
 # interfacing with ROS-based object detection input - behavior is undefined.
 PARAM_INPUT_COCO_FILEPATH = "input_obj_det_kwcoco"
+# If we should enable additional logging to the info level about when we
+# receive and process data.
+PARAM_TIME_TRACE_LOGGING = "enable_time_trace_logging"
 
 
 class NoActivityClassification(Exception):
@@ -132,6 +135,7 @@ class ActivityClassifierTCN(Node):
                 (PARAM_RT_HEARTBEAT, 0.1),
                 (PARAM_OUTPUT_COCO_FILEPATH, ""),
                 (PARAM_INPUT_COCO_FILEPATH, ""),
+                (PARAM_TIME_TRACE_LOGGING, False)
             ],
         )
         self._img_ts_topic = param_values[PARAM_IMG_TS_TOPIC]
@@ -139,6 +143,7 @@ class ActivityClassifierTCN(Node):
         self._act_topic = param_values[PARAM_ACT_TOPIC]
         self._img_pix_width = param_values[PARAM_IMAGE_PIX_WIDTH]
         self._img_pix_height = param_values[PARAM_IMAGE_PIX_HEIGHT]
+        self._enable_trace_logging = param_values[PARAM_TIME_TRACE_LOGGING]
 
         # Load in TCN classification model and weights
         with SimpleTimer("Loading inference module", log.info):
@@ -330,7 +335,8 @@ class ActivityClassifierTCN(Node):
 
             # Calling the image callback last since image frames define the
             # window bounds, creating a new window for processing.
-            log.info(f"Queuing from COCO: n_dets={n_dets}, ts_index={image_ts}")
+            if self._enable_trace_logging:
+                log.info(f"Queuing from COCO: n_dets={n_dets}, ts_index={image_ts}")
             self.det_callback(det_msg)
             self.img_ts_callback(image_ts)
 
@@ -352,7 +358,8 @@ class ActivityClassifierTCN(Node):
         Capture a detection source image timestamp message.
         """
         if self.rt_alive() and self._buffer.queue_image(None, msg):
-            self.get_logger().info(f"Queueing image TS {msg}")
+            if self._enable_trace_logging:
+                self.get_logger().info(f"Queueing image TS {msg}")
             # Let the runtime know we've queued something.
             self._rt_awake_evt.set()
 
@@ -363,9 +370,10 @@ class ActivityClassifierTCN(Node):
         and publish the `ActivityDetection` message.
         """
         if self.rt_alive() and self._buffer.queue_object_detections(msg):
-            self.get_logger().info(
-                f"Queueing object detections (ts={msg.header.stamp})"
-            )
+            if self._enable_trace_logging:
+                self.get_logger().info(
+                    f"Queueing object detections (ts={msg.header.stamp})"
+                )
             # Let the runtime know we've queued something.
             self._rt_awake_evt.set()
 
@@ -450,6 +458,7 @@ class ActivityClassifierTCN(Node):
         """
         log = self.get_logger()
         log.debug("Runtime loop starting")
+        enable_time_trace_logging = self._enable_trace_logging
 
         # These criterion predicates must all return true for us to proceed
         # with processing activity classification for a window.
@@ -486,10 +495,11 @@ class ActivityClassifierTCN(Node):
                     self._buffer.clear_before(time_to_int(window.frames[1][0]))
 
                     try:
-                        log.info(
-                            f"Processing window with leading image TS: "
-                            f"{window.frames[-1][0]}"
-                        )
+                        if enable_time_trace_logging:
+                            log.info(
+                                f"Processing window with leading image TS: "
+                                f"{window.frames[-1][0]}"
+                            )
                         act_msg = self._process_window(window)
                         self._collect_results(act_msg)
                         self._activity_publisher.publish(act_msg)
@@ -582,12 +592,13 @@ class ActivityClassifierTCN(Node):
         activity_msg.label_vec = self._model.classes
         activity_msg.conf_vec = proba.tolist()
 
-        log.info(
-            f"Activity classification -- "
-            f"{activity_msg.label_vec[pred]} @ {activity_msg.conf_vec[pred]} "
-            f"(time: {time_to_int(activity_msg.source_stamp_start_frame)} - "
-            f"{time_to_int(activity_msg.source_stamp_end_frame)})"
-        )
+        if self._enable_trace_logging:
+            log.info(
+                f"Activity classification -- "
+                f"{activity_msg.label_vec[pred]} @ {activity_msg.conf_vec[pred]} "
+                f"(time: {time_to_int(activity_msg.source_stamp_start_frame)} - "
+                f"{time_to_int(activity_msg.source_stamp_end_frame)})"
+            )
 
         self._rate_tracker.tick()
         log.info(
