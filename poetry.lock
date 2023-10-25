@@ -4127,12 +4127,31 @@ numpy = ">=1.16.6"
 
 [[package]]
 name = "pycocotools"
-version = "2.0.6"
+version = "2.0.7"
 description = "Official APIs for the MS-COCO dataset"
 optional = false
 python-versions = ">=3.5"
 files = [
-    {file = "pycocotools-2.0.6.tar.gz", hash = "sha256:7fe089b05cc18e806dcf3bd764708d86dab922a100f3734eb77fb77a70a1d18c"},
+    {file = "pycocotools-2.0.7-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:a6683a002fcb4500edbcec94bdf48be69f578a9aa5c638db38614df1f45cc935"},
+    {file = "pycocotools-2.0.7-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:4d517ec315e53ef8df9f6b0899ebc4c79bd61fd715383861949bb1c3fca2c6d5"},
+    {file = "pycocotools-2.0.7-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:9eb5d46900375adaba88eedb5cbc29d8cbcf43e82505d67378df1c3b720a8c5f"},
+    {file = "pycocotools-2.0.7-cp310-cp310-win_amd64.whl", hash = "sha256:363a6be808125306ace1a163c0b9ba479ee08eceec1fbd3889a88bd8245f73dc"},
+    {file = "pycocotools-2.0.7-cp311-cp311-macosx_10_9_universal2.whl", hash = "sha256:623b941bbafecbfee574aedbf3cb257f7a879f4fdb79394e6d3fb9c76e7ad6cf"},
+    {file = "pycocotools-2.0.7-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:0ac4f30bac1503c780072053e6922971392fa3628b2e6967192bfca1f14736e2"},
+    {file = "pycocotools-2.0.7-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:121017ca87e2eec4e9081636d1a79519b50f473959defc5671c2d1ce0eec482e"},
+    {file = "pycocotools-2.0.7-cp311-cp311-win_amd64.whl", hash = "sha256:4a8ec6f439638120e11f49120e1ddb6c66e0b1f293d7884207d02703a73d25a1"},
+    {file = "pycocotools-2.0.7-cp37-cp37m-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:f1a675728e459d72be6e3bb3546672bb37c7daffdc2e5335aa7b834aece2b560"},
+    {file = "pycocotools-2.0.7-cp37-cp37m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:6541340f26bae32e044eedc5d8ccdac5bd0cb64eb2b0a342dac859b696edd0aa"},
+    {file = "pycocotools-2.0.7-cp37-cp37m-win_amd64.whl", hash = "sha256:8def3c46349e919999d6d5a1d6b7e587e6891524cc28f8b4a11e463bf0914621"},
+    {file = "pycocotools-2.0.7-cp38-cp38-macosx_10_9_universal2.whl", hash = "sha256:6469089b9b36a1f645dc9ee830f29d261e99b4b3be73cb260688fd8b6d02760c"},
+    {file = "pycocotools-2.0.7-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:1dbc429018149dc34e206ea32ee6297ff30b55a8615a3f7f4c6e3842f9df73db"},
+    {file = "pycocotools-2.0.7-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:66864bec8b30d47faa946bb55c8e8d6b7acb9fba0c17ff6aaa37abd78cda962a"},
+    {file = "pycocotools-2.0.7-cp38-cp38-win_amd64.whl", hash = "sha256:625388f52e543f6f798f75f1ec125fe519580f22e72ccbd75eee0355ce336e18"},
+    {file = "pycocotools-2.0.7-cp39-cp39-macosx_10_9_universal2.whl", hash = "sha256:73dc251ae4a06b7c10747ca7e2d29faabb4f13e5fc43760945966845581e79ae"},
+    {file = "pycocotools-2.0.7-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:3e6f7bfa1c5fb206a614bf2382c923d56092219a12dfd0fec3b5f83c13e29e00"},
+    {file = "pycocotools-2.0.7-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:b29086b6ce7b73e4ddaf3045006f5c059f344a2720605cd4474814017ff2af53"},
+    {file = "pycocotools-2.0.7-cp39-cp39-win_amd64.whl", hash = "sha256:254506c0eecabb3abbde17640f82103c0c04d53148ae920657664cab9cd649fc"},
+    {file = "pycocotools-2.0.7.tar.gz", hash = "sha256:da8b7815196eebf0adabf67fcc459126cbc6498bbc6ab1fd144c371465d86879"},
 ]
 
 [package.dependencies]
