@@ -88,8 +88,6 @@ def data_loader(
 
     ann_by_image = {}
     for gid, anns in dset.index.gid_to_aids.items():
-        if not anns:
-            print("empty image anns")
         ann_by_image[gid] = []
         for ann_id in anns:
             ann = dset.anns[ann_id]

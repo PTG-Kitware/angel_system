@@ -247,8 +247,6 @@ def add_activity_gt_to_kwcoco(dset):
     appended to the end).
 
     :param dset: kwcoco object or a string pointing to a kwcoco file
-    :param activity_config_fn: Path to the activity labels config file
-    :param activity_gt_dir: Path to the activity annotation csv files
     """
     # Load kwcoco file
     dset = load_kwcoco(dset)
@@ -325,6 +323,18 @@ def add_activity_gt_to_kwcoco(dset):
                 else:
                     activity = activity[0]
                     activity_label = activity["label"]
+
+                    # Temp fix until we can update the groundtruth labels
+                    if activity_label in ["microwave-30-sec", "microwave-60-sec"]:
+                        activity_label = "microwave"
+                    if activity_label in ["stir-again"]:
+                        activity_label = "oatmeal-stir"
+                    if activity_label in ["measure-half-cup-water", "measure-12oz-water"]:
+                        activity_label = "measure-water"
+                    if activity_label in ["insert-toothpick-1", "insert-toothpick-2"]:
+                        activity_label = "insert-toothpick"
+                    if activity_label in ["slice-tortilla", "continue-slicing"]:
+                        activity_label = "floss-slice-tortilla"
 
             dset.imgs[gid]["activity_gt"] = activity_label
 

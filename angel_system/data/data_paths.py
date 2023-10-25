@@ -222,7 +222,7 @@ oatmeal_obj_config = f"{object_config_path}/recipe_oatmeal.yaml"
 
 # Pinwheels
 # ---------
-pinwheels_activity_gt_dir = f"{activity_gt_dir}/pinwheels_labels/"
+pinwheels_activity_gt_dir = f"{activity_gt_dir}/pinwheel_labels/"
 pinwheels_activity_config_fn = f"{activity_config_path}/recipe_pinwheel.yaml"
 
 pinwheels_ros_bags_dir = f"{ros_bags_dir}/pinwheels/pinwheels_extracted/"
