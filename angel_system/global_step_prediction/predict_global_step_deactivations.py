@@ -104,19 +104,16 @@ def plot_gt_vs_predicted_one_recipe(step_gts, step_predictions, activity_confs, 
     step_gts = [float(i) for i in step_gts]
     plt.plot(step_gts, label = 'gt')
     plt.plot(step_predictions, label = 'estimated')
-    plt.plot(10*np.asarray(activity_confs)[:,17]-5, label = 'act_preds[17]')
-    plt.plot(10*np.asarray(activity_confs)[:,18]-5, label = 'act_preds[18]')
-    plt.plot(10*np.asarray(activity_confs)[:,19]-5, label = 'act_preds[19]')
 
-    plt.plot(bilateralFtr1D(10*np.asarray(activity_confs)[:,17])-10, label = 'act_preds_bilateral[17]')
-    plt.plot(bilateralFtr1D(10*np.asarray(activity_confs)[:,18])-10, label = 'act_pred_bilateral[18]')
-    plt.plot(bilateralFtr1D(10*np.asarray(activity_confs)[:,19])-10, label = 'act_preds_bilateral[19]')
-    #plt.plot(10*X_conf_incremental, label = 'confidence')
-    #plt.plot(10*vid_acts[:,10], label = act_labels[10])
-    #plt.plot(10*vid_acts[:,11], label = act_labels[11])
-    #plt.plot(10*vid_acts[:,12], label = act_labels[12])
+    starting_zero_value = 0
+    for i in range(len(avg_probs)):
+        starting_zero_value -= 2
+        plot_line = np.asarray(activity_confs)[:,i]
+        plt.plot(2*plot_line-starting_zero_value, label = f'act_preds[{i}]')
+        plt.plot([2*int(j < avg_probs[i])+starting_zero_value for j in plot_line], label = f'act_preds_threshold[{i}]')
     plt.legend()
     fig.savefig(f"./outputs/plot_pred_vs_gt_vid{vid_id}.png")
+    plt.show()
 
 def bilateralFtr1D(y, sSpatial = 5, sIntensity = 1):
     '''
