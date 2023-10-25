@@ -55,7 +55,10 @@ warn_build_spaces=(
   "${SCRIPT_DIR}/angel_system"
   "${SCRIPT_DIR}/tmux"
 )
+# Check if there are tracked file modifications.
 git_status="$(git status --porcelain "${warn_build_spaces[@]}")"
+git_sm_status="$(git submodule foreach git status --porcelain)"
+git_sm_q_status="$(git submodule --quiet foreach git status --porcelain)"
 # Check if there are ignored files in the workspace that should not be there.
 git_clean_dr_cmd=( git clean "${warn_build_spaces[@]}" -Xdn )
 git_clean_dr="$("${git_clean_dr_cmd[@]}")"
@@ -66,13 +69,18 @@ git_sm_clean_dr_cmd=( git submodule foreach --recursive git clean -xdn )
 git_sm_q_clean_dr_cmd=( git submodule --quiet foreach --recursive git clean -xdn )
 git_sm_clean_dr="$(${git_sm_clean_dr_cmd[@]})"
 git_sm_q_clean_dr="$(${git_sm_q_clean_dr_cmd[@]})"
-if [[ -n "${git_status}" ]] || [[ -n "${git_clean_dr}" ]] || [[ -n "${git_sm_q_clean_dr}" ]]
+if [[ -n "${git_status}" ]] || [[ -n "${git_sm_q_status}" ]] || [[ -n "${git_clean_dr}" ]] || [[ -n "${git_sm_q_clean_dr}" ]]
 then
   log "WARNING: Docker/ROS workspace subtree is modified and/or un-clean."
   if [[ -n "${git_status}" ]]
   then
     log "WARNING: -- There are modified / new files (check git status)."
     log "${git_status}"
+  fi
+  if [[ -n "${git_sm_q_status}" ]]
+  then
+    log "WARNING: -- There are modified / new files in sub-modules."
+    log "${git_sm_status}"
   fi
   if [[ -n "${git_clean_dr}" ]]
   then
