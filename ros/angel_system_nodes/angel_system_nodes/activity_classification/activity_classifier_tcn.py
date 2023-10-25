@@ -5,7 +5,7 @@ trainer.predict(model=model, dataloaders=dataloaders, ckpt_path=cfg.ckpt_path)
 """
 import json
 from pathlib import Path
-from threading import Event, Lock, Thread
+from threading import Condition, Event, Lock, Thread
 from typing import Callable
 from typing import List
 from typing import Optional
@@ -174,6 +174,8 @@ class ActivityClassifierTCN(Node):
         # Input data buffer for temporal windowing.
         # Data should be tuple pairing a timestamp (ROS Time) of the source
         # image frame with the object detections descriptor vector.
+        # Buffer initialization must be before ROS callback and runtime-loop
+        # initialization.
         self._window_size = param_values[PARAM_WINDOW_FRAME_SIZE]
         self._buffer = InputBuffer(
             0,  # Not using msgs with tolerance.
@@ -183,9 +185,18 @@ class ActivityClassifierTCN(Node):
             param_values[PARAM_BUFFER_MAX_SIZE_SECONDS] * 1e9
         )
 
-        # Used by a _window_criterion_new_leading_frame to track previous
-        # window's leading frame time.
-        self._prev_leading_time_ns = None
+        # Time of the most recent window extracted from the buffer in the
+        # runtime loop.
+        # This is a little different
+        self._window_extracted_time_ns: Optional[int] = None
+        # Protected access across threads.
+        self._window_extracted_time_ns_cond = Condition()
+
+        # Track the time of the most recently processed window's leading frame
+        # time. Assuming only used on the same thread (runtime loop thread).
+        # Used by a `_window_criterion_new_leading_frame`.
+        # Intentionally before runtime-loop initialization.
+        self._window_processed_time_ns: Optional[int] = None
 
         # Create ROS subscribers and publishers.
         # These are being purposefully being allocated before the
@@ -218,7 +229,6 @@ class ActivityClassifierTCN(Node):
         self._rate_tracker = RateTracker()
 
         # Start windowed prediction runtime thread.
-        log.info("Starting runtime thread...")
         # On/Off Switch for runtime loop, initializing to "on" position.
         # Clear this event to deactivate the runtime loop.
         self._rt_active = Event()
@@ -230,7 +240,6 @@ class ActivityClassifierTCN(Node):
         self._rt_awake_evt = WaitAndClearEvent()
         self._rt_thread = Thread(target=self.rt_loop, name="prediction_runtime")
         self._rt_thread.daemon = True
-        self._rt_thread.start()
 
         # Optionally initialize buffer-feeding from input COCO-file of object
         # detections.
@@ -242,13 +251,19 @@ class ActivityClassifierTCN(Node):
         self._coco_complete_lock = Lock()
         self._coco_load_thread = None
         if input_coco_path is not None:
-            log.info("Starting COCO loading thread...")
             self._coco_load_thread = Thread(
                 target=self._thread_populate_from_coco,
                 name="coco_loader",
                 args=(input_coco_path,),
             )
             self._coco_load_thread.daemon = True
+
+        # Start threads
+        # Should be the last part of the constructor.
+        log.info("Starting runtime thread...")
+        self._rt_thread.start()
+        if self._coco_load_thread:
+            log.info("Starting COCO loading thread...")
             self._coco_load_thread.start()
 
     def _thread_populate_from_coco(self, input_coco_path: Path) -> None:
@@ -286,7 +301,8 @@ class ActivityClassifierTCN(Node):
             image_id_to_frame_index.items(), key=lambda v: v[1]
         ):
             # Arbitrary time for alignment in windowing
-            image_ts = self.get_clock().now().to_msg()
+            image_ts = Time(sec=0, nanosec=frame_index)
+            image_ts_ns = time_to_int(image_ts)
 
             # Detection set message
             det_msg = ObjectDetection2dSet()
@@ -312,13 +328,24 @@ class ActivityClassifierTCN(Node):
                 ] = image_annots.get("confidence")
                 det_msg.label_confidences.extend(conf_mat.ravel())
 
-            # Calling the image callback last so the runtime trigger happens
-            # *after* detections are populated for the same timestamp.
-            # log.info(f"Queuing from COCO: n_dets={n_dets}, ts_index={image_ts}")
+            # Calling the image callback last since image frames define the
+            # window bounds, creating a new window for processing.
+            log.info(f"Queuing from COCO: n_dets={n_dets}, ts_index={image_ts}")
             self.det_callback(det_msg)
             self.img_ts_callback(image_ts)
 
+            # Wait until `image_ts` was considered in the runtime loop before
+            # proceeding into the next iteration.
+            with self._window_extracted_time_ns_cond:
+                self._window_extracted_time_ns_cond.wait_for(
+                    lambda: (
+                        self._window_extracted_time_ns is not None
+                        and self._window_extracted_time_ns >= image_ts_ns
+                    ),
+                )
+
         log.info("Completed COCO file object yielding")
+        rclpy.shutdown()
 
     def img_ts_callback(self, msg: Time) -> None:
         """
@@ -326,11 +353,7 @@ class ActivityClassifierTCN(Node):
         """
         if self.rt_alive() and self._buffer.queue_image(None, msg):
             self.get_logger().info(f"Queueing image TS {msg}")
-            # Inform the runtime that it should process a cycle.
-            # This is specifically in the image callback because processing
-            # windows are dictated by image frames and what aligns to an image
-            # frame. When we buffer a new image, we create a new window that
-            # can be processed.
+            # Let the runtime know we've queued something.
             self._rt_awake_evt.set()
 
     def det_callback(self, msg: ObjectDetection2dSet) -> None:
@@ -343,6 +366,8 @@ class ActivityClassifierTCN(Node):
             self.get_logger().info(
                 f"Queueing object detections (ts={msg.header.stamp})"
             )
+            # Let the runtime know we've queued something.
+            self._rt_awake_evt.set()
 
     def rt_alive(self) -> bool:
         """
@@ -360,6 +385,7 @@ class ActivityClassifierTCN(Node):
         Indicate that the runtime loop should cease.
         """
         self._rt_active.clear()
+        self._rt_awake_evt.set()  # intentionally second
 
     def _rt_keep_looping(self) -> bool:
         """
@@ -392,7 +418,7 @@ class ActivityClassifierTCN(Node):
             self.get_logger().warn("Window has no content, no leading frame to check.")
             return False
         cur_leading_time_ns = time_to_int(window.frames[-1][0])
-        prev_leading_time_ns = self._prev_leading_time_ns
+        prev_leading_time_ns = self._window_processed_time_ns
         if prev_leading_time_ns is not None:
             window_ok = prev_leading_time_ns < cur_leading_time_ns
             if not window_ok:
@@ -401,9 +427,21 @@ class ActivityClassifierTCN(Node):
                 self.get_logger().warn("Input window has duplicate leading frame time.")
                 return False
             # Window is OK, save new latest leading frame time below.
-        # Else:This is the first window with non-zero frames. The first history
-        # will be recorded below.
-        self._prev_leading_time_ns = cur_leading_time_ns
+        # Else: This is the first window with non-zero frames.
+        return True
+
+    def _window_criterion_coco_input_mode(self, window: InputWindow) -> bool:
+        """
+        When input is coming from COCO file, we expect that all input window
+        slots are filled and there are no None values.
+        Basically only need to check the latest time column as inputs are
+        lock-step buffered.
+        """
+        if len(window) == 0:
+            return True  # nothing to check, defer to other checks
+        if None in window.frames or None in window.obj_dets:
+            self.get_logger().warn("Inputs not jointly filled yet.")
+            return False
         return True
 
     def rt_loop(self):
@@ -421,23 +459,35 @@ class ActivityClassifierTCN(Node):
             self._window_criterion_new_leading_frame,
         ]
 
+        # If we're in COCO input mode, add the associated criterion
+        if self._coco_load_thread is not None:
+            window_processing_criterion_fn_list.append(
+                self._window_criterion_coco_input_mode
+            )
+
         while self._rt_keep_looping():
             if self._rt_awake_evt.wait_and_clear(self._rt_active_heartbeat):
                 # We want to fire off a prediction if the current window of
                 # data is "valid" based on our registered criterion.
                 window = self._buffer.get_window(self._window_size)
+
+                # Time of the leading frame of the extracted window.
+                window_time_ns: Optional[int] = None
+                if window.frames:  # maybe there are no frames yet in there.
+                    window_time_ns = time_to_int(window.frames[-1][0])
+
+                with self._window_extracted_time_ns_cond:
+                    self._window_extracted_time_ns = window_time_ns
+                    self._window_extracted_time_ns_cond.notify_all()
+
                 if all(fn(window) for fn in window_processing_criterion_fn_list):
                     # After validating a window, and before processing it, clear
                     # out older data at and before the first item in the window.
-                    # from the buffer based on the timestamp of
-                    # the first item in the current window.
-                    clear_before_time = window.frames[1][0]
-                    clear_before_ns = time_to_int(clear_before_time)
-                    self._buffer.clear_before(clear_before_ns)
+                    self._buffer.clear_before(time_to_int(window.frames[1][0]))
 
                     try:
                         log.info(
-                            f"Processing window with final image TS: "
+                            f"Processing window with leading image TS: "
                             f"{window.frames[-1][0]}"
                         )
                         act_msg = self._process_window(window)
@@ -450,18 +500,23 @@ class ActivityClassifierTCN(Node):
                             "not yield an activity classification for "
                             "publishing."
                         )
+
+                    # This window has completed processing - record its leading
+                    # timestamp now.
+                    self._window_processed_time_ns = window_time_ns
                 else:
                     log.debug("Runtime loop window criterion check(s) failed.")
                     with self._buffer:
                         # Clear to at least our maximum buffer size even if we
                         # didn't process anything (if there is anything *in*
-                        # our buffer).
+                        # our buffer). It's OK if the buffer's latest time has
+                        # progress since the start of this loop: that's just
+                        # the state it's in now.
                         try:
-                            clear_before_ns = (
+                            self._buffer.clear_before(
                                 time_to_int(self._buffer.latest_time())
                                 - self._buffer_max_size_nsec
                             )
-                            self._buffer.clear_before(clear_before_ns)
                         except RuntimeError:
                             # Nothing in the buffer, nothing to clear.
                             pass
@@ -530,7 +585,7 @@ class ActivityClassifierTCN(Node):
         log.info(
             f"Activity classification -- "
             f"{activity_msg.label_vec[pred]} @ {activity_msg.conf_vec[pred]} "
-            f"(time: {time_to_int(activity_msg.source_stamp_end_frame)} - "
+            f"(time: {time_to_int(activity_msg.source_stamp_start_frame)} - "
             f"{time_to_int(activity_msg.source_stamp_end_frame)})"
         )
 
@@ -573,6 +628,9 @@ class ActivityClassifierTCN(Node):
         """
         rc = self._results_collector
         if rc is not None:
+            self.get_logger().info(
+                f"Writing classification results to: {self._output_kwcoco_path}"
+            )
             self._results_collector.write_file()
 
     def destroy_node(self):
@@ -596,6 +654,7 @@ def main():
         executor.spin()
     except KeyboardInterrupt:
         log.info("Keyboard interrupt, shutting down.\n")
+        rclpy.shutdown()
     finally:
         log.info("Stopping node runtime")
         activity_classifier.rt_stop()
@@ -604,8 +663,6 @@ def main():
         # (optional - otherwise it will be done automatically
         # when the garbage collector destroys the node object)
         activity_classifier.destroy_node()
-
-        rclpy.shutdown()
 
 
 if __name__ == "__main__":
