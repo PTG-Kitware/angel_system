@@ -1,5 +1,7 @@
 version: "1.0"
 title: "Pour-over coffee"
+# These tasks are sourced from "PTG Evaluation Tasks Vol. 2" version 2.0
+# Provided by MASSACHUSETTS INSTITUTE OF TECHNOLOGY LINCOLN LABORATORY
 labels:
   # Item:
   # - id: Integer identification number of the label.
