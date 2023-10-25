@@ -1,4 +1,4 @@
-version: "2.0"
+version: "2.1"
 title: "Coffee + Tea + Dessert Quesadilla + Oatmeal"
 labels:
   # Item:
@@ -32,142 +32,139 @@ labels:
   - id: 7
     label: "slice-banana"
     full_str: "Slice banana"
+  - id: 8 
+    label: "measure-water"
+    full_str: "Measure water in the liquid measuring cup."
   # Labels that are the same across recipes but applied to different objects
-  - id: 8 # same action, different amounts
-    label: "measure-half-cup-water"
-    full_str: "Measure 1/2 cup water in the liquid measuring cup."
-  - id: 9 # same action, different amounts
-    label: "measure-12oz-water"
-    full_str: "Measure 12 ounces of water in the liquid measuring cup"
-  - id: 10 # same action, different ingredient
+  - id: 9 # same action, different ingredient
     label: "scoop-nutella"
     full_str: "Use the butter knife to scoop nutella from the jar"
-  - id: 11 # same action, different ingredient
+  - id: 10 # same action, different ingredient
     label: "spread-nutella-tortilla"
     full_str: "Spread nutella onto tortilla, leaving ½ inch uncovered at the edges"
-  - id: 12 # same action, different applications
+  - id: 11 # same action, different applications
     label: "dq-top-banana-slices"
     full_str: "Top with banana slices."
-  - id: 13 # same action, different applications
+  - id: 12 # same action, different applications
     label: "oatmeal-top-banana-slices"
     full_str: "Top with banana slices."
-  - id: 14 # same action, different applications
+  - id: 13 # same action, different applications
     label: "dq-sprinkle-cinnamon"
     full_str: "Sprinkle small amount of cinnamon onto tortilla"
-  - id: 15 # same action, different applications
+  - id: 14 # same action, different applications
     label: "oatmeal-sprinkle-cinnamon"
     full_str: "sprinkle with cinnamon"
-  - id: 16
+  - id: 15
     label: "tea-add-honey"
     full_str: "Add honey to mug"
-  - id: 17
+  - id: 16
     label: "oatmeal-drizzle-honey"
     full_str: "drizzle with honey"
-  - id: 18 # same action, different ingredient
+  - id: 17 # same action, different ingredient
     label: "dq-clean-knife"
     full_str: "Clean the knife by wiping with a paper towel."
-  - id: 19
+  - id: 18
     label: "tea-stir"
     full_str: "Stir" 
-  - id: 20
+  - id: 19
     label: "oatmeal-stir"
     full_str: "Stir"
   # Labels unique to coffee 
-  - id: 21
+  - id: 20
     label: "place-dipper-on-mug"
     full_str: "Place the dripper on top of the mug"
-  - id: 22
+  - id: 21
     label: "filter-fold-half"
-    full_str: Take the coffee filter and fold it in half to create a semi-circle
-  - id: 23
+    full_str: "Take the coffee filter and fold it in half to create a semi-circle"
+  - id: 22
     label: "filter-fold-quarter"
     full_str: "Fold the filter in half again to create a quarter-circle"
-  - id: 24
+  - id: 23
     label: "place-filter"
     full_str: "Place the folded filter into the dripper such that the the point of the quarter-circle rests in the center of the dripper"
-  - id: 25
+  - id: 24
     label: "spread-filter"
     full_str: "Spread the filter open to create a cone inside the dripper"
-  - id: 26
+  - id: 25
     label: "scale-turn-on"
     full_str: "Turn on the kitchen scale"
-  - id: 27
+  - id: 26
     label: "place-bowl-on-scale"
     full_str: "Place a bowl on the scale"
-  - id: 28
+  - id: 27
     label: "zero-scale"
     full_str: "Zero the scale"
-  - id: 29
+  - id: 28
     label: "measure-coffee-beans"
     full_str: "Add coffee beans to the bowl until the scale reads 25 grams"
-  - id: 30
+  - id: 29
     label: "pour-coffee-grinder"
     full_str: "Pour the measured coffee beans into the coffee grinder"
-  - id: 31
+  - id: 30
     label: "grind-beans"
     full_str: "Grind the coffee beans by pressing and holding down on the black part of the lid"
-  - id: 32
+  - id: 31
     label: "pour-beans-filter"
     #full_str: "Transfer the grounds to the filter cone"
     full_str: "pour the grounded coffee beans into the filter cone prepared in step 2"
-  - id: 33
+  - id: 32
     label: "pour-water-grounds-wet"
     #full_str: "Pour a small amount of water over the grounds in order to wet the grounds. Wait about 30 seconds."
     full_str: "Pour a small amount of water over the grounds in order to wet the grounds"
-  - id: 34
+  - id: 33
     label: "pour-water-grounds-circular"
     full_str: "slowly pour the water over the grounds in a circular motion. do not overfill beyond the top of the paper filter"
-  - id: 35
+  - id: 34
     label: "water-drain"
     full_str: "Allow the rest of the water in the dripper to drain"
-  - id: 36
+  - id: 35
     label: "remove-dripper"
     full_str: "Remove the dripper from the cup"
-  - id: 37
+  - id: 36
     label: "remove-grounds"
     full_str: "Remove the coffee grounds and paper filter from the dripper. "
-  - id: 38
+  - id: 37
     label: "discard-grounds"
     full_str: "Discard the coffee grounds and paper filter"
   # Labels unique to dessert quesadilla
-  - id: 39
+  - id: 38
     label: "fold-tortilla-half"
     full_str: "Fold tortilla in half into semi-cirlce"
-  - id: 40
+  - id: 39
     label: "slice-tortilla-half"
     full_str: "Slice tortilla in half using butter knife to create two triangular wedges"
-  - id: 41
+  - id: 40
     label: "place-tortilla-wedge"
     full_str: "Place tortilla wedge on the plate"
     repeat: 2
   # Labels unique to oatmeal
-  - id: 42
+  - id: 41
     label: "pour-water-bowl"
     full_str: "Pour the water from the liquid measuring cup into the microwave safe bowl."
-  - id: 43
+  - id: 42
     label: "measure-1-tbsp-oats"
     full_str: "Measure 1 Tablespoon of quick-cook oats and place in a microwave-safe bowl."
     repeat: 4
-  - id: 44
+  - id: 43
     label: "add-raisins"
     full_str: "Add handful of raisins"
-  - id: 45
+  - id: 44
     label: "microwave"
     full_str: "Microwave."
   # Labels unique to tea
-  - id: 46
+  - id: 45
     label: "tea-bag-in-mug"
     full_str: "Place tea bag in mug"
-  - id: 47
+  - id: 46
     label: "pour-water-mug"
     full_str: "Pour water from the electric kettle into the mug"
-  - id: 48
+  - id: 47
     label: "steep"
     full_str: "Steep for 3 minutes"
-  - id: 49
+  - id: 48
     label: "remove-tea-bag"
     full_str: "Remove tea bag from mug"
-  - id: 50
+  - id: 49
     label: "discard-tea-bag"
     full_str: "Discard tea bag"
 

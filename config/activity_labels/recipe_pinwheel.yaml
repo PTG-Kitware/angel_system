@@ -1,4 +1,4 @@
-version: "1"
+version: "1.1"
 title: "Pinwheels"
 labels:
   # Item:
@@ -23,7 +23,7 @@ labels:
     full_str: "Spread nut butter onto tortilla, leaving ½ inch uncovered at the edges"
     depends: [1, 2]
   - id: 4
-    label: "clean-knife"
+    label: "pinwheel-clean-knife"
     full_str: "Clean the knife by wiping with a paper towel."
     depends: [3]
   - id: 5
