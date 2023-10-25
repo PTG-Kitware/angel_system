@@ -135,7 +135,7 @@ class ActivityClassifierTCN(Node):
                 (PARAM_RT_HEARTBEAT, 0.1),
                 (PARAM_OUTPUT_COCO_FILEPATH, ""),
                 (PARAM_INPUT_COCO_FILEPATH, ""),
-                (PARAM_TIME_TRACE_LOGGING, False)
+                (PARAM_TIME_TRACE_LOGGING, False),
             ],
         )
         self._img_ts_topic = param_values[PARAM_IMG_TS_TOPIC]
@@ -161,6 +161,23 @@ class ActivityClassifierTCN(Node):
         # Feature version aligned with model current architecture
         self._feat_version = param_values[PARAM_MODEL_DETS_CONV_VERSION]
 
+        # Optionally initialize buffer-feeding from input COCO-file of object
+        # detections.
+        tmp_str = param_values[PARAM_INPUT_COCO_FILEPATH]
+        input_coco_path: Optional[Path] = Path(tmp_str) if tmp_str else None
+        # TODO: Variable to signal that processing of all file-loaded
+        #       detections has completed.
+        self._coco_complete_lock = Lock()
+        self._coco_load_thread = None
+        if input_coco_path is not None:
+            self._coco_load_thread = Thread(
+                target=self._thread_populate_from_coco,
+                name="coco_loader",
+                args=(input_coco_path,),
+            )
+            self._coco_load_thread.daemon = True
+            # Thread start at bottom of constructor.
+
         # Setup optional results output to a COCO file at end of runtime.
         tmp_str: str = param_values[PARAM_OUTPUT_COCO_FILEPATH]
         self._output_kwcoco_path: Optional[Path] = Path(tmp_str) if tmp_str else None
@@ -174,7 +191,10 @@ class ActivityClassifierTCN(Node):
                 self._output_kwcoco_path,
                 {i: c for i, c in enumerate(self._model.classes)},
             )
-            self._results_collector.set_video("ROS2 Stream")
+            # If we are loading from a COCO detections file, it will set the
+            # video in the loading thread.
+            if self._coco_load_thread is None:
+                self._results_collector.set_video("ROS2 Stream")
 
         # Input data buffer for temporal windowing.
         # Data should be tuple pairing a timestamp (ROS Time) of the source
@@ -245,23 +265,7 @@ class ActivityClassifierTCN(Node):
         self._rt_awake_evt = WaitAndClearEvent()
         self._rt_thread = Thread(target=self.rt_loop, name="prediction_runtime")
         self._rt_thread.daemon = True
-
-        # Optionally initialize buffer-feeding from input COCO-file of object
-        # detections.
-        # This is intentionally after the runtime thread initialization.
-        tmp_str = param_values[PARAM_INPUT_COCO_FILEPATH]
-        input_coco_path: Optional[Path] = Path(tmp_str) if tmp_str else None
-        # TODO: Variable to signal that processing of all file-loaded
-        #       detections has completed.
-        self._coco_complete_lock = Lock()
-        self._coco_load_thread = None
-        if input_coco_path is not None:
-            self._coco_load_thread = Thread(
-                target=self._thread_populate_from_coco,
-                name="coco_loader",
-                args=(input_coco_path,),
-            )
-            self._coco_load_thread.daemon = True
+        # Thread start at bottom of constructor.
 
         # Start threads
         # Should be the last part of the constructor.
@@ -293,6 +297,11 @@ class ActivityClassifierTCN(Node):
             )
             self._rt_active.clear()
             return
+
+        # If we're also outputting via a results collector, set the video
+        # (name) to be that of the input detections video.
+        if self._results_collector:
+            self._results_collector.set_video(dset.dataset["videos"][0]["name"])
 
         # Store detection annotation category labels as a vector once.
         # * categories() will using ascending ID order when not given any
@@ -335,8 +344,7 @@ class ActivityClassifierTCN(Node):
 
             # Calling the image callback last since image frames define the
             # window bounds, creating a new window for processing.
-            if self._enable_trace_logging:
-                log.info(f"Queuing from COCO: n_dets={n_dets}, ts_index={image_ts}")
+            log.info(f"Queuing from COCO: n_dets={n_dets}, image_ts={image_ts}")
             self.det_callback(det_msg)
             self.img_ts_callback(image_ts)
 
@@ -549,61 +557,68 @@ class ActivityClassifierTCN(Node):
 
         # TCN wants to know the label and confidence for the maximally
         # confident class only. Input object detection messages
-        frame_object_detections = [
-            ObjectDetectionsLTRB(
-                det_msg.left,
-                det_msg.top,
-                det_msg.right,
-                det_msg.bottom,
-                *obj_det_msg_to_max_lbl_conf(det_msg),
-            )
-            if det_msg is not None
-            else None
-            for det_msg in window.obj_dets
-        ]
+        with SimpleTimer("[_process_window] Detections prep", log.info):
+            frame_object_detections = [
+                ObjectDetectionsLTRB(
+                    det_msg.left,
+                    det_msg.top,
+                    det_msg.right,
+                    det_msg.bottom,
+                    *obj_det_msg_to_max_lbl_conf(det_msg),
+                )
+                if det_msg is not None
+                else None
+                for det_msg in window.obj_dets
+            ]
         log.debug(
-            f"Window vector presence: "
+            f"[_process_window] Window vector presence: "
             f"{[(v is not None) for v in frame_object_detections]}"
         )
 
-        try:
-            feats, mask = objects_to_feats(
-                frame_object_detections,
-                self._det_label_to_id,
-                self._feat_version,
-                self._img_pix_width,
-                self._img_pix_height,
-            )
-        except ValueError:
-            # feature detections were all None
-            raise NoActivityClassification()
-        feats = feats.to(self._model_device)
-        mask = mask.to(self._model_device)
+        with SimpleTimer("[_process_window] Detections embedding", log.info):
+            try:
+                feats, mask = objects_to_feats(
+                    frame_object_detections,
+                    self._det_label_to_id,
+                    self._feat_version,
+                    self._img_pix_width,
+                    self._img_pix_height,
+                )
+            except ValueError:
+                # feature detections were all None
+                raise NoActivityClassification()
 
-        proba = predict(self._model, feats, mask).cpu()
+        with SimpleTimer("[_process_window] Tensors to device", log.info):
+            feats = feats.to(self._model_device)
+            mask = mask.to(self._model_device)
+
+        with SimpleTimer("[_process_window] Model processing", log.info):
+            proba = predict(self._model, feats, mask).cpu()
         pred = torch.argmax(proba)
 
-        # Prepare output message
-        activity_msg = ActivityDetection()
-        activity_msg.header.frame_id = "Activity Classification"
-        activity_msg.header.stamp = self.get_clock().now().to_msg()
-        activity_msg.source_stamp_start_frame = window.frames[0][0]
-        activity_msg.source_stamp_end_frame = window.frames[-1][0]
-        activity_msg.label_vec = self._model.classes
-        activity_msg.conf_vec = proba.tolist()
+        with SimpleTimer("[_process_window] Message formation", log.info):
+            # Prepare output message
+            activity_msg = ActivityDetection()
+            activity_msg.header.frame_id = "Activity Classification"
+            activity_msg.header.stamp = self.get_clock().now().to_msg()
+            activity_msg.source_stamp_start_frame = window.frames[0][0]
+            activity_msg.source_stamp_end_frame = window.frames[-1][0]
+            activity_msg.label_vec = self._model.classes
+            activity_msg.conf_vec = proba.tolist()
 
-        if self._enable_trace_logging:
-            log.info(
-                f"Activity classification -- "
-                f"{activity_msg.label_vec[pred]} @ {activity_msg.conf_vec[pred]} "
-                f"(time: {time_to_int(activity_msg.source_stamp_start_frame)} - "
-                f"{time_to_int(activity_msg.source_stamp_end_frame)})"
-            )
+            if self._enable_trace_logging:
+                log.info(
+                    f"[_process_window] Activity classification -- "
+                    f"{activity_msg.label_vec[pred]} @ {activity_msg.conf_vec[pred]} "
+                    f"(time: {time_to_int(activity_msg.source_stamp_start_frame)} - "
+                    f"{time_to_int(activity_msg.source_stamp_end_frame)})"
+                )
 
         self._rate_tracker.tick()
         log.info(
-            f"Activity classification rate (hz: "
-            f"{self._rate_tracker.get_rate_avg()})",
+            f"[_process_window] Activity classification rate "
+            f"@ TS={activity_msg.source_stamp_end_frame} "
+            f"(hz: {self._rate_tracker.get_rate_avg()})",
         )
 
         return activity_msg
@@ -620,7 +635,9 @@ class ActivityClassifierTCN(Node):
         """
         rc = self._results_collector
         if rc is not None:
-            # Assigning result to the "id" if the last frame in the window.
+            # Use window end timestamp nanoseconds as the frame index.
+            # When reading from an input COCO file, this aligns with the input
+            # `image` `frame_index` attributes.
             frame_index = time_to_int(msg.source_stamp_end_frame)
             pred_cls_idx = int(np.argmax(msg.conf_vec))
             rc.collect(
