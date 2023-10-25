@@ -5,12 +5,13 @@ trainer.predict(model=model, dataloaders=dataloaders, ckpt_path=cfg.ckpt_path)
 """
 import json
 from pathlib import Path
-from threading import Event, Thread
+from threading import Event, Lock, Thread
 from typing import Callable
 from typing import List
 from typing import Optional
 from typing import Tuple
 
+import kwcoco
 from builtin_interfaces.msg import Time
 import numpy as np
 import rclpy
@@ -74,6 +75,10 @@ PARAM_RT_HEARTBEAT = "rt_thread_heartbeat"
 # predictions. If a path is provided, we will accumulate and output at node
 # closure.
 PARAM_OUTPUT_COCO_FILEPATH = "output_predictions_kwcoco"
+# Optional input COCO file of video frame object detections to be used as input
+# for activity classification. This should not be used simultaneously when
+# interfacing with ROS-based object detection input - behavior is undefined.
+PARAM_INPUT_COCO_FILEPATH = "input_obj_det_kwcoco"
 
 
 class NoActivityClassification(Exception):
@@ -126,6 +131,7 @@ class ActivityClassifierTCN(Node):
                 (PARAM_IMAGE_PIX_HEIGHT,),
                 (PARAM_RT_HEARTBEAT, 0.1),
                 (PARAM_OUTPUT_COCO_FILEPATH, ""),
+                (PARAM_INPUT_COCO_FILEPATH, ""),
             ],
         )
         self._img_ts_topic = param_values[PARAM_IMG_TS_TOPIC]
@@ -151,8 +157,8 @@ class ActivityClassifierTCN(Node):
         self._feat_version = param_values[PARAM_MODEL_DETS_CONV_VERSION]
 
         # Setup optional results output to a COCO file at end of runtime.
-        tmp = param_values[PARAM_OUTPUT_COCO_FILEPATH]
-        self._output_kwcoco_path: Optional[Path] = Path(tmp) if tmp else None
+        tmp_str: str = param_values[PARAM_OUTPUT_COCO_FILEPATH]
+        self._output_kwcoco_path: Optional[Path] = Path(tmp_str) if tmp_str else None
         self._results_collector: Optional[ResultsCollector] = None
         if self._output_kwcoco_path:
             log.info(
@@ -184,6 +190,7 @@ class ActivityClassifierTCN(Node):
         # Create ROS subscribers and publishers.
         # These are being purposefully being allocated before the
         # runtime-thread allocation.
+        # This is intentionally before runtime-loop initialization.
         self._img_ts_subscriber = self.create_subscription(
             Time,
             self._img_ts_topic,
@@ -205,11 +212,15 @@ class ActivityClassifierTCN(Node):
             callback_group=MutuallyExclusiveCallbackGroup(),
         )
 
+        # Rate tracker used in the window processing function.
+        # This needs to be initialized before starting the runtime-loop which
+        # calls that method.
         self._rate_tracker = RateTracker()
 
         # Start windowed prediction runtime thread.
         log.info("Starting runtime thread...")
-        # On/Off Switch for runtime loop
+        # On/Off Switch for runtime loop, initializing to "on" position.
+        # Clear this event to deactivate the runtime loop.
         self._rt_active = Event()
         self._rt_active.set()
         # seconds to occasionally time out of the wait condition for the loop
@@ -221,6 +232,94 @@ class ActivityClassifierTCN(Node):
         self._rt_thread.daemon = True
         self._rt_thread.start()
 
+        # Optionally initialize buffer-feeding from input COCO-file of object
+        # detections.
+        # This is intentionally after the runtime thread initialization.
+        tmp_str = param_values[PARAM_INPUT_COCO_FILEPATH]
+        input_coco_path: Optional[Path] = Path(tmp_str) if tmp_str else None
+        # TODO: Variable to signal that processing of all file-loaded
+        #       detections has completed.
+        self._coco_complete_lock = Lock()
+        self._coco_load_thread = None
+        if input_coco_path is not None:
+            log.info("Starting COCO loading thread...")
+            self._coco_load_thread = Thread(
+                target=self._thread_populate_from_coco,
+                name="coco_loader",
+                args=(input_coco_path,),
+            )
+            self._coco_load_thread.daemon = True
+            self._coco_load_thread.start()
+
+    def _thread_populate_from_coco(self, input_coco_path: Path) -> None:
+        """
+        Function to populate the buffer from a loaded COCO dataset of object
+        detections.
+        """
+        log = self.get_logger()
+        with SimpleTimer("Loading COCO object detections...", log.info):
+            with open(input_coco_path, "r") as infile:
+                dset = kwcoco.CocoDataset(data=json.load(infile))
+
+        # Only supporting processing of a single video's worth of detections.
+        # We will be buffering into a window-based buffer, so we need to only
+        # buffer one video's worth of detections at a time. Supporting only one
+        # video's worth of inputs is the simplest to support initially.
+        if len(dset.videos()) != 1:
+            log.error(
+                f"Input object detections COCO file did not have, or had more "
+                f"than, one video's worth of detections. "
+                f"Had: {len(dset.videos())}"
+            )
+            self._rt_active.clear()
+            return
+
+        # Store detection annotation category labels as a vector once.
+        # * categories() will using ascending ID order when not given any
+        #   explicit IDs to retrieve.
+        obj_labels = dset.categories().name
+
+        # Scan images by frame_index attribute
+        # Type annotations for `dset.images().get` is not accurate.
+        image_id_to_frame_index = dset.images().get("frame_index", keepid=True)
+        for image_id, frame_index in sorted(
+            image_id_to_frame_index.items(), key=lambda v: v[1]
+        ):
+            # Arbitrary time for alignment in windowing
+            image_ts = self.get_clock().now().to_msg()
+
+            # Detection set message
+            det_msg = ObjectDetection2dSet()
+            det_msg.header.stamp = image_ts
+            det_msg.source_stamp = image_ts
+            det_msg.label_vec = obj_labels
+
+            image_annots = dset.annots(dset.index.gid_to_aids[image_id])  # type: ignore
+            det_msg.num_detections = n_dets = len(image_annots)
+
+            if n_dets > 0:
+                det_bbox_tlbr = image_annots.boxes.to_tlbr().data.T
+                det_msg.top.extend(det_bbox_tlbr[0])
+                det_msg.left.extend(det_bbox_tlbr[1])
+                det_msg.bottom.extend(det_bbox_tlbr[2])
+                det_msg.right.extend(det_bbox_tlbr[3])
+
+                # Creates [n_det, n_label] matrix, which we assign to and then
+                # ravel into the message slot.
+                conf_mat = np.zeros((n_dets, len(obj_labels)), dtype=np.float64)
+                conf_mat[
+                    np.arange(n_dets), image_annots.get("category_id")
+                ] = image_annots.get("confidence")
+                det_msg.label_confidences.extend(conf_mat.ravel())
+
+            # Calling the image callback last so the runtime trigger happens
+            # *after* detections are populated for the same timestamp.
+            # log.info(f"Queuing from COCO: n_dets={n_dets}, ts_index={image_ts}")
+            self.det_callback(det_msg)
+            self.img_ts_callback(image_ts)
+
+        log.info("Completed COCO file object yielding")
+
     def img_ts_callback(self, msg: Time) -> None:
         """
         Capture a detection source image timestamp message.
@@ -228,7 +327,11 @@ class ActivityClassifierTCN(Node):
         if self.rt_alive() and self._buffer.queue_image(None, msg):
             self.get_logger().info(f"Queueing image TS {msg}")
             # Inform the runtime that it should process a cycle.
-            # self._rt_awake_evt.set()
+            # This is specifically in the image callback because processing
+            # windows are dictated by image frames and what aligns to an image
+            # frame. When we buffer a new image, we create a new window that
+            # can be processed.
+            self._rt_awake_evt.set()
 
     def det_callback(self, msg: ObjectDetection2dSet) -> None:
         """
@@ -240,12 +343,11 @@ class ActivityClassifierTCN(Node):
             self.get_logger().info(
                 f"Queueing object detections (ts={msg.header.stamp})"
             )
-            self._rt_awake_evt.set()
 
     def rt_alive(self) -> bool:
         """
-        Check that the prediction runtime is still alive and raise an exception
-        if it is not.
+        Check that the prediction runtime is still alive and return false if it
+        is not.
         """
         alive = self._rt_thread.is_alive()
         if not alive:
@@ -258,6 +360,19 @@ class ActivityClassifierTCN(Node):
         Indicate that the runtime loop should cease.
         """
         self._rt_active.clear()
+
+    def _rt_keep_looping(self) -> bool:
+        """
+        Indicator that the runtime-loop should keep looping.
+
+        The runtime should still be active when:
+        * The `_rt_active` event is still set (on/off switch)
+        * The input-file-mode EOF has not been reached (if in that mode).
+        """
+        # This will quickly return False if it has been `.clear()`ed
+        rt_active = self._rt_active.wait(0)
+        # TODO: add has-finished-processing-file-input check.
+        return rt_active
 
     def _window_criterion_correct_size(self, window: InputBuffer) -> bool:
         window_ok = len(window) == self._window_size
@@ -306,14 +421,15 @@ class ActivityClassifierTCN(Node):
             self._window_criterion_new_leading_frame,
         ]
 
-        while self._rt_active.wait(0):  # will quickly return false if cleared.
+        while self._rt_keep_looping():
             if self._rt_awake_evt.wait_and_clear(self._rt_active_heartbeat):
                 # We want to fire off a prediction if the current window of
                 # data is "valid" based on our registered criterion.
                 window = self._buffer.get_window(self._window_size)
                 if all(fn(window) for fn in window_processing_criterion_fn_list):
                     # After validating a window, and before processing it, clear
-                    # out older data from the buffer based on the timestamp of
+                    # out older data at and before the first item in the window.
+                    # from the buffer based on the timestamp of
                     # the first item in the current window.
                     clear_before_time = window.frames[1][0]
                     clear_before_ns = time_to_int(clear_before_time)
@@ -374,13 +490,6 @@ class ActivityClassifierTCN(Node):
                 det_msg.top,
                 det_msg.right,
                 det_msg.bottom,
-                # NOTE: Detection producer node is not filling in the message
-                #       correctly. label_vec/label_confidences is only
-                #       recording max-confidence label and confidence values.
-                #       This logic will need to be updated if that ever
-                #       changes.
-                # det_msg.label_vec,
-                # det_msg.label_confidences,
                 *obj_det_msg_to_max_lbl_conf(det_msg),
             )
             if det_msg is not None
