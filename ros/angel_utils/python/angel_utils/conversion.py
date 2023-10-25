@@ -29,7 +29,7 @@ HECTO_NS = 1e7
 def time_to_int(time_msg: Time) -> int:
     """
     Convert the given time message into an integer representing nanoseconds,
-    which is easily comparible and index-able.
+    which is easily comparable and index-able.
     :param time_msg:
     :return: Integer nanoseconds
     """
