@@ -34,7 +34,9 @@ class FeedbackGenerator(Node):
     to the ARUI when the information has updated.
 
     Takes in information from the `angel_msgs/ActivityDetection`,
-    `angel_msgs/ObjectDetection3dSet`, and `angel_msgs/TaskUpdate` messages.
+    `angel_msgs/ObjectDetection3dSet`, `angel_msgs/TaskUpdate`,
+    `angel_msgs/InterpretedAudioUserIntent`, and `angel_msgs/SystemTextResponse`
+    messages.
 
     Publishes `angel_msgs/AruiUpdate` representing the current activity,
     detections, and task.
@@ -61,7 +63,9 @@ class FeedbackGenerator(Node):
         self._task_monitor_topic = param_values[PARAM_TASK_MONITOR_TOPIC]
         self._arui_update_topic = param_values[PARAM_ARUI_UPDATE_TOPIC]
         self._interp_uintent_topic = param_values[PARAM_INTERP_USER_INTENT_TOPIC]
-        self._system_text_response_topic = param_values[PARAM_SYSTEM_TEXT_RESPONSE_TOPIC]
+        self._system_text_response_topic = param_values[
+            PARAM_SYSTEM_TEXT_RESPONSE_TOPIC
+        ]
 
         # subscribers
         self.activity_subscriber = self.create_subscription(
@@ -236,7 +240,7 @@ class FeedbackGenerator(Node):
     def system_text_response_callback(self, msg: SystemTextResponse) -> None:
         """
         Publish an ARUI update message with a *single* ARUI user notification.
-        The ARUI will read the `decription` field aloud.
+        The ARUI will read the `description` field aloud.
         """
         # Create an AruiUserNotification msg with this information
         notification = AruiUserNotification()
@@ -248,6 +252,7 @@ class FeedbackGenerator(Node):
         notification.description = f"{msg.response}"
 
         self.publish_update(notifications=[notification])
+
 
 def main():
     rclpy.init()
