@@ -308,7 +308,6 @@ class ActivityClassifierTCN(Node):
 
         while self._rt_active.wait(0):  # will quickly return false if cleared.
             if self._rt_awake_evt.wait_and_clear(self._rt_active_heartbeat):
-
                 # We want to fire off a prediction if the current window of
                 # data is "valid" based on our registered criterion.
                 window = self._buffer.get_window(self._window_size)
