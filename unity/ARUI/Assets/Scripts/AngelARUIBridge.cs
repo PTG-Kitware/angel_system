@@ -81,6 +81,7 @@ public class AngelARUIBridge : MonoBehaviour
     /// <param name="msg"></param>
     private void AruiUpdateCallback(AruiUpdateMsg msg)
     {
+        // Update task status
         try
         {
             AngelARUI.Instance.SetCurrentObservedTask(msg.task_update.task_name);
@@ -89,6 +90,12 @@ public class AngelARUIBridge : MonoBehaviour
         catch (Exception e)
         {
             debugMsg += e.ToString();
+        }
+
+        // Handle user notifications
+        for (int i = 0; i < msg.notifications.Length; i++)
+        {
+            AngelARUI.Instance.PlayMessageAtOrb(msg.notifications[i].description);
         }
     }
 
