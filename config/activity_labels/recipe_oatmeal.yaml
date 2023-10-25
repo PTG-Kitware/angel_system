@@ -1,5 +1,8 @@
 version: "1"
 title: "Oatmeal"
+# TODO: These activity ids should be updated to match those in 
+# `all_recipe_labels.yaml` but they are being left for now until
+# we can update the groundtruth labels as well
 labels:
   # Item:
   # - id: Integer identification number of the label.
