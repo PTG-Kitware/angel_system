@@ -83,17 +83,17 @@ girder_file_downloads:
       sha512: d352d0dda78d33fa60b4ce755e4603381ee54d5bbc821da024bbc10bf75240def3d1ed9dc035481802551c386bfad235ce99933992835a2ac825def26a37fdae
       dest: "{{ stage_dirs.model_files }}/yolov7-combined_objects-weights.pt"
     # Activity TCN input object detection label mapping
-    - file_id: 650ba52ffed5ca0b78984cae
-      sha512: 296a90cbb4a5c52ab8a4534463e6d643d46bcdfcb9d759fdd987b10379d4dc299075ddbd831b16356a889c75522767068cb2d884fb0e173bf347d0bc61752bc2
-      dest: "{{ stage_dirs.model_files }}/activity_tcn-coffee-det_label_mapping.json"
+    - file_id: 6539a24b5be10c8fb6ed5246
+      sha512: ed49b26156486f9fb30a940d18b4d32c3224ba30de42e0baa065d4406f6af9ead001a4332301db856898fdfd718bc4f13f457228f1cf2f6e359175f25296f9da
+      dest: "{{ stage_dirs.model_files }}/activity_tcn-all_activities-det_label_mapping.json"
     # Activity TCN classifier model weights
-    - file_id: 650a1393fed5ca0b78984bb5
-      sha512: 7fc3198da1c7926a966f50aac0ba0c9c775b527c20c66bc0becb27e890b0016b18553297664c07aa687e281a0562653af2e9dd0a11aeb5dda4fc7e2607732d85
-      dest: "{{ stage_dirs.model_files }}/activity_tcn-coffee-checkpoint.ckpt"
+    - file_id: 653998e65be10c8fb6ed523f
+      sha512: 0e3b38d6b4b90c727f3b368bbca54bb6f019a50fa575f1afe5d8d1b0259b02928d066feaab5a8f8a4ab5011349099c0f02dd28aa1f9cbd53cb0effbd70016d77
+      dest: "{{ stage_dirs.model_files }}/activity_tcn-all_activities-checkpoint.ckpt"
     # Activity TCN classifier model label mapping
-    - file_id: 650a2e74fed5ca0b78984bb8
-      sha512: 324c4321bc41fa8b3ac5a656a84d4bb7b7cd90108b3e2c9f38eec0997c4f7375a92ee898fbf781d48e62be6f9321ea9b1f71d456e8ccaa30180bc418078a3bd0
-      dest: "{{ stage_dirs.model_files }}/activity_tcn-coffee-mapping.txt"
+    - file_id: 653999935be10c8fb6ed5242
+      sha512: b83b5cd4f9a56bf9e8bfff5ce6a24bda013cca1e4b8c6b905f8d819f29afbfc6d4bc214ec1f97fd6f18d8e4ce304a3f19b89cbb11aad412647d91639eff0e058
+      dest: "{{ stage_dirs.model_files }}/activity_tcn-all_activities-mapping.txt"
 
 
 # List of git repositories to check out at a specific ref and then archive.
