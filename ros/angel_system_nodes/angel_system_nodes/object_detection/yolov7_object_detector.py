@@ -1,4 +1,5 @@
 from pathlib import Path
+from threading import Event, Lock, Thread
 from typing import Union
 
 from cv_bridge import CvBridge
@@ -10,15 +11,16 @@ import rclpy.logging
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 
-from angel_msgs.msg import ObjectDetection2dSet
-from angel_utils import RateTracker
-
 from yolov7.detect_ptg import load_model, predict_image
 from yolov7.models.experimental import attempt_load
 import yolov7.models.yolo
 from yolov7.utils.torch_utils import TracedModel
 
-from angel_utils import declare_and_get_parameters
+from angel_system.utils.event import WaitAndClearEvent
+from angel_system.utils.simple_timer import SimpleTimer
+
+from angel_msgs.msg import ObjectDetection2dSet
+from angel_utils import declare_and_get_parameters, RateTracker
 
 
 BRIDGE = CvBridge()
@@ -51,6 +53,8 @@ class YoloObjectDetector(Node):
                 ("cuda_device_id", "0"),  # cuda device, i.e. 0 or 0,1,2,3 or cpu
                 ("no_trace", True),  # don`t trace model
                 ("agnostic_nms", False),  # class-agnostic NMS
+                # Runtime thread checkin heartbeat interval in seconds.
+                ("rt_thread_heartbeat", 0.1),
             ],
         )
         self._image_topic = param_values["image_topic"]
@@ -73,6 +77,10 @@ class YoloObjectDetector(Node):
             f"Loaded model with classes:\n"
             + "\n".join(f'\t- "{n}"' for n in self.model.names)
         )
+
+        # Single slot for latest image message to process detection over.
+        self._cur_image_msg: Image = None
+        self._cur_image_msg_lock = Lock()
 
         # Initialize ROS hooks
         self._subscription = self.create_subscription(
@@ -101,84 +109,117 @@ class YoloObjectDetector(Node):
         self._rate_tracker = RateTracker()
         log.info("Detector initialized")
 
-    def listener_callback(self, image):
+        # Create and start detection runtime thread and loop.
+        log.info("Starting runtime thread...")
+        # On/Off Switch for runtime loop
+        self._rt_active = Event()
+        self._rt_active.set()
+        # seconds to occasionally time out of the wait condition for the loop
+        # to check if it is supposed to still be alive.
+        self._rt_active_heartbeat = param_values["rt_thread_heartbeat"]
+        # Condition that the runtime should perform processing
+        self._rt_awake_evt = WaitAndClearEvent()
+        self._rt_thread = Thread(target=self.rt_loop, name="prediction_runtime")
+        self._rt_thread.daemon = True
+        self._rt_thread.start()
+
+    def listener_callback(self, image: Image):
         """
         Callback function for image messages. Runs the berkeley object detector
         on the image and publishes an ObjectDetectionSet2d message for the image.
         """
         log = self.get_logger()
+        log.info(f"Received image with TS: {image.header.stamp}")
+        with self._cur_image_msg_lock:
+            self._cur_image_msg = image
+            self._rt_awake_evt.set()
 
-        # Convert ROS img msg to CV2 image
-        img0 = BRIDGE.imgmsg_to_cv2(image, desired_encoding="bgr8")
-        height, width = img0.shape[:2]
+    def rt_alive(self) -> bool:
+        """
+        Check that the prediction runtime is still alive and raise an exception
+        if it is not.
+        """
+        alive = self._rt_thread.is_alive()
+        if not alive:
+            self.get_logger().warn("Runtime thread no longer alive.")
+            self._rt_thread.join()
+        return alive
 
-        # img = preprocess_bgr_img(img0, self.imgsz, self.stride, self.device, self.half)
-        # t_end_img = time.monotonic()
-        #
-        # # Predict
-        # with torch.no_grad():   # Calculating gradients would cause a GPU memory leak
-        #     pred = self.model(img, augment=False)[0]
-        # t_end_pred = time.monotonic()
-        #
-        # # Apply NMS
-        # pred_nms = non_max_suppression(
-        #     pred,
-        #     self._det_conf_thresh,
-        #     self._iou_thr,
-        #     classes=None,
-        #     agnostic=self._agnostic_nms
-        # )
-        # t_end_nms = time.monotonic()
+    def rt_stop(self) -> None:
+        """
+        Indicate that the runtime loop should cease.
+        """
+        self._rt_active.clear()
 
-        msg = ObjectDetection2dSet()
-        msg.header.stamp = self.get_clock().now().to_msg()
-        msg.header.frame_id = image.header.frame_id
-        msg.source_stamp = image.header.stamp
-        msg.label_vec[:] = self.model.names
+    def rt_loop(self):
+        log = self.get_logger()
+        log.info("Runtime loop starting")
 
-        n_classes = len(self.model.names)
-        n_dets = 0
+        while self._rt_active.wait(0):  # will quickly return false if cleared.
+            if self._rt_awake_evt.wait_and_clear(self._rt_active_heartbeat):
+                with self._cur_image_msg_lock:
+                    if self._cur_image_msg is None:
+                        continue
+                    image = self._cur_image_msg
+                    self._cur_image_msg = None
 
-        dflt_conf_vec = np.zeros(n_classes, dtype=np.float64)
+                with SimpleTimer(
+                    f"[rt-loop] Processing image TS={image.header.stamp}", log.info
+                ):
+                    # Convert ROS img msg to CV2 image
+                    img0 = BRIDGE.imgmsg_to_cv2(image, desired_encoding="bgr8")
 
-        for xyxy, conf, cls_id in predict_image(
-            img0,
-            self.device,
-            self.model,
-            self.stride,
-            self.imgsz,
-            self.half,
-            False,
-            self._det_conf_thresh,
-            self._iou_thr,
-            None,
-            self._agnostic_nms,
-        ):
-            n_dets += 1
-            msg.left.append(xyxy[0])
-            msg.top.append(xyxy[1])
-            msg.right.append(xyxy[2])
-            msg.bottom.append(xyxy[3])
+                    msg = ObjectDetection2dSet()
+                    msg.header.stamp = self.get_clock().now().to_msg()
+                    msg.header.frame_id = image.header.frame_id
+                    msg.source_stamp = image.header.stamp
+                    msg.label_vec[:] = self.model.names
 
-            dflt_conf_vec[cls_id] = conf
-            msg.label_confidences.extend(dflt_conf_vec)  # copies data into array
-            dflt_conf_vec[cls_id] = 0.0  # reset before next passthrough
+                    n_classes = len(self.model.names)
+                    n_dets = 0
 
-        msg.num_detections = n_dets
+                    dflt_conf_vec = np.zeros(n_classes, dtype=np.float64)
 
-        # EXAMPLE: Getting max conf labels for each detection:
-        # np.asarray(msg.label_vec)[
-        #   np.asarray(msg.label_confidences).reshape(msg.num_detections, len(msg.label_vec)).argmax(axis=1)
-        # ]
+                    for xyxy, conf, cls_id in predict_image(
+                        img0,
+                        self.device,
+                        self.model,
+                        self.stride,
+                        self.imgsz,
+                        self.half,
+                        False,
+                        self._det_conf_thresh,
+                        self._iou_thr,
+                        None,
+                        self._agnostic_nms,
+                    ):
+                        n_dets += 1
+                        msg.left.append(xyxy[0])
+                        msg.top.append(xyxy[1])
+                        msg.right.append(xyxy[2])
+                        msg.bottom.append(xyxy[3])
 
-        self._det_publisher.publish(msg)
+                        dflt_conf_vec[cls_id] = conf
+                        # copies data into array
+                        msg.label_confidences.extend(dflt_conf_vec)
+                        # reset before next passthrough
+                        dflt_conf_vec[cls_id] = 0.0
 
-        self._rate_tracker.tick()
-        log.info(
-            f"Objects predicted & published (hz: "
-            f"{self._rate_tracker.get_rate_avg()})",
-            throttle_duration_sec=1,
-        )
+                    msg.num_detections = n_dets
+
+                    self._det_publisher.publish(msg)
+
+                self._rate_tracker.tick()
+                log.info(
+                    f"Objects Detection Rate: {self._rate_tracker.get_rate_avg()} Hz",
+                )
+
+    def destroy_node(self):
+        print("Shutting down runtime thread...")
+        self._rt_active.clear()  # make RT active flag "False"
+        self._rt_thread.join()
+        print("Shutting down runtime thread... Done")
+        super().destroy_node()
 
 
 def main():
@@ -188,17 +229,20 @@ def main():
     node = YoloObjectDetector()
 
     # Don't really want to use *all* available threads...
-    # 5 threads because:
-    # - 3 known subscribers which have their own groups
+    # 3 threads because:
+    # - 1 known subscriber which has their own group
     # - 1 for default group
     # - 1 for publishers
-    executor = MultiThreadedExecutor(num_threads=5)
+    executor = MultiThreadedExecutor(num_threads=3)
     executor.add_node(node)
     try:
         executor.spin()
     except KeyboardInterrupt:
         log.info("Keyboard interrupt, shutting down.\n")
     finally:
+        node.rt_stop()
+        node.get_logger().debug("Keyboard interrupt, shutting down.\n")
+
         # Destroy the node explicitly
         # (optional - otherwise it will be done automatically
         # when the garbage collector destroys the node object)

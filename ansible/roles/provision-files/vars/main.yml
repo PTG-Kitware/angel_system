@@ -24,59 +24,60 @@ girder_file_downloads:
     #  sha512: "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
     #  dest: "{{ stage_dirs.build_itt_base }}/some_file.txt"
 
-    # FasterRCNN label list text file
-    - file_id: 6332f54b11dab814282085e9
-      sha512: 2a635a859135f2360c0e02f58b9c9b78311ef07bb01cf6f5daac1c4ca92b827d7eeb5369362931e266c4b813ef472306803a4534d30c3f83712bea2b8d1cceb0
-      dest: "{{ stage_dirs.model_files }}/fasterrcnn_label_list.txt"
-    # FasterRCNN model weights checkpoint
-    - file_id: 6332f52a11dab814282085e6
-      sha512: 73529a1c238c20417bc6197035b4307a8afb3884ed24bc5938c92ca4d42e8f0531ae9582809da9512b198ad88d64113fd557692ac0933da24d7433983eb4f0ad
-      dest: "{{ stage_dirs.model_files }}/fasterrcnn_res101_vg.pth"
-    # UHO model weights checkpoint
-    - file_id: 633b095d11dab81428208933
-      sha512: 15aa06bcca0d775178adfbcda0426b983f72c14883b35b80e3114dba98e59840de2e54cf6620b0ddf96231ae378eed16ab1cb82b9a95545614543bec917ab81c
-      dest: "{{ stage_dirs.model_files }}/uho_epoch_090.ckpt"
-    # UHO model label list text file.
-    - file_id: 633c957011dab814282089ab
-      sha512: 293ef83fbd745ba4a5882ab8d476c1c87747050223dd13dd50139dd07425a50ff265a986ea37fc91180be759eee4cbf3ae4b7f11e3050586a8e5bf1db2513136
-      dest: "{{ stage_dirs.model_files }}/uho_epoch_090_labels.txt"
-    - file_id: 635c785711dab8142820abbb
-      sha512: 1d9d371b1c8b3377de27ac36de04c7a267c6ad5991ce9e6a19dca3f71af905a18c4510762155ca7c7ac4d85bc3959d6773871b5191372568333f4416b7b4c813
-      dest: "{{ stage_dirs.model_files }}/uho_checkpoint_20221022.ckpt"
-    # Task step HMM weights
-    - file_id: 6361524811dab8142820adff
-      sha512: 86f5ed4e01266c13f405f4048175d4a2b8d31c412a7170ee5ae6039062967e2b539c95f5ba16a61b893addec407648411d8a1b3ca62394e70f171fb8dd738bef
-      dest: "{{ stage_dirs.model_files }}/recipe_coffee_mean_std.npy"
-    - file_id: 63643e4e11dab8142820af0e
-      sha512: 5b9a42e3048c0f5360d7a7f9e11e677e51a2ae3318e60222ee07c0852e464e3572eb1bb5521aaccab38f8f3085609a2a06179e69e435f42dc1ba96d05a3d160a
-      dest: "{{ stage_dirs.model_files }}/recipe_coffee_trimmed_mean_std.npy"
-    - file_id: 63657f9c11dab8142820af6b
-      sha512: 78e9bf93fad284a6cf1ffe488b940ec8e807aed13f3bdb5a5c4b83bb649737765b4ac007359a8d68464318e5d624b226918272fe82e0ddb6f29852f4e18f50b0
-      dest: "{{ stage_dirs.model_files }}/recipe_coffee_trimmed_v2_mean_std.npy"
-    - file_id: 63657eb111dab8142820af68
-      sha512: 9a9f9aa836dc3eb6ba187b64bdd72bb0cdce062b086996921827270783b1686bdf079bfdb34eacd5c71cb28366e8e89a4303a71f9ce0d2c27628d78fae939ab3
-      dest: "{{ stage_dirs.model_files }}/recipe_coffee_trimmed_v3_mean_std.npy"
-    - file_id: 645aa4ad58fefcae81a9f73f
-      sha512: 1091c0fa8ca7db5364f56829b74e8bed57c6739e0633c37745ee32ebc76477eb6363e08de9cc04a26bf6ba7efcf45115f53239fd7d5136ddb48b9c474c6f851d
-      dest: "{{ stage_dirs.model_files }}/recipe_m2_apply_tourniquet.npy"
-    # Coffee object detection
-    - file_id: 63fe7dbb7b0dfcc98f66a871
-      sha512: c15fc5c38359d92a3a8aad41cd8a06bdfda6df7ae8ca553188ae02917ca2eb3fef92e5ea6a3d4a0676816a299e9d4253facf6cb59cab6776885fbaad57c31c39
-      dest: "{{ stage_dirs.model_files }}/coffee_stage1.pth"
-    - file_id: 640b6cc67b0dfcc98f66b743
-      sha512: 1a9a96f201d4472d3c946e3a9a7af1e0e232abf5a2868ebf8b3184dba3b23d858e619ab24e28dd9f1921d908387e3a3986eccfb136d3c38bc9ca85b7cae78e2e
-      dest: "{{ stage_dirs.model_files }}/berkeley_model_r50_final.pth"
-    # Tourniquet activity detection
-    - file_id: 6455411e58fefcae81a9efc5
-      sha512: e3d44527b572cb95f1869ec33214cbaf9c721aae18f14bc9db73ea8ed5c9c9d6c52975ebc0884acd3402e8ec66fcfd6168ff5744c5a9e31069049d23a97c5fce
-      dest: "{{ stage_dirs.model_files }}/recipe_m2_apply_tourniquet_v0.052.pkl"
-    # Tourniquet object detection
-    - file_id: 645a94db58fefcae81a9f73a
-      sha512: 2f07f3ec2759c729d70d89cd31266e000226208fbdcf25e50018cbb6c85e5c5a51378b73049334d5472f8dfe000040dbc740e65e093c6cd114d83e96bfcdab6d
-      dest: "{{ stage_dirs.model_files }}/tourniquet_stage1.pth"
-    - file_id: 645a946058fefcae81a9f737
-      sha512: 7382a33fe69bdb97ae218a30a5797404ef6573637a6bf28e04041f7c87b056bbb1d3e2dfb6ea8ceb869a6d73aff9e53e0d11a43e62e7c132964394bd0e033ff8
-      dest: "{{ stage_dirs.model_files }}/tourniquet_stage2_interstitial.pth"
+    ## FasterRCNN label list text file
+    #- file_id: 6332f54b11dab814282085e9
+    #  sha512: 2a635a859135f2360c0e02f58b9c9b78311ef07bb01cf6f5daac1c4ca92b827d7eeb5369362931e266c4b813ef472306803a4534d30c3f83712bea2b8d1cceb0
+    #  dest: "{{ stage_dirs.model_files }}/fasterrcnn_label_list.txt"
+    ## FasterRCNN model weights checkpoint
+    #- file_id: 6332f52a11dab814282085e6
+    #  sha512: 73529a1c238c20417bc6197035b4307a8afb3884ed24bc5938c92ca4d42e8f0531ae9582809da9512b198ad88d64113fd557692ac0933da24d7433983eb4f0ad
+    #  dest: "{{ stage_dirs.model_files }}/fasterrcnn_res101_vg.pth"
+    ## UHO model weights checkpoint
+    #- file_id: 633b095d11dab81428208933
+    #  sha512: 15aa06bcca0d775178adfbcda0426b983f72c14883b35b80e3114dba98e59840de2e54cf6620b0ddf96231ae378eed16ab1cb82b9a95545614543bec917ab81c
+    #  dest: "{{ stage_dirs.model_files }}/uho_epoch_090.ckpt"
+    ## UHO model label list text file.
+    #- file_id: 633c957011dab814282089ab
+    #  sha512: 293ef83fbd745ba4a5882ab8d476c1c87747050223dd13dd50139dd07425a50ff265a986ea37fc91180be759eee4cbf3ae4b7f11e3050586a8e5bf1db2513136
+    #  dest: "{{ stage_dirs.model_files }}/uho_epoch_090_labels.txt"
+    #- file_id: 635c785711dab8142820abbb
+    #  sha512: 1d9d371b1c8b3377de27ac36de04c7a267c6ad5991ce9e6a19dca3f71af905a18c4510762155ca7c7ac4d85bc3959d6773871b5191372568333f4416b7b4c813
+    #  dest: "{{ stage_dirs.model_files }}/uho_checkpoint_20221022.ckpt"
+    ## Task step HMM weights
+    #- file_id: 6361524811dab8142820adff
+    #  sha512: 86f5ed4e01266c13f405f4048175d4a2b8d31c412a7170ee5ae6039062967e2b539c95f5ba16a61b893addec407648411d8a1b3ca62394e70f171fb8dd738bef
+    #  dest: "{{ stage_dirs.model_files }}/recipe_coffee_mean_std.npy"
+    #- file_id: 63643e4e11dab8142820af0e
+    #  sha512: 5b9a42e3048c0f5360d7a7f9e11e677e51a2ae3318e60222ee07c0852e464e3572eb1bb5521aaccab38f8f3085609a2a06179e69e435f42dc1ba96d05a3d160a
+    #  dest: "{{ stage_dirs.model_files }}/recipe_coffee_trimmed_mean_std.npy"
+    #- file_id: 63657f9c11dab8142820af6b
+    #  sha512: 78e9bf93fad284a6cf1ffe488b940ec8e807aed13f3bdb5a5c4b83bb649737765b4ac007359a8d68464318e5d624b226918272fe82e0ddb6f29852f4e18f50b0
+    #  dest: "{{ stage_dirs.model_files }}/recipe_coffee_trimmed_v2_mean_std.npy"
+    #- file_id: 63657eb111dab8142820af68
+    #  sha512: 9a9f9aa836dc3eb6ba187b64bdd72bb0cdce062b086996921827270783b1686bdf079bfdb34eacd5c71cb28366e8e89a4303a71f9ce0d2c27628d78fae939ab3
+    #  dest: "{{ stage_dirs.model_files }}/recipe_coffee_trimmed_v3_mean_std.npy"
+    #- file_id: 645aa4ad58fefcae81a9f73f
+    #  sha512: 1091c0fa8ca7db5364f56829b74e8bed57c6739e0633c37745ee32ebc76477eb6363e08de9cc04a26bf6ba7efcf45115f53239fd7d5136ddb48b9c474c6f851d
+    #  dest: "{{ stage_dirs.model_files }}/recipe_m2_apply_tourniquet.npy"
+    ## Coffee object detection
+    #- file_id: 63fe7dbb7b0dfcc98f66a871
+    #  sha512: c15fc5c38359d92a3a8aad41cd8a06bdfda6df7ae8ca553188ae02917ca2eb3fef92e5ea6a3d4a0676816a299e9d4253facf6cb59cab6776885fbaad57c31c39
+    #  dest: "{{ stage_dirs.model_files }}/coffee_stage1.pth"
+    #- file_id: 640b6cc67b0dfcc98f66b743
+    #  sha512: 1a9a96f201d4472d3c946e3a9a7af1e0e232abf5a2868ebf8b3184dba3b23d858e619ab24e28dd9f1921d908387e3a3986eccfb136d3c38bc9ca85b7cae78e2e
+    #  dest: "{{ stage_dirs.model_files }}/berkeley_model_r50_final.pth"
+    ## Tourniquet activity detection
+    #- file_id: 6455411e58fefcae81a9efc5
+    #  sha512: e3d44527b572cb95f1869ec33214cbaf9c721aae18f14bc9db73ea8ed5c9c9d6c52975ebc0884acd3402e8ec66fcfd6168ff5744c5a9e31069049d23a97c5fce
+    #  dest: "{{ stage_dirs.model_files }}/recipe_m2_apply_tourniquet_v0.052.pkl"
+    ## Tourniquet object detection
+    #- file_id: 645a94db58fefcae81a9f73a
+    #  sha512: 2f07f3ec2759c729d70d89cd31266e000226208fbdcf25e50018cbb6c85e5c5a51378b73049334d5472f8dfe000040dbc740e65e093c6cd114d83e96bfcdab6d
+    #  dest: "{{ stage_dirs.model_files }}/tourniquet_stage1.pth"
+    #- file_id: 645a946058fefcae81a9f737
+    #  sha512: 7382a33fe69bdb97ae218a30a5797404ef6573637a6bf28e04041f7c87b056bbb1d3e2dfb6ea8ceb869a6d73aff9e53e0d11a43e62e7c132964394bd0e033ff8
+    #  dest: "{{ stage_dirs.model_files }}/tourniquet_stage2_interstitial.pth"
+
     # YOLO v7 Combined Objects weights
     - file_id: 65300c3bdd4f924baed358ea
       sha512: d352d0dda78d33fa60b4ce755e4603381ee54d5bbc821da024bbc10bf75240def3d1ed9dc035481802551c386bfad235ce99933992835a2ac825def26a37fdae
