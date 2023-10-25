@@ -1,0 +1,56 @@
+{
+    "Name": "Coffee",
+    "Steps": [
+        {
+            "StepDesc": "Measure 12 ounces of cold water and transfer to a kettle.",
+            "RequiredItems": [ "water", "kettle" ],
+            "SubSteps": [],
+            "CurrSubStepIndex": -1
+        },
+        {
+            "StepDesc": "Assemble the filter cone. Place the dripper on top of a coffee mug.",
+            "RequiredItems": [ "dripper", "mug", "filter" ],
+            "SubSteps": [],
+            "CurrSubStepIndex": -1
+        },
+        {
+            "StepDesc": "Prepare the filter insert by folding the paper filter in half to create a semi-circle, and in half again to create a quarter-circle. Place the paper filter in the dripper and spread open to create a cone.",
+            "RequiredItems": [ "filter", "mug" ],
+            "SubSteps": [],
+            "CurrSubStepIndex": -1
+        },
+        {
+            "StepDesc": "Weigh the coffee beans and grind until the coffee grounds are the consistency of coarse sand, about 20 seconds. Transfer the grounds to the filter cone.",
+            "RequiredItems": [ "filter", "mug" ],
+            "SubSteps": [],
+            "CurrSubStepIndex": -1
+        },
+        {
+            "StepDesc": "Check the temperature of the water.",
+            "RequiredItems": [ "filter", "mug" ],
+            "SubSteps": [],
+            "CurrSubStepIndex": -1
+        },
+        {
+            "StepDesc": "Pour a small amount of water in the filter to wet the grounds. Wait about 30 seconds.",
+            "RequiredItems": [ "filter", "mug" ],
+            "SubSteps": [],
+            "CurrSubStepIndex": -1
+        },
+        {
+            "StepDesc": "Slowly pour the rest of the water over the grounds in a circular motion. Do not overfill beyond the top of the paper filter.",
+            "RequiredItems": [ "filter", "mug" ],
+            "SubSteps": [],
+            "CurrSubStepIndex": -1
+        },
+        {
+            "StepDesc": "Let the coffee drain completely into the mug before removing the dripper. Discard the paper filter and coffee grounds.",
+            "RequiredItems": [ "filter", "mug" ],
+            "SubSteps": [],
+            "CurrSubStepIndex": -1
+        }
+    ],
+    "CurrStepIndex": 0,
+    "PrevStepIndex": -1,
+    "NextStepIndex": 1
+}
