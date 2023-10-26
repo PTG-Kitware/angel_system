@@ -97,26 +97,27 @@ class GlobalStepPredictorNode(Node):
         TaskUpdate message.
         """
         conf_array = np.array(activity_msg.conf_vec)
-        if self.n_dets % 10:
-            # Swap confidences
-            conf_array[1] = 1.0
-            print("skipping to step 1")
-
         conf_array = np.expand_dims(conf_array, 0)
         print(conf_array)
 
         self.n_dets += 1
 
         # GSP expects confidence array of shape [n_frames, n_acts]
-        tracker_dict_list = self.gsp.process_new_confidences(conf_array)
+        if self.n_dets % 10 == 0:
+            print("skipping step ")
+            tracker_dict_list = self.gsp.manually_increment_current_step(0)
+        else:
+            tracker_dict_list = self.gsp.process_new_confidences(conf_array)
 
         for task in tracker_dict_list:
             previous_step_id = self.recipe_steps[task["recipe"]]
             current_step_id = task["current_step"]
 
-            # TODO: if previous and current are not the same, publish a taskupdate
+            # If previous and current are not the same, publish a taskupdate
             if previous_step_id != current_step_id:
                 self.publish_task_state_message(task)
+
+                self.recipe_steps[task["recipe"]] = current_step_id
 
     def publish_task_state_message(
         self,
@@ -181,7 +182,6 @@ class GlobalStepPredictorNode(Node):
         log.info("Shutting down runtime threads...")
         log.info("Shutting down runtime threads... Done")
         super()
-
 
 
 def main():
