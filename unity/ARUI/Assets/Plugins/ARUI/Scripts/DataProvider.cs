@@ -202,6 +202,7 @@ public class DataProvider : Singleton<DataProvider>
         }
         else if (stepIndex > _currentSelectedTasks[taskID].Steps.Count - 1)
         {
+            //set the current task as count if the task is done
             _currentSelectedTasks[taskID].PrevStepIndex = _currentSelectedTasks[taskID].Steps.Count-1;
             _currentSelectedTasks[taskID].CurrStepIndex = _currentSelectedTasks[taskID].Steps.Count;
             _currentSelectedTasks[taskID].NextStepIndex = -1;

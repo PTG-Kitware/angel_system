@@ -354,7 +354,6 @@ GameObject:
   - component: {fileID: 3313594597915729618}
   - component: {fileID: 3313594597915729619}
   - component: {fileID: 2724373997908098381}
-  - component: {fileID: 5355532698893695842}
   - component: {fileID: 6646244368683478121}
   - component: {fileID: 7817718346021929786}
   - component: {fileID: 5601470322353805520}
@@ -422,25 +421,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   TaskText: {fileID: 5601470322353805520}
-  centerScript: {fileID: 0}
   currStep:
     StepDesc: 
     RequiredItems: []
     SubSteps: []
     CurrSubStepIndex: 0
---- !u!114 &5355532698893695842
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3313594597915729622}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c4955531865a5dd49826541d2fc409be, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  text: {fileID: 5601470322353805520}
 --- !u!114 &6646244368683478121
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -495,8 +480,8 @@ MonoBehaviour:
     seconds. Microwave the mug and batter on high power for 60 seconds. Microwave
     the mug and batter on high power for 60 seconds.'
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: b7b7aad347bf1fa4c990aeb3355289fe, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: b7b7aad347bf1fa4c990aeb3355289fe, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []

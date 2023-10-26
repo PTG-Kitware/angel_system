@@ -42,7 +42,6 @@ public class ManageStepFlashcardMulti : MonoBehaviour
             collider.center = new Vector3(collider.center.x, collider.center.y - 0.015f, collider.center.z);
             collider.size = new Vector3(collider.size.x, collider.size.y + 0.03f, collider.size.z);
         }
-        int currIndex = currStep.CurrSubStepIndex;
     }
 
 

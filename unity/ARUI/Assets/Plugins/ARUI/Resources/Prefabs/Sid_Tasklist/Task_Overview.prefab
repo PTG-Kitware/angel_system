@@ -169,8 +169,6 @@ GameObject:
   - component: {fileID: 7387432270431237105}
   - component: {fileID: 6473157197095737792}
   - component: {fileID: 6597955565745825878}
-  - component: {fileID: 8044146250310382076}
-  - component: {fileID: 2468358496749658757}
   m_Layer: 0
   m_Name: Task_Overview
   m_TagString: Untagged
@@ -319,33 +317,6 @@ MonoBehaviour:
     RepeatSnapPoints: 0
     SnapRadius: 0
   elasticTypes: 0
---- !u!114 &8044146250310382076
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1735085396694344570}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5afd5316c63705643b3daba5a6e923bd, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  ShowTetherWhenManipulating: 0
-  IsBoundsHandles: 0
---- !u!65 &2468358496749658757
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1735085396694344570}
-  m_Material: {fileID: 0}
-  m_IsTrigger: 0
-  m_Enabled: 1
-  serializedVersion: 2
-  m_Size: {x: 0.01, y: 0.013275959, z: 0.01}
-  m_Center: {x: 0, y: 0.03183504, z: 0}
 --- !u!1 &5401681680357383070
 GameObject:
   m_ObjectHideFlags: 0

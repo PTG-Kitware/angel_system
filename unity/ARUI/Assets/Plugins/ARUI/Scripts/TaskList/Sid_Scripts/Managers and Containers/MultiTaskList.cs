@@ -107,7 +107,7 @@ public class MultiTaskList : Singleton<MultiTaskList>
     /// <param name="index"></param>
     public void SetMenuActive(int index)
     {
-        this.GetComponent<TasklistPositionManager>().SetIsLooking(true);
+        TasklistPositionManager.Instance.SetIsLooking(true);
         _currIndex = index;
         for(int i = 0; i < _allTasklists.Count; i++)
         {
@@ -143,32 +143,26 @@ public class MultiTaskList : Singleton<MultiTaskList>
         {
             ToggleOverview(false);
         }
+
         foreach(KeyValuePair<string, TaskList> pair in tasks)
         {
             if (pair.Key == currTask)
             {
                 _containers[0].taskNameText.SetText(pair.Key);
                 SetupCurrTaskOverview currSetup = _containers[0].setupInstance;
-                if (pair.Value.CurrStepIndex != -1)
+
+                _containers[0].multiListInstance.UpdateProgres(Mathf.Min(1f, Mathf.Max(0f, (float) pair.Value.CurrStepIndex / (float)pair.Value.Steps.Count)));
+
+                if (pair.Value.CurrStepIndex >= pair.Value.Steps.Count)
                 {
-                    if (pair.Value.CurrStepIndex >= pair.Value.Steps.Count)
-                        currSetup.SetupCurrTask(pair.Value.Steps[pair.Value.Steps.Count-1], this.GetComponent<TasklistPositionManager>());
-                    else
-                        currSetup.SetupCurrTask(pair.Value.Steps[pair.Value.CurrStepIndex], this.GetComponent<TasklistPositionManager>());
-                }
-                if (pair.Value.NextStepIndex != -1)
+                    currSetup.SetupCurrTask(null, 0);
+                    currSetup.SetupNextTasks(null, 0);
+                    currSetup.SetupPrevTask(null, 0);
+                } else 
                 {
-                    currSetup.SetupNextTask(pair.Value.Steps[pair.Value.NextStepIndex]);
-                } else
-                {
-                    currSetup.DeactivateNextTask();
-                }
-                if (pair.Value.PrevStepIndex != -1)
-                {
-                    currSetup.SetupPrevTask(pair.Value.Steps[pair.Value.PrevStepIndex]);
-                } else
-                {
-                    currSetup.DeactivatePrevTask();
+                    currSetup.SetupPrevTask(pair.Value.Steps, pair.Value.PrevStepIndex);
+                    currSetup.SetupCurrTask(pair.Value.Steps, pair.Value.CurrStepIndex);
+                    currSetup.SetupNextTasks(pair.Value.Steps, pair.Value.NextStepIndex);
                 }
             }
             else
@@ -183,26 +177,19 @@ public class MultiTaskList : Singleton<MultiTaskList>
                 curr.multiListInstance.index = index;
                 curr.taskNameText.SetText(pair.Key);
                 SetupCurrTaskOverview currSetup = curr.setupInstance;
-                if (pair.Value.CurrStepIndex != -1)
+                _containers[_containers.Count - 1].multiListInstance.UpdateProgres(Mathf.Min(1f, Mathf.Max(0f, (float)pair.Value.CurrStepIndex / (float)pair.Value.Steps.Count)));
+
+                if (pair.Value.CurrStepIndex >= pair.Value.Steps.Count)
                 {
-                    if (pair.Value.CurrStepIndex >= pair.Value.Steps.Count)
-                        currSetup.SetupCurrTask(pair.Value.Steps[pair.Value.Steps.Count - 1]);
-                    else
-                        currSetup.SetupCurrTask(pair.Value.Steps[pair.Value.CurrStepIndex]);
+                    currSetup.SetupCurrTask(null, 0);
+                    currSetup.SetupNextTasks(null, 0);
+                    currSetup.SetupPrevTask(null, 0);
                 }
-                if (pair.Value.NextStepIndex != -1)
+                else
                 {
-                    currSetup.SetupNextTask(pair.Value.Steps[pair.Value.NextStepIndex]);
-                } else
-                {
-                    currSetup.DeactivateNextTask();
-                }
-                if (pair.Value.PrevStepIndex != -1)
-                {
-                    currSetup.SetupPrevTask(pair.Value.Steps[pair.Value.PrevStepIndex]);
-                } else
-                {
-                    currSetup.DeactivatePrevTask();
+                    currSetup.SetupPrevTask(pair.Value.Steps, pair.Value.PrevStepIndex);
+                    currSetup.SetupCurrTask(pair.Value.Steps, pair.Value.CurrStepIndex);
+                    currSetup.SetupNextTasks(pair.Value.Steps, pair.Value.NextStepIndex);
                 }
                 index++;
             }
@@ -318,12 +305,12 @@ public class MultiTaskList : Singleton<MultiTaskList>
                 {
                     canvas.SetActive(false);
                 }
-                this.GetComponent<TasklistPositionManager>().SetIsLooking(false);
+                TasklistPositionManager.Instance.SetIsLooking(false);
                 if (canvasGroup != null)
                 {
                     canvasGroup.alpha = 1.0f;
                 }
-                this.GetComponent<TasklistPositionManager>().DeactivateLines();
+                TasklistPositionManager.Instance.DeactivateLines();
             }
             else
             {

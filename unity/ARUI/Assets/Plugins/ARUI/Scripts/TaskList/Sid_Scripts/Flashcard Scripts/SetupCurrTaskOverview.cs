@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -5,62 +6,64 @@ using UnityEngine;
 //Handles setting up the text + required items for the flashcards 
 
 public class SetupCurrTaskOverview : MonoBehaviour
-{
-    public ManageStepFlashcardMulti currFlashcardMulti;
+{ 
     public ManageStepFlashcardSolo currFlashcardSolo;
     public ManageStepFlashcardSolo prevFlashcard;
-    public ManageStepFlashcardSolo nextFlashcard;
-    public GameObject topPlaceholder;
-    public GameObject bottomPlaceholder;
-    public void SetupCurrTask(Step currStep, TasklistPositionManager centerScript = null)
+    public ManageStepFlashcardSolo[] nextFlashcards;
+
+    public void SetupCurrTask(List<Step> allSteps, int currentStep)
     {
-        List<string> reqList;
-        if (currStep.SubSteps.Count > 0)
+        if (allSteps == null || currentStep <= -1)
         {
-            reqList = currStep.SubSteps[currStep.CurrSubStepIndex].RequiredItems;
-            currFlashcardMulti.gameObject.SetActive(true);
             currFlashcardSolo.gameObject.SetActive(false);
-            currFlashcardMulti.InitializeFlashcad(currStep);
-        } else
-        {
-            currFlashcardMulti.gameObject.SetActive(false);
+        } else {
+
             currFlashcardSolo.gameObject.SetActive(true);
-            reqList = currStep.RequiredItems;
-            currFlashcardSolo.InitializeFlashcard(currStep);
+            currFlashcardSolo.InitializeFlashcard(allSteps[currentStep], currentStep+1, allSteps.Count);
         }
-        //if (centerScript != null)
-        //{
-        //    centerScript.ClearObjs();
-        //    foreach (string str in reqList)
-        //    {
-        //        centerScript.AddObj(str);
-        //    }
-        //}
     }
 
-    public void SetupPrevTask(Step prevStep)
+    public void SetupPrevTask(List<Step> allSteps, int prevStep)
     {
-        prevFlashcard.gameObject.SetActive(true);
-        topPlaceholder.gameObject.SetActive(false);
-        prevFlashcard.InitializeFlashcard(prevStep);
+        if (allSteps == null || prevStep <= -1)
+        {
+            prevFlashcard.gameObject.SetActive(false);
+        }
+        else
+        {
+            prevFlashcard.gameObject.SetActive(true);
+            prevFlashcard.InitializeFlashcard(allSteps[prevStep]);
+        }
     }
 
-    public void DeactivatePrevTask()
+    public void SetupNextTasks(List<Step> allSteps, int nextStep)
     {
-        prevFlashcard.gameObject.SetActive(false);
-        topPlaceholder.gameObject.SetActive(true);
+        if (allSteps == null || nextStep <= -1)
+        {
+            foreach (var card in nextFlashcards)
+                card.gameObject.SetActive(false);
+        }
+        else
+        {
+            int i = nextStep;
+            foreach (var card in nextFlashcards)
+            {
+                if (i < allSteps.Count)
+                {
+                    card.gameObject.SetActive(true);
+                    card.InitializeFlashcard(allSteps[i]);
+                }
+                else
+                    card.gameObject.SetActive(false);
+
+                i++;
+            }
+        }
     }
 
-    public void SetupNextTask(Step nextStep)
+    public void DeactivateNextTasks()
     {
-        nextFlashcard.gameObject.SetActive(true);
-        bottomPlaceholder.gameObject.SetActive(false);
-        nextFlashcard.InitializeFlashcard(nextStep);
-    }
-
-    public void DeactivateNextTask()
-    {
-        nextFlashcard.gameObject.SetActive(false);
-        bottomPlaceholder.gameObject.SetActive(true);
+        foreach (var card in nextFlashcards)
+            card.gameObject.SetActive(false);
     }
 }

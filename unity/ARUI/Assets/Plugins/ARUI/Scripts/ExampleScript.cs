@@ -6,8 +6,9 @@ using System;
 public class ExampleScript : MonoBehaviour
 {
     public bool Automate = true;
-    private int _currentTask = 0;
 
+    private Dictionary<string, int> _currentStepMap;
+    private string _currentTask = "";
     private void Start()
     {
         if (Automate)
@@ -22,6 +23,11 @@ public class ExampleScript : MonoBehaviour
 
         //test with dummy data
         var taskIDs = new List<string> { "Pinwheels", "Coffee", "Oatmeal", "Quesadilla", "Tea" };
+        _currentStepMap = new Dictionary<string, int> { 
+            { "Pinwheels", 0 }, { "Coffee", 0 },
+            { "Oatmeal", 0 }, { "Quesadilla", 0 }, { "Tea", 0 }};
+        _currentTask = "Pinwheels";
+
         var allJsonTasks = new Dictionary<string, string>();
         foreach (string  taskID in taskIDs)
         {
@@ -49,6 +55,11 @@ public class ExampleScript : MonoBehaviour
         {
             //test with dummy data
             var taskIDs = new List<string> { "Pinwheels", "Coffee", "Oatmeal", "Quesadilla", "Tea" };
+            _currentStepMap = new Dictionary<string, int> {
+            { "Pinwheels", 0 }, { "Coffee", 0 },
+            { "Oatmeal", 0 }, { "Quesadilla", 0 }, { "Tea", 0 }};
+            _currentTask = "Pinwheels";
+
             var allJsonTasks = new Dictionary<string, string>();
             foreach (string taskID in taskIDs)
             {
@@ -62,13 +73,13 @@ public class ExampleScript : MonoBehaviour
         // Example how to step forward/backward in tasklist. 
         if (Input.GetKeyUp(KeyCode.RightArrow))
         {
-            _currentTask++;
-            AngelARUI.Instance.GoToStep("Pinwheels", _currentTask);
+            _currentStepMap[_currentTask]++;
+            AngelARUI.Instance.GoToStep(_currentTask, _currentStepMap[_currentTask]);
         }
         else if (Input.GetKeyUp(KeyCode.LeftArrow))
         {
-            _currentTask--;
-            AngelARUI.Instance.GoToStep("Pinwheels", _currentTask);
+            _currentStepMap[_currentTask]--;
+            AngelARUI.Instance.GoToStep(_currentTask, _currentStepMap[_currentTask]);
         }
 
         if (Input.GetKeyUp(KeyCode.V))
@@ -100,26 +111,31 @@ public class ExampleScript : MonoBehaviour
         if (Input.GetKeyUp(KeyCode.Alpha1))
         {
             AngelARUI.Instance.SetCurrentObservedTask("Pinwheels");
+            _currentTask = "Pinwheels";
         }
 
         if (Input.GetKeyUp(KeyCode.Alpha2))
         {
             AngelARUI.Instance.SetCurrentObservedTask("Coffee");
+            _currentTask = "Coffee";
         }
 
         if (Input.GetKeyUp(KeyCode.Alpha3))
         {
             AngelARUI.Instance.SetCurrentObservedTask("Oatmeal");
+            _currentTask = "Oatmeal";
         }
 
         if (Input.GetKeyUp(KeyCode.Alpha4))
         {
             AngelARUI.Instance.SetCurrentObservedTask("Tea");
+            _currentTask = "Tea";
         }
 
         if (Input.GetKeyUp(KeyCode.Alpha5))
         {
             AngelARUI.Instance.SetCurrentObservedTask("Quesadilla");
+            _currentTask = "Quesadilla";
         }
     }
 

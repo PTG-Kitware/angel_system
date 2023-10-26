@@ -5,38 +5,39 @@ using UnityEngine;
 public class ManageStepFlashcardSolo : MonoBehaviour
 {
     public TMP_Text TaskText;
-    public TasklistPositionManager centerScript;
     public Step currStep;
+
+    public void InitializeFlashcard(Step newStep, int current, int allSteps)
+    {
+        currStep = newStep;
+        TaskText.SetText("("+ current + "/"+ allSteps+") : "+currStep.StepDesc);
+
+        foreach(string item in currStep.RequiredItems) {
+            FindSubtext(item);
+        }
+    }
 
     public void InitializeFlashcard(Step newStep)
     {
         currStep = newStep;
         TaskText.SetText(currStep.StepDesc);
-        foreach(string item in currStep.RequiredItems) {
-            this.GetComponent<UnderlineSubText>().FindSubtext(item);
+
+        foreach (string item in currStep.RequiredItems)
+        {
+            FindSubtext(item);
         }
     }
 
-    void Update()
+    public void FindSubtext(string substring)
     {
-        if (centerScript != null)
+        string currTextLower = TaskText.text.ToLower(new CultureInfo("en-US", false));
+        string currText = TaskText.text;
+        int index = currTextLower.IndexOf(substring);
+        if (index >= 0)
         {
-            int increment = 1;
-            foreach (string item in currStep.RequiredItems)
-            {
-                int offset = 6 * increment;
-                string currTextLower = TaskText.text.ToLower(new CultureInfo("en-US", false));
-                string currText = TaskText.text;
-                int index = currTextLower.IndexOf(item);
-                index -= offset;
-                //UnityEngine.Debug.Log("Index of " + item + " is " + index);
-                TMP_TextInfo textInfo = TaskText.textInfo;
-                TMP_CharacterInfo charInfo = textInfo.characterInfo[index];
-                Vector3 bottomLeft = charInfo.bottomRight;
-                //UnityEngine.Debug.Log("Position of " + item +" is " + TaskText.transform.TransformPoint(bottomLeft).ToString());
-                centerScript.SetLineStart(item, TaskText.transform.TransformPoint(bottomLeft));
-                increment += 2;
-            }
+            currText = currText.Insert(index, "<u><b>");
+            currText = currText.Insert(index + substring.Length + 6, "</u></b>");
         }
+        TaskText.SetText(currText);
     }
 }
