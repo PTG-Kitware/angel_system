@@ -8,8 +8,7 @@ from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from angel_msgs.msg import InterpretedAudioUserEmotion, InterpretedAudioUserIntent
 from angel_utils import declare_and_get_parameters
 
-IN_EXPECT_USER_INTENT_TOPIC = "expect_user_intent_topic"
-IN_INTERP_USER_INTENT_TOPIC = "interp_user_intent_topic"
+IN_USER_INTENT_TOPIC = "user_intent_topic"
 OUT_INTERP_USER_EMOTION_TOPIC = "user_emotion_topic"
 
 # Currently supported emotions. This is tied with the emotions
@@ -25,8 +24,8 @@ VADER_POSITIVE_COMPOUND_THRESHOLD = 0.05
 
 class BaseEmotionDetector(Node):
     """
-    As of Q22023, emotion detection is derived via VaderSentiment
-    (https://github.com/cjhutto/vaderSentiment).
+    This is the base emotion detection node that other emotion detection nodes
+    should inherit from.
     """
 
     def __init__(self):
@@ -37,26 +36,18 @@ class BaseEmotionDetector(Node):
         param_values = declare_and_get_parameters(
             self,
             [
-                (IN_EXPECT_USER_INTENT_TOPIC,),
-                (IN_INTERP_USER_INTENT_TOPIC,),
+                (IN_USER_INTENT_TOPIC,),
                 (OUT_INTERP_USER_EMOTION_TOPIC,),
             ],
         )
 
-        self._in_expect_uintent_topic = param_values[IN_EXPECT_USER_INTENT_TOPIC]
-        self._in_interp_uintent_topic = param_values[IN_INTERP_USER_INTENT_TOPIC]
+        self._in_uintent_topic = param_values[IN_USER_INTENT_TOPIC]
         self._out_interp_uemotion_topic = param_values[OUT_INTERP_USER_EMOTION_TOPIC]
 
         # Handle subscription/publication topics.
-        self.expect_uintent_subscription = self.create_subscription(
+        self.uintent_subscription = self.create_subscription(
             InterpretedAudioUserIntent,
-            self._in_expect_uintent_topic,
-            self.intent_detection_callback,
-            1,
-        )
-        self.interp_uintent_subscription = self.create_subscription(
-            InterpretedAudioUserIntent,
-            self._in_interp_uintent_topic,
+            self._in_uintent_topic,
             self.intent_detection_callback,
             1,
         )
@@ -116,7 +107,7 @@ class BaseEmotionDetector(Node):
         Constant loop to process received messages.
         """
         while True:
-            msg = self.message_queue.get()
+            msg = self.message_queue.get(block=True, timeout=None)
             self.log.debug(f'Processing message:\n\n"{msg.utterance_text}"')
             classification, confidence_score = self.get_inference(msg)
             self.publish_detected_emotion(
