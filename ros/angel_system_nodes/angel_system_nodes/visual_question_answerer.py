@@ -17,6 +17,7 @@ from angel_msgs.msg import (
     InterpretedAudioUserEmotion,
     ObjectDetection2dSet,
     SystemTextResponse,
+    TaskUpdate
 )
 from angel_utils import declare_and_get_parameters
 
@@ -27,6 +28,7 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 IN_EMOTION_TOPIC = "user_emotion_topic"
 IN_OBJECT_DETECTION_TOPIC = "object_detections_topic"
 IN_ACT_CLFN_TOPIC = "action_classifications_topic"
+IN_TASK_UPDATE_TOPIC = "task_update_topic"
 
 # Below is/are the published topic(s).
 OUT_QA_TOPIC = "system_text_response_topic"
@@ -72,6 +74,7 @@ class VisualQuestionAnswerer(Node):
                 (RECIPE_PATH,),
                 (PROMPT_TEMPLATE_PATH,),
                 (IN_EMOTION_TOPIC,),
+                (IN_TASK_UPDATE_TOPIC, ""),
                 (IN_OBJECT_DETECTION_TOPIC, ""),
                 (IN_ACT_CLFN_TOPIC, ""),
                 (OBJECT_DETECTION_THRESHOLD, 0.8),
@@ -81,6 +84,7 @@ class VisualQuestionAnswerer(Node):
             ],
         )
         self._in_emotion_topic = param_values[IN_EMOTION_TOPIC]
+        self._in_task_updates_topic = param_values[IN_TASK_UPDATE_TOPIC]
         self._in_objects_topic = param_values[IN_OBJECT_DETECTION_TOPIC]
         self._in_actions_topic = param_values[IN_ACT_CLFN_TOPIC]
         self._out_qa_topic = param_values[OUT_QA_TOPIC]
@@ -101,6 +105,7 @@ class VisualQuestionAnswerer(Node):
         self.action_clfn_threshold = param_values[ACT_CLFN_THRESHOLD]
 
         self.question_queue = queue.Queue()
+        self.step = "Unstarted"
         self.action_classification_queue = queue.Queue()
         self.detected_objects_queue = queue.Queue()
         self.handler_thread = threading.Thread(target=self.process_question_queue)
@@ -113,6 +118,15 @@ class VisualQuestionAnswerer(Node):
             self.question_answer_callback,
             1,
         )
+        # Configure the optional task updates subscription.
+        self.objects_subscription = None
+        if self._in_emotion_topic:
+            self.objects_subscription = self.create_subscription(
+                TaskUpdate,
+                self._in_task_updates_topic,
+                self._set_current_step,
+                1,
+            )
         # Configure the optional object detection subscription.
         self.objects_subscription = None
         if self._in_emotion_topic:
@@ -184,13 +198,16 @@ class VisualQuestionAnswerer(Node):
             max_tokens=64,
         )
         zero_shot_prompt = langchain.PromptTemplate(
-            input_variables=["recipe", "emotion", "action", "observables", "question"],
+            input_variables=["recipe", "current_step", "emotion", "action", "observables", "question"],
             template=self.prompt_template,
         )
         return LLMChain(llm=openai_llm, prompt=zero_shot_prompt)
 
     def _get_sec(self, msg) -> int:
         return msg.header.stamp.sec
+
+    def _set_current_step(self, msg: TaskUpdate):
+        self.step = msg.current_step
 
     def _add_action_classification(self, msg: ActivityDetection) -> str:
         """
@@ -253,9 +270,8 @@ class VisualQuestionAnswerer(Node):
             return "nothing"
         return ", ".join(list(observables))
 
-    def get_response(
-        self, msg: InterpretedAudioUserEmotion, action: str, observables: str
-    ):
+    def get_response(self, msg: InterpretedAudioUserEmotion, 
+        current_step: str, action: str, observables: str):
         """
         Generate a  response to the utterance, enriched with the addition of
         the user's detected emotion. Inference calls can be added and revised
@@ -266,6 +282,7 @@ class VisualQuestionAnswerer(Node):
             self.log.info(f"User emotion: {msg.user_emotion}")
             response = self.chain.run(
                 recipe=self.recipe,
+                current_step=current_step,
                 action=action,
                 observables=observables,
                 emotion=msg.user_emotion,
@@ -310,7 +327,7 @@ class VisualQuestionAnswerer(Node):
             self.log.info(f"Observed objects: {observables}")
 
             # Generate response.
-            response = self.get_response(question_msg, action, observables)
+            response = self.get_response(question_msg, self.current_step, action, observables)
             self.publish_generated_response(question_msg.utterance_text, response)
 
     def publish_generated_response(self, utterance: str, response: str):
