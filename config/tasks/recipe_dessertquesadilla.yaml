@@ -1,0 +1,43 @@
+version: "1.1"
+title: "Dessert Quesadilla"
+# These tasks are sourced from "PTG Evaluation Tasks Vol. 2" version 2.0
+# Provided by MASSACHUSETTS INSTITUTE OF TECHNOLOGY LINCOLN LABORATORY
+labels:
+  # Item:
+  # - id: Integer identification number of the label.
+  # - label: Short human-readable semantic string to succinctly represent the
+  #          label.
+  # - full_str: Complete sentence that fully represents the label.
+  # - activity_ids: List of activity ids that correspond to the task 
+  - id: 0
+    label: "background"
+    full_str: "background"
+    activity_ids: [0]
+  - id: 1
+    label: "place-tortilla"
+    full_str: "Place tortilla on cutting board."
+    activity_ids: [6]
+  - id: 2
+    label: "add-nutella"
+    full_str: "Use a butter knife to spread a layer of Nutella onto tortilla."
+    activity_ids: [9, 12, 21]
+  - id: 3
+    label: "add-banana-slices"
+    full_str: "Top with banana slices."
+    activity_ids: [7, 15, 21]
+  - id: 4
+    label: "dq-sprinkle-cinnamon"
+    full_str: "Sprinkle small amount of cinnamon onto tortilla"
+    activity_ids: [17]
+  - id: 5
+    label: "fold-tortilla-half"
+    full_str: "Fold tortilla in half into semi-cirlce"
+    activity_ids: [43]
+  - id: 6
+    label: "slice-tortilla-half"
+    full_str: "Slice tortilla in half using butter knife to create two triangular wedges"
+    activity_ids: [44]
+  - id: 7
+    label: "place-tortilla-wedges"
+    full_str: "Place tortilla wedges on a plate to serve."
+    activity_ids: [45, 45]

@@ -1,4 +1,7 @@
-version: "1.1"
+version: "1.2"
+# TODO: These activity ids should be updated to match those in 
+# `all_recipe_labels.yaml` but they are being left for now until
+# we can update the groundtruth labels as well
 title: "Dessert Quesadilla"
 labels:
   # Item:
@@ -28,11 +31,11 @@ labels:
     full_str: "Slice banana"
     depends: [10]
   - id: 5
-    label: "top-banana-slices"
+    label: "dq-top-banana-slices"
     full_str: "Top with banana slices."
     depends: [3, 4]
   - id: 6
-    label: "sprinkle-cinnamon"
+    label: "dq-sprinkle-cinnamon"
     full_str: "Sprinkle small amount of cinnamon onto tortilla"
     depends: [3]
   - id: 7
@@ -49,11 +52,11 @@ labels:
     depends: [8]
     repeat: 2
   - id: 10
-    label: "clean-knife"
+    label: "dq-clean-knife"
     full_str: "Clean the knife by wiping with a paper towel."
     depends:
   - id: 11
-    label: "clean-knife"
+    label: "dq-clean-knife"
     full_str: "Clean the knife by wiping with a paper towel."
     depends:
   - id: 12
