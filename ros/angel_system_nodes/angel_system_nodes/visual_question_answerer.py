@@ -1,3 +1,4 @@
+import itertools
 import langchain
 from langchain.chains import LLMChain
 import json
@@ -8,9 +9,9 @@ import os
 import queue
 import rclpy
 from rclpy.node import Node
-import requests
 from termcolor import colored
 import threading
+from typing import *
 
 from angel_msgs.msg import (
     ActivityDetection,
@@ -28,7 +29,7 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 IN_EMOTION_TOPIC = "user_emotion_topic"
 IN_OBJECT_DETECTION_TOPIC = "object_detections_topic"
 IN_ACT_CLFN_TOPIC = "action_classifications_topic"
-IN_TASK_UPDATE_TOPIC = "task_update_topic"
+IN_TASK_STATE_TOPIC = "task_state_topic"
 
 # Below is/are the published topic(s).
 OUT_QA_TOPIC = "system_text_response_topic"
@@ -42,6 +43,7 @@ RECIPE_PATH = "recipe_path"
 # Below is the recipe paths for the prompt template.
 PROMPT_TEMPLATE_PATH = "prompt_template_path"
 
+CONTEXT_HISTORY_LENGTH = "context_history_length"
 DEBUG_MODE = "debug_mode"
 
 # Below is the complete set of prompt instructions.
@@ -74,22 +76,26 @@ class VisualQuestionAnswerer(Node):
                 (RECIPE_PATH,),
                 (PROMPT_TEMPLATE_PATH,),
                 (IN_EMOTION_TOPIC,),
-                (IN_TASK_UPDATE_TOPIC, ""),
+                (IN_TASK_STATE_TOPIC, ""),
                 (IN_OBJECT_DETECTION_TOPIC, ""),
                 (IN_ACT_CLFN_TOPIC, ""),
                 (OBJECT_DETECTION_THRESHOLD, 0.8),
                 (ACT_CLFN_THRESHOLD, 0.8),
                 (OUT_QA_TOPIC,),
+                (CONTEXT_HISTORY_LENGTH, 3),
                 (DEBUG_MODE, False),
             ],
         )
         self._in_emotion_topic = param_values[IN_EMOTION_TOPIC]
-        self._in_task_updates_topic = param_values[IN_TASK_UPDATE_TOPIC]
+        self._in_task_state_topic = param_values[IN_TASK_STATE_TOPIC]
         self._in_objects_topic = param_values[IN_OBJECT_DETECTION_TOPIC]
         self._in_actions_topic = param_values[IN_ACT_CLFN_TOPIC]
         self._out_qa_topic = param_values[OUT_QA_TOPIC]
+        self.dialogue_history_length = param_values[CONTEXT_HISTORY_LENGTH]
+        self.debug_mode = False
         if param_values[DEBUG_MODE]:
-            langchain.debug = True
+            # langchain.debug = True
+            self.debug_mode = True
 
         self._recipe_path = param_values[RECIPE_PATH]
         self.recipe = self._configure_recipe(self._recipe_path)
@@ -105,7 +111,7 @@ class VisualQuestionAnswerer(Node):
         self.action_clfn_threshold = param_values[ACT_CLFN_THRESHOLD]
 
         self.question_queue = queue.Queue()
-        self.step = "Unstarted"
+        self.current_step = "Unstarted"
         self.action_classification_queue = queue.Queue()
         self.detected_objects_queue = queue.Queue()
         self.handler_thread = threading.Thread(target=self.process_question_queue)
@@ -119,11 +125,11 @@ class VisualQuestionAnswerer(Node):
             1,
         )
         # Configure the optional task updates subscription.
-        self.objects_subscription = None
-        if self._in_emotion_topic:
-            self.objects_subscription = self.create_subscription(
+        self.task_state_subscription = None
+        if self._in_task_state_topic:
+            self.task_state_subscription = self.create_subscription(
                 TaskUpdate,
-                self._in_task_updates_topic,
+                self._in_task_state_topic,
                 self._set_current_step,
                 1,
             )
@@ -156,6 +162,8 @@ class VisualQuestionAnswerer(Node):
 
         # Configure LangChain.
         self.chain = self._configure_langchain()
+
+        self.dialogue_history = []
 
     def _configure_openai_org_id(self):
         if not os.getenv("OPENAI_ORG_ID"):
@@ -197,8 +205,11 @@ class VisualQuestionAnswerer(Node):
             temperature=0.0,
             max_tokens=64,
         )
+        # TODO (derekahmed) Figure out how to  include optional  dialogue history
         zero_shot_prompt = langchain.PromptTemplate(
-            input_variables=["recipe", "current_step", "emotion", "action", "observables", "question"],
+            input_variables=["recipe", "chat_history",
+                             "current_step", "emotion", "action", "observables",
+                             "question"],
             template=self.prompt_template,
         )
         return LLMChain(llm=openai_llm, prompt=zero_shot_prompt)
@@ -207,7 +218,15 @@ class VisualQuestionAnswerer(Node):
         return msg.header.stamp.sec
 
     def _set_current_step(self, msg: TaskUpdate):
-        self.step = msg.current_step
+        self.current_step = msg.current_step
+
+    def _get_current_step(self):
+        return self.current_step
+
+    def _get_dialogue_history(self):
+        last_n = min(len(self.dialogue_history), self.dialogue_history_length)
+        last_n_turns = self.dialogue_history[-1 * last_n:]
+        return "\n".join(itertools.chain.from_iterable(last_n_turns))
 
     def _add_action_classification(self, msg: ActivityDetection) -> str:
         """
@@ -237,6 +256,9 @@ class VisualQuestionAnswerer(Node):
                 self._get_sec(msg), detected_objects
             )
             self.detected_objects_queue.put(te)
+
+    def _add_dialogue_history(self, question: str, response: str):
+        self.dialogue_history.append((f"Me: {question}",  f"You: {response}"))
 
     def _get_action_before(self, curr_time: int) -> str:
         """
@@ -270,8 +292,8 @@ class VisualQuestionAnswerer(Node):
             return "nothing"
         return ", ".join(list(observables))
 
-    def get_response(self, msg: InterpretedAudioUserEmotion, 
-        current_step: str, action: str, observables: str):
+    def get_response(self, msg: InterpretedAudioUserEmotion,
+                     chat_history: str, current_step: str, action: str, observables: str):
         """
         Generate a  response to the utterance, enriched with the addition of
         the user's detected emotion. Inference calls can be added and revised
@@ -280,24 +302,30 @@ class VisualQuestionAnswerer(Node):
         return_msg = None
         try:
             self.log.info(f"User emotion: {msg.user_emotion}")
-            response = self.chain.run(
+            return_msg = self.chain.run(
                 recipe=self.recipe,
+                chat_history=chat_history,
                 current_step=current_step,
                 action=action,
                 observables=observables,
                 emotion=msg.user_emotion,
                 question=msg.utterance_text,
             )
-            return_msg = colored(f"{response}\n", "light_green")
+            if self.debug_mode:
+                sent_prompt = \
+                    self.chain.prompt.format_prompt(recipe=self.recipe,
+                                                    chat_history=chat_history,
+                                                    current_step=current_step,
+                                                    action=action,
+                                                    observables=observables,
+                                                    emotion=msg.user_emotion,
+                                                    question=msg.utterance_text,).to_string()
+                sent_prompt = colored(sent_prompt, "light_red")
+                self.log.info(f"Prompt sent over:~~~~~~~~~~\n{sent_prompt}\n:~~~~~~~~~~")
         except RuntimeError as err:
             self.log.info(err)
-            colored_apology = colored(
-                "I'm sorry. I don't know how to answer your statement.", "light_red"
-            )
-            colored_emotion = colored(msg.user_emotion, "light_red")
-            return_msg = (
-                f"{colored_apology} I understand that you feel {colored_emotion}."
-            )
+            return_msg = "I'm sorry. I don't know how to answer your statement. " +\
+                f"I understand that you feel {msg.user_emotion}."
         return return_msg
 
     def question_answer_callback(self, msg):
@@ -327,8 +355,11 @@ class VisualQuestionAnswerer(Node):
             self.log.info(f"Observed objects: {observables}")
 
             # Generate response.
-            response = self.get_response(question_msg, self.current_step, action, observables)
+            response = self.get_response(question_msg, 
+                                         self._get_dialogue_history(),
+                                         self._get_current_step(), action, observables)
             self.publish_generated_response(question_msg.utterance_text, response)
+            self._add_dialogue_history(question_msg.utterance_text, response)
 
     def publish_generated_response(self, utterance: str, response: str):
         msg = SystemTextResponse()
