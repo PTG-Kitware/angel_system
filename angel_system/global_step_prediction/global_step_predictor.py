@@ -18,11 +18,12 @@ class GlobalStepPredictor(
         deactivate_thresh_mult = 0.3,
         deactivate_thresh_frame_count = 20,
         recipe_configs=["coffee"],
+        background_threshold=0.3,
         ):
 
         '''
         GlobalStepPredctor: based on a TCN activity classifier's activity classification
-        outputs, 
+        outputs + a set of recipes, track what step a user is on for multiple recipes.
         '''
 
         # maximum number of steps that can be "jumped" to.
@@ -173,6 +174,9 @@ class GlobalStepPredictor(
 
         # activity conf = vector of all activities for one frame.
         for i, activity_conf in enumerate(activity_confs):
+            if i == 6000:
+                self.initialize_new_recipe_tracker("coffee")
+                print(f"initialized second tracker")
             # activated_confidences = classes predicted to be "happening" now.
             activated_indexes = np.where(self.activated_activities[:,0] == 1)[0]
             # deactivated_confidences = classes predicted NOT to be happening yet.
@@ -284,6 +288,8 @@ class GlobalStepPredictor(
 
         self.activity_conf_history = \
                 np.append(self.activity_conf_history, activity_confs, axis=0)
+
+        return self.trackers
 
     def plot_gt_vs_predicted_one_recipe(self, step_gts, fname_suffix=None):
         # Plot gt vs predicted class across all vid frames
