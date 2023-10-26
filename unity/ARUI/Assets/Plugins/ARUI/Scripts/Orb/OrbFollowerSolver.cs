@@ -4,6 +4,7 @@
 using Microsoft.MixedReality.Toolkit.Utilities.Solvers;
 using UnityEngine;
 using System.Collections;
+using System;
 
 /// <summary>
 /// Provides a solver for the Orb, using MRTK solver
@@ -29,8 +30,15 @@ public class OrbFollowerSolver : Solver
     private bool _stayCenter = false;
     private bool _isSticky = false;                     /// < If true, orb stays at the edge of the view cone
 
+    private bool _snappedToTaskList = false;
+    public bool IsSnappedToTaskList
+    {
+        get => _snappedToTaskList;
+    }
+
     private bool _outOfFOV = false;                     /// < If true, orb is not in the FOV of the user
     public bool IsOutOfFOV => _outOfFOV;
+
 
     //** Eye gaze events
     private bool _isLookingAtOrbFlag = false;           /// < If true, user is looking at orb
@@ -42,6 +50,7 @@ public class OrbFollowerSolver : Solver
     private Vector3 SolverReferenceDirection => SolverHandler.TransformTarget != null ? SolverHandler.TransformTarget.forward : Vector3.forward;
 
     private Vector3 ReferencePoint => SolverHandler.TransformTarget != null ? SolverHandler.TransformTarget.position : Vector3.zero;
+
 
     private new void Start()
     {
@@ -76,7 +85,7 @@ public class OrbFollowerSolver : Solver
             if (!_coolDown)
             {
                 //update maxDistance based on spatial map
-                float dist = transform.position.GetCameraToPosDist();
+                float dist = transform.position.GetDistanceToSpatialMap();
                 if (dist != -1)
                     _currentMaxDistance = Mathf.Max(ARUISettings.OrbMinDistToUser, Mathf.Min(dist - 0.05f, ARUISettings.OrbMaxDistToUser));
 
@@ -109,7 +118,7 @@ public class OrbFollowerSolver : Solver
             yield return new WaitForEndOfFrame();
 
             //update maxDistance based on spatial map
-            float distance = transform.position.GetCameraToPosDist();
+            float distance = transform.position.GetDistanceToSpatialMap();
             if (distance != -1)
                 _currentMaxDistance = Mathf.Max(ARUISettings.OrbMinDistToUser, Mathf.Min(distance - 0.05f, ARUISettings.OrbMaxDistToUser));
 
@@ -293,6 +302,14 @@ public class OrbFollowerSolver : Solver
             _currentMaxViewDegrees = ARUISettings.OrbMaxViewDegSticky;
             MoveLerpTime = ARUISettings.OrbMoveLerpRegular;
         }
+    }
+
+    public void SnapToTaskList(Vector3 position, bool snapped)
+    {
+        if (snapped) {
+            transform.position = position;
+        }
+        _snappedToTaskList = snapped;
     }
 
     #endregion

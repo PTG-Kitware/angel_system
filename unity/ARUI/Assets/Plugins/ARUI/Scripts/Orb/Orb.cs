@@ -93,11 +93,10 @@ public class Orb : Singleton<Orb>
         _orbHandle.IsActive = (_orbBehavior == OrbMovementBehavior.Fixed);
         _followSolver.IsPaused = (_orbBehavior == OrbMovementBehavior.Fixed || _face.UserIsGrabbing);
 
+
         float distance = Vector3.Distance(_followSolver.transform.position, AngelARUI.Instance.ARCamera.transform.position);
-        if (distance > 0.8)
-            _followSolver.transform.localScale = new Vector3(distance * 1.1f, distance * 1.1f, distance * 1.1f);
-        else
-            _followSolver.transform.localScale = new Vector3(1, 1, 1);
+        float scaleValue = Mathf.Max(1f, distance);
+        _followSolver.transform.localScale = new Vector3(scaleValue, scaleValue, scaleValue);
 
         if (DataProvider.Instance.CurrentSelectedTasks.Keys.Count > 0)
             UpdateMessageVisibility();
@@ -111,11 +110,11 @@ public class Orb : Singleton<Orb>
     /// </summary>
     private void UpdateMessageVisibility()
     {
-        if ((IsLookingAtOrb(false) && !_messageContainer.IsMessageContainerActive && !_messageContainer.IsMessageFading))
+        if ((IsLookingAtOrb(false) && !_messageContainer.IsMessageContainerActive && !_messageContainer.IsMessageFading && !_followSolver.IsSnappedToTaskList))
         { //Set the message visible!
             _messageContainer.IsMessageContainerActive = true;
         }
-        else if (!_messageContainer.IsLookingAtMessage && !IsLookingAtOrb(false) && _followSolver.IsOutOfFOV)
+        else if (!_messageContainer.IsLookingAtMessage && !IsLookingAtOrb(false) && _followSolver.IsOutOfFOV || _followSolver.IsSnappedToTaskList)
         {
             _messageContainer.IsMessageContainerActive = false;
         }
@@ -329,6 +328,11 @@ public class Orb : Singleton<Orb>
     private void HandleUpdateActiveStepEvent()
     {
         SetTaskMessage(DataProvider.Instance.CurrentSelectedTasks, DataProvider.Instance.CurrentObservedTask);
+    }
+
+    public void SnapToTaskList(Vector3 position, bool isSnapped)
+    {
+        _followSolver.SnapToTaskList(position, isSnapped);
     }
 
     #endregion

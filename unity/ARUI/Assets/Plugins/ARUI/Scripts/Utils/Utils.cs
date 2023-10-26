@@ -378,11 +378,12 @@ public static class Utils
     }
 
     /// <summary>
-    /// Returns the distance from the camera to the spatial mesh created by hololens2 towards a given target position
+    /// Returns the length of the vector that is originating at the camera towards the given target if the direction vector 
+    /// hits the spatial map. If there is no intersection it returns -1
     /// </summary>
     /// <param name="target"></param>
     /// <returns></returns>
-    public static float GetCameraToPosDist(this Vector3 target)
+    public static float GetDistanceToSpatialMap(this Vector3 target)
     {
         int layerMask = 1 << StringResources.LayerToInt(StringResources.spatialAwareness_layer);
 
