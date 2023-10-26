@@ -359,7 +359,7 @@ class ActivityClassifierTCN(Node):
                 )
 
         log.info("Completed COCO file object yielding")
-        rclpy.shutdown()
+        self._rt_active.clear()
 
     def img_ts_callback(self, msg: Time) -> None:
         """
@@ -682,7 +682,6 @@ def main():
         executor.spin()
     except KeyboardInterrupt:
         log.info("Keyboard interrupt, shutting down.\n")
-        rclpy.shutdown()
     finally:
         log.info("Stopping node runtime")
         activity_classifier.rt_stop()
@@ -691,6 +690,8 @@ def main():
         # (optional - otherwise it will be done automatically
         # when the garbage collector destroys the node object)
         activity_classifier.destroy_node()
+
+        rclpy.shutdown()
 
 
 if __name__ == "__main__":
