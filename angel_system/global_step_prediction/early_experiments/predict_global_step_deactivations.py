@@ -109,7 +109,7 @@ def plot_gt_vs_predicted_one_recipe(step_gts, step_predictions, activity_confs, 
     for i in range(len(avg_probs)):
         starting_zero_value -= 2
         plot_line = np.asarray(activity_confs)[:,i]
-        plt.plot(2*plot_line-starting_zero_value, label = f'act_preds[{i}]')
+        plt.plot(2*plot_line+starting_zero_value, label = f'act_preds[{i}]')
         plt.plot([2*int(j < avg_probs[i])+starting_zero_value for j in plot_line], label = f'act_preds_threshold[{i}]')
     plt.legend()
     fig.savefig(f"./outputs/plot_pred_vs_gt_vid{vid_id}.png")
