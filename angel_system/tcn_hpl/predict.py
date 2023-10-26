@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 import os
+from threading import RLock
 from typing import List
 from typing import Dict
 from typing import Mapping
@@ -255,23 +256,25 @@ class ResultsCollector:
     """
 
     def __init__(self, output_filepath: Path, id_to_action: Mapping[int, str]):
+        self._lock = RLock()  # for thread safety
         self._collection: Dict[int, ResultElement] = {}
         self._dset = dset = kwcoco.CocoDataset()
         dset.fpath = output_filepath.as_posix()
         dset.dataset["info"].append({"activity_labels": id_to_action})
         self._vid: Optional[int] = None
 
-    def set_video(self, video_name):
+    def set_video(self, video_name: str) -> None:
         """
         Set the video for which we are currently collecting results for.
 
         :param video_name: Semantic name of the video   .
         """
-        video_lookup = self._dset.index.name_to_video
-        if video_name in video_lookup:
-            self._vid = video_lookup[video_name]["id"]
-        else:
-            self._vid = self._dset.add_video(name=video_name)
+        with self._lock:
+            video_lookup = self._dset.index.name_to_video
+            if video_name in video_lookup:
+                self._vid = video_lookup[video_name]["id"]
+            else:
+                self._vid = self._dset.add_video(name=video_name)
 
     def collect(
         self,
@@ -285,30 +288,32 @@ class ResultsCollector:
         """
         See `CocoDataset.add_image` for more details.
         """
-        if self._vid is None:
-            raise RuntimeError(
-                "No video set before results collection. See `set_video` method."
+        with self._lock:
+            if self._vid is None:
+                raise RuntimeError(
+                    "No video set before results collection. See `set_video` method."
+                )
+            packet = dict(
+                video_id=self._vid,
+                frame_index=frame_index,
+                activity_pred=activity_pred,
+                activity_conf=list(activity_conf_vec),
             )
-        packet = dict(
-            video_id=self._vid,
-            frame_index=frame_index,
-            activity_pred=activity_pred,
-            activity_conf=list(activity_conf_vec),
-        )
-        if name is not None:
-            packet["name"] = name
-        if file_name is not None:
-            packet["file_name"] = file_name
-        if activity_gt is not None:
-            packet["activity_gt"] = activity_gt
-        self._dset.add_image(**packet)
+            if name is not None:
+                packet["name"] = name
+            if file_name is not None:
+                packet["file_name"] = file_name
+            if activity_gt is not None:
+                packet["activity_gt"] = activity_gt
+            self._dset.add_image(**packet)
 
     def write_file(self):
         """
         Write COCO file to the set output path.
         """
-        dset = self._dset
-        dset.dump(dset.fpath, newlines=True)
+        with self._lock:
+            dset = self._dset
+            dset.dump(dset.fpath, newlines=True)
 
 
 ###############################################################################

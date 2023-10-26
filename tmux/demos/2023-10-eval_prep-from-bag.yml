@@ -97,10 +97,10 @@ windows:
       -p image_ts_topic:=PVFramesRGB_TS
       -p det_topic:=ObjectDetections2d
       -p act_topic:=ActivityDetections
-      -p model_weights:=${MODEL_DIR}/activity_tcn-coffee-checkpoint.ckpt
-      -p model_mapping:=${MODEL_DIR}/activity_tcn-coffee-mapping.txt
-      -p model_det_label_mapping:=${MODEL_DIR}/activity_tcn-coffee-det_label_mapping.json
-      -p model_device:=cuda
+      -p model_weights:=${MODEL_DIR}/activity_tcn-all_activities-checkpoint.ckpt
+      -p model_mapping:=${MODEL_DIR}/activity_tcn-all_activities-mapping.txt
+      -p model_det_label_mapping:=${MODEL_DIR}/activity_tcn-all_activities-det_label_mapping.json
+      -p model_device:=cuda:0
       -p model_dets_conv_version:=5
       -p window_size:=30
       -p buffer_max_size_seconds:=5
