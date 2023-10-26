@@ -325,6 +325,14 @@ class GlobalStepPredictor(
         """
         return str_.lower().strip(" .")
 
+    def manually_increment_current_step(self, tracker_index):
+        self.trackers[tracker_index]["current_step"] += 1
+        return self.trackers
+
+    def manually_decrement_current_step(self, tracker_index):
+        self.trackers[tracker_index]["current_step"] -= 1
+        return self.trackers
+
 def plot_positive_GT_conf_distributions(activity_confs, activity_gt):
     """
     plot_TP_conf_distributions:
