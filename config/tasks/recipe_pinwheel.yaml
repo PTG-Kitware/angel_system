@@ -1,4 +1,4 @@
-version: "1.0"
+version: "1.1"
 title: "Pinwheels"
 # These tasks are sourced from "PTG Evaluation Tasks Vol. 2" version 2.0
 # Provided by MASSACHUSETTS INSTITUTE OF TECHNOLOGY LINCOLN LABORATORY
@@ -21,48 +21,48 @@ labels:
     label: "add-nut-butter"
     full_str: "Use a butter knife to scoop nut butter from the jar. Spread nut butter onto tortilla, leaving 1/2-
 inch uncovered at the edges."
-    activity_ids: [11, 14]
+    activity_ids: [10, 13]
   - id: 3
     label: "clean-knife"
     full_str: "Clean the knife by wiping with a paper towel."
-    activity_ids: [23]
+    activity_ids: [22]
   - id: 4
     label: "add-jelly"
     full_str: "Use the knife to scoop jelly from the jar. Spread jelly over the nut butter."
-    activity_ids: [12, 15]
+    activity_ids: [11, 14]
   - id: 5
     label: "clean-knife"
     full_str: "Clean the knife by wiping with a paper towel."
-    actiivty_ids: [23]
+    actiivty_ids: [22]
   - id: 6
     label: "roll-tortilla"
     full_str: "Roll the tortilla from one end to the other into a log shape, about 1.5 inches thick. Roll it tight
 enough to prevent gaps, but not so tight that the filling leaks."
-    activity_ids: [56]
+    activity_ids: [55]
   - id: 7
     label: "add-toothpicks"
     full_str: "Secure the rolled tortilla by inserting 5 toothpicks about 1 inch apart."
-    activity_ids: [57]
+    activity_ids: [56, 56, 56, 56, 56]
   - id: 8
     label: "remove-tortilla-ends"
     full_str: "Trim the ends of the tortilla roll with the butter knife, leaving 1⁄2 inch margin between the last
 toothpick and the end of the roll. Discard ends."
-    activity_ids: [58, 59]
+    activity_ids: [57, 57, 58]
   - id: 9
     label: "place-floss-between-toothpicks"
     full_str: "Slide floss under the tortilla, perpendicular to the length of the roll. Place the floss halfway
 between two toothpicks."
-    activity_ids: [60]
+    activity_ids: [59]
   - id: 10
     label: "first-slice"
     full_str: "Cross the two ends of the floss over the top of the tortilla roll. Holding one end of the floss in
 each hand, pull the floss ends in opposite directions to slice."
-    activity_ids: [61, 62]
+    activity_ids: [60, 61]
   - id: 11
     label: "continue-slicing"
     full_str: "Continue slicing with floss to create 5 pinwheels."
-    activity_ids: [60, 61, 62]
+    activity_ids: [59, 60, 61, 59, 60, 61, 59, 60, 61]
   - id: 12
     label: "plate-pinwheels"
     full_str: "Place the pinwheels on a plate."
-    activity_ids: [63]
+    activity_ids: [62]

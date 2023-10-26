@@ -1,4 +1,4 @@
-version: "1.0"
+version: "1.1"
 title: "Tea"
 # These tasks are sourced from "PTG Evaluation Tasks Vol. 2" version 2.0
 # Provided by MASSACHUSETTS INSTITUTE OF TECHNOLOGY LINCOLN LABORATORY
@@ -16,11 +16,11 @@ labels:
   - id: 1
     label: "water-in-kettle"
     full_str: "Measure 12 ounces of cold water and transfer to a kettle."
-    activity_ids: [9, 1, 2]
+    activity_ids: [8, 1, 2]
   - id: 2
     label: "tea-bag-in-mug"
     full_str: "Place tea bag in mug"
-    activity_ids: [51]
+    activity_ids: [50]
   - id: 3
     label: "check-temp"
     full_str: "Check the temperature of the water."
@@ -28,16 +28,16 @@ labels:
   - id: 4
     label: "pour-water-mug"
     full_str: "Pour water into mug."
-    activity_ids: [52]
+    activity_ids: [51]
   - id: 5
     label: "steep"
     full_str: "Steep for 3 minutes"
-    activity_ids: [53]
+    activity_ids: [52] # TODO: time requirement
   - id: 6
     label: "toss-tea-bag"
     full_str: "Discard tea bag."
-    actiivty_ids: [54, 55]
+    actiivty_ids: [53, 54]
   - id: 7
     label: "add-honey-stir"
     full_str: "Add honey and stir."
-    activity_ids: [20, 24]
+    activity_ids: [19, 23]
