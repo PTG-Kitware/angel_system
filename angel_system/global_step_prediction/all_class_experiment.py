@@ -7,18 +7,23 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
 import scipy.ndimage as ndi
 
-from global_step_predictor import (GlobalStepPredictor,
-        get_gt_steps_from_gt_activities,
-        )
+from global_step_predictor import (
+    GlobalStepPredictor,
+    get_gt_steps_from_gt_activities,
+)
 
 
-coco_val = kwcoco.CocoDataset("/data/PTG/cooking/training/activity_classifier/TCN_HPL/logs/yolo_all_recipes_sample_rate_2/runs/2023-10-25_12-08-48/val_activity_preds_epoch69.mscoco.json")
-coco_test = kwcoco.CocoDataset("/data/PTG/cooking/training/activity_classifier/TCN_HPL/logs/yolo_all_recipes_sample_rate_2/runs/2023-10-25_12-08-48/test_activity_preds.mscoco.json")
+coco_val = kwcoco.CocoDataset(
+    "/data/PTG/cooking/training/activity_classifier/TCN_HPL/logs/yolo_all_recipes_sample_rate_2/runs/2023-10-25_12-08-48/val_activity_preds_epoch69.mscoco.json"
+)
+coco_test = kwcoco.CocoDataset(
+    "/data/PTG/cooking/training/activity_classifier/TCN_HPL/logs/yolo_all_recipes_sample_rate_2/runs/2023-10-25_12-08-48/test_activity_preds.mscoco.json"
+)
 
-#Train
+# Train
 avg_probs = None
 
-all_vid_ids = np.unique(np.asarray(coco_val.images().lookup('video_id')))
+all_vid_ids = np.unique(np.asarray(coco_val.images().lookup("video_id")))
 
 for vid_id in all_vid_ids:
     print(f"vid_id {vid_id}===========================")
@@ -50,7 +55,7 @@ print(f"2 Coffee vids interleaved===========================")
 # Spliced videos:
 step_predictor = GlobalStepPredictor()
 # Add a second coffee predictor
-#step_predictor.initialize_new_recipe_tracker("coffee")
+# step_predictor.initialize_new_recipe_tracker("coffee")
 # Use the avg_probs we already computed...
 if avg_probs is not None:
     step_predictor.get_average_TP_activations_from_array(avg_probs)
@@ -84,6 +89,6 @@ step_gts.extend(get_gt_steps_from_gt_activities(video_dset)[0][6001:])
 
 step_predictor.process_new_confidences(activity_confs)
 
-step_predictor.plot_gt_vs_predicted_one_recipe(step_gts, fname_suffix=
-        "2_coffee_vids_interleaved_1")
-
+step_predictor.plot_gt_vs_predicted_one_recipe(
+    step_gts, fname_suffix="2_coffee_vids_interleaved_1"
+)

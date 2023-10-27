@@ -7,26 +7,27 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
 import scipy.ndimage as ndi
 
-from global_step_predictor import (GlobalStepPredictor,
-        get_gt_steps_from_gt_activities,
-        )
+from global_step_predictor import (
+    GlobalStepPredictor,
+    get_gt_steps_from_gt_activities,
+)
 
 
 coco_val = kwcoco.CocoDataset("model_files/val_activity_preds_epoch40.mscoco.json")
 coco_test = kwcoco.CocoDataset("model_files/test_activity_preds.mscoco.json")
 
-#Train
+# Train
 avg_probs = None
 avg_probs_fpath = "./model_files/global_step_predictor_act_avgs_coffee.npy"
 
-all_vid_ids = np.unique(np.asarray(coco_val.images().lookup('video_id')))
+all_vid_ids = np.unique(np.asarray(coco_val.images().lookup("video_id")))
 
 for vid_id in all_vid_ids:
     print(f"vid_id {vid_id}===========================")
 
     step_predictor = GlobalStepPredictor()
     # Add a second coffee predictor
-    #step_predictor.initialize_new_recipe_tracker("coffee")
+    # step_predictor.initialize_new_recipe_tracker("coffee")
 
     if avg_probs is not None:
         step_predictor.get_average_TP_activations_from_array(avg_probs)
@@ -54,7 +55,7 @@ print(f"2 Coffee vids interleaved===========================")
 # Spliced videos:
 step_predictor = GlobalStepPredictor()
 # Add a second coffee predictor
-#step_predictor.initialize_new_recipe_tracker("coffee")
+# step_predictor.initialize_new_recipe_tracker("coffee")
 # Use the avg_probs we already computed...
 if avg_probs is not None:
     step_predictor.get_average_TP_activations_from_array(avg_probs)
@@ -88,14 +89,15 @@ step_gts.extend(get_gt_steps_from_gt_activities(video_dset)[0][6001:])
 
 step_predictor.process_new_confidences(activity_confs)
 
-step_predictor.plot_gt_vs_predicted_one_recipe(step_gts, fname_suffix=
-        "2_coffee_vids_interleaved_1")
+step_predictor.plot_gt_vs_predicted_one_recipe(
+    step_gts, fname_suffix="2_coffee_vids_interleaved_1"
+)
 
 # 2 coffee videos, one after another
 print(f"2 Coffee vids sequential===========================")
 step_predictor = GlobalStepPredictor()
 # Add a second coffee predictor
-#step_predictor.initialize_new_recipe_tracker("coffee")
+# step_predictor.initialize_new_recipe_tracker("coffee")
 # Use the avg_probs we already computed...
 if avg_probs is not None:
     step_predictor.get_average_TP_activations_from_array(avg_probs)
@@ -117,6 +119,6 @@ step_gts.extend(get_gt_steps_from_gt_activities(video_dset)[0])
 
 step_predictor.process_new_confidences(activity_confs)
 
-step_predictor.plot_gt_vs_predicted_one_recipe(step_gts, fname_suffix=
-        "2_coffee_vids_sequential_1")
-
+step_predictor.plot_gt_vs_predicted_one_recipe(
+    step_gts, fname_suffix="2_coffee_vids_sequential_1"
+)
