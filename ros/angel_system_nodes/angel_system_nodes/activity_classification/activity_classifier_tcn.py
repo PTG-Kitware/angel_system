@@ -4,9 +4,12 @@ Use get_hydra_config to get cfg dict, use eval.py content as how-to-call example
 trainer.predict(model=model, dataloaders=dataloaders, ckpt_path=cfg.ckpt_path)
 """
 import json
+from heapq import heappush, heappop
+import logging
 from pathlib import Path
 from threading import Condition, Event, Lock, Thread
 from typing import Callable
+from typing import Dict
 from typing import List
 from typing import Optional
 from typing import Tuple
@@ -14,6 +17,7 @@ from typing import Tuple
 import kwcoco
 from builtin_interfaces.msg import Time
 import numpy as np
+import numpy.typing as npt
 import rclpy
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 import rclpy.logging
@@ -91,22 +95,6 @@ class NoActivityClassification(Exception):
     """
 
 
-def obj_det_msg_to_max_lbl_conf(
-    msg: ObjectDetection2dSet,
-) -> Tuple[List[str], List[float]]:
-    """
-    Get out a tuple of the maximally confident class label and
-    confidence value for each detection as a tuple of two lists for
-    expansion into the `ObjectDetectionsLTRB` constructor
-    """
-    mat_shape = (msg.num_detections, len(msg.label_vec))
-    conf_mat = np.asarray(msg.label_confidences).reshape(mat_shape)
-    max_conf_idxs = conf_mat.argmax(axis=1)
-    max_confs = conf_mat[np.arange(conf_mat.shape[0]), max_conf_idxs]
-    max_labels = np.asarray(msg.label_vec)[max_conf_idxs]
-    return max_labels, max_confs
-
-
 class ActivityClassifierTCN(Node):
     """
     ROS node that publishes `ActivityDetection` messages using a classifier and
@@ -160,6 +148,18 @@ class ActivityClassifierTCN(Node):
         self._det_label_to_id = {c: i for i, c in enumerate(det_label_list)}
         # Feature version aligned with model current architecture
         self._feat_version = param_values[PARAM_MODEL_DETS_CONV_VERSION]
+
+        # Memoization structure for structures created as input to feature
+        # embedding function in the `_predict` method.
+        self._memo_preproc_input: Dict[int, ObjectDetectionsLTRB] = {}
+        # Memoization structure for feature embedding function used in the
+        # `_predict` method.
+        self._memo_objects_to_feats: Dict[int, npt.NDArray] = {}
+        # We expire memoized content when the ID (nanosecond timestamp) is
+        # older than what will be processed going forward. That way we don't
+        # keep content around forever and "leak" memory.
+        self._memo_preproc_input_id_heap = []
+        self._memo_objects_to_feats_id_heap = []
 
         # Optionally initialize buffer-feeding from input COCO-file of object
         # detections.
@@ -546,6 +546,22 @@ class ActivityClassifierTCN(Node):
 
         log.info("Runtime function end.")
 
+    @staticmethod
+    def _obj_det_msg_to_max_lbl_conf(
+        msg: ObjectDetection2dSet,
+    ) -> Tuple[List[str], List[float]]:
+        """
+        Get out a tuple of the maximally confident class label and
+        confidence value for each detection as a tuple of two lists for
+        expansion into the `ObjectDetectionsLTRB` constructor
+        """
+        mat_shape = (msg.num_detections, len(msg.label_vec))
+        conf_mat = np.asarray(msg.label_confidences).reshape(mat_shape)
+        max_conf_idxs = conf_mat.argmax(axis=1)
+        max_confs = conf_mat[np.arange(conf_mat.shape[0]), max_conf_idxs]
+        max_labels = np.asarray(msg.label_vec)[max_conf_idxs]
+        return max_labels, max_confs
+
     def _process_window(self, window: InputWindow) -> ActivityDetection:
         """
         Process an input window and output an activity classification message.
@@ -554,22 +570,30 @@ class ActivityClassifierTCN(Node):
             determined for this input window.
         """
         log = self.get_logger()
+        obj_det_msg_to_max_lbl_conf = self._obj_det_msg_to_max_lbl_conf
+        memo_preproc_input = self._memo_preproc_input
+        memo_preproc_input_id_heap = self._memo_preproc_input_id_heap
 
         # TCN wants to know the label and confidence for the maximally
         # confident class only. Input object detection messages
-        with SimpleTimer("[_process_window] Detections prep", log.info):
-            frame_object_detections = [
-                ObjectDetectionsLTRB(
-                    det_msg.left,
-                    det_msg.top,
-                    det_msg.right,
-                    det_msg.bottom,
-                    *obj_det_msg_to_max_lbl_conf(det_msg),
-                )
-                if det_msg is not None
-                else None
-                for det_msg in window.obj_dets
-            ]
+        frame_object_detections: List[Optional[ObjectDetectionsLTRB]]
+        frame_object_detections = [None] * len(window)
+        for i, det_msg in enumerate(window.obj_dets):
+            if det_msg is not None:
+                msg_id = time_to_int(det_msg.source_stamp)
+                if msg_id not in memo_preproc_input:
+                    memo_preproc_input[msg_id] = v = ObjectDetectionsLTRB(
+                        msg_id,
+                        det_msg.left,
+                        det_msg.top,
+                        det_msg.right,
+                        det_msg.bottom,
+                        *obj_det_msg_to_max_lbl_conf(det_msg),
+                    )
+                    heappush(memo_preproc_input_id_heap, msg_id)
+                else:
+                    v = memo_preproc_input[msg_id]
+                frame_object_detections[i] = v
         log.debug(
             f"[_process_window] Window vector presence: "
             f"{[(v is not None) for v in frame_object_detections]}"
@@ -588,31 +612,40 @@ class ActivityClassifierTCN(Node):
                 # feature detections were all None
                 raise NoActivityClassification()
 
-        with SimpleTimer("[_process_window] Tensors to device", log.info):
-            feats = feats.to(self._model_device)
-            mask = mask.to(self._model_device)
+        feats = feats.to(self._model_device)
+        mask = mask.to(self._model_device)
 
         with SimpleTimer("[_process_window] Model processing", log.info):
             proba = predict(self._model, feats, mask).cpu()
         pred = torch.argmax(proba)
 
-        with SimpleTimer("[_process_window] Message formation", log.info):
-            # Prepare output message
-            activity_msg = ActivityDetection()
-            activity_msg.header.frame_id = "Activity Classification"
-            activity_msg.header.stamp = self.get_clock().now().to_msg()
-            activity_msg.source_stamp_start_frame = window.frames[0][0]
-            activity_msg.source_stamp_end_frame = window.frames[-1][0]
-            activity_msg.label_vec = self._model.classes
-            activity_msg.conf_vec = proba.tolist()
+        # Prepare output message
+        activity_msg = ActivityDetection()
+        activity_msg.header.frame_id = "Activity Classification"
+        activity_msg.header.stamp = self.get_clock().now().to_msg()
+        activity_msg.source_stamp_start_frame = window.frames[0][0]
+        activity_msg.source_stamp_end_frame = window.frames[-1][0]
+        activity_msg.label_vec = self._model.classes
+        activity_msg.conf_vec = proba.tolist()
 
-            if self._enable_trace_logging:
-                log.info(
-                    f"[_process_window] Activity classification -- "
-                    f"{activity_msg.label_vec[pred]} @ {activity_msg.conf_vec[pred]} "
-                    f"(time: {time_to_int(activity_msg.source_stamp_start_frame)} - "
-                    f"{time_to_int(activity_msg.source_stamp_end_frame)})"
-                )
+        if self._enable_trace_logging:
+            log.info(
+                f"[_process_window] Activity classification -- "
+                f"{activity_msg.label_vec[pred]} @ {activity_msg.conf_vec[pred]} "
+                f"(time: {time_to_int(activity_msg.source_stamp_start_frame)} - "
+                f"{time_to_int(activity_msg.source_stamp_end_frame)})"
+            )
+
+        # Clean up our memos from IDs at or earlier than this window's earliest
+        # frame.
+        window_start_time_ns = time_to_int(window.frames[0][0])
+        while (
+            memo_preproc_input_id_heap
+            and memo_preproc_input_id_heap[0] <= window_start_time_ns
+        ):
+            # Pop off the smallest "id" (timestamp) and remove it from the memo
+            # map.
+            del memo_preproc_input[heappop(memo_preproc_input_id_heap)]
 
         self._rate_tracker.tick()
         log.info(
@@ -662,15 +695,20 @@ class ActivityClassifierTCN(Node):
             self._results_collector.write_file()
 
     def destroy_node(self):
-        print("Shutting down runtime thread...")
-        self._rt_active.clear()  # make RT active flag "False"
-        self._rt_thread.join()
-        print("Shutting down runtime thread... Done")
+        log = self.get_logger()
+        with SimpleTimer("Shutting down runtime thread...", log.info):
+            self._rt_active.clear()  # make RT active flag "False"
+            self._rt_thread.join()
         self._save_results()
         super().destroy_node()
 
 
 def main():
+    logging.basicConfig(
+        format="[%(levelname)s] [%(asctime)s] [%(name)s.%(funcName)s]: %(message)s"
+    )
+    logging.getLogger().setLevel(logging.INFO)
+
     rclpy.init()
     log = rclpy.logging.get_logger("main")
 
