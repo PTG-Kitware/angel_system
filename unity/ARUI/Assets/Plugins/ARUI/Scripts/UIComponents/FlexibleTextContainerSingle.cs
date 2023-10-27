@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -18,6 +19,7 @@ public class FlexibleTextContainer : MonoBehaviour
 
     private Material _taskBackgroundMat;
 
+    private Color _innerGlowColorStartup;
     public Color GlowColor
     {
         get => _taskBackgroundMat.GetColor("_InnerGlowColor");
@@ -42,6 +44,20 @@ public class FlexibleTextContainer : MonoBehaviour
         set { _textComponent.text = Utils.SplitTextIntoLines(value, ARUISettings.OrbMessageMaxCharCountPerLine); }
     }
 
+    public bool IsLookingAtText
+    {
+        set
+        {
+            if (value)
+            {
+                GlowColor = new Color(0.3f,0.3f,0.3f);
+            } else
+            {
+                GlowColor = _innerGlowColorStartup;
+            }
+        }
+    }
+
     // Start is called before the first frame update
     void Awake()
     {
@@ -56,8 +72,8 @@ public class FlexibleTextContainer : MonoBehaviour
         //Init background image
         Image bkgr = _HGroupTaskMessage.GetComponentInChildren<Image>();
         _taskBackgroundMat = new Material(bkgr.material);
-        Color firstColor = GlowColor;
-        _taskBackgroundMat.SetColor("_InnerGlowColor", firstColor);
+        _innerGlowColorStartup = GlowColor;
+        _taskBackgroundMat.SetColor("_InnerGlowColor", _innerGlowColorStartup);
         bkgr.material = _taskBackgroundMat;
 
         _taskMessageCollider = transform.GetComponent<BoxCollider>();
@@ -83,4 +99,5 @@ public class FlexibleTextContainer : MonoBehaviour
         _taskMessageCollider.center = new Vector3(_HGroupTaskMessage.rect.width / 2, 0, 0);
         _taskMessageCollider.size = new Vector3(_HGroupTaskMessage.rect.width, _taskMessageCollider.size.y, _taskMessageCollider.size.z);
     }
+
 }

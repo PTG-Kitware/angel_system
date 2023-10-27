@@ -134,7 +134,7 @@ public class OrbMessageContainer : MonoBehaviour
 
         foreach (OrbPie pie in _allPies)
         {
-            pie.UpdateMessageVisibility(DataProvider.Instance.CurrentObservedTask);
+            pie.UpdateMessageVisibility(taskNameToOrbPie[DataProvider.Instance.CurrentObservedTask]);
         }
     }
 
@@ -164,7 +164,7 @@ public class OrbMessageContainer : MonoBehaviour
             _allPies[pieIndex].SetTaskMessage(currentSelectedTasks[taskName].CurrStepIndex,
                 currentSelectedTasks[taskName].Steps.Count,
                 currentSelectedTasks[taskName].Steps[currentSelectedTasks[taskName].CurrStepIndex].StepDesc, currentTaskID);
-            _allPies[pieIndex].UpdateMessageVisibility(currentTaskID);
+            _allPies[pieIndex].UpdateMessageVisibility(taskNameToOrbPie[currentTaskID]);
             pieIndex++;
         }
     }
@@ -192,15 +192,15 @@ public class OrbMessageContainer : MonoBehaviour
     /// Turn on or off message fading
     /// </summary>
     /// <param name="active"></param>
-    public void SetFadeOutMessage(bool active)
+    public void SetFadeOutMessageContainer(bool active)
     {
         if (active)
         {
-            StartCoroutine(FadeOutMessage());
+            StartCoroutine(FadeOutAllMessages());
         }
         else
         {
-            StopCoroutine(FadeOutMessage());
+            StopCoroutine(FadeOutAllMessages());
             IsMessageFading = false;
         }
     }
@@ -209,7 +209,7 @@ public class OrbMessageContainer : MonoBehaviour
     /// Fade out message from the moment the user does not look at the message anymore
     /// </summary>
     /// <returns></returns>
-    private IEnumerator FadeOutMessage()
+    private IEnumerator FadeOutAllMessages()
     {
         float fadeOutStep = 0.001f;
         IsMessageFading = true;

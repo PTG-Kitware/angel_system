@@ -120,12 +120,12 @@ public class Orb : Singleton<Orb>
         }
         else if ((_messageContainer.IsLookingAtMessage || IsLookingAtOrb(false)) && _messageContainer.IsMessageContainerActive && _messageContainer.IsMessageFading)
         { //Stop Fading, set the message visible
-            _messageContainer.SetFadeOutMessage(false);
+            _messageContainer.SetFadeOutMessageContainer(false);
         }
         else if (!IsLookingAtOrb(false) && _messageContainer.IsMessageContainerActive && !_messageContainer.IsMessageFading
             && !_messageContainer.IsLookingAtMessage)
         { //Start Fading
-            _messageContainer.SetFadeOutMessage(true);
+            _messageContainer.SetFadeOutMessageContainer(true);
         }
     } 
 
@@ -333,6 +333,9 @@ public class Orb : Singleton<Orb>
     public void SnapToTaskList(Vector3 position, bool isSnapped)
     {
         _followSolver.SnapToTaskList(position, isSnapped);
+
+        if (isSnapped && _messageContainer.IsMessageContainerActive)
+            _messageContainer.IsMessageContainerActive = false;
     }
 
     #endregion

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using TMPro;
 using UnityEngine;
 
@@ -12,6 +13,8 @@ public class OrbPie : MonoBehaviour
 
     private GameObject _pieSlice;
     private BoxCollider _sliceCollider;
+    private float zRotCollider = 0;
+    
     private Shapes.Disc _pie;
     private Shapes.Disc _pieProgress;
     private TextMeshProUGUI _progressText;
@@ -47,7 +50,8 @@ public class OrbPie : MonoBehaviour
 
     private Color _activeColorText = Color.white;
 
-    private bool _isLookingAtPies = false;
+    private bool _textIsFadingOut = false;
+    private bool _textIsFadingIn = false;
 
     public void InitializeComponents(float rDeg, float lDeg)
     {
@@ -58,6 +62,8 @@ public class OrbPie : MonoBehaviour
         _pieSlice = transform.GetChild(0).gameObject;
         _pie = _pieSlice.GetComponent<Shapes.Disc>();
         _sliceCollider = _pie.GetComponentInChildren<BoxCollider>();
+        zRotCollider = _sliceCollider.transform.eulerAngles.z;
+
         _pieProgress = _pie.transform.GetChild(0).GetComponent<Shapes.Disc>();
         _pieProgress.Radius = 0;
         _pieProgress.Thickness = 0;
@@ -102,25 +108,111 @@ public class OrbPie : MonoBehaviour
         SetPieActive(false, "");
     }
 
-    public void UpdateMessageVisibility(string currentActiveID)
+    private void Update()
     {
-        if (_currentStepText.text.Length == 0) return;
+        _textContainer.IsLookingAtText = EyeGazeManager.Instance.CurrentHitObj != null &&
+            EyeGazeManager.Instance.CurrentHitObj.GetInstanceID() == _textContainer.gameObject.GetInstanceID();
+    }
 
-        if (_pieSlice.activeSelf && EyeGazeManager.Instance.CurrentHit.Equals(EyeTarget.pieCollider) || EyeGazeManager.Instance.CurrentHit.Equals(EyeTarget.orbMessage))
-        {
-            _isLookingAtPies = true;
-            if (!_pieText.activeSelf)
-                _pieText.SetActive(true);
+    public void UpdateMessageVisibility(OrbPie currentactivePie)
+    {
+        if (currentactivePie == null || _currentStepText.text.Length == 0) return;
 
-        } else
+        if (!_pieSlice.activeSelf)
         {
-            _isLookingAtPies = false;
-            if (!_taskname.Equals(currentActiveID))
-                _pieText.SetActive(false);
+            SetPieTextActive(false);
+            return;
         }
 
-        if (_pieSlice.activeSelf && !_pieText.activeSelf && _taskname.Equals(currentActiveID))
-            _pieText.SetActive(true);
+        //only show the pie if it is the current observed task
+        if (_pieSlice.activeSelf && !_pieText.activeSelf && _taskname.Equals(currentactivePie.TaskName))
+        {
+            SetPieTextActive(true);
+            return;
+        }
+
+        if (EyeGazeManager.Instance.CurrentHit.Equals(EyeTarget.pieCollider) && !_textIsFadingIn)
+        {
+            StartCoroutine(FadeInMessage());
+            return;
+        }
+
+        if (!_taskname.Equals(currentactivePie.TaskName) && EyeGazeManager.Instance.CurrentHitObj != null &&
+            EyeGazeManager.Instance.CurrentHitObj.GetInstanceID() == currentactivePie.Text.gameObject.GetInstanceID() && !_textIsFadingOut)
+        {
+            StartCoroutine(FadeOutAllMessages());
+            return;
+
+        } else if (!_taskname.Equals(currentactivePie.TaskName) && EyeGazeManager.Instance.CurrentHit.Equals(EyeTarget.orbMessage) &&
+            EyeGazeManager.Instance.CurrentHitObj != null &&
+            EyeGazeManager.Instance.CurrentHitObj.GetInstanceID() != currentactivePie.Text.gameObject.GetInstanceID() && !_textIsFadingIn)
+        {
+            SetPieTextActive(true);
+            return;
+        }
+    }
+
+    /// <summary>
+    /// Fade out message from the moment the user does not look at the message anymore
+    /// </summary>
+    /// <returns></returns>
+    private IEnumerator FadeOutAllMessages()
+    {
+        float fadeOutStep = 0.001f;
+        _textIsFadingOut = true;
+
+        yield return new WaitForSeconds(2.0f);
+
+        float shade = ARUISettings.OrbMessageBGColor.r;
+        float alpha = 1f;
+
+        while (_textIsFadingOut && shade > 0)
+        {
+            alpha -= (fadeOutStep * 20);
+            shade -= fadeOutStep;
+
+            if (alpha < 0)
+                alpha = 0;
+            if (shade < 0)
+                shade = 0;
+
+            Text.BackgroundColor = new Color(shade, shade, shade, shade);
+            SetTextAlpha(alpha);
+
+            yield return new WaitForEndOfFrame();
+        }
+
+        _textIsFadingOut = false;
+        _pieText.SetActive(!(shade <= 0));
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <returns></returns>
+    private IEnumerator FadeInMessage()
+    {
+        _textIsFadingIn = true;
+        yield return new WaitForSeconds(0.8f);
+
+        if (EyeGazeManager.Instance.CurrentHit.Equals(EyeTarget.pieCollider));
+            SetPieTextActive(true);
+
+        _textIsFadingIn = false;
+    }
+
+
+    private void SetPieTextActive(bool isActive)
+    {
+        _pieText.SetActive(isActive);
+        
+        if (isActive)
+        {
+            StopCoroutine(FadeOutAllMessages());
+            _textIsFadingOut = false;
+            Text.BackgroundColor = ARUISettings.OrbMessageBGColor;
+            SetTextAlpha(1);
+        }
     }
 
     public void SetPieActive(bool active, string currentActiveID)
@@ -129,11 +221,10 @@ public class OrbPie : MonoBehaviour
 
         _pieSlice.SetActive(active);
 
-        if (active && (_taskname.Equals(currentActiveID) && _currentStepText.text.Length > 0) || _isLookingAtPies)
+        if (!active)
         {
-            _pieText.SetActive(true);
-        } else
             _pieText.SetActive(false);
+        }
     }
 
     public void SetTaskMessage(int stepIndex, int total, string message, string currentTaskID)
@@ -222,7 +313,9 @@ public class OrbPie : MonoBehaviour
             deg = _lDeg;
             YRot = 180;
         }
-        _sliceCollider.transform.localRotation = Quaternion.Euler(new Vector3(_sliceCollider.transform.localRotation.x, YRot, _sliceCollider.transform.localRotation.z));
+
+        _sliceCollider.transform.localRotation = Quaternion.Euler(new Vector3(_sliceCollider.transform.localRotation.x, YRot, zRotCollider));
+
 
         _pie.AngRadiansEnd = deg * Mathf.Deg2Rad;
         _pie.AngRadiansStart = (deg -21) * Mathf.Deg2Rad;
