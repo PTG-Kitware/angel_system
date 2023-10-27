@@ -2,10 +2,8 @@
 # System configuration to run the ANGEL system for the 2022/11 PI meeting and
 # Evaluation 1.
 #
-# This configuration is for the Coffee task/recipe.
-#
 
-name: coffee_allows_skip
+name: 2023-10-eval-live
 root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 
 # Optional tmux socket
@@ -20,12 +18,13 @@ root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 # on_project_start: command
 on_project_start: |
   export ROS_NAMESPACE=${ROS_NAMESPACE:-/debug}
-  export HL2_IP=${HL2_IP:-192.168.1.101}
+  export HL2_IP=${HL2_IP:-192.168.1.4}
   export CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/config
   export BERKELEY_CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/angel_system/berkeley/configs
   export NODE_CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/src/angel_system_nodes/configs
   export MODEL_DIR=${ANGEL_WORKSPACE_DIR}/model_files
   export BAGS_DIR=${ANGEL_WORKSPACE_DIR}/ros_bags
+  #export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
 
   # Changing the domain ID was important at KHQ to unblock perceived network
   # congestion slowdowns to message sending.
@@ -54,19 +53,23 @@ windows:
   - sensor_input:
       layout: even-vertical
       panes:
-        - ros_bag_play: #ros2 bag play <<PATH_TO_BAG_FILE>>
-            ros2 bag play -l ${BAGS_DIR}/all_activities_20
-
-        # Old videos were recorded in NV12
-        - image_converter: ros2 run angel_datahub ImageConverter --ros-args
+        - datahub: ros2 run ros_tcp_endpoint default_server_endpoint --ros-args
             -r __ns:=${ROS_NAMESPACE}
-            -p topic_input_images:=PVFramesNV12
-            -p topic_output_images:=PVFramesRGB
-
-        - image_ts_relay: ros2 run angel_system_nodes  image_timestamp_relay --ros-args
+            -p ROS_IP:=0.0.0.0
+        - hl2ss_bridge: ros2 run angel_system_nodes hl2ss_ros_bridge --ros-args
             -r __ns:=${ROS_NAMESPACE}
-            -p image_topic:=PVFramesRGB
-            -p output_topic:=PVFramesRGB_TS
+            -p ip_addr:=${HL2_IP}
+            -p image_topic:=PVFramesBGR
+            -p image_ts_topic:=PVFramesBGR_TS
+            -p hand_pose_topic:=disable
+            -p audio_topic:=disable
+            -p sm_topic:=disable
+            -p head_pose_topic:=disable
+            -p pv_width:=1280
+            -p pv_height:=720
+            -p pv_framerate:=30
+            -p sm_freq:=5
+            -p rm_depth_AHAT:=disable
 
         # Visualize RGB Images being output from the headset
         - rqt_rgb_images: rqt -s rqt_image_view/ImageView
@@ -78,7 +81,7 @@ windows:
       panes:
         - object_detector: ros2 run angel_system_nodes object_detection_yolo_v7 --ros-args
             -r __ns:=${ROS_NAMESPACE}
-            -p image_topic:=PVFramesRGB
+            -p image_topic:=PVFramesBGR
             -p det_topic:=ObjectDetections2d
             -p net_checkpoint:=${MODEL_DIR}/yolov7-combined_objects-weights.pt
             -p inference_img_size:=1280
@@ -87,14 +90,14 @@ windows:
 
         - simple_2d_overlay: ros2 run angel_debug Simple2dDetectionOverlay --ros-args
             -r __ns:=${ROS_NAMESPACE}
-            -p topic_input_images:=PVFramesRGB
+            -p topic_input_images:=PVFramesBGR
             -p topic_input_det_2d:=ObjectDetections2d
             -p topic_output_images:=pv_image_detections_2d
             -p filter_top_k:=-1
 
   - activity_classifier: ros2 run angel_system_nodes activity_classifier_tcn --ros-args
       -r __ns:=${ROS_NAMESPACE}
-      -p image_ts_topic:=PVFramesRGB_TS
+      -p image_ts_topic:=PVFramesBGR_TS
       -p det_topic:=ObjectDetections2d
       -p act_topic:=ActivityDetections
       -p model_weights:=${MODEL_DIR}/activity_tcn-all_activities-checkpoint.ckpt
@@ -107,17 +110,21 @@ windows:
       -p image_pix_width:=1280
       -p image_pix_height:=720
 
-  - task_monitor:
-      layout: even-horizontal
-      panes:
-        - ros2 run angel_system_nodes global_step_predictor --ros-args
-          -r __ns:=${ROS_NAMESPACE}
-          -p det_topic:=ActivityDetections
-          -p model_file:=${MODEL_DIR}/global_step_predictor_act_avgs_coffee.npy
-          -p config_file:=${CONFIG_DIR}/tasks/multi-task-config.yaml
-          -p task_state_topic:=TaskUpdates
-          -p query_task_graph_topic:=query_task_graph
-        - ros2 topic list
+  - task_monitor: ros2 run angel_system_nodes global_step_predictor --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p det_topic:=ActivityDetections
+      -p model_file:=${MODEL_DIR}/global_step_predictor_act_avgs_coffee.npy
+      -p config_file:=${CONFIG_DIR}/tasks/multi-task-config.yaml
+      -p task_state_topic:=TaskUpdates
+      -p query_task_graph_topic:=query_task_graph
+
+  - feedback_generator: ros2 run angel_system_nodes feedback_generator --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p activity_detector_topic:=ActivityDetections
+      -p object_detection_topic:=ObjectDetections3d
+      -p task_monitor_topic:=TaskUpdates
+      -p arui_update_topic:=AruiUpdates
+      -p interp_user_intent_topic:=InterpUserIntents
 
   - engineering-ui:
       layout: even-vertical
