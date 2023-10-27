@@ -572,7 +572,9 @@ class ActivityClassifierTCN(Node):
         log = self.get_logger()
         obj_det_msg_to_max_lbl_conf = self._obj_det_msg_to_max_lbl_conf
         memo_preproc_input = self._memo_preproc_input
-        memo_preproc_input_id_heap = self._memo_preproc_input_id_heap
+        memo_preproc_input_h = self._memo_preproc_input_id_heap
+        memo_object_to_feats = self._memo_objects_to_feats
+        memo_object_to_feats_h = self._memo_objects_to_feats_id_heap
 
         # TCN wants to know the label and confidence for the maximally
         # confident class only. Input object detection messages
@@ -590,7 +592,7 @@ class ActivityClassifierTCN(Node):
                         det_msg.bottom,
                         *obj_det_msg_to_max_lbl_conf(det_msg),
                     )
-                    heappush(memo_preproc_input_id_heap, msg_id)
+                    heappush(memo_preproc_input_h, msg_id)
                 else:
                     v = memo_preproc_input[msg_id]
                 frame_object_detections[i] = v
@@ -607,6 +609,7 @@ class ActivityClassifierTCN(Node):
                     self._feat_version,
                     self._img_pix_width,
                     self._img_pix_height,
+                    memo_object_to_feats,
                 )
             except ValueError:
                 # feature detections were all None
@@ -639,13 +642,12 @@ class ActivityClassifierTCN(Node):
         # Clean up our memos from IDs at or earlier than this window's earliest
         # frame.
         window_start_time_ns = time_to_int(window.frames[0][0])
+        while memo_preproc_input_h and memo_preproc_input_h[0] <= window_start_time_ns:
+            del memo_preproc_input[heappop(memo_preproc_input_h)]
         while (
-            memo_preproc_input_id_heap
-            and memo_preproc_input_id_heap[0] <= window_start_time_ns
+            memo_object_to_feats_h and memo_object_to_feats_h[0] <= window_start_time_ns
         ):
-            # Pop off the smallest "id" (timestamp) and remove it from the memo
-            # map.
-            del memo_preproc_input[heappop(memo_preproc_input_id_heap)]
+            del memo_object_to_feats[heappop(memo_object_to_feats_h)]
 
         self._rate_tracker.tick()
         log.info(
