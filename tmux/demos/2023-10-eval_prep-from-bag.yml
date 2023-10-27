@@ -70,7 +70,7 @@ windows:
 
         # Visualize RGB Images being output from the headset
         - rqt_rgb_images: rqt -s rqt_image_view/ImageView
-            --args ${ROS_NAMESPACE}/PVFramesRGB
+            --args ${ROS_NAMESPACE}/PVFramesBGR
             --ros-args -p _image_transport:=raw
 
   - object_detector:
@@ -80,7 +80,7 @@ windows:
             -r __ns:=${ROS_NAMESPACE}
             -p image_topic:=PVFramesRGB
             -p det_topic:=ObjectDetections2d
-            -p net_checkpoint:=${MODEL_DIR}/best.pt
+            -p net_checkpoint:=${MODEL_DIR}/yolov7-combined_objects-weights.pt
             -p inference_img_size:=1280
             -p det_conf_threshold:=0.1
             -p cuda_device_id:=0
@@ -97,9 +97,9 @@ windows:
       -p image_ts_topic:=PVFramesRGB_TS
       -p det_topic:=ObjectDetections2d
       -p act_topic:=ActivityDetections
-      -p model_weights:=${MODEL_DIR}/epoch_040.ckpt
-      -p model_mapping:=${MODEL_DIR}/activity_tcn-coffee-mapping.txt
-      -p model_det_label_mapping:=${MODEL_DIR}/activity_tcn-coffee-det_label_mapping.json
+      -p model_weights:=${MODEL_DIR}/activity_tcn-all_activities-checkpoint.ckpt
+      -p model_mapping:=${MODEL_DIR}/activity_tcn-all_activities-mapping.txt
+      -p model_det_label_mapping:=${MODEL_DIR}/activity_tcn-all_activities-det_label_mapping.json
       -p model_device:=cuda
       -p model_dets_conv_version:=5
       -p window_size:=30
@@ -107,13 +107,17 @@ windows:
       -p image_pix_width:=1280
       -p image_pix_height:=720
 
-  - task_monitor: ros2 run angel_system_nodes global_step_predictor --ros-args
-      -r __ns:=${ROS_NAMESPACE}
-      -p det_topic:=ActivityDetections
-      -p model_file:=${MODEL_DIR}/global_step_predictor_act_avgs_coffee.npy
-      -p config_file:=${CONFIG_DIR}/tasks/multi-task-config.yaml
-      -p task_state_topic:=TaskUpdates
-      -p query_task_graph_topic:=query_task_graph
+  - task_monitor:
+      layout: even-horizontal
+      panes:
+        - ros2 run angel_system_nodes global_step_predictor --ros-args
+          -r __ns:=${ROS_NAMESPACE}
+          -p det_topic:=ActivityDetections
+          -p model_file:=${MODEL_DIR}/global_step_predictor_act_avgs_coffee.npy
+          -p config_file:=${CONFIG_DIR}/tasks/multi-task-config.yaml
+          -p task_state_topic:=TaskUpdates
+          -p query_task_graph_topic:=query_task_graph
+        - ros2 topic list
 
   - engineering-ui:
       layout: even-vertical
