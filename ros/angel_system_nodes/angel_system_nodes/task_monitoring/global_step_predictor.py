@@ -9,6 +9,7 @@ from typing import Optional
 from typing import Set
 
 from builtin_interfaces.msg import Time
+import kwcoco
 import numpy as np
 import numpy.typing as npt
 import rclpy
@@ -24,7 +25,10 @@ from angel_msgs.msg import (
 from angel_msgs.srv import QueryTaskGraph
 from angel_utils import declare_and_get_parameters
 
-from angel_system.global_step_prediction.global_step_predictor import GlobalStepPredictor
+from angel_system.global_step_prediction.global_step_predictor import (
+    GlobalStepPredictor,
+    get_gt_steps_from_gt_activities,
+)
 
 
 PARAM_CONFIG_FILE = "config_file"
@@ -33,12 +37,6 @@ PARAM_TASK_ERROR_TOPIC = "task_error_topic"
 PARAM_QUERY_TASK_GRAPH_TOPIC = "query_task_graph_topic"
 PARAM_DET_TOPIC = "det_topic"
 PARAM_MODEL_FILE = "model_file"
-
-import kwcoco
-from angel_system.global_step_prediction.global_step_predictor import (
-    GlobalStepPredictor,
-    get_gt_steps_from_gt_activities,
-)
 
 
 class GlobalStepPredictorNode(Node):
@@ -68,7 +66,7 @@ class GlobalStepPredictorNode(Node):
         self._model_file = param_values[PARAM_MODEL_FILE]
 
         # Instantiate the GlobalStepPredictor module
-        self.gsp = GlobalStepPredictor(threshold_frame_count=8)
+        self.gsp = GlobalStepPredictor()
 
         self.gsp.get_average_TP_activations_from_file(self._model_file)
         log.info("Global state predictor loaded")
@@ -85,9 +83,7 @@ class GlobalStepPredictorNode(Node):
             TaskUpdate, self._task_state_topic, 1
         )
         self._task_graph_service = self.create_service(
-            QueryTaskGraph,
-            self._query_task_graph_topic,
-            self.query_task_graph_callback
+            QueryTaskGraph, self._query_task_graph_topic, self.query_task_graph_callback
         )
         self._subscription = self.create_subscription(
             ActivityDetection, self._det_topic, self.det_callback, 1
@@ -100,8 +96,6 @@ class GlobalStepPredictorNode(Node):
         video_dset = coco_test.subset(gids=image_ids, copy=True)
         self.step_gts, _ = get_gt_steps_from_gt_activities(video_dset)
 
-        self.n_dets = 0
-
     def det_callback(self, activity_msg: ActivityDetection):
         """
         Callback function for the activity detection subscriber topic.
@@ -109,16 +103,12 @@ class GlobalStepPredictorNode(Node):
         TaskUpdate message.
         """
         log = self.get_logger()
+
+        # GSP expects confidence array of shape [n_frames, n_acts]
+        # In this case, we only ever send 1 frame's dets at a time
         conf_array = np.array(activity_msg.conf_vec)
         conf_array = np.expand_dims(conf_array, 0)
 
-        self.n_dets += 1
-
-        # GSP expects confidence array of shape [n_frames, n_acts]
-        #if self.n_dets % 10 == 0:
-        #    print("skipping step ")
-        #    tracker_dict_list = self.gsp.manually_increment_current_step(0)
-        #else:
         tracker_dict_list = self.gsp.process_new_confidences(conf_array)
 
         for task in tracker_dict_list:
@@ -133,7 +123,6 @@ class GlobalStepPredictorNode(Node):
                 )
                 self.publish_task_state_message(task)
                 self.recipe_steps[task["recipe"]] = current_step_id
-
 
     def publish_task_state_message(
         self,
@@ -160,7 +149,6 @@ class GlobalStepPredictorNode(Node):
         task_steps = task_state["step_to_activity_desc"][1:]  # Exclude background
 
         task_step = task_steps.index(task_step_str)
-        #print(task_step)
 
         message.current_step_id = task_step
         message.current_step = task_step_str
@@ -210,7 +198,7 @@ def main():
     except KeyboardInterrupt:
         gsp.get_logger().info("Keyboard interrupt, shutting down.\n")
         gsp.gsp.plot_gt_vs_predicted_one_recipe(
-                    gsp.step_gts, fname_suffix=str("all_activities_20_josh")
+            gsp.step_gts, fname_suffix=str("all_activities_20_josh")
         )
 
     # Destroy the node explicitly
