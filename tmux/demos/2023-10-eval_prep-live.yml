@@ -106,7 +106,7 @@ windows:
       -p model_det_label_mapping:=${MODEL_DIR}/activity_tcn-coffee-det_label_mapping.json
       -p model_device:=cuda
       -p model_dets_conv_version:=5
-      -p window_size:=15
+      -p window_size:=30
       -p buffer_max_size_seconds:=5
       -p image_pix_width:=1280
       -p image_pix_height:=720

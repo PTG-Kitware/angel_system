@@ -98,16 +98,15 @@ class GlobalStepPredictorNode(Node):
         """
         conf_array = np.array(activity_msg.conf_vec)
         conf_array = np.expand_dims(conf_array, 0)
-        print(conf_array)
 
         self.n_dets += 1
 
         # GSP expects confidence array of shape [n_frames, n_acts]
-        if self.n_dets % 10 == 0:
-            print("skipping step ")
-            tracker_dict_list = self.gsp.manually_increment_current_step(0)
-        else:
-            tracker_dict_list = self.gsp.process_new_confidences(conf_array)
+        #if self.n_dets % 10 == 0:
+        #    print("skipping step ")
+        #    tracker_dict_list = self.gsp.manually_increment_current_step(0)
+        #else:
+        tracker_dict_list = self.gsp.process_new_confidences(conf_array)
 
         for task in tracker_dict_list:
             previous_step_id = self.recipe_steps[task["recipe"]]
@@ -118,6 +117,7 @@ class GlobalStepPredictorNode(Node):
                 self.publish_task_state_message(task)
 
                 self.recipe_steps[task["recipe"]] = current_step_id
+                print("new step", current_step_id)
 
     def publish_task_state_message(
         self,
