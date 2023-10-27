@@ -5,6 +5,7 @@
 /.container_xauth
 /model_files
 /ros_bags
+/outputs
 
 ### Python template
 # Byte-compiled / optimized / DLL files
