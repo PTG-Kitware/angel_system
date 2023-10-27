@@ -58,11 +58,19 @@ class ObjectDetectionsLTRB:
     ecosystem.
     """
 
+    # Identifier for this set of detections.
+    id: int
+    # Vectorized detection bbox left pixel bounds
     left: Tuple[float]
+    # Vectorized detection bbox top pixel bounds
     top: Tuple[float]
+    # Vectorized detection bbox right pixel bounds
     right: Tuple[float]
+    # Vectorized detection bbox bottom pixel bounds
     bottom: Tuple[float]
+    # Vectorized detection label of the most confident class.
     labels: Tuple[str]
+    # Vectorized detection confidence value of the most confidence class.
     confidences: Tuple[float]
 
 
@@ -97,6 +105,7 @@ def objects_to_feats(
     feat_version: int,
     image_width: int,
     image_height: int,
+    feature_memo: Optional[Dict[int, npt.NDArray]] = None,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Convert some object detections for some window of frames into a feature
@@ -114,6 +123,9 @@ def objects_to_feats(
         were generated on.
     :param image_height: Integer pixel height of the image that object
         detections were generated on.
+    :param feature_memo: Optional memoization cache to given us that we will
+        access and insert into based on the IDs given to `ObjectDetectionsLTRB`
+        instances encountered.
 
     :raises ValueError: No non-None object detections in the given input
         window.
@@ -125,6 +137,8 @@ def objects_to_feats(
     if all([d is None for d in frame_object_detections]):
         raise ValueError("No frames with detections in input.")
 
+    feat_memo = {} if feature_memo is None else feature_memo
+
     window_size = len(frame_object_detections)
     # Shape [window_size, None|n_feats]
     feature_list: List[Optional[npt.NDArray]] = [None] * window_size
@@ -133,35 +147,41 @@ def objects_to_feats(
     for i, frame_dets in enumerate(frame_object_detections):
         frame_dets: ObjectDetectionsLTRB
         if frame_dets is not None:
-            # the input message has tlbr, but obj_det2d_set_to_feature
-            # requires xywh.
-            xs, ys, ws, hs = tlbr_to_xywh(
-                frame_dets.top,
-                frame_dets.left,
-                frame_dets.bottom,
-                frame_dets.right,
-            )
-            feature_list[i] = (
-                obj_det2d_set_to_feature(
-                    frame_dets.labels,
-                    xs,
-                    ys,
-                    ws,
-                    hs,
-                    frame_dets.confidences,
-                    None,
-                    None,
-                    None,
-                    None,
-                    None,
-                    det_label_to_idx,
-                    version=feat_version,
+            f_id = frame_dets.id
+            if f_id not in feat_memo:
+                # the input message has tlbr, but obj_det2d_set_to_feature
+                # requires xywh.
+                xs, ys, ws, hs = tlbr_to_xywh(
+                    frame_dets.top,
+                    frame_dets.left,
+                    frame_dets.bottom,
+                    frame_dets.right,
                 )
-                .ravel()
-                .astype(np.float32)
-            )
-            feature_ndim = feature_list[i].shape
-            feature_dtype = feature_list[i].dtype
+                feat = (
+                    obj_det2d_set_to_feature(
+                        frame_dets.labels,
+                        xs,
+                        ys,
+                        ws,
+                        hs,
+                        frame_dets.confidences,
+                        None,
+                        None,
+                        None,
+                        None,
+                        None,
+                        det_label_to_idx,
+                        version=feat_version,
+                    )
+                    .ravel()
+                    .astype(np.float32)
+                )
+                feat_memo[f_id] = feat
+            else:
+                feat = feat_memo[f_id]
+            feature_ndim = feat.shape
+            feature_dtype = feat.dtype
+            feature_list[i] = feat
     # Already checked that we should have non-zero frames with detections above
     # so feature_ndim/_dtype should not be None at this stage
     assert feature_ndim is not None
