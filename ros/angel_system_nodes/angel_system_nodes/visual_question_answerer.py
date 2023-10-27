@@ -38,23 +38,27 @@ OUT_QA_TOPIC = "system_text_response_topic"
 
 # Below configures the filtering strategy for detected objects. It should correspond to
 # VisualQuestionAnswerer.FilterType.
-OBJECT_DETECTION_FILTER = "obj_det_filter"
+PARAM_OBJECT_DETECTION_FILTER_STRATEGY = "obj_det_filter"
+
+# Below indicates how many of the last n detected objects should be surfaced
+# in the LLM prompt. These objects do NOT have to be unique.
+PARAM_OBJECT_LAST_N_OBJECTS = "obj_det_last_n"
 
 # Below are the corresponding model thresholds.
-OBJECT_DETECTION_THRESHOLD = "object_detections_threshold"
-ACT_CLFN_THRESHOLD = "action_classification_threshold"
+PARAM_OBJECT_DETECTION_THRESHOLD = "object_det_threshold"
+PARAM_ACT_CLFN_THRESHOLD = "action_classification_threshold"
 
 # Below is the recipe paths for the intended task.
-RECIPE_PATH = "recipe_path"
+PARAM_RECIPE_PATH = "recipe_path"
 # Below is the recipe paths for the prompt template.
-PROMPT_TEMPLATE_PATH = "prompt_template_path"
+PARAM_PROMPT_TEMPLATE_PATH = "prompt_template_path"
 # Below is how many dialogue turns to keep maintained in the prompt context.
-CONTEXT_HISTORY_LENGTH = "context_history_length"
+PARAM_CONTEXT_HISTORY_LENGTH = "context_history_length"
 
 # Below configures the width and height of an image. A typical example would be 1280 * 720.
-IMAGE_WIDTH = "pv_width"
-IMAGE_HEIGHT = "pv_height"
-DEBUG_MODE = "debug_mode"
+PARAM_IMAGE_WIDTH = "pv_width"
+PARAM_IMAGE_HEIGHT = "pv_height"
+PARAM_DEBUG_MODE = "debug_mode"
 
 # Below is the complete set of prompt instructions.
 PROMPT_INSTRUCTIONS = """
@@ -116,23 +120,24 @@ class VisualQuestionAnswerer(Node):
         param_values = declare_and_get_parameters(
             self,
             [
-                (RECIPE_PATH,),
-                (PROMPT_TEMPLATE_PATH,),
                 (IN_EMOTION_TOPIC,),
                 (IN_TASK_STATE_TOPIC, ""),
                 (IN_OBJECT_DETECTION_TOPIC, ""),
                 (IN_ACT_CLFN_TOPIC, ""),
-                (IMAGE_WIDTH, -1),
-                (IMAGE_HEIGHT, -1),
+                (PARAM_RECIPE_PATH,),
+                (PARAM_PROMPT_TEMPLATE_PATH,),
+                (PARAM_IMAGE_WIDTH, -1),
+                (PARAM_IMAGE_HEIGHT, -1),
                 (
-                    OBJECT_DETECTION_FILTER,
+                    PARAM_OBJECT_DETECTION_FILTER_STRATEGY,
                     VisualQuestionAnswerer.FilterType.THRESHOLD.name,
                 ),
-                (OBJECT_DETECTION_THRESHOLD, 0.8),
-                (ACT_CLFN_THRESHOLD, 0.8),
+                (PARAM_OBJECT_LAST_N_OBJECTS, 10),
+                (PARAM_OBJECT_DETECTION_THRESHOLD, 0.8),
+                (PARAM_ACT_CLFN_THRESHOLD, 0.8),
                 (OUT_QA_TOPIC,),
-                (CONTEXT_HISTORY_LENGTH, 3),
-                (DEBUG_MODE, False),
+                (PARAM_CONTEXT_HISTORY_LENGTH, 3),
+                (PARAM_DEBUG_MODE, False),
             ],
         )
         self._in_emotion_topic = param_values[IN_EMOTION_TOPIC]
@@ -140,48 +145,51 @@ class VisualQuestionAnswerer(Node):
         self._in_objects_topic = param_values[IN_OBJECT_DETECTION_TOPIC]
         self._in_actions_topic = param_values[IN_ACT_CLFN_TOPIC]
         self._out_qa_topic = param_values[OUT_QA_TOPIC]
-        self.dialogue_history_length = param_values[CONTEXT_HISTORY_LENGTH]
+        self.dialogue_history_length = param_values[PARAM_CONTEXT_HISTORY_LENGTH]
         self.debug_mode = False
-        if param_values[DEBUG_MODE]:
+        if param_values[PARAM_DEBUG_MODE]:
             # langchain.debug = True
             self.debug_mode = True
 
         # Used to obtain the center perspective point and how far detected objects
         # are from it.
-        self.pv_width = param_values[IMAGE_WIDTH]
-        self.pv_height = param_values[IMAGE_HEIGHT]
+        self.pv_width = param_values[PARAM_IMAGE_WIDTH]
+        self.pv_height = param_values[PARAM_IMAGE_HEIGHT]
         pv_configured = self.pv_width > 0 and self.pv_height > 0
         self.pv_center_coordinate = (
             [self.pv_width / 2, self.pv_height / 2] if pv_configured else [None, None]
         )
 
         # Read the configured recipe file.
-        self._recipe_path = param_values[RECIPE_PATH]
+        self._recipe_path = param_values[PARAM_RECIPE_PATH]
         self.recipe = self._configure_recipe(self._recipe_path)
         self.log.info(f"Configured recipe to be: ~~~~~~~~~~\n{self.recipe}\n~~~~~~~~~~")
 
         # Read the configured prompt template.
-        self._prompt_template_path = param_values[PROMPT_TEMPLATE_PATH]
+        self._prompt_template_path = param_values[PARAM_PROMPT_TEMPLATE_PATH]
         with open(self._prompt_template_path, "r") as file:
             self.prompt_template = file.read()
             self.log.info(
                 f"Prompt Template: ~~~~~~~~~~\n{self.prompt_template}\n~~~~~~~~~~"
             )
 
-        # Configure supplemental input detection & classification criteria.
+        # Configure supplemental input object detection criteria.
         self.object_dtctn_filter = VisualQuestionAnswerer.FilterType[
-            param_values[OBJECT_DETECTION_FILTER].upper()
+            param_values[PARAM_OBJECT_DETECTION_FILTER_STRATEGY].upper()
         ]
         if (
             self.object_dtctn_filter.is_center()
             and self.pv_center_coordinate[0] is None
         ):
             raise ValueError(
-                f"All {OBJECT_DETECTION_FILTER} and {IMAGE_WIDTH} and {IMAGE_HEIGHT} "
+                f"All {PARAM_OBJECT_DETECTION_FILTER_STRATEGY} and {PARAM_IMAGE_WIDTH} and {PARAM_IMAGE_HEIGHT} "
                 + "must be configured together."
             )
-        self.object_dtctn_threshold = param_values[OBJECT_DETECTION_THRESHOLD]
-        self.action_clfn_threshold = param_values[ACT_CLFN_THRESHOLD]
+        self.object_dtctn_threshold = param_values[PARAM_OBJECT_DETECTION_THRESHOLD]
+        self.object_dtctn_last_n_objects = param_values[PARAM_OBJECT_LAST_N_OBJECTS]
+
+        # Configure supplemental input action classification criteria.
+        self.action_clfn_threshold = param_values[PARAM_ACT_CLFN_THRESHOLD]
 
         # Configure supplemental input resources.
         self.question_queue = queue.Queue()
@@ -348,11 +356,11 @@ class VisualQuestionAnswerer(Node):
                 most_center_obj = obj
                 most_center_dist = curr_dist
         if most_center_obj:
-            if self.debug_mode:
-                self.log.info(
-                    f"Added {most_center_obj} to detected objects queue."
-                    + f"Object is {most_center_dist} away from the center."
-                )
+            # if self.debug_mode:
+            #     self.log.info(
+            #         f"Added {most_center_obj} to detected objects queue."
+            #         + f"Object is {most_center_dist} away from the center."
+            #     )
             te = VisualQuestionAnswerer.TimestampedEntity(
                 self._get_sec(msg), set([most_center_obj])
             )
@@ -391,22 +399,27 @@ class VisualQuestionAnswerer(Node):
                 break
         return latest_action
 
-    def _get_latest_observables(self, curr_time: int) -> str:
+    def _get_last_n_observables(self, curr_time: int, n: int) -> str:
         """
         Returns a comma-delimited list of observed objects per all
         entities in self.detected_objects_queue that occurred before a provided time.
+
+
+        :param curr_time: The time for which objects must have been detected before.
+        :param n: The last n objects.
+        :return: returns a string-ified list of the latest observables
         """
-        observables = set()
+        observables = []
         while not self.detected_objects_queue.empty():
             next = self.detected_objects_queue.queue[0]
             if next.time < curr_time:
-                observables.update(next.entity)
+                observables.extend(next.entity)
                 self.detected_objects_queue.get()
             else:
                 break
         if not observables:
             return "nothing"
-        return ", ".join(list(observables))
+        return ", ".join(set(observables[-n:]))
 
     def get_response(
         self,
@@ -478,7 +491,9 @@ class VisualQuestionAnswerer(Node):
             self.log.info(f"Latest action: {action}")
 
             # Get detected objects.
-            observables = self._get_latest_observables(start_time)
+            observables = self._get_last_n_observables(
+                start_time, self.object_dtctn_last_n_objects
+            )
             self.log.info(f"Observed objects: {observables}")
 
             # Generate response.
