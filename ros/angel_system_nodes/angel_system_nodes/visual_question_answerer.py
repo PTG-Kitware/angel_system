@@ -1,3 +1,4 @@
+from enum import Enum
 import itertools
 import langchain
 from langchain.chains import LLMChain
@@ -9,6 +10,7 @@ import os
 import queue
 import rclpy
 from rclpy.node import Node
+from scipy.spatial import distance
 from termcolor import colored
 import threading
 from typing import *
@@ -18,7 +20,7 @@ from angel_msgs.msg import (
     InterpretedAudioUserEmotion,
     ObjectDetection2dSet,
     SystemTextResponse,
-    TaskUpdate
+    TaskUpdate,
 )
 from angel_utils import declare_and_get_parameters
 
@@ -34,6 +36,10 @@ IN_TASK_STATE_TOPIC = "task_state_topic"
 # Below is/are the published topic(s).
 OUT_QA_TOPIC = "system_text_response_topic"
 
+# Below configures the filtering strategy for detected objects. It should correspond to
+# VisualQuestionAnswerer.FilterType.
+OBJECT_DETECTION_FILTER = "obj_det_filter"
+
 # Below are the corresponding model thresholds.
 OBJECT_DETECTION_THRESHOLD = "object_detections_threshold"
 ACT_CLFN_THRESHOLD = "action_classification_threshold"
@@ -42,8 +48,12 @@ ACT_CLFN_THRESHOLD = "action_classification_threshold"
 RECIPE_PATH = "recipe_path"
 # Below is the recipe paths for the prompt template.
 PROMPT_TEMPLATE_PATH = "prompt_template_path"
-
+# Below is how many dialogue turns to keep maintained in the prompt context.
 CONTEXT_HISTORY_LENGTH = "context_history_length"
+
+# Below configures the width and height of an image. A typical example would be 1280 * 720.
+IMAGE_WIDTH = "pv_width"
+IMAGE_HEIGHT = "pv_height"
 DEBUG_MODE = "debug_mode"
 
 # Below is the complete set of prompt instructions.
@@ -59,17 +69,50 @@ The User feels {emotion} while doing {action}. The User can see {observables}.
 User Question: {question}
 Answer: """
 
+# Below are all the variables. These should correspond to the variables defined in the
+# PROMPT_TEMPLATE_PATH and will be indicated by surrounding '{' and '}'.
+PROMPT_VARIABLES = [
+    "recipe",
+    "chat_history",
+    "current_step",
+    "emotion",
+    "action",
+    "observables",
+    "question",
+]
+
 
 class VisualQuestionAnswerer(Node):
+    class FilterType(Enum):
+        """
+        The following determines which objects to surface in the prompt.
+        "threshold" selects objects with a confidence score above OBJECT_DETECTION_THRESHOLD.
+        "center" selects the object closest to the center of the user's field of view. Make sure to
+                 also configure pv_width and pv_height if this is selected.
+        """
+
+        THRESHOLD = 1
+        CENTER = 2
+
+        def is_threshold(self):
+            return self.value == VisualQuestionAnswerer.FilterType.THRESHOLD.value
+
+        def is_center(self):
+            return self.value == VisualQuestionAnswerer.FilterType.CENTER.value
+
     class TimestampedEntity:
-        def __init__(self, time, entity: str):
+        """
+        This class is used internally as a container for recorded detections and classifications at
+        specific instances in time.
+        """
+
+        def __init__(self, time, entity):
             self.time = time
             self.entity = entity
 
     def __init__(self):
         super().__init__(self.__class__.__name__)
         self.log = self.get_logger()
-
         param_values = declare_and_get_parameters(
             self,
             [
@@ -79,6 +122,12 @@ class VisualQuestionAnswerer(Node):
                 (IN_TASK_STATE_TOPIC, ""),
                 (IN_OBJECT_DETECTION_TOPIC, ""),
                 (IN_ACT_CLFN_TOPIC, ""),
+                (IMAGE_WIDTH, -1),
+                (IMAGE_HEIGHT, -1),
+                (
+                    OBJECT_DETECTION_FILTER,
+                    VisualQuestionAnswerer.FilterType.THRESHOLD.name,
+                ),
                 (OBJECT_DETECTION_THRESHOLD, 0.8),
                 (ACT_CLFN_THRESHOLD, 0.8),
                 (OUT_QA_TOPIC,),
@@ -97,9 +146,21 @@ class VisualQuestionAnswerer(Node):
             # langchain.debug = True
             self.debug_mode = True
 
+        # Used to obtain the center perspective point and how far detected objects
+        # are from it.
+        self.pv_width = param_values[IMAGE_WIDTH]
+        self.pv_height = param_values[IMAGE_HEIGHT]
+        pv_configured = self.pv_width > 0 and self.pv_height > 0
+        self.pv_center_coordinate = (
+            [self.pv_width / 2, self.pv_height / 2] if pv_configured else [None, None]
+        )
+
+        # Read the configured recipe file.
         self._recipe_path = param_values[RECIPE_PATH]
         self.recipe = self._configure_recipe(self._recipe_path)
         self.log.info(f"Configured recipe to be: ~~~~~~~~~~\n{self.recipe}\n~~~~~~~~~~")
+
+        # Read the configured prompt template.
         self._prompt_template_path = param_values[PROMPT_TEMPLATE_PATH]
         with open(self._prompt_template_path, "r") as file:
             self.prompt_template = file.read()
@@ -107,13 +168,27 @@ class VisualQuestionAnswerer(Node):
                 f"Prompt Template: ~~~~~~~~~~\n{self.prompt_template}\n~~~~~~~~~~"
             )
 
+        # Configure supplemental input detection & classification criteria.
+        self.object_dtctn_filter = VisualQuestionAnswerer.FilterType[
+            param_values[OBJECT_DETECTION_FILTER].upper()
+        ]
+        if (
+            self.object_dtctn_filter.is_center()
+            and self.pv_center_coordinate[0] is None
+        ):
+            raise ValueError(
+                f"All {OBJECT_DETECTION_FILTER} and {IMAGE_WIDTH} and {IMAGE_HEIGHT} "
+                + "must be configured together."
+            )
         self.object_dtctn_threshold = param_values[OBJECT_DETECTION_THRESHOLD]
         self.action_clfn_threshold = param_values[ACT_CLFN_THRESHOLD]
 
+        # Configure supplemental input resources.
         self.question_queue = queue.Queue()
         self.current_step = "Unstarted"
         self.action_classification_queue = queue.Queue()
         self.detected_objects_queue = queue.Queue()
+        self.dialogue_history = []
         self.handler_thread = threading.Thread(target=self.process_question_queue)
         self.handler_thread.start()
 
@@ -163,8 +238,6 @@ class VisualQuestionAnswerer(Node):
         # Configure LangChain.
         self.chain = self._configure_langchain()
 
-        self.dialogue_history = []
-
     def _configure_openai_org_id(self):
         if not os.getenv("OPENAI_ORG_ID"):
             raise ValueError(
@@ -205,11 +278,9 @@ class VisualQuestionAnswerer(Node):
             temperature=0.0,
             max_tokens=64,
         )
-        # TODO (derekahmed) Figure out how to  include optional  dialogue history
+        # TODO (derekahmed) Figure out how to include optional dialogue history
         zero_shot_prompt = langchain.PromptTemplate(
-            input_variables=["recipe", "chat_history",
-                             "current_step", "emotion", "action", "observables",
-                             "question"],
+            input_variables=PROMPT_VARIABLES,
             template=self.prompt_template,
         )
         return LLMChain(llm=openai_llm, prompt=zero_shot_prompt)
@@ -224,8 +295,11 @@ class VisualQuestionAnswerer(Node):
         return self.current_step
 
     def _get_dialogue_history(self):
+        """
+        Gets a string concatenation of the last self.dialogue_history_length turns of conversation.
+        """
         last_n = min(len(self.dialogue_history), self.dialogue_history_length)
-        last_n_turns = self.dialogue_history[-1 * last_n:]
+        last_n_turns = self.dialogue_history[-1 * last_n :]
         return "\n".join(itertools.chain.from_iterable(last_n_turns))
 
     def _add_action_classification(self, msg: ActivityDetection) -> str:
@@ -245,22 +319,64 @@ class VisualQuestionAnswerer(Node):
         """
         Stores all detected objects with a confidence score above IN_OBJECT_DETECTION_THRESHOLD.
         """
-        detected_objects = set()
+        if self.object_dtctn_filter.is_threshold():
+            self._add_detected_objects_above_threshold(msg)
+        elif self.object_dtctn_filter.is_center():
+            # TODO(derekahmed): Maybe these shouldn't be mutually exclusive?
+            self._add_detected_object_closest_to_center(msg)
+        else:
+            raise ValueError(
+                "VisualQuestionAnswerer Node is misconfigured as "
+                + self.object_dtctn_filter.value
+            )
+
+    def _add_detected_object_closest_to_center(self, msg):
+        """
+        Adds the object that is closest to the configured center coordinate of the user's view.
+        This center coordinate is indicated by self.pv_center_coordinate.
+        """
+        most_center_obj = None
+        most_center_dist = max(self.pv_width, self.pv_height)
+        zipped = zip(msg.label_vec, msg.left, msg.right, msg.top, msg.bottom)
+        for obj, left, right, top, bottom in zipped:
+            width_center = left + int((right - left) / 2)
+            height_center = top + int((bottom - top) / 2)
+            curr_dist = distance.euclidean(
+                [width_center, height_center], self.pv_center_coordinate
+            )
+            if curr_dist < most_center_dist:
+                most_center_obj = obj
+                most_center_dist = curr_dist
+        if most_center_obj:
+            if self.debug_mode:
+                self.log.info(
+                    f"Added {most_center_obj} to detected objects queue."
+                    + f"Object is {most_center_dist} away from the center."
+                )
+            te = VisualQuestionAnswerer.TimestampedEntity(
+                self._get_sec(msg), set([most_center_obj])
+            )
+            self.detected_objects_queue.put(te)
+
+    def _add_detected_objects_above_threshold(self, msg):
+        """
+        Queuse all objects above a configure threshold.
+        """
+        detected_objs = set()
         for obj, score in zip(msg.label_vec, msg.label_confidences):
             if score < self.object_dtctn_threshold:
-                # Optional threshold filtering
                 continue
-            detected_objects.add(obj)
-        if detected_objects:
+            detected_objs.add(obj)
+        if detected_objs:
             te = VisualQuestionAnswerer.TimestampedEntity(
-                self._get_sec(msg), detected_objects
+                self._get_sec(msg), detected_objs
             )
             self.detected_objects_queue.put(te)
 
     def _add_dialogue_history(self, question: str, response: str):
-        self.dialogue_history.append((f"Me: {question}",  f"You: {response}"))
+        self.dialogue_history.append((f"Me: {question}", f"You: {response}"))
 
-    def _get_action_before(self, curr_time: int) -> str:
+    def _get_latest_action(self, curr_time: int) -> str:
         """
         Returns the latest action classification in self.action_classification_queue
         that does not occur before a provided time.
@@ -275,7 +391,7 @@ class VisualQuestionAnswerer(Node):
                 break
         return latest_action
 
-    def _get_observables_before(self, curr_time: int) -> str:
+    def _get_latest_observables(self, curr_time: int) -> str:
         """
         Returns a comma-delimited list of observed objects per all
         entities in self.detected_objects_queue that occurred before a provided time.
@@ -292,12 +408,18 @@ class VisualQuestionAnswerer(Node):
             return "nothing"
         return ", ".join(list(observables))
 
-    def get_response(self, msg: InterpretedAudioUserEmotion,
-                     chat_history: str, current_step: str, action: str, observables: str):
+    def get_response(
+        self,
+        msg: InterpretedAudioUserEmotion,
+        chat_history: str,
+        current_step: str,
+        action: str,
+        observables: str,
+    ):
         """
-        Generate a  response to the utterance, enriched with the addition of
-        the user's detected emotion. Inference calls can be added and revised
-        here.
+        Generate a response to the utterance, enriched with the addition of
+        the user's detected emotion, chat history, current step information, action, and
+        detected objects. Inference calls can be added and revised here.
         """
         return_msg = None
         try:
@@ -312,20 +434,25 @@ class VisualQuestionAnswerer(Node):
                 question=msg.utterance_text,
             )
             if self.debug_mode:
-                sent_prompt = \
-                    self.chain.prompt.format_prompt(recipe=self.recipe,
-                                                    chat_history=chat_history,
-                                                    current_step=current_step,
-                                                    action=action,
-                                                    observables=observables,
-                                                    emotion=msg.user_emotion,
-                                                    question=msg.utterance_text,).to_string()
+                sent_prompt = self.chain.prompt.format_prompt(
+                    recipe=self.recipe,
+                    chat_history=chat_history,
+                    current_step=current_step,
+                    action=action,
+                    observables=observables,
+                    emotion=msg.user_emotion,
+                    question=msg.utterance_text,
+                ).to_string()
                 sent_prompt = colored(sent_prompt, "light_red")
-                self.log.info(f"Prompt sent over:~~~~~~~~~~\n{sent_prompt}\n:~~~~~~~~~~")
+                self.log.info(
+                    f"Prompt sent over:~~~~~~~~~~\n{sent_prompt}\n:~~~~~~~~~~"
+                )
         except RuntimeError as err:
             self.log.info(err)
-            return_msg = "I'm sorry. I don't know how to answer your statement. " +\
-                f"I understand that you feel {msg.user_emotion}."
+            return_msg = (
+                "I'm sorry. I don't know how to answer your statement. "
+                + f"I understand that you feel {msg.user_emotion}."
+            )
         return return_msg
 
     def question_answer_callback(self, msg):
@@ -347,17 +474,21 @@ class VisualQuestionAnswerer(Node):
             start_time = self._get_sec(question_msg)
 
             # Get most recently detected action.
-            action = self._get_action_before(start_time)
+            action = self._get_latest_action(start_time)
             self.log.info(f"Latest action: {action}")
 
             # Get detected objects.
-            observables = self._get_observables_before(start_time)
+            observables = self._get_latest_observables(start_time)
             self.log.info(f"Observed objects: {observables}")
 
             # Generate response.
-            response = self.get_response(question_msg, 
-                                         self._get_dialogue_history(),
-                                         self._get_current_step(), action, observables)
+            response = self.get_response(
+                question_msg,
+                self._get_dialogue_history(),
+                self._get_current_step(),
+                action,
+                observables,
+            )
             self.publish_generated_response(question_msg.utterance_text, response)
             self._add_dialogue_history(question_msg.utterance_text, response)
 
