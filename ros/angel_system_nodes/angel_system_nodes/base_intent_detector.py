@@ -134,9 +134,8 @@ class BaseIntentDetector(Node):
             intent_msg.confidence = 1.0
             self._expected_publisher.publish(intent_msg)
             published_topic = PARAM_EXPECT_USER_INTENT_TOPIC
-        else:
-            self._interp_publisher.publish(intent_msg)
-            published_topic = PARAM_INTERP_USER_INTENT_TOPIC
+        self._interp_publisher.publish(intent_msg)
+        published_topic = PARAM_INTERP_USER_INTENT_TOPIC
 
         colored_utterance = colored(utterance, "light_blue")
         colored_intent = colored(intent_msg.user_intent, "light_green")
