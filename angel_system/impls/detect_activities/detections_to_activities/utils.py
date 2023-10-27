@@ -259,23 +259,12 @@ def obj_det2d_set_to_feature_by_method(
 
         return hand_idx, hand_bbox, hand_conf, hand_bbox.center
 
-    def dist_to_center(center, obj_center):
+    def dist_to_center(center1, center2):
         center_dist = [
-            obj_center[0][0][0] - center[0][0][0],
-            obj_center[1][0][0] - center[1][0][0],
+            center2[0][0][0] - center1[0][0][0],
+            center2[1][0][0] - center1[1][0][0],
         ]
         return center_dist
-
-    def dist_from_hand(hand_idx, hand_center):
-        hand_dist = [default_dist for i in range(num_det_classes)]
-        for i in range(num_det_classes):
-            obj_bbox = kwimage.Boxes([det_class_bbox[i]], "xywh")
-            obj_center = obj_bbox.center
-
-            if obj_center != default_center:
-                hand_dist[i] = dist_to_center(obj_center, hand_center)
-
-        return hand_dist
 
     #########################
     # Hands
@@ -290,24 +279,45 @@ def obj_det2d_set_to_feature_by_method(
         "hand (left)"
     )
 
+    RIGHT_IDX = 0
+    LEFT_IDX = 1
     right_left_hand_kwboxes = det_class_kwboxes[[right_hand_idx, left_hand_idx]]
+    # Mask detailing hand presence in the scene.
+    hand_mask = det_class_mask[[right_hand_idx, left_hand_idx]]
+    # 2-D mask object class gate per hand
+    hand_by_object_mask = np.dot(hand_mask[:, None], det_class_mask[None, :])
 
     #########################
     # Distances
     #########################
     if use_hand_dist:
-        # Compute distances to the right hand
-        right_hand_dist = (
-            dist_from_hand(right_hand_idx, right_hand_center)
-            if right_hand_conf != 0
-            else [default_dist for i in range(num_det_classes)]
+        # Compute distances to the right and left hands. Distance to the hand
+        # is defined by `hand.center - object.center`.
+        # `kwcoco.Boxes.center` returns a tuple of two arrays, each shaped
+        # [n_boxes, 1].
+        obj_centers_x, obj_centers_y = det_class_kwboxes.center  # [n_dets, 1]
+        hand_centers_x, hand_centers_y = right_left_hand_kwboxes.center  # [2, 1]
+        # Hand distances from objects. Shape: [2, n_dets]
+        hand_dist_x = np.subtract(
+            hand_centers_x,
+            obj_centers_x.T,
+            where=hand_by_object_mask,
+            # required, otherwise indices may be left uninitialized.
+            out=np.zeros(shape=hand_by_object_mask.shape),
         )
-
-        # Compute distances to the left hand
-        left_hand_dist = (
-            dist_from_hand(left_hand_idx, left_hand_center)
-            if left_hand_conf != 0
-            else [default_dist for i in range(num_det_classes)]
+        hand_dist_y = np.subtract(
+            hand_centers_y,
+            obj_centers_y.T,
+            where=hand_by_object_mask,
+            # required, otherwise indices may be left uninitialized.
+            out=np.zeros(shape=hand_by_object_mask.shape),
+        )
+        # Collate into arrays of (x, y) coordinates.
+        right_hand_dist = np.stack(
+            [hand_dist_x[RIGHT_IDX], hand_dist_y[RIGHT_IDX]], axis=1
+        )
+        left_hand_dist = np.stack(
+            [hand_dist_x[LEFT_IDX], hand_dist_y[LEFT_IDX]], axis=1
         )
 
     else:
