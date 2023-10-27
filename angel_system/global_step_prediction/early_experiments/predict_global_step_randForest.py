@@ -164,131 +164,132 @@ def train_random_forest(coco):
     return clf
 
 
-config_fn = "config/tasks/task_steps_cofig-recipe-coffee-shortstrings.yaml"
-with open(config_fn, "r") as stream:
-    config = yaml.safe_load(stream)
-labels = [sanitize_str(l["description"]) for l in config["steps"]]
-steps = config["steps"]
-if steps[0]["id"] == 1:
-    config["steps"].insert(
-        0,
-        {
-            "id": 0,
-            "activity_id": 0,
-            "description": "background",
-            "median_duration_seconds": 0.5,
-            "mean_conf": 0.5,
-            "std_conf": 0.2,
-        },
-    )
+if __name__ == "__main__":
+    config_fn = "config/tasks/task_steps_cofig-recipe-coffee-shortstrings.yaml"
+    with open(config_fn, "r") as stream:
+        config = yaml.safe_load(stream)
+    labels = [sanitize_str(l["description"]) for l in config["steps"]]
+    steps = config["steps"]
+    if steps[0]["id"] == 1:
+        config["steps"].insert(
+            0,
+            {
+                "id": 0,
+                "activity_id": 0,
+                "description": "background",
+                "median_duration_seconds": 0.5,
+                "mean_conf": 0.5,
+                "std_conf": 0.2,
+            },
+        )
 
-coco_val = kwcoco.CocoDataset("model_files/val_activity_preds_epoch40.mscoco.json")
-coco_test = kwcoco.CocoDataset("model_files/test_activity_preds.mscoco.json")
+    coco_val = kwcoco.CocoDataset("model_files/val_activity_preds_epoch40.mscoco.json")
+    coco_test = kwcoco.CocoDataset("model_files/test_activity_preds.mscoco.json")
 
-image_ids = coco_test.index.vidid_to_gids[3]
-video_dset = coco_test.subset(gids=image_ids, copy=True)
-
-# "Training": for each activity class, see what the average "true positive"
-# activation was.
-clf = train_random_forest(coco_test)
-avg_probs = get_average_TP_activations(coco_test, clf)
-print(f"average_probs = {avg_probs}")
-
-all_vid_ids = np.unique(np.asarray(coco_val.images().lookup("video_id")))
-
-for vid_id in all_vid_ids:
-    print(f"vid_id {vid_id}")
-
-    image_ids = coco_test.index.vidid_to_gids[vid_id]
+    image_ids = coco_test.index.vidid_to_gids[3]
     video_dset = coco_test.subset(gids=image_ids, copy=True)
 
-    # All N activity confs x each video frame
-    activity_confs = video_dset.images().lookup("activity_conf")
-    new_probs = clf.predict_proba(activity_confs)
-    new_probs_all_classes = np.zeros((new_probs.shape[0], new_probs.shape[1] + 1))
-    new_probs_all_classes[:, 0:17] = new_probs[:, 0:17]
-    new_probs_all_classes[:, 18:] = new_probs[:, 17:]
+    # "Training": for each activity class, see what the average "true positive"
+    # activation was.
+    clf = train_random_forest(coco_test)
+    avg_probs = get_average_TP_activations(coco_test, clf)
+    print(f"average_probs = {avg_probs}")
 
-    next_step = 1
-    step_predictions = []
-    num_frames_activated = 0
+    all_vid_ids = np.unique(np.asarray(coco_val.images().lookup("video_id")))
 
-    # Predicted step: confidence has been above threshold for 5 frames.
-    for activity_conf in new_probs_all_classes:
-        # Next step
-        next_activity_id = steps[next_step]["activity_id"]
+    for vid_id in all_vid_ids:
+        print(f"vid_id {vid_id}")
 
-        next_activity_conf = activity_conf[next_activity_id]
+        image_ids = coco_test.index.vidid_to_gids[vid_id]
+        video_dset = coco_test.subset(gids=image_ids, copy=True)
 
-        avg_prob_next_activity = avg_probs[next_activity_id]
+        # All N activity confs x each video frame
+        activity_confs = video_dset.images().lookup("activity_conf")
+        new_probs = clf.predict_proba(activity_confs)
+        new_probs_all_classes = np.zeros((new_probs.shape[0], new_probs.shape[1] + 1))
+        new_probs_all_classes[:, 0:17] = new_probs[:, 0:17]
+        new_probs_all_classes[:, 18:] = new_probs[:, 17:]
 
-        if next_activity_conf > 0.8 * avg_prob_next_activity:
-            num_frames_activated += 1
-        else:
-            num_frames_activated = 0
+        next_step = 1
+        step_predictions = []
+        num_frames_activated = 0
 
-        if num_frames_activated >= 8:
-            if next_step < 23:
-                next_step += 1
-            num_frames_activated = 0
+        # Predicted step: confidence has been above threshold for 5 frames.
+        for activity_conf in new_probs_all_classes:
+            # Next step
+            next_activity_id = steps[next_step]["activity_id"]
 
-        step_predictions.append(next_step - 1)
+            next_activity_conf = activity_conf[next_activity_id]
 
-    # Ground truth step:
-    activity_gts = video_dset.images().lookup("activity_gt")
-    step_gts = []
-    step_gts_no_background = []
-    current_step = 0
-    for activity_gt in activity_gts:
-        # convert activity id to step id
-        step_id = next(
-            int(item["id"]) for item in steps if item["activity_id"] == activity_gt
+            avg_prob_next_activity = avg_probs[next_activity_id]
+
+            if next_activity_conf > 0.8 * avg_prob_next_activity:
+                num_frames_activated += 1
+            else:
+                num_frames_activated = 0
+
+            if num_frames_activated >= 8:
+                if next_step < 23:
+                    next_step += 1
+                num_frames_activated = 0
+
+            step_predictions.append(next_step - 1)
+
+        # Ground truth step:
+        activity_gts = video_dset.images().lookup("activity_gt")
+        step_gts = []
+        step_gts_no_background = []
+        current_step = 0
+        for activity_gt in activity_gts:
+            # convert activity id to step id
+            step_id = next(
+                int(item["id"]) for item in steps if item["activity_id"] == activity_gt
+            )
+            step_gts.append(step_id)
+
+            # A version of GT that never jumps back to 0
+            if step_id > 0:
+                current_step = step_id
+            step_gts_no_background.append(current_step)
+
+        # Plot confusion matrix
+        fig, ax = plt.subplots(figsize=(100, 100))
+        cm = confusion_matrix(step_gts_no_background, step_predictions)
+        sn.heatmap(cm, annot=True, fmt="g", ax=ax)
+        sn.set(font_scale=4)
+        ax.set(
+            title="Confusion Matrix",
+            xlabel="Predicted Label",
+            ylabel="True Label",
         )
-        step_gts.append(step_id)
+        fig.savefig(f"./outputs/plot_confusion_mat_vid{vid_id}.png")
 
-        # A version of GT that never jumps back to 0
-        if step_id > 0:
-            current_step = step_id
-        step_gts_no_background.append(current_step)
+        # Plot gt vs predicted class across all vid frames
+        fig = plt.figure()
+        sn.set(font_scale=1)
+        step_gts = [float(i) for i in step_gts]
+        plt.plot(step_gts, label="gt")
+        plt.plot(step_predictions, label="estimated")
+        # plt.plot(inliers-0.5, label = 'inliers')
+        plt.plot(10 * np.asarray(activity_confs)[:, 17] - 5, label="act_preds[17]")
+        plt.plot(10 * np.asarray(activity_confs)[:, 18] - 5, label="act_preds[18]")
+        plt.plot(10 * np.asarray(activity_confs)[:, 19] - 5, label="act_preds[19]")
 
-    # Plot confusion matrix
-    fig, ax = plt.subplots(figsize=(100, 100))
-    cm = confusion_matrix(step_gts_no_background, step_predictions)
-    sn.heatmap(cm, annot=True, fmt="g", ax=ax)
-    sn.set(font_scale=4)
-    ax.set(
-        title="Confusion Matrix",
-        xlabel="Predicted Label",
-        ylabel="True Label",
-    )
-    fig.savefig(f"./outputs/plot_confusion_mat_vid{vid_id}.png")
-
-    # Plot gt vs predicted class across all vid frames
-    fig = plt.figure()
-    sn.set(font_scale=1)
-    step_gts = [float(i) for i in step_gts]
-    plt.plot(step_gts, label="gt")
-    plt.plot(step_predictions, label="estimated")
-    # plt.plot(inliers-0.5, label = 'inliers')
-    plt.plot(10 * np.asarray(activity_confs)[:, 17] - 5, label="act_preds[17]")
-    plt.plot(10 * np.asarray(activity_confs)[:, 18] - 5, label="act_preds[18]")
-    plt.plot(10 * np.asarray(activity_confs)[:, 19] - 5, label="act_preds[19]")
-
-    plt.plot(
-        bilateralFtr1D(10 * np.asarray(activity_confs)[:, 17]) - 10,
-        label="act_preds_bilateral[17]",
-    )
-    plt.plot(
-        bilateralFtr1D(10 * np.asarray(activity_confs)[:, 18]) - 10,
-        label="act_pred_bilateral[18]",
-    )
-    plt.plot(
-        bilateralFtr1D(10 * np.asarray(activity_confs)[:, 19]) - 10,
-        label="act_preds_bilateral[19]",
-    )
-    # plt.plot(10*X_conf_incremental, label = 'confidence')
-    # plt.plot(10*vid_acts[:,10], label = act_labels[10])
-    # plt.plot(10*vid_acts[:,11], label = act_labels[11])
-    # plt.plot(10*vid_acts[:,12], label = act_labels[12])
-    plt.legend()
-    fig.savefig(f"./outputs/plot_pred_vs_gt_vid{vid_id}.png")
+        plt.plot(
+            bilateralFtr1D(10 * np.asarray(activity_confs)[:, 17]) - 10,
+            label="act_preds_bilateral[17]",
+        )
+        plt.plot(
+            bilateralFtr1D(10 * np.asarray(activity_confs)[:, 18]) - 10,
+            label="act_pred_bilateral[18]",
+        )
+        plt.plot(
+            bilateralFtr1D(10 * np.asarray(activity_confs)[:, 19]) - 10,
+            label="act_preds_bilateral[19]",
+        )
+        # plt.plot(10*X_conf_incremental, label = 'confidence')
+        # plt.plot(10*vid_acts[:,10], label = act_labels[10])
+        # plt.plot(10*vid_acts[:,11], label = act_labels[11])
+        # plt.plot(10*vid_acts[:,12], label = act_labels[12])
+        plt.legend()
+        fig.savefig(f"./outputs/plot_pred_vs_gt_vid{vid_id}.png")
