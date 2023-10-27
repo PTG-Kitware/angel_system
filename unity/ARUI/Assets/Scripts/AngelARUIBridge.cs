@@ -67,10 +67,6 @@ public class AngelARUIBridge : MonoBehaviour
             ros.SendServiceMessage<QueryTaskGraphResponse>(querytaskgraphTopicName, queryTaskGraphRequest, QueryTaskGraphCallback);
         }
 
-        if (debugMsg != "")
-        {
-            log.LogInfo(debugMsg);
-        }
         loopIdx++;
     }
 
@@ -82,15 +78,8 @@ public class AngelARUIBridge : MonoBehaviour
     private void AruiUpdateCallback(AruiUpdateMsg msg)
     {
         // Update task status
-        try
-        {
-            AngelARUI.Instance.SetCurrentObservedTask(msg.task_update.task_name);
-            AngelARUI.Instance.GoToStep(msg.task_update.task_name, msg.task_update.current_step_id);
-        }
-        catch (Exception e)
-        {
-            debugMsg += e.ToString();
-        }
+        AngelARUI.Instance.SetCurrentObservedTask(msg.task_update.task_name);
+        AngelARUI.Instance.GoToStep(msg.task_update.task_name, msg.task_update.current_step_id);
 
         // Handle user notifications
         for (int i = 0; i < msg.notifications.Length; i++)
@@ -136,17 +125,6 @@ public class AngelARUIBridge : MonoBehaviour
             string taskDictStr = JsonConvert.SerializeObject(taskDict);
             tasks.Add(msg.task_titles[i], taskDictStr);
         }
-
-        /*
-        string path = Path.Combine(Application.persistentDataPath, "MyFile.txt");
-        using (TextWriter writer = File.CreateText(path))
-        {
-            foreach (KeyValuePair<string, string> entry in tasks)
-            {
-                writer.WriteLine(entry.Key + ": " + entry.Value);
-            }
-        }
-        */
 
         AngelARUI.Instance.InitManual(tasks);
         taskGraphInitialized = true;
