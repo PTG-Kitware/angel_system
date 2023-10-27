@@ -79,8 +79,8 @@ girder_file_downloads:
     #  dest: "{{ stage_dirs.model_files }}/tourniquet_stage2_interstitial.pth"
 
     # YOLO v7 Combined Objects weights
-    - file_id: 65300c3bdd4f924baed358ea
-      sha512: d352d0dda78d33fa60b4ce755e4603381ee54d5bbc821da024bbc10bf75240def3d1ed9dc035481802551c386bfad235ce99933992835a2ac825def26a37fdae
+    - file_id: 653c008068ef53152cbab25a
+      sha512: 4dce342d356db73326106a436462ee02a5fcbad4f1b6420c34fd280c220a09fd949c174dfc95697cda980e1837b0641d5a7862c160bfa3e736a2c672c8e0c657
       dest: "{{ stage_dirs.model_files }}/yolov7-combined_objects-weights.pt"
     # Activity TCN input object detection label mapping
     - file_id: 6539a24b5be10c8fb6ed5246
