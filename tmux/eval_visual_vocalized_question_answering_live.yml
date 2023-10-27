@@ -175,10 +175,6 @@ windows:
   - emotion_detection:
       layout: even-vertical
       panes:
-        - gpt_exp_emotion_detection: ros2 run angel_system_nodes gpt_emotion_detector --ros-args
-           -r __ns:=${ROS_NAMESPACE}
-           -p user_intent_topic:=expect_user_intent_topic
-           -p user_emotion_topic:=null_topic
         - gpt_interp_emotion_detection: ros2 run angel_system_nodes gpt_emotion_detector --ros-args
            -r __ns:=${ROS_NAMESPACE}
            -p user_intent_topic:=interp_user_intent_topic
