@@ -129,7 +129,7 @@ class YoloObjectDetector(Node):
         on the image and publishes an ObjectDetectionSet2d message for the image.
         """
         log = self.get_logger()
-        #log.info(f"Received image with TS: {image.header.stamp}")
+        log.info(f"Received image with TS: {image.header.stamp}")
         with self._cur_image_msg_lock:
             self._cur_image_msg = image
             self._rt_awake_evt.set()

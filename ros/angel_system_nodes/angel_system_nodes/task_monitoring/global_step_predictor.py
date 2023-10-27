@@ -34,6 +34,12 @@ PARAM_QUERY_TASK_GRAPH_TOPIC = "query_task_graph_topic"
 PARAM_DET_TOPIC = "det_topic"
 PARAM_MODEL_FILE = "model_file"
 
+import kwcoco
+from angel_system.global_step_prediction.global_step_predictor import (
+    GlobalStepPredictor,
+    get_gt_steps_from_gt_activities,
+)
+
 
 class GlobalStepPredictorNode(Node):
     """
@@ -62,7 +68,7 @@ class GlobalStepPredictorNode(Node):
         self._model_file = param_values[PARAM_MODEL_FILE]
 
         # Instantiate the GlobalStepPredictor module
-        self.gsp = GlobalStepPredictor(threshold_frame_count=1)
+        self.gsp = GlobalStepPredictor(threshold_frame_count=8)
 
         self.gsp.get_average_TP_activations_from_file(self._model_file)
         log.info("Global state predictor loaded")
@@ -73,7 +79,6 @@ class GlobalStepPredictorNode(Node):
 
         for task in self.gsp.trackers:
             self.recipe_steps[task["recipe"]] = task["current_step"]
-        print(self.recipe_steps)
 
         # Initialize ROS hooks
         self._task_update_publisher = self.create_publisher(
@@ -88,6 +93,13 @@ class GlobalStepPredictorNode(Node):
             ActivityDetection, self._det_topic, self.det_callback, 1
         )
 
+        self.gt_dets_file = "./model_files/test_activity_preds.mscoco.json"
+        vid_id = 1
+        coco_test = kwcoco.CocoDataset("model_files/test_activity_preds.mscoco.json")
+        image_ids = coco_test.index.vidid_to_gids[vid_id]
+        video_dset = coco_test.subset(gids=image_ids, copy=True)
+        self.step_gts, _ = get_gt_steps_from_gt_activities(video_dset)
+
         self.n_dets = 0
 
     def det_callback(self, activity_msg: ActivityDetection):
@@ -96,6 +108,7 @@ class GlobalStepPredictorNode(Node):
         Adds the activity detection msg to the HMM and then publishes a new
         TaskUpdate message.
         """
+        log = self.get_logger()
         conf_array = np.array(activity_msg.conf_vec)
         conf_array = np.expand_dims(conf_array, 0)
 
@@ -114,10 +127,13 @@ class GlobalStepPredictorNode(Node):
 
             # If previous and current are not the same, publish a taskupdate
             if previous_step_id != current_step_id:
+                log.info(
+                    f"Step change detected: {task['recipe']}. Current step: {current_step_id}"
+                    f" Previous step: {previous_step_id}."
+                )
                 self.publish_task_state_message(task)
-
                 self.recipe_steps[task["recipe"]] = current_step_id
-                print("new step", current_step_id)
+
 
     def publish_task_state_message(
         self,
@@ -140,11 +156,11 @@ class GlobalStepPredictorNode(Node):
 
         # Populate steps and current step
         task_step_str = task_state["step_to_activity_desc"][task_state["current_step"]]
-        print(task_step_str)
+        log.info(f"Publish task update w/ step: {task_step_str}")
         task_steps = task_state["step_to_activity_desc"][1:]  # Exclude background
 
         task_step = task_steps.index(task_step_str)
-        print(task_step)
+        #print(task_step)
 
         message.current_step_id = task_step
         message.current_step = task_step_str
@@ -193,6 +209,9 @@ def main():
         rclpy.spin(gsp)
     except KeyboardInterrupt:
         gsp.get_logger().info("Keyboard interrupt, shutting down.\n")
+        gsp.gsp.plot_gt_vs_predicted_one_recipe(
+                    gsp.step_gts, fname_suffix=str("all_activities_20_josh")
+        )
 
     # Destroy the node explicitly
     # (optional - otherwise it will be done automatically
