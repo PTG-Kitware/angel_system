@@ -328,11 +328,11 @@ class ActivityClassifierTCN(Node):
             det_msg.num_detections = n_dets = len(image_annots)
 
             if n_dets > 0:
-                det_bbox_tlbr = image_annots.boxes.to_tlbr().data.T
-                det_msg.top.extend(det_bbox_tlbr[0])
-                det_msg.left.extend(det_bbox_tlbr[1])
-                det_msg.bottom.extend(det_bbox_tlbr[2])
-                det_msg.right.extend(det_bbox_tlbr[3])
+                det_bbox_ltrb = image_annots.boxes.to_ltrb().data.T
+                det_msg.left.extend(det_bbox_ltrb[0])
+                det_msg.top.extend(det_bbox_ltrb[1])
+                det_msg.right.extend(det_bbox_ltrb[2])
+                det_msg.bottom.extend(det_bbox_ltrb[3])
 
                 # Creates [n_det, n_label] matrix, which we assign to and then
                 # ravel into the message slot.
