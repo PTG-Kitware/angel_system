@@ -10,7 +10,6 @@ import scipy.ndimage as ndi
 # from global_step_predictor import (
 from angel_system.global_step_prediction.global_step_predictor import (
     GlobalStepPredictor,
-    get_gt_steps_from_gt_activities,
 )
 
 if __name__ == "__main__":
