@@ -7,7 +7,8 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
 import scipy.ndimage as ndi
 
-from angel_system.global_step_prediction.global_step_predictor import (
+#from angel_system.global_step_prediction.global_step_predictor import (
+from global_step_predictor import (
     GlobalStepPredictor,
     get_gt_steps_from_gt_activities,
 )
@@ -27,12 +28,12 @@ if __name__ == "__main__":
 
         step_predictor = GlobalStepPredictor()
         # Add a second coffee predictor
-        # step_predictor.initialize_new_recipe_tracker("coffee")
+        # step_predictor.initialize_new_recipe_tracker("coffee", config_fn = "config/tasks/task_steps_cofig-recipe-coffee-shortstrings.yaml")
 
         if avg_probs is not None:
             step_predictor.get_average_TP_activations_from_array(avg_probs)
-        elif os.path.exists(avg_probs_fpath):
-            avg_probs = np.load(avg_probs_fpath)
+        #elif os.path.exists(avg_probs_fpath):
+        #    avg_probs = np.load(avg_probs_fpath)
         else:
             avg_probs = step_predictor.compute_average_TP_activations(coco_test)
             np.save("model_files/global_step_predictor_act_avgs_coffee.npy", avg_probs)
