@@ -261,7 +261,6 @@ class GlobalStepPredictor:
           - [5, 5, 5, 5, 5] --> [5]
         """
         indexes = np.unique(activity_ids, return_index=True)[1]
-        print(f"activity_ids {activity_ids}")
         return [activity_ids[index] for index in sorted(indexes)]
 
     def get_first_granular_step_per_broad_step(self, steps):
@@ -534,6 +533,86 @@ class GlobalStepPredictor:
         ][tracker["current_broad_step"]]
         return self.trackers
 
+    def get_gt_steps_from_gt_activities(self, video_dset, broad_steps, config_fn):
+        """
+        Map activity IDs to granular steps and broad steps.
+        Assuming one video input.
+
+        Inputs:
+        - video_dset: kwcocoDataset for a single video, with "activity_gt"
+          ground truth for each video frame as a kwcoco image.
+        - broad_steps: steps as derived from a config/tasks/[recipe].yaml file.
+          config["labels"] example:
+           'labels': [{'id': 0,
+               'label': 'background',
+               'full_str': 'background',
+               'activity_ids': [0]},
+              {'id': 1,
+               'label': 'water-in-kettle',
+               'full_str': 'Measure 12 ounces of cold water and transfer to a kettle.',
+               'activity_ids': [8, 1, 2]},
+               ...]
+        - config_fn = "config/tasks/task_coffee.yaml"
+        Note: In the "easy case", every activity_id maps to 'activity_ids' in just one
+        "broad step" (just one element of config["labels"]. We check for this case.
+
+        In that "easy case", every activity maps to just one "granular step", and one
+        "broad step" too.
+
+        In the "harder case", an "activity_gt" may exist in step 2, and step 6, for
+        instance. I'll just incorrectly assume for now that that activity always pertains
+        to the earlier step. It's just a plot, and creating a comprehensive set of
+        rules to always get the activity-to-broad-step & activity-to-granular-step
+        mapping perfect probably isn't worth the effort for now.
+
+        """
+        activity_gts = video_dset.images().lookup("activity_gt")
+        broad_step_gts = []
+        broad_step_gts_no_background = []
+        granular_step_gts = []
+        granular_step_gts_no_background = []
+        current_step = 0
+
+        # TODO: rm these lines
+        def sanitize_str(str_: str):
+            return str_.lower().strip(" .")
+
+        with open(config_fn, "r") as stream:
+            config = yaml.safe_load(stream)
+        labels = [sanitize_str(l["label"]) for l in config["labels"]]
+        broad_steps = config["labels"]
+        if broad_steps[0]["id"] == 1:
+            config["labels"].insert(
+                0,
+                {
+                    "id": 0,
+                    "activity_ids": 0,
+                    "label": "background",
+                    "full_str": "background",
+                },
+            )
+        for broad_step in broad_steps:
+            f
+        # TODO: ^^ rm these lines
+
+        for activity_gt in activity_gts:
+            # convert activity id to step id
+            step_id = next(
+                int(item["id"]) for item in steps if item["activity_id"] == activity_gt
+            )
+            step_gts.append(step_id)
+
+            # A version of GT that never jumps back to 0
+            if step_id > 0:
+                current_step = step_id
+            step_gts_no_background.append(current_step)
+        return (
+            granular_step_gts,
+            granular_step_gts_no_background,
+            broad_step_gts,
+            broad_step_gts_no_background,
+        )
+
 
 def plot_positive_GT_conf_distributions(activity_confs, activity_gt):
     """
@@ -711,44 +790,3 @@ def bilateralFtr1D(y, sSpatial=5, sIntensity=1):
         ret[i] = sum(tempY)
 
     return ret
-
-
-def get_gt_steps_from_gt_activities(video_dset):
-    activity_gts = video_dset.images().lookup("activity_gt")
-    step_gts = []
-    step_gts_no_background = []
-    current_step = 0
-
-    # TODO: rm these lines
-    def sanitize_str(str_: str):
-        return str_.lower().strip(" .")
-
-    config_fn = "config/tasks/task_steps_cofig-recipe-coffee-shortstrings.yaml"
-    with open(config_fn, "r") as stream:
-        config = yaml.safe_load(stream)
-    labels = [sanitize_str(l["full_str"]) for l in config["labels"]]
-    steps = config["labels"]
-    if steps[0]["id"] == 1:
-        config["labels"].insert(
-            0,
-            {
-                "id": 0,
-                "activity_ids": 0,
-                "label": "background",
-                "full_str": "background",
-            },
-        )
-    # TODO: ^^ rm these lines
-
-    for activity_gt in activity_gts:
-        # convert activity id to step id
-        step_id = next(
-            int(item["id"]) for item in steps if item["activity_id"] == activity_gt
-        )
-        step_gts.append(step_id)
-
-        # A version of GT that never jumps back to 0
-        if step_id > 0:
-            current_step = step_id
-        step_gts_no_background.append(current_step)
-    return step_gts, step_gts_no_background
