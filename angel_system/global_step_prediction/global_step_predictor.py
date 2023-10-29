@@ -1,10 +1,9 @@
+from pathlib import Path
+
 import yaml
-import os
 import seaborn as sn
 import numpy as np
-import kwcoco
 import matplotlib.pyplot as plt
-from sklearn.metrics import confusion_matrix
 import scipy.ndimage as ndi
 
 
@@ -85,6 +84,39 @@ class GlobalStepPredictor:
                 2,
             )
         )
+
+        self.recipe_configs = {
+            "coffee": "config/tasks/recipe_coffee.yaml",
+            "tea": "config/tasks/recipe_tea.yaml",
+            "dessert_quesadilla": "config/tasks/recipe_dessertquesadilla.yaml",
+            "oatmeal": "config/tasks/recipe_oatmeal.yaml",
+            "pinwheel": "config/tasks/recipe_pinwheel.yaml",
+        }
+
+        self.gt_activities_order_from_each_config = {
+            _recipe: self.get_activity_order_from_config(self.recipe_configs[_recipe])
+            for _recipe in self.recipe_configs
+        }
+
+    def get_activity_order_from_config(self, config_fn):
+        """
+        Get the order of activity_ids (mapping to granular step
+        number) based on a recipe config
+        """
+        with open(config_fn, "r") as stream:
+            config = yaml.safe_load(stream)
+        broad_steps = config["labels"]
+        if broad_steps[0]["id"] == 1:
+            config["labels"].insert(
+                0,
+                {
+                    "id": 0,
+                    "activity_ids": [0],
+                    "label": "background",
+                    "full_str": "background",
+                },
+            )
+        return self.get_activity_per_granular_step(broad_steps)
 
     def compute_average_TP_activations(self, coco):
         # For each activity, given the Ground Truth-specified
@@ -440,6 +472,7 @@ class GlobalStepPredictor:
         recipe_type,
         fname_suffix=None,
         granular_or_broad="granular",  # "granular" or "broad"
+        output_dir="outputs",
     ):
         """
         Plot gt vs predicted class across all vid frames
@@ -460,11 +493,29 @@ class GlobalStepPredictor:
         plt.legend()
         if not fname_suffix:
             fname_suffix = f"vid{vid_id}"
+        output_dir_p = Path(output_dir)
+        output_dir_p.mkdir(parents=True, exist_ok=True)
         title = f"plot_pred_vs_gt_{recipe_type}_{fname_suffix}.png"
         plt.title(title)
-        fig.savefig(f"./outputs/{title}")
+        fig.savefig(output_dir_p / title)
 
     def determine_recipe_from_gt_first_activity(self, activity_gts):
+        """
+        Current rough strategy: check for all of the first five
+        ground truth labels from a video's ground truth being in
+        the first 10 activity IDs from a config's list of
+        activities.
+        """
+        first_five_gt_acts_from_vid = self.get_unique(activity_gts)[1:6]
+        for _recipe in self.gt_activities_order_from_each_config:
+            if all(
+                vid_gt in self.gt_activities_order_from_each_config[_recipe]
+                for vid_gt in first_five_gt_acts_from_vid
+            ):
+                return _recipe
+        return "unknown_recipe_type"
+
+        """
         for activity_gt in activity_gts:
             if activity_gt > 0:
                 first_activity_gt = activity_gt
@@ -505,6 +556,7 @@ class GlobalStepPredictor:
                 else:
                     return tracker["recipe"]
         return "unknown_recipe_type"
+        """
 
     def plot_gt_vs_predicted_plus_activations(self, step_gts, fname_suffix=None):
         # Plot gt vs predicted class across all vid frames
@@ -535,6 +587,7 @@ class GlobalStepPredictor:
         title = f"plot_pred_vs_gt_{recipe_type}_{fname_suffix}.png"
         plt.title(title)
         fig.savefig(f"./outputs/{title}")
+        plt.close()
 
     def sanitize_str(self, str_: str):
         """
@@ -748,6 +801,7 @@ def plot_positive_GT_conf_distributions(activity_confs, activity_gt):
 
         # save
         plt.savefig("./outputs/plot_positive_GT_conf_distributions.png")
+        plt.close()
 
 
 def bilateralFtr1D(y, sSpatial=5, sIntensity=1):

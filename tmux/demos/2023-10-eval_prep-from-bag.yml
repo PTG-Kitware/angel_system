@@ -55,7 +55,7 @@ windows:
       layout: even-vertical
       panes:
         - ros_bag_play: #ros2 bag play <<PATH_TO_BAG_FILE>>
-            ros2 bag play -l ${BAGS_DIR}/all_activities_20
+            echo ros2 bag play ${BAGS_DIR}/all_activities_20
 
         # Old videos were recorded in NV12
         - image_converter: ros2 run angel_datahub ImageConverter --ros-args
@@ -107,17 +107,16 @@ windows:
       -p image_pix_width:=1280
       -p image_pix_height:=720
 
-  - task_monitor:
-      layout: even-horizontal
-      panes:
-        - ros2 run angel_system_nodes global_step_predictor --ros-args
-          -r __ns:=${ROS_NAMESPACE}
-          -p det_topic:=ActivityDetections
-          -p model_file:=${MODEL_DIR}/global_step_predictor_act_avgs_coffee.npy
-          -p config_file:=${CONFIG_DIR}/tasks/multi-task-config.yaml
-          -p task_state_topic:=TaskUpdates
-          -p query_task_graph_topic:=query_task_graph
-        - ros2 topic list
+  - task_monitor: ros2 run angel_system_nodes global_step_predictor --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p det_topic:=ActivityDetections
+      -p model_file:=${MODEL_DIR}/global_step_predictor_act_avgs.npy
+      -p config_file:=${CONFIG_DIR}/tasks/multi-task-config.yaml
+      -p task_state_topic:=TaskUpdates
+      -p query_task_graph_topic:=query_task_graph
+      #-p gt_activity_mscoco:=model_files/test_activity_preds.mscoco.json
+      #-p gt_video_id:=8
+      #-p gt_output_dir:="${BAGS_DIR}"
 
   - engineering-ui:
       layout: even-vertical

@@ -113,10 +113,13 @@ windows:
   - task_monitor: ros2 run angel_system_nodes global_step_predictor --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p det_topic:=ActivityDetections
-      -p model_file:=${MODEL_DIR}/global_step_predictor_act_avgs_coffee.npy
+      -p model_file:=${MODEL_DIR}/global_step_predictor_act_avgs.npy
       -p config_file:=${CONFIG_DIR}/tasks/multi-task-config.yaml
       -p task_state_topic:=TaskUpdates
       -p query_task_graph_topic:=query_task_graph
+      #-p gt_activity_mscoco:=model_files/test_activity_preds.mscoco.json
+      #-p gt_video_id:=8
+      #-p gt_output_dir:="${BAGS_DIR}"
 
   - feedback_generator: ros2 run angel_system_nodes feedback_generator --ros-args
       -r __ns:=${ROS_NAMESPACE}

@@ -56,6 +56,12 @@ if __name__ == "__main__":
         activity_confs = video_dset.images().lookup("activity_conf")
         activity_gts = video_dset.images().lookup("activity_gt")
 
+        def get_unique(activity_ids):
+            indexes = np.unique(activity_ids, return_index=True)[1]
+            return [activity_ids[index] for index in sorted(indexes)]
+
+        print(f"unique activities: {get_unique(activity_gts)}")
+
         step_predictor.process_new_confidences(activity_confs)
 
         recipe_type = step_predictor.determine_recipe_from_gt_first_activity(
@@ -86,6 +92,7 @@ if __name__ == "__main__":
             granular_or_broad="broad",
         )
 
+    """
     # 2 Coffee videos interleaved ===========================
     print(f"2 Coffee vids interleaved===========================")
     # Spliced videos:
@@ -128,3 +135,4 @@ if __name__ == "__main__":
     step_predictor.plot_gt_vs_predicted_one_recipe(
         step_gts, fname_suffix="2_coffee_vids_interleaved_1"
     )
+    """
