@@ -239,8 +239,8 @@ class GlobalStepPredictor:
             ] = self.granular_to_broad_step(tracker, tracker["current_granular_step"])
         else:
             raise Exception(
-                f"Tried to increment tracker #{tracker_ind}: \
-                    {tracker['recipe']} past last step."
+                f"Tried to increment tracker #{tracker_ind}: "
+                f"{tracker['recipe']} past last step."
             )
 
     def granular_to_broad_step(self, tracker, granular_step):
