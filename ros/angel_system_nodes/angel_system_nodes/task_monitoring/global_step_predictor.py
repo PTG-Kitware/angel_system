@@ -100,9 +100,7 @@ class GlobalStepPredictorNode(Node):
             if not gt_coco_filepath.is_file():
                 raise ValueError("Given GT coco filepath did not exist.")
             if vid_id < 0:
-                raise ValueError(
-                    "No GT video ID given or given a negative value."
-                )
+                raise ValueError("No GT video ID given or given a negative value.")
 
             coco_test = kwcoco.CocoDataset(gt_coco_filepath)
             image_ids = coco_test.index.vidid_to_gids[vid_id]
@@ -173,11 +171,11 @@ class GlobalStepPredictorNode(Node):
         # TODO: This is a temporary implementation until the GSP has its "broad
         #       steps" mapping working.
         task_step_str = self._granular_step_id_to_str(
-            task_state['recipe'], task_state['current_granular_step']
+            task_state["recipe"], task_state["current_granular_step"]
         )
         log.info(f"Publish task update w/ step: {task_step_str}")
         # Exclude background
-        task_step = task_state['current_granular_step'] - 1
+        task_step = task_state["current_granular_step"] - 1
 
         message.current_step_id = task_step
         message.current_step = task_step_str
@@ -230,9 +228,7 @@ class GlobalStepPredictorNode(Node):
             return
         # List of per-frame truth activity classification IDs.
         activity_gts = self.gt_video_dset.images().lookup("activity_gt")
-        recipe_type = self.gsp.determine_recipe_from_gt_first_activity(
-            activity_gts
-        )
+        recipe_type = self.gsp.determine_recipe_from_gt_first_activity(activity_gts)
         log.info(f"recipe_type = {recipe_type}")
         if recipe_type == "unknown_recipe_type":
             log.info(f"Skipping plotting due to unknown recipe from activity GT.'")
@@ -243,12 +239,10 @@ class GlobalStepPredictorNode(Node):
             granular_step_gts_no_background,
             broad_step_gts,
             broad_step_gts_no_background,
-        ) = self.gsp.get_gt_steps_from_gt_activities(
-            self.gt_video_dset, config_fn
-        )
+        ) = self.gsp.get_gt_steps_from_gt_activities(self.gt_video_dset, config_fn)
 
-        vid_name = self.gt_video_dset.dataset["videos"][0]['name']
-        vid_id = self.gt_video_dset.dataset["videos"][0]['id']
+        vid_name = self.gt_video_dset.dataset["videos"][0]["name"]
+        vid_id = self.gt_video_dset.dataset["videos"][0]["id"]
         self.gsp.plot_gt_vs_predicted_one_recipe(
             granular_step_gts,
             recipe_type,
