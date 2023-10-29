@@ -9,8 +9,8 @@ import scipy.ndimage as ndi
 
 from angel_system.global_step_prediction.global_step_predictor import (
     GlobalStepPredictor,
-    get_gt_steps_from_gt_activities,
 )
+
 
 if __name__ == "__main__":
     coco_val = kwcoco.CocoDataset(
@@ -19,6 +19,14 @@ if __name__ == "__main__":
     coco_test = kwcoco.CocoDataset(
         "/data/PTG/cooking/training/activity_classifier/TCN_HPL/logs/yolo_all_recipes_sample_rate_2/runs/2023-10-25_12-08-48/test_activity_preds.mscoco.json"
     )
+
+    recipe_config = {
+        "coffee": "config/tasks/recipe_coffee.yaml",
+        "tea": "config/tasks/recipe_tea.yaml",
+        "dessert_quesadilla": "config/tasks/recipe_dessertquesadilla.yaml",
+        "oatmeal": "config/tasks/recipe_oatmeal.yaml",
+        "pinwheel": "config/tasks/recipe_pinwheel.yaml",
+    }
 
     # Train
     avg_probs = None
@@ -36,6 +44,9 @@ if __name__ == "__main__":
             step_predictor.get_average_TP_activations_from_array(avg_probs)
         else:
             avg_probs = step_predictor.compute_average_TP_activations(coco_test)
+            np.save(
+                "model_files/global_step_predictor_act_avgs_all_classes.npy", avg_probs
+            )
             print(f"average_probs = {avg_probs}")
 
         image_ids = coco_test.index.vidid_to_gids[vid_id]
@@ -43,13 +54,36 @@ if __name__ == "__main__":
 
         # All N activity confs x each video frame
         activity_confs = video_dset.images().lookup("activity_conf")
+        activity_gts = video_dset.images().lookup("activity_gt")
 
         step_predictor.process_new_confidences(activity_confs)
 
-        step_gts, step_gts_no_background = get_gt_steps_from_gt_activities(video_dset)
+        recipe_type = step_predictor.determine_recipe_from_gt_first_activity(
+            activity_gts
+        )
+        print(f"recipe_type = {recipe_type}")
+        if recipe_type == "unknown_recipe_type":
+            print("skipping plotting.")
+            continue
+        config_fn = recipe_config[recipe_type]
+        (
+            granular_step_gts,
+            granular_step_gts_no_background,
+            broad_step_gts,
+            broad_step_gts_no_background,
+        ) = step_predictor.get_gt_steps_from_gt_activities(video_dset, config_fn)
 
         step_predictor.plot_gt_vs_predicted_one_recipe(
-            step_gts, fname_suffix=str(vid_id)
+            granular_step_gts,
+            recipe_type,
+            fname_suffix=f"{str(vid_id)}_granular",
+            granular_or_broad="granular",
+        )
+        step_predictor.plot_gt_vs_predicted_one_recipe(
+            broad_step_gts,
+            recipe_type,
+            fname_suffix=f"{str(vid_id)}_broad",
+            granular_or_broad="broad",
         )
 
     # 2 Coffee videos interleaved ===========================

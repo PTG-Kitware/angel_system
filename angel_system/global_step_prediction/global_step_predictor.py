@@ -18,7 +18,7 @@ class GlobalStepPredictor:
         threshold_frame_count_weak=0.0,
         deactivate_thresh_mult=0.3,
         deactivate_thresh_frame_count=20,
-        recipe_configs=["coffee"],
+        recipe_types=["coffee", "tea", "dessert_quesadilla", "oatmeal", "pinwheel"],
         background_threshold=0.3,
     ):
         """
@@ -56,11 +56,13 @@ class GlobalStepPredictor:
         # all start at frame 30, since the TCN takes in 30 frames.
         self.current_frame = 30
 
-        self.activity_conf_history = np.empty((0, 25))
+        self.activity_conf_history = np.empty((0, 63))
+
+        self.recipe_types = recipe_types
 
         # Array of tracker dicts
         self.trackers = []
-        for recipe in recipe_configs:
+        for recipe in recipe_types:
             self.initialize_new_recipe_tracker(recipe)
 
         # activated_activites: shape = (number of activity indexes) x 2
@@ -71,14 +73,15 @@ class GlobalStepPredictor:
         # previous frames in a row that have been "activated".
         # When the left column is 1, the right column indicates the number of
         # previous frames in a row that have been "DEactivated".
+        max_activity_id_per_recipe = np.array(
+            [
+                np.max(np.array(tracker["granular_step_to_activity_id"]))
+                for tracker in self.trackers
+            ]
+        )
         self.activated_activities = np.zeros(
             (
-                np.max(
-                    np.array(
-                        [tracker["step_to_activity_id"] for tracker in self.trackers]
-                    )
-                )
-                + 1,
+                np.max(max_activity_id_per_recipe) + 1,
                 2,
             )
         )
@@ -90,16 +93,24 @@ class GlobalStepPredictor:
 
         all_activity_ids = np.unique(np.asarray(coco.images().lookup("activity_gt")))
         all_vid_ids = np.unique(np.asarray(coco.images().lookup("video_id")))
+        print(
+            f"Computing average true positive activations for {len(all_vid_ids)} videos."
+        )
 
+        # Don't use len() here... There might be skipped indexes.
         avg_probs = np.zeros(max(all_activity_ids) + 1)
 
         for activity_id in all_activity_ids:
             # image_ids = coco.index.vidid_to_gids[vid_id]
-            image_ids = [
-                img["id"]
-                for img in coco.videos(video_ids=all_vid_ids).images[0].objs
-                if img["activity_gt"] == activity_id
-            ]
+            image_ids = []
+            for i in range(len(all_vid_ids)):
+                image_ids.extend(
+                    [
+                        img["id"]
+                        for img in coco.videos(video_ids=all_vid_ids).images[i].objs
+                        if img["activity_gt"] == activity_id
+                    ]
+                )
             sub_dset = coco.subset(gids=image_ids, copy=True)
             probs_for_true_inds = np.asarray(sub_dset.images().lookup("activity_conf"))[
                 :, activity_id
@@ -116,11 +127,13 @@ class GlobalStepPredictor:
     def get_average_TP_activations_from_array(self, avg_probs):
         self.avg_probs = avg_probs
 
-    def initialize_new_recipe_tracker(self, recipe):
+    def initialize_new_recipe_tracker(self, recipe, config_fn=None):
         """
         tracker dict fields:
             {
             "recipe":"coffee"
+                - all options: ["coffee", "tea", "dessert_quesadilla",
+                  "oatmeal", "pinwheel"]
             "current_step": 5
                 - int type.
                 - 0 = background.
@@ -148,70 +161,162 @@ class GlobalStepPredictor:
         """
         tracker_dict = {}
         if recipe == "coffee":
-            config_fn = "config/tasks/task_steps_cofig-recipe-coffee-shortstrings.yaml"
+            if config_fn == None:
+                config_fn = "config/tasks/recipe_coffee.yaml"
+        elif recipe == "tea":
+            if config_fn == None:
+                config_fn = "config/tasks/recipe_tea.yaml"
+        elif recipe == "dessert_quesadilla":
+            if config_fn == None:
+                config_fn = "config/tasks/recipe_dessertquesadilla.yaml"
+        elif recipe == "oatmeal":
+            if config_fn == None:
+                config_fn = "config/tasks/recipe_oatmeal.yaml"
+        elif recipe == "pinwheel":
+            if config_fn == None:
+                config_fn = "config/tasks/recipe_pinwheel.yaml"
         else:
             raise ValueError(f"Invalid recipe type. Valid types: [coffee].")
         with open(config_fn, "r") as stream:
             config = yaml.safe_load(stream)
-        labels = [self.sanitize_str(l["description"]) for l in config["steps"]]
-        steps = config["steps"]
-        if steps[0]["id"] == 1:
-            config["steps"].insert(
+        labels = [self.sanitize_str(l["full_str"]) for l in config["labels"]]
+        broad_steps = config["labels"]
+        if broad_steps[0]["id"] == 1:
+            config["labels"].insert(
                 0,
                 {
                     "id": 0,
-                    "activity_id": 0,
-                    "description": "background",
-                    "median_duration_seconds": 0.5,
-                    "mean_conf": 0.5,
-                    "std_conf": 0.2,
+                    "activity_ids": [0],
+                    "label": "background",
+                    "full_str": "background",
                 },
             )
+        tracker_dict[
+            "first_granular_step_per_broad_step"
+        ] = self.get_first_granular_step_per_broad_step(broad_steps)
         tracker_dict["recipe"] = recipe
-        tracker_dict["current_step"] = 0
-        tracker_dict["total_num_steps"] = len(steps)
-        tracker_dict["can_skip"] = False
-        tracker_dict["step_to_activity_id"] = [step["activity_id"] for step in steps]
-        tracker_dict["step_to_activity_desc"] = [step["description"] for step in steps]
-        tracker_dict["prediction_history"] = np.array([])
+        tracker_dict["current_broad_step"] = 0
+        tracker_dict["current_granular_step"] = 0
+        tracker_dict["total_num_broad_steps"] = len(broad_steps)
+        tracker_dict["total_num_granular_steps"] = np.sum(
+            [len(self.get_unique(step["activity_ids"])) for step in config["labels"]]
+        )
+        tracker_dict["broad_step_to_activity_ids"] = [
+            self.get_unique(step["activity_ids"]) for step in broad_steps
+        ]
+        tracker_dict[
+            "granular_step_to_activity_id"
+        ] = self.get_activity_per_granular_step(broad_steps)
+        tracker_dict["step_to_label"] = [step["label"] for step in broad_steps]
+        tracker_dict["step_to_full_str"] = [step["full_str"] for step in broad_steps]
+        tracker_dict["broad_step_prediction_history"] = np.array([])
+        tracker_dict["granular_step_prediction_history"] = np.array([])
         tracker_dict["active"] = True
-        tracker_dict["steps"] = steps
+        tracker_dict["broad_steps"] = broad_steps
+        tracker_dict["can_skip"] = True
 
         self.trackers.append(tracker_dict)
+
+    def get_activity_per_granular_step(self, broad_steps):
+        activity_id_per_granular_step = []
+        for broad_step in broad_steps:
+            for activity_id in self.get_unique(broad_step["activity_ids"]):
+                activity_id_per_granular_step.append(activity_id)
+        return activity_id_per_granular_step
+
+    def increment_granular_step(self, tracker_ind):
+        """
+        Increment a tracker's granular step, and also update the tracker's
+        broad step.
+        (Many broad steps contain several granular steps, so a granular step
+        increment may or may not entail a broad step increment.)
+        """
+        tracker = self.trackers[tracker_ind]
+        if tracker["current_granular_step"] < tracker["total_num_granular_steps"] - 1:
+            self.trackers[tracker_ind]["current_granular_step"] += 1
+            self.trackers[tracker_ind][
+                "current_broad_step"
+            ] = self.granular_to_broad_step(tracker, tracker["current_granular_step"])
+        else:
+            raise Exception(
+                f"Tried to increment tracker #{tracker_ind}: "
+                f"{tracker['recipe']} past last step."
+            )
+
+    def granular_to_broad_step(self, tracker, granular_step):
+        """
+        Convert granular step to broad step.
+        first_granular_step_per_broad_step
+        Ex: [0, 2, 5, 6, 7]
+        granular_step_4
+        """
+        fgspbs = np.array(tracker["first_granular_step_per_broad_step"])
+        return len(np.nonzero(fgspbs <= granular_step))
+
+    def get_unique(self, activity_ids):
+        """
+        Some steps have the same activity more than once. In those cases,
+        keep them in order but only have each activity once.
+        Ex:
+          - [3, 2, 1, 3, 2, 1] --> [3, 2, 1]
+          - [5, 5, 5, 5, 5] --> [5]
+        """
+        indexes = np.unique(activity_ids, return_index=True)[1]
+        return [activity_ids[index] for index in sorted(indexes)]
+
+    def get_first_granular_step_per_broad_step(self, steps):
+        """
+        Get first substep index of each broad step.
+        Example: a recipe might have 8 succinct steps, with
+        multiple activities per succinct step:
+        step 0: background
+        step 1: activity 1, activity 2, activity 3
+        step 2: activity 10, activity 4
+        step 3: activity 20.
+
+        first_granular_step_per_broad_step = [0,3,5,6].
+        """
+        first_granular_step_per_broad_step = []
+        total_granular_steps_to_here = 0
+        for step in steps:
+            if step["id"] == 0:
+                first_granular_step_per_broad_step.append(0)
+            else:
+                num_substeps = len(self.get_unique(step["activity_ids"]))
+                total_granular_steps_to_here += num_substeps
+                first_granular_step_per_broad_step.append(total_granular_steps_to_here)
+        return first_granular_step_per_broad_step
 
     def process_new_confidences(self, activity_confs):
         assert np.array(activity_confs).shape[1] <= len(self.activated_activities)
 
-        activated_indexes = np.where(self.activated_activities[:, 0] == 1)[0]
-        deactivated_indexes = np.where(self.activated_activities[:, 0] == 0)[0]
+        activated_indexes = np.nonzero(self.activated_activities[:, 0] == 1)[0]
+        deactivated_indexes = np.nonzero(self.activated_activities[:, 0] == 0)[0]
         assert len(activated_indexes) + len(deactivated_indexes) == len(
             self.activated_activities
         )
 
         # activity conf = vector of all activities for one frame.
         for i, activity_conf in enumerate(activity_confs):
-            if i == 6000:
-                self.initialize_new_recipe_tracker("coffee")
-                print(f"initialized second tracker")
             # activated_confidences = classes predicted to be "happening" now.
-            activated_indexes = np.where(self.activated_activities[:, 0] == 1)[0]
+            activated_indexes = np.nonzero(self.activated_activities[:, 0] == 1)[0]
             # deactivated_confidences = classes predicted NOT to be happening yet.
-            deactivated_indexes = np.where(self.activated_activities[:, 0] == 0)[0]
+            deactivated_indexes = np.nonzero(self.activated_activities[:, 0] == 0)[0]
 
             # Check for activations > 80% * (avg act threshold)
-            above_pos_threshold_indexes = np.where(
+            above_pos_threshold_indexes = np.nonzero(
                 activity_conf > self.threshold_multiplier * self.avg_probs
             )[0]
             # ...and < 30% * (avg act threshold)
-            below_pos_threshold_indexes = np.where(
+            below_pos_threshold_indexes = np.nonzero(
                 activity_conf < self.threshold_multiplier * self.avg_probs
             )[0]
             # Check for activations > 80% * (avg act threshold)
-            above_neg_threshold_indexes = np.where(
+            above_neg_threshold_indexes = np.nonzero(
                 activity_conf > self.deactivate_thresh_mult * self.avg_probs
             )[0]
             # ...and < 30% * (avg act threshold)
-            below_neg_threshold_indexes = np.where(
+            below_neg_threshold_indexes = np.nonzero(
                 activity_conf < self.deactivate_thresh_mult * self.avg_probs
             )[0]
 
@@ -223,9 +328,6 @@ class GlobalStepPredictor:
                 np.array(activated_indexes), np.array(below_neg_threshold_indexes)
             )
             self.activated_activities[indexes_to_add_neg_threshold_increment, 1] += 1
-            # if len(indexes_to_add_pos_threshold_increment) > 0:
-            #    import ipdb; ipdb.set_trace()
-            # print(np.max(self.activated_activities))
 
             # Not activated AND not above activation threshold?
             # Then set the activation clock back to zero.
@@ -242,18 +344,10 @@ class GlobalStepPredictor:
             # activation threshold for enough consecutive frames
             flipping_on_indexes = np.intersect1d(
                 deactivated_indexes,
-                np.where(self.activated_activities[:, 1] >= self.threshold_frame_count)[
-                    0
-                ],
+                np.nonzero(
+                    self.activated_activities[:, 1] >= self.threshold_frame_count
+                )[0],
             )
-            # flipping_on_indexes = np.where((self.activated_activities[:,0] == 0,)
-            #    and (self.activated_activities[:,1] >= self.
-            #        threshold_frame_count,))[1]
-            if 1 in flipping_on_indexes:
-                print(f"woo i = {i}")
-            # if 1 in above_threshold_indexes:
-            # print(f"activity 1 engaged. i = {i}")
-            # print(f"self.activated_activities[1,1] = {self.activated_activities[1,1]}")
             self.activated_activities[flipping_on_indexes, 0] = 1
             self.activated_activities[flipping_on_indexes, 1] = 0
 
@@ -261,50 +355,51 @@ class GlobalStepPredictor:
             # deactivation threshold for enough consecutive frames
             flipping_off_indexes = np.intersect1d(
                 activated_indexes,
-                np.where(
+                np.nonzero(
                     self.activated_activities[:, 1]
                     >= self.deactivate_thresh_frame_count
                 )[0],
             )
-            if 1 in flipping_off_indexes:
-                print(f"boo i = {i}")
-            # flipping_off_indexes = np.where((self.activated_activities[:,0] == 1,)
-            #    and (self.activated_activities[:,1] <= self.
-            #        deactivate_thresh_frame_count,))[1]
             self.activated_activities[flipping_off_indexes, 0] = 0
             self.activated_activities[flipping_off_indexes, 1] = 0
 
             # Now, go through ACTIVE trackers and see which corresponds to "flipping_on_indexes."
             for tracker_ind, tracker in enumerate(self.trackers):
-                current_step = tracker["current_step"]
+                current_granular_step = tracker["current_granular_step"]
 
                 # TODO: For now the tracker can jump 1 or 2 steps, if base
                 # jump criteria is met. Add "weak" threshold too.
-                if current_step == tracker["total_num_steps"] - 1:
+                if current_granular_step == tracker["total_num_granular_steps"] - 1:
                     continue
 
-                next_step = current_step + 1
-                next_next_step = min(next_step + 1, tracker["total_num_steps"] - 1)
-                current_activity = tracker["step_to_activity_id"][current_step]
-                next_activity = tracker["step_to_activity_id"][next_step]
-                try:
-                    next_next_activity = tracker["step_to_activity_id"][next_next_step]
-                except:
-                    import ipdb
-
-                    ipdb.set_trace()
+                next_granular_step = current_granular_step + 1
+                next_next_granular_step = min(
+                    next_granular_step + 1, tracker["total_num_granular_steps"] - 1
+                )
+                current_activity = tracker["granular_step_to_activity_id"][
+                    current_granular_step
+                ]
+                next_activity = tracker["granular_step_to_activity_id"][
+                    next_granular_step
+                ]
+                next_next_activity = tracker["granular_step_to_activity_id"][
+                    next_next_granular_step
+                ]
 
                 # TODO: prioritize a 1-step jump over a 2-step jump. Create a
                 # second loop just for the 2-step jumps, after this loop has completed
                 # searching for one-step jumps.
                 if next_activity in flipping_on_indexes:
-                    self.trackers[tracker_ind]["current_step"] = next_step
+                    self.increment_granular_step(tracker_ind)
                     # Each activity activation can only be used once.
+                    # Delete activity from flipping_on_indexes
                     next_act_ind = np.argwhere(flipping_on_indexes == next_activity)
                     flipping_on_indexes = np.delete(flipping_on_indexes, next_act_ind)
                 elif next_next_activity in flipping_on_indexes:
-                    self.trackers[tracker_ind]["current_step"] = next_next_step
+                    self.increment_granular_step(tracker_ind)
+                    self.increment_granular_step(tracker_ind)
                     # Each activity activation can only be used once.
+                    # Delete activity from flipping_on_indexes
                     next_next_act_ind = np.argwhere(
                         flipping_on_indexes == next_next_activity
                     )
@@ -315,8 +410,10 @@ class GlobalStepPredictor:
                 # TODO: Try requiring that previous step is de-activated
 
                 # Add current preds to this tracker's prediction history
-                self.trackers[tracker_ind]["prediction_history"] = np.append(
-                    self.trackers[tracker_ind]["prediction_history"], current_step
+                self.record_history(
+                    tracker_ind,
+                    tracker["current_granular_step"],
+                    tracker["current_broad_step"],
                 )
         # Update the current_frame
         self.current_frame += len(activity_confs)
@@ -327,7 +424,89 @@ class GlobalStepPredictor:
 
         return self.trackers
 
-    def plot_gt_vs_predicted_one_recipe(self, step_gts, fname_suffix=None):
+    def record_history(self, tracker_ind, current_granular_step, current_broad_step):
+        self.trackers[tracker_ind]["broad_step_prediction_history"] = np.append(
+            self.trackers[tracker_ind]["broad_step_prediction_history"],
+            current_broad_step,
+        )
+        self.trackers[tracker_ind]["granular_step_prediction_history"] = np.append(
+            self.trackers[tracker_ind]["granular_step_prediction_history"],
+            current_granular_step,
+        )
+
+    def plot_gt_vs_predicted_one_recipe(
+        self,
+        step_gts,  # the granular_step_gts or broad_step_gts
+        recipe_type,
+        fname_suffix=None,
+        granular_or_broad="granular",  # "granular" or "broad"
+    ):
+        """
+        Plot gt vs predicted class across all vid frames
+        """
+        assert granular_or_broad in ["granular", "broad"]
+        assert recipe_type in self.recipe_types
+        fig = plt.figure()
+        sn.set(font_scale=1)
+        step_gts = [float(i) for i in step_gts]
+        plt.plot(step_gts, label=f"{granular_or_broad}_step_gt")
+        for i, tracker in enumerate(self.trackers):
+            step_predictions = tracker[f"{granular_or_broad}_step_prediction_history"]
+            plt.plot(
+                step_predictions,
+                label=f"estimated_{granular_or_broad}_steps_{tracker['recipe']}_{i}",
+            )
+
+        plt.legend()
+        if not fname_suffix:
+            fname_suffix = f"vid{vid_id}"
+        title = f"plot_pred_vs_gt_{recipe_type}_{fname_suffix}.png"
+        plt.title(title)
+        fig.savefig(f"./outputs/{title}")
+
+    def determine_recipe_from_gt_first_activity(self, activity_gts):
+        for activity_gt in activity_gts:
+            if activity_gt > 0:
+                first_activity_gt = activity_gt
+                break
+        for tracker in self.trackers:
+            if tracker["granular_step_to_activity_id"][1] == activity_gt:
+                if tracker["recipe"] in ["coffee", "tea"]:
+                    # Coffee and tea have the same broad step 1.
+                    # TODO: For now I'm just using the specific activity configs
+                    # for this TCN to discriminate tea and coffee. Do something
+                    # a little more general later.
+                    for activity_gt in activity_gts:
+                        if activity_gt not in [0, 8, 1, 2]:
+                            if activity_gt == 25:
+                                return "coffee"
+                            elif activity_gt in [3, 4, 5]:
+                                return "tea"
+                            else:
+                                raise Exception(
+                                    "Can't tell what recipe this should be based on the activities. First activity_id that's not 0, 8, 1, or 2 was {activity_gt}."
+                                )
+
+                if tracker["recipe"] in ["dessert_quesadilla", "pinwheel"]:
+                    # Pinwheel and quesa have the same broad step 1.
+                    # TODO: For now I'm just using the specific activity configs
+                    # for this TCN to discriminate tea and coffee. Do something
+                    # a little more general later.
+                    for activity_gt in activity_gts:
+                        if activity_gt not in [0, 6]:
+                            if activity_gt == 9:
+                                return "dessert_quesadilla"
+                            elif activity_gt in [10, 13]:
+                                return "pinwheel"
+                            else:
+                                raise Exception(
+                                    "Can't tell what recipe this should be based on the activities. First activity_id that's not 0, or 6 was {activity_gt}."
+                                )
+                else:
+                    return tracker["recipe"]
+        return "unknown_recipe_type"
+
+    def plot_gt_vs_predicted_plus_activations(self, step_gts, fname_suffix=None):
         # Plot gt vs predicted class across all vid frames
         fig = plt.figure()
         sn.set(font_scale=1)
@@ -335,8 +514,7 @@ class GlobalStepPredictor:
         plt.plot(step_gts, label="gt")
         for i, tracker in enumerate(self.trackers):
             step_predictions = tracker["prediction_history"]
-            plt.plot(step_predictions, label=f"estimated_{i}")
-
+            plt.plot(step_predictions, label=f"estimated_{tracker['recipe']}_{i}")
         starting_zero_value = 0
         for i in range(len(self.avg_probs)):
             starting_zero_value -= 2
@@ -349,11 +527,14 @@ class GlobalStepPredictor:
                 ],
                 label=f"act_preds_threshold[{i}]",
             )
+
         plt.legend()
         if not fname_suffix:
             fname_suffix = f"vid{vid_id}"
-        fig.savefig(f"./outputs/plot_pred_vs_gt_{fname_suffix}.png")
-        # plt.show()
+        recipe_type = self.determine_recipe_from_gt_first_step(step_gts)
+        title = f"plot_pred_vs_gt_{recipe_type}_{fname_suffix}.png"
+        plt.title(title)
+        fig.savefig(f"./outputs/{title}")
 
     def sanitize_str(self, str_: str):
         """
@@ -366,13 +547,112 @@ class GlobalStepPredictor:
         """
         return str_.lower().strip(" .")
 
-    def manually_increment_current_step(self, tracker_index):
-        self.trackers[tracker_index]["current_step"] += 1
+    def manually_increment_current_broad_step(self, tracker_index):
+        """
+        Increment to the first granular step of the next broad step.
+        """
+        tracker = self.trackers[tracker_index]
+        self.trackers[tracker_index]["current_broad_step"] += 1
+        self.trackers[tracker_index]["current_granular_step"] = tracker[
+            "first_granular_step_per_broad_step"
+        ][tracker["current_broad_step"]]
         return self.trackers
 
     def manually_decrement_current_step(self, tracker_index):
-        self.trackers[tracker_index]["current_step"] -= 1
+        """
+        Decrement to the first granular step of the previous broad step.
+        """
+        tracker = self.trackers[tracker_index]
+        self.trackers[tracker_index]["current_broad_step"] -= 1
+        self.trackers[tracker_index]["current_granular_step"] = tracker[
+            "first_granular_step_per_broad_step"
+        ][tracker["current_broad_step"]]
         return self.trackers
+
+    def get_gt_steps_from_gt_activities(self, video_dset, config_fn):
+        """
+        Map activity IDs to granular steps and broad steps.
+        Assuming one video input.
+
+        Inputs:
+        - video_dset: kwcocoDataset for a single video, with "activity_gt"
+          ground truth for each video frame as a kwcoco image.
+        - broad_steps: steps as derived from a config/tasks/[recipe].yaml file.
+          config["labels"] example:
+           'labels': [{'id': 0,
+               'label': 'background',
+               'full_str': 'background',
+               'activity_ids': [0]},
+              {'id': 1,
+               'label': 'water-in-kettle',
+               'full_str': 'Measure 12 ounces of cold water and transfer to a kettle.',
+               'activity_ids': [8, 1, 2]},
+               ...]
+        - config_fn = "config/tasks/task_coffee.yaml"
+        Note: In the "easy case", every activity_id maps to 'activity_ids' in just one
+        "broad step" (just one element of config["labels"]. We check for this case.
+
+        In that "easy case", every activity maps to just one "granular step", and one
+        "broad step" too.
+
+        In the "harder case", an "activity_gt" may exist in step 2, and step 6, for
+        instance. I'll just incorrectly assume for now that that activity always pertains
+        to the earlier step. It's just a plot, and creating a comprehensive set of
+        rules to always get the activity-to-broad-step & activity-to-granular-step
+        mapping perfect probably isn't worth the effort for now.
+
+        """
+        activity_gts = video_dset.images().lookup("activity_gt")
+        broad_step_gts = []
+        broad_step_gts_no_background = []
+        granular_step_gts = []
+        granular_step_gts_no_background = []
+        current_step = 0
+
+        def sanitize_str(str_: str):
+            return str_.lower().strip(" .")
+
+        with open(config_fn, "r") as stream:
+            config = yaml.safe_load(stream)
+        labels = [sanitize_str(l["label"]) for l in config["labels"]]
+        broad_steps = config["labels"]
+        if broad_steps[0]["id"] == 1:
+            config["labels"].insert(
+                0,
+                {
+                    "id": 0,
+                    "activity_ids": 0,
+                    "label": "background",
+                    "full_str": "background",
+                },
+            )
+        granular_step_to_activity_id = self.get_activity_per_granular_step(broad_steps)
+        fgspbs = self.get_first_granular_step_per_broad_step(broad_steps)
+
+        def get_broad_step_from_granular_step(fgspbs, granular_step):
+            fgspbs = np.array(fgspbs)
+            return len(np.nonzero(fgspbs <= granular_step))
+
+        for activity_gt in activity_gts:
+            # convert activity id to step id
+            granular_step_id = granular_step_to_activity_id.index(activity_gt)
+            broad_step_id = get_broad_step_from_granular_step(fgspbs, granular_step_id)
+
+            granular_step_gts.append(granular_step_id)
+            broad_step_gts.append(broad_step_id)
+
+            # A version of GT that never jumps back to 0
+            if granular_step_id > 0:
+                current_granular_step = granular_step_id
+                current_broad_step = broad_step_id
+            granular_step_gts_no_background.append(current_step)
+            broad_step_gts_no_background.append(current_step)
+        return (
+            granular_step_gts,
+            granular_step_gts_no_background,
+            broad_step_gts,
+            broad_step_gts_no_background,
+        )
 
 
 def plot_positive_GT_conf_distributions(activity_confs, activity_gt):
@@ -551,46 +831,3 @@ def bilateralFtr1D(y, sSpatial=5, sIntensity=1):
         ret[i] = sum(tempY)
 
     return ret
-
-
-def get_gt_steps_from_gt_activities(video_dset):
-    activity_gts = video_dset.images().lookup("activity_gt")
-    step_gts = []
-    step_gts_no_background = []
-    current_step = 0
-
-    # TODO: rm these lines
-    def sanitize_str(str_: str):
-        return str_.lower().strip(" .")
-
-    config_fn = "config/tasks/task_steps_cofig-recipe-coffee-shortstrings.yaml"
-    with open(config_fn, "r") as stream:
-        config = yaml.safe_load(stream)
-    labels = [sanitize_str(l["description"]) for l in config["steps"]]
-    steps = config["steps"]
-    if steps[0]["id"] == 1:
-        config["steps"].insert(
-            0,
-            {
-                "id": 0,
-                "activity_id": 0,
-                "description": "background",
-                "median_duration_seconds": 0.5,
-                "mean_conf": 0.5,
-                "std_conf": 0.2,
-            },
-        )
-    # TODO: ^^ rm these lines
-
-    for activity_gt in activity_gts:
-        # convert activity id to step id
-        step_id = next(
-            int(item["id"]) for item in steps if item["activity_id"] == activity_gt
-        )
-        step_gts.append(step_id)
-
-        # A version of GT that never jumps back to 0
-        if step_id > 0:
-            current_step = step_id
-        step_gts_no_background.append(current_step)
-    return step_gts, step_gts_no_background

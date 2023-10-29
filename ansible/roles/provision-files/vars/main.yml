@@ -94,6 +94,10 @@ girder_file_downloads:
     - file_id: 653999935be10c8fb6ed5242
       sha512: b83b5cd4f9a56bf9e8bfff5ce6a24bda013cca1e4b8c6b905f8d819f29afbfc6d4bc214ec1f97fd6f18d8e4ce304a3f19b89cbb11aad412647d91639eff0e058
       dest: "{{ stage_dirs.model_files }}/activity_tcn-all_activities-mapping.txt"
+    # Global Step predictor model
+    - file_id: 653d8c0768ef53152cbab35d
+      sha512: 65d0c7f89e8a6064f9dccbe8bfc4d8abb9af6e2cd69d5900268fe7e7a0362510073b8514e764b1d42ab81a2dcbcc681eab9cc7bcd2b3380096623ca13248556b
+      dest: "{{ stage_dirs.model_files }}/global_step_predictor_act_avgs.npy"
 
 
 # List of git repositories to check out at a specific ref and then archive.

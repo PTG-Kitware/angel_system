@@ -12,7 +12,7 @@ labels:
   - id: 0
     label: "background"
     full_str: "background"
-    activity_ids: 0
+    activity_ids: [0]
   - id: 1
     label: "place-tortilla"
     full_str: "Place tortilla on cutting board."
@@ -33,7 +33,7 @@ inch uncovered at the edges."
   - id: 5
     label: "clean-knife"
     full_str: "Clean the knife by wiping with a paper towel."
-    actiivty_ids: [22]
+    activity_ids: [22]
   - id: 6
     label: "roll-tortilla"
     full_str: "Roll the tortilla from one end to the other into a log shape, about 1.5 inches thick. Roll it tight
