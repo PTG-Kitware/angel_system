@@ -330,7 +330,10 @@ def add_activity_gt_to_kwcoco(dset):
                         activity_label = "microwave"
                     if activity_label in ["stir-again"]:
                         activity_label = "oatmeal-stir"
-                    if activity_label in ["measure-half-cup-water", "measure-12oz-water"]:
+                    if activity_label in [
+                        "measure-half-cup-water",
+                        "measure-12oz-water",
+                    ]:
                         activity_label = "measure-water"
                     if activity_label in ["insert-toothpick-1", "insert-toothpick-2"]:
                         activity_label = "insert-toothpick"
@@ -1047,7 +1050,9 @@ def dive_csv_to_kwcoco(dive_folder, object_config_fn, data_dir, dst_dir, output_
     print(f"Saved dset to {dset.fpath}")
 
 
-def mixed_dive_csv_to_kwcoco(dive_folder, object_config_fn, data_dir, dst_dir, output_dir=""):
+def mixed_dive_csv_to_kwcoco(
+    dive_folder, object_config_fn, data_dir, dst_dir, output_dir=""
+):
     """Convert object annotations in DIVE csv file(s) to a kwcoco file,
     for the use case where there is one DIVE file for multiple videos
 
@@ -1091,10 +1096,10 @@ def mixed_dive_csv_to_kwcoco(dive_folder, object_config_fn, data_dir, dst_dir, o
 
             # Attempt to find the original file
             original_file = glob.glob(f"{data_dir}/*/*/*/images/{img_fn}")
-            #import pdb; pdb.set_trace()
+            # import pdb; pdb.set_trace()
             assert len(original_file) == 1
             original_folder = os.path.dirname(original_file[0])
-            video_name = original_folder.split('/')[-2]
+            video_name = original_folder.split("/")[-2]
             if "_extracted" in video_name:
                 video_name = video_name.split("_extracted")[0]
             print(video_name)
@@ -1305,7 +1310,7 @@ def remap_category_ids_demo(dset):
 
 def dset_from_obj_dets(obj_dets, good_imgs_dir, output_dir):
     """Create a new kwcoco dataset and set of images
-    based on a kwcoco file of object annotations and a 
+    based on a kwcoco file of object annotations and a
     folder of the desired final images
     """
     obj_dets = load_kwcoco(obj_dets)
@@ -1320,18 +1325,18 @@ def dset_from_obj_dets(obj_dets, good_imgs_dir, output_dir):
 
     for gid in sorted(gids):
         im = obj_dets.imgs[gid]
-        
+
         video = obj_dets.index.videos[im["video_id"]]
         video_name = video["name"]
         if "_extracted" in video_name:
             video_name = video_name.split("_extracted")[0]
-        
+
         fn = os.path.basename(im["file_name"])
 
         temp_fp = f"{good_imgs_dir}/{video_name}/{fn}"
         print("temp fp", temp_fp)
         if os.path.isfile(temp_fp):
-            recipe_name = video['recipe']
+            recipe_name = video["recipe"]
             if recipe_name == "dessertquesadilla":
                 recipe_name = "dessert_quesadilla"
             if recipe_name == "pinwheel":
@@ -1375,5 +1380,3 @@ def dset_from_obj_dets(obj_dets, good_imgs_dir, output_dir):
     dset.fpath = f"{output_dir}/hannah_additional_objs.mscoco.json"
     dset.dump(dset.fpath, newlines=True)
     print(f"Saved predictions to {dset.fpath}")
-
-
