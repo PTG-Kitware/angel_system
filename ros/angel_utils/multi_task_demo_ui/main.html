@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+
+  <link rel="stylesheet" href="css/layout.css">
+
+  <script src="src/third_party/Chart.js/3.9.0/chart.js"></script>
+  <script type="text/javascript">
+    Chart.defaults.font.size = 20;
+    Chart.defaults.font.family = "Roboto","sans-serif";
+    Chart.defaults.plugins.legend.display = false;
+  </script>
+  <script src="src/third_party/jquery/1.9.1/jquery.min.js"></script>
+  <script src="src/third_party/roslibjs/1.3.0/roslib.min.js"></script>
+  <script type="text/javascript">
+    var ros = new ROSLIB.Ros({
+      url : 'ws://localhost:9090'
+    });
+  </script>
+</head>
+
+<body>
+  <!-- HEADER -->
+  <div id="header">
+    <img src="static/Kitware Logo Stacked.png" alt="kitware"/>
+    <div id="status">
+      <p class="text body-text">Rosbridge Websocket Status: <span id="status-msg">N/A</span></p>
+    </div>
+  </div>
+  <!-- END HEADER -->
+  
+  <div class="columns">
+    <!-- LEFT COLUMN -->
+    <div id="left-column" class="column">
+      <div id="recipes">
+        <div class="highlighted-title">
+          <span class="text title-hex">Recipes</span>
+        </div>
+
+        <!-- coffee -->
+        <div id="blue-recipe" class="recipe">
+          <div class="highlighted-title">
+            <span id="blue-task_title" class="task-title text">Recipe Title</span>
+          </div>
+          <div id="blue-task-list" class="task-list">
+            
+          </div>
+        </div>
+        
+        <!-- tea -->
+        <div id="green-recipe" class="recipe">
+          <div class="highlighted-title">
+            <span id="green-task_title" class="task-title text">Recipe Title</span>
+          </div>
+          <div id="green-task-list" class="task-list">
+            
+          </div>
+        </div>
+
+        <!-- dessert quesadilla -->
+        <div id="yellow-recipe" class="recipe">
+          <div class="highlighted-title">
+            <span id="yellow-task_title" class="task-title text">Recipe Title</span>
+          </div>
+          <div id="yellow-task-list" class="task-list">
+            
+          </div>
+        </div>
+
+        <!-- pinwheels -->
+        <div id="red-recipe" class="recipe">
+          <div class="highlighted-title">
+            <span id="red-task_title" class="task-title text">Recipe Title</span>
+          </div>
+          <div id="red-task-list" class="task-list">
+            
+          </div>
+        </div>
+
+        <!-- oatmeal -->
+        <div id="orange-recipe" class="recipe">
+          <div class="highlighted-title">
+            <span id="orange-task_title" class="task-title text">Recipe Title</span>
+          </div>
+          <div id="orange-task-list" class="task-list">
+            
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <!-- END LEFT COLUMN -->
+
+    
+    <!-- RIGHT COLUMN -->
+    <div id="right-column" class="column">
+      <div id="HL-live">
+        <div class="highlighted-title">
+          <span class="text title-hex">Object Detections</span>
+        </div>
+        <img id="hl-image" class="live-img" src="static/hl-live-filler.jpg" alt="HoloLens2 live view">
+      </div>
+
+      <!-- TODO: Task step graph -->
+
+      <div id="errors">
+        <div class="highlighted-title">
+          <span class="text title-hex">Error Messages</span>
+        </div>
+
+        <div id="error-msgs"></div>
+      </div>
+    </div>
+    <!-- END RIGHT COLUMN -->
+  </div>
+
+  <!-- SCRIPTS -->
+  <script type="text/javascript" src="src/hl_image.js"></script>
+  <script type="text/javascript" src="src/task_lists.js"></script>
+  <script type="text/javascript" src="src/connection_status.js"></script>
+  <script type="text/javascript" src="src/errors.js"></script>
+</body>
+
+</html>

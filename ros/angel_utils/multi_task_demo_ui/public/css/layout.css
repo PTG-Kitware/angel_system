@@ -1,0 +1,321 @@
+/* Kitware Colors */
+:root {
+  --light-gray-3:    rgb(243, 243, 243); /* light gray 3 */
+  --dark-gray-30:    rgb(36, 42, 55);
+  --kit-light-blue:  rgb(220, 227, 236); /* kitware light blue */
+  --kit-dark-blue:   rgb(0, 55, 101); /* kitware dark blue*/
+  --kit-blue:        rgb(0, 104, 199); /* kitware blue */
+  --kit-green:       rgb(62, 174, 43);
+  --light-red-berry: rgb(244, 40, 54);
+
+  /* Hex Options */
+  --hex-full:   polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+  --hex-top:    polygon(25% 100%, 75% 100%, 100% 100%, 75% 0, 25% 0, 0 100%);
+  --hex-bottom: polygon(25% 0, 75% 0, 100% 0, 75% 100%, 25% 100%, 0 0);
+  --hex-left:   polygon(100% 0, 0 50%, 100% 100%);
+  --hex-right:  polygon(0 0, 100% 50%, 0 100%);
+}
+
+html,
+body {
+  display: flex;
+  flex-direction: column;
+  overflow-y: scroll;
+  margin-left: 0px;
+  margin-right: 0px;
+  margin-top: 0px;
+}
+
+.content {
+  flex-grow: 1;
+}
+
+/* ------------ */
+/* TEXT         */
+/* ------------ */
+.text {
+  font-family: "Roboto",sans-serif;
+}
+.body-text {
+  font-size: clamp(1rem,1vw,1.7rem);
+  font-weight: 300;
+  line-height: 1;
+
+  color: var(--kit-dark-blue);
+
+  text-align: left;
+}
+
+/* ------------ */
+/* MENU         */
+/* ------------ */
+#header { /* main menu */
+  background: var(--light-gray-3);
+  position: relative;
+  display: flex;
+  height: 5%;
+  max-height: 4vh;
+}
+#header img { /* kitware logo */
+  height: 3%;
+  max-height: 3vh;
+  width: auto; /* keep aspect ratio */
+  float: top;
+  padding: 5px;
+  
+}
+#status {
+  margin-left: auto; 
+  margin-right: 10px;
+}
+
+/* ------------ */
+/* TITLE        */
+/* ------------ */
+.task-title {
+  padding: 0 0 10px 0;
+  position: relative;
+  margin: 0 auto;
+
+  margin-bottom: 4px;
+  max-width: 15vw;
+
+  overflow: hidden;
+  text-overflow: clip;
+
+  max-height: 10%;
+
+  font-size: 1rem;
+  font-weight: 550;
+  line-height: 1.3;
+  color: var(--kit-dark-blue);
+
+  text-align: center;
+}
+.highlighted-title {
+  padding: 0 0 10px 0;
+  position: relative;
+  margin: 0 auto;
+
+  margin-bottom: 4px;
+
+  overflow: scroll;
+  text-overflow: clip;
+
+  max-height: 10%;
+  max-width: 70%;
+
+  width: 60%;
+
+  text-align: center;
+}
+.icon-hex {
+  position: relative;
+  display: inline-block;
+  vertical-align: middle;
+  margin: 0 1px 0 0;
+
+  /*height:64.8px;
+  width: 69.8px;*/
+  width: 49px;
+  height: 49px;
+  clip-path: var(--hex-full);
+  background-color: var(--kit-green); 
+}
+
+.title-hex {
+  position: relative;
+  background-color: var(--kit-light-blue);
+  display: inline-block;
+  vertical-align: middle;
+
+  clip-path: polygon(12.5556px 0, calc(100% - 12.5556px) 0, 100% 50%, calc(100% - 12.5556px) 100%, 12.5556px 100%, 0% 50%);
+
+  padding: 0 2rem 0 2rem;
+  width: 70%;
+  max-width: 80%;
+  
+  font-size: 1.2rem;
+  font-weight: 550;
+  line-height: 1.3;
+  color: var(--kit-dark-blue);
+}
+
+/* ------------ */
+/* COLUMNS      */
+/* ------------ */
+.columns{
+  display: flex;
+  max-height: 95vh;
+}
+.column {
+  margin-top: 10px;
+  margin-bottom: 10px;
+
+  content: "";
+
+  clear: both;
+  
+  width: 50%;
+  max-width: 49vh;
+  max-height: 93vh;
+
+  left: 0;
+  position: relative;
+}
+
+#left-column{
+  float: left;
+  margin-left: 15px;
+}
+
+#right-column{
+  margin-left: 15px;
+  margin-right: 15px;
+}
+
+
+/* ------------ */
+/* RECIPE       */
+/* ------------ */
+.recipe { /* task list */
+  padding: 10px;
+  height: 20%;
+
+  max-width: 45vw;
+  max-height: 15vh;
+
+  text-align: left;
+}
+
+#blue-recipe{
+  background-color: var(--kit-light-blue);
+}
+#green-recipe{
+  background-color: rgb(217, 234, 211);
+}
+#yellow-recipe{
+  background-color: rgb(255, 242, 204);
+}
+#red-recipe{
+  background-color: rgb(234, 209, 220);
+}
+#orange-recipe{
+  background-color: rgb(252, 229, 205);
+}
+
+
+.task-list {
+  overflow: scroll;
+
+  scrollbar-color: var(--dark-gray-30) white;
+
+  text-align: left;
+
+  max-height: 13vh;
+}
+.task-line {
+  display: block;
+  margin-bottom: 5px;
+}
+/* task text */
+.task {
+  font-size: clamp(1rem,1vw,1.8rem);
+  font-weight: 300;
+  line-height: 1;
+
+  color: black;
+}
+
+/* checkmark */
+.checkbox { 
+  border: 1.5px solid black; 
+  width: 1.1em; 
+  height: 1.1em; 
+
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 8px;
+
+  background-color: white;
+}
+
+/* ------------ */
+/* LIVE VIEW    */
+/* ------------ */
+#HL-live{
+  float: left;
+  padding: 15px;
+  max-width: 49vw;
+}
+
+.live-img {
+  float:left;
+
+  height: 99%;
+  width: auto; /* keep aspect ratio */
+  max-width: 45vw;
+}
+
+
+/* ------------ */
+/* ERRORS       */
+/* ------------ */
+#errors {
+  margin-top: 20px;
+  
+  height:30%;
+  position: relative;
+}
+#error-msgs {
+  max-height:100%;
+  height: 60%;
+
+  overflow: scroll;
+  scrollbar-color: var(--dark-gray-30) white;
+}
+
+.error-msg {
+  margin-bottom: 10px;
+}
+
+/* https://www.w3schools.com/howto/howto_js_collapsible.asp */
+.collapsible {
+  background-color: #eee;
+  cursor: pointer;
+  padding: 18px;
+  width: 100%;
+  border: none;
+  text-align: left;
+  outline: none;
+  font-size: clamp(1rem,1vw,1.8rem);
+  font-weight: 550;
+}
+
+/* Add a background color to the button if it is clicked on (add the .active class with JS), and when you move the mouse over it (hover) */
+.active, .collapsible:hover {
+  background-color: #ccc;
+}
+
+/* Style the collapsible content. Note: hidden by default */
+.content {
+  padding: 0 18px;
+  display: block;
+  overflow: hidden;
+  background-color: var(--kit-light-blue);
+  text-align: left;
+  font-size: clamp(1rem,1vw,1.5rem);
+}
+
+.collapsible:after {
+  font-size: 10px;
+  float: right;
+  margin-left: 5px;
+}
+
+.lapse{
+  background-color: rgb(238, 143, 77);
+}
+.lapse:hover {
+  background-color: rgb(238, 143, 77);
+}
