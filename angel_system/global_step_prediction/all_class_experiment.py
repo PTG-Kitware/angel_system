@@ -7,7 +7,9 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
 import scipy.ndimage as ndi
 
-from angel_system.global_step_prediction.global_step_predictor import GlobalStepPredictor
+from angel_system.global_step_prediction.global_step_predictor import (
+    GlobalStepPredictor,
+)
 
 
 if __name__ == "__main__":
