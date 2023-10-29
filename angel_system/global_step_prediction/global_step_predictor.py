@@ -1,10 +1,9 @@
+from pathlib import Path
+
 import yaml
-import os
 import seaborn as sn
 import numpy as np
-import kwcoco
 import matplotlib.pyplot as plt
-from sklearn.metrics import confusion_matrix
 import scipy.ndimage as ndi
 
 
@@ -473,6 +472,7 @@ class GlobalStepPredictor:
         recipe_type,
         fname_suffix=None,
         granular_or_broad="granular",  # "granular" or "broad"
+        output_dir="outputs",
     ):
         """
         Plot gt vs predicted class across all vid frames
@@ -493,9 +493,11 @@ class GlobalStepPredictor:
         plt.legend()
         if not fname_suffix:
             fname_suffix = f"vid{vid_id}"
+        output_dir_p = Path(output_dir)
+        output_dir_p.mkdir(parents=True, exist_ok=True)
         title = f"plot_pred_vs_gt_{recipe_type}_{fname_suffix}.png"
         plt.title(title)
-        fig.savefig(f"./outputs/{title}")
+        fig.savefig(output_dir_p / title)
 
     def determine_recipe_from_gt_first_activity(self, activity_gts):
         """

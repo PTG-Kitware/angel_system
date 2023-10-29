@@ -369,6 +369,7 @@ class ActivityClassifierTCN(Node):
             if self._enable_trace_logging:
                 self.get_logger().info(f"Queueing image TS {msg}")
             # Let the runtime know we've queued something.
+            # Only triggering here as a new image frame (TS) is the
             self._rt_awake_evt.set()
 
     def det_callback(self, msg: ObjectDetection2dSet) -> None:
@@ -383,7 +384,7 @@ class ActivityClassifierTCN(Node):
                     f"Queueing object detections (ts={msg.header.stamp})"
                 )
             # Let the runtime know we've queued something.
-            self._rt_awake_evt.set()
+            # self._rt_awake_evt.set()
 
     def rt_alive(self) -> bool:
         """

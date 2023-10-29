@@ -1,12 +1,5 @@
-from threading import (
-    Event,
-    RLock,
-    Thread,
-)
-import time
-from typing import cast
+from pathlib import Path
 from typing import Optional
-from typing import Set
 
 from builtin_interfaces.msg import Time
 import kwcoco
@@ -27,7 +20,6 @@ from angel_utils import declare_and_get_parameters
 
 from angel_system.global_step_prediction.global_step_predictor import (
     GlobalStepPredictor,
-    get_gt_steps_from_gt_activities,
 )
 
 
@@ -37,6 +29,12 @@ PARAM_TASK_ERROR_TOPIC = "task_error_topic"
 PARAM_QUERY_TASK_GRAPH_TOPIC = "query_task_graph_topic"
 PARAM_DET_TOPIC = "det_topic"
 PARAM_MODEL_FILE = "model_file"
+# Enable ground-truth plotting mode by specifying the path to an MSCOCO file
+# that includes image level `activity_gt` attribute.
+# Requires co-specification of the video ID to select out of the COCO file.
+PARAM_GT_ACT_COCO = "gt_activity_mscoco"
+PARAM_GT_VIDEO_ID = "gt_video_id"
+PARAM_GT_OUTPUT_DIR = "gt_output_dir"  # output directory override.
 
 
 class GlobalStepPredictorNode(Node):
@@ -57,6 +55,9 @@ class GlobalStepPredictorNode(Node):
                 (PARAM_QUERY_TASK_GRAPH_TOPIC,),
                 (PARAM_DET_TOPIC,),
                 (PARAM_MODEL_FILE,),
+                (PARAM_GT_ACT_COCO, ""),
+                (PARAM_GT_VIDEO_ID, -1),
+                (PARAM_GT_OUTPUT_DIR, "outputs"),
             ],
         )
         self._config_file = param_values[PARAM_CONFIG_FILE]
@@ -76,7 +77,7 @@ class GlobalStepPredictorNode(Node):
         self.recipe_steps = {}
 
         for task in self.gsp.trackers:
-            self.recipe_steps[task["recipe"]] = task["current_step"]
+            self.recipe_steps[task["recipe"]] = task["current_granular_step"]
 
         # Initialize ROS hooks
         self._task_update_publisher = self.create_publisher(
@@ -88,13 +89,27 @@ class GlobalStepPredictorNode(Node):
         self._subscription = self.create_subscription(
             ActivityDetection, self._det_topic, self.det_callback, 1
         )
+        log.info("ROS services initialized.")
 
-        self.gt_dets_file = "./model_files/test_activity_preds.mscoco.json"
-        vid_id = 1
-        coco_test = kwcoco.CocoDataset("model_files/test_activity_preds.mscoco.json")
-        image_ids = coco_test.index.vidid_to_gids[vid_id]
-        video_dset = coco_test.subset(gids=image_ids, copy=True)
-        self.step_gts, _ = get_gt_steps_from_gt_activities(video_dset)
+        self.gt_video_dset: Optional[kwcoco.CocoDataset] = None
+        if param_values[PARAM_GT_ACT_COCO]:
+            log.info("GT params specified, initializing data...")
+            gt_coco_filepath = Path(param_values[PARAM_GT_ACT_COCO])
+            self.gt_output_dir_override: str = param_values[PARAM_GT_OUTPUT_DIR]
+            vid_id = param_values[PARAM_GT_VIDEO_ID]
+            if not gt_coco_filepath.is_file():
+                raise ValueError("Given GT coco filepath did not exist.")
+            if vid_id < 0:
+                raise ValueError(
+                    "No GT video ID given or given a negative value."
+                )
+
+            coco_test = kwcoco.CocoDataset(gt_coco_filepath)
+            image_ids = coco_test.index.vidid_to_gids[vid_id]
+            self.gt_video_dset: Optional[kwcoco.CocoDataset] = coco_test.subset(
+                gids=image_ids, copy=True
+            )
+            log.info("GT params specified, initializing data... Done")
 
     def det_callback(self, activity_msg: ActivityDetection):
         """
@@ -113,9 +128,9 @@ class GlobalStepPredictorNode(Node):
 
         for task in tracker_dict_list:
             previous_step_id = self.recipe_steps[task["recipe"]]
-            current_step_id = task["current_step"]
+            current_step_id = task["current_granular_step"]
 
-            # If previous and current are not the same, publish a taskupdate
+            # If previous and current are not the same, publish a task-update
             if previous_step_id != current_step_id:
                 log.info(
                     f"Step change detected: {task['recipe']}. Current step: {current_step_id}"
@@ -123,6 +138,17 @@ class GlobalStepPredictorNode(Node):
                 )
                 self.publish_task_state_message(task)
                 self.recipe_steps[task["recipe"]] = current_step_id
+
+    @staticmethod
+    def _granular_step_id_to_str(recipe_name: str, granular_id: int) -> str:
+        """
+        :param recipe_name: String name of the task the granular step is a part
+            of.
+        :param granular_id: Integer ID of the step.
+
+        :return: String representation.
+        """
+        return f"PLACEHOLDER: Task {recipe_name} - Granular ID {granular_id}"
 
     def publish_task_state_message(
         self,
@@ -144,11 +170,14 @@ class GlobalStepPredictorNode(Node):
         message.task_name = task_state["recipe"]
 
         # Populate steps and current step
-        task_step_str = task_state["step_to_activity_desc"][task_state["current_step"]]
+        # TODO: This is a temporary implementation until the GSP has its "broad
+        #       steps" mapping working.
+        task_step_str = self._granular_step_id_to_str(
+            task_state['recipe'], task_state['current_granular_step']
+        )
         log.info(f"Publish task update w/ step: {task_step_str}")
-        task_steps = task_state["step_to_activity_desc"][1:]  # Exclude background
-
-        task_step = task_steps.index(task_step_str)
+        # Exclude background
+        task_step = task_state['current_granular_step'] - 1
 
         message.current_step_id = task_step
         message.current_step = task_step_str
@@ -168,7 +197,15 @@ class GlobalStepPredictorNode(Node):
         task_graphs = []  # List of TaskGraphs
         task_titles = []  # List of task titles associated with the graphs
         for task in self.gsp.trackers:
-            task_steps = task["step_to_activity_desc"][1:]  # Exclude background
+            # Retrieve step descriptions in the current task.
+            # TODO: This is a temporary implementation until the GSP has its "broad
+            #       steps" mapping working.
+            # task_steps = task["step_to_activity_desc"][1:]  # Exclude background
+            task_steps = [
+                self._granular_step_id_to_str(task["recipe"], gsid)
+                for gsid in sorted(task["granular_step_to_activity_id"])[1:]
+            ]
+
             task_g = TaskGraph()
             task_g.task_steps = task_steps
             task_g.task_levels = [0] * len(task_steps)
@@ -180,6 +217,51 @@ class GlobalStepPredictorNode(Node):
         response.task_titles = task_titles
         log.info("Received request for the current task graph -- Done")
         return response
+
+    def output_gt_plotting(self):
+        """
+        If enabled, output GT plotting artifacts.
+        Assuming this is called at the "end" of a run, i.e. after node has
+        exited spinning.
+        """
+        log = self.get_logger()
+        if self.gt_video_dset is None:
+            log.info("No GT configured to score against, skipping.")
+            return
+        # List of per-frame truth activity classification IDs.
+        activity_gts = self.gt_video_dset.images().lookup("activity_gt")
+        recipe_type = self.gsp.determine_recipe_from_gt_first_activity(
+            activity_gts
+        )
+        log.info(f"recipe_type = {recipe_type}")
+        if recipe_type == "unknown_recipe_type":
+            log.info(f"Skipping plotting due to unknown recipe from activity GT.'")
+            return
+        config_fn = self.gsp.recipe_configs[recipe_type]
+        (
+            granular_step_gts,
+            granular_step_gts_no_background,
+            broad_step_gts,
+            broad_step_gts_no_background,
+        ) = self.gsp.get_gt_steps_from_gt_activities(
+            self.gt_video_dset, config_fn
+        )
+
+        vid_name = self.gt_video_dset.dataset["videos"][0]['name']
+        vid_id = self.gt_video_dset.dataset["videos"][0]['id']
+        self.gsp.plot_gt_vs_predicted_one_recipe(
+            granular_step_gts,
+            recipe_type,
+            fname_suffix=f"{vid_name}_{str(vid_id)}_granular",
+            granular_or_broad="granular",
+            output_dir=self.gt_output_dir_override,
+        )
+        # self.gsp.plot_gt_vs_predicted_one_recipe(
+        #     broad_step_gts,
+        #     recipe_type,
+        #     fname_suffix=f"{vid_name}_{str(vid_id)}_broad",
+        #     granular_or_broad="broad",
+        # )
 
     def destroy_node(self):
         log = self.get_logger()
@@ -197,9 +279,7 @@ def main():
         rclpy.spin(gsp)
     except KeyboardInterrupt:
         gsp.get_logger().info("Keyboard interrupt, shutting down.\n")
-        gsp.gsp.plot_gt_vs_predicted_one_recipe(
-            gsp.step_gts, fname_suffix=str("all_activities_20_josh")
-        )
+        gsp.output_gt_plotting()
 
     # Destroy the node explicitly
     # (optional - otherwise it will be done automatically
