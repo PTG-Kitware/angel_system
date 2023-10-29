@@ -8,6 +8,7 @@ import textwrap
 import warnings
 import random
 import matplotlib
+import shutil
 
 import numpy as np
 import ubelt as ub
@@ -1046,6 +1047,104 @@ def dive_csv_to_kwcoco(dive_folder, object_config_fn, data_dir, dst_dir, output_
     print(f"Saved dset to {dset.fpath}")
 
 
+def mixed_dive_csv_to_kwcoco(dive_folder, object_config_fn, data_dir, dst_dir, output_dir=""):
+    """Convert object annotations in DIVE csv file(s) to a kwcoco file,
+    for the use case where there is one DIVE file for multiple videos
+
+    :param dive_folder: Path to the csv files
+    :param object_config_fn: Path to the object label config file
+    """
+    dset = kwcoco.CocoDataset()
+
+    # Load object labels config
+    with open(object_config_fn, "r") as stream:
+        object_config = yaml.safe_load(stream)
+    object_labels = object_config["labels"]
+
+    label_ver = object_config["version"]
+    title = object_config["title"].lower()
+    dset.dataset["info"].append({f"{title}_object_label_version": label_ver})
+
+    # Add categories
+    for object_label in object_labels:
+        if object_label["label"] == "background":
+            continue
+        dset.add_category(name=object_label["label"], id=object_label["id"])
+
+    # Add boxes
+    for csv_file in ub.ProgIter(
+        glob.glob(f"{dive_folder}/*.csv"), desc="Loading video annotations"
+    ):
+        print(csv_file)
+
+        dive_df = pd.read_csv(csv_file)
+        print(f"Loaded {csv_file}")
+        for i, row in dive_df.iterrows():
+            if i == 0:
+                continue
+
+            frame = row["2: Video or Image Identifier"]
+            img_fn = os.path.basename(frame)
+            frame_num, time = time_from_name(img_fn)
+            frame_fn = f"{dst_dir}/images/{img_fn}"
+            assert os.path.isfile(frame_fn)
+
+            # Attempt to find the original file
+            original_file = glob.glob(f"{data_dir}/*/*/*/images/{img_fn}")
+            #import pdb; pdb.set_trace()
+            assert len(original_file) == 1
+            original_folder = os.path.dirname(original_file[0])
+            video_name = original_folder.split('/')[-2]
+            if "_extracted" in video_name:
+                video_name = video_name.split("_extracted")[0]
+            print(video_name)
+
+            video_lookup = dset.index.name_to_video
+            if video_name in video_lookup:
+                vid = video_lookup[video_name]["id"]
+            else:
+                vid = dset.add_video(name=video_name)
+
+            image_lookup = dset.index.file_name_to_img
+            if frame_fn in image_lookup:
+                img_id = image_lookup[frame_fn]["id"]
+            else:
+                img_id = dset.add_image(
+                    file_name=frame_fn,
+                    video_id=vid,
+                    frame_index=frame_num,
+                    width=1280,
+                    height=720,
+                )
+
+            bbox = (
+                [
+                    float(row["4-7: Img-bbox(TL_x"]),
+                    float(row["TL_y"]),
+                    float(row["BR_x"]),
+                    float(row["BR_y)"]),
+                ],
+            )
+
+            xywh = kwimage.Boxes([bbox], "tlbr").toformat("xywh").data[0][0].tolist()
+
+            obj_id = row["10-11+: Repeated Species"]
+
+            ann = {
+                "area": xywh[2] * xywh[3],
+                "image_id": img_id,
+                "category_id": obj_id,
+                "segmentation": [],
+                "bbox": xywh,
+            }
+
+            dset.add_annotation(**ann)
+
+    dset.fpath = f"{title}_obj_annotations_v{label_ver}.mscoco.json"
+    dset.dump(dset.fpath, newlines=True)
+    print(f"Saved dset to {dset.fpath}")
+
+
 def update_obj_labels(dset, object_config_fn):
     """Change the object labels to match those provided
     in ``object_config_fn``
@@ -1202,3 +1301,79 @@ def remap_category_ids_demo(dset):
     dset._build_index()
     dset.dump(dset.fpath, newlines=True)
     print(f"Saved predictions to {dset.fpath}")
+
+
+def dset_from_obj_dets(obj_dets, good_imgs_dir, output_dir):
+    """Create a new kwcoco dataset and set of images
+    based on a kwcoco file of object annotations and a 
+    folder of the desired final images
+    """
+    obj_dets = load_kwcoco(obj_dets)
+    dset = kwcoco.CocoDataset()
+
+    # Copy categories
+    for i, cat in obj_dets.cats.items():
+        dset.add_category(**cat)
+
+    gid_to_aids = obj_dets.index.gid_to_aids
+    gids = ub.argsort(ub.map_vals(len, gid_to_aids))
+
+    for gid in sorted(gids):
+        im = obj_dets.imgs[gid]
+        
+        video = obj_dets.index.videos[im["video_id"]]
+        video_name = video["name"]
+        if "_extracted" in video_name:
+            video_name = video_name.split("_extracted")[0]
+        
+        fn = os.path.basename(im["file_name"])
+
+        temp_fp = f"{good_imgs_dir}/{video_name}/{fn}"
+        print("temp fp", temp_fp)
+        if os.path.isfile(temp_fp):
+            recipe_name = video['recipe']
+            if recipe_name == "dessertquesadilla":
+                recipe_name = "dessert_quesadilla"
+            if recipe_name == "pinwheel":
+                recipe_name = "pinwheels"
+            actual_fp = f"/data/PTG/cooking/ros_bags/{recipe_name}/{recipe_name}_extracted/{video_name}_extracted/images/{fn}"
+            shutil.copy(actual_fp, f"{output_dir}/images")
+        else:
+            continue
+
+        # Add video
+        video_lookup = dset.index.name_to_video
+        if video_name in video_lookup:
+            vid = video_lookup[video_name]["id"]
+        else:
+            new_video = video.copy()
+            del new_video["id"]
+            new_video["name"] = video_name
+            vid = dset.add_video(**new_video)
+
+        # Add image
+        new_fp = f"images/{fn}"
+        print("new fp", new_fp)
+        new_im = im.copy()
+        del new_im["id"]
+        new_im["file_name"] = new_fp
+        new_im["video_id"] = vid
+
+        img_id = dset.add_image(**new_im)
+
+        aids = gid_to_aids[gid]
+        anns = ub.dict_subset(obj_dets.anns, aids)
+        for aid, ann in anns.items():
+            # Add annotation
+            new_ann = ann.copy()
+            del new_ann["id"]
+            del new_ann["image_id"]
+            new_ann["image_id"] = img_id
+
+            dset.add_annotation(**new_ann)
+
+    dset.fpath = f"{output_dir}/hannah_additional_objs.mscoco.json"
+    dset.dump(dset.fpath, newlines=True)
+    print(f"Saved predictions to {dset.fpath}")
+
+
