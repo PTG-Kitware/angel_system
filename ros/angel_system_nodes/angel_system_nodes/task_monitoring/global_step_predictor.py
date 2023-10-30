@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Dict
 from typing import Optional
 
 from builtin_interfaces.msg import Time
@@ -74,10 +75,10 @@ class GlobalStepPredictorNode(Node):
 
         # Mapping from recipe to current step. Used to track state changes
         # of the GSP and determine when to publish a TaskUpdate msg.
-        self.recipe_steps = {}
+        self.recipe_current_step_id = {}
 
         for task in self.gsp.trackers:
-            self.recipe_steps[task["recipe"]] = task["current_granular_step"]
+            self.recipe_current_step_id[task["recipe"]] = task["current_granular_step"]
 
         # Initialize ROS hooks
         self._task_update_publisher = self.create_publisher(
@@ -125,7 +126,7 @@ class GlobalStepPredictorNode(Node):
         tracker_dict_list = self.gsp.process_new_confidences(conf_array)
 
         for task in tracker_dict_list:
-            previous_step_id = self.recipe_steps[task["recipe"]]
+            previous_step_id = self.recipe_current_step_id[task["recipe"]]
             current_step_id = task["current_granular_step"]
 
             # If previous and current are not the same, publish a task-update
@@ -134,8 +135,12 @@ class GlobalStepPredictorNode(Node):
                     f"Step change detected: {task['recipe']}. Current step: {current_step_id}"
                     f" Previous step: {previous_step_id}."
                 )
-                self.publish_task_state_message(task)
-                self.recipe_steps[task["recipe"]] = current_step_id
+                self.publish_task_state_message(
+                    task,
+                    previous_step_id,
+                    activity_msg.source_stamp_end_frame,
+                )
+                self.recipe_current_step_id[task["recipe"]] = current_step_id
 
     @staticmethod
     def _granular_step_id_to_str(recipe_name: str, granular_id: int) -> str:
@@ -150,13 +155,18 @@ class GlobalStepPredictorNode(Node):
 
     def publish_task_state_message(
         self,
-        task_state,
+        task_state: Dict,
+        previous_step_id: int,
+        result_ts: Time,
     ) -> None:
         """
         Forms and sends a `angel_msgs/TaskUpdate` message to the
         TaskUpdates topic.
 
         :param task_state: TODO
+        :param previous_step_id: Integer ID of the previous task step.
+        :param result_ts: Time of the latest frame input that went into
+            estimation of the current task state.
         """
         log = self.get_logger()
 
@@ -166,6 +176,8 @@ class GlobalStepPredictorNode(Node):
         message.header.stamp = self.get_clock().now().to_msg()
         message.header.frame_id = "Task message"
         message.task_name = task_state["recipe"]
+        message.task_description = message.task_name
+        message.latest_sensor_input_time = result_ts
 
         # Populate steps and current step
         # TODO: This is a temporary implementation until the GSP has its "broad
@@ -176,11 +188,24 @@ class GlobalStepPredictorNode(Node):
         log.info(f"Publish task update w/ step: {task_step_str}")
         # Exclude background
         task_step = task_state["current_granular_step"] - 1
+        previous_step_str = self._granular_step_id_to_str(
+            task_state["recipe"], previous_step_id
+        )
 
         message.current_step_id = task_step
         message.current_step = task_step_str
+        message.previous_step = previous_step_str
 
-        # TODO: Lots of missing fields here
+        # Binary array simply hinged on everything
+        completed_steps_arr = np.zeros(
+            task_state["total_num_granular_steps"] - 1,
+            dtype=bool,
+        )
+        completed_steps_arr[:task_step] = True
+        message.completed_steps = completed_steps_arr.tolist()
+
+        # Task completion confidence is currently binary.
+        message.task_complete_confidence = float(np.all(message.completed_steps))
 
         self._task_update_publisher.publish(message)
 
