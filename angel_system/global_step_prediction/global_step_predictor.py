@@ -240,7 +240,9 @@ class GlobalStepPredictor:
             "granular_step_to_activity_id"
         ] = self.get_activity_per_granular_step(broad_steps)
         tracker_dict["broad_step_to_label"] = [step["label"] for step in broad_steps]
-        tracker_dict["broad_step_to_full_str"] = [step["full_str"] for step in broad_steps]
+        tracker_dict["broad_step_to_full_str"] = [
+            step["full_str"] for step in broad_steps
+        ]
         tracker_dict["broad_step_prediction_history"] = np.array([])
         tracker_dict["granular_step_prediction_history"] = np.array([])
         tracker_dict["active"] = True

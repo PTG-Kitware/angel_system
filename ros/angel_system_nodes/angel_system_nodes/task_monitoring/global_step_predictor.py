@@ -176,7 +176,9 @@ class GlobalStepPredictorNode(Node):
         log.info(f"Publish task update w/ step: {task_step_str}")
         # Exclude background
         task_step = task_state["current_granular_step"] - 1
-        previous_step_str = task["step_to_full_str"][max(task["current_broad_step"]-1, 0)]
+        previous_step_str = task["step_to_full_str"][
+            max(task["current_broad_step"] - 1, 0)
+        ]
 
         message.current_step_id = task_step
         message.current_step = task_step_str

@@ -33,7 +33,6 @@ def run_inference_all_vids(coco, recipe_config, extra_output_suffix=""):
             )
             print(f"average_probs = {avg_probs}")
 
-
         image_ids = coco.index.vidid_to_gids[vid_id]
         video_dset = coco.subset(gids=image_ids, copy=True)
 
@@ -82,8 +81,8 @@ def run_inference_all_vids(coco, recipe_config, extra_output_suffix=""):
             granular_or_broad="broad",
         )
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
     coco_val = kwcoco.CocoDataset(
         "/data/PTG/cooking/training/activity_classifier/TCN_HPL/logs/yolo_all_recipes_sample_rate_2/runs/2023-10-25_12-08-48/val_activity_preds_epoch69.mscoco.json"
     )
@@ -99,10 +98,8 @@ if __name__ == "__main__":
         "pinwheel": "config/tasks/recipe_pinwheel.yaml",
     }
 
-
     run_inference_all_vids(coco_test, recipe_config, extra_output_suffix="test_set")
-    #run_inference_all_vids(coco_val, recipe_config, extra_output_suffix="val_set")
-
+    # run_inference_all_vids(coco_val, recipe_config, extra_output_suffix="val_set")
 
     """
     # 2 Coffee videos interleaved ===========================
