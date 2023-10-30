@@ -81,7 +81,7 @@ windows:
   - sensor_input:
       layout: even-vertical
       panes:
-        - ros_bag_play: sleep  5; ros2 bag play ros_bags/josh_rosbag/josh_rosbag.db3
+        - ros_bag_play: sleep  2; ros2 bag play ros_bags/josh_rosbag/josh_rosbag.db3
 
         # Old videos were recorded in NV12
         #- image_converter: ros2 run angel_datahub ImageConverter --ros-args
@@ -175,10 +175,10 @@ windows:
   - emotion_detection:
       layout: even-vertical
       panes:
-        - gpt_exp_emotion_detection: ros2 run angel_system_nodes gpt_emotion_detector --ros-args
-           -r __ns:=${ROS_NAMESPACE}
-           -p user_intent_topic:=expect_user_intent_topic
-           -p user_emotion_topic:=null_topic
+        # - gpt_exp_emotion_detection: ros2 run angel_system_nodes gpt_emotion_detector --ros-args
+        #    -r __ns:=${ROS_NAMESPACE}
+        #    -p user_intent_topic:=expect_user_intent_topic
+        #    -p user_emotion_topic:=null_topic
         - gpt_interp_emotion_detection: ros2 run angel_system_nodes gpt_emotion_detector --ros-args
            -r __ns:=${ROS_NAMESPACE}
            -p user_intent_topic:=interp_user_intent_topic

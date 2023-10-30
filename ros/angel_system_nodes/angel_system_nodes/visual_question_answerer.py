@@ -23,6 +23,7 @@ from angel_msgs.msg import (
     TaskUpdate,
 )
 from angel_utils import declare_and_get_parameters
+from angel_system.utils.object_detection_queues import centroid_2d_strategy_queue
 
 openai.organization = os.getenv("OPENAI_ORG_ID")
 openai.api_key = os.getenv("OPENAI_API_KEY")
@@ -200,6 +201,11 @@ class VisualQuestionAnswerer(Node):
         self.handler_thread = threading.Thread(target=self.process_question_queue)
         self.handler_thread.start()
 
+        self.centroid_object_queue = \
+            centroid_2d_strategy_queue.Centroid2DStrategyQueue(
+                5, self.pv_center_coordinate[0], self.pv_center_coordinate[1],
+                k=1)
+
         # Configure the (necessary) emotional detection enriched utterance subscription.
         self.emotion_subscription = self.create_subscription(
             InterpretedAudioUserEmotion,
@@ -327,6 +333,14 @@ class VisualQuestionAnswerer(Node):
         """
         Stores all detected objects with a confidence score above IN_OBJECT_DETECTION_THRESHOLD.
         """
+        # We will queue timestamped lists of pairs of (detections, confidence scores).
+        self.centroid_object_queue.add(
+            self._get_sec(msg),
+            centroid_2d_strategy_queue.Centroid2DStrategyQueue.BoundingBoxes(
+                msg.left, msg.right, msg.top, msg.bottom,
+                item=list(zip(msg.label_vec, msg.label_confidences))
+                ))
+
         if self.object_dtctn_filter.is_threshold():
             self._add_detected_objects_above_threshold(msg)
         elif self.object_dtctn_filter.is_center():
@@ -409,17 +423,30 @@ class VisualQuestionAnswerer(Node):
         :param n: The last n objects.
         :return: returns a string-ified list of the latest observables
         """
-        observables = []
-        while not self.detected_objects_queue.empty():
-            next = self.detected_objects_queue.queue[0]
-            if next.time < curr_time:
-                observables.extend(next.entity)
-                self.detected_objects_queue.get()
-            else:
-                break
+        observables = set()
+        timestamped_detections = self.centroid_object_queue.get_n_before(timestamp=curr_time)
+        if timestamped_detections:
+            if self.debug_mode:
+                print(f"Timestamped detections based on centroid distance are:{timestamped_detections}")
+            # Recall that we passed in timestamped lists of pairs of (detections, confidence scores).
+            top_k_obj_lists = [j for _, j in timestamped_detections]
+            for top_k_obj_list in top_k_obj_lists:
+                for centroid_dist_obj in top_k_obj_list:
+                    centroid, obj_score  = centroid_dist_obj
+                    obj, score = obj_score
+                    observables.add(obj)
+            return ", ".join(observables)
+                
+        # while not self.detected_objects_queue.empty():
+        #     next = self.detected_objects_queue.queue[0]
+        #     if next.time < curr_time:
+        #         observables.extend(next.entity)
+        #         self.detected_objects_queue.get()
+        #     else:
+        #         break
         if not observables:
             return "nothing"
-        return ", ".join(set(observables[-n:]))
+        # return ", ".join(set(observables[-n:]))
 
     def get_response(
         self,
