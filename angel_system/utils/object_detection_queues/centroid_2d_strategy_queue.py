@@ -109,6 +109,8 @@ class Centroid2DStrategyQueue:
         # Return the top k centered objects based on centroid distance.
         result = []
         for _ in range(self.k):
+            if not k_most_centered_objects:
+                break
             result.append(heapq.heappop(k_most_centered_objects))
         return result
         

@@ -107,7 +107,7 @@ class BaseEmotionDetector(Node):
         Constant loop to process received messages.
         """
         while True:
-            msg = self.message_queue.get(block=True, timeout=None)
+            msg = self.message_queue.get()
             self.log.debug(f'Processing message:\n\n"{msg.utterance_text}"')
             classification, confidence_score = self.get_inference(msg)
             self.publish_detected_emotion(
@@ -144,7 +144,10 @@ class BaseEmotionDetector(Node):
         #     return msg
         # else:
         #     return None
-        return msg
+
+        if "hey angel" in msg.utterance_text.lower():
+            return msg
+        return None
 
 
 def main():
