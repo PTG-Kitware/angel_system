@@ -198,3 +198,4 @@ windows:
            -p obj_det_filter:=CENTROID
            -p pv_width:=1920
            -p pv_height:=1080
+           -p debug_mode:=True
