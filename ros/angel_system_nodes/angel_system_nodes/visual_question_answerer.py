@@ -97,13 +97,13 @@ class VisualQuestionAnswerer(Node):
         """
 
         THRESHOLD = 1
-        CENTER = 2
+        CENTROID = 2
 
         def is_threshold(self):
             return self.value == VisualQuestionAnswerer.FilterType.THRESHOLD.value
 
-        def is_center(self):
-            return self.value == VisualQuestionAnswerer.FilterType.CENTER.value
+        def is_centroid(self):
+            return self.value == VisualQuestionAnswerer.FilterType.CENTROID.value
 
     class TimestampedEntity:
         """
@@ -149,7 +149,6 @@ class VisualQuestionAnswerer(Node):
         self.dialogue_history_length = param_values[PARAM_CONTEXT_HISTORY_LENGTH]
         self.debug_mode = False
         if param_values[PARAM_DEBUG_MODE]:
-            # langchain.debug = True
             self.debug_mode = True
 
         # Used to obtain the center perspective point and how far detected objects
@@ -179,7 +178,7 @@ class VisualQuestionAnswerer(Node):
             param_values[PARAM_OBJECT_DETECTION_FILTER_STRATEGY].upper()
         ]
         if (
-            self.object_dtctn_filter.is_center()
+            self.object_dtctn_filter.is_centroid()
             and self.pv_center_coordinate[0] is None
         ):
             raise ValueError(
@@ -204,7 +203,7 @@ class VisualQuestionAnswerer(Node):
         self.centroid_object_queue = \
             centroid_2d_strategy_queue.Centroid2DStrategyQueue(
                 5, self.pv_center_coordinate[0], self.pv_center_coordinate[1],
-                k=1)
+                k=3)
 
         # Configure the (necessary) emotional detection enriched utterance subscription.
         self.emotion_subscription = self.create_subscription(
@@ -343,7 +342,7 @@ class VisualQuestionAnswerer(Node):
 
         if self.object_dtctn_filter.is_threshold():
             self._add_detected_objects_above_threshold(msg)
-        elif self.object_dtctn_filter.is_center():
+        elif self.object_dtctn_filter.is_centroid():
             # TODO(derekahmed): Maybe these shouldn't be mutually exclusive?
             self._add_detected_object_closest_to_center(msg)
         else:
