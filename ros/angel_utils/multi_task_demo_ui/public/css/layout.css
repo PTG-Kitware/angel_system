@@ -83,7 +83,7 @@ body {
   overflow: hidden;
   text-overflow: clip;
 
-  max-height: 10%;
+  max-height: 15%;
 
   font-size: 1rem;
   font-weight: 550;
@@ -99,10 +99,10 @@ body {
 
   margin-bottom: 4px;
 
-  overflow: scroll;
+  overflow: hidden;
   text-overflow: clip;
 
-  max-height: 10%;
+  max-height: 15%;
   max-width: 70%;
 
   width: 60%;
@@ -172,6 +172,9 @@ body {
 #right-column{
   margin-left: 15px;
   margin-right: 15px;
+
+  display: flex;
+  flex-direction: column;
 }
 
 
@@ -245,18 +248,32 @@ body {
 /* ------------ */
 #HL-live{
   float: left;
-  padding: 15px;
+
   max-width: 49vw;
+  height: auto;
 }
 
 .live-img {
   float:left;
 
-  height: 99%;
+  height: 80%;
   width: auto; /* keep aspect ratio */
   max-width: 45vw;
 }
 
+
+/* ------------ */
+/* TASK STEP    */
+/* ------------ */
+#task-step-display {
+  margin-top: 20px;
+  
+  height: 40%;
+}
+
+#task-step-chart{
+  height: 95%;
+}
 
 /* ------------ */
 /* ERRORS       */

@@ -7,7 +7,7 @@
 
   <script src="src/third_party/Chart.js/3.9.0/chart.js"></script>
   <script type="text/javascript">
-    Chart.defaults.font.size = 20;
+    Chart.defaults.font.size = 15;
     Chart.defaults.font.family = "Roboto","sans-serif";
     Chart.defaults.plugins.legend.display = false;
   </script>
@@ -103,14 +103,22 @@
       </div>
 
       <!-- TODO: Task step graph -->
+      <div id="task-step-display">
+        <div class="highlighted-title">
+          <span class="text title-hex">Step Progression</span>
+        </div>
 
-      <div id="errors">
+        <canvas id="task-step-chart"></canvas>
+      </div>
+
+      <!-- TODO: Error messages -->
+      <!-- <div id="errors">
         <div class="highlighted-title">
           <span class="text title-hex">Error Messages</span>
         </div>
 
         <div id="error-msgs"></div>
-      </div>
+      </div> -->
     </div>
     <!-- END RIGHT COLUMN -->
   </div>

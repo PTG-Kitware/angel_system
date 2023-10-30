@@ -6,21 +6,26 @@ var task_step_chart = new Chart(ctx, {
     type: "line",
     data: {
         labels: [],
-        datasets: [{
-            label: 'recipe1',
-            data: [],
-            borderColor: "blue",
-            yAxisID: 'y'
-        }]
+        datasets: []
     },
     options: {
         plugins: {
+            legend: {
+                display: true,
+                labels: {
+                    fontSize: 10,
+                }
+            },
             title: {
                 display: false
             }
         },
+        maintainAspectRatio: false,
         scales: {
             x: {
+                ticks: {
+                    display: false
+                },
                 title: {
                     display: true,
                     text: "Time"
@@ -31,6 +36,11 @@ var task_step_chart = new Chart(ctx, {
                 title: {
                     display: true,
                     text: "Step Number"
+                },
+                min: 0,
+                max: 25,
+                ticks: {
+                    stepSize: 1
                 }
             }
         }
@@ -63,14 +73,25 @@ $.get("/topics")
 
         // Load title
         var task_title = task[0];
+        task_title_to_steps[task_title] = {}
         var title_container_block = document.getElementById(task_color + '-task_title');
         title_container_block.innerHTML = task_title;
+
+        // Add recipe to graph
+        task_step_chart.data.datasets.push({
+            label: task_title,
+            data: [],
+            borderColor: task_color,
+            backgroundColor: task_color,
+            yAxisID: 'y'
+        });
+        task_title_to_steps[task_title]["chart_id"] = task_step_chart.data.datasets.length - 1
 
         // Load task graph
         var task_graph = task[1];
 
         step_list = task_graph.task_steps;
-        task_title_to_steps[task_title] = step_list;
+        task_title_to_steps[task_title]['steps'] = step_list;
         var task_levels = task_graph.task_levels;
         var container_block = document.getElementById(
             task_color + '-task-list'
@@ -110,7 +131,8 @@ $.get("/topics")
 
   task_update.subscribe(function(m) {
     var task_name = m.task_name;
-    var step_list = task_title_to_steps[task_name];
+    var step_list = task_title_to_steps[task_name]["steps"];
+    var chart_id = task_title_to_steps[task_name]["chart_id"];
 
     const completed_steps = m.completed_steps;
     completed_steps.forEach(function(completed, index){
@@ -123,9 +145,34 @@ $.get("/topics")
       else {
         box.style.backgroundColor = "white";
       }
-
-      // Update line chart
-
     });
+
+    // Update line chart
+    var current_step_id = m.current_step_id;
+    var ts = m.header.stamp.sec;
+
+    if(current_step_id != null){
+        task_step_chart.data.datasets.forEach(
+            function(dataset, index){
+                if(index == chart_id){
+                    task_step_chart.data.datasets[chart_id].data.push(current_step_id);
+                }
+                else{
+                    var last_val = task_step_chart.data.datasets[index].data.slice(-1).pop();
+                    if(last_val == null){
+                        last_val = 0;
+                    }
+                    task_step_chart.data.datasets[index].data.push(last_val);
+                }
+            }
+          );
+
+        task_step_chart.data.labels.push(ts);
+    
+        task_step_chart.update('none'); // don't animate
+    }
+    
+
+    
   });
 });
