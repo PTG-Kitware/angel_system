@@ -32,7 +32,7 @@ var task_step_chart = new Chart(ctx, {
                 }
             },
             y: {
-                stacked: true,
+                stacked: false,
                 title: {
                     display: true,
                     text: "Step Number"
@@ -148,7 +148,7 @@ $.get("/topics")
     });
 
     // Update line chart
-    var current_step_id = m.current_step_id;
+    var current_step_id = m.current_step_id + 1; // list doesn't include background
     var ts = m.header.stamp.sec;
 
     if(current_step_id != null){
@@ -156,13 +156,17 @@ $.get("/topics")
             function(dataset, index){
                 if(index == chart_id){
                     task_step_chart.data.datasets[chart_id].data.push(current_step_id);
+                    console.log(task_step_chart.data.datasets[index].data);
                 }
                 else{
                     var last_val = task_step_chart.data.datasets[index].data.slice(-1).pop();
                     if(last_val == null){
                         last_val = 0;
                     }
+                    console.log(last_val);
+                    
                     task_step_chart.data.datasets[index].data.push(last_val);
+                    console.log(task_step_chart.data.datasets[index].data);
                 }
             }
           );
