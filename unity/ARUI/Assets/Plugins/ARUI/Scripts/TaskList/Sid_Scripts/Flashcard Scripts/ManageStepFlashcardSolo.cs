@@ -32,6 +32,8 @@ public class ManageStepFlashcardSolo : MonoBehaviour
         }
     }
 
+    public void SetAsDone(string message) => TaskText.SetText(message);
+
     public void Update()
     {
         if (backgroundGrid != null)

@@ -804,7 +804,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: -0.07799995, y: -0.057}
-  m_SizeDelta: {x: 0.3, y: 0.67}
+  m_SizeDelta: {x: 0.3, y: 0.64}
   m_Pivot: {x: 0.48, y: 0.98}
 --- !u!114 &6216110576236575215
 MonoBehaviour:
@@ -824,7 +824,7 @@ MonoBehaviour:
     m_Top: 0
     m_Bottom: 0
   m_ChildAlignment: 0
-  m_Spacing: 0.01
+  m_Spacing: 0
   m_ChildForceExpandWidth: 1
   m_ChildForceExpandHeight: 1
   m_ChildControlWidth: 0
@@ -955,6 +955,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: listmenubutton_tasks_Next
       objectReference: {fileID: 0}
+    - target: {fileID: 6737309401687996402, guid: a43d03df097f2b843b076181006821db, type: 3}
+      propertyPath: m_margin.y
+      value: 0.023144722
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: a43d03df097f2b843b076181006821db, type: 3}
 --- !u!224 &2685405215343848614 stripped
@@ -1050,7 +1054,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3665351414825318623, guid: a43d03df097f2b843b076181006821db, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -0.66999996
+      value: -0.64
       objectReference: {fileID: 0}
     - target: {fileID: 3665351414825318623, guid: a43d03df097f2b843b076181006821db, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -1163,7 +1167,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3665351414825318623, guid: a43d03df097f2b843b076181006821db, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -0.5
+      value: -0.48
       objectReference: {fileID: 0}
     - target: {fileID: 3665351414825318623, guid: a43d03df097f2b843b076181006821db, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -1393,7 +1397,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3665351414825318623, guid: a43d03df097f2b843b076181006821db, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -0.32999998
+      value: -0.32
       objectReference: {fileID: 0}
     - target: {fileID: 3665351414825318623, guid: a43d03df097f2b843b076181006821db, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x

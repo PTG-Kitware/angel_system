@@ -19,7 +19,8 @@ public class ExampleScript : MonoBehaviour
     {
         yield return new WaitForSeconds(1f);
 
-        //AngelARUI.Instance.PrintVMDebug = true;
+        AngelARUI.Instance.DebugShowEyeGazeTarget(true);
+        AngelARUI.Instance.PrintVMDebug = true;
 
         //test with dummy data
         var taskIDs = new List<string> { "Pinwheels", "Coffee", "Oatmeal", "Quesadilla", "Tea" };
@@ -40,6 +41,31 @@ public class ExampleScript : MonoBehaviour
         yield return new WaitForSeconds(2f);
 
         AngelARUI.Instance.PlayMessageAtOrb("This is a test of a very long text. I am just going to continue talking until somebody says stop or if I am getting interrupted by another incoming message. I enjoy helping people, so ask me any question you want about the tasks.");
+
+        yield return new WaitForSeconds(5f);
+
+        AngelARUI.Instance.SetCurrentObservedTask("Tea");
+        _currentTask = "Tea";
+    
+        yield return new WaitForSeconds(1f);
+
+        _currentStepMap[_currentTask]++;
+        AngelARUI.Instance.GoToStep(_currentTask, _currentStepMap[_currentTask]);
+
+        yield return new WaitForSeconds(2f);
+
+        _currentStepMap[_currentTask]++;
+        AngelARUI.Instance.GoToStep(_currentTask, _currentStepMap[_currentTask]);
+
+        _currentStepMap[_currentTask]++;
+        AngelARUI.Instance.GoToStep(_currentTask, _currentStepMap[_currentTask]);
+
+        AngelARUI.Instance.SetNotification("Be careful!");
+
+        yield return new WaitForSeconds(2f);
+
+        _currentStepMap["Pinwheels"]++;
+        AngelARUI.Instance.GoToStep("Pinwheels", _currentStepMap["Pinwheels"]);
     }
 
 #if UNITY_EDITOR

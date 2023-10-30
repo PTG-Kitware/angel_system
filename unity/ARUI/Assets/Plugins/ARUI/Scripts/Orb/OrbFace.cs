@@ -19,9 +19,7 @@ public class OrbFace : MonoBehaviour
     private Shapes.Disc _eyes;
     private Shapes.Disc _mouth;
     private Shapes.Disc _orbHalo;
-
-    private Shapes.Disc _shut;
-
+    
     ///** Colors of orb states
     private Color _faceColorInnerStart = new Color(1, 1, 1, 1f);
     private Color _faceColorOuterStart = new Color(1, 1, 1, 0f);
@@ -35,36 +33,21 @@ public class OrbFace : MonoBehaviour
         set => SetNotificationPulse(value);
     }
 
-    public void UpdateNotification(bool warning, bool note)
+    public void UpdateNotification(bool note)
     {
-        SetNotificationPulse(warning || note);
+        SetNotificationPulse(note);
 
-        if (warning && note)
-        {
-            _face.ColorInnerStart = Color.yellow;
-            _face.ColorInnerEnd = Color.red;
-        }
-
-        if (warning && !note)
-        {
-            _face.ColorInnerStart = Color.red;
-            _face.ColorInnerEnd = Color.red;
-        }
-
-        if (note && !warning)
+        if (note)
         {
             _face.ColorInnerStart = Color.yellow;
             _face.ColorInnerEnd = Color.yellow;
-        }
-
-        if (!warning && !note)
+        } else 
         {
             _face.ColorInnerStart = _faceColorInnerStart;
             _face.ColorInnerEnd = _faceColorInnerEnd;
         }
 
         _noteIcon.SetActive(note);
-        _warningIcon.SetActive(warning);
     }
 
     private float _initialMouthScale;
@@ -124,9 +107,6 @@ public class OrbFace : MonoBehaviour
         _noteIcon.SetActive(false);
         _warningIcon = allDiscs[5].gameObject;
         _warningIcon.SetActive(false);
-
-        _shut = transform.GetChild(1).GetComponentInChildren<Shapes.Disc>();
-        _shut.gameObject.SetActive(false);
     }
 
     private void Update()

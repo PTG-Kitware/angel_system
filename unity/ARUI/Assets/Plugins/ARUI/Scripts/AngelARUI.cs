@@ -130,6 +130,7 @@ public class AngelARUI : Singleton<AngelARUI>
     public void GoToStep(string taskID, int stepIndex)
     {
         DataProvider.Instance.SetCurrentStep(taskID, stepIndex);
+        
     }
 
     /// <summary>
@@ -188,19 +189,13 @@ public class AngelARUI : Singleton<AngelARUI>
     /// //TODO
     /// </summary>
     /// <param name="show">if true, the orb will show a skip notification, if false, the notification will disappear</param>
-    private void SetNotification(NotificationType type, string message)
-    {
-        Orb.Instance.AddNotification(type, message);
-    }
+    public void SetNotification(string message) => Orb.Instance.AddNotification(message);
 
     /// <summary>
     /// //TODO
     /// </summary>
     /// <param name="type"></param>
-    private void RemoveNotification(NotificationType type)
-    {
-        Orb.Instance.RemoveNotification(type);
-    }
+    public void RemoveNotification() => Orb.Instance.RemoveNotification();
 
     #endregion
 

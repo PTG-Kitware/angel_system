@@ -57,22 +57,6 @@ public class TasklistPositionManager : Singleton<TasklistPositionManager>
         BeginLerp(this.transform.position, finalPos);
     }
 
-    // Update is called once per frame
-    void Update()
-    {
-        if (MultiTaskList.Instance == null)
-            return;
-
-        MultiTaskList.Instance.SetLineStart(_listContainer.transform.position);
-        Vector3 centroid = new Vector3(0, 0, 0);
-        foreach (KeyValuePair<string, GameObject> pair in objsDict)
-        {
-            centroid += pair.Value.transform.position;
-        }
-        centroid = centroid / objsDict.Count;
-        MultiTaskList.Instance.SetLineEnd(centroid);
-    }
-
     //Source -> https://www.blueraja.com/blog/404/how-to-use-unity-3ds-linear-interpolation-vector3-lerp-correctly
     //Code to lerp from one position to another
     void BeginLerp(Vector3 startPos, Vector3 endPos)

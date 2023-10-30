@@ -15,10 +15,8 @@ public class SetupCurrTaskOverview : MonoBehaviour
     {
         if (allSteps == null || currentStep <= -1)
         {
-            currFlashcardSolo.gameObject.SetActive(false);
+            currFlashcardSolo.SetAsDone("Task Done");
         } else {
-
-            currFlashcardSolo.gameObject.SetActive(true);
             currFlashcardSolo.InitializeFlashcard(allSteps[currentStep], currentStep+1, allSteps.Count);
         }
     }

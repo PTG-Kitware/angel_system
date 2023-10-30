@@ -21,6 +21,7 @@ public class Orb : Singleton<Orb>
     public OrbMovementBehavior OrbBehavior
     {
         get => _orbBehavior;
+        set => _orbBehavior = value;
     }
 
     ///** Reference to parts of the orb
@@ -31,7 +32,6 @@ public class Orb : Singleton<Orb>
         set => _face.MouthScale = value;
     }
 
-    private OrbHandle _orbHandle;
     private OrbGrabbable _grabbable;                         /// <reference to grabbing behavior
     private OrbMessageContainer _messageContainer;                     /// <reference to orb message container (part of prefab)
     public OrbMessageContainer Message => _messageContainer;
@@ -60,10 +60,6 @@ public class Orb : Singleton<Orb>
         _messageContainer = messageObj.AddComponent<OrbMessageContainer>();
         _messageContainer.InitializeComponents();
 
-        // Get handle object in orb prefab
-        GameObject handleObj = transform.GetChild(0).GetChild(2).gameObject;
-        _orbHandle = handleObj.AddComponent<OrbHandle>();
-
         // Get grabbable and following scripts
         _followSolver = gameObject.GetComponentInChildren<OrbFollowerSolver>();
         _grabbable = gameObject.GetComponentInChildren<OrbGrabbable>();
@@ -90,12 +86,10 @@ public class Orb : Singleton<Orb>
         if (_isLookingAtOrb || _messageContainer.IsLookingAtMessage)
             _face.MessageNotificationEnabled = false;
 
-        _orbHandle.IsActive = (_orbBehavior == OrbMovementBehavior.Fixed);
         _followSolver.IsPaused = (_orbBehavior == OrbMovementBehavior.Fixed || _face.UserIsGrabbing);
 
-
         float distance = Vector3.Distance(_followSolver.transform.position, AngelARUI.Instance.ARCamera.transform.position);
-        float scaleValue = Mathf.Max(1f, distance);
+        float scaleValue = Mathf.Max(1f, distance * 1.2f);
         _followSolver.transform.localScale = new Vector3(scaleValue, scaleValue, scaleValue);
 
         if (DataProvider.Instance.CurrentSelectedTasks.Keys.Count > 0)
@@ -160,13 +154,7 @@ public class Orb : Singleton<Orb>
             _isLookingAtOrb = true;
             _lazyLookAtRunning = false;
             _face.UserIsLooking = true;
-
         }
-    }
-
-    public void UpdateMovementbehavior(OrbMovementBehavior newBehavior)
-    {
-        _orbBehavior = newBehavior;
     }
 
     /// <summary>
@@ -218,19 +206,13 @@ public class Orb : Singleton<Orb>
 
     #region Task Messages and Notifications
 
-    public void AddNotification(NotificationType type, string message)
+    public void AddNotification(string message)
     {
-        _messageContainer.AddNotification(type, message, _face);
-
+        _messageContainer.AddNotification(message, _face);
         AudioManager.Instance.PlaySound(_face.transform.position, SoundType.warning);
     }
-
     
-    public void RemoveNotification(NotificationType type)
-    {
-        _messageContainer.RemoveNotification(type, _face);
-        
-    }
+    public void RemoveNotification() => _messageContainer.RemoveNotification(_face);
 
     /// <summary>
     /// Set the task messages the orb communicates, if 'message' is less than 2 char, the message is deactivated
@@ -238,10 +220,7 @@ public class Orb : Singleton<Orb>
     /// <param name="message"></param>
     private void SetTaskMessage(Dictionary<string, TaskList> currentSelectedTasks, string currentActiveTask)
     {
-        _messageContainer.RemoveAllNotifications();
-        _face.UpdateNotification(false,false);
-
-        _messageContainer.SetTaskMessage(currentSelectedTasks, currentActiveTask);
+        _messageContainer.UpdateAllTaskMessages(currentSelectedTasks, currentActiveTask);
 
         if (_allOrbColliders.Count == 0)
         {
@@ -270,11 +249,24 @@ public class Orb : Singleton<Orb>
     /// Update the position behavior of the orb
     /// </summary>
     /// <param name="isSticky"></param>
-    private void SetSticky(bool isSticky)
+    public void SetSticky(bool isSticky)
     {
         _followSolver.SetSticky(isSticky);
 
         if (isSticky)
+            _messageContainer.IsMessageContainerActive = false;
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="position"></param>
+    /// <param name="isSnapped"></param>
+    public void SnapToTaskList(Vector3 position, bool isSnapped)
+    {
+        _followSolver.SnapToTaskList(position, isSnapped);
+
+        if (isSnapped && _messageContainer.IsMessageContainerActive)
             _messageContainer.IsMessageContainerActive = false;
     }
 
@@ -328,14 +320,6 @@ public class Orb : Singleton<Orb>
     private void HandleUpdateActiveStepEvent()
     {
         SetTaskMessage(DataProvider.Instance.CurrentSelectedTasks, DataProvider.Instance.CurrentObservedTask);
-    }
-
-    public void SnapToTaskList(Vector3 position, bool isSnapped)
-    {
-        _followSolver.SnapToTaskList(position, isSnapped);
-
-        if (isSnapped && _messageContainer.IsMessageContainerActive)
-            _messageContainer.IsMessageContainerActive = false;
     }
 
     #endregion

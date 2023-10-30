@@ -19,8 +19,8 @@ public class FlexibleTextContainer : MonoBehaviour
 
     private Material _taskBackgroundMat;
 
-    private Color _innerGlowColorStartup;
-    public Color GlowColor
+    private Color32 _innerGlowColorStartup;
+    public Color32 GlowColor
     {
         get => _taskBackgroundMat.GetColor("_InnerGlowColor");
         set { _taskBackgroundMat.SetColor("_InnerGlowColor", value); }
@@ -44,13 +44,19 @@ public class FlexibleTextContainer : MonoBehaviour
         set { _textComponent.text = Utils.SplitTextIntoLines(value, ARUISettings.OrbMessageMaxCharCountPerLine); }
     }
 
+    public float TextSize
+    {
+        set { _textComponent.fontSize = value; }
+    }
+
+    private Color _isLookingatTextColor = new Color(0.1f, 0.1f, 0.1f);
     public bool IsLookingAtText
     {
         set
         {
             if (value)
             {
-                GlowColor = new Color(0.3f,0.3f,0.3f);
+                GlowColor = _isLookingatTextColor;
             } else
             {
                 GlowColor = _innerGlowColorStartup;

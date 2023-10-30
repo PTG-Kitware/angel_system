@@ -3,7 +3,7 @@ using System.Collections;
 using TMPro;
 using UnityEngine;
 
-public class OrbPie : MonoBehaviour
+public class OrbTask : MonoBehaviour
 {
     private string _taskname;
     public string TaskName {
@@ -11,13 +11,13 @@ public class OrbPie : MonoBehaviour
         set { _taskname = value; }
     }
 
-    private GameObject _pieSlice;
-    private BoxCollider _sliceCollider;
-    private float zRotCollider = 0;
-    
-    private Shapes.Disc _pie;
-    private Shapes.Disc _pieProgress;
-    private TextMeshProUGUI _progressText;
+    private Shapes.Line _orbRect;
+    private Shapes.Line _pieProgressRect;
+   
+    private float _thicknessActive;
+    private float _thickness;
+    private float _xStart = 0;
+    private float _xEnd = 0;
 
     private FlexibleTextContainer _textContainer;
     public FlexibleTextContainer Text
@@ -30,16 +30,6 @@ public class OrbPie : MonoBehaviour
     {
         get => _initialmessageXOffset;
     }
-
-    private float _minRadius = 0.0175f;
-    private float _minThick = 0.005f;
-    private float _maxRadius = 0.024f;
-    private float _maxThick = 0.014f;
-    private float _maxRadiusActive = 0.027f;
-    private float _maxThickActive = 0.02f;
-
-    private float _rDeg = 0;
-    private float _lDeg = 0;
 
     private GameObject _pieText;
     private TextMeshProUGUI _currentStepText;
@@ -55,25 +45,24 @@ public class OrbPie : MonoBehaviour
 
     public void InitializeComponents(float rDeg, float lDeg)
     {
-        _rDeg = rDeg;
-        _lDeg = lDeg;
-
         //init pie slice and components
-        _pieSlice = transform.GetChild(0).gameObject;
-        _pie = _pieSlice.GetComponent<Shapes.Disc>();
-        _sliceCollider = _pie.GetComponentInChildren<BoxCollider>();
-        zRotCollider = _sliceCollider.transform.eulerAngles.z;
+        GameObject tmp = transform.GetChild(0).gameObject;
+        _orbRect = tmp.GetComponent<Shapes.Line>();
 
-        _pieProgress = _pie.transform.GetChild(0).GetComponent<Shapes.Disc>();
-        _pieProgress.Radius = 0;
-        _pieProgress.Thickness = 0;
-        _progressText = _pieProgress.GetComponentInChildren<TextMeshProUGUI>();
-        _progressText.gameObject.SetActive(false);
+        _pieProgressRect = _orbRect.transform.GetChild(0).GetComponent<Shapes.Line>();
+        _pieProgressRect.End = _pieProgressRect.Start;
+        _thicknessActive = _pieProgressRect.Thickness;
+        _thickness = _thicknessActive / 2;
+
+        _pieProgressRect.Thickness = _thickness;
+        _orbRect.Thickness = _thickness;
+        _xStart = _orbRect.Start.x;
+        _xEnd = _orbRect.End.x;
 
         _textContainer = transform.GetChild(1).GetChild(0).gameObject.AddComponent<FlexibleTextContainer>();
         _initialmessageXOffset = _textContainer.transform.localPosition.x;
 
-        UpdateAnchor(MessageAnchor.right);
+        UpdateAnchor();
 
         //init pie text
         _pieText = transform.GetChild(1).gameObject;
@@ -98,10 +87,9 @@ public class OrbPie : MonoBehaviour
         _taskname = "";
         _currentStepText.text = "";
 
-        _pieProgress.Radius = 0;
-        _pieProgress.Thickness = 0;
-        _pie.Radius = _maxRadius;
-        _pie.Thickness = _maxThick;
+        _pieProgressRect.Thickness = _thickness;
+        _orbRect.Thickness = _thickness;
+        _pieProgressRect.End = new Vector3(_xEnd,0,0);
 
         _textContainer.TextColor = new Color(_activeColorText.r, _activeColorText.g, _activeColorText.b, 1);
 
@@ -114,18 +102,18 @@ public class OrbPie : MonoBehaviour
             EyeGazeManager.Instance.CurrentHitObj.GetInstanceID() == _textContainer.gameObject.GetInstanceID();
     }
 
-    public void UpdateMessageVisibility(OrbPie currentactivePie)
+    public void UpdateMessageVisibility(OrbTask currentactivePie)
     {
         if (currentactivePie == null || _currentStepText.text.Length == 0) return;
 
-        if (!_pieSlice.activeSelf)
+        if (!_orbRect.gameObject.activeSelf)
         {
             SetPieTextActive(false);
             return;
         }
 
         //only show the pie if it is the current observed task
-        if (_pieSlice.activeSelf && !_pieText.activeSelf && _taskname.Equals(currentactivePie.TaskName))
+        if (_orbRect.gameObject.activeSelf && !_pieText.activeSelf && _taskname.Equals(currentactivePie.TaskName))
         {
             SetPieTextActive(true);
             return;
@@ -138,7 +126,8 @@ public class OrbPie : MonoBehaviour
         }
 
         if (!_taskname.Equals(currentactivePie.TaskName) && EyeGazeManager.Instance.CurrentHitObj != null &&
-            EyeGazeManager.Instance.CurrentHitObj.GetInstanceID() == currentactivePie.Text.gameObject.GetInstanceID() && !_textIsFadingOut)
+            EyeGazeManager.Instance.CurrentHitObj.GetInstanceID() == currentactivePie.Text.gameObject.GetInstanceID() && !_textIsFadingOut
+            && gameObject.activeSelf)
         {
             StartCoroutine(FadeOutAllMessages());
             return;
@@ -219,7 +208,7 @@ public class OrbPie : MonoBehaviour
     {
         if (active && _currentStepText.text.Length == 0) return;
 
-        _pieSlice.SetActive(active);
+        _orbRect.gameObject.SetActive(active);
 
         if (!active)
         {
@@ -232,26 +221,9 @@ public class OrbPie : MonoBehaviour
         AngelARUI.Instance.DebugLogMessage("Set step message: '" + message + "' for task: " + TaskName, true);
 
         string newPotentialMessage = Utils.SplitTextIntoLines(TaskName + " (" + (stepIndex + 1) + "/" + total + ") : " +
-            message, 150);
-
-        //Play sound if task is finised and play task messag in case it was not played before
-        if (message.Contains("Done!") && !_currentStepText.text.Contains("Done!"))
-        {
-            AudioManager.Instance.PlaySound(transform.position, SoundType.taskDone);
-        } else if (currentTaskID.Equals(TaskName) && !newPotentialMessage.ToLower().Equals(_currentStepText.text.ToLower()))
-        {
-            AudioManager.Instance.PlayText(message);
-        }
+            message, 110);
 
         _currentStepText.text = newPotentialMessage;
-        //_prevText.text = "";
-        //        _nextText.text = "";
-        //        if (previousMessage.Length > 0)
-        //            _prevText.text = "<b>DONE:</b> " + Utils.SplitTextIntoLines(previousMessage, ARUISettings.OrbMessageMaxCharCountPerLine);
-
-        //        if (nextMessage.Length > 0)
-        //            _nextText.text = "<b>Upcoming:</b> " + Utils.SplitTextIntoLines(nextMessage, ARUISettings.OrbNoteMaxCharCountPerLine);
-
     }
 
     #region Update Pie
@@ -266,34 +238,23 @@ public class OrbPie : MonoBehaviour
         //Update pie length
         if (isCurrent)
         {
-            _pie.Radius = _maxRadiusActive;
-            _pie.Thickness = _maxThickActive;
+            _pieProgressRect.Thickness = _thicknessActive;
+            _orbRect.Thickness = _thicknessActive;
+            transform.SetSiblingIndex(0);
+            _textContainer.TextSize = 0.008f;
         }
         else
         {
-            _pie.Radius = _maxRadius;
-            _pie.Thickness = _maxThick;
+            _pieProgressRect.Thickness = _thickness;
+            _orbRect.Thickness = _thickness;
+            _textContainer.TextSize = 0.0065f;
         }
 
-        //Update progress pie length
+        //Update progress length
         if (ratio == 0)
-        {
-            _pieProgress.Radius = 0;
-            _pieProgress.Thickness = 0;
-        }
+            _pieProgressRect.End = new Vector3(_xStart, 0, 0);
         else
-        {
-            if (isCurrent)
-            {
-                _pieProgress.Radius = _minRadius + (ratio * (_maxRadiusActive - _minRadius));
-                _pieProgress.Thickness = _minThick + (ratio * (_maxThickActive - _minThick));
-            }
-            else
-            {
-                _pieProgress.Radius = _minRadius + (ratio * (_maxRadius - _minRadius));
-                _pieProgress.Thickness = _minThick + (ratio * (_maxThick - _minThick));
-            }
-        }
+            _pieProgressRect.End = new Vector3(_xStart + (Mathf.Abs(_xEnd - _xStart) * ratio), 0, 0);
     }
 
     #endregion
@@ -302,27 +263,7 @@ public class OrbPie : MonoBehaviour
     /// 
     /// </summary>
     /// <param name="anchor"></param>
-    public void UpdateAnchor(MessageAnchor anchor)
-    {
-        _textContainer.UpdateAnchorInstant();
-
-        float deg = _rDeg;
-        float YRot = 0;
-        if (anchor.Equals(MessageAnchor.left))
-        {
-            deg = _lDeg;
-            YRot = 180;
-        }
-
-        _sliceCollider.transform.localRotation = Quaternion.Euler(new Vector3(_sliceCollider.transform.localRotation.x, YRot, zRotCollider));
-
-
-        _pie.AngRadiansEnd = deg * Mathf.Deg2Rad;
-        _pie.AngRadiansStart = (deg -21) * Mathf.Deg2Rad;
-
-        _pieProgress.AngRadiansEnd = deg * Mathf.Deg2Rad;
-        _pieProgress.AngRadiansStart = (deg -5) * Mathf.Deg2Rad;
-    }
+    public void UpdateAnchor() => _textContainer.UpdateAnchorInstant();
 
     /// <summary>
     /// Update the color of the text based on visibility

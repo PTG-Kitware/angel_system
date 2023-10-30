@@ -214,6 +214,7 @@ public class DataProvider : Singleton<DataProvider>
             _currentSelectedTasks[taskID].NextStepIndex = stepIndex + 1;
         }
 
+        AudioManager.Instance.PlaySound(Orb.Instance.transform.position,SoundType.taskDone);
         AngelARUI.Instance.DebugLogMessage("DATA PROVIDER: current step index changed for: " + taskID +" - ID: "+ stepIndex, true);
         PublishToSubscribers(SusbcriberType.CurrentStepChanged);
     }

@@ -103,8 +103,12 @@ public class OrbFollowerSolver : Solver
         {
             //only update rotation 
             GoalPosition = transform.position;
-            transform.rotation = Quaternion.LookRotation(transform.position - ReferencePoint, AngelARUI.Instance.ARCamera.transform.up);
+            transform.rotation = Quaternion.LookRotation(transform.position - ReferencePoint, Vector3.up);
             _outOfFOV = false;
+        } else
+        {
+            GoalPosition = transform.position;
+            transform.rotation = Quaternion.LookRotation(transform.position - ReferencePoint, Vector3.up);
         }
     }
 
@@ -134,11 +138,9 @@ public class OrbFollowerSolver : Solver
 
                     yield return new WaitForSeconds(0.2f);
                 }
-
             }
 
             dist = Vector3.Magnitude(transform.position - _coolDownTarget);
-
         }
 
         _coolDown = false;
@@ -200,7 +202,6 @@ public class OrbFollowerSolver : Solver
                 desiredPos = _coolDownTarget;
                 return true;
             }
-
         }
 
         if (currentAngle > ARUISettings.OrbOutOfFOVThresV * verticalAspectScale)
