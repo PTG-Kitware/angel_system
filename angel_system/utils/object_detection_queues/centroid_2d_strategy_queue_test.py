@@ -174,7 +174,7 @@ class Centroid2DStrategyQueueTest(unittest.TestCase):
         Tests proper queueing of the last 3 top 2 objects are inserted as strings.
         """
         q = Centroid2DStrategyQueue(
-            n=5, center_x=RESOLUTION_W/2, center_y=RESOLUTION_H/2, k=2)
+            n=1, center_x=RESOLUTION_W/2, center_y=RESOLUTION_H/2, k=2)
         
         # Dog is in the middle of the screen. Mug is in top left of the screen.
         # Computer is near bottom right of screen.
@@ -211,16 +211,10 @@ class Centroid2DStrategyQueueTest(unittest.TestCase):
         
         no_items = q.get_n_before(timestamp=1)
         self.assertEqual([], no_items)
+        # Expects the last n=1 detections before timestamp 4. This should be timestamp 3's
+        # top k=2 objects.
         last_n_top_k = q.get_n_before(timestamp=4)
-        discarded_timestamp, first_top_k_with_centroid_dist = last_n_top_k[0]
-        first_top_k = [item for discarded_dist, item in first_top_k_with_centroid_dist]
-        self.assertEqual(["dog", "computer"], first_top_k)
-
-        discarded_timestamp, second_top_k_with_centroid_dist = last_n_top_k[1]
-        second_top_k = [item for dist, item in second_top_k_with_centroid_dist]
-        self.assertEqual(["cat", "butterfly"], second_top_k)
-
-        discarded_timestamp, third_top_k_with_centroid_dist = last_n_top_k[2]
+        discarded_timestamp, third_top_k_with_centroid_dist = last_n_top_k[0]
         third_top_k = [item for dist, item in third_top_k_with_centroid_dist]
         self.assertEqual(["shoes", "pencil"], third_top_k)
 
@@ -267,18 +261,28 @@ class Centroid2DStrategyQueueTest(unittest.TestCase):
         
         no_items = q.get_n_before(timestamp=1)
         self.assertEqual([], no_items)
+        # Expects the last n=2 detections before timestamp 4. This should be timestamp 2 and
+        # timestamp 3's top k=2 objects.
         last_n_top_k = q.get_n_before(timestamp=4)
         discarded_timestamp, first_top_k_with_centroid_dist = last_n_top_k[0]
         first_scored_top_k = [scored_item for discarded_dist, scored_item in
                        first_top_k_with_centroid_dist]
         first_top_k = [item for item, score in first_scored_top_k]
         self.assertEqual(["cat", "butterfly"], first_top_k)
-
         discarded_timestamp, second_top_k_with_centroid_dist = last_n_top_k[1]
         second_scored_top_k = [scored_item for discarded_dist, scored_item in
                         second_top_k_with_centroid_dist]
         second_top_k = [item for item, score in second_scored_top_k]
         self.assertEqual(["shoes", "pencil"], second_top_k)
+
+    def test_empty_queue(self):
+        """
+        Tests proper get-behavior of an empty queue.
+        """
+        q = Centroid2DStrategyQueue(
+            n=2, center_x=RESOLUTION_W/2, center_y=RESOLUTION_H/2, k=2)
+        self.assertEqual([], q.get_n_before(timestamp=4))
+
 
 if __name__ == "__main__":
     unittest.main()
