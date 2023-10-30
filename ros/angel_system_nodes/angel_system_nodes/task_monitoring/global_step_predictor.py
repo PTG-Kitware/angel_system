@@ -268,19 +268,22 @@ class GlobalStepPredictorNode(Node):
 
         vid_name = self.gt_video_dset.dataset["videos"][0]["name"]
         vid_id = self.gt_video_dset.dataset["videos"][0]["id"]
-        self.gsp.plot_gt_vs_predicted_one_recipe(
+        log.info("Generating plots...")
+        out_p = self.gsp.plot_gt_vs_predicted_one_recipe(
             granular_step_gts,
             recipe_type,
             fname_suffix=f"{vid_name}_{str(vid_id)}_granular",
             granular_or_broad="granular",
             output_dir=self.gt_output_dir_override,
         )
-        # self.gsp.plot_gt_vs_predicted_one_recipe(
+        log.info(f"Generated granular plot to: {out_p}")
+        # out_p = self.gsp.plot_gt_vs_predicted_one_recipe(
         #     broad_step_gts,
         #     recipe_type,
         #     fname_suffix=f"{vid_name}_{str(vid_id)}_broad",
         #     granular_or_broad="broad",
         # )
+        # log.info(f"Generated broad plot to: {out_p}")
 
     def destroy_node(self):
         log = self.get_logger()
