@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using Shapes;
 using System;
+using System.Diagnostics.Eventing.Reader;
 
 public class MultiTaskList : Singleton<MultiTaskList>
 {
@@ -23,6 +24,8 @@ public class MultiTaskList : Singleton<MultiTaskList>
     {
         //Set up child objects
         _taskOverviewContainer = transform.GetChild(0).gameObject;
+        TasklistPositionManager.Instance.SnapToCentroid();
+        _taskOverviewContainer.gameObject.SetActive(false);
 
         //Register subscribers
         DataProvider.Instance.RegisterDataSubscriber(() => HandleDataUpdateEvent(), SusbcriberType.TaskListChanged);
@@ -32,6 +35,9 @@ public class MultiTaskList : Singleton<MultiTaskList>
         ToggleOverview(false);
     }
 
+    /// <summary>
+    /// Listen to data changes
+    /// </summary>
     public void HandleDataUpdateEvent()
     {
         MultiTaskList.Instance.UpdateAllSteps(DataProvider.Instance.CurrentSelectedTasks, DataProvider.Instance.CurrentObservedTask);
@@ -47,13 +53,6 @@ public class MultiTaskList : Singleton<MultiTaskList>
             else
                 delta += Time.deltaTime;
         }
-
-        // Snap orb
-        if (_taskOverviewContainer.activeSelf)
-        {
-            Orb.Instance.SetSticky(Utils.InFOV(transform.position, AngelARUI.Instance.ARCamera) ||
-                                    Utils.InFOV(_taskOverviewContainer.transform.position, AngelARUI.Instance.ARCamera));
-        }
         
         // Scale task list with distance to user 
         float distance = Vector3.Distance(transform.position, AngelARUI.Instance.ARCamera.transform.position);
@@ -61,10 +60,23 @@ public class MultiTaskList : Singleton<MultiTaskList>
         transform.localScale = new Vector3(scaleValue, scaleValue, scaleValue);
 
         // The canvas should always face the user
-        var lookPos = AngelARUI.Instance.ARCamera.transform.position - _taskOverviewContainer.transform.position;
+        var lookPos = transform.position - AngelARUI.Instance.ARCamera.transform.position;
         lookPos.y = 0;
-        var rotation = Quaternion.LookRotation(lookPos);
-        //_taskOverviewContainer.transform.rotation = rotation;
+        transform.rotation = Quaternion.LookRotation(lookPos, Vector3.up);
+
+        if (_containers == null) return;
+        bool anyMenuActive = false;
+        foreach (var canvas in _allTasklists)
+        {
+            if (canvas.alpha<1)
+                anyMenuActive = true;
+        }
+
+        foreach (var tasklist in _containers.Values)
+            tasklist.multiListInstance.Text.gameObject.SetActive(!anyMenuActive);
+
+        // Snap orb
+        Orb.Instance.SetSticky(!anyMenuActive && _taskOverviewContainer.activeSelf);
     }
 
     #region Setting inidvidual recipe menus active/inative
@@ -77,14 +89,15 @@ public class MultiTaskList : Singleton<MultiTaskList>
     /// <param name="index"></param>
     public void SetMenuActive(int index)
     {
-        TasklistPositionManager.Instance.SetIsLooking(true);
+        TasklistPositionManager.Instance.IsLooking = true;
         _currIndex = index;
-        for(int i = 0; i < _allTasklists.Count; i++)
+        for (int i = 0; i < _allTasklists.Count; i++)
         {
-            if(i == index)
+            if (i == index)
             {
                 _allTasklists[i].gameObject.SetActive(true);
-            } else
+            }
+            else
             {
                 CanvasGroup canvasGroup = _allTasklists[i];
                 canvasGroup.alpha = 1.0f;
@@ -149,7 +162,7 @@ public class MultiTaskList : Singleton<MultiTaskList>
         foreach (KeyValuePair<string, TaskList> pair in tasks)
         {
             GameObject newOverview = Instantiate(Resources.Load(StringResources.TaskOverview_template_path) as GameObject, _taskOverviewContainer.transform);
-            newOverview.transform.localPosition = new Vector3(0, -(0.07f * (index+1)), 0);
+            newOverview.transform.localPosition = new Vector3(0, -(0.06f * (index+1)), 0);
             _taskOverviewContainer.transform.localPosition = new Vector3(_taskOverviewContainer.transform.localPosition.x, _taskOverviewContainer.transform.localPosition.y + 0.020f, _taskOverviewContainer.transform.localPosition.z);
 
             _containers.Add(pair.Key,newOverview.GetComponent<TaskOverviewContainerRepo>());
@@ -191,10 +204,9 @@ public class MultiTaskList : Singleton<MultiTaskList>
     /// <returns></returns>
     private IEnumerator FadeOut()
     {
-        CanvasGroup canvas = null;
         if (_currIndex < _allTasklists.Count)
         {
-            canvas = _allTasklists[_currIndex];
+            CanvasGroup canvas =  _allTasklists[_currIndex];
             float counter = 0f;
             float duration = 1.0f;
             float startAlpha = 1.0f;
@@ -218,7 +230,7 @@ public class MultiTaskList : Singleton<MultiTaskList>
                 if (canvas != null)
                     canvas.gameObject.SetActive(false);
 
-                TasklistPositionManager.Instance.SetIsLooking(false);
+                TasklistPositionManager.Instance.IsLooking = false;
 
                 if (canvas != null)
                     canvas.alpha = 1.0f;

@@ -62,7 +62,6 @@ public class OrbFace : MonoBehaviour
             {
                 _mouth.Radius = Mathf.Clamp(_initialMouthScale - value, 0.5f, _initialMouthScale);
             }
-            
         }
     }
 
@@ -116,11 +115,6 @@ public class OrbFace : MonoBehaviour
 
         else if (!_userIsLooking && !_userIsGrabbing && _eyes.gameObject.activeSelf)
             _eyes.gameObject.SetActive(false);
-
-        if (Orb.Instance.OrbBehavior.Equals(OrbMovementBehavior.Fixed))
-            _mouth.Type = Shapes.DiscType.Disc;
-        else
-            _mouth.Type = Shapes.DiscType.Ring;
     }
 
     private void SetNotificationPulse(bool pulsing)

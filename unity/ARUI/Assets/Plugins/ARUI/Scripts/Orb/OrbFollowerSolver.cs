@@ -23,7 +23,7 @@ public class OrbFollowerSolver : Solver
     //** Radial and positional behavior of the orb
     private float _currentMaxDistance = 0.7f;           /// < Current max distance from eye to element, changes depending on the environment
     private float _currentMaxViewDegrees = 15f;         /// < The element will stay at least this close to the center of view
-    
+
     private bool _coolDown = false;
     private Vector3 _coolDownTarget = Vector3.zero;
 

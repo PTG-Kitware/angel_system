@@ -88,7 +88,7 @@ public class OrbMessageContainer : MonoBehaviour
         GameObject taskListbtn = transform.GetChild(0).gameObject;
         _taskListbutton = taskListbtn.AddComponent<DwellButton>();
         _taskListbutton.gameObject.name += "FacetasklistButton";
-        _taskListbutton.InitializeButton(EyeTarget.orbtasklistButton, () => MultiTaskList.Instance.ToggleOverview(), null, true, DwellButtonType.Select);
+        _taskListbutton.InitializeButton(EyeTarget.orbtasklistButton, () => MultiTaskList.Instance.ToggleOverview(), null, true, DwellButtonType.Toggle);
 
         float _startDegRight = 23;
         float _startDegLeft = 180;
@@ -185,7 +185,7 @@ public class OrbMessageContainer : MonoBehaviour
                 {
                     if (_taskNameToOrbPie[taskName].gameObject.activeSelf)
                     {
-                        AudioManager.Instance.PlaySound(transform.position, SoundType.bell);
+                        AudioManager.Instance.PlaySound(transform.position, SoundType.confirmation);
                         _taskNameToOrbPie[taskName].gameObject.SetActive(false);
                     }
                 }

@@ -119,7 +119,7 @@ public class OrbTask : MonoBehaviour
             return;
         }
 
-        if (EyeGazeManager.Instance.CurrentHit.Equals(EyeTarget.pieCollider) && !_textIsFadingIn)
+        if (EyeGazeManager.Instance.CurrentHit.Equals(EyeTarget.pieCollider) && !_textIsFadingIn && gameObject.activeSelf)
         {
             StartCoroutine(FadeInMessage());
             return;
@@ -218,8 +218,6 @@ public class OrbTask : MonoBehaviour
 
     public void SetTaskMessage(int stepIndex, int total, string message, string currentTaskID)
     {
-        AngelARUI.Instance.DebugLogMessage("Set step message: '" + message + "' for task: " + TaskName, true);
-
         string newPotentialMessage = Utils.SplitTextIntoLines(TaskName + " (" + (stepIndex + 1) + "/" + total + ") : " +
             message, 110);
 

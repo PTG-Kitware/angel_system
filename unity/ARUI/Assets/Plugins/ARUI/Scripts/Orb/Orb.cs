@@ -4,26 +4,12 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public enum OrbMovementBehavior
-{
-    Follow = 0,
-    Fixed = 1,
-}
-
 /// <summary>
 /// Represents a virtual assistant in the shape of an orb, staying in the FOV of the user and
 /// guiding the user through a sequence of tasks
 /// </summary>
 public class Orb : Singleton<Orb>
 {
-    ///** Reference to parts of the orb
-    private OrbMovementBehavior _orbBehavior = OrbMovementBehavior.Follow;                                   /// <the orb shape itself (part of prefab)
-    public OrbMovementBehavior OrbBehavior
-    {
-        get => _orbBehavior;
-        set => _orbBehavior = value;
-    }
-
     ///** Reference to parts of the orb
     private OrbFace _face;                                   /// <the orb shape itself (part of prefab)
     public float MouthScale
@@ -85,8 +71,6 @@ public class Orb : Singleton<Orb>
 
         if (_isLookingAtOrb || _messageContainer.IsLookingAtMessage)
             _face.MessageNotificationEnabled = false;
-
-        _followSolver.IsPaused = (_orbBehavior == OrbMovementBehavior.Fixed || _face.UserIsGrabbing);
 
         float distance = Vector3.Distance(_followSolver.transform.position, AngelARUI.Instance.ARCamera.transform.position);
         float scaleValue = Mathf.Max(1f, distance * 1.2f);
@@ -165,18 +149,15 @@ public class Orb : Singleton<Orb>
     {
         _face.UserIsGrabbing = isDragging;
 
-        if (_orbBehavior == OrbMovementBehavior.Follow)
+        if (!isDragging && !_lazyFollowStarted)
+            StartCoroutine(EnableLazyFollow());
+
+        if (isDragging && _lazyFollowStarted)
         {
-            if (!isDragging && !_lazyFollowStarted)
-                StartCoroutine(EnableLazyFollow());
+            StopCoroutine(EnableLazyFollow());
 
-            if (isDragging && _lazyFollowStarted)
-            {
-                StopCoroutine(EnableLazyFollow());
-
-                _lazyFollowStarted = false;
-                _followSolver.IsPaused = (false);
-            }
+            _lazyFollowStarted = false;
+            _followSolver.IsPaused = (false);
         }
     }
 
@@ -238,12 +219,6 @@ public class Orb : Singleton<Orb>
     /// </summary>
     /// <param name="isHovering"></param>
     public void SetNearHover(bool isHovering) => _face.UserIsGrabbing = isHovering;
-
-    /// <summary>
-    /// Change the visibility of the tasklist button
-    /// </summary>
-    /// <param name="isActive"></param>
-    //public void SetTaskListButtonActive(bool isActive) => _messageContainer.TaskListToggle.gameObject.SetActive(isActive);
 
     /// <summary>
     /// Update the position behavior of the orb

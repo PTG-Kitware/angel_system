@@ -88,7 +88,6 @@ public class AngelARUI : Singleton<AngelARUI>
         //Instantiate the Task Overview
         GameObject TaskOverview = Instantiate(Resources.Load(StringResources.Sid_Tasklist_path)) as GameObject;
         TaskOverview.gameObject.name = "***ARUI-" + StringResources.tasklist_name;
-        TaskOverview.GetComponent<TasklistPositionManager>().SnapToCentroid();
 
         //Start View Management, if enabled
         if (_useViewManagement)

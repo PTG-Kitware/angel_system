@@ -27,6 +27,11 @@ public class CurrentListActivator : MonoBehaviour
     private float _currentRatio = 0;
 
     private TextMeshPro _textMeshProUGUI;
+    public TextMeshPro Text
+    {
+        get => _textMeshProUGUI;
+    }
+
     private Line progressPoints;
 
     private void Awake()
@@ -50,22 +55,15 @@ public class CurrentListActivator : MonoBehaviour
     void Update()
     {
         //Once user looks at this object, set the task list visible
-        if (EyeGazeManager.Instance != null)
+        if (EyeGazeManager.Instance != null && EyeGazeManager.Instance.CurrentHitObj != null
+            && EyeGazeManager.Instance.CurrentHitObj.GetInstanceID() == this.gameObject.GetInstanceID())
         {
-            if (EyeGazeManager.Instance.CurrentHitObj != null)
-            {
-                if (EyeGazeManager.Instance.CurrentHitObj.GetInstanceID() == this.gameObject.GetInstanceID())
-                {
-                    //fade in tasklist 
-                    MultiTaskList.Instance.SetMenuActive(_index);
-                }
-            }
-        }
+            //fade in tasklist 
+            MultiTaskList.Instance.SetMenuActive(_index);
+        } 
 
         if (progressPoints!=null && progressPoints.gameObject.activeSelf)
-        {
-            progressPoints.DashOffset = Time.time%250;
-        }
+            progressPoints.DashOffset = Time.time % 250;
     }
 
     public void SetAsCurrent(bool isCurrent)

@@ -27,7 +27,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 920366772760735130}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0.0023}
+  m_LocalPosition: {x: 0, y: 0, z: 0.004}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 9017675414162035610}
@@ -49,7 +49,7 @@ MonoBehaviour:
   scaleMode: 0
   color: {r: 0.14150941, g: 0.14150941, b: 0.14150941, a: 1}
   detailLevel: 2
-  renderQueue: -1
+  renderQueue: 10
   zTest: 4
   zOffsetFactor: 0
   zOffsetUnits: 0
@@ -103,7 +103,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 6afefec347ded4848ac07cf2cc259ae2, type: 2}
+  - {fileID: 0}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -432,7 +432,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   blendMode: 1
   scaleMode: 0
-  color: {r: 0.41169345, g: 0.6792453, b: 0.3182627, a: 1}
+  color: {r: 0.3244643, g: 0.5283019, b: 0.25252163, a: 1}
   detailLevel: 2
   renderQueue: -1
   zTest: 4
@@ -619,8 +619,8 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4292269782
-  m_fontColor: {r: 0.8396226, g: 0.8396226, b: 0.8396226, a: 1}
+    rgba: 4290559164
+  m_fontColor: {r: 0.735849, g: 0.735849, b: 0.735849, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -731,8 +731,8 @@ BoxCollider:
   m_IsTrigger: 0
   m_Enabled: 1
   serializedVersion: 2
-  m_Size: {x: 0.31, y: 0.06999685, z: 0.03}
-  m_Center: {x: -0.12, y: 0, z: 0}
+  m_Size: {x: 0.27, y: 0.05, z: 0.03}
+  m_Center: {x: -0.12, y: -0.003, z: 0}
 --- !u!114 &9017675414162035615
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -792,7 +792,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   blendMode: 1
   scaleMode: 0
-  color: {r: 1, g: 1, b: 1, a: 1}
+  color: {r: 0.8113208, g: 0.8113208, b: 0.8113208, a: 1}
   detailLevel: 2
   renderQueue: -1
   zTest: 4

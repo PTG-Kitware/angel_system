@@ -6,90 +6,63 @@ using System.Diagnostics;
 
 public class TasklistPositionManager : Singleton<TasklistPositionManager>
 {
-    // Debug only
-    public List<GameObject> objs;
-
-    public GameObject LinePrefab;
-    private GameObject _listContainer;
-
     public float movementSpeed = 1.0f;
     //Offset from camera if no objects exist
     public float xOffset;
     public float zOffset;
 
-    #region Delay Values
-    //public float xOffset;
-    //public float yOffset;
-    //public float zOffset;
-    //public float SnapDelay = 2.0f;
-    //public float minDistance = 0.5f;
-    //Vector3 LastPosition;
-    //float CurrDelay;
-    #endregion
-    public float heightOffset;
+    private float _lerpTime = 1.0f;
 
-    Dictionary<string, GameObject> objsDict = new Dictionary<string, GameObject>();
-    Dictionary<string, GameObject> linesDict = new Dictionary<string, GameObject>();
-    float LerpTime = 2.0f;
+    private Vector3 _lerpStart;
+    private Vector3 _lerpEnd;
+    private bool _isLerping;
 
-    Vector3 lerpStart;
-    Vector3 lerpEnd;
-    bool isLerping;
+    private float _timeStarted;
 
-    float timeStarted;
-
-    bool isLooking = false;
-    #region Delay Code
-    // Start is called before the first frame update
-    void Start()
+    private bool _isLooking = false;
+    public bool IsLooking
     {
-        _listContainer = transform.GetChild(1).gameObject;
-        //LastPosition = Camera.main.transform.position;
+        get => _isLooking;
+        set { _isLooking = value; }
     }
-    #endregion
-    //Function to have the task overview snap to the center of all required objects
-    //This is done when the recipe goes from one step to another. By default, the overview
-    //stays on the center of all required objects
+
+    private float _currentMaxDistance = 1.2f;
+
+    /// <summary>
+    /// Function to have the task overview snap to the center of all required objects
+    /// This is done when the recipe goes from one step to another. By default, the overview
+    /// stays on the center of all required objects
+    /// Source -> https://www.blueraja.com/blog/404/how-to-use-unity-3ds-linear-interpolation-vector3-lerp-correctly
+    /// </summary>
     public void SnapToCentroid()
     {
-        Vector3 centroid = Camera.main.transform.position + Camera.main.transform.forward * zOffset + Camera.main.transform.right * xOffset;
-        Vector3 finalPos = new Vector3(centroid.x, Camera.main.transform.position.y + heightOffset, centroid.z);
-        BeginLerp(this.transform.position, finalPos);
-    }
+        //update maxDistance based on spatial map
+        float distance = transform.position.GetDistanceToSpatialMap();
+        if (distance != -1)
+            _currentMaxDistance = Mathf.Max(ARUISettings.OrbMinDistToUser, Mathf.Min(distance - 0.05f, ARUISettings.OrbMaxDistToUser));
 
-    //Source -> https://www.blueraja.com/blog/404/how-to-use-unity-3ds-linear-interpolation-vector3-lerp-correctly
-    //Code to lerp from one position to another
-    void BeginLerp(Vector3 startPos, Vector3 endPos)
-    {
-        timeStarted = Time.time;
-        isLerping = true;
-        lerpStart = startPos;
-        lerpEnd = endPos;
+        Vector3 lookDirection = AngelARUI.Instance.ARCamera.transform.forward * _currentMaxDistance;
+
+        Vector3 finalPos = new Vector3(lookDirection.x, AngelARUI.Instance.ARCamera.transform.position.y, lookDirection.z);
+
+        _timeStarted = Time.time;
+        _isLerping = true;
+        _lerpStart = transform.position;
+        _lerpEnd = finalPos;
     }
 
     void FixedUpdate()
     {
-        if (isLerping)
+        if (_isLerping)
         {
-            float timeSinceStarted = Time.time - timeStarted;
-            float percentComplete = timeSinceStarted / LerpTime;
-            transform.position = Vector3.Lerp(lerpStart, lerpEnd, percentComplete);
+            float timeSinceStarted = Time.time - _timeStarted;
+            float percentComplete = timeSinceStarted / _lerpTime;
+            transform.position = Vector3.Lerp(_lerpStart, _lerpEnd, percentComplete);
             if (percentComplete >= 1.0f)
             {
-                isLerping = false;
+                _isLerping = false;
             }
         }
     }
-
-    /// <summary>
-    /// If the user is looking at a task overview object then set isLooking to true
-    /// </summary>
-    /// <param name="val"></param>
-    public void SetIsLooking(bool val)
-    {
-        isLooking = val;
-    }
-
-
 
 }
