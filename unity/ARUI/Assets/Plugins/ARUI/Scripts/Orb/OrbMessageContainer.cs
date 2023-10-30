@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 public enum MessageAnchor
 {
@@ -11,7 +12,10 @@ public enum MessageAnchor
 
 public class OrbMessageContainer : MonoBehaviour
 {
-    private List<OrbTask> _allPies = new List<OrbTask>();
+    private List<OrbTask> _allTasksPlaceholder = new List<OrbTask>();
+
+    //** OrbTasks after manual is set
+    private OrbTask _mainTaskPiePlace;
     private Dictionary<string, OrbTask> _taskNameToOrbPie;
 
     //** Layout
@@ -35,9 +39,9 @@ public class OrbMessageContainer : MonoBehaviour
         {
             _isMessageContainerActive = value;
 
-            foreach (OrbTask op in _allPies)
+            foreach (OrbTask op in _taskNameToOrbPie.Values)
             {
-                op.SetPieActive(value, DataProvider.Instance.CurrentObservedTask);
+                op.SetPieActive(value);
                 if (value)
                 {
                     op.Text.BackgroundColor = ARUISettings.OrbMessageBGColor;
@@ -90,22 +94,19 @@ public class OrbMessageContainer : MonoBehaviour
         _taskListbutton.gameObject.name += "FacetasklistButton";
         _taskListbutton.InitializeButton(EyeTarget.orbtasklistButton, () => MultiTaskList.Instance.ToggleOverview(), null, true, DwellButtonType.Toggle);
 
-        float _startDegRight = 23;
-        float _startDegLeft = 180;
-        float degR = _startDegRight;
-        float degL = _startDegLeft;
-
         // Init Pie Menu
-        for (int i = 0; i < 5; i++)
+        for (int i = 0; i < 4; i++)
         {
-            GameObject ob = transform.GetChild(1).GetChild(0).GetChild(0).GetChild(0).GetChild(i).gameObject;
+            GameObject ob = transform.GetChild(1).GetChild(0).GetChild(0).GetChild(1).GetChild(i).gameObject;
             OrbTask current = ob.AddComponent<OrbTask>();
-            current.InitializeComponents(degR, degL);
-            degR += -23;
-            degL += 23;
+            current.InitializeComponents(TaskType.secondary);
 
-            _allPies.Add(current);
+            _allTasksPlaceholder.Add(current);
         }
+
+        GameObject obMain = transform.GetChild(1).GetChild(0).GetChild(0).GetChild(0).gameObject;
+        _mainTaskPiePlace = obMain.AddComponent<OrbTask>();
+        _mainTaskPiePlace.InitializeComponents(TaskType.primary);
 
         _taskNameToOrbPie = new Dictionary<string, OrbTask>();
 
@@ -137,10 +138,8 @@ public class OrbMessageContainer : MonoBehaviour
         else if (ChangeMessageBoxToLeft(100))
             UpdateAnchorLerp(MessageAnchor.left);
 
-        foreach (OrbTask pie in _allPies)
-        {
+        foreach (OrbTask pie in _taskNameToOrbPie.Values)
             pie.UpdateMessageVisibility(_taskNameToOrbPie[DataProvider.Instance.CurrentObservedTask]);
-        }
     }
 
     public void HandleUpdateActiveTaskEvent(Dictionary<string, TaskList> currentSelectedTasks, string currentTaskID)
@@ -148,7 +147,7 @@ public class OrbMessageContainer : MonoBehaviour
         foreach (OrbTask pie in _taskNameToOrbPie.Values)
         {
             float ratio = (float)currentSelectedTasks[pie.TaskName].CurrStepIndex / (float)(currentSelectedTasks[pie.TaskName].Steps.Count - 1);
-            pie.UpdateCurrentTaskStatus(ratio, currentTaskID);
+            pie.UpdateCurrentTaskStatus(ratio);
         }
     }
 
@@ -164,10 +163,20 @@ public class OrbMessageContainer : MonoBehaviour
         int pieIndex = 0;
         foreach (string taskName in currentSelectedTasks.Keys)
         {
-            _taskNameToOrbPie.Add(taskName, _allPies[pieIndex]); //assign task to pie
-            _allPies[pieIndex].TaskName = currentSelectedTasks[taskName].Name;
-            _allPies[pieIndex].UpdateMessageVisibility(_taskNameToOrbPie[currentTaskID]);
-            pieIndex++;
+            if (taskName.Equals(currentTaskID))
+            {
+                _taskNameToOrbPie.Add(taskName, _mainTaskPiePlace);
+                _mainTaskPiePlace.TaskName = currentSelectedTasks[taskName].Name;
+                _mainTaskPiePlace.UpdateMessageVisibility(_taskNameToOrbPie[currentTaskID]);
+            }
+            else
+            {
+                _taskNameToOrbPie.Add(taskName, _allTasksPlaceholder[pieIndex]); //assign task to pie
+                _allTasksPlaceholder[pieIndex].TaskName = currentSelectedTasks[taskName].Name;
+                _allTasksPlaceholder[pieIndex].UpdateMessageVisibility(_taskNameToOrbPie[currentTaskID]);
+                pieIndex++;
+            }
+            
         }
 
         UpdateAllTaskMessages(currentSelectedTasks, currentTaskID);
@@ -196,10 +205,10 @@ public class OrbMessageContainer : MonoBehaviour
 
                     _taskNameToOrbPie[taskName].SetTaskMessage(currentSelectedTasks[taskName].CurrStepIndex,
                 currentSelectedTasks[taskName].Steps.Count,
-                    currentSelectedTasks[taskName].Steps[currentSelectedTasks[taskName].CurrStepIndex].StepDesc, currentActiveTask);
+                    currentSelectedTasks[taskName].Steps[currentSelectedTasks[taskName].CurrStepIndex].StepDesc);
 
                     float ratio = Mathf.Min(1, (float)currentSelectedTasks[taskName].CurrStepIndex / (float)(currentSelectedTasks[taskName].Steps.Count - 1));
-                    _taskNameToOrbPie[taskName].UpdateCurrentTaskStatus(ratio, currentActiveTask);
+                    _taskNameToOrbPie[taskName].UpdateCurrentTaskStatus(ratio);
                 }
             }
         }
@@ -265,7 +274,7 @@ public class OrbMessageContainer : MonoBehaviour
             if (shade < 0)
                 shade = 0;
 
-            foreach (OrbTask op in _allPies)
+            foreach (OrbTask op in _taskNameToOrbPie.Values)
             {
                 op.Text.BackgroundColor = new Color(shade, shade, shade, shade);
                 op.SetTextAlpha(alpha);
@@ -283,7 +292,7 @@ public class OrbMessageContainer : MonoBehaviour
     {
         //throw new System.NotImplementedException();
         var pieColliders = new List<BoxCollider>();
-        foreach (OrbTask pie in _allPies)
+        foreach (OrbTask pie in _taskNameToOrbPie.Values)
         {
             pieColliders.AddRange(pie.GetComponentsInChildren<BoxCollider>());
         }
@@ -313,7 +322,7 @@ public class OrbMessageContainer : MonoBehaviour
     public void UpdateAnchorInstant(MessageAnchor anchor)
     {
         _currentAnchor = anchor;
-        foreach (OrbTask ob in _allPies)
+        foreach (OrbTask ob in _taskNameToOrbPie.Values)
             ob.UpdateAnchor();
 
         StartCoroutine(MoveMessageBox(anchor.Equals(MessageAnchor.left), true));
@@ -335,7 +344,7 @@ public class OrbMessageContainer : MonoBehaviour
 
         while (step < 1)
         {
-            foreach (OrbTask op in _allPies)
+            foreach (OrbTask op in _taskNameToOrbPie.Values)
             {
                 float XOffset = op.InitialXOffset;
                 if (isLeft)

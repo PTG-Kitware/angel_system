@@ -3,8 +3,16 @@ using System.Collections;
 using TMPro;
 using UnityEngine;
 
+public enum TaskType
+{
+    primary = 1, 
+    secondary = 2, 
+}
+
 public class OrbTask : MonoBehaviour
 {
+    private TaskType _taskType = TaskType.secondary;
+
     private string _taskname;
     public string TaskName {
         get { return _taskname; }
@@ -43,8 +51,10 @@ public class OrbTask : MonoBehaviour
     private bool _textIsFadingOut = false;
     private bool _textIsFadingIn = false;
 
-    public void InitializeComponents(float rDeg, float lDeg)
+    public void InitializeComponents(TaskType currenType)
     {
+        _taskType = currenType;
+
         //init pie slice and components
         GameObject tmp = transform.GetChild(0).gameObject;
         _orbRect = tmp.GetComponent<Shapes.Line>();
@@ -79,7 +89,7 @@ public class OrbTask : MonoBehaviour
 
         _taskname = gameObject.name;
 
-        SetPieActive(false, "");
+        SetPieActive(false);
     }
 
     public void ResetPie()
@@ -93,7 +103,7 @@ public class OrbTask : MonoBehaviour
 
         _textContainer.TextColor = new Color(_activeColorText.r, _activeColorText.g, _activeColorText.b, 1);
 
-        SetPieActive(false, "");
+        SetPieActive(false);
     }
 
     private void Update()
@@ -204,7 +214,7 @@ public class OrbTask : MonoBehaviour
         }
     }
 
-    public void SetPieActive(bool active, string currentActiveID)
+    public void SetPieActive(bool active)
     {
         if (active && _currentStepText.text.Length == 0) return;
 
@@ -216,7 +226,7 @@ public class OrbTask : MonoBehaviour
         }
     }
 
-    public void SetTaskMessage(int stepIndex, int total, string message, string currentTaskID)
+    public void SetTaskMessage(int stepIndex, int total, string message)
     {
         string newPotentialMessage = Utils.SplitTextIntoLines(TaskName + " (" + (stepIndex + 1) + "/" + total + ") : " +
             message, 110);
@@ -229,12 +239,10 @@ public class OrbTask : MonoBehaviour
     /// <summary>
     /// 
     /// </summary>
-    public void UpdateCurrentTaskStatus(float ratio, string currentActiveID)
+    public void UpdateCurrentTaskStatus(float ratio)
     {
-        bool isCurrent = _taskname.Equals(currentActiveID);
-
         //Update pie length
-        if (isCurrent)
+        if (_taskType.Equals(TaskType.primary))
         {
             _pieProgressRect.Thickness = _thicknessActive;
             _orbRect.Thickness = _thicknessActive;

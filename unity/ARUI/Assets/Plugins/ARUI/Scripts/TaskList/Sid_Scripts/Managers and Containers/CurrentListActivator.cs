@@ -2,7 +2,6 @@ using Microsoft.MixedReality.Toolkit.Utilities;
 using Shapes;
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics.Eventing.Reader;
 using TMPro;
 using Unity.Profiling;
 using UnityEngine;
