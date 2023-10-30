@@ -142,17 +142,6 @@ class GlobalStepPredictorNode(Node):
                 )
                 self.recipe_current_step_id[task["recipe"]] = current_step_id
 
-    @staticmethod
-    def _granular_step_id_to_str(recipe_name: str, granular_id: int) -> str:
-        """
-        :param recipe_name: String name of the task the granular step is a part
-            of.
-        :param granular_id: Integer ID of the step.
-
-        :return: String representation.
-        """
-        return f"PLACEHOLDER: Task {recipe_name} - Granular ID {granular_id}"
-
     def publish_task_state_message(
         self,
         task_state: Dict,
@@ -182,15 +171,12 @@ class GlobalStepPredictorNode(Node):
         # Populate steps and current step
         # TODO: This is a temporary implementation until the GSP has its "broad
         #       steps" mapping working.
-        task_step_str = self._granular_step_id_to_str(
-            task_state["recipe"], task_state["current_granular_step"]
-        )
+        task_step_str = task["step_to_full_str"][task["current_broad_step"]]
+
         log.info(f"Publish task update w/ step: {task_step_str}")
         # Exclude background
         task_step = task_state["current_granular_step"] - 1
-        previous_step_str = self._granular_step_id_to_str(
-            task_state["recipe"], previous_step_id
-        )
+        previous_step_str = task["step_to_full_str"][max(task["current_broad_step"]-1, 0)]
 
         message.current_step_id = task_step
         message.current_step = task_step_str
@@ -224,10 +210,7 @@ class GlobalStepPredictorNode(Node):
             # TODO: This is a temporary implementation until the GSP has its "broad
             #       steps" mapping working.
             # task_steps = task["step_to_activity_desc"][1:]  # Exclude background
-            task_steps = [
-                self._granular_step_id_to_str(task["recipe"], gsid)
-                for gsid in sorted(task["granular_step_to_activity_id"])[1:]
-            ]
+            task_steps = task["step_to_full_str"].values()
 
             task_g = TaskGraph()
             task_g.task_steps = task_steps
