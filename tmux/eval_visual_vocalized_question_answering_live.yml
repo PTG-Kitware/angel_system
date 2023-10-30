@@ -195,6 +195,5 @@ windows:
            -p recipe_path:=${CONFIG_DIR}/mit_ll_eval_one_coffee_recipe_steps_v2.json
            -p prompt_template_path:=${CONFIG_DIR}/llm_prompts/vis_qa_teacher_prompt
            -p obj_det_filter:=CENTROID
-           -p pv_width:=1280
-           -p pv_height:=720
-           -p debug_mode:=True
+           -p pv_width:=1920
+           -p pv_height:=1080

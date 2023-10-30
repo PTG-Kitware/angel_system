@@ -88,22 +88,6 @@ PROMPT_VARIABLES = [
 
 
 class VisualQuestionAnswerer(Node):
-    class FilterType(Enum):
-        """
-        The following determines which objects to surface in the prompt.
-        "threshold" selects objects with a confidence score above OBJECT_DETECTION_THRESHOLD.
-        "center" selects the object closest to the center of the user's field of view. Make sure to
-                 also configure pv_width and pv_height if this is selected.
-        """
-
-        THRESHOLD = 1
-        CENTROID = 2
-
-        def is_threshold(self):
-            return self.value == VisualQuestionAnswerer.FilterType.THRESHOLD.value
-
-        def is_centroid(self):
-            return self.value == VisualQuestionAnswerer.FilterType.CENTROID.value
 
     class TimestampedEntity:
         """
@@ -127,12 +111,8 @@ class VisualQuestionAnswerer(Node):
                 (IN_ACT_CLFN_TOPIC, ""),
                 (PARAM_RECIPE_PATH,),
                 (PARAM_PROMPT_TEMPLATE_PATH,),
-                (PARAM_IMAGE_WIDTH, -1),
-                (PARAM_IMAGE_HEIGHT, -1),
-                (
-                    PARAM_OBJECT_DETECTION_FILTER_STRATEGY,
-                    VisualQuestionAnswerer.FilterType.THRESHOLD.name,
-                ),
+                (PARAM_IMAGE_WIDTH,),
+                (PARAM_IMAGE_HEIGHT,),
                 (PARAM_OBJECT_LAST_N_OBJECTS, 10),
                 (PARAM_OBJECT_DETECTION_THRESHOLD, 0.8),
                 (PARAM_ACT_CLFN_THRESHOLD, 0.8),
@@ -173,18 +153,6 @@ class VisualQuestionAnswerer(Node):
                 f"Prompt Template: ~~~~~~~~~~\n{self.prompt_template}\n~~~~~~~~~~"
             )
 
-        # Configure supplemental input object detection criteria.
-        self.object_dtctn_filter = VisualQuestionAnswerer.FilterType[
-            param_values[PARAM_OBJECT_DETECTION_FILTER_STRATEGY].upper()
-        ]
-        if (
-            self.object_dtctn_filter.is_centroid()
-            and self.pv_center_coordinate[0] is None
-        ):
-            raise ValueError(
-                f"All {PARAM_OBJECT_DETECTION_FILTER_STRATEGY} and {PARAM_IMAGE_WIDTH} and {PARAM_IMAGE_HEIGHT} "
-                + "must be configured together."
-            )
         self.object_dtctn_threshold = param_values[PARAM_OBJECT_DETECTION_THRESHOLD]
         self.object_dtctn_last_n_objects = param_values[PARAM_OBJECT_LAST_N_OBJECTS]
 
@@ -196,14 +164,14 @@ class VisualQuestionAnswerer(Node):
         self.current_step = "Unstarted"
         self.action_classification_queue = queue.Queue()
         self.detected_objects_queue = queue.Queue()
+        self.centroid_object_queue = \
+            centroid_2d_strategy_queue.Centroid2DStrategyQueue(
+                8, self.pv_center_coordinate[0], self.pv_center_coordinate[1],
+                k=1)
+        
         self.dialogue_history = []
         self.handler_thread = threading.Thread(target=self.process_question_queue)
         self.handler_thread.start()
-
-        self.centroid_object_queue = \
-            centroid_2d_strategy_queue.Centroid2DStrategyQueue(
-                5, self.pv_center_coordinate[0], self.pv_center_coordinate[1],
-                k=3)
 
         # Configure the (necessary) emotional detection enriched utterance subscription.
         self.emotion_subscription = self.create_subscription(
@@ -340,45 +308,6 @@ class VisualQuestionAnswerer(Node):
                 item=list(zip(msg.label_vec, msg.label_confidences))
                 ))
 
-        if self.object_dtctn_filter.is_threshold():
-            self._add_detected_objects_above_threshold(msg)
-        elif self.object_dtctn_filter.is_centroid():
-            # TODO(derekahmed): Maybe these shouldn't be mutually exclusive?
-            self._add_detected_object_closest_to_center(msg)
-        else:
-            raise ValueError(
-                "VisualQuestionAnswerer Node is misconfigured as "
-                + self.object_dtctn_filter.value
-            )
-
-    def _add_detected_object_closest_to_center(self, msg):
-        """
-        Adds the object that is closest to the configured center coordinate of the user's view.
-        This center coordinate is indicated by self.pv_center_coordinate.
-        """
-        most_center_obj = None
-        most_center_dist = max(self.pv_width, self.pv_height)
-        zipped = zip(msg.label_vec, msg.left, msg.right, msg.top, msg.bottom)
-        for obj, left, right, top, bottom in zipped:
-            width_center = left + int((right - left) / 2)
-            height_center = top + int((bottom - top) / 2)
-            curr_dist = distance.euclidean(
-                [width_center, height_center], self.pv_center_coordinate
-            )
-            if curr_dist < most_center_dist:
-                most_center_obj = obj
-                most_center_dist = curr_dist
-        if most_center_obj:
-            # if self.debug_mode:
-            #     self.log.info(
-            #         f"Added {most_center_obj} to detected objects queue."
-            #         + f"Object is {most_center_dist} away from the center."
-            #     )
-            te = VisualQuestionAnswerer.TimestampedEntity(
-                self._get_sec(msg), set([most_center_obj])
-            )
-            self.detected_objects_queue.put(te)
-
     def _add_detected_objects_above_threshold(self, msg):
         """
         Queuse all objects above a configure threshold.
@@ -423,6 +352,7 @@ class VisualQuestionAnswerer(Node):
         :return: returns a string-ified list of the latest observables
         """
         observables = set()
+        #  handle 2D centroid distance queueing.
         timestamped_detections = self.centroid_object_queue.get_n_before(timestamp=curr_time)
         if timestamped_detections:
             if self.debug_mode:
@@ -435,17 +365,7 @@ class VisualQuestionAnswerer(Node):
                     obj, score = obj_score
                     observables.add(obj)
             return ", ".join(observables)
-                
-        # while not self.detected_objects_queue.empty():
-        #     next = self.detected_objects_queue.queue[0]
-        #     if next.time < curr_time:
-        #         observables.extend(next.entity)
-        #         self.detected_objects_queue.get()
-        #     else:
-        #         break
-        if not observables:
-            return "nothing"
-        # return ", ".join(set(observables[-n:]))
+
 
     def get_response(
         self,
