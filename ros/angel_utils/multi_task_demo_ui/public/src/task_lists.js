@@ -1,6 +1,42 @@
 var recipe_colors = ["blue", "green", "yellow", "red", "orange"]
 const zip = (a, b) => a.map((k, i) => [k, b[i]]);
 
+var ctx = document.getElementById("task-step-chart").getContext('2d');
+var task_step_chart = new Chart(ctx, {
+    type: "line",
+    data: {
+        labels: [],
+        datasets: [{
+            label: 'recipe1',
+            data: [],
+            borderColor: "blue",
+            yAxisID: 'y'
+        }]
+    },
+    options: {
+        plugins: {
+            title: {
+                display: false
+            }
+        },
+        scales: {
+            x: {
+                title: {
+                    display: true,
+                    text: "Time"
+                }
+            },
+            y: {
+                stacked: true,
+                title: {
+                    display: true,
+                    text: "Step Number"
+                }
+            }
+        }
+    }
+});
+
 $.get("/topics")
 .done(function( topics ){
   // subscribe to QueryTaskGraph
@@ -78,16 +114,18 @@ $.get("/topics")
 
     const completed_steps = m.completed_steps;
     completed_steps.forEach(function(completed, index){
-      let el = document.getElementById(step_list[index]);
+      let box = document.getElementById(step_list[index]);
 
       // Update boxes in task list
-      var box = el.querySelector('.checkbox');
       if(completed) {
-        box.style.background_color = "green";
+        box.style.backgroundColor = "green";
       }
       else {
-        box.style.background_color = "white";
+        box.style.backgroundColor = "white";
       }
+
+      // Update line chart
+
     });
   });
 });
