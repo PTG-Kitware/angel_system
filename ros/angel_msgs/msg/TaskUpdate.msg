@@ -31,11 +31,6 @@ float32 task_complete_confidence
 # steps, by index association, are complete.
 bool[] completed_steps
 
-# Array of relevant task step HMM step confidence scores. This includes the HMM
-# background class as index 0.
-# TODO: This should be its own separate message, implementation dependent
-float32[] hmm_step_confidence
-
 ###############################################################################
 #
 # DEPRECATED FIELDS
@@ -54,3 +49,8 @@ TaskItem[] task_items
 # Time remaining to move to next task (e.g. waiting for tea to steep)
 # -1 means that this is not a time based task
 int32 time_remaining_until_next_task
+
+# Array of relevant task step HMM step confidence scores. This includes the HMM
+# background class as index 0.
+# TODO: This should be its own separate message, implementation dependent
+float32[] hmm_step_confidence
