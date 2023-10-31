@@ -285,9 +285,7 @@ class GlobalStepPredictor:
         granular_step_4
         """
         fgspbs = np.array(tracker["first_granular_step_per_broad_step"])
-        return min(
-            len(np.nonzero(fgspbs <= granular_step)[0]), len(tracker["broad_steps"] - 1)
-        )
+        return len(np.nonzero(fgspbs <= granular_step)[0]) - 1
 
     def get_unique(self, activity_ids):
         """
@@ -421,11 +419,9 @@ class GlobalStepPredictor:
                 next_next_granular_step = min(
                     next_granular_step + 1, tracker["total_num_granular_steps"] - 1
                 )
-
                 next_activity = tracker["granular_step_to_activity_id"][
                     next_granular_step
                 ]
-
                 next_next_activity = tracker["granular_step_to_activity_id"][
                     next_next_granular_step
                 ]
