@@ -398,24 +398,33 @@ class GlobalStepPredictor:
             self.activated_activities[flipping_off_indexes, 1] = 0
 
             # Now, go through ACTIVE trackers and see which corresponds to "flipping_on_indexes."
+            # If a tracker's last step is ACTIVE and its last step is in "flipping_off_indexes",
+            # then deactivate the tracker.
             for tracker_ind, tracker in enumerate(self.trackers):
-                current_granular_step = tracker["current_granular_step"]
+                if not tracker["active"]:
+                    continue
 
                 # TODO: For now the tracker can jump 1 or 2 steps, if base
                 # jump criteria is met. Add "weak" threshold too.
+                current_granular_step = tracker["current_granular_step"]
+                current_activity = tracker["granular_step_to_activity_id"][
+                    current_granular_step
+                ]
                 if current_granular_step == tracker["total_num_granular_steps"] - 1:
+                    if current_activity in flipping_off_indexes:
+                        tracker["active"] == False
                     continue
 
                 next_granular_step = current_granular_step + 1
                 next_next_granular_step = min(
                     next_granular_step + 1, tracker["total_num_granular_steps"] - 1
                 )
-                current_activity = tracker["granular_step_to_activity_id"][
-                    current_granular_step
-                ]
-                next_activity = tracker["granular_step_to_activity_id"][
-                    next_granular_step
-                ]
+                try:
+                    next_activity = tracker["granular_step_to_activity_id"][
+                        next_granular_step
+                    ]
+                except:
+                    import ipdb; ipdb.set_trace()
                 next_next_activity = tracker["granular_step_to_activity_id"][
                     next_next_granular_step
                 ]
