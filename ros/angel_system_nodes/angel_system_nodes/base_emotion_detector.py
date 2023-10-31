@@ -48,7 +48,7 @@ class BaseEmotionDetector(Node):
         self.uintent_subscription = self.create_subscription(
             InterpretedAudioUserIntent,
             self._in_uintent_topic,
-            self.intent_detection_callback,
+            self.emotion_detection_callback,
             1,
         )
         self._interp_emo_publisher = self.create_publisher(
@@ -92,14 +92,12 @@ class BaseEmotionDetector(Node):
         """
         return self._get_vader_sentiment_analysis(msg.utterance_text)
 
-    def intent_detection_callback(self, msg):
+    def emotion_detection_callback(self, msg):
         """
         This is the main ROS node listener callback loop that will process
         all messages received via subscribed topics.
         """
         self.log.debug(f'Received message:\n\n"{msg.utterance_text}"')
-        if not self._apply_filter(msg):
-            return
         self.message_queue.put(msg)
 
     def process_message_queue(self):
@@ -133,22 +131,6 @@ class BaseEmotionDetector(Node):
             f'Publishing {{"{colored_emotion}": {confidence_score}}} '
             + f'to {self._out_interp_uemotion_topic} for:\n>>> "{colored_utterance}"'
         )
-
-    def _apply_filter(self, msg):
-        """
-        Abstracts away any filtering to apply on received messages. Return
-        none if the message should be filtered out. Else, return the incoming
-        msg if it can be included.
-        """
-        # if msg.user_intent.lower() == "user inquiry":
-        #     return msg
-        # else:
-        #     return None
-
-        if "hey angel" in msg.utterance_text.lower():
-            return msg
-        return None
-
 
 def main():
     rclpy.init()
