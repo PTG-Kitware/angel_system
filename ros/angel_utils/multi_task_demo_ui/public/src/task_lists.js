@@ -38,7 +38,6 @@ var task_step_chart = new Chart(ctx, {
                     text: "Step Number"
                 },
                 min: 0,
-                max: 25,
                 ticks: {
                     stepSize: 1
                 }
@@ -68,6 +67,7 @@ $.get("/topics")
     // Or maybe dynamically insert fields for tasks?
     
     var tasks = zip(task_titles, task_graphs);
+    var max_task_len = 0;
     tasks.forEach(function(task, index){
         var task_color = recipe_colors[index];
 
@@ -100,6 +100,11 @@ $.get("/topics")
 
         // Load steps
         var step_list = task_graph.task_steps;
+        var step_list_len = step_list.length;
+        if(step_list_len > max_task_len){
+            max_task_len = step_list_len
+        }
+        
         step_list.forEach(function(step, index){
             // TODO: support different step levels
             var step_level = task_levels[index];
@@ -109,7 +114,7 @@ $.get("/topics")
       
             var checkbox = document.createElement('span');
             checkbox.className = "checkbox";
-            checkbox.id = step;
+            checkbox.id = task_title + "-" + step;
             step_line.appendChild(checkbox);
       
             var text = document.createElement('span');
@@ -120,6 +125,10 @@ $.get("/topics")
             container_block.appendChild(step_line);
           });
     });
+
+    // Set size of task graph chart y axis
+    task_step_chart.options.scales.y.max = max_task_len;
+    task_step_chart.update('none'); // don't animate
   });
 
   // Create a listener for task completion updates
@@ -136,7 +145,7 @@ $.get("/topics")
 
     const completed_steps = m.completed_steps;
     completed_steps.forEach(function(completed, index){
-      let box = document.getElementById(step_list[index]);
+      let box = document.getElementById(task_name + "-" + step_list[index]);
 
       // Update boxes in task list
       if(completed) {
@@ -156,17 +165,14 @@ $.get("/topics")
             function(dataset, index){
                 if(index == chart_id){
                     task_step_chart.data.datasets[chart_id].data.push(current_step_id);
-                    console.log(task_step_chart.data.datasets[index].data);
                 }
                 else{
                     var last_val = task_step_chart.data.datasets[index].data.slice(-1).pop();
                     if(last_val == null){
                         last_val = 0;
                     }
-                    console.log(last_val);
                     
                     task_step_chart.data.datasets[index].data.push(last_val);
-                    console.log(task_step_chart.data.datasets[index].data);
                 }
             }
           );
