@@ -267,7 +267,6 @@ class VisualQuestionAnswerer(Node):
             temperature=0.0,
             max_tokens=64,
         )
-        # TODO (derekahmed) Figure out how to include optional dialogue history
         zero_shot_prompt = langchain.PromptTemplate(
             input_variables=PROMPT_VARIABLES,
             template=self.prompt_template,
