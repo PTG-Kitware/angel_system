@@ -5,7 +5,9 @@
     <publisher profile_name="default publisher profile" is_default_profile="true">
         <qos>
             <publishMode>
-                <kind>ASYNCHRONOUS</kind>
+                <kind>SYNCHRONOUS</kind>
+                <!-- Async mode seems to allow for "stalls" in some cases. -->
+                <!--<kind>ASYNCHRONOUS</kind>-->
             </publishMode>
         </qos>
         <historyMemoryPolicy>PREALLOCATED_WITH_REALLOC</historyMemoryPolicy>
