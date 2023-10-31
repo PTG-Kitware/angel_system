@@ -37,6 +37,11 @@ IN_TASK_STATE_TOPIC = "task_state_topic"
 # Below is/are the published topic(s).
 OUT_QA_TOPIC = "system_text_response_topic"
 
+# Below is used to filter out incoming questions. Toggle this parameter to True if questions
+# are only responded to if they contain the TARGET_PHRASE.
+PARAM_MUST_CONTAIN_TARGET_PHRASE = "must_contain_target_phrase"
+TARGET_PHRASE = "hey angel"
+
 # Below configures the filtering strategy for detected objects. It should correspond to
 # VisualQuestionAnswerer.FilterType.
 PARAM_OBJECT_DETECTION_FILTER_STRATEGY = "obj_det_filter"
@@ -119,6 +124,7 @@ class VisualQuestionAnswerer(Node):
                 (OUT_QA_TOPIC,),
                 (PARAM_CONTEXT_HISTORY_LENGTH, 3),
                 (PARAM_DEBUG_MODE, False),
+                (PARAM_MUST_CONTAIN_TARGET_PHRASE, False),
             ],
         )
         self._in_emotion_topic = param_values[IN_EMOTION_TOPIC]
@@ -130,6 +136,8 @@ class VisualQuestionAnswerer(Node):
         self.debug_mode = False
         if param_values[PARAM_DEBUG_MODE]:
             self.debug_mode = True
+
+        self.param_must_contain_target_phrase = param_values[PARAM_MUST_CONTAIN_TARGET_PHRASE]        
 
         # Used to obtain the center perspective point and how far detected objects
         # are from it.
@@ -470,10 +478,12 @@ class VisualQuestionAnswerer(Node):
     def _apply_filter(self, msg):
         """
         Abstracts away any filtering to apply on received messages. Return
-        none if the message should be filtered out. Else, return the incoming
-        msg if it can be included.
+        a boolean value indicating if the message passes a filter and should be processed.
         """
-        return msg
+        if self.param_must_contain_target_phrase:
+            return TARGET_PHRASE in msg.utterance_text.lower()
+        else:
+            return True
 
 
 def main():

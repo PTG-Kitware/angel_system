@@ -101,16 +101,16 @@ windows:
   - object_detector:
       layout: even-vertical
       panes:
-        - berkeley_object_detector: ros2 run angel_system_nodes berkeley_object_detector --ros-args
-            -r __ns:=${ROS_NAMESPACE}
-            -p image_topic:=PVFramesBGR
-            -p det_topic:=BerkeleyObjectDetections2d
-            -p det_conf_threshold:=0.1
-            -p cuda_device_id:=1
-            -p model_config:=${BERKELEY_CONFIG_DIR}/MC50-InstanceSegmentation/cooking/coffee/stage2/mask_rcnn_R_50_FPN_1x_demo.yaml
+        # - berkeley_object_detector: ros2 run angel_system_nodes berkeley_object_detector --ros-args
+        #     -r __ns:=${ROS_NAMESPACE}
+        #     -p image_topic:=PVFramesBGR
+        #     -p det_topic:=ObjectDetections2d
+        #     -p det_conf_threshold:=0.1
+        #     -p cuda_device_id:=1
+        #     -p model_config:=${BERKELEY_CONFIG_DIR}/MC50-InstanceSegmentation/cooking/coffee/stage2/mask_rcnn_R_50_FPN_1x_demo.yaml
         - object_detector: ros2 run angel_system_nodes object_detection_yolo_v7 --ros-args
             -r __ns:=${ROS_NAMESPACE}
-            -p image_topic:=PVFramesRGB
+            -p image_topic:=PVFramesBGR
             -p det_topic:=ObjectDetections2d
             -p net_checkpoint:=${MODEL_DIR}/yolov7-combined_objects-weights.pt
             -p inference_img_size:=1280
@@ -126,7 +126,7 @@ windows:
   - activity_classifier: ros2 run angel_system_nodes activity_classifier_tcn --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p image_ts_topic:=PVFramesBGR_TS
-      -p det_topic:=BerkeleyObjectDetections2d
+      -p det_topic:=ObjectDetections2d
       -p act_topic:=ActivityDetections
       -p model_weights:=${MODEL_DIR}/activity_tcn-coffee-checkpoint.ckpt
       -p model_mapping:=${MODEL_DIR}/activity_tcn-coffee-mapping.txt
@@ -190,7 +190,7 @@ windows:
            -r __ns:=${ROS_NAMESPACE}
            -p user_emotion_topic:=gpt_emotion_topic
            -p task_state_topic:=task_state_topic
-           -p object_detections_topic:=BerkeleyObjectDetections2d
+           -p object_detections_topic:=ObjectDetections2d
            -p action_classifications_topic:=ActivityDetections
            -p system_text_response_topic:=system_text_response_topic
            -p recipe_path:=${CONFIG_DIR}/mit_ll_eval_one_coffee_recipe_steps_v2.json
@@ -198,4 +198,5 @@ windows:
            -p obj_det_filter:=CENTROID
            -p pv_width:=1920
            -p pv_height:=1080
+           -p must_contain_target_phrase:=False
            -p debug_mode:=True
