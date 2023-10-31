@@ -78,7 +78,7 @@ class GlobalStepPredictorNode(Node):
         self.recipe_current_step_id = {}
 
         for task in self.gsp.trackers:
-            self.recipe_current_step_id[task["recipe"]] = task["current_granular_step"]
+            self.recipe_current_step_id[task["recipe"]] = task["current_broad_step"]
 
         # Initialize ROS hooks
         self._task_update_publisher = self.create_publisher(
@@ -127,7 +127,7 @@ class GlobalStepPredictorNode(Node):
 
         for task in tracker_dict_list:
             previous_step_id = self.recipe_current_step_id[task["recipe"]]
-            current_step_id = task["current_granular_step"]
+            current_step_id = task["current_broad_step"]
 
             # If previous and current are not the same, publish a task-update
             if previous_step_id != current_step_id:
@@ -174,7 +174,7 @@ class GlobalStepPredictorNode(Node):
 
         log.info(f"Publish task update w/ step: {task_step_str}")
         # Exclude background
-        task_step = task_state["current_granular_step"] - 1
+        task_step = task_state["current_broad_step"] - 1
         previous_step_str = task_state["broad_step_to_full_str"][
             max(task_state["current_broad_step"] - 1, 0)
         ]
@@ -185,7 +185,7 @@ class GlobalStepPredictorNode(Node):
 
         # Binary array simply hinged on everything
         completed_steps_arr = np.zeros(
-            task_state["total_num_granular_steps"] - 1,
+            task_state["total_num_broad_steps"] - 1,
             dtype=bool,
         )
         completed_steps_arr[:task_step] = True
