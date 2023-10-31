@@ -79,7 +79,17 @@ public class AngelARUIBridge : MonoBehaviour
     {
         // Update task status
         AngelARUI.Instance.SetCurrentObservedTask(msg.task_update.task_name);
-        AngelARUI.Instance.GoToStep(msg.task_update.task_name, msg.task_update.current_step_id);
+
+        // Check if the final step is complete
+        if (msg.task_update.completed_steps[msg.task_update.completed_steps.Length - 1])
+        {
+            // Advance the step ID past the end of the list to tell ARUI the task is done
+            AngelARUI.Instance.GoToStep(msg.task_update.task_name, msg.task_update.current_step_id + 1);
+        }
+        else
+        {
+            AngelARUI.Instance.GoToStep(msg.task_update.task_name, msg.task_update.current_step_id);
+        }
 
         // Handle user notifications
         for (int i = 0; i < msg.notifications.Length; i++)
