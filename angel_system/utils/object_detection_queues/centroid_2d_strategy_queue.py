@@ -4,6 +4,8 @@ from scipy.spatial import distance
 import threading
 from typing import *
 
+from angel_system.data.common.bounding_boxes import BoundingBoxes
+
 LOG = logging.getLogger(__name__)
 
 
@@ -22,22 +24,6 @@ class Centroid2DStrategyQueue:
     q.add(timestamp=2, BoundingBoxes(..., [('obj1', 'obj2', 'obj3')]))
     q.get_n_before(2)
     """
-
-    class BoundingBoxes:
-        
-        def __init__(self, left: List[int], right: List[int], top: List[int], bottom: List[int],
-                     item: List[Any]):
-            """
-            Wrapper of bounding boxes and a contained entity corresponding to each bounding box.
-            The item is intentionally kept ambiguous to provide flexibility (e.g. can pass in
-            an object label that corresponds to each bounding box or a tuple of an object label and
-            its confidence score).
-            """
-            self.left = left
-            self.right = right
-            self.top = top
-            self.bottom = bottom
-            self.item = item
 
     def __init__(self, n : int, center_x: int, center_y: int,
                  k: int = 1, log_func: Optional[Callable[..., None]] = None):
@@ -65,9 +51,9 @@ class Centroid2DStrategyQueue:
     def get_queue(self):
         return self.pq
 
-    def add(self, timestamp: int, item: BoundingBoxes):
+    def add(self, timestamp: int, bounding_boxed_item: BoundingBoxes):
         self.lock.acquire()
-        k_most_centered_objects = self._get_k_most_center_objects(item)
+        k_most_centered_objects = self._get_k_most_center_objects(bounding_boxed_item)
         heapq.heappush(self.pq, (timestamp, k_most_centered_objects))
         self.lock.release()
 

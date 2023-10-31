@@ -1,7 +1,7 @@
 import unittest
 
 from centroid_2d_strategy_queue import Centroid2DStrategyQueue
-
+from angel_system.data.common.bounding_boxes import BoundingBoxes
 
 
 RESOLUTION_W = 1920
@@ -18,7 +18,7 @@ class Centroid2DStrategyQueueTest(unittest.TestCase):
         
         # Dog is in the middle of the screen. Mug is in top left of the screen.
         # Computer is near bottom right of screen.
-        first_objects_detected = Centroid2DStrategyQueue.BoundingBoxes(
+        first_objects_detected = BoundingBoxes(
             [1, RESOLUTION_W * 3 // 4, RESOLUTION_W // 2],
             [2, RESOLUTION_W * 3 // 4 + 10, RESOLUTION_W // 2 + 20],
             [1, RESOLUTION_H * 3 // 4, RESOLUTION_H // 2],
@@ -28,7 +28,7 @@ class Centroid2DStrategyQueueTest(unittest.TestCase):
 
         # Ball is in top left of the screen. The butterfly is bottom right
         # of this ball. The cat is in the middle of the screen.
-        second_objects_detected = Centroid2DStrategyQueue.BoundingBoxes(
+        second_objects_detected = BoundingBoxes(
             [1, 2, RESOLUTION_W // 2],
             [2, 4, RESOLUTION_W // 2 + 20],
             [1, 2, RESOLUTION_H // 2],
@@ -38,16 +38,16 @@ class Centroid2DStrategyQueueTest(unittest.TestCase):
 
         # Shoes is in bottom right of the screen. The pencil is in the top left
         # of the screen. The child is in the top left of the screen.
-        third_objects_detected = Centroid2DStrategyQueue.BoundingBoxes(
+        third_objects_detected = BoundingBoxes(
             [RESOLUTION_W - 10, 2, 1],
             [RESOLUTION_W, 4, 2],
             [RESOLUTION_H - 10, 2, 1],
             [RESOLUTION_H, 4 , 2],
             ['shoes', 'pencil', 'child']
         )
-        q.add(timestamp=1, item=first_objects_detected)
-        q.add(timestamp=2, item=second_objects_detected)
-        q.add(timestamp=3, item=third_objects_detected)
+        q.add(timestamp=1, bounding_boxed_item=first_objects_detected)
+        q.add(timestamp=2, bounding_boxed_item=second_objects_detected)
+        q.add(timestamp=3, bounding_boxed_item=third_objects_detected)
         
         queue_state = q.get_queue()
         first_timestamped_item, second_timetsamped_item, third_timestamped_item = \
@@ -68,7 +68,7 @@ class Centroid2DStrategyQueueTest(unittest.TestCase):
         
         # Dog is in the middle of the screen. Mug is in top left of the screen.
         # Computer is near bottom right of screen.
-        first_objects_detected = Centroid2DStrategyQueue.BoundingBoxes(
+        first_objects_detected = BoundingBoxes(
             [1, RESOLUTION_W * 3 // 4, RESOLUTION_W // 2],
             [2, RESOLUTION_W * 3 // 4 + 10, RESOLUTION_W // 2 + 20],
             [1, RESOLUTION_H * 3 // 4, RESOLUTION_H // 2],
@@ -78,7 +78,7 @@ class Centroid2DStrategyQueueTest(unittest.TestCase):
 
         # Ball is in top left of the screen. The butterfly is bottom right
         # of this ball. The cat is in the middle of the screen.
-        second_objects_detected = Centroid2DStrategyQueue.BoundingBoxes(
+        second_objects_detected = BoundingBoxes(
             [1, 2, RESOLUTION_W // 2],
             [2, 4, RESOLUTION_W // 2 + 20],
             [1, 2, RESOLUTION_H // 2],
@@ -88,16 +88,16 @@ class Centroid2DStrategyQueueTest(unittest.TestCase):
 
         # Shoes is in bottom right of the screen. The pencil is in the top left
         # of the screen. The child is in the top left of the screen.
-        third_objects_detected = Centroid2DStrategyQueue.BoundingBoxes(
+        third_objects_detected = BoundingBoxes(
             [RESOLUTION_W - 10, 2, 1],
             [RESOLUTION_W, 4, 2],
             [RESOLUTION_H - 10, 2, 1],
             [RESOLUTION_H, 4 , 2],
             [('shoes', 0.9), ('pencil', 0.3), ('child', 0.5)]
         )
-        q.add(timestamp=1, item=first_objects_detected)
-        q.add(timestamp=2, item=second_objects_detected)
-        q.add(timestamp=3, item=third_objects_detected)
+        q.add(timestamp=1, bounding_boxed_item=first_objects_detected)
+        q.add(timestamp=2, bounding_boxed_item=second_objects_detected)
+        q.add(timestamp=3, bounding_boxed_item=third_objects_detected)
         
         queue_state = q.get_queue()
         first_timestamped_item, second_timetsamped_item, third_timestamped_item = \
@@ -122,7 +122,7 @@ class Centroid2DStrategyQueueTest(unittest.TestCase):
         
         # Dog is in the middle of the screen. Mug is in top left of the screen.
         # Computer is near bottom right of screen.
-        first_objects_detected = Centroid2DStrategyQueue.BoundingBoxes(
+        first_objects_detected = BoundingBoxes(
             [1, RESOLUTION_W * 3 // 4, RESOLUTION_W // 2],
             [2, RESOLUTION_W * 3 // 4 + 10, RESOLUTION_W // 2 + 20],
             [1, RESOLUTION_H * 3 // 4, RESOLUTION_H // 2],
@@ -132,7 +132,7 @@ class Centroid2DStrategyQueueTest(unittest.TestCase):
 
         # Ball is in top left of the screen. The butterfly is bottom right
         # of this ball. The cat is in the middle of the screen.
-        second_objects_detected = Centroid2DStrategyQueue.BoundingBoxes(
+        second_objects_detected = BoundingBoxes(
             [1, 2, RESOLUTION_W // 2],
             [2, 4, RESOLUTION_W // 2 + 20],
             [1, 2, RESOLUTION_H // 2],
@@ -142,16 +142,16 @@ class Centroid2DStrategyQueueTest(unittest.TestCase):
 
         # Shoes is in bottom right of the screen. The pencil is in the top left
         # of the screen. The child is in the top left of the screen.
-        third_objects_detected = Centroid2DStrategyQueue.BoundingBoxes(
+        third_objects_detected = BoundingBoxes(
             [RESOLUTION_W - 10, 2, 1],
             [RESOLUTION_W, 4, 2],
             [RESOLUTION_H - 10, 2, 1],
             [RESOLUTION_H, 4 , 2],
             ['shoes', 'pencil', 'child']
         )
-        q.add(timestamp=1, item=first_objects_detected)
-        q.add(timestamp=2, item=second_objects_detected)
-        q.add(timestamp=3, item=third_objects_detected)
+        q.add(timestamp=1, bounding_boxed_item=first_objects_detected)
+        q.add(timestamp=2, bounding_boxed_item=second_objects_detected)
+        q.add(timestamp=3, bounding_boxed_item=third_objects_detected)
         
         queue_state = q.get_queue()
         first_timestamped_item, second_timetsamped_item, third_timestamped_item = \
@@ -178,7 +178,7 @@ class Centroid2DStrategyQueueTest(unittest.TestCase):
         
         # Dog is in the middle of the screen. Mug is in top left of the screen.
         # Computer is near bottom right of screen.
-        first_objects_detected = Centroid2DStrategyQueue.BoundingBoxes(
+        first_objects_detected = BoundingBoxes(
             [1, RESOLUTION_W * 3 // 4, RESOLUTION_W // 2],
             [2, RESOLUTION_W * 3 // 4 + 10, RESOLUTION_W // 2 + 20],
             [1, RESOLUTION_H * 3 // 4, RESOLUTION_H // 2],
@@ -188,7 +188,7 @@ class Centroid2DStrategyQueueTest(unittest.TestCase):
 
         # Ball is in top left of the screen. The butterfly is bottom right
         # of this ball. The cat is in the middle of the screen.
-        second_objects_detected = Centroid2DStrategyQueue.BoundingBoxes(
+        second_objects_detected = BoundingBoxes(
             [1, 2, RESOLUTION_W // 2],
             [2, 4, RESOLUTION_W // 2 + 20],
             [1, 2, RESOLUTION_H // 2],
@@ -198,16 +198,16 @@ class Centroid2DStrategyQueueTest(unittest.TestCase):
 
         # Shoes is in bottom right of the screen. The pencil is in the top left
         # of the screen. The child is in the top left of the screen.
-        third_objects_detected = Centroid2DStrategyQueue.BoundingBoxes(
+        third_objects_detected = BoundingBoxes(
             [RESOLUTION_W - 10, 2, 1],
             [RESOLUTION_W, 4, 2],
             [RESOLUTION_H - 10, 2, 1],
             [RESOLUTION_H, 4 , 2],
             ['shoes', 'pencil', 'child']
         )
-        q.add(timestamp=1, item=first_objects_detected)
-        q.add(timestamp=2, item=second_objects_detected)
-        q.add(timestamp=3, item=third_objects_detected)
+        q.add(timestamp=1, bounding_boxed_item=first_objects_detected)
+        q.add(timestamp=2, bounding_boxed_item=second_objects_detected)
+        q.add(timestamp=3, bounding_boxed_item=third_objects_detected)
         
         no_items = q.get_n_before(timestamp=1)
         self.assertEqual([], no_items)
@@ -228,7 +228,7 @@ class Centroid2DStrategyQueueTest(unittest.TestCase):
         
         # Dog is in the middle of the screen. Mug is in top left of the screen.
         # Computer is near bottom right of screen.
-        first_objects_detected = Centroid2DStrategyQueue.BoundingBoxes(
+        first_objects_detected = BoundingBoxes(
             [1, RESOLUTION_W * 3 // 4, RESOLUTION_W // 2],
             [2, RESOLUTION_W * 3 // 4 + 10, RESOLUTION_W // 2 + 20],
             [1, RESOLUTION_H * 3 // 4, RESOLUTION_H // 2],
@@ -238,7 +238,7 @@ class Centroid2DStrategyQueueTest(unittest.TestCase):
 
         # Ball is in top left of the screen. The butterfly is bottom right
         # of this ball. The cat is in the middle of the screen.
-        second_objects_detected = Centroid2DStrategyQueue.BoundingBoxes(
+        second_objects_detected = BoundingBoxes(
             [1, 2, RESOLUTION_W // 2],
             [2, 4, RESOLUTION_W // 2 + 20],
             [1, 2, RESOLUTION_H // 2],
@@ -248,16 +248,16 @@ class Centroid2DStrategyQueueTest(unittest.TestCase):
 
         # Shoes is in bottom right of the screen. The pencil is in the top left
         # of the screen. The child is in the top left of the screen.
-        third_objects_detected = Centroid2DStrategyQueue.BoundingBoxes(
+        third_objects_detected = BoundingBoxes(
             [RESOLUTION_W - 10, 2, 1],
             [RESOLUTION_W, 4, 2],
             [RESOLUTION_H - 10, 2, 1],
             [RESOLUTION_H, 4 , 2],
             [('shoes', 0.9), ('pencil', 0.3), ('child', 0.5)]
         )
-        q.add(timestamp=1, item=first_objects_detected)
-        q.add(timestamp=2, item=second_objects_detected)
-        q.add(timestamp=3, item=third_objects_detected)
+        q.add(timestamp=1, bounding_boxed_item=first_objects_detected)
+        q.add(timestamp=2, bounding_boxed_item=second_objects_detected)
+        q.add(timestamp=3, bounding_boxed_item=third_objects_detected)
         
         no_items = q.get_n_before(timestamp=1)
         self.assertEqual([], no_items)
