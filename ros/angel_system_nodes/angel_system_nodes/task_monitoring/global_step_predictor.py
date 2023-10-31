@@ -208,10 +208,7 @@ class GlobalStepPredictorNode(Node):
         task_titles = []  # List of task titles associated with the graphs
         for task in self.gsp.trackers:
             # Retrieve step descriptions in the current task.
-            # TODO: This is a temporary implementation until the GSP has its "broad
-            #       steps" mapping working.
-            # task_steps = task["step_to_activity_desc"][1:]  # Exclude background
-            task_steps = task["step_to_full_str"].values()
+            task_steps = task["broad_step_to_full_str"][1:]  # Exclude background
 
             task_g = TaskGraph()
             task_g.task_steps = task_steps
