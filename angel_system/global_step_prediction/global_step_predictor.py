@@ -412,7 +412,7 @@ class GlobalStepPredictor:
                 ]
                 if current_granular_step == tracker["total_num_granular_steps"] - 1:
                     if current_activity in flipping_off_indexes:
-                        tracker["active"] == False
+                        tracker["active"] = False
                     continue
 
                 next_granular_step = current_granular_step + 1
