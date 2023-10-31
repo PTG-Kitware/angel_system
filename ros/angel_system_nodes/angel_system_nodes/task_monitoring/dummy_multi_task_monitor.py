@@ -105,7 +105,7 @@ class DummyMultiTaskMonitor(Node):
             with open(t["config_file"], "r") as f:
                 task_config = yaml.safe_load(f)
 
-            n_steps = len(task_config["steps"])
+            n_steps = len(task_config["labels"][1:])
 
             task_state_info = TaskStateInformation(
                 f"{t['id']}_{task_config['title']}",
@@ -114,7 +114,7 @@ class DummyMultiTaskMonitor(Node):
 
             # Load the list of task steps
             task_state_info.steps = [
-                step["description"] for step in task_config["steps"]
+                step["full_str"] for step in task_config["labels"][1:]
             ]
 
             self._task_state_dict[t["id"]] = task_state_info
@@ -167,33 +167,21 @@ class DummyMultiTaskMonitor(Node):
             message.latest_sensor_input_time = Time(0, 0)
 
         # Populate steps and current step
-        # TODO: DEPRECATE steps field here. Use query service instead.
-        message.steps = task_state.steps
-        last_step_id = len(message.steps) - 1
-
         if task_state.current_step is None:
             message.current_step_id = -1
             message.current_step = "None"
         else:
             # Getting the index of the step in the list-of-strings
-            steps_list_id = message.steps.index(task_state.current_step)
-            message.current_step_id = steps_list_id
-            message.current_step = message.steps[message.current_step_id]
+            message.current_step_id = task_state.current_step_id
+            message.current_step = task_state.current_step
 
         if task_state.previous_step is None:
             message.previous_step = "N/A"
         else:
             message.previous_step = task_state.previous_step
 
-        if message.current_step_id == last_step_id:
-            message.task_complete_confidence = 1.0
-        else:
-            message.task_complete_confidence = 0.0
-
         message.completed_steps = task_state.steps_complete.tolist()
-        log.debug(f"Steps complete: {message.completed_steps}")
-        message.hmm_step_confidence = [1.0] * len(task_state.steps_complete)
-        log.debug(f"HMM step confidence: {message.hmm_step_confidence}")
+        log.info(f"Steps complete: {message.completed_steps}")
 
         self._task_update_publisher.publish(message)
 
@@ -259,12 +247,16 @@ class DummyMultiTaskMonitor(Node):
         task_state.latest_act_classification_end_time = end_time
 
         curr_step_id = task_state.current_step_id
+        print(curr_step_id)
         if forward:
             new_step_id = curr_step_id + 1
 
-            if new_step_id >= len(task_state.steps):
+            if new_step_id > len(task_state.steps):
                 log.debug("Attempting to advance past end of list... ignoring")
                 return
+            if new_step_id == len(task_state.steps):
+                # Do not change the step id
+                new_step_id = curr_step_id
 
             # Mark this step as done
             task_state.steps_complete[curr_step_id] = True
@@ -284,6 +276,8 @@ class DummyMultiTaskMonitor(Node):
 
         task_state.current_step_id = new_step_id
         task_state.current_step = task_state.steps[new_step_id]
+
+        print(task_state)
 
         log.info(
             f"Advanced task {task_id} to step {new_step_id}: {task_state.current_step}"
