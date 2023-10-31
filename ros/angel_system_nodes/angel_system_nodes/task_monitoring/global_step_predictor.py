@@ -137,7 +137,6 @@ class GlobalStepPredictorNode(Node):
                 )
                 self.publish_task_state_message(
                     task,
-                    previous_step_id,
                     activity_msg.source_stamp_end_frame,
                 )
                 self.recipe_current_step_id[task["recipe"]] = current_step_id
@@ -145,7 +144,6 @@ class GlobalStepPredictorNode(Node):
     def publish_task_state_message(
         self,
         task_state: Dict,
-        previous_step_id: int,
         result_ts: Time,
     ) -> None:
         """
@@ -153,7 +151,6 @@ class GlobalStepPredictorNode(Node):
         TaskUpdates topic.
 
         :param task_state: TODO
-        :param previous_step_id: Integer ID of the previous task step.
         :param result_ts: Time of the latest frame input that went into
             estimation of the current task state.
         """
@@ -171,13 +168,15 @@ class GlobalStepPredictorNode(Node):
         # Populate steps and current step
         # TODO: This is a temporary implementation until the GSP has its "broad
         #       steps" mapping working.
-        task_step_str = task["step_to_full_str"][task["current_broad_step"]]
+        task_step_str = task_state["broad_step_to_full_str"][
+            task_state["current_broad_step"]
+        ]
 
         log.info(f"Publish task update w/ step: {task_step_str}")
         # Exclude background
         task_step = task_state["current_granular_step"] - 1
-        previous_step_str = task["step_to_full_str"][
-            max(task["current_broad_step"] - 1, 0)
+        previous_step_str = task_state["broad_step_to_full_str"][
+            max(task_state["current_broad_step"] - 1, 0)
         ]
 
         message.current_step_id = task_step
@@ -209,10 +208,7 @@ class GlobalStepPredictorNode(Node):
         task_titles = []  # List of task titles associated with the graphs
         for task in self.gsp.trackers:
             # Retrieve step descriptions in the current task.
-            # TODO: This is a temporary implementation until the GSP has its "broad
-            #       steps" mapping working.
-            # task_steps = task["step_to_activity_desc"][1:]  # Exclude background
-            task_steps = task["step_to_full_str"].values()
+            task_steps = task["broad_step_to_full_str"][1:]  # Exclude background
 
             task_g = TaskGraph()
             task_g.task_steps = task_steps
@@ -253,19 +249,22 @@ class GlobalStepPredictorNode(Node):
 
         vid_name = self.gt_video_dset.dataset["videos"][0]["name"]
         vid_id = self.gt_video_dset.dataset["videos"][0]["id"]
-        self.gsp.plot_gt_vs_predicted_one_recipe(
+        log.info("Generating plots...")
+        out_p = self.gsp.plot_gt_vs_predicted_one_recipe(
             granular_step_gts,
             recipe_type,
             fname_suffix=f"{vid_name}_{str(vid_id)}_granular",
             granular_or_broad="granular",
             output_dir=self.gt_output_dir_override,
         )
-        # self.gsp.plot_gt_vs_predicted_one_recipe(
+        log.info(f"Generated granular plot to: {out_p}")
+        # out_p = self.gsp.plot_gt_vs_predicted_one_recipe(
         #     broad_step_gts,
         #     recipe_type,
         #     fname_suffix=f"{vid_name}_{str(vid_id)}_broad",
         #     granular_or_broad="broad",
         # )
+        # log.info(f"Generated broad plot to: {out_p}")
 
     def destroy_node(self):
         log = self.get_logger()
