@@ -20,7 +20,7 @@ public class ExampleScript : MonoBehaviour
         yield return new WaitForSeconds(1f);
 
         AngelARUI.Instance.DebugShowEyeGazeTarget(true);
-        AngelARUI.Instance.PrintVMDebug = true;
+        AngelARUI.Instance.PrintVMDebug = false;
 
         //test with dummy data
         var taskIDs = new List<string> { "Pinwheels", "Coffee", "Oatmeal", "Quesadilla", "Tea" };
@@ -57,15 +57,25 @@ public class ExampleScript : MonoBehaviour
         _currentStepMap[_currentTask]++;
         AngelARUI.Instance.GoToStep(_currentTask, _currentStepMap[_currentTask]);
 
+        yield return new WaitForSeconds(1f);
+
         _currentStepMap[_currentTask]++;
         AngelARUI.Instance.GoToStep(_currentTask, _currentStepMap[_currentTask]);
 
-        AngelARUI.Instance.SetNotification("Be careful!");
+        yield return new WaitForSeconds(2f);
+
+        _currentStepMap[_currentTask]++;
+        AngelARUI.Instance.GoToStep(_currentTask, _currentStepMap[_currentTask]);
+        AngelARUI.Instance.RemoveNotification();
 
         yield return new WaitForSeconds(2f);
 
         _currentStepMap["Pinwheels"]++;
         AngelARUI.Instance.GoToStep("Pinwheels", _currentStepMap["Pinwheels"]);
+
+        yield return new WaitForSeconds(2f);
+
+        AngelARUI.Instance.SetCurrentObservedTask("Pinwheels");
     }
 
 #if UNITY_EDITOR
@@ -123,7 +133,7 @@ public class ExampleScript : MonoBehaviour
         }
         if (Input.GetKeyUp(KeyCode.D))
         {
-            AngelARUI.Instance.PrintVMDebug = true;
+            AngelARUI.Instance.PrintVMDebug = !AngelARUI.Instance.PrintVMDebug;
         }
         if (Input.GetKeyUp(KeyCode.F))
         {

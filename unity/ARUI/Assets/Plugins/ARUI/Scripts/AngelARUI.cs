@@ -128,8 +128,7 @@ public class AngelARUI : Singleton<AngelARUI>
     /// <param name="stepIndex">index of the current task that should be highlighted in the UI</param>
     public void GoToStep(string taskID, int stepIndex)
     {
-        DataProvider.Instance.SetCurrentStep(taskID, stepIndex);
-        
+        DataProvider.Instance.SetCurrentStep(taskID, stepIndex);   
     }
 
     /// <summary>
@@ -149,30 +148,14 @@ public class AngelARUI : Singleton<AngelARUI>
 
     #endregion
 
-    #region Callbacks
-
-    ///// <summary>
-    ///// If no confirmation window is active at the moment, the user is shown a 
-    ///// timed confirmation window. If the user confirms the dialogue, the confirmationCallback action is invoked. 
-    ///// </summary>
-    ///// <param name="msg">message that is shown in the confirmation dialogue</param>
-    public void AskForUserConfirmation(string msg, UnityAction confirmationCallback)
-    {
-        if (msg == null || msg.Length == 0) return;
-
-        GameObject window = Instantiate(_confirmationWindowPrefab, transform);
-        window.gameObject.name = "***ARUI-Confirmation-" + msg;
-        var _confirmationWindow = window.AddComponent<ConfirmationDialogue>();
-        _confirmationWindow.InitializeConfirmationNotification(msg, confirmationCallback);
-    }
-
-    #endregion
 
     #region Notifications
 
     /// <summary>
     /// Forward a text-base message to the orb, and the orb will output the message using audio.
     /// The message will be cut off after 50 words, which take around 25 seconds to speak on average. 
+    /// 
+    /// Iterrupts the last message that was spoken
     /// </summary>
     /// <param name="message"></param>
     public void PlayMessageAtOrb(string message)

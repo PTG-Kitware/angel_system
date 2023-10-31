@@ -97,7 +97,7 @@ public class OrbFollowerSolver : Solver
                 goalPosition = _coolDownTarget;
 
             GoalPosition = goalPosition;
-            transform.rotation = Quaternion.LookRotation(goalPosition - ReferencePoint, AngelARUI.Instance.ARCamera.transform.up);
+            transform.rotation = Quaternion.LookRotation(goalPosition - ReferencePoint, Vector3.up);
         }
         else if (!(_isLookingAtOrbFlag))
         {

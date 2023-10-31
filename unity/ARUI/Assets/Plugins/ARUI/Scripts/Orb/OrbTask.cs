@@ -12,6 +12,7 @@ public enum TaskType
 public class OrbTask : MonoBehaviour
 {
     private TaskType _taskType = TaskType.secondary;
+    public TaskType TaskType { get { return _taskType; } }
 
     private string _taskname;
     public string TaskName {
@@ -49,7 +50,6 @@ public class OrbTask : MonoBehaviour
     private Color _activeColorText = Color.white;
 
     private bool _textIsFadingOut = false;
-    private bool _textIsFadingIn = false;
 
     public void InitializeComponents(TaskType currenType)
     {
@@ -102,8 +102,6 @@ public class OrbTask : MonoBehaviour
         _pieProgressRect.End = new Vector3(_xEnd,0,0);
 
         _textContainer.TextColor = new Color(_activeColorText.r, _activeColorText.g, _activeColorText.b, 1);
-
-        SetPieActive(false);
     }
 
     private void Update()
@@ -112,124 +110,29 @@ public class OrbTask : MonoBehaviour
             EyeGazeManager.Instance.CurrentHitObj.GetInstanceID() == _textContainer.gameObject.GetInstanceID();
     }
 
-    public void UpdateMessageVisibility(OrbTask currentactivePie)
-    {
-        if (currentactivePie == null || _currentStepText.text.Length == 0) return;
-
-        if (!_orbRect.gameObject.activeSelf)
-        {
-            SetPieTextActive(false);
-            return;
-        }
-
-        //only show the pie if it is the current observed task
-        if (_orbRect.gameObject.activeSelf && !_pieText.activeSelf && _taskname.Equals(currentactivePie.TaskName))
-        {
-            SetPieTextActive(true);
-            return;
-        }
-
-        if (EyeGazeManager.Instance.CurrentHit.Equals(EyeTarget.pieCollider) && !_textIsFadingIn && gameObject.activeSelf)
-        {
-            StartCoroutine(FadeInMessage());
-            return;
-        }
-
-        if (!_taskname.Equals(currentactivePie.TaskName) && EyeGazeManager.Instance.CurrentHitObj != null &&
-            EyeGazeManager.Instance.CurrentHitObj.GetInstanceID() == currentactivePie.Text.gameObject.GetInstanceID() && !_textIsFadingOut
-            && gameObject.activeSelf)
-        {
-            StartCoroutine(FadeOutAllMessages());
-            return;
-
-        } else if (!_taskname.Equals(currentactivePie.TaskName) && EyeGazeManager.Instance.CurrentHit.Equals(EyeTarget.orbMessage) &&
-            EyeGazeManager.Instance.CurrentHitObj != null &&
-            EyeGazeManager.Instance.CurrentHitObj.GetInstanceID() != currentactivePie.Text.gameObject.GetInstanceID() && !_textIsFadingIn)
-        {
-            SetPieTextActive(true);
-            return;
-        }
-    }
-
-    /// <summary>
-    /// Fade out message from the moment the user does not look at the message anymore
-    /// </summary>
-    /// <returns></returns>
-    private IEnumerator FadeOutAllMessages()
-    {
-        float fadeOutStep = 0.001f;
-        _textIsFadingOut = true;
-
-        yield return new WaitForSeconds(2.0f);
-
-        float shade = ARUISettings.OrbMessageBGColor.r;
-        float alpha = 1f;
-
-        while (_textIsFadingOut && shade > 0)
-        {
-            alpha -= (fadeOutStep * 20);
-            shade -= fadeOutStep;
-
-            if (alpha < 0)
-                alpha = 0;
-            if (shade < 0)
-                shade = 0;
-
-            Text.BackgroundColor = new Color(shade, shade, shade, shade);
-            SetTextAlpha(alpha);
-
-            yield return new WaitForEndOfFrame();
-        }
-
-        _textIsFadingOut = false;
-        _pieText.SetActive(!(shade <= 0));
-    }
-
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <returns></returns>
-    private IEnumerator FadeInMessage()
-    {
-        _textIsFadingIn = true;
-        yield return new WaitForSeconds(0.8f);
-
-        if (EyeGazeManager.Instance.CurrentHit.Equals(EyeTarget.pieCollider));
-            SetPieTextActive(true);
-
-        _textIsFadingIn = false;
-    }
-
-
-    private void SetPieTextActive(bool isActive)
-    {
-        _pieText.SetActive(isActive);
-        
-        if (isActive)
-        {
-            StopCoroutine(FadeOutAllMessages());
-            _textIsFadingOut = false;
-            Text.BackgroundColor = ARUISettings.OrbMessageBGColor;
-            SetTextAlpha(1);
-        }
-    }
-
     public void SetPieActive(bool active)
     {
         if (active && _currentStepText.text.Length == 0) return;
 
         _orbRect.gameObject.SetActive(active);
-
-        if (!active)
-        {
-            _pieText.SetActive(false);
-        }
+        _pieText.SetActive(active);
     }
 
+
+    /// <summary>
+    /// Set the text message of this orb task container.
+    /// </summary>
+    /// <param name="stepIndex"></param>
+    /// <param name="total"></param>
+    /// <param name="message"></param>
     public void SetTaskMessage(int stepIndex, int total, string message)
     {
+        int maxChar = 110;
+        if (_taskType.Equals(TaskType.primary))
+            maxChar = 80;
+
         string newPotentialMessage = Utils.SplitTextIntoLines(TaskName + " (" + (stepIndex + 1) + "/" + total + ") : " +
-            message, 110);
+            message, maxChar);
 
         _currentStepText.text = newPotentialMessage;
     }
@@ -237,7 +140,7 @@ public class OrbTask : MonoBehaviour
     #region Update Pie
 
     /// <summary>
-    /// 
+    /// Update the green task progress bar 
     /// </summary>
     public void UpdateCurrentTaskStatus(float ratio)
     {
@@ -266,7 +169,7 @@ public class OrbTask : MonoBehaviour
     #endregion
 
     /// <summary>
-    /// 
+    /// Update anchor of textbox
     /// </summary>
     /// <param name="anchor"></param>
     public void UpdateAnchor() => _textContainer.UpdateAnchorInstant();

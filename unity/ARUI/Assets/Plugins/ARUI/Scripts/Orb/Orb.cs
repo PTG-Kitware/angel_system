@@ -199,14 +199,14 @@ public class Orb : Singleton<Orb>
     /// Set the task messages the orb communicates, if 'message' is less than 2 char, the message is deactivated
     /// </summary>
     /// <param name="message"></param>
-    private void SetTaskMessage(Dictionary<string, TaskList> currentSelectedTasks, string currentActiveTask)
+    private void SetTaskMessage(Dictionary<string, TaskList> currentSelectedTasks)
     {
-        _messageContainer.UpdateAllTaskMessages(currentSelectedTasks, currentActiveTask);
+        _messageContainer.UpdateAllTaskMessages(currentSelectedTasks);
 
         if (_allOrbColliders.Count == 0)
         {
             _allOrbColliders.Add(transform.GetChild(0).GetComponent<BoxCollider>());
-            _allOrbColliders.AddRange(_messageContainer.GetAllColliders());
+            _allOrbColliders.AddRange(_messageContainer.AllColliders);
         }
     }
 
@@ -229,19 +229,6 @@ public class Orb : Singleton<Orb>
         _followSolver.SetSticky(isSticky);
 
         if (isSticky)
-            _messageContainer.IsMessageContainerActive = false;
-    }
-
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <param name="position"></param>
-    /// <param name="isSnapped"></param>
-    public void SnapToTaskList(Vector3 position, bool isSnapped)
-    {
-        _followSolver.SnapToTaskList(position, isSnapped);
-
-        if (isSnapped && _messageContainer.IsMessageContainerActive)
             _messageContainer.IsMessageContainerActive = false;
     }
 
@@ -294,7 +281,7 @@ public class Orb : Singleton<Orb>
     /// </summary>
     private void HandleUpdateActiveStepEvent()
     {
-        SetTaskMessage(DataProvider.Instance.CurrentSelectedTasks, DataProvider.Instance.CurrentObservedTask);
+        SetTaskMessage(DataProvider.Instance.CurrentSelectedTasks);
     }
 
     #endregion

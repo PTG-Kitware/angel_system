@@ -19,6 +19,8 @@ public class MultiTaskList : Singleton<MultiTaskList>
     [SerializeField]
     private float disableDelay = 1.0f;
 
+    private bool _isActive = false; 
+
     public void Start()
     {
         //Set up child objects
@@ -30,8 +32,9 @@ public class MultiTaskList : Singleton<MultiTaskList>
         DataProvider.Instance.RegisterDataSubscriber(() => HandleDataUpdateEvent(), SusbcriberType.TaskListChanged);
         DataProvider.Instance.RegisterDataSubscriber(() => HandleDataUpdateEvent(), SusbcriberType.ObservedTaskChanged);
         DataProvider.Instance.RegisterDataSubscriber(() => HandleDataUpdateEvent(), SusbcriberType.CurrentStepChanged);
-        //Set inactive by default
-        ToggleOverview(false);
+
+        _taskOverviewContainer.SetActive(false);
+        _isActive = false;
     }
 
     /// <summary>
@@ -44,6 +47,8 @@ public class MultiTaskList : Singleton<MultiTaskList>
 
     private void Update()
     {
+        if (!_isActive) return;
+
         //if eye gaze not on task objects then do fade out currentindex
         if (EyeGazeManager.Instance != null && EyeGazeManager.Instance.CurrentHit != EyeTarget.listmenuButton_tasks)
         {
@@ -75,7 +80,7 @@ public class MultiTaskList : Singleton<MultiTaskList>
             tasklist.multiListInstance.Text.gameObject.SetActive(!anyMenuActive);
 
         // Snap orb
-        Orb.Instance.SetSticky(!anyMenuActive && _taskOverviewContainer.activeSelf);
+        Orb.Instance.SetSticky(!anyMenuActive || (EyeGazeManager.Instance != null && EyeGazeManager.Instance.CurrentHit == EyeTarget.listmenuButton_tasks));
     }
 
     #region Setting inidvidual recipe menus active/inative
@@ -120,12 +125,7 @@ public class MultiTaskList : Singleton<MultiTaskList>
         if (tasks == null) return;
 
         if (_containers == null || (_containers.Count == 0 && tasks.Count>0))
-        {
-            //Set Containers for the first time
-            InitializeAllContainers(tasks, currTask);
-        }
-
-        ToggleOverview(tasks.Count > 0);
+            InitializeAllContainers(tasks);
 
         foreach (KeyValuePair<string, TaskList> pair in tasks)
         { 
@@ -149,11 +149,10 @@ public class MultiTaskList : Singleton<MultiTaskList>
     }
 
     /// <summary>
-    /// 
+    /// TODO
     /// </summary>
     /// <param name="tasks"></param>
-    /// <param name="currTask"></param>
-    private void InitializeAllContainers(Dictionary<string, TaskList> tasks, string currTask)
+    private void InitializeAllContainers(Dictionary<string, TaskList> tasks)
     {
         _containers = new Dictionary<string, TaskOverviewContainerRepo>();
 
@@ -189,9 +188,13 @@ public class MultiTaskList : Singleton<MultiTaskList>
         {
             _taskOverviewContainer.SetActive(true);
             TasklistPositionManager.Instance.SnapToCentroid();
+            _isActive = true;
+
+            MultiTaskList.Instance.UpdateAllSteps(DataProvider.Instance.CurrentSelectedTasks, DataProvider.Instance.CurrentObservedTask);
         } else
         {
             _taskOverviewContainer.SetActive(false);
+            _isActive = false;
         }
     }
 
@@ -245,13 +248,6 @@ public class MultiTaskList : Singleton<MultiTaskList>
             yield return null;
 
     }
-
-    /// <summary>
-    /// Set the overview (containing all task data) active 
-    /// or inactive
-    /// </summary>
-    /// <param name="active"></param>
-    private void ToggleOverview(bool active) => _taskOverviewContainer.SetActive(active);
 
     #endregion
 }
