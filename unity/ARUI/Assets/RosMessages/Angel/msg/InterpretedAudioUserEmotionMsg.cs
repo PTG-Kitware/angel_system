@@ -14,7 +14,7 @@ namespace RosMessageTypes.Angel
         public override string RosMessageName => k_RosMessageName;
 
         // 
-        //  Message communicating an interpreted User Audio from an audio-based user
+        //  Message communicating an interpreted User Audio emotion from an audio-based user
         //  utterance.
         // 
         //  The header primarily encapsulates when this message was emitted.

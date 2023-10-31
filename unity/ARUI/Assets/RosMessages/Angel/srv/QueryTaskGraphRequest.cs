@@ -14,7 +14,8 @@ namespace RosMessageTypes.Angel
         public override string RosMessageName => k_RosMessageName;
 
         //  Get all of the task graphs for the current tasks.
-        //  Request
+        //  This field is required b/c the ROS TCP bridge cannot handle deserializing an
+        //  empty request
         public byte test;
 
         public QueryTaskGraphRequest()
