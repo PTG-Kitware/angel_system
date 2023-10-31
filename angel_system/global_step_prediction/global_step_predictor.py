@@ -481,9 +481,11 @@ class GlobalStepPredictor:
         fname_suffix=None,
         granular_or_broad="granular",  # "granular" or "broad"
         output_dir="outputs",
-    ):
+    ) -> Path:
         """
-        Plot gt vs predicted class across all vid frames
+        Plot gt vs predicted class across all vid frames.
+
+        :returns: The filesystem path written to.
         """
         assert granular_or_broad in ["granular", "broad"]
         assert recipe_type in self.recipe_types
@@ -505,7 +507,9 @@ class GlobalStepPredictor:
         output_dir_p.mkdir(parents=True, exist_ok=True)
         title = f"plot_pred_vs_gt_{recipe_type}_{fname_suffix}.png"
         plt.title(title)
-        fig.savefig(output_dir_p / title)
+        output_file_path = output_dir_p / title
+        fig.savefig(output_file_path)
+        return output_file_path
 
     def determine_recipe_from_gt_first_activity(self, activity_gts):
         """
