@@ -10,7 +10,6 @@ import os
 import queue
 import rclpy
 from rclpy.node import Node
-from scipy.spatial import distance
 from termcolor import colored
 import threading
 from typing import *
@@ -23,6 +22,7 @@ from angel_msgs.msg import (
     TaskUpdate,
 )
 from angel_utils import declare_and_get_parameters
+from angel_system.data.common import bounding_boxes
 from angel_system.utils.object_detection_queues import centroid_2d_strategy_queue
 
 openai.organization = os.getenv("OPENAI_ORG_ID")
@@ -48,7 +48,7 @@ PARAM_OBJECT_DETECTION_FILTER_STRATEGY = "obj_det_filter"
 
 # Below indicates how many of the last n detected objects should be surfaced
 # in the LLM prompt. These objects do NOT have to be unique.
-PARAM_OBJECT_LAST_N_OBJECTS = "obj_det_last_n"
+PARAM_OBJECT_LAST_N_OBJ_DETECTIONS = "obj_det_last_n"
 
 # Below are the corresponding model thresholds.
 PARAM_OBJECT_DETECTION_THRESHOLD = "object_det_threshold"
@@ -87,7 +87,8 @@ PROMPT_VARIABLES = [
     "current_step",
     "emotion",
     "action",
-    "observables",
+    "centered_observables",
+    "all_observables",
     "question",
 ]
 
@@ -118,7 +119,7 @@ class VisualQuestionAnswerer(Node):
                 (PARAM_PROMPT_TEMPLATE_PATH,),
                 (PARAM_IMAGE_WIDTH,),
                 (PARAM_IMAGE_HEIGHT,),
-                (PARAM_OBJECT_LAST_N_OBJECTS, 10),
+                (PARAM_OBJECT_LAST_N_OBJ_DETECTIONS, 5),
                 (PARAM_OBJECT_DETECTION_THRESHOLD, 0.8),
                 (PARAM_ACT_CLFN_THRESHOLD, 0.8),
                 (OUT_QA_TOPIC,),
@@ -162,7 +163,7 @@ class VisualQuestionAnswerer(Node):
             )
 
         self.object_dtctn_threshold = param_values[PARAM_OBJECT_DETECTION_THRESHOLD]
-        self.object_dtctn_last_n_objects = param_values[PARAM_OBJECT_LAST_N_OBJECTS]
+        self.object_dtctn_last_n_obj_detections = param_values[PARAM_OBJECT_LAST_N_OBJ_DETECTIONS]
 
         # Configure supplemental input action classification criteria.
         self.action_clfn_threshold = param_values[PARAM_ACT_CLFN_THRESHOLD]
@@ -174,8 +175,10 @@ class VisualQuestionAnswerer(Node):
         self.detected_objects_queue = queue.Queue()
         self.centroid_object_queue = \
             centroid_2d_strategy_queue.Centroid2DStrategyQueue(
-                8, self.pv_center_coordinate[0], self.pv_center_coordinate[1],
-                k=1)
+                self.object_dtctn_last_n_obj_detections,
+                self.pv_center_coordinate[0], self.pv_center_coordinate[1],
+                k=1, # the number of top-k objects to obtain from each detection.
+                )
         
         self.dialogue_history = []
         self.handler_thread = threading.Thread(target=self.process_question_queue)
@@ -307,17 +310,22 @@ class VisualQuestionAnswerer(Node):
         """
         Stores all detected objects with a confidence score above IN_OBJECT_DETECTION_THRESHOLD.
         """
-        # We will queue timestamped lists of pairs of (detections, confidence scores).
+        # We queue timestamped lists of pairs of (detections, confidence scores) for centered
+        # objects based on centroid distance from the middle.
         self.centroid_object_queue.add(
             self._get_sec(msg),
-            centroid_2d_strategy_queue.Centroid2DStrategyQueue.BoundingBoxes(
+            bounding_boxes.BoundingBoxes(
                 msg.left, msg.right, msg.top, msg.bottom,
                 item=list(zip(msg.label_vec, msg.label_confidences))
                 ))
+        
+        # We queue ALL objects above threshold, regardless if they are centered in the user's
+        # perspective.
+        self._add_detected_objects_above_threshold(msg)
 
     def _add_detected_objects_above_threshold(self, msg):
         """
-        Queuse all objects above a configure threshold.
+        Queuse all objects above a configured threshold.
         """
         detected_objs = set()
         for obj, score in zip(msg.label_vec, msg.label_confidences):
@@ -348,12 +356,10 @@ class VisualQuestionAnswerer(Node):
                 break
         return latest_action
 
-    def _get_last_n_observables(self, curr_time: int, n: int) -> str:
+    def _get_latest_centered_observables(self, curr_time: int) -> str:
         """
-        Returns a comma-delimited list of observed objects per all
+        Returns a comma-delimited list of "centered" objects per all
         entities in self.detected_objects_queue that occurred before a provided time.
-
-
         :param curr_time: The time for which objects must have been detected before.
         :param n: The last n objects.
         :return: returns a string-ified list of the latest observables
@@ -363,16 +369,39 @@ class VisualQuestionAnswerer(Node):
         timestamped_detections = self.centroid_object_queue.get_n_before(timestamp=curr_time)
         if timestamped_detections:
             if self.debug_mode:
-                print(f"Timestamped detections based on centroid distance are:{timestamped_detections}")
-            # Recall that we passed in timestamped lists of pairs of (detections, confidence scores).
-            top_k_obj_lists = [j for _, j in timestamped_detections]
-            for top_k_obj_list in top_k_obj_lists:
-                for centroid_dist_obj in top_k_obj_list:
-                    centroid, obj_score  = centroid_dist_obj
+                print(f"Timestamped detections based on centroid distance are: " +\
+                      f"{timestamped_detections}")
+            # Recall that we passed in timestamped lists of pairs of
+            # (detection, confidence score).
+            centered_obj_detections_lists = [j for _, j in timestamped_detections]
+            for centered_obj_detections in centered_obj_detections_lists:
+                for centered_obj_detection in centered_obj_detections:
+                    centroid, obj_score  = centered_obj_detection
                     obj, score = obj_score
                     observables.add(obj)
             return ", ".join(observables)
 
+    def _get_latest_observables(self, curr_time: int, n: int) -> str:
+        """
+        Returns a comma-delimited list of all observed objects per all
+        entities in self.detected_objects_queue that occurred before a provided time.
+        Only refers to the latest n detections.
+        :param curr_time: The time for which objects must have been detected before.
+        :param n: The last n objects.
+        :return: returns a string-ified list of the latest observables
+        """
+        detections = []
+        while not self.detected_objects_queue.empty():
+            next_detections = self.detected_objects_queue.queue[0]
+            if next_detections.time < curr_time:
+                detections.append(self.detected_objects_queue.get())
+            else:
+                break
+        observables = set()
+        for detection in detections[-n:]:
+            for obj in detection.entity:
+                observables.add(obj)
+        return ", ".join(observables)
 
     def get_response(
         self,
@@ -380,7 +409,8 @@ class VisualQuestionAnswerer(Node):
         chat_history: str,
         current_step: str,
         action: str,
-        observables: str,
+        centered_observables: str,
+        all_observables: str,
     ):
         """
         Generate a response to the utterance, enriched with the addition of
@@ -395,7 +425,8 @@ class VisualQuestionAnswerer(Node):
                 chat_history=chat_history,
                 current_step=current_step,
                 action=action,
-                observables=observables,
+                centered_observables=centered_observables,
+                all_observables=all_observables,
                 emotion=msg.user_emotion,
                 question=msg.utterance_text,
             )
@@ -405,7 +436,8 @@ class VisualQuestionAnswerer(Node):
                     chat_history=chat_history,
                     current_step=current_step,
                     action=action,
-                    observables=observables,
+                    centered_observables=centered_observables,
+                    all_observables=all_observables,
                     emotion=msg.user_emotion,
                     question=msg.utterance_text,
                 ).to_string()
@@ -443,11 +475,15 @@ class VisualQuestionAnswerer(Node):
             action = self._get_latest_action(start_time)
             self.log.info(f"Latest action: {action}")
 
-            # Get detected objects.
-            observables = self._get_last_n_observables(
-                start_time, self.object_dtctn_last_n_objects
-            )
-            self.log.info(f"Observed objects: {observables}")
+            # Get centered detected objects.
+            centered_observables = \
+                self._get_latest_centered_observables(start_time)
+            self.log.info(f"Observed objects: {centered_observables}")
+            
+            # Get all detected objects.
+            all_observables = self._get_latest_observables(start_time,
+                                                       self.object_dtctn_last_n_obj_detections)
+            self.log.info(f"Observed objects: {all_observables}")
 
             # Generate response.
             response = self.get_response(
@@ -455,7 +491,8 @@ class VisualQuestionAnswerer(Node):
                 self._get_dialogue_history(),
                 self._get_current_step(),
                 action,
-                observables,
+                centered_observables,
+                all_observables,
             )
             self.publish_generated_response(question_msg.utterance_text, response)
             self._add_dialogue_history(question_msg.utterance_text, response)

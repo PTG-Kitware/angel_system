@@ -12,7 +12,9 @@ My Emotion: {emotion}.
 
 My Current Action: {action}.
 
-Objects In Front of Me: {observables}.
+Objects In Front of Me: {centered_observables}.
+
+Objects Nearby: {all_observables}
 
 My Question: {question}
 
