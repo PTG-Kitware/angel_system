@@ -247,7 +247,6 @@ class DummyMultiTaskMonitor(Node):
         task_state.latest_act_classification_end_time = end_time
 
         curr_step_id = task_state.current_step_id
-        print(curr_step_id)
         if forward:
             new_step_id = curr_step_id + 1
 
@@ -276,8 +275,6 @@ class DummyMultiTaskMonitor(Node):
 
         task_state.current_step_id = new_step_id
         task_state.current_step = task_state.steps[new_step_id]
-
-        print(task_state)
 
         log.info(
             f"Advanced task {task_id} to step {new_step_id}: {task_state.current_step}"
