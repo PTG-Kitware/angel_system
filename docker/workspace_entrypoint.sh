@@ -18,11 +18,4 @@ fi
 # Activate our workspace
 source "${ANGEL_WORKSPACE_DIR}/workspace_setenv.sh"
 
-# If CYCLONE_DDS_INTERFACE is defined to a value, then template
-if [[ -n "$CYCLONE_DDS_INTERFACE" ]]
-then
-  envsubst <"${SCRIPT_DIR}/cyclonedds_profile.xml.tmpl" >"${SCRIPT_DIR}/cyclonedds_profile.xml"
-  export CYCLONEDDS_URI=file://${SCRIPT_DIR}/cyclonedds_profile.xml
-fi
-
 exec "$@"

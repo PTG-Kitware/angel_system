@@ -1,0 +1,116 @@
+#
+# Live testing of the Question Answering and related audio nodes.
+#
+
+name: eval-live-qa
+root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
+
+# Optional tmux socket
+# socket_name: foo
+
+# Note that the pre and post options have been deprecated and will be replaced by
+# project hooks.
+
+# Project hooks
+
+# Runs on project start, always
+# on_project_start: command
+on_project_start: |
+  export ROS_NAMESPACE=${ROS_NAMESPACE:-/debug}
+  export HL2_IP=${HL2_IP:-10.0.0.170}
+  export CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/config
+  export NODE_CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/src/angel_system_nodes/configs
+  export MODEL_DIR=${ANGEL_WORKSPACE_DIR}/model_files
+
+# Run on project start, the first time
+# on_project_first_start: command
+
+# Run on project start, after the first time
+# on_project_restart: command
+
+# Run on project exit ( detaching from tmux session )
+# on_project_exit: command
+
+# Run on project stop
+# on_project_stop: command
+
+# Runs in each window and pane before window/pane specific commands. Useful for setting up interpreter versions.
+# pre_window: rbenv shell 2.0.0-p247
+
+# Pass command line options to tmux. Useful for specifying a different tmux.conf.
+# tmux_options: -f ~/.tmux.mac.conf
+tmux_options: -f <%= ENV["ANGEL_WORKSPACE_DIR"] %>/tmux/tmux.conf
+
+windows:
+  - datahub: ros2 run ros_tcp_endpoint default_server_endpoint --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p ROS_IP:=0.0.0.0
+  - hl2ss_bridge: ros2 run angel_system_nodes hl2ss_ros_bridge --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p ip_addr:=${HL2_IP}
+      -p image_topic:=PVFramesBGR
+      -p image_ts_topic:=PVFramesBGR_TS
+      -p hand_pose_topic:=disable
+      -p audio_topic:=HeadsetAudioData
+      -p sm_topic:=disable
+      -p head_pose_topic:=disable
+      -p pv_width:=1280
+      -p pv_height:=720
+      -p pv_framerate:=30
+      -p sm_freq:=5
+      -p rm_depth_AHAT:=disable
+
+  # Audio nodes
+  - vocal:
+      layout: even-vertical
+      panes:
+        - vad: ros2 run angel_system_nodes voice_activity_detector --ros-args
+            -r __ns:=${ROS_NAMESPACE}
+            -p input_audio_topic:=HeadsetAudioData
+            -p output_voice_activity_topic:=DetectedVoiceData
+            -p vad_server_url:=http://communication.cs.columbia.edu:55667/vad
+            -p vad_cadence:=4
+            -p vad_margin:=0.9
+            -p max_accumulation_length:=10
+            -p debug_mode:=True
+        - asr: ros2 run angel_system_nodes asr --ros-args
+            -r __ns:=${ROS_NAMESPACE}
+            -p audio_topic:=DetectedVoiceData
+            -p utterances_topic:=utterances_topic
+            -p asr_server_url:=http://communication.cs.columbia.edu:55667/asr
+            -p asr_req_segment_duration:=2
+            -p is_sentence_tokenize:=False
+            -p debug_mode:=True
+  - intent_detection:
+      layout: even-vertical
+      panes:
+        - gpt_intent_detection: ros2 run angel_system_nodes base_intent_detector --ros-args
+           -r __ns:=${ROS_NAMESPACE}
+           -p utterances_topic:=utterances_topic
+           -p expect_user_intent_topic:=expect_user_intent_topic
+           -p interp_user_intent_topic:=interp_user_intent_topic
+  - emotion_detection:
+      layout: even-vertical
+      panes:
+        - gpt_emotion_detection: ros2 run angel_system_nodes base_emotion_detector --ros-args
+           -r __ns:=${ROS_NAMESPACE}
+           -p expect_user_intent_topic:=expect_user_intent_topic
+           -p interp_user_intent_topic:=interp_user_intent_topic
+           -p user_emotion_topic:=gpt_emotion_topic
+  - question_answering:
+      layout: even-vertical
+      panes:
+        - question_answerer: ros2 run angel_system_nodes question_answerer --ros-args
+           -r __ns:=${ROS_NAMESPACE}
+           -p user_emotion_topic:=gpt_emotion_topic
+           -p system_text_response_topic:=system_text_response_topic
+           -p few_shot_prompt_file:=${NODE_CONFIG_DIR}/llm_prompts/tourniquet_steps_prompt
+
+  - feedback_generator: ros2 run angel_system_nodes feedback_generator --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p activity_detector_topic:=ActivityDetections
+      -p object_detection_topic:=ObjectDetections3d
+      -p task_monitor_topic:=TaskUpdates
+      -p arui_update_topic:=AruiUpdates
+      -p interp_user_intent_topic:=interp_user_intent_topic
+      -p system_text_response_topic:=system_text_response_topic

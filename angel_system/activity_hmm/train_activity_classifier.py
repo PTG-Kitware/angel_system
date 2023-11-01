@@ -3,6 +3,7 @@ import yaml
 import pickle
 import kwcoco
 import argparse
+import json
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -22,7 +23,7 @@ from angel_system.impls.detect_activities.detections_to_activities.utils import 
 
 def data_loader(
     dset: Union[str, PosixPath, kwcoco.CocoDataset], act_labels: dict
-) -> Tuple[dict, dict, dict, dict, dict, dict]:
+) -> Tuple[dict, dict, dict, dict, dict, dict, dict]:
     """Parse the data in ``dset``
 
     :param dset: kwcoco dataset
@@ -79,12 +80,14 @@ def data_loader(
     label_to_ind = {
         dset.cats[i]["name"]: dset.cats[i]["id"] - min_cat for i in dset.cats
     }
+    print(
+        f"Object label mapping:\n\t"
+        f"{json.dumps([o['name'] for o in dset.categories().objs])}"
+    )
     act_id_to_str = {dset.cats[i]["id"]: dset.cats[i]["name"] for i in dset.cats}
 
     ann_by_image = {}
     for gid, anns in dset.index.gid_to_aids.items():
-        if not anns:
-            print("empty image anns")
         ann_by_image[gid] = []
         for ann_id in anns:
             ann = dset.anns[ann_id]

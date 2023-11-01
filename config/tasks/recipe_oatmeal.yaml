@@ -1,0 +1,43 @@
+version: "1.1"
+title: "Oatmeal"
+# These tasks are sourced from "PTG Evaluation Tasks Vol. 2" version 2.0
+# Provided by MASSACHUSETTS INSTITUTE OF TECHNOLOGY LINCOLN LABORATORY
+labels:
+  # Item:
+  # - id: Integer identification number of the label.
+  # - label: Short human-readable semantic string to succinctly represent the
+  #          label.
+  # - full_str: Complete sentence that fully represents the label.
+  # - activity_ids: List of activity ids that correspond to the task 
+  - id: 0
+    label: "background"
+    full_str: "background"
+    activity_ids: [0]
+  - id: 1
+    label: "add-oats"
+    full_str: "Measure 4 Tablespoons of quick-cook oats and place in a microwave-safe bowl."
+    activity_ids: [47, 47, 47, 47]
+  - id: 2
+    label: "add-water"
+    full_str: "Add 1/2 cup water."
+    activity_ids: [8, 46]
+  - id: 3
+    label: "microwave-30-sec"
+    full_str: "Microwave for 30 seconds."
+    activity_ids: [49] # TODO: time requirement
+  - id: 4
+    label: "add-raisins"
+    full_str: "Add handful of raisins and stir."
+    activity_ids: [48, 24]
+  - id: 5
+    label: "microwave-60-sec-and-stir"
+    full_str: "Microwave for 60 more seconds then stir."
+    activity_ids: [49, 24] # TODO: time requirement
+  - id: 6
+    label: "add-banana-slices"
+    full_str: "Top with banana slices."
+    activity_ids: [7, 16]
+  - id: 7
+    label: "add-cinnamon-and-honey"
+    full_str: "Sprinkle with cinnamon and drizzle with honey before serving."
+    activity_ids: [18, 20]

@@ -1,4 +1,5 @@
 version: "1.2"
+# TODO: Update so this matches the result of kwcoco union
 title: "All Recipes"
 labels:
   # Item:
@@ -246,7 +247,7 @@ labels:
     label: "plate + pinwheel(s) + toothpick"
   - id: 123
     label: "tortilla (partially rolled)"
-  - id: 124:
+  - id: 124
     label: "tortilla end"
   # Labels unique to tea
   - id: 115
@@ -261,6 +262,3 @@ labels:
     label: "mug + tea bag + water"
   - id: 120
     label: "mug + tea"
-  
-
-  

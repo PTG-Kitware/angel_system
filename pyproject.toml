@@ -126,6 +126,7 @@ addopts = [
     "--tb=long",                            # Trace-back print mode.
     "--ignore=./angel_system/berkeley",     # Ignore bundled package
     "--ignore=./angel_system/fasterrcnn",   # Ignore bundled package
+    "--ignore=./angel_system/bbn_commandcom_client",   # Ignore bundled package
     "--cov=./angel_system",                 # Cover our package specifically
     "--cov=./tests",                        # Also cover our tests for dead spots
     "--cov-report=term",                    # Coverage report to terminal

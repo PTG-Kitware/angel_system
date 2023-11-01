@@ -19,7 +19,7 @@ root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 # on_project_start: command
 on_project_start: |
   export ROS_NAMESPACE=${ROS_NAMESPACE:-/kitware}
-  export HL2_IP=${HL2_IP:-192.168.1.101}
+  export HL2_IP=${HL2_IP:-192.168.1.4}
 
 # Run on project start, the first time
 # on_project_first_start: command
@@ -65,9 +65,10 @@ windows:
             -r __ns:=${ROS_NAMESPACE}
             -p ip_addr:=${HL2_IP}
             -p image_topic:=PVFramesBGR
+            -p image_ts_topic:=PVFramesBGR_TS
             -p hand_pose_topic:=HandJointPoseData
             -p audio_topic:=HeadsetAudioData
-            -p sm_topic:=disable
+            -p sm_topic:=SpatialMapData
             -p head_pose_topic:=HeadsetPoseData
             -p pv_width:=1280
             -p pv_height:=720
@@ -89,9 +90,6 @@ windows:
             ${ROS_NAMESPACE}/HandJointPoseData
             ${ROS_NAMESPACE}/SpatialMapData
             ${ROS_NAMESPACE}/EyeGazeData
-            ${ROS_NAMESPACE}/AnnotationEvents
             ${ROS_NAMESPACE}/HeadsetDepthPoseData
             ${ROS_NAMESPACE}/ShortThrowDepthMapImages
-  #- event_monitor: ros2 run angel_system_nodes annotation_event_monitor --ros-args
-  #    -r __ns:=${ROS_NAMESPACE}
-  #    -p annotation_event_topic:=AnnotationEvents
+
