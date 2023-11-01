@@ -114,6 +114,7 @@ windows:
       -r __ns:=${ROS_NAMESPACE}
       -p det_topic:=ActivityDetections
       -p model_file:=${MODEL_DIR}/global_step_predictor_act_avgs.npy
+      -p thresh_frame_count:=4
       -p step_mode:=granular
       -p config_file:=${CONFIG_DIR}/tasks/multi-task-config.yaml
       -p task_state_topic:=TaskUpdates

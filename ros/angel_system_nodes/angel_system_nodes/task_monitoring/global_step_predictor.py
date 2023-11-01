@@ -29,6 +29,7 @@ PARAM_TASK_ERROR_TOPIC = "task_error_topic"
 PARAM_QUERY_TASK_GRAPH_TOPIC = "query_task_graph_topic"
 PARAM_DET_TOPIC = "det_topic"
 PARAM_MODEL_FILE = "model_file"
+PARAM_THRESH_FRAME_COUNT = "thresh_frame_count"
 PARAM_STEP_MODE = "step_mode"
 # Enable ground-truth plotting mode by specifying the path to an MSCOCO file
 # that includes image level `activity_gt` attribute.
@@ -57,6 +58,7 @@ class GlobalStepPredictorNode(Node):
                 (PARAM_QUERY_TASK_GRAPH_TOPIC,),
                 (PARAM_DET_TOPIC,),
                 (PARAM_MODEL_FILE,),
+                (PARAM_THRESH_FRAME_COUNT,),
                 (PARAM_STEP_MODE,),
                 (PARAM_GT_ACT_COCO, ""),
                 (PARAM_GT_VIDEO_ID, -1),
@@ -69,6 +71,7 @@ class GlobalStepPredictorNode(Node):
         self._query_task_graph_topic = param_values[PARAM_QUERY_TASK_GRAPH_TOPIC]
         self._det_topic = param_values[PARAM_DET_TOPIC]
         self._model_file = param_values[PARAM_MODEL_FILE]
+        self._thresh_frame_count = param_values[PARAM_THRESH_FRAME_COUNT]
         self._step_mode = param_values[PARAM_STEP_MODE]
 
         # Determine what recipes are in the config
@@ -81,7 +84,11 @@ class GlobalStepPredictorNode(Node):
         log.info(f"Recipes: {recipe_config_dict}")
 
         # Instantiate the GlobalStepPredictor module
-        self.gsp = GlobalStepPredictor(recipe_types=recipe_types, recipe_config_dict=recipe_config_dict)
+        self.gsp = GlobalStepPredictor(
+            threshold_frame_count=self._thresh_frame_count,
+            recipe_types=recipe_types,
+            recipe_config_dict=recipe_config_dict
+        )
 
         self.gsp.get_average_TP_activations_from_file(self._model_file)
         log.info("Global state predictor loaded")
