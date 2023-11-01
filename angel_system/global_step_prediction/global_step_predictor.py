@@ -19,7 +19,7 @@ class GlobalStepPredictor:
         deactivate_thresh_frame_count=20,
         recipe_types=["coffee", "tea", "dessert_quesadilla", "oatmeal", "pinwheel"],
         background_threshold=0.3,
-        activity_config_fpath = "config/activity_labels/all_recipe_labels.yaml",
+        activity_config_fpath="config/activity_labels/all_recipe_labels.yaml",
     ):
         """
         GlobalStepPredctor: based on a TCN activity classifier's activity classification
@@ -480,12 +480,20 @@ class GlobalStepPredictor:
         skipped_steps = []
         for granular_step in tracker["skipped_granular_steps"]:
             skipped_steps.append(
-                    {
-                        "granular": granular_step,
-                        "part_of_broad": self.granular_to_broad_step(tracker, granular_step),
-                        "activity_id": self.get_activity_from_granular_step(tracker, granular_step)[0],
-                        "activity_str": self.get_activity_from_granular_step(tracker, granular_step)[1],
-                    })
+                {
+                    "recipe": tracker["recipe"],
+                    "granular": granular_step,
+                    "part_of_broad": self.granular_to_broad_step(
+                        tracker, granular_step
+                    ),
+                    "activity_id": self.get_activity_from_granular_step(
+                        tracker, granular_step
+                    )[0],
+                    "activity_str": self.get_activity_from_granular_step(
+                        tracker, granular_step
+                    )[1],
+                }
+            )
         return skipped_steps
 
     def get_activity_from_granular_step(self, tracker, granular_step):
@@ -495,13 +503,15 @@ class GlobalStepPredictor:
         return activity_id, activity_str
 
     def get_activity_str_from_id(self, activity_id):
-        return self.activity_config['labels'][activity_id]
+        return self.activity_config["labels"][activity_id]["full_str"]
         fdsao
 
     def get_skipped_steps_all_trackers(self):
         skipped_steps_all_trackers = []
         for tracker_ind, tracker in enumerate(self.trackers):
-            skipped_steps_all_trackers.append(self.get_skipped_steps_one_tracker(tracker_ind))
+            skipped_steps_all_trackers.append(
+                self.get_skipped_steps_one_tracker(tracker_ind)
+            )
         return skipped_steps_all_trackers
 
     def record_history(self, tracker_ind, current_granular_step, current_broad_step):
