@@ -5,10 +5,8 @@ from typing import Optional
 from builtin_interfaces.msg import Time
 import kwcoco
 import numpy as np
-import numpy.typing as npt
 import rclpy
 from rclpy.node import Node
-import yaml
 
 from angel_msgs.msg import (
     ActivityDetection,
@@ -183,7 +181,7 @@ class GlobalStepPredictorNode(Node):
         message.context = message.N_CONTEXT_TASK_ERROR
 
         message.title = "Step skip detected"
-        message.description = (f"Detected skip: {skipped_step}")
+        message.description = f"Detected skip: {skipped_step}"
 
         self._task_error_publisher.publish(message)
 
