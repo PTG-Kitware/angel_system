@@ -251,13 +251,14 @@ body {
   float: left;
 
   max-width: 49vw;
+  max-height: 30vh;
   height: auto;
 }
 
 .live-img {
   float:left;
 
-  height: 80%;
+  height: 85%;
   width: auto; /* keep aspect ratio */
 }
 
@@ -267,12 +268,12 @@ body {
 /* ------------ */
 #task-step-display {
   margin-top: 20px;
-  
-  height: 40%;
+  max-height: 30vh;
 }
 
 #task-step-chart{
-  height: 95%;
+  height: 80%;
+  max-height: 25vh;
 }
 
 /* ------------ */
@@ -282,6 +283,7 @@ body {
   margin-top: 20px;
   
   height:30%;
+  max-height: 20vh;
   position: relative;
 }
 #error-msgs {
