@@ -152,12 +152,22 @@ class GlobalStepPredictorNode(Node):
 
         # Check for any skipped steps
         skipped_steps_all_trackers = self.gsp.get_skipped_steps_all_trackers()
+
         for task in skipped_steps_all_trackers:
             for skipped_step in task:
                 recipe = skipped_step["recipe"]
                 skipped_step_id = skipped_step["activity_id"]
+                broad_step_id = skipped_step["part_of_broad"]
+                for idx, tracker_dict in enumerate(tracker_dict_list):
+                    if tracker_dict["recipe"] == recipe:
+                        broad_step_str = tracker_dict["broad_step_to_full_str"][
+                            broad_step_id
+                        ]
+                        break
+
                 skipped_step_str = (
-                    f"Recipe: {recipe}, step: {skipped_step['activity_str']}"
+                    f"Recipe: {recipe}, activity: {skipped_step['activity_str']}, "
+                    f"broad step: {broad_step_str}"
                 )
 
                 # New skipped step detected, publish error and add it to the list
