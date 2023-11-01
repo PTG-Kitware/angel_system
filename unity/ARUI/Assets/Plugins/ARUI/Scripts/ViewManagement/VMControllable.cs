@@ -34,7 +34,7 @@ public class VMControllable : VMObject
 
     public void UpdateRectBasedOnSubColliders(List<BoxCollider> allColliders)
     {
-        if (allColliders.Count !=0 && transform.InFrontOfCamera(AngelARUI.Instance.ARCamera) &&
+        if (allColliders!=null && allColliders.Count !=0 && transform.InFrontOfCamera(AngelARUI.Instance.ARCamera) &&
             BaseCollider.enabled)
         {
             AABB = allColliders[0].transform.RectFromObjs(AngelARUI.Instance.ARCamera, allColliders);
