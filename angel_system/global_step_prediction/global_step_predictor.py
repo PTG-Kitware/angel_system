@@ -305,7 +305,7 @@ class GlobalStepPredictor:
 
     def get_last_granular_step_per_broad_step(self, steps):
         """
-        Get first substep index of each broad step.
+        Get last substep index of each broad step.
         Example: a recipe might have 8 succinct steps, with
         multiple activities per succinct step:
         step 0: background
