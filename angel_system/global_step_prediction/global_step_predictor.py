@@ -290,7 +290,7 @@ class GlobalStepPredictor:
         granular_step_4
         """
         lgspbs = np.array(tracker["last_granular_step_per_broad_step"])
-        return len(np.nonzero(fgspbs < granular_step)[0])
+        return len(np.nonzero(lgspbs < granular_step)[0])
 
     def get_unique(self, activity_ids):
         """
@@ -746,14 +746,14 @@ class GlobalStepPredictor:
         granular_step_to_activity_id = self.get_activity_per_granular_step(broad_steps)
         lgspbs = self.get_last_granular_step_per_broad_step(broad_steps)
 
-        def get_broad_step_from_granular_step(fgspbs, granular_step):
-            fgspbs = np.array(fgspbs)
-            return len(np.nonzero(fgspbs <= granular_step))
+        def get_broad_step_from_granular_step(lgspbs, granular_step):
+            lgspbs = np.array(lgspbs)
+            return len(np.nonzero(lgspbs <= granular_step))
 
         for activity_gt in activity_gts:
             # convert activity id to step id
             granular_step_id = granular_step_to_activity_id.index(activity_gt)
-            broad_step_id = get_broad_step_from_granular_step(fgspbs, granular_step_id)
+            broad_step_id = get_broad_step_from_granular_step(lgspbs, granular_step_id)
 
             granular_step_gts.append(granular_step_id)
             broad_step_gts.append(broad_step_id)
