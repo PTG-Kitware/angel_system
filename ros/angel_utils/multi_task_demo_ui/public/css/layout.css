@@ -158,7 +158,7 @@ body {
   
   width: 50%;
   max-width: 49vh;
-  max-height: 95vh;
+  max-height: 75vh;
 
   left: 0;
   position: relative;
@@ -336,3 +336,20 @@ body {
 .lapse:hover {
   background-color: rgb(238, 143, 77);
 }
+
+
+/* ------------ */
+/* ACT CONF     */
+/* ------------ */
+#activity {
+  text-align: center;
+
+  max-height: 15vh;
+  
+  margin-left: 10px;
+}
+#activity-conf-chart { /* chart */
+  width: 90%;
+  max-height: 10vh;
+}
+
