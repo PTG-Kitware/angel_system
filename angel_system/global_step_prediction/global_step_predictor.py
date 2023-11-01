@@ -228,8 +228,8 @@ class GlobalStepPredictor:
                 },
             )
         tracker_dict[
-            "first_granular_step_per_broad_step"
-        ] = self.get_first_granular_step_per_broad_step(broad_steps)
+            "last_granular_step_per_broad_step"
+        ] = self.get_last_granular_step_per_broad_step(broad_steps)
         tracker_dict["recipe"] = recipe
         tracker_dict["current_broad_step"] = 0
         tracker_dict["current_granular_step"] = 0
@@ -285,12 +285,12 @@ class GlobalStepPredictor:
     def granular_to_broad_step(self, tracker, granular_step):
         """
         Convert granular step to broad step.
-        first_granular_step_per_broad_step
+        last_granular_step_per_broad_step
         Ex: [0, 2, 5, 6, 7]
         granular_step_4
         """
-        fgspbs = np.array(tracker["first_granular_step_per_broad_step"])
-        return len(np.nonzero(fgspbs <= granular_step)[0]) - 1
+        lgspbs = np.array(tracker["last_granular_step_per_broad_step"])
+        return len(np.nonzero(fgspbs < granular_step)[0])
 
     def get_unique(self, activity_ids):
         """
@@ -303,7 +303,7 @@ class GlobalStepPredictor:
         indexes = np.unique(activity_ids, return_index=True)[1]
         return [activity_ids[index] for index in sorted(indexes)]
 
-    def get_first_granular_step_per_broad_step(self, steps):
+    def get_last_granular_step_per_broad_step(self, steps):
         """
         Get first substep index of each broad step.
         Example: a recipe might have 8 succinct steps, with
@@ -313,18 +313,18 @@ class GlobalStepPredictor:
         step 2: activity 10, activity 4
         step 3: activity 20.
 
-        first_granular_step_per_broad_step = [0,3,5,6].
+        last_granular_step_per_broad_step = [0,3,5,6].
         """
-        first_granular_step_per_broad_step = []
+        last_granular_step_per_broad_step = []
         total_granular_steps_to_here = 0
         for step in steps:
             if step["id"] == 0:
-                first_granular_step_per_broad_step.append(0)
+                last_granular_step_per_broad_step.append(0)
             else:
                 num_substeps = len(self.get_unique(step["activity_ids"]))
                 total_granular_steps_to_here += num_substeps
-                first_granular_step_per_broad_step.append(total_granular_steps_to_here)
-        return first_granular_step_per_broad_step
+                last_granular_step_per_broad_step.append(total_granular_steps_to_here)
+        return last_granular_step_per_broad_step
 
     def process_new_confidences(self, activity_confs):
         assert np.array(activity_confs).shape[1] <= len(self.activated_activities)
@@ -443,7 +443,7 @@ class GlobalStepPredictor:
                 elif next_next_activity in flipping_on_indexes:
                     # Keep track of skipped steps
                     self.add_skipped_granular_step(tracker_ind, next_granular_step)
-                    self.trackers[tracker_ind]["skipped_granular_steps"].append
+                    # Increment the granular step twice
                     self.increment_granular_step(tracker_ind)
                     self.increment_granular_step(tracker_ind)
                     # Each activity activation can only be used once.
@@ -667,9 +667,12 @@ class GlobalStepPredictor:
         """
         tracker = self.trackers[tracker_index]
         self.trackers[tracker_index]["current_broad_step"] += 1
-        self.trackers[tracker_index]["current_granular_step"] = tracker[
-            "first_granular_step_per_broad_step"
-        ][tracker["current_broad_step"]]
+        self.trackers[tracker_index]["current_granular_step"] = (
+            tracker["last_granular_step_per_broad_step"][
+                tracker["current_broad_step"] - 1
+            ]
+            + 1
+        )
         return self.trackers
 
     def manually_decrement_current_step(self, tracker_index):
@@ -679,7 +682,7 @@ class GlobalStepPredictor:
         tracker = self.trackers[tracker_index]
         self.trackers[tracker_index]["current_broad_step"] -= 1
         self.trackers[tracker_index]["current_granular_step"] = tracker[
-            "first_granular_step_per_broad_step"
+            "last_granular_step_per_broad_step"
         ][tracker["current_broad_step"]]
         return self.trackers
 
@@ -741,7 +744,7 @@ class GlobalStepPredictor:
                 },
             )
         granular_step_to_activity_id = self.get_activity_per_granular_step(broad_steps)
-        fgspbs = self.get_first_granular_step_per_broad_step(broad_steps)
+        lgspbs = self.get_last_granular_step_per_broad_step(broad_steps)
 
         def get_broad_step_from_granular_step(fgspbs, granular_step):
             fgspbs = np.array(fgspbs)
