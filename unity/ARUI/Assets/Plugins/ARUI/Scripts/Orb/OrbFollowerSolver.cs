@@ -30,15 +30,8 @@ public class OrbFollowerSolver : Solver
     private bool _stayCenter = false;
     private bool _isSticky = false;                     /// < If true, orb stays at the edge of the view cone
 
-    private bool _snappedToTaskList = false;
-    public bool IsSnappedToTaskList
-    {
-        get => _snappedToTaskList;
-    }
-
     private bool _outOfFOV = false;                     /// < If true, orb is not in the FOV of the user
     public bool IsOutOfFOV => _outOfFOV;
-
 
     //** Eye gaze events
     private bool _isLookingAtOrbFlag = false;           /// < If true, user is looking at orb
@@ -303,14 +296,6 @@ public class OrbFollowerSolver : Solver
             _currentMaxViewDegrees = ARUISettings.OrbMaxViewDegSticky;
             MoveLerpTime = ARUISettings.OrbMoveLerpRegular;
         }
-    }
-
-    public void SnapToTaskList(Vector3 position, bool snapped)
-    {
-        if (snapped) {
-            transform.position = position;
-        }
-        _snappedToTaskList = snapped;
     }
 
     #endregion

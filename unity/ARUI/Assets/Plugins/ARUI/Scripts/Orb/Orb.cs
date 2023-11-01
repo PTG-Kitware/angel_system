@@ -20,7 +20,6 @@ public class Orb : Singleton<Orb>
 
     private OrbGrabbable _grabbable;                         /// <reference to grabbing behavior
     private OrbMessageContainer _messageContainer;                     /// <reference to orb message container (part of prefab)
-    public OrbMessageContainer Message => _messageContainer;
 
     private List<BoxCollider> _allOrbColliders;              /// <reference to all collider - will be merged for view management.
     public List<BoxCollider> AllOrbColliders => _allOrbColliders;
@@ -88,16 +87,17 @@ public class Orb : Singleton<Orb>
     /// </summary>
     private void UpdateMessageVisibility()
     {
-        if ((IsLookingAtOrb(false) && !_messageContainer.IsMessageContainerActive && !_messageContainer.IsMessageFading && !_followSolver.IsSnappedToTaskList))
+        if ((IsLookingAtOrb(false) && !_messageContainer.IsMessageContainerActive && !_messageContainer.IsMessageFading))
         { //Set the message visible!
+            _messageContainer.SetFadeOutMessageContainer(false);
             _messageContainer.IsMessageContainerActive = true;
         }
-        else if (!_messageContainer.IsLookingAtMessage && !IsLookingAtOrb(false) && _followSolver.IsOutOfFOV || _followSolver.IsSnappedToTaskList)
+        else if (!_messageContainer.IsLookingAtMessage && !IsLookingAtOrb(false) && _followSolver.IsOutOfFOV)
         {
             _messageContainer.IsMessageContainerActive = false;
         }
         else if ((_messageContainer.IsLookingAtMessage || IsLookingAtOrb(false)) && _messageContainer.IsMessageContainerActive && _messageContainer.IsMessageFading)
-        { //Stop Fading, set the message visible
+        { //Stop Fading
             _messageContainer.SetFadeOutMessageContainer(false);
         }
         else if (!IsLookingAtOrb(false) && _messageContainer.IsMessageContainerActive && !_messageContainer.IsMessageFading
@@ -228,8 +228,8 @@ public class Orb : Singleton<Orb>
     {
         _followSolver.SetSticky(isSticky);
 
-        if (isSticky)
-            _messageContainer.IsMessageContainerActive = false;
+        if (isSticky && _messageContainer.IsMessageContainerActive && !_messageContainer.IsMessageFading)
+            _messageContainer.SetFadeOutMessageContainer(true);
     }
 
     /// <summary>

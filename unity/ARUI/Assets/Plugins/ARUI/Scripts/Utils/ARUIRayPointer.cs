@@ -40,9 +40,15 @@ public class ARUIRayPointer : LinePointer
     private bool wasSelectPressed = false;
     private bool wasGrabPressed = false;
 
+    private MixedRealityLineRenderer lineRenderer;
+
     protected override void Start()
     {
         base.Start();
+
+        lineRenderer = gameObject.GetComponent<MixedRealityLineRenderer>();
+        lineRenderer.enabled = false;
+
     }
 
     /// <inheritdoc />
@@ -51,6 +57,19 @@ public class ARUIRayPointer : LinePointer
         base.OnEnable();
 
         inertia = gameObject.EnsureComponent<BezierInertia>();
+    }
+
+    public void Update()
+    {
+        if (EyeGazeManager.Instance != null && (EyeGazeManager.Instance.CurrentHit.Equals(EyeTarget.orbFace) || EyeGazeManager.Instance.CurrentHit.Equals(EyeTarget.orbMessage) ||
+            EyeGazeManager.Instance.CurrentHit.Equals(EyeTarget.listmenuButton_tasks)|| EyeGazeManager.Instance.CurrentHit.Equals(EyeTarget.tasklist)|| EyeGazeManager.Instance.CurrentHit.Equals(EyeTarget.orbtasklistButton)))  
+        {
+            lineRenderer.enabled = true;
+        } else
+        {
+            lineRenderer.enabled = false;
+        }
+
     }
 
     private static readonly ProfilerMarker OnPostSceneQueryPerfMarker = new ProfilerMarker("[MRTK] ShellHandRayPointer.OnPostSceneQuery");

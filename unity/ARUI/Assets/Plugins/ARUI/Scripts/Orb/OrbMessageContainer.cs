@@ -93,7 +93,6 @@ public class OrbMessageContainer : MonoBehaviour
 
             return pieColliders;
         }
-
     }
 
     /// <summary>
@@ -124,8 +123,8 @@ public class OrbMessageContainer : MonoBehaviour
         _taskNameToOrbPie = new Dictionary<string, OrbTask>();
 
         IsMessageContainerActive = false;
-        _currentNote = transform.GetChild(2).GetChild(0).gameObject.AddComponent<Notification>();
-        _currentNote.init(NotificationType.warning, "", 0);
+        _currentNote = transform.GetChild(2).gameObject.AddComponent<Notification>();
+        _currentNote.Init("");
         _currentNote.gameObject.SetActive(false);
     }
 
@@ -152,17 +151,21 @@ public class OrbMessageContainer : MonoBehaviour
             UpdateAnchorLerp(MessageAnchor.left);
     }
 
+    /// <summary>
+    /// Handles updates if the currently observed task updates
+    /// </summary>
+    /// <param name="currentSelectedTasks"></param>
+    /// <param name="currentTaskID"></param>
     public void HandleUpdateActiveTaskEvent(Dictionary<string, TaskList> currentSelectedTasks, string currentTaskID)
     {
-        //foreach (OrbTask pie in _taskNameToOrbPie.Values)
-        //{
-        //    float ratio = (float)currentSelectedTasks[pie.TaskName].CurrStepIndex / (float)(currentSelectedTasks[pie.TaskName].Steps.Count - 1);
-        //    pie.UpdateCurrentTaskStatus(ratio);
-        //}
-
         HandleUpdateTaskListEvent(currentSelectedTasks, currentTaskID);
     }
 
+    /// <summary>
+    /// Handles updates to the task list (e.g., if stepIndex updates)
+    /// </summary>
+    /// <param name="currentSelectedTasks"></param>
+    /// <param name="currentTaskID"></param>
     public void HandleUpdateTaskListEvent(Dictionary<string, TaskList> currentSelectedTasks, string currentTaskID)
     {
         if (currentSelectedTasks.Count == 0 || currentSelectedTasks.Count > 5) return;
@@ -315,6 +318,10 @@ public class OrbMessageContainer : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Updates the anchor of the messagebox instantly
+    /// </summary>
+    /// <param name="anchor"></param>
     public void UpdateAnchorInstant(MessageAnchor anchor)
     {
         _currentAnchor = anchor;
@@ -359,9 +366,19 @@ public class OrbMessageContainer : MonoBehaviour
                 {
                     op.Text.transform.localPosition = Vector2.Lerp(op.Text.transform.localPosition, new Vector3(XOffset, YOffset, 0), step + Time.deltaTime);
                 }
-
                 step += Time.deltaTime;
             }
+
+            float XOffsetNote = _currentNote.XOffset;
+            if (isLeft)
+            {
+                XOffsetNote = -_currentNote.XOffset-0.25f;
+                _currentNote.Text.alignment = TMPro.TextAlignmentOptions.BottomRight;
+            } else
+                _currentNote.Text.alignment = TMPro.TextAlignmentOptions.BottomLeft;
+
+            _currentNote.gameObject.transform.localPosition = Vector2.Lerp(_currentNote.gameObject.transform.localPosition,
+                                                                            new Vector3(XOffsetNote, _currentNote.gameObject.transform.localPosition.y, 0), step + Time.deltaTime);
 
             yield return new WaitForEndOfFrame();
         }
