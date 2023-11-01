@@ -37,7 +37,7 @@ var chart = new Chart(ctx, {
         text: 'Activity',
         color: barColors,
         font:{
-          size: 15
+          size: 20
         },
         position: 'top'
       }
