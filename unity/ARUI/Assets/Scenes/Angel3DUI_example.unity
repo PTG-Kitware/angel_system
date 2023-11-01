@@ -347,7 +347,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   PrintVMDebug: 0
-  IsGuidanceActive: 1
 --- !u!1001 &1200407600
 PrefabInstance:
   m_ObjectHideFlags: 0

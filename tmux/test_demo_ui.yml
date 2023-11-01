@@ -1,0 +1,124 @@
+#
+# System configuration to run the ANGEL system for the 2022/11 PI meeting and
+# Evaluation 1.
+#
+# This configuration is for the Coffee task/recipe.
+#
+
+name: coffee_allows_skip
+root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
+
+# Optional tmux socket
+# socket_name: foo
+
+# Note that the pre and post options have been deprecated and will be replaced by
+# project hooks.
+
+# Project hooks
+
+# Runs on project start, always
+# on_project_start: command
+on_project_start: |
+  export ROS_NAMESPACE=${ROS_NAMESPACE:-/debug}
+  export HL2_IP=${HL2_IP:-192.168.1.4}
+  export CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/config
+  export BERKELEY_CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/angel_system/berkeley/configs
+  export NODE_CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/src/angel_system_nodes/configs
+  export MODEL_DIR=${ANGEL_WORKSPACE_DIR}/model_files
+  export BAGS_DIR=${ANGEL_WORKSPACE_DIR}/ros_bags
+
+  # Changing the domain ID was important at KHQ to unblock perceived network
+  # congestion slowdowns to message sending.
+  export ROS_DOMAIN_ID=77
+
+# Run on project start, the first time
+# on_project_first_start: command
+
+# Run on project start, after the first time
+# on_project_restart: command
+
+# Run on project exit ( detaching from tmux session )
+# on_project_exit: command
+
+# Run on project stop
+# on_project_stop: command
+
+# Runs in each window and pane before window/pane specific commands. Useful for setting up interpreter versions.
+# pre_window: rbenv shell 2.0.0-p247
+
+# Pass command line options to tmux. Useful for specifying a different tmux.conf.
+# tmux_options: -f ~/.tmux.mac.conf
+tmux_options: -f <%= ENV["ANGEL_WORKSPACE_DIR"] %>/tmux/tmux.conf
+
+windows:
+  # HL2 ROS TCP connection
+  - sensor_input:
+      layout: even-vertical
+      panes:
+        - ros_bag_play: #ros2 bag play <<PATH_TO_BAG_FILE>>
+            echo ros2 bag play ${BAGS_DIR}/all_activities_15
+
+        # Old videos were recorded in NV12
+        - image_converter: ros2 run angel_datahub ImageConverter --ros-args
+            -r __ns:=${ROS_NAMESPACE}
+            -p topic_input_images:=PVFramesNV12
+            -p topic_output_images:=PVFramesRGB
+
+        - image_ts_relay: ros2 run angel_system_nodes  image_timestamp_relay --ros-args
+            -r __ns:=${ROS_NAMESPACE}
+            -p image_topic:=PVFramesRGB
+            -p output_topic:=PVFramesRGB_TS
+
+  - object_detector:
+      layout: even-vertical
+      panes:
+        - object_detector: ros2 run angel_system_nodes object_detection_yolo_v7 --ros-args
+            -r __ns:=${ROS_NAMESPACE}
+            -p image_topic:=PVFramesRGB
+            -p det_topic:=ObjectDetections2d
+            -p net_checkpoint:=${MODEL_DIR}/yolov7-combined_objects-weights.pt
+            -p inference_img_size:=1280
+            -p det_conf_threshold:=0.1
+            -p cuda_device_id:=0
+
+        - simple_2d_overlay: ros2 run angel_debug Simple2dDetectionOverlay --ros-args
+            -r __ns:=${ROS_NAMESPACE}
+            -p topic_input_images:=PVFramesRGB
+            -p topic_input_det_2d:=ObjectDetections2d
+            -p topic_output_images:=pv_image_detections_2d
+            -p filter_top_k:=-1
+
+  - activity_classifier: ros2 run angel_system_nodes activity_classifier_tcn --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p image_ts_topic:=PVFramesRGB_TS
+      -p det_topic:=ObjectDetections2d
+      -p act_topic:=ActivityDetections
+      -p model_weights:=${MODEL_DIR}/activity_tcn-all_activities-checkpoint.ckpt
+      -p model_mapping:=${MODEL_DIR}/activity_tcn-all_activities-mapping.txt
+      -p model_det_label_mapping:=${MODEL_DIR}/activity_tcn-all_activities-det_label_mapping.json
+      -p model_device:=cuda
+      -p model_dets_conv_version:=5
+      -p window_size:=30
+      -p buffer_max_size_seconds:=5
+      -p image_pix_width:=1280
+      -p image_pix_height:=720
+
+  - task_monitor: ros2 run angel_system_nodes global_step_predictor --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p det_topic:=ActivityDetections
+      -p model_file:=${MODEL_DIR}/global_step_predictor_act_avgs.npy
+      -p config_file:=${CONFIG_DIR}/tasks/multi-task-config.yaml
+      -p task_state_topic:=TaskUpdates
+      -p query_task_graph_topic:=query_task_graph
+  
+  - engineering-ui:
+      layout: even-vertical
+      panes:
+        - engineering_ui_websocket: ros2 launch rosbridge_server rosbridge_websocket_launch.xml port:=9090
+        - engineering_ui_server: node src/angel_utils/multi_task_demo_ui/index.js
+            --namespace=${ROS_NAMESPACE}
+            --image_topic=pv_image_detections_2d/compressed
+            --query_task_graph_topic=query_task_graph
+            --task_updates_topic=TaskUpdates
+            --activity_detections_topic=ActivityDetections
+            --task_errors_topic=TaskErrors
