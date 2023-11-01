@@ -10,7 +10,7 @@ from rclpy.node import Node
 from rclpy.executors import MultiThreadedExecutor
 from sensor_msgs.msg import Image
 
-from angel_utils import declare_and_get_parameters
+from angel_utils import declare_and_get_parameters, RateTracker
 
 
 PARAM_INPUT_TOPIC = "image_topic"
@@ -29,6 +29,8 @@ class ImageTimestampRelay(Node):
             ],
         )
 
+        self._rate_tracker = RateTracker()
+
         self._sub = self.create_subscription(
             Image,
             param_values[PARAM_INPUT_TOPIC],
@@ -44,8 +46,12 @@ class ImageTimestampRelay(Node):
         )
 
     def input_callback(self, msg: Image) -> None:
-        self.get_logger().info(f"Forwarding image with TS={msg.header.stamp}")
         self._pub.publish(msg.header.stamp)
+        self._rate_tracker.tick()
+        self.get_logger().info(
+            f"[input_callback] Forwarded image with TS={msg.header.stamp}, "
+            f"rate={self._rate_tracker.get_rate_avg()} Hz",
+        )
 
 
 def main():
