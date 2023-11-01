@@ -142,6 +142,7 @@ $.get("/topics")
     var task_name = m.task_name;
     var step_list = task_title_to_steps[task_name]["steps"];
     var chart_id = task_title_to_steps[task_name]["chart_id"];
+    var current_step_id = m.current_step_id;
 
     const completed_steps = m.completed_steps;
     completed_steps.forEach(function(completed, index){
@@ -155,10 +156,14 @@ $.get("/topics")
         box.style.backgroundColor = "white";
       }
     });
+    
+    // Mark current step as yellow
+    let box = document.getElementById(task_name + "-" + step_list[current_step_id]);
+    box.style.backgroundColor = "orange";
 
     // Update line chart
-    var current_step_id = m.current_step_id + 1; // list doesn't include background
     var ts = m.header.stamp.sec;
+    current_step_id = current_step_id + 1;  // list doesn't include background, so index 0 = step 1
 
     if(current_step_id != null){
         task_step_chart.data.datasets.forEach(
