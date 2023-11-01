@@ -19,6 +19,7 @@ class GlobalStepPredictor:
         deactivate_thresh_frame_count=20,
         recipe_types=["coffee", "tea", "dessert_quesadilla", "oatmeal", "pinwheel"],
         background_threshold=0.3,
+        activity_config_fpath="config/activity_labels/all_recipe_labels.yaml",
     ):
         """
         GlobalStepPredctor: based on a TCN activity classifier's activity classification
@@ -97,6 +98,9 @@ class GlobalStepPredictor:
             _recipe: self.get_activity_order_from_config(self.recipe_configs[_recipe])
             for _recipe in self.recipe_configs
         }
+
+        with open(activity_config_fpath, "r") as stream:
+            self.activity_config = yaml.safe_load(stream)
 
     def get_activity_order_from_config(self, config_fn):
         """
@@ -233,6 +237,7 @@ class GlobalStepPredictor:
         tracker_dict["total_num_granular_steps"] = np.sum(
             [len(self.get_unique(step["activity_ids"])) for step in config["labels"]]
         )
+        tracker_dict["skipped_granular_steps"] = []
         tracker_dict["broad_step_to_activity_ids"] = [
             self.get_unique(step["activity_ids"]) for step in broad_steps
         ]
@@ -436,6 +441,9 @@ class GlobalStepPredictor:
                     next_act_ind = np.argwhere(flipping_on_indexes == next_activity)
                     flipping_on_indexes = np.delete(flipping_on_indexes, next_act_ind)
                 elif next_next_activity in flipping_on_indexes:
+                    # Keep track of skipped steps
+                    self.add_skipped_granular_step(tracker_ind, next_granular_step)
+                    self.trackers[tracker_ind]["skipped_granular_steps"].append
                     self.increment_granular_step(tracker_ind)
                     self.increment_granular_step(tracker_ind)
                     # Each activity activation can only be used once.
@@ -463,6 +471,47 @@ class GlobalStepPredictor:
         )
 
         return self.trackers
+
+    def add_skipped_granular_step(self, tracker_ind, granular_step):
+        self.trackers[tracker_ind]["skipped_granular_steps"].append(granular_step)
+
+    def get_skipped_steps_one_tracker(self, tracker_ind):
+        tracker = self.trackers[tracker_ind]
+        skipped_steps = []
+        for granular_step in tracker["skipped_granular_steps"]:
+            skipped_steps.append(
+                {
+                    "recipe": tracker["recipe"],
+                    "granular": granular_step,
+                    "part_of_broad": self.granular_to_broad_step(
+                        tracker, granular_step
+                    ),
+                    "activity_id": self.get_activity_from_granular_step(
+                        tracker, granular_step
+                    )[0],
+                    "activity_str": self.get_activity_from_granular_step(
+                        tracker, granular_step
+                    )[1],
+                }
+            )
+        return skipped_steps
+
+    def get_activity_from_granular_step(self, tracker, granular_step):
+        activity_id = tracker["granular_step_to_activity_id"][granular_step]
+        activity_str = self.get_activity_str_from_id(activity_id)
+
+        return activity_id, activity_str
+
+    def get_activity_str_from_id(self, activity_id):
+        return self.activity_config["labels"][activity_id]["full_str"]
+
+    def get_skipped_steps_all_trackers(self):
+        skipped_steps_all_trackers = []
+        for tracker_ind, tracker in enumerate(self.trackers):
+            skipped_steps_all_trackers.append(
+                self.get_skipped_steps_one_tracker(tracker_ind)
+            )
+        return skipped_steps_all_trackers
 
     def record_history(self, tracker_ind, current_granular_step, current_broad_step):
         self.trackers[tracker_ind]["broad_step_prediction_history"] = np.append(
