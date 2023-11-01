@@ -504,7 +504,6 @@ class GlobalStepPredictor:
 
     def get_activity_str_from_id(self, activity_id):
         return self.activity_config["labels"][activity_id]["full_str"]
-        fdsao
 
     def get_skipped_steps_all_trackers(self):
         skipped_steps_all_trackers = []
