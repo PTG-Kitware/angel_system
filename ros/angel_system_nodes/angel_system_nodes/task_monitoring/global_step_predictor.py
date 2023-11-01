@@ -53,6 +53,7 @@ class GlobalStepPredictorNode(Node):
             [
                 (PARAM_CONFIG_FILE,),
                 (PARAM_TASK_STATE_TOPIC,),
+                (PARAM_TASK_ERROR_TOPIC,),
                 (PARAM_QUERY_TASK_GRAPH_TOPIC,),
                 (PARAM_DET_TOPIC,),
                 (PARAM_MODEL_FILE,),
@@ -63,6 +64,7 @@ class GlobalStepPredictorNode(Node):
         )
         self._config_file = param_values[PARAM_CONFIG_FILE]
         self._task_state_topic = param_values[PARAM_TASK_STATE_TOPIC]
+        self._task_error_topic = param_values[PARAM_TASK_ERROR_TOPIC]
         self._query_task_graph_topic = param_values[PARAM_QUERY_TASK_GRAPH_TOPIC]
         self._det_topic = param_values[PARAM_DET_TOPIC]
         self._model_file = param_values[PARAM_MODEL_FILE]
@@ -77,12 +79,21 @@ class GlobalStepPredictorNode(Node):
         # of the GSP and determine when to publish a TaskUpdate msg.
         self.recipe_current_step_id = {}
 
+        # Mapping from recipe to a list of skipped step IDs. Used to ensure
+        # that duplicate task error messages are not published for the same
+        # skipped step
+        self.recipe_skipped_step_ids = {}
+
         for task in self.gsp.trackers:
             self.recipe_current_step_id[task["recipe"]] = task["current_broad_step"]
+            self.recipe_skipped_step_ids[task["recipe"]] = []
 
         # Initialize ROS hooks
         self._task_update_publisher = self.create_publisher(
             TaskUpdate, self._task_state_topic, 1
+        )
+        self._task_error_publisher = self.create_publisher(
+            AruiUserNotification, self._task_error_topic, 1
         )
         self._task_graph_service = self.create_service(
             QueryTaskGraph, self._query_task_graph_topic, self.query_task_graph_callback
@@ -140,6 +151,41 @@ class GlobalStepPredictorNode(Node):
                     activity_msg.source_stamp_end_frame,
                 )
                 self.recipe_current_step_id[task["recipe"]] = current_step_id
+
+        # Check for any skipped steps
+        skipped_steps_all_trackers = self.gsp.get_skipped_steps_all_trackers()
+        for task in skipped_steps_all_trackers:
+            for skipped_step in task:
+                recipe = skipped_step["recipe"]
+                skipped_step_id = skipped_step["activity_id"]
+                skipped_step_str = (
+                    f"Recipe: {recipe}, step: {skipped_step['activity_str']}"
+                )
+
+                # New skipped step detected, publish error and add it to the list
+                # of skipped steps
+                if skipped_step_id not in self.recipe_skipped_step_ids[recipe]:
+                    self.publish_task_error_message(skipped_step_str)
+                    self.recipe_skipped_step_ids[recipe].append(skipped_step_id)
+
+    def publish_task_error_message(self, skipped_step: str):
+        """
+        Forms and sends a `angel_msgs/AruiUserNotification` message to the
+        task errors topic.
+
+        :param skipped_step: Description of the step that was skipped.
+        """
+        log = self.get_logger()
+        log.info(f"Reporting step skipped error: {skipped_step}")
+
+        message = AruiUserNotification()
+        message.category = message.N_CAT_NOTICE
+        message.context = message.N_CONTEXT_TASK_ERROR
+
+        message.title = "Step skip detected"
+        message.description = (f"Detected skip: {skipped_step}")
+
+        self._task_error_publisher.publish(message)
 
     def publish_task_state_message(
         self,
