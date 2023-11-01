@@ -17,7 +17,8 @@ class GlobalStepPredictor:
         threshold_frame_count_weak=0.0,
         deactivate_thresh_mult=0.3,
         deactivate_thresh_frame_count=20,
-        recipe_types=["tea"],#["coffee", "tea", "dessert_quesadilla", "oatmeal", "pinwheel"],
+        recipe_types=[],
+        recipe_config_dict={},
         background_threshold=0.3,
         activity_config_fpath="config/activity_labels/all_recipe_labels.yaml",
     ):
@@ -25,6 +26,8 @@ class GlobalStepPredictor:
         GlobalStepPredctor: based on a TCN activity classifier's activity classification
         outputs + a set of recipes, track what step a user is on for multiple recipes.
         """
+        with open(activity_config_fpath, "r") as stream:
+            self.activity_config = yaml.safe_load(stream)
 
         # maximum number of steps that can be "jumped" to.
         # i.e. if max_step_jump is 1, from step 2, you can only jump to 3.
@@ -86,21 +89,12 @@ class GlobalStepPredictor:
             )
         )
 
-        self.recipe_configs = {
-            "coffee": "config/tasks/recipe_coffee.yaml",
-            "tea": "config/tasks/recipe_tea.yaml",
-            "dessert_quesadilla": "config/tasks/recipe_dessertquesadilla.yaml",
-            "oatmeal": "config/tasks/recipe_oatmeal.yaml",
-            "pinwheel": "config/tasks/recipe_pinwheel.yaml",
-        }
+        self.recipe_configs = recipe_config_dict
 
         self.gt_activities_order_from_each_config = {
             _recipe: self.get_activity_order_from_config(self.recipe_configs[_recipe])
             for _recipe in self.recipe_configs
         }
-
-        with open(activity_config_fpath, "r") as stream:
-            self.activity_config = yaml.safe_load(stream)
 
     def get_activity_order_from_config(self, config_fn):
         """
@@ -229,12 +223,6 @@ class GlobalStepPredictor:
                     "full_str": "background",
                 },
             )
-
-        # Read in activity config
-        activity_config_fn = "config/activity_labels/all_recipe_labels.yaml"
-        with open(activity_config_fn, "r") as stream:
-            activity_config = yaml.safe_load(stream)
-        activities = activity_config["labels"]
         
         tracker_dict[
             "last_granular_step_per_broad_step"
@@ -267,7 +255,7 @@ class GlobalStepPredictor:
             step["full_str"] for step in broad_steps
         ]
         tracker_dict["granular_step_to_full_str"] = [
-            self.get_activity_from_id(act_id, activities)["full_str"] for act_id in tracker_dict["granular_step_to_activity_id"]
+            self.get_activity_str_from_id(act_id) for act_id in tracker_dict["granular_step_to_activity_id"]
         ]
 
         # Prediction History
@@ -279,11 +267,6 @@ class GlobalStepPredictor:
         tracker_dict["can_skip"] = True
 
         self.trackers.append(tracker_dict)
-
-    def get_activity_from_id(self, id_, activities):
-        for activity in activities:
-            if activity["id"] == id_:
-                return activity
 
     def get_activity_per_granular_step(self, broad_steps):
         activity_id_per_granular_step = []
@@ -532,7 +515,9 @@ class GlobalStepPredictor:
         return activity_id, activity_str
 
     def get_activity_str_from_id(self, activity_id):
-        return self.activity_config["labels"][activity_id]["full_str"]
+        for activity in self.activity_config["labels"]:
+            if activity["id"] == activity_id:
+                return activity["full_str"]
 
     def get_skipped_steps_all_trackers(self):
         skipped_steps_all_trackers = []

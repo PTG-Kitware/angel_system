@@ -4,6 +4,7 @@ from typing import Optional
 
 from builtin_interfaces.msg import Time
 import kwcoco
+import yaml
 import numpy as np
 import rclpy
 from rclpy.node import Node
@@ -70,8 +71,17 @@ class GlobalStepPredictorNode(Node):
         self._model_file = param_values[PARAM_MODEL_FILE]
         self._step_mode = param_values[PARAM_STEP_MODE]
 
+        # Determine what recipes are in the config
+        with open(self._config_file, "r") as stream:
+            config = yaml.safe_load(stream)
+        recipe_types = [recipe["label"] for recipe in config["tasks"]]
+        recipe_configs = [recipe["config_file"] for recipe in config["tasks"]]
+
+        recipe_config_dict = dict(zip(recipe_types, recipe_configs))
+        log.info(f"Recipes: {recipe_config_dict}")
+
         # Instantiate the GlobalStepPredictor module
-        self.gsp = GlobalStepPredictor()
+        self.gsp = GlobalStepPredictor(recipe_types=recipe_types, recipe_config_dict=recipe_config_dict)
 
         self.gsp.get_average_TP_activations_from_file(self._model_file)
         log.info("Global state predictor loaded")
@@ -142,16 +152,16 @@ class GlobalStepPredictorNode(Node):
             current_step_id = task[f"current_{self._step_mode}_step"]
 
         # If previous and current are not the same, publish a task-update
-        #if previous_step_id != current_step_id:
-        log.info(
-            f"Step change detected: {task['recipe']}. Current step: {current_step_id}"
-            f" Previous step: {previous_step_id}."
-        )
-        self.publish_task_state_message(
-            task,
-            activity_msg.source_stamp_end_frame,
-        )
-        self.recipe_current_step_id[task["recipe"]] = current_step_id
+        if previous_step_id != current_step_id:
+            log.info(
+                f"Step change detected: {task['recipe']}. Current step: {current_step_id}"
+                f" Previous step: {previous_step_id}."
+            )
+            self.publish_task_state_message(
+                task,
+                activity_msg.source_stamp_end_frame,
+            )
+            self.recipe_current_step_id[task["recipe"]] = current_step_id
 
         # Check for any skipped steps
         skipped_steps_all_trackers = self.gsp.get_skipped_steps_all_trackers()
@@ -229,7 +239,8 @@ class GlobalStepPredictorNode(Node):
 
         log.info(f"Publish task update w/ step: {task_step_str}")
         # Exclude background
-        task_step = task_state[f"current_{self._step_mode}_step"] - 1
+        curr_step = task_state[f"current_{self._step_mode}_step"]
+        task_step = curr_step - 1 if curr_step != 0 else 0
         previous_step_str = task_state[f"{self._step_mode}_step_to_full_str"][
             max(task_state[f"current_{self._step_mode}_step"] - 1, 0)
         ]
