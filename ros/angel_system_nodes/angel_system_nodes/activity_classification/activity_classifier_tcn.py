@@ -42,6 +42,7 @@ from angel_msgs.msg import (
 from angel_utils import declare_and_get_parameters, RateTracker
 from angel_utils.activity_classification import InputWindow, InputBuffer
 from angel_utils.conversion import time_to_int
+from angel_utils.object_detection import max_labels_and_confs
 
 
 # Input ROS topic for RGB Image Timestamps
@@ -547,22 +548,6 @@ class ActivityClassifierTCN(Node):
 
         log.info("Runtime function end.")
 
-    @staticmethod
-    def _obj_det_msg_to_max_lbl_conf(
-        msg: ObjectDetection2dSet,
-    ) -> Tuple[List[str], List[float]]:
-        """
-        Get out a tuple of the maximally confident class label and
-        confidence value for each detection as a tuple of two lists for
-        expansion into the `ObjectDetectionsLTRB` constructor
-        """
-        mat_shape = (msg.num_detections, len(msg.label_vec))
-        conf_mat = np.asarray(msg.label_confidences).reshape(mat_shape)
-        max_conf_idxs = conf_mat.argmax(axis=1)
-        max_confs = conf_mat[np.arange(conf_mat.shape[0]), max_conf_idxs]
-        max_labels = np.asarray(msg.label_vec)[max_conf_idxs]
-        return max_labels, max_confs
-
     def _process_window(self, window: InputWindow) -> ActivityDetection:
         """
         Process an input window and output an activity classification message.
@@ -571,7 +556,6 @@ class ActivityClassifierTCN(Node):
             determined for this input window.
         """
         log = self.get_logger()
-        obj_det_msg_to_max_lbl_conf = self._obj_det_msg_to_max_lbl_conf
         memo_preproc_input = self._memo_preproc_input
         memo_preproc_input_h = self._memo_preproc_input_id_heap
         memo_object_to_feats = self._memo_objects_to_feats
@@ -591,7 +575,7 @@ class ActivityClassifierTCN(Node):
                         det_msg.top,
                         det_msg.right,
                         det_msg.bottom,
-                        *obj_det_msg_to_max_lbl_conf(det_msg),
+                        *max_labels_and_confs(det_msg),
                     )
                     heappush(memo_preproc_input_h, msg_id)
                 else:

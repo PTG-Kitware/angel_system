@@ -247,7 +247,6 @@ def main():
         log.info("Keyboard interrupt, shutting down.\n")
     finally:
         node.rt_stop()
-        node.get_logger().debug("Keyboard interrupt, shutting down.\n")
 
         # Destroy the node explicitly
         # (optional - otherwise it will be done automatically
