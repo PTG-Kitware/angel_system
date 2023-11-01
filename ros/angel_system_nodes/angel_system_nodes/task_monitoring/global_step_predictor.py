@@ -4,6 +4,7 @@ from typing import Optional
 
 from builtin_interfaces.msg import Time
 import kwcoco
+import yaml
 import numpy as np
 import rclpy
 from rclpy.node import Node
@@ -28,6 +29,8 @@ PARAM_TASK_ERROR_TOPIC = "task_error_topic"
 PARAM_QUERY_TASK_GRAPH_TOPIC = "query_task_graph_topic"
 PARAM_DET_TOPIC = "det_topic"
 PARAM_MODEL_FILE = "model_file"
+PARAM_THRESH_FRAME_COUNT = "thresh_frame_count"
+PARAM_STEP_MODE = "step_mode"
 # Enable ground-truth plotting mode by specifying the path to an MSCOCO file
 # that includes image level `activity_gt` attribute.
 # Requires co-specification of the video ID to select out of the COCO file.
@@ -55,6 +58,8 @@ class GlobalStepPredictorNode(Node):
                 (PARAM_QUERY_TASK_GRAPH_TOPIC,),
                 (PARAM_DET_TOPIC,),
                 (PARAM_MODEL_FILE,),
+                (PARAM_THRESH_FRAME_COUNT,),
+                (PARAM_STEP_MODE,),
                 (PARAM_GT_ACT_COCO, ""),
                 (PARAM_GT_VIDEO_ID, -1),
                 (PARAM_GT_OUTPUT_DIR, "outputs"),
@@ -66,9 +71,24 @@ class GlobalStepPredictorNode(Node):
         self._query_task_graph_topic = param_values[PARAM_QUERY_TASK_GRAPH_TOPIC]
         self._det_topic = param_values[PARAM_DET_TOPIC]
         self._model_file = param_values[PARAM_MODEL_FILE]
+        self._thresh_frame_count = param_values[PARAM_THRESH_FRAME_COUNT]
+        self._step_mode = param_values[PARAM_STEP_MODE]
+
+        # Determine what recipes are in the config
+        with open(self._config_file, "r") as stream:
+            config = yaml.safe_load(stream)
+        recipe_types = [recipe["label"] for recipe in config["tasks"]]
+        recipe_configs = [recipe["config_file"] for recipe in config["tasks"]]
+
+        recipe_config_dict = dict(zip(recipe_types, recipe_configs))
+        log.info(f"Recipes: {recipe_config_dict}")
 
         # Instantiate the GlobalStepPredictor module
-        self.gsp = GlobalStepPredictor()
+        self.gsp = GlobalStepPredictor(
+            threshold_frame_count=self._thresh_frame_count,
+            recipe_types=recipe_types,
+            recipe_config_dict=recipe_config_dict
+        )
 
         self.gsp.get_average_TP_activations_from_file(self._model_file)
         log.info("Global state predictor loaded")
@@ -83,7 +103,7 @@ class GlobalStepPredictorNode(Node):
         self.recipe_skipped_step_ids = {}
 
         for task in self.gsp.trackers:
-            self.recipe_current_step_id[task["recipe"]] = task["current_broad_step"]
+            self.recipe_current_step_id[task["recipe"]] = task[f"current_{self._step_mode}_step"]
             self.recipe_skipped_step_ids[task["recipe"]] = []
 
         # Initialize ROS hooks
@@ -136,19 +156,19 @@ class GlobalStepPredictorNode(Node):
 
         for task in tracker_dict_list:
             previous_step_id = self.recipe_current_step_id[task["recipe"]]
-            current_step_id = task["current_broad_step"]
+            current_step_id = task[f"current_{self._step_mode}_step"]
 
-            # If previous and current are not the same, publish a task-update
-            if previous_step_id != current_step_id:
-                log.info(
-                    f"Step change detected: {task['recipe']}. Current step: {current_step_id}"
-                    f" Previous step: {previous_step_id}."
-                )
-                self.publish_task_state_message(
-                    task,
-                    activity_msg.source_stamp_end_frame,
-                )
-                self.recipe_current_step_id[task["recipe"]] = current_step_id
+        # If previous and current are not the same, publish a task-update
+        if previous_step_id != current_step_id:
+            log.info(
+                f"Step change detected: {task['recipe']}. Current step: {current_step_id}"
+                f" Previous step: {previous_step_id}."
+            )
+            self.publish_task_state_message(
+                task,
+                activity_msg.source_stamp_end_frame,
+            )
+            self.recipe_current_step_id[task["recipe"]] = current_step_id
 
         # Check for any skipped steps
         skipped_steps_all_trackers = self.gsp.get_skipped_steps_all_trackers()
@@ -220,17 +240,16 @@ class GlobalStepPredictorNode(Node):
         message.latest_sensor_input_time = result_ts
 
         # Populate steps and current step
-        # TODO: This is a temporary implementation until the GSP has its "broad
-        #       steps" mapping working.
-        task_step_str = task_state["broad_step_to_full_str"][
-            task_state["current_broad_step"]
+        task_step_str = task_state[f"{self._step_mode}_step_to_full_str"][
+            task_state[f"current_{self._step_mode}_step"]
         ]
 
         log.info(f"Publish task update w/ step: {task_step_str}")
         # Exclude background
-        task_step = task_state["current_broad_step"] - 1
-        previous_step_str = task_state["broad_step_to_full_str"][
-            max(task_state["current_broad_step"] - 1, 0)
+        curr_step = task_state[f"current_{self._step_mode}_step"]
+        task_step = curr_step - 1 if curr_step != 0 else 0
+        previous_step_str = task_state[f"{self._step_mode}_step_to_full_str"][
+            max(task_state[f"current_{self._step_mode}_step"] - 1, 0)
         ]
 
         message.current_step_id = task_step
@@ -239,7 +258,7 @@ class GlobalStepPredictorNode(Node):
 
         # Binary array simply hinged on everything
         completed_steps_arr = np.zeros(
-            task_state["total_num_broad_steps"] - 1,
+            task_state[f"total_num_{self._step_mode}_steps"] - 1,
             dtype=bool,
         )
         completed_steps_arr[:task_step] = True
@@ -262,7 +281,7 @@ class GlobalStepPredictorNode(Node):
         task_titles = []  # List of task titles associated with the graphs
         for task in self.gsp.trackers:
             # Retrieve step descriptions in the current task.
-            task_steps = task["broad_step_to_full_str"][1:]  # Exclude background
+            task_steps = task[f"{self._step_mode}_step_to_full_str"][1:]  # Exclude background
 
             task_g = TaskGraph()
             task_g.task_steps = task_steps
