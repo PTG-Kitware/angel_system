@@ -258,7 +258,7 @@ body {
 .live-img {
   float:left;
 
-  height: 85%;
+  height: 75%;
   width: auto; /* keep aspect ratio */
 }
 
