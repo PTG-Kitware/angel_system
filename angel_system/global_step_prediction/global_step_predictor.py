@@ -583,7 +583,6 @@ class GlobalStepPredictor:
             "pinwheel": [10, "dessert_quesadilla"],
             "dessert_quesadilla": [11, "pinwheel"],
         }
-
         if not skip:
             for recipe in resetter_granular_step:
                 if (
@@ -592,10 +591,19 @@ class GlobalStepPredictor:
                     == resetter_granular_step[recipe][0]
                 ):
                     print("reset condition hit!!")
+                    #import ipdb; ipdb.set_trace()
+                    if tracker["recipe"] == "coffee":
+                        print(f"tea step = {self.trackers[1]['current_granular_step']}")
                     for tracker_ind in self.find_trackers_by_recipe(
                         resetter_granular_step[recipe][1]
                     ):
-                        self.reset_one_tracker(tracker_ind)
+                        if (
+                            self.trackers[tracker_ind]["current_granular_step"] 
+                            < resetter_granular_step[self.trackers[tracker_ind]["recipe"]][0]
+                        ):
+                            self.reset_one_tracker(tracker_ind)
+                    if tracker["recipe"] == "coffee":
+                        print(f"tea step after = {self.trackers[1]['current_granular_step']}")
         else:
             for recipe in resetter_granular_step:
                 granular_steps = [
@@ -609,7 +617,11 @@ class GlobalStepPredictor:
                     for tracker_ind in self.find_trackers_by_recipe(
                         resetter_granular_step[recipe][1]
                     ):
-                        self.reset_one_tracker(tracker_ind)
+                        if (
+                            self.trackers[tracker_ind]["current_granular_step"] 
+                            < resetter_granular_step[self.trackers[tracker_ind]["recipe"]][0]
+                        ):
+                            self.reset_one_tracker(tracker_ind)
 
     def should_this_activity_trigger_be_used_once(self, activity_id):
         """
