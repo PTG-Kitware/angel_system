@@ -90,6 +90,10 @@ girder_file_downloads:
     - file_id: 653998e65be10c8fb6ed523f
       sha512: 0e3b38d6b4b90c727f3b368bbca54bb6f019a50fa575f1afe5d8d1b0259b02928d066feaab5a8f8a4ab5011349099c0f02dd28aa1f9cbd53cb0effbd70016d77
       dest: "{{ stage_dirs.model_files }}/activity_tcn-all_activities-checkpoint.ckpt"
+    # Activity TCN classifier model weights -- Half-rate trained, intended for 15Hz video rate / detection input
+    - file_id: 6543a72168ef53152cbab67a
+      sha512: 15ad19f1627e5b37980b306eb36690a119c5a811f8125e30853d5dc7e80bff4b6d48bf80d875524a59d712b875143fe21e5b641a75c62616494e2ae3fedbf19b
+      dest: "{{ stage_dirs.model_files }}/yolo_all_recipes_sample_rate_2.ckpt"
     # Activity TCN classifier model label mapping
     - file_id: 653999935be10c8fb6ed5242
       sha512: b83b5cd4f9a56bf9e8bfff5ce6a24bda013cca1e4b8c6b905f8d819f29afbfc6d4bc214ec1f97fd6f18d8e4ce304a3f19b89cbb11aad412647d91639eff0e058

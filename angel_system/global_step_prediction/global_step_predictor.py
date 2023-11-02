@@ -207,7 +207,7 @@ class GlobalStepPredictor:
                 config_fn = "config/tasks/recipe_pinwheel.yaml"
         else:
             raise ValueError(f"Invalid recipe type. Valid types: [coffee].")
-        
+
         # Read in task config
         with open(config_fn, "r") as stream:
             config = yaml.safe_load(stream)
@@ -223,7 +223,7 @@ class GlobalStepPredictor:
                     "full_str": "background",
                 },
             )
-        
+
         tracker_dict[
             "last_granular_step_per_broad_step"
         ] = self.get_last_granular_step_per_broad_step(broad_steps)
@@ -249,13 +249,14 @@ class GlobalStepPredictor:
 
         # Labels
         tracker_dict["broad_step_to_label"] = [step["label"] for step in broad_steps]
-        
+
         # Full strings
         tracker_dict["broad_step_to_full_str"] = [
             step["full_str"] for step in broad_steps
         ]
         tracker_dict["granular_step_to_full_str"] = [
-            self.get_activity_str_from_id(act_id) for act_id in tracker_dict["granular_step_to_activity_id"]
+            self.get_activity_str_from_id(act_id)
+            for act_id in tracker_dict["granular_step_to_activity_id"]
         ]
 
         # Prediction History
@@ -339,7 +340,7 @@ class GlobalStepPredictor:
         return last_granular_step_per_broad_step
 
     def process_new_confidences(self, activity_confs):
-        #assert np.array(activity_confs).shape[1] <= len(self.activated_activities)
+        # assert np.array(activity_confs).shape[1] <= len(self.activated_activities)
 
         activated_indexes = np.nonzero(self.activated_activities[:, 0] == 1)[0]
         deactivated_indexes = np.nonzero(self.activated_activities[:, 0] == 0)[0]

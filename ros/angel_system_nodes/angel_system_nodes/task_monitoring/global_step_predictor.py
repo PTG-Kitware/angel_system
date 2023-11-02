@@ -30,6 +30,8 @@ PARAM_QUERY_TASK_GRAPH_TOPIC = "query_task_graph_topic"
 PARAM_DET_TOPIC = "det_topic"
 PARAM_MODEL_FILE = "model_file"
 PARAM_THRESH_FRAME_COUNT = "thresh_frame_count"
+# The step mode to use for this predictor instance. This must be either "broad"
+# or "granular"
 PARAM_STEP_MODE = "step_mode"
 # Enable ground-truth plotting mode by specifying the path to an MSCOCO file
 # that includes image level `activity_gt` attribute.
@@ -37,6 +39,9 @@ PARAM_STEP_MODE = "step_mode"
 PARAM_GT_ACT_COCO = "gt_activity_mscoco"
 PARAM_GT_VIDEO_ID = "gt_video_id"
 PARAM_GT_OUTPUT_DIR = "gt_output_dir"  # output directory override.
+
+
+VALID_STEP_MODES = {"broad", "granular"}
 
 
 class GlobalStepPredictorNode(Node):
@@ -74,6 +79,12 @@ class GlobalStepPredictorNode(Node):
         self._thresh_frame_count = param_values[PARAM_THRESH_FRAME_COUNT]
         self._step_mode = param_values[PARAM_STEP_MODE]
 
+        if self._step_mode not in VALID_STEP_MODES:
+            raise ValueError(
+                f"Given step mode '{self._step_mode}' was not valid. Must be "
+                f"one of {VALID_STEP_MODES}."
+            )
+
         # Determine what recipes are in the config
         with open(self._config_file, "r") as stream:
             config = yaml.safe_load(stream)
@@ -87,7 +98,7 @@ class GlobalStepPredictorNode(Node):
         self.gsp = GlobalStepPredictor(
             threshold_frame_count=self._thresh_frame_count,
             recipe_types=recipe_types,
-            recipe_config_dict=recipe_config_dict
+            recipe_config_dict=recipe_config_dict,
         )
 
         self.gsp.get_average_TP_activations_from_file(self._model_file)
@@ -103,7 +114,9 @@ class GlobalStepPredictorNode(Node):
         self.recipe_skipped_step_ids = {}
 
         for task in self.gsp.trackers:
-            self.recipe_current_step_id[task["recipe"]] = task[f"current_{self._step_mode}_step"]
+            self.recipe_current_step_id[task["recipe"]] = task[
+                f"current_{self._step_mode}_step"
+            ]
             self.recipe_skipped_step_ids[task["recipe"]] = []
 
         # Initialize ROS hooks
@@ -281,7 +294,9 @@ class GlobalStepPredictorNode(Node):
         task_titles = []  # List of task titles associated with the graphs
         for task in self.gsp.trackers:
             # Retrieve step descriptions in the current task.
-            task_steps = task[f"{self._step_mode}_step_to_full_str"][1:]  # Exclude background
+            task_steps = task[f"{self._step_mode}_step_to_full_str"][
+                1:
+            ]  # Exclude background
 
             task_g = TaskGraph()
             task_g.task_steps = task_steps
