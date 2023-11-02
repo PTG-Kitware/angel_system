@@ -176,7 +176,6 @@ $.get("/topics")
       else {
         if(index == current_step_id){
             box.style.backgroundColor = "orange";
-            console.log(task_id_tag)
         }
         else{
             box.style.backgroundColor = "white";
