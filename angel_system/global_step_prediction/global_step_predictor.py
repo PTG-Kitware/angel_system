@@ -296,6 +296,7 @@ class GlobalStepPredictor:
                 f"{tracker['recipe']} past last step."
             )
         return self.trackers
+
     def decrement_granular_step(self, tracker_ind):
         """
         Decrement a tracker's granular step, and also update the tracker's
