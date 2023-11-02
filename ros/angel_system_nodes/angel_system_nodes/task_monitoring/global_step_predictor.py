@@ -88,8 +88,8 @@ class GlobalStepPredictorNode(Node):
         # Determine what recipes are in the config
         with open(self._config_file, "r") as stream:
             config = yaml.safe_load(stream)
-        recipe_types = [recipe["label"] for recipe in config["tasks"]]
-        recipe_configs = [recipe["config_file"] for recipe in config["tasks"]]
+        recipe_types = [recipe["label"] for recipe in config["tasks"] if recipe["active"]]
+        recipe_configs = [recipe["config_file"] for recipe in config["tasks"] if recipe["active"]]
 
         recipe_config_dict = dict(zip(recipe_types, recipe_configs))
         log.info(f"Recipes: {recipe_config_dict}")
@@ -171,17 +171,17 @@ class GlobalStepPredictorNode(Node):
             previous_step_id = self.recipe_current_step_id[task["recipe"]]
             current_step_id = task[f"current_{self._step_mode}_step"]
 
-        # If previous and current are not the same, publish a task-update
-        if previous_step_id != current_step_id:
-            log.info(
-                f"Step change detected: {task['recipe']}. Current step: {current_step_id}"
-                f" Previous step: {previous_step_id}."
-            )
-            self.publish_task_state_message(
-                task,
-                activity_msg.source_stamp_end_frame,
-            )
-            self.recipe_current_step_id[task["recipe"]] = current_step_id
+            # If previous and current are not the same, publish a task-update
+            if previous_step_id != current_step_id:
+                log.info(
+                    f"Step change detected: {task['recipe']}. Current step: {current_step_id}"
+                    f" Previous step: {previous_step_id}."
+                )
+                self.publish_task_state_message(
+                    task,
+                    activity_msg.source_stamp_end_frame,
+                )
+                self.recipe_current_step_id[task["recipe"]] = current_step_id
 
         # Check for any skipped steps
         skipped_steps_all_trackers = self.gsp.get_skipped_steps_all_trackers()
