@@ -87,7 +87,7 @@ class GlobalStepPredictorNode(Node):
         self.gsp = GlobalStepPredictor(
             threshold_frame_count=self._thresh_frame_count,
             recipe_types=recipe_types,
-            recipe_config_dict=recipe_config_dict
+            recipe_config_dict=recipe_config_dict,
         )
 
         self.gsp.get_average_TP_activations_from_file(self._model_file)
@@ -103,7 +103,9 @@ class GlobalStepPredictorNode(Node):
         self.recipe_skipped_step_ids = {}
 
         for task in self.gsp.trackers:
-            self.recipe_current_step_id[task["recipe"]] = task[f"current_{self._step_mode}_step"]
+            self.recipe_current_step_id[task["recipe"]] = task[
+                f"current_{self._step_mode}_step"
+            ]
             self.recipe_skipped_step_ids[task["recipe"]] = []
 
         # Initialize ROS hooks
@@ -281,7 +283,9 @@ class GlobalStepPredictorNode(Node):
         task_titles = []  # List of task titles associated with the graphs
         for task in self.gsp.trackers:
             # Retrieve step descriptions in the current task.
-            task_steps = task[f"{self._step_mode}_step_to_full_str"][1:]  # Exclude background
+            task_steps = task[f"{self._step_mode}_step_to_full_str"][
+                1:
+            ]  # Exclude background
 
             task_g = TaskGraph()
             task_g.task_steps = task_steps
