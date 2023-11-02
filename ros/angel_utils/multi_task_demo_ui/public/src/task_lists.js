@@ -157,10 +157,12 @@ $.get("/topics")
       }
     });
     
-    // Mark current step as yellow
+    // Mark current step as orange if it isn't done
     let box = document.getElementById(task_name + "-" + step_list[current_step_id]);
-    box.style.backgroundColor = "orange";
-
+    if(completed_steps[current_step_id] != true){
+    	box.style.backgroundColor = "orange";
+    }
+    
     // Update line chart
     var ts = m.header.stamp.sec;
     current_step_id = current_step_id + 1;  // list doesn't include background, so index 0 = step 1
