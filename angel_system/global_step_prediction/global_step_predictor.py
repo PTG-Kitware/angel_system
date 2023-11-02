@@ -17,7 +17,7 @@ class GlobalStepPredictor:
         threshold_frame_count_weak=0.0,
         deactivate_thresh_mult=0.3,
         deactivate_thresh_frame_count=20,
-        recipe_types=[],
+        recipe_types=["coffee", "tea", "pinwheel", "dessert_quesadilla", "oatmeal"],
         recipe_config_dict={},
         background_threshold=0.3,
         activity_config_fpath="config/activity_labels/all_recipe_labels.yaml",
@@ -59,7 +59,7 @@ class GlobalStepPredictor:
         # all start at frame 30, since the TCN takes in 30 frames.
         self.current_frame = 30
 
-        self.activity_conf_history = np.empty((0, 63))
+        self.activity_conf_history = np.empty((0, 58))
 
         self.recipe_types = recipe_types
 
@@ -82,12 +82,15 @@ class GlobalStepPredictor:
                 for tracker in self.trackers
             ]
         )
-        self.activated_activities = np.zeros(
-            (
-                np.max(max_activity_id_per_recipe) + 1,
-                2,
+        try:
+            self.activated_activities = np.zeros(
+                (
+                    np.max(max_activity_id_per_recipe) + 1,
+                    2,
+                )
             )
-        )
+        except:
+            import ipdb; ipdb.set_trace()
 
         self.recipe_configs = recipe_config_dict
 
@@ -485,11 +488,11 @@ class GlobalStepPredictor:
                 # searching for one-step jumps.
                 if next_activity in flipping_on_indexes:
                     self.increment_granular_step(tracker_ind)
-                    conditionally_reset_irrational_trackers(tracker):
+                    self.conditionally_reset_irrational_trackers(tracker)
                     # Each activity activation can only be used once.
                     # Delete activity from flipping_on_indexes
                     next_act_ind = np.argwhere(flipping_on_indexes == next_activity)
-                    if should_this_activity_be_used_once(next_act_ind):
+                    if self.should_this_activity_trigger_be_used_once(next_act_ind):
                         flipping_on_indexes = np.delete(flipping_on_indexes, next_act_ind)
                 elif next_next_activity in flipping_on_indexes:
                     # Keep track of skipped steps
@@ -497,12 +500,13 @@ class GlobalStepPredictor:
                     # Increment the granular step twice
                     self.increment_granular_step(tracker_ind)
                     self.increment_granular_step(tracker_ind)
+                    self.conditionally_reset_irrational_trackers(tracker, skip=True)
                     # Each activity activation can only be used once.
                     # Delete activity from flipping_on_indexes
                     next_next_act_ind = np.argwhere(
                         flipping_on_indexes == next_next_activity
                     )
-                    if should_this_activity_be_used_once(next_act_ind):
+                    if self.should_this_activity_trigger_be_used_once(next_next_act_ind):
                         flipping_on_indexes = np.delete(
                             flipping_on_indexes, next_next_act_ind
                         )
@@ -527,7 +531,7 @@ class GlobalStepPredictor:
     def find_trackers_by_recipe(self, recipe):
         tracker_indexes = []
         for tracker_ind, tracker in enumerate(self.trackers):
-            if tracker["recipe"] = recipe:
+            if tracker["recipe"] == recipe:
                 tracker_index_list.append(tracker_ind)
         return tracker_index_list
 
@@ -552,10 +556,10 @@ class GlobalStepPredictor:
         resetter_granular_step = { 
                 # recipe: [ (gran index to trigger reset,
                 #            recipe that should reset)
-                "coffee": [20, "tea"]
-                "tea": [8, "coffee"]
-                "pinwheel": [10, "dessert_quesadilla"]
-                "dessert_quesadilla": [11, "pinwheel"]
+                "coffee": [20, "tea"],
+                "tea": [8, "coffee"],
+                "pinwheel": [10, "dessert_quesadilla"],
+                "dessert_quesadilla": [11, "pinwheel"],
                 }
         if not skip:
             for recipe in resetter_granular_step:
