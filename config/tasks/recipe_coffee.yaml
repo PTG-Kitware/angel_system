@@ -16,36 +16,36 @@ labels:
   - id: 1
     label: "water-in-kettle"
     full_str: "Measure 12 ounces of cold water and transfer to a kettle."
-    activity_ids: [8, 1, 2]
+    activity_ids: [7, 1, 2]
   - id: 2
     label: "place-dipper-on-mug"
     full_str: "Assemble the filter cone. Place the dripper on top of a coffee mug."
-    activity_ids: [25]
+    activity_ids: [23]
   - id: 3
     label: "prepare-paper-filter"
     full_str: "Prepare the filter insert by folding the paper filter in half to create a semi-circle, and in half again
 to create a quarter-circle. Place the paper filter in the dripper and spread open to create a cone."
-    activity_ids: [26, 27, 28, 29]
+    activity_ids: [24, 25, 26, 27]
   - id: 4
     label: "coffee-beans-to-grounds"
     full_str: "Weigh the coffee beans and grind until the coffee grounds are the consistency of coarse sand,
 about 20 seconds. Transfer the grounds to the filter cone."
-    activity_ids: [30, 31, 32, 33, 34, 35, 36]
+    activity_ids: [28, 29, 28, 30, 31, 32, 33]
   - id: 5
     label: "check-temp"
     full_str: "Check the temperature of the water."
-    activity_ids: [3, 4, 5]
+    activity_ids: [3, 4]
   - id: 6
     label: pour-water-grounds-wet"
     full_str: "Pour a small amount of water in the filter to wet the grounds. Wait about 30 seconds."
-    activity_ids: [37]
+    activity_ids: [34]
   - id: 7
     label: "pour-water-grounds-circular"
     full_str: "Slowly pour the rest of the water over the grounds in a circular motion. Do not overfill beyond
 the top of the paper filter."
-    activity_ids: [38]
+    activity_ids: [34]
   - id: 8
     label: "drain-and-cleanup"
     full_str: "Let the coffee drain completely into the mug before removing the dripper. Discard the paper
 filter and coffee grounds."
-    activity_ids: [39, 40, 41, 42]
+    activity_ids: [35, 36, 37, 38]

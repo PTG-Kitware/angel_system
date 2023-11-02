@@ -34,7 +34,10 @@ namespace {
 DEFINE_PARAM_NAME( PARAM_TOPIC_INPUT_IMAGES, "topic_input_images" );
 // Topic we will outpit RGB8 images to.
 DEFINE_PARAM_NAME( PARAM_TOPIC_OUTPUT_IMAGE, "topic_output_images" );
-
+// Drop every other Nth frame (Or None if set to 1)
+DEFINE_PARAM_NAME( PARAM_DROP_Nth_FRAME, "drop_nth_frame" );
+// Convert NV12 to RGB
+DEFINE_PARAM_NAME( PARAM_CONVERT_NV12_TO_RGB, "convert_nv12_to_rgb" ); // TODO: Figure out how to read encoding instead
 #undef DEFINE_PARAM_NAME
 
 
@@ -75,6 +78,10 @@ private:
 
   int m_image_width = -1;
   int m_image_height = -1;
+
+  int m_image_id = 0;
+  int m_drop_nth_frame = 1;
+  bool m_convert_nv12_to_rgb = true;
 };
 
 // ----------------------------------------------------------------------------
@@ -89,11 +96,19 @@ ImageConverter
   // clue what is going wrong.
   declare_parameter( PARAM_TOPIC_INPUT_IMAGES );
   declare_parameter( PARAM_TOPIC_OUTPUT_IMAGE );
+  declare_parameter( PARAM_DROP_Nth_FRAME );
+  declare_parameter( PARAM_CONVERT_NV12_TO_RGB );
 
   auto topic_input_images =
     this->get_parameter( PARAM_TOPIC_INPUT_IMAGES ).as_string();
   auto topic_output_image =
     this->get_parameter( PARAM_TOPIC_OUTPUT_IMAGE ).as_string();
+  auto topic_drop_nth_frame =
+    this->get_parameter( PARAM_DROP_Nth_FRAME ).as_int();
+  m_drop_nth_frame = topic_drop_nth_frame;
+  auto topic_convert_nv12_to_rgb =
+    this->get_parameter( PARAM_CONVERT_NV12_TO_RGB ).as_bool();
+  m_convert_nv12_to_rgb = topic_convert_nv12_to_rgb;
 
   RCLCPP_INFO( log, "Creating subscribers and publishers" );
   // Alternative "best effort" QoS: rclcpp::SensorDataQoS().keep_last( 1 )
@@ -126,42 +141,61 @@ ImageConverter
   // Store the current image dimensions
   m_image_width = image_msg->width;
   m_image_height = image_msg->height;
+  m_image_id = m_image_id + 1;
 
-  // Convert from NV12 image data to RGB8
-  cv::Mat nv12_image = cv::Mat(image_msg->height * 3/2, image_msg->width,
-                               CV_8UC1, &image_msg->data[0]);
-  cv::Mat rgb_image;
-  cv::cvtColor(nv12_image, rgb_image, cv::COLOR_YUV2RGB_NV12);
+  if(m_image_id % m_drop_nth_frame == 0){
+    cv::Mat rgb_image;
+    
+    std::string encoding;
+    sensor_msgs::msg::Image::SharedPtr image_message;
+    if(m_convert_nv12_to_rgb){
+      // Convert from NV12 image data to RGB8
+      cv::Mat nv12_image = cv::Mat(image_msg->height * 3/2, image_msg->width,
+                                  CV_8UC1, &image_msg->data[0]);
+      cv::cvtColor(nv12_image, rgb_image, cv::COLOR_YUV2RGB_NV12);
+      encoding = "rgb8";
 
-  // Convert the cv::Mat to a ROS ImageMsg
-  sensor_msgs::msg::Image::SharedPtr image_message = cv_bridge::CvImage(std_msgs::msg::Header(),
-                                                                        "rgb8",
-                                                                        rgb_image).toImageMsg();
+      // Convert the cv::Mat to a ROS ImageMsg
+      image_message = cv_bridge::CvImage(std_msgs::msg::Header(),
+                                        encoding,
+                                        rgb_image).toImageMsg();
+    }
+    else{
+      cv::Mat nv12_image = cv::Mat(image_msg->height, image_msg->width,
+                                  CV_8UC1, &image_msg->data[0]);
+      rgb_image = nv12_image; // actually this is bgr, don't convert
+      encoding = "bgr8";
 
-  image_message->header.stamp = image_msg->header.stamp;
-  image_message->header.frame_id = frame_id;
+      image_message = image_msg;
+    }
+    
+    
+    image_message->header.stamp = image_msg->header.stamp;
+    image_message->header.frame_id = frame_id;
 
-  // Publish the RGB image
-  rclcpp::Time rgb_publish_time = this->now();
-  m_pub_output_image->publish(*image_message);
+    // Publish the RGB image
+    rclcpp::Time rgb_publish_time = this->now();
+    m_pub_output_image->publish(*image_message);
 
-  // Log latencies
-  {
-    double time_nv12_image = time_to_decimal(nv12_image_time),
-           time_nv12_receive = time_to_decimal(nv12_receive_time),
-           time_rgb_publish = time_to_decimal(rgb_publish_time);
-    double delta_image_receive = time_nv12_receive - time_nv12_image,
-           delta_receive_publish = time_rgb_publish - time_nv12_receive,
-           delta_image_publish = time_rgb_publish - time_nv12_image;
-    auto ss = std::stringstream();
-    ss << std::endl << std::setprecision(16)
-       << "Received frame with header time @ " << time_nv12_image << std::endl
-       << "Callback triggered @ " << time_to_decimal(nv12_receive_time) << std::endl
-       << "Sending converted image time @ " << time_to_decimal(rgb_publish_time) << std::endl
-       << "Capture --> Receive Latency: " << delta_image_receive << std::endl
-       << "Receive --> Publish Latency: " << delta_receive_publish << std::endl
-       << "Capture --> Publish Latency: " << delta_image_publish << std::endl;
-    RCLCPP_INFO( log, ss.str() );
+    // Log latencies
+    {
+      double time_nv12_image = time_to_decimal(nv12_image_time),
+            time_nv12_receive = time_to_decimal(nv12_receive_time),
+            time_rgb_publish = time_to_decimal(rgb_publish_time);
+      double delta_image_receive = time_nv12_receive - time_nv12_image,
+            delta_receive_publish = time_rgb_publish - time_nv12_receive,
+            delta_image_publish = time_rgb_publish - time_nv12_image;
+      auto ss = std::stringstream();
+      ss << std::endl << std::setprecision(16)
+        << "Received frame with header time @ " << time_nv12_image << std::endl
+        << "Callback triggered @ " << time_to_decimal(nv12_receive_time) << std::endl
+        << "Sending converted image time @ " << time_to_decimal(rgb_publish_time) << std::endl
+        << "Capture --> Receive Latency: " << delta_image_receive << std::endl
+        << "Receive --> Publish Latency: " << delta_receive_publish << std::endl
+        << "Capture --> Publish Latency: " << delta_image_publish << std::endl
+        << "Image ID: " << m_image_id << std::endl;
+      RCLCPP_INFO( log, ss.str() );
+    }
   }
 }
 
