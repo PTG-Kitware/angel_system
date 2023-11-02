@@ -16,6 +16,6 @@ Objects In Front of Me: {centered_observables}.
 
 Objects Nearby: {all_observables}
 
-My Question: {question}
+My Question: "{question}"
 
 Your Answer:
