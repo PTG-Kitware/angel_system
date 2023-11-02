@@ -216,8 +216,7 @@ class GlobalStepPredictorNode(Node):
                 f" Previous step: {previous_step_id}."
             )
             self.publish_task_state_message(
-                task,
-                self._latest_act_classification_end_time
+                task, self._latest_act_classification_end_time
             )
             self.recipe_current_step_id[task["recipe"]] = current_step_id
 
@@ -295,7 +294,9 @@ class GlobalStepPredictorNode(Node):
                         self.recipe_skipped_step_ids[recipe].append(skipped_step_id)
 
             # Update latest classification timestamp
-            self._latest_act_classification_end_time = activity_msg.source_stamp_end_frame
+            self._latest_act_classification_end_time = (
+                activity_msg.source_stamp_end_frame
+            )
 
     def publish_task_error_message(self, skipped_step: str):
         """
