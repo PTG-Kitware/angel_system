@@ -127,7 +127,7 @@ class InputBuffer:
 
     def latest_time(self) -> Time:
         """
-        Get the most recent timestamp of data queued in this buffer.
+        Get timestamp of the most recent image queued in this buffer.
 
         :raises RuntimeError: No data has yet been buffered.
 

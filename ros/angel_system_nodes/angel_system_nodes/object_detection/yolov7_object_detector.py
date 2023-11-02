@@ -55,6 +55,9 @@ class YoloObjectDetector(Node):
                 ("agnostic_nms", False),  # class-agnostic NMS
                 # Runtime thread checkin heartbeat interval in seconds.
                 ("rt_thread_heartbeat", 0.1),
+                # If we should enable additional logging to the info level
+                # about when we receive and process data.
+                ("enable_time_trace_logging", False),
             ],
         )
         self._image_topic = param_values["image_topic"]
@@ -67,6 +70,8 @@ class YoloObjectDetector(Node):
         self._cuda_device_id = param_values["cuda_device_id"]
         self._no_trace = param_values["no_trace"]
         self._agnostic_nms = param_values["agnostic_nms"]
+
+        self._enable_trace_logging = param_values["enable_time_trace_logging"]
 
         # Model
         self.model: Union[yolov7.models.yolo.Model, TracedModel]
@@ -129,7 +134,8 @@ class YoloObjectDetector(Node):
         on the image and publishes an ObjectDetectionSet2d message for the image.
         """
         log = self.get_logger()
-        log.info(f"Received image with TS: {image.header.stamp}")
+        if self._enable_trace_logging:
+            log.info(f"Received image with TS: {image.header.stamp}")
         with self._cur_image_msg_lock:
             self._cur_image_msg = image
             self._rt_awake_evt.set()
@@ -154,6 +160,7 @@ class YoloObjectDetector(Node):
     def rt_loop(self):
         log = self.get_logger()
         log.info("Runtime loop starting")
+        enable_trace_logging = self._enable_trace_logging
 
         while self._rt_active.wait(0):  # will quickly return false if cleared.
             if self._rt_awake_evt.wait_and_clear(self._rt_active_heartbeat):
@@ -163,51 +170,50 @@ class YoloObjectDetector(Node):
                     image = self._cur_image_msg
                     self._cur_image_msg = None
 
-                with SimpleTimer(
-                    f"[rt-loop] Processing image TS={image.header.stamp}", log.info
+                if enable_trace_logging:
+                    log.info(f"[rt-loop] Processing image TS={image.header.stamp}")
+                # Convert ROS img msg to CV2 image
+                img0 = BRIDGE.imgmsg_to_cv2(image, desired_encoding="bgr8")
+
+                msg = ObjectDetection2dSet()
+                msg.header.stamp = self.get_clock().now().to_msg()
+                msg.header.frame_id = image.header.frame_id
+                msg.source_stamp = image.header.stamp
+                msg.label_vec[:] = self.model.names
+
+                n_classes = len(self.model.names)
+                n_dets = 0
+
+                dflt_conf_vec = np.zeros(n_classes, dtype=np.float64)
+
+                for xyxy, conf, cls_id in predict_image(
+                    img0,
+                    self.device,
+                    self.model,
+                    self.stride,
+                    self.imgsz,
+                    self.half,
+                    False,
+                    self._det_conf_thresh,
+                    self._iou_thr,
+                    None,
+                    self._agnostic_nms,
                 ):
-                    # Convert ROS img msg to CV2 image
-                    img0 = BRIDGE.imgmsg_to_cv2(image, desired_encoding="bgr8")
+                    n_dets += 1
+                    msg.left.append(xyxy[0])
+                    msg.top.append(xyxy[1])
+                    msg.right.append(xyxy[2])
+                    msg.bottom.append(xyxy[3])
 
-                    msg = ObjectDetection2dSet()
-                    msg.header.stamp = self.get_clock().now().to_msg()
-                    msg.header.frame_id = image.header.frame_id
-                    msg.source_stamp = image.header.stamp
-                    msg.label_vec[:] = self.model.names
+                    dflt_conf_vec[cls_id] = conf
+                    # copies data into array
+                    msg.label_confidences.extend(dflt_conf_vec)
+                    # reset before next passthrough
+                    dflt_conf_vec[cls_id] = 0.0
 
-                    n_classes = len(self.model.names)
-                    n_dets = 0
+                msg.num_detections = n_dets
 
-                    dflt_conf_vec = np.zeros(n_classes, dtype=np.float64)
-
-                    for xyxy, conf, cls_id in predict_image(
-                        img0,
-                        self.device,
-                        self.model,
-                        self.stride,
-                        self.imgsz,
-                        self.half,
-                        False,
-                        self._det_conf_thresh,
-                        self._iou_thr,
-                        None,
-                        self._agnostic_nms,
-                    ):
-                        n_dets += 1
-                        msg.left.append(xyxy[0])
-                        msg.top.append(xyxy[1])
-                        msg.right.append(xyxy[2])
-                        msg.bottom.append(xyxy[3])
-
-                        dflt_conf_vec[cls_id] = conf
-                        # copies data into array
-                        msg.label_confidences.extend(dflt_conf_vec)
-                        # reset before next passthrough
-                        dflt_conf_vec[cls_id] = 0.0
-
-                    msg.num_detections = n_dets
-
-                    self._det_publisher.publish(msg)
+                self._det_publisher.publish(msg)
 
                 self._rate_tracker.tick()
                 log.info(
@@ -241,7 +247,6 @@ def main():
         log.info("Keyboard interrupt, shutting down.\n")
     finally:
         node.rt_stop()
-        node.get_logger().debug("Keyboard interrupt, shutting down.\n")
 
         # Destroy the node explicitly
         # (optional - otherwise it will be done automatically

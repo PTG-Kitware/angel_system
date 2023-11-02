@@ -1,0 +1,210 @@
+# Schema version.
+version: "1.0"
+
+# Reference to the activity classification labels configuration that we will
+# reference into.
+activity_labels: "./config/activity_labels/recipe_coffee.yaml"
+
+# Reference to the file defining the mean and standard deviation of the
+# activity classifications to be used by the HMM. For N activities, both the
+# mean and standard deviation should be N x N matrices such that when activity
+# i is actually occuring, the classifier will emit confidence
+# mean[i, j] +/- std[i, j] for activity j.
+activity_mean_and_std_file: "./model_files/recipe_coffee_shortstrings_mean_std.npy"
+
+# Task title for display purposes.
+title: "Pour-over coffee"
+
+# Layout of the steps that define this task.
+steps:
+  # Item format:
+  # - id: Identifying integer for the step.
+  # - activity_id: The ID of an activity classification associated with this
+  #                step. This must reference an ID within the `activity_labels`
+  #                configuration file referenced above.
+  # - description: Human semantic description of this step.
+  # - median_duration_seconds: Median expected time this task will
+  #                            consume in seconds.
+  # - mean_conf: mean value of classifier confidence for true examples.
+  # - std_conf: standard deviation of confidence for both true and false
+  #             examples.
+  - id: 1   # Must start at 1, 0 is reserved for background.
+    activity_id: 1
+    description: >-
+      measure-12oz-water
+    median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
+  - id: 2
+    activity_id: 2
+    description: >-
+      pour-water-kettle
+    median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
+  - id: 3
+    activity_id: 24
+    description: >-
+      turn-on-kettle
+    median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
+  - id: 4
+    activity_id: 3
+    description: >-
+      place-dipper-on-mug
+    median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
+  - id: 5
+    activity_id: 4
+    description: >-
+      filter-fold-half
+    median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
+  - id: 6
+    activity_id: 5
+    description: >-
+      filter-fold-quarter
+    median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
+  - id: 7
+    activity_id: 6
+    description: >-
+      place-filter
+    median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
+  - id: 8
+    activity_id: 7
+    description: >-
+      spread-filter
+    median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
+  - id: 9
+    activity_id: 8
+    description: >-
+      scale-turn-on
+    median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
+  - id: 10
+    activity_id: 9
+    description: >-
+      place-bowl-on-scale
+    median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
+  - id: 11
+    activity_id: 10
+    description: >-
+      zero-scale
+    median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
+  - id: 12
+    activity_id: 11
+    description: >-
+      measure-coffee-beans
+    median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
+  - id: 13
+    activity_id: 12
+    description: >-
+      pour-coffee-grinder
+    median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
+  - id: 14
+    activity_id: 13
+    description: >-
+      grind-beans
+    median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
+  - id: 15
+    activity_id: 14
+    description: >-
+      pour-beans-filter
+    median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
+  - id: 16
+    activity_id: 15
+    description: >-
+      thermometer-turn-on
+    median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
+  - id: 17
+    activity_id: 16
+    description: >-
+      thermometer-in-water
+    median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
+  - id: 18
+    activity_id: 18
+    description: >-
+      pour-water-grounds-wet
+    median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
+  - id: 19
+    activity_id: 19
+    description: >-
+      pour-water-grounds-circular
+    median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
+  - id: 20
+    activity_id: 20
+    description: >-
+      water-drain
+    median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
+  - id: 21
+    activity_id: 21
+    description: >-
+      remove-dripper
+    median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
+  - id: 22
+    activity_id: 22
+    description: >-
+      remove-grounds
+    median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
+  - id: 23
+    activity_id: 23
+    description: >-
+      discard-grounds
+    median_duration_seconds: 5
+    mean_conf: 0.5
+    std_conf: 0.2
+
+# Hidden markov model configuration parameters
+hmm:
+  # Time (seconds) between time steps of HMM. Sets the temporal precision of
+  # the HMM analysis at the expense of processing costs.
+  dt: 0.5
+
+  # Constrain whether HMM sequence can skip steps or jump backwards. When both
+  # values are set to 0, forward progress without skipping steps is enforced.
+  num_steps_can_jump_fwd: 1
+  num_steps_can_jump_bck: 0
+
+  # Default classifier mean confidence to use if not explicitly provided for a
+  # step.
+  default_mean_conf: 0.5
+
+  # Default classifier standard deviation of confidence to use if not
+  # explicitly provided for a step.
+  default_std_conf: 0.2

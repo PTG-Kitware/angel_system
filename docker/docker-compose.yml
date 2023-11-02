@@ -70,6 +70,8 @@ services:
       - ./workspace_test.sh:${ANGEL_WORKSPACE_DIR}/workspace_test.sh
       - ../ros_bags:${ANGEL_WORKSPACE_DIR}/ros_bags
       - ../hl2ss:${ANGEL_WORKSPACE_DIR}/hl2ss
+      - ./fastrtps_profile.xml.tmpl:${ANGEL_WORKSPACE_DIR}/fastrtps_profile.xml.tmpl
+      - ./cyclonedds_profile.xml.tmpl:${ANGEL_WORKSPACE_DIR}/cyclonedds_profile.xml.tmpl
       # Build environment things
       - ${WORKSPACE_SHELL_HOST_DIR}/build:${ANGEL_WORKSPACE_DIR}/build
       - ${WORKSPACE_SHELL_HOST_DIR}/install:${ANGEL_WORKSPACE_DIR}/install
@@ -83,8 +85,10 @@ services:
       - ${XAUTH_FILEPATH}:/tmp/.docker.xauth
     environment:
       HISTFILE: ${ANGEL_WORKSPACE_DIR}/stuff/bash_history
-      CYCLONE_DDS_INTERFACE:  # from .env file or parent environment
       SETUP_WORKSPACE_INSTALL:  # from .env file or parent environment
+      ROS_LOCALHOST_ONLY:  # from .env file or parent environment
+      RMW_IMPLEMENTATION:  # from .env file or parent environment
+      CYCLONE_DDS_INTERFACE:  # from .env file or parent environment
       DISPLAY:  # pull from current environment
       XAUTHORITY: /tmp/.docker.xauth
       PYTHONDONTWRITEBYTECODE: 1  # Don't write .pyc files when in workspace
@@ -111,5 +115,7 @@ services:
     volumes:
       - /dev/shm:/dev/shm
     environment:
-      CYCLONE_DDS_INTERFACE:  # from .env file
+      ROS_LOCALHOST_ONLY:  # from .env file or parent environment
+      RMW_IMPLEMENTATION:  # from .env file or parent environment
+      CYCLONE_DDS_INTERFACE:  # from .env file or parent environment
       SETUP_WORKSPACE_INSTALL: 1  # yes, activate the workspace here

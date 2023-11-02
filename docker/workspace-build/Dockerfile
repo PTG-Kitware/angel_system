@@ -126,6 +126,7 @@ RUN ln -s "${ANGEL_WORKSPACE_DIR}"/tmux "${HOME}/.tmuxinator" \
  && ln -s "${ANGEL_WORKSPACE_DIR}"/tmux/tmux.conf "${HOME}"/.tmux.conf
 
 COPY docker/cyclonedds_profile.xml.tmpl \
+     docker/fastrtps_profile.xml.tmpl \
      docker/workspace_entrypoint.sh \
      docker/workspace_setenv.sh \
      docker/workspace_build.sh \

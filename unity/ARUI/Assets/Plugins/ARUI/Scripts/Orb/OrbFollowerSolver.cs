@@ -4,6 +4,7 @@
 using Microsoft.MixedReality.Toolkit.Utilities.Solvers;
 using UnityEngine;
 using System.Collections;
+using System;
 
 /// <summary>
 /// Provides a solver for the Orb, using MRTK solver
@@ -22,7 +23,7 @@ public class OrbFollowerSolver : Solver
     //** Radial and positional behavior of the orb
     private float _currentMaxDistance = 0.7f;           /// < Current max distance from eye to element, changes depending on the environment
     private float _currentMaxViewDegrees = 15f;         /// < The element will stay at least this close to the center of view
-    
+
     private bool _coolDown = false;
     private Vector3 _coolDownTarget = Vector3.zero;
 
@@ -42,6 +43,7 @@ public class OrbFollowerSolver : Solver
     private Vector3 SolverReferenceDirection => SolverHandler.TransformTarget != null ? SolverHandler.TransformTarget.forward : Vector3.forward;
 
     private Vector3 ReferencePoint => SolverHandler.TransformTarget != null ? SolverHandler.TransformTarget.position : Vector3.zero;
+
 
     private new void Start()
     {
@@ -76,7 +78,7 @@ public class OrbFollowerSolver : Solver
             if (!_coolDown)
             {
                 //update maxDistance based on spatial map
-                float dist = transform.position.GetCameraToPosDist();
+                float dist = transform.position.GetDistanceToSpatialMap();
                 if (dist != -1)
                     _currentMaxDistance = Mathf.Max(ARUISettings.OrbMinDistToUser, Mathf.Min(dist - 0.05f, ARUISettings.OrbMaxDistToUser));
 
@@ -88,14 +90,18 @@ public class OrbFollowerSolver : Solver
                 goalPosition = _coolDownTarget;
 
             GoalPosition = goalPosition;
-            transform.rotation = Quaternion.LookRotation(goalPosition - ReferencePoint, AngelARUI.Instance.ARCamera.transform.up);
+            transform.rotation = Quaternion.LookRotation(goalPosition - ReferencePoint, Vector3.up);
         }
         else if (!(_isLookingAtOrbFlag))
         {
             //only update rotation 
             GoalPosition = transform.position;
-            transform.rotation = Quaternion.LookRotation(transform.position - ReferencePoint, AngelARUI.Instance.ARCamera.transform.up);
+            transform.rotation = Quaternion.LookRotation(transform.position - ReferencePoint, Vector3.up);
             _outOfFOV = false;
+        } else
+        {
+            GoalPosition = transform.position;
+            transform.rotation = Quaternion.LookRotation(transform.position - ReferencePoint, Vector3.up);
         }
     }
 
@@ -109,7 +115,7 @@ public class OrbFollowerSolver : Solver
             yield return new WaitForEndOfFrame();
 
             //update maxDistance based on spatial map
-            float distance = transform.position.GetCameraToPosDist();
+            float distance = transform.position.GetDistanceToSpatialMap();
             if (distance != -1)
                 _currentMaxDistance = Mathf.Max(ARUISettings.OrbMinDistToUser, Mathf.Min(distance - 0.05f, ARUISettings.OrbMaxDistToUser));
 
@@ -125,11 +131,9 @@ public class OrbFollowerSolver : Solver
 
                     yield return new WaitForSeconds(0.2f);
                 }
-
             }
 
             dist = Vector3.Magnitude(transform.position - _coolDownTarget);
-
         }
 
         _coolDown = false;
@@ -191,7 +195,6 @@ public class OrbFollowerSolver : Solver
                 desiredPos = _coolDownTarget;
                 return true;
             }
-
         }
 
         if (currentAngle > ARUISettings.OrbOutOfFOVThresV * verticalAspectScale)

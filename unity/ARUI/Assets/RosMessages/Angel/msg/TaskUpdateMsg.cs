@@ -37,10 +37,6 @@ namespace RosMessageTypes.Angel
         //  Array of length n_steps (same length as `steps` above) that indicates which
         //  steps, by index association, are complete.
         public bool[] completed_steps;
-        //  Array of relevant task step HMM step confidence scores. This includes the HMM
-        //  background class as index 0.
-        //  TODO: This should be its own separate message, implementation dependent
-        public float[] hmm_step_confidence;
         // ##############################################################################
         // 
         //  DEPRECATED FIELDS
@@ -56,6 +52,10 @@ namespace RosMessageTypes.Angel
         //  Time remaining to move to next task (e.g. waiting for tea to steep)
         //  -1 means that this is not a time based task
         public int time_remaining_until_next_task;
+        //  Array of relevant task step HMM step confidence scores. This includes the HMM
+        //  background class as index 0.
+        //  TODO: This should be its own separate message, implementation dependent
+        public float[] hmm_step_confidence;
 
         public TaskUpdateMsg()
         {
@@ -68,15 +68,15 @@ namespace RosMessageTypes.Angel
             this.previous_step = "";
             this.task_complete_confidence = 0.0f;
             this.completed_steps = new bool[0];
-            this.hmm_step_confidence = new float[0];
             this.steps = new string[0];
             this.current_activity = "";
             this.next_activity = "";
             this.task_items = new TaskItemMsg[0];
             this.time_remaining_until_next_task = 0;
+            this.hmm_step_confidence = new float[0];
         }
 
-        public TaskUpdateMsg(Std.HeaderMsg header, string task_name, string task_description, BuiltinInterfaces.TimeMsg latest_sensor_input_time, sbyte current_step_id, string current_step, string previous_step, float task_complete_confidence, bool[] completed_steps, float[] hmm_step_confidence, string[] steps, string current_activity, string next_activity, TaskItemMsg[] task_items, int time_remaining_until_next_task)
+        public TaskUpdateMsg(Std.HeaderMsg header, string task_name, string task_description, BuiltinInterfaces.TimeMsg latest_sensor_input_time, sbyte current_step_id, string current_step, string previous_step, float task_complete_confidence, bool[] completed_steps, string[] steps, string current_activity, string next_activity, TaskItemMsg[] task_items, int time_remaining_until_next_task, float[] hmm_step_confidence)
         {
             this.header = header;
             this.task_name = task_name;
@@ -87,12 +87,12 @@ namespace RosMessageTypes.Angel
             this.previous_step = previous_step;
             this.task_complete_confidence = task_complete_confidence;
             this.completed_steps = completed_steps;
-            this.hmm_step_confidence = hmm_step_confidence;
             this.steps = steps;
             this.current_activity = current_activity;
             this.next_activity = next_activity;
             this.task_items = task_items;
             this.time_remaining_until_next_task = time_remaining_until_next_task;
+            this.hmm_step_confidence = hmm_step_confidence;
         }
 
         public static TaskUpdateMsg Deserialize(MessageDeserializer deserializer) => new TaskUpdateMsg(deserializer);
@@ -108,12 +108,12 @@ namespace RosMessageTypes.Angel
             deserializer.Read(out this.previous_step);
             deserializer.Read(out this.task_complete_confidence);
             deserializer.Read(out this.completed_steps, sizeof(bool), deserializer.ReadLength());
-            deserializer.Read(out this.hmm_step_confidence, sizeof(float), deserializer.ReadLength());
             deserializer.Read(out this.steps, deserializer.ReadLength());
             deserializer.Read(out this.current_activity);
             deserializer.Read(out this.next_activity);
             deserializer.Read(out this.task_items, TaskItemMsg.Deserialize, deserializer.ReadLength());
             deserializer.Read(out this.time_remaining_until_next_task);
+            deserializer.Read(out this.hmm_step_confidence, sizeof(float), deserializer.ReadLength());
         }
 
         public override void SerializeTo(MessageSerializer serializer)
@@ -128,8 +128,6 @@ namespace RosMessageTypes.Angel
             serializer.Write(this.task_complete_confidence);
             serializer.WriteLength(this.completed_steps);
             serializer.Write(this.completed_steps);
-            serializer.WriteLength(this.hmm_step_confidence);
-            serializer.Write(this.hmm_step_confidence);
             serializer.WriteLength(this.steps);
             serializer.Write(this.steps);
             serializer.Write(this.current_activity);
@@ -137,6 +135,8 @@ namespace RosMessageTypes.Angel
             serializer.WriteLength(this.task_items);
             serializer.Write(this.task_items);
             serializer.Write(this.time_remaining_until_next_task);
+            serializer.WriteLength(this.hmm_step_confidence);
+            serializer.Write(this.hmm_step_confidence);
         }
 
         public override string ToString()
@@ -151,12 +151,12 @@ namespace RosMessageTypes.Angel
             "\nprevious_step: " + previous_step.ToString() +
             "\ntask_complete_confidence: " + task_complete_confidence.ToString() +
             "\ncompleted_steps: " + System.String.Join(", ", completed_steps.ToList()) +
-            "\nhmm_step_confidence: " + System.String.Join(", ", hmm_step_confidence.ToList()) +
             "\nsteps: " + System.String.Join(", ", steps.ToList()) +
             "\ncurrent_activity: " + current_activity.ToString() +
             "\nnext_activity: " + next_activity.ToString() +
             "\ntask_items: " + System.String.Join(", ", task_items.ToList()) +
-            "\ntime_remaining_until_next_task: " + time_remaining_until_next_task.ToString();
+            "\ntime_remaining_until_next_task: " + time_remaining_until_next_task.ToString() +
+            "\nhmm_step_confidence: " + System.String.Join(", ", hmm_step_confidence.ToList());
         }
 
 #if UNITY_EDITOR

@@ -1,4 +1,7 @@
 version: "1"
+# TODO: These activity ids should be updated to match those in 
+# `all_recipe_labels.yaml` but they are being left for now until
+# we can update the groundtruth labels as well
 title: "Tea"
 labels:
   # Item:
@@ -51,11 +54,11 @@ labels:
     full_str: "Discard tea bag"
     depends: [9]
   - id: 11
-    label: "add-honey"
+    label: "tea-add-honey"
     full_str: "Add honey to mug"
     depends:
   - id: 12
-    label: "stir"
+    label: "tea-stir"
     full_str: "Stir"
     depends: [7, 11]
   - id: 13

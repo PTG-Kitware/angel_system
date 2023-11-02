@@ -12,8 +12,17 @@ tasks:
   #   It is expected that these paths are relative to where this tool is run.
   #   (i.e. relative to $(ANGEL_WORKSPACE)).
   - id: 0
-    config_file: "./config/tasks/task_steps_config-recipe_coffee_trimmed_v3_allows_skip.yaml"
+    label: "coffee"
+    config_file: "./config/tasks/recipe_coffee.yaml"
   - id: 1
-    config_file: "./config/tasks/task_steps_berkeley_config-recipe_coffee.yaml"
+    label: "tea"
+    config_file: "./config/tasks/recipe_tea.yaml"
   - id: 2
-    config_file: "./config/tasks/task_steps_config-recipe_coffee_trimmed.yaml"
+    label: "pinwheel"
+    config_file: "./config/tasks/recipe_pinwheel.yaml"
+  - id: 3
+    label: "oatmeal"
+    config_file: "./config/tasks/recipe_oatmeal.yaml"
+  - id: 4
+    label: "dessert_quesadilla"
+    config_file: "./config/tasks/recipe_dessertquesadilla.yaml"
