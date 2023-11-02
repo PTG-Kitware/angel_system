@@ -83,17 +83,13 @@ class GlobalStepPredictor:
                 for tracker in self.trackers
             ]
         )
-        try:
-            self.activated_activities = np.zeros(
-                (
-                    np.max(max_activity_id_per_recipe) + 1,
-                    2,
-                )
-            )
-        except:
-            import ipdb
 
-            ipdb.set_trace()
+        self.activated_activities = np.zeros(
+            (
+                np.max(max_activity_id_per_recipe) + 1,
+                2,
+            )
+        )
 
         self.recipe_configs = recipe_config_dict
 
@@ -293,16 +289,24 @@ class GlobalStepPredictor:
         increment may or may not entail a broad step increment.)
         """
         tracker = self.trackers[tracker_ind]
-        if tracker["current_granular_step"] < tracker["total_num_granular_steps"] - 1:
+        current_granular_step = tracker["current_granular_step"]
+        num_granular_steps = tracker["total_num_granular_steps"] - 1
+        if current_granular_step < num_granular_steps:
             self.trackers[tracker_ind]["current_granular_step"] += 1
             self.trackers[tracker_ind][
                 "current_broad_step"
-            ] = self.granular_to_broad_step(tracker, tracker["current_granular_step"])
+            ] = self.granular_to_broad_step(tracker, current_granular_step)
+        elif current_granular_step == num_granular_steps:
+            self.trackers[tracker_ind]["active"] = False
         else:
             raise Exception(
                 f"Tried to increment tracker #{tracker_ind}: "
                 f"{tracker['recipe']} past last step."
             )
+<<<<<<< Updated upstream
+=======
+        
+>>>>>>> Stashed changes
         self.conditionally_reset_irrational_trackers(tracker)
         return self.trackers
 
@@ -314,11 +318,19 @@ class GlobalStepPredictor:
         increment may or may not entail a broad step increment.)
         """
         tracker = self.trackers[tracker_ind]
-        if tracker["current_granular_step"] > 0:
+
+        num_granular_steps = tracker["total_num_granular_steps"] - 1
+        current_granular_step = tracker["current_granular_step"]
+
+        if current_granular_step == num_granular_steps and not self.trackers[tracker_ind]["active"]:
+            self.trackers[tracker_ind]["active"] = True
+            return self.trackers
+
+        if current_granular_step > 0:
             self.trackers[tracker_ind]["current_granular_step"] -= 1
             self.trackers[tracker_ind][
                 "current_broad_step"
-            ] = self.granular_to_broad_step(tracker, tracker["current_granular_step"])
+            ] = self.granular_to_broad_step(tracker, current_granular_step)
         else:
             raise Exception(
                 f"Tried to decrement tracker #{tracker_ind}: "
@@ -570,13 +582,7 @@ class GlobalStepPredictor:
             "pinwheel": [10, "dessert_quesadilla"],
             "dessert_quesadilla": [11, "pinwheel"],
         }
-        """
-        if tracker["recipe"] == "coffee" and tracker["current_granular_step"] == 20:
-            print("hey")
-            import ipdb
 
-            ipdb.set_trace()
-        """
         if not skip:
             for recipe in resetter_granular_step:
                 if (

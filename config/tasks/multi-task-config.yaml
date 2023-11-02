@@ -30,4 +30,4 @@ tasks:
   - id: 4
     label: "dessert_quesadilla"
     config_file: "./config/tasks/recipe_dessertquesadilla.yaml"
-    active: false
+    active: true
