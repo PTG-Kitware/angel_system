@@ -95,6 +95,9 @@ class GlobalStepPredictor:
             _recipe: self.get_activity_order_from_config(self.recipe_configs[_recipe])
             for _recipe in self.recipe_configs
         }
+        # tracker resets: list of recipe name strings, for each reset we've had.
+        # Example: ["tea", "coffee"]
+        self.tracker_resets = []
 
     def get_activity_order_from_config(self, config_fn):
         """
@@ -315,6 +318,19 @@ class GlobalStepPredictor:
             )
         return self.trackers
 
+    def reset_one_tracker(self, tracker_ind):
+        """
+        Set a tracker's granular & broad steps to 0.
+
+        NOTE: you can still see any nonzero steps in the prediction_history.
+
+        Also, note that you'll have to process more activity confidence vectors
+        to see zeros in your prediction history.
+        """
+        self.trackers[tracker_ind]["current_broad_step"] = 0
+        self.trackers[tracker_ind]["current_granular_step"] = 0
+        self.tracker_resets.append[self.trackers[tracker_ind]["recipe"]]
+
     def granular_to_broad_step(self, tracker, granular_step):
         """
         Convert granular step to broad step.
@@ -469,10 +485,12 @@ class GlobalStepPredictor:
                 # searching for one-step jumps.
                 if next_activity in flipping_on_indexes:
                     self.increment_granular_step(tracker_ind)
+                    conditionally_reset_irrational_trackers(tracker):
                     # Each activity activation can only be used once.
                     # Delete activity from flipping_on_indexes
                     next_act_ind = np.argwhere(flipping_on_indexes == next_activity)
-                    flipping_on_indexes = np.delete(flipping_on_indexes, next_act_ind)
+                    if should_this_activity_be_used_once(next_act_ind):
+                        flipping_on_indexes = np.delete(flipping_on_indexes, next_act_ind)
                 elif next_next_activity in flipping_on_indexes:
                     # Keep track of skipped steps
                     self.add_skipped_granular_step(tracker_ind, next_granular_step)
@@ -484,9 +502,10 @@ class GlobalStepPredictor:
                     next_next_act_ind = np.argwhere(
                         flipping_on_indexes == next_next_activity
                     )
-                    flipping_on_indexes = np.delete(
-                        flipping_on_indexes, next_next_act_ind
-                    )
+                    if should_this_activity_be_used_once(next_act_ind):
+                        flipping_on_indexes = np.delete(
+                            flipping_on_indexes, next_next_act_ind
+                        )
 
                 # TODO: Try requiring that previous step is de-activated
 
@@ -504,6 +523,67 @@ class GlobalStepPredictor:
         )
 
         return self.trackers
+
+    def find_trackers_by_recipe(self, recipe):
+        tracker_indexes = []
+        for tracker_ind, tracker in enumerate(self.trackers):
+            if tracker["recipe"] = recipe:
+                tracker_index_list.append(tracker_ind)
+        return tracker_index_list
+
+    def conditionally_reset_irrational_trackers(self, tracker, skip=False):
+        """
+        A rational recipe tracker reset. 
+
+        Assuming one pot of water with 12oz poured into it:
+        - you can't make tea while coffee is between broad steps 1-7
+          (Reset tea at coffee granular step 20)
+        - you can't make coffee while tea is between broad steps 1-
+          (Reset coffee at tea granular step 8)
+
+        Assuming one cutting board:
+        - you can't make dessert quesadilla while pinwheel is between
+          broad steps 1-6
+          (Reset dessert quesadilla at pinwheel granular step 10)
+        - you can't make pinwheel while dessert quesadilla is between
+          broad steps 1-5
+          (Reset pinwheel at dessert q granular step 11)
+        """
+        resetter_granular_step = { 
+                # recipe: [ (gran index to trigger reset,
+                #            recipe that should reset)
+                "coffee": [20, "tea"]
+                "tea": [8, "coffee"]
+                "pinwheel": [10, "dessert_quesadilla"]
+                "dessert_quesadilla": [11, "pinwheel"]
+                }
+        if not skip:
+            for recipe in resetter_granular_step:
+                if tracker["recipe"] == recipe and tracker["current_granular_step"] == resetter_granular_step[recipe][0]:
+                    for tracker_ind in find_trackers_by_recipe(resetter_granular_step[recipe][1]):
+                        reset_one_tracker(tracker_ind)
+        else:
+            for recipe in resetter_granular_step:
+                granular_steps = [resetter_granular_step[recipe][0], resetter_granular_step[recipe][0] + 1]
+                if tracker["recipe"] == recipe and tracker["current_granular_step"] in granular_steps:
+                    for tracker_ind in find_trackers_by_recipe(resetter_granular_step[recipe][1]):
+                        reset_one_tracker(tracker_ind)
+
+    def should_this_activity_trigger_be_used_once(self, activity_id):
+        """
+        Should this activity trigger be used once?
+        Or should we use it to trigger any step increment it applies to?
+        """
+        # TODO: un-hard-code these indexes. Find them in the right configs.
+        shared_activity_indexes = []
+        if "tea" in self.recipe_types and "coffee" in self.recipe_types:
+            # the activities in broad_step 1 are the same for tea and coffee
+            shared_activity_indexes.extend([8,1,2])
+        if "pinwheel" in self.recipe_types and "dessert_quesadilla" in self.recipe_types:
+            shared_activity_indexes.extend([6])
+        if activity_id in shared_activity_indexes:
+            return False
+        return True
 
     def add_skipped_granular_step(self, tracker_ind, granular_step):
         self.trackers[tracker_ind]["skipped_granular_steps"].append(granular_step)
