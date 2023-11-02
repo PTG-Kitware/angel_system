@@ -174,7 +174,7 @@ $.get("/topics")
         box.style.backgroundColor = "green";
       }
       else {
-        if(index == current_step_id){
+        if(index == current_step_id && m.current_step != "background"){
             box.style.backgroundColor = "orange";
         }
         else{
