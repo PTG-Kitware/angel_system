@@ -9,6 +9,7 @@
 #
 
 # Task Monitor commands
+int8 task_index
 bool reset_current_task
 bool previous_step
 bool next_step
