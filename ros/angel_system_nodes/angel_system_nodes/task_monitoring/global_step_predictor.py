@@ -30,6 +30,8 @@ PARAM_QUERY_TASK_GRAPH_TOPIC = "query_task_graph_topic"
 PARAM_DET_TOPIC = "det_topic"
 PARAM_MODEL_FILE = "model_file"
 PARAM_THRESH_FRAME_COUNT = "thresh_frame_count"
+# The step mode to use for this predictor instance. This must be either "broad"
+# or "granular"
 PARAM_STEP_MODE = "step_mode"
 # Enable ground-truth plotting mode by specifying the path to an MSCOCO file
 # that includes image level `activity_gt` attribute.
@@ -37,6 +39,9 @@ PARAM_STEP_MODE = "step_mode"
 PARAM_GT_ACT_COCO = "gt_activity_mscoco"
 PARAM_GT_VIDEO_ID = "gt_video_id"
 PARAM_GT_OUTPUT_DIR = "gt_output_dir"  # output directory override.
+
+
+VALID_STEP_MODES = {"broad", "granular"}
 
 
 class GlobalStepPredictorNode(Node):
@@ -73,6 +78,12 @@ class GlobalStepPredictorNode(Node):
         self._model_file = param_values[PARAM_MODEL_FILE]
         self._thresh_frame_count = param_values[PARAM_THRESH_FRAME_COUNT]
         self._step_mode = param_values[PARAM_STEP_MODE]
+
+        if self._step_mode not in VALID_STEP_MODES:
+            raise ValueError(
+                f"Given step mode '{self._step_mode}' was not valid. Must be "
+                f"one of {VALID_STEP_MODES}."
+            )
 
         # Determine what recipes are in the config
         with open(self._config_file, "r") as stream:
