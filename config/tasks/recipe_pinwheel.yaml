@@ -16,53 +16,53 @@ labels:
   - id: 1
     label: "place-tortilla"
     full_str: "Place tortilla on cutting board."
-    activity_ids: [6]
+    activity_ids: [5]
   - id: 2
     label: "add-nut-butter"
     full_str: "Use a butter knife to scoop nut butter from the jar. Spread nut butter onto tortilla, leaving 1/2-
 inch uncovered at the edges."
-    activity_ids: [10, 13]
+    activity_ids: [9, 12]
   - id: 3
     label: "clean-knife"
     full_str: "Clean the knife by wiping with a paper towel."
-    activity_ids: [22]
+    activity_ids: [20]
   - id: 4
     label: "add-jelly"
     full_str: "Use the knife to scoop jelly from the jar. Spread jelly over the nut butter."
-    activity_ids: [11, 14]
+    activity_ids: [10, 13]
   - id: 5
     label: "clean-knife"
     full_str: "Clean the knife by wiping with a paper towel."
-    activity_ids: [22]
+    activity_ids: [20]
   - id: 6
     label: "roll-tortilla"
     full_str: "Roll the tortilla from one end to the other into a log shape, about 1.5 inches thick. Roll it tight
 enough to prevent gaps, but not so tight that the filling leaks."
-    activity_ids: [55]
+    activity_ids: [50]
   - id: 7
     label: "add-toothpicks"
     full_str: "Secure the rolled tortilla by inserting 5 toothpicks about 1 inch apart."
-    activity_ids: [56, 56, 56, 56, 56]
+    activity_ids: [51, 51, 51, 51, 51]
   - id: 8
     label: "remove-tortilla-ends"
     full_str: "Trim the ends of the tortilla roll with the butter knife, leaving 1⁄2 inch margin between the last
 toothpick and the end of the roll. Discard ends."
-    activity_ids: [57, 57, 58]
+    activity_ids: [52, 52, 53]
   - id: 9
     label: "place-floss-between-toothpicks"
     full_str: "Slide floss under the tortilla, perpendicular to the length of the roll. Place the floss halfway
 between two toothpicks."
-    activity_ids: [59]
+    activity_ids: [54]
   - id: 10
     label: "first-slice"
     full_str: "Cross the two ends of the floss over the top of the tortilla roll. Holding one end of the floss in
 each hand, pull the floss ends in opposite directions to slice."
-    activity_ids: [60, 61]
+    activity_ids: [55, 56]
   - id: 11
     label: "continue-slicing"
     full_str: "Continue slicing with floss to create 5 pinwheels."
-    activity_ids: [59, 60, 61, 59, 60, 61, 59, 60, 61]
+    activity_ids: [54, 55, 56, 54, 55, 56, 54, 55, 56]
   - id: 12
     label: "plate-pinwheels"
     full_str: "Place the pinwheels on a plate."
-    activity_ids: [62]
+    activity_ids: [57]
