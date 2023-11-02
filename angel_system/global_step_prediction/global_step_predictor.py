@@ -303,10 +303,7 @@ class GlobalStepPredictor:
                 f"Tried to increment tracker #{tracker_ind}: "
                 f"{tracker['recipe']} past last step."
             )
-<<<<<<< Updated upstream
-=======
         
->>>>>>> Stashed changes
         self.conditionally_reset_irrational_trackers(tracker)
         return self.trackers
 
@@ -347,6 +344,7 @@ class GlobalStepPredictor:
         Also, note that you'll have to process more activity confidence vectors
         to see zeros in your prediction history.
         """
+        print(f"RESETTING tracker {tracker_ind}")
         self.trackers[tracker_ind]["current_broad_step"] = 0
         self.trackers[tracker_ind]["current_granular_step"] = 0
         self.tracker_resets.append(self.trackers[tracker_ind]["recipe"])
