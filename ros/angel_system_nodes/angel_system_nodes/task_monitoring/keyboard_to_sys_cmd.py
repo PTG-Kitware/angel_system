@@ -57,18 +57,20 @@ class KeyboardToSystemCommands(Node):
             )
             return lambda: self.publish_sys_cmd(t_id, forward)
 
-        with keyboard.GlobalHotKeys({
-            "<ctrl>+<shift>+!": for_task_direction(0, False),
-            "<ctrl>+<shift>+@": for_task_direction(0, True),
-            "<ctrl>+<shift>+#": for_task_direction(1, False),
-            "<ctrl>+<shift>+$": for_task_direction(1, True),
-            "<ctrl>+<shift>+%": for_task_direction(2, False),
-            "<ctrl>+<shift>+^": for_task_direction(2, True),
-            "<ctrl>+<shift>+&": for_task_direction(3, False),
-            "<ctrl>+<shift>+*": for_task_direction(3, True),
-            "<ctrl>+<shift>+(": for_task_direction(4, False),
-            "<ctrl>+<shift>+)": for_task_direction(4, True),
-        }) as h:
+        with keyboard.GlobalHotKeys(
+            {
+                "<ctrl>+<shift>+!": for_task_direction(0, False),
+                "<ctrl>+<shift>+@": for_task_direction(0, True),
+                "<ctrl>+<shift>+#": for_task_direction(1, False),
+                "<ctrl>+<shift>+$": for_task_direction(1, True),
+                "<ctrl>+<shift>+%": for_task_direction(2, False),
+                "<ctrl>+<shift>+^": for_task_direction(2, True),
+                "<ctrl>+<shift>+&": for_task_direction(3, False),
+                "<ctrl>+<shift>+*": for_task_direction(3, True),
+                "<ctrl>+<shift>+(": for_task_direction(4, False),
+                "<ctrl>+<shift>+)": for_task_direction(4, True),
+            }
+        ) as h:
             h.join()
 
     def publish_sys_cmd(self, task_id: int, forward: bool) -> None:

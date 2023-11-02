@@ -84,7 +84,9 @@ class GlobalStepPredictorNode(Node):
         self._det_topic = param_values[PARAM_DET_TOPIC]
         self._model_file = param_values[PARAM_MODEL_FILE]
         self._thresh_frame_count = param_values[PARAM_THRESH_FRAME_COUNT]
-        self._deactivate_thresh_frame_count = param_values[PARAM_DEACTIVATE_THRESH_FRAME_COUNT]
+        self._deactivate_thresh_frame_count = param_values[
+            PARAM_DEACTIVATE_THRESH_FRAME_COUNT
+        ]
         self._step_mode = param_values[PARAM_STEP_MODE]
 
         if self._step_mode not in VALID_STEP_MODES:
@@ -96,8 +98,12 @@ class GlobalStepPredictorNode(Node):
         # Determine what recipes are in the config
         with open(self._config_file, "r") as stream:
             config = yaml.safe_load(stream)
-        recipe_types = [recipe["label"] for recipe in config["tasks"] if recipe["active"]]
-        recipe_configs = [recipe["config_file"] for recipe in config["tasks"] if recipe["active"]]
+        recipe_types = [
+            recipe["label"] for recipe in config["tasks"] if recipe["active"]
+        ]
+        recipe_configs = [
+            recipe["config_file"] for recipe in config["tasks"] if recipe["active"]
+        ]
 
         recipe_config_dict = dict(zip(recipe_types, recipe_configs))
         log.info(f"Recipes: {recipe_config_dict}")
@@ -242,7 +248,9 @@ class GlobalStepPredictorNode(Node):
             step_mode = self._step_mode
             for task in tracker_dict_list:
                 previous_step_id = self.recipe_current_step_id[task["recipe"]]
+                # print(f"previous: {previous_step_id}")
                 current_step_id = task[f"current_{step_mode}_step"]
+                # print(f"current: {current_step_id}")
 
                 # If previous and current are not the same, publish a task-update
                 if previous_step_id != current_step_id:
@@ -257,7 +265,10 @@ class GlobalStepPredictorNode(Node):
                     self.recipe_current_step_id[task["recipe"]] = current_step_id
 
                 # If we are on the last step and it is not active, mark it as done
-                if current_step_id == task[f"total_num_{step_mode}_steps"] - 1 and not task["active"]:
+                if (
+                    current_step_id == task[f"total_num_{step_mode}_steps"] - 1
+                    and not task["active"]
+                ):
                     if not self.recipe_published_last_msg[task["recipe"]]:
                         # The last step activity was completed.
                         log.info(
@@ -368,7 +379,7 @@ class GlobalStepPredictorNode(Node):
             dtype=bool,
         )
         completed_steps_arr[:task_step] = True
-        if task_step == len(completed_steps_arr)-1 and not task_state["active"]:
+        if task_step == len(completed_steps_arr) - 1 and not task_state["active"]:
             completed_steps_arr[task_step] = True
         message.completed_steps = completed_steps_arr.tolist()
 
