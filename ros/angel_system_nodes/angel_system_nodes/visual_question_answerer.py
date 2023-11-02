@@ -92,6 +92,7 @@ PROMPT_VARIABLES = [
     "question",
 ]
 
+PARAM_TIMEOUT = "timeout"
 
 class VisualQuestionAnswerer(BaseDialogueSystemNode):
 
@@ -124,8 +125,9 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
                 (PARAM_ACT_CLFN_THRESHOLD, 0.8),
                 (OUT_QA_TOPIC,),
                 (PARAM_CONTEXT_HISTORY_LENGTH, 3),
-                (PARAM_DEBUG_MODE, False),
                 (PARAM_MUST_CONTAIN_TARGET_PHRASE, False),
+                (PARAM_TIMEOUT, 600),
+                (PARAM_DEBUG_MODE, False),
             ],
         )
         self._in_utterance_topic = param_values[IN_UTTERANCE_TOPIC]
@@ -134,6 +136,7 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
         self._in_actions_topic = param_values[IN_ACT_CLFN_TOPIC]
         self._out_qa_topic = param_values[OUT_QA_TOPIC]
         self.dialogue_history_length = param_values[PARAM_CONTEXT_HISTORY_LENGTH]
+        self.timeout = param_values[PARAM_TIMEOUT]
         self.debug_mode = False
         if param_values[PARAM_DEBUG_MODE]:
             self.debug_mode = True
@@ -269,6 +272,7 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
             openai_api_key=self.openai_api_key,
             temperature=0.0,
             max_tokens=64,
+            request_timeout=self.timeout
         )
         zero_shot_prompt = langchain.PromptTemplate(
             input_variables=PROMPT_VARIABLES,

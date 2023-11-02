@@ -171,13 +171,15 @@ windows:
            -p input_topic:=utterances_topic
            -p expect_user_intent_topic:=expect_user_intent_topic
            -p interp_user_intent_topic:=interp_user_intent_topic
+           -p timeout:=2
   - emotion_detection:
       layout: even-vertical
       panes:
-        - emotion_detection: ros2 run angel_system_nodes base_emotion_detector --ros-args
+        - emotion_detection: ros2 run angel_system_nodes gpt_emotion_detector --ros-args
            -r __ns:=${ROS_NAMESPACE}
            -p input_topic:=interp_user_intent_topic
            -p user_emotion_topic:=emotion_topic
+           -p timeout:=2
   - question_answering:
       layout: even-vertical
       panes:

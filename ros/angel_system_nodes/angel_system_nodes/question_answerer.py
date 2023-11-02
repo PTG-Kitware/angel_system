@@ -18,7 +18,7 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 INPUT_TOPIC = "input_topic"
 OUT_QA_TOPIC = "system_text_response_topic"
 FEW_SHOT_PROMPT = "few_shot_prompt_file"
-
+PARAM_TIMEOUT = "timeout"
 
 class QuestionAnswerer(BaseDialogueSystemNode):
     def __init__(self):
@@ -31,11 +31,13 @@ class QuestionAnswerer(BaseDialogueSystemNode):
                 (INPUT_TOPIC,),
                 (OUT_QA_TOPIC,),
                 (FEW_SHOT_PROMPT,),
+                (PARAM_TIMEOUT, 600),
             ],
         )
         self._input_topic = param_values[INPUT_TOPIC]
         self._out_qa_topic = param_values[OUT_QA_TOPIC]
         self.prompt_file = param_values[FEW_SHOT_PROMPT]
+        self.timeout = param_values[PARAM_TIMEOUT]
 
         self.question_queue = queue.Queue()
         self.handler_thread = threading.Thread(target=self.process_question_queue)
@@ -137,6 +139,7 @@ class QuestionAnswerer(BaseDialogueSystemNode):
             "https://api.openai.com/v1/chat/completions",
             json=payload,
             headers={"Authorization": "Bearer {}".format(self.openai_api_key)},
+            timeout=self.timeout
         )
         return (
             json.loads(req.text)["choices"][0]["message"]["content"]

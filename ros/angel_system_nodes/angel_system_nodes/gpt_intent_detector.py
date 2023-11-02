@@ -8,6 +8,7 @@ import rclpy
 
 from angel_msgs.msg import DialogueUtterance
 from angel_system_nodes.base_intent_detector import BaseIntentDetector, INTENT_LABELS
+from angel_utils import declare_and_get_parameters
 
 openai.organization = os.getenv("OPENAI_ORG_ID")
 openai.api_key = os.getenv("OPENAI_API_KEY")
@@ -20,11 +21,19 @@ FEW_SHOT_EXAMPLES = [
     {"utterance": "The sky is blue", "label": "other"},
 ]
 
+PARAM_TIMEOUT = "timeout"
 
 class GptIntentDetector(BaseIntentDetector):
     def __init__(self):
         super().__init__()
         self.log = self.get_logger()
+
+        param_values = declare_and_get_parameters(
+            self,
+            [
+                (PARAM_TIMEOUT,600),
+            ])
+        self.timeout = param_values[PARAM_TIMEOUT]
 
         # This node additionally includes fields for interacting with OpenAI
         # via LangChain.
@@ -79,6 +88,7 @@ class GptIntentDetector(BaseIntentDetector):
             # Only 2 tokens needed for classification (tokens are delimited by use of '_', i.e.
             # 'next_step' counts as 2 tokens).
             max_tokens=2,
+            request_timeout=self.timeout
         )
         return LLMChain(llm=openai_llm, prompt=few_shot_prompt)
 
