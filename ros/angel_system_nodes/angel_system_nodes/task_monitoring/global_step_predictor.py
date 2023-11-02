@@ -205,11 +205,6 @@ class GlobalStepPredictorNode(Node):
                 # GSP raises exception if this fails, so just ignore it
                 return
 
-            task = tracker_dict_list[sys_cmd_msg.task_index]
-
-            previous_step_id = self.recipe_current_step_id[task["recipe"]]
-            current_step_id = task[f"current_{self._step_mode}_step"]
-
             if self._latest_act_classification_end_time is None:
                 # No classifications received yet, set time window to now
                 start_time = self.get_clock().now().to_msg()
@@ -220,14 +215,38 @@ class GlobalStepPredictorNode(Node):
             end_time.sec += 1
             self._latest_act_classification_end_time = end_time
 
-            log.info(
-                f"Manual step change detected: {task['recipe']}. Current step: {current_step_id}"
-                f" Previous step: {previous_step_id}."
-            )
-            self.publish_task_state_message(
-                task, self._latest_act_classification_end_time
-            )
-            self.recipe_current_step_id[task["recipe"]] = current_step_id
+            step_mode = self._step_mode
+            for task in tracker_dict_list:
+                previous_step_id = self.recipe_current_step_id[task["recipe"]]
+                current_step_id = task[f"current_{step_mode}_step"]
+
+                # If previous and current are not the same, publish a task-update
+                if previous_step_id != current_step_id:
+                    log.info(
+                        f"Manual step change detected: {task['recipe']}. Current step: {current_step_id}"
+                        f" Previous step: {previous_step_id}."
+                    )
+                    self.publish_task_state_message(
+                        task, self._latest_act_classification_end_time
+                    )
+                    self.recipe_current_step_id[task["recipe"]] = current_step_id
+
+                # If we are on the last step and it is not active, mark it as done
+                if (
+                    current_step_id == task[f"total_num_{step_mode}_steps"] - 1
+                    and not task["active"]
+                ):
+                    if not self.recipe_published_last_msg[task["recipe"]]:
+                        # The last step activity was completed.
+                        log.info(
+                            f"Final step manually completed: {task['recipe']}. Current step: {current_step_id}"
+                        )
+                        self.publish_task_state_message(
+                            task,
+                            activity_msg.source_stamp_end_frame,
+                        )
+
+                        self.recipe_published_last_msg[task["recipe"]] = True
 
     def det_callback(self, activity_msg: ActivityDetection):
         """
@@ -248,9 +267,7 @@ class GlobalStepPredictorNode(Node):
             step_mode = self._step_mode
             for task in tracker_dict_list:
                 previous_step_id = self.recipe_current_step_id[task["recipe"]]
-                # print(f"previous: {previous_step_id}")
                 current_step_id = task[f"current_{step_mode}_step"]
-                # print(f"current: {current_step_id}")
 
                 # If previous and current are not the same, publish a task-update
                 if previous_step_id != current_step_id:
