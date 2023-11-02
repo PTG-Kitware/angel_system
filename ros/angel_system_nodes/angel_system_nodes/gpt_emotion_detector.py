@@ -5,6 +5,7 @@ import openai
 import os
 import rclpy
 
+from angel_msgs.msg import DialogueUtterance
 from angel_system_nodes.base_emotion_detector import BaseEmotionDetector, LABEL_MAPPINGS
 
 openai.organization = os.getenv("OPENAI_ORG_ID")
@@ -80,7 +81,7 @@ class GptEmotionDetector(BaseEmotionDetector):
         )
         return LLMChain(llm=openai_llm, prompt=few_shot_prompt)
 
-    def get_inference(self, msg):
+    def get_inference(self, msg: DialogueUtterance):
         """
         Detects the user intent via langchain execution of GPT.
         """

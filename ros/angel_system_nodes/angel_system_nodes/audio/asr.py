@@ -11,7 +11,7 @@ import rclpy
 from rclpy.node import Node
 import simpleaudio as sa
 
-from angel_msgs.msg import HeadsetAudioData, Utterance
+from angel_msgs.msg import HeadsetAudioData, DialogueUtterance
 
 
 AUDIO_TOPIC = "audio_topic"
@@ -105,7 +105,7 @@ class ASR(Node):
         self.subscription = self.create_subscription(
             HeadsetAudioData, self._audio_topic, self.listener_callback, 1
         )
-        self._publisher = self.create_publisher(Utterance, self._utterances_topic, 1)
+        self._publisher = self.create_publisher(DialogueUtterance, self._utterances_topic, 1)
 
         self.audio_stream = []
         self.t = threading.Thread()
@@ -204,15 +204,19 @@ class ASR(Node):
                 self.log.info("Complete ASR text is:\n" + f'"{response_text}"')
                 if self._is_sentence_tokenize_mode:
                     for sentence in sent_tokenize(response_text):
-                        utterance_msg = Utterance()
-                        utterance_msg.value = sentence
+                        msg = DialogueUtterance()
+                        msg.header.frame_id = "ASR"
+                        msg.header.stamp = self.get_clock().now().to_msg()
+                        msg.utterance_text = sentence
                         self.log.info("Publishing message: " + f'"{sentence}"')
-                        self._publisher.publish(utterance_msg)
+                        self._publisher.publish(msg)
                 else:
-                    utterance_msg = Utterance()
-                    utterance_msg.value = response_text
+                    msg = DialogueUtterance()
+                    msg.header.frame_id = "ASR"
+                    msg.header.stamp = self.get_clock().now().to_msg()
+                    msg.utterance_text = response_text
                     self.log.info("Publishing message: " + f'"{response_text}"')
-                    self._publisher.publish(utterance_msg)
+                    self._publisher.publish(msg)
 
 
 def main():

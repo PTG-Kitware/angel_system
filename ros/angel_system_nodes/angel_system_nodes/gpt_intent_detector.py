@@ -6,6 +6,7 @@ import openai
 import os
 import rclpy
 
+from angel_msgs.msg import DialogueUtterance
 from angel_system_nodes.base_intent_detector import BaseIntentDetector, INTENT_LABELS
 
 openai.organization = os.getenv("OPENAI_ORG_ID")
@@ -81,11 +82,11 @@ class GptIntentDetector(BaseIntentDetector):
         )
         return LLMChain(llm=openai_llm, prompt=few_shot_prompt)
 
-    def detect_intents(self, msg):
+    def detect_intents(self, msg: DialogueUtterance):
         """
         Detects the user intent via langchain execution of GPT.
         """
-        return self.chain.run(utterance=msg), 0.5
+        return self.chain.run(utterance=msg.utterance_text), 0.5
 
 
 def main():

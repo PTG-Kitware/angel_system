@@ -9,27 +9,27 @@ from operator import itemgetter
 import os
 import queue
 import rclpy
-from rclpy.node import Node
 from termcolor import colored
 import threading
 from typing import *
 
 from angel_msgs.msg import (
     ActivityDetection,
-    InterpretedAudioUserEmotion,
+    DialogueUtterance,
     ObjectDetection2dSet,
     SystemTextResponse,
     TaskUpdate,
 )
 from angel_utils import declare_and_get_parameters
 from angel_system.data.common import bounding_boxes
+from angel_system_nodes.base_dialogue_system_node import BaseDialogueSystemNode
 from angel_system.utils.object_detection_queues import centroid_2d_strategy_queue
 
 openai.organization = os.getenv("OPENAI_ORG_ID")
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # Below is/are the subscribed topic(s).
-IN_EMOTION_TOPIC = "user_emotion_topic"
+IN_UTTERANCE_TOPIC = "utterance_topic"
 IN_OBJECT_DETECTION_TOPIC = "object_detections_topic"
 IN_ACT_CLFN_TOPIC = "action_classifications_topic"
 IN_TASK_STATE_TOPIC = "task_state_topic"
@@ -93,7 +93,7 @@ PROMPT_VARIABLES = [
 ]
 
 
-class VisualQuestionAnswerer(Node):
+class VisualQuestionAnswerer(BaseDialogueSystemNode):
 
     class TimestampedEntity:
         """
@@ -106,12 +106,12 @@ class VisualQuestionAnswerer(Node):
             self.entity = entity
 
     def __init__(self):
-        super().__init__(self.__class__.__name__)
+        super().__init__()
         self.log = self.get_logger()
         param_values = declare_and_get_parameters(
             self,
             [
-                (IN_EMOTION_TOPIC,),
+                (IN_UTTERANCE_TOPIC,),
                 (IN_TASK_STATE_TOPIC, ""),
                 (IN_OBJECT_DETECTION_TOPIC, ""),
                 (IN_ACT_CLFN_TOPIC, ""),
@@ -128,7 +128,7 @@ class VisualQuestionAnswerer(Node):
                 (PARAM_MUST_CONTAIN_TARGET_PHRASE, False),
             ],
         )
-        self._in_emotion_topic = param_values[IN_EMOTION_TOPIC]
+        self._in_utterance_topic = param_values[IN_UTTERANCE_TOPIC]
         self._in_task_state_topic = param_values[IN_TASK_STATE_TOPIC]
         self._in_objects_topic = param_values[IN_OBJECT_DETECTION_TOPIC]
         self._in_actions_topic = param_values[IN_ACT_CLFN_TOPIC]
@@ -185,9 +185,9 @@ class VisualQuestionAnswerer(Node):
         self.handler_thread.start()
 
         # Configure the (necessary) emotional detection enriched utterance subscription.
-        self.emotion_subscription = self.create_subscription(
-            InterpretedAudioUserEmotion,
-            self._in_emotion_topic,
+        self.subscription = self.create_subscription(
+            DialogueUtterance,
+            self._in_utterance_topic,
             self.question_answer_callback,
             1,
         )
@@ -202,7 +202,7 @@ class VisualQuestionAnswerer(Node):
             )
         # Configure the optional object detection subscription.
         self.objects_subscription = None
-        if self._in_emotion_topic:
+        if self._in_objects_topic:
             self.objects_subscription = self.create_subscription(
                 ObjectDetection2dSet,
                 self._in_objects_topic,
@@ -276,7 +276,7 @@ class VisualQuestionAnswerer(Node):
         )
         return LLMChain(llm=openai_llm, prompt=zero_shot_prompt)
 
-    def _get_sec(self, msg) -> int:
+    def _get_sec(self, msg: DialogueUtterance) -> int:
         return msg.header.stamp.sec
 
     def _set_current_step(self, msg: TaskUpdate):
@@ -346,7 +346,7 @@ class VisualQuestionAnswerer(Node):
         Returns the latest action classification in self.action_classification_queue
         that does not occur before a provided time.
         """
-        latest_action = "nothing"
+        latest_action = "not available"
         while not self.action_classification_queue.empty():
             next = self.action_classification_queue.queue[0]
             if next.time < curr_time:
@@ -405,7 +405,7 @@ class VisualQuestionAnswerer(Node):
 
     def get_response(
         self,
-        msg: InterpretedAudioUserEmotion,
+        msg: DialogueUtterance,
         chat_history: str,
         current_step: str,
         action: str,
@@ -417,17 +417,17 @@ class VisualQuestionAnswerer(Node):
         the user's detected emotion, chat history, current step information, action, and
         detected objects. Inference calls can be added and revised here.
         """
-        return_msg = None
+        return_string = None
         try:
-            self.log.info(f"User emotion: {msg.user_emotion}")
-            return_msg = self.chain.run(
+            self.log.info(f"User emotion: {msg.emotion}")
+            return_string = self.chain.run(
                 recipe=self.recipe,
                 chat_history=chat_history,
                 current_step=current_step,
                 action=action,
                 centered_observables=centered_observables,
                 all_observables=all_observables,
-                emotion=msg.user_emotion,
+                emotion=self.get_emotion_or(msg),
                 question=msg.utterance_text,
             )
             if self.debug_mode:
@@ -438,7 +438,7 @@ class VisualQuestionAnswerer(Node):
                     action=action,
                     centered_observables=centered_observables,
                     all_observables=all_observables,
-                    emotion=msg.user_emotion,
+                    emotion=self.get_emotion_or(msg),
                     question=msg.utterance_text,
                 ).to_string()
                 sent_prompt = colored(sent_prompt, "light_red")
@@ -447,18 +447,18 @@ class VisualQuestionAnswerer(Node):
                 )
         except RuntimeError as err:
             self.log.info(err)
-            return_msg = (
+            return_string = (
                 "I'm sorry. I don't know how to answer your statement. "
-                + f"I understand that you feel {msg.user_emotion}."
+                + f"I understand that you feel {self.get_emotion_or(msg)}."
             )
-        return return_msg
+        return return_string
 
-    def question_answer_callback(self, msg):
+    def question_answer_callback(self, msg: DialogueUtterance):
         """
         This is the main ROS node listener callback loop that will process
         all messages received via subscribed topics.
         """
-        self.log.debug(f"Received message:\n\n{msg.utterance_text}")
+        self.log.info(f"Received message:\n\n{msg.utterance_text}")
         if not self._apply_filter(msg):
             return
         self.question_queue.put(msg)
@@ -467,9 +467,11 @@ class VisualQuestionAnswerer(Node):
         """
         Constant loop to process received questions.
         """
+        self.log.info("Spawning question-processing thread...")
         while True:
             question_msg = self.question_queue.get()
             start_time = self._get_sec(question_msg)
+            self.log.info(f"Processing utterance {question_msg.utterance_text}")
 
             # Get most recently detected action.
             action = self._get_latest_action(start_time)
