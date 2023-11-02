@@ -1,6 +1,4 @@
-from threading import (
-    Thread,
-)
+from threading import Event, Thread
 
 from pynput import keyboard
 import rclpy
@@ -51,9 +49,27 @@ class KeyboardToSystemCommands(Node):
             f"Starting keyboard monitor. Use the 0-9 number keys to advance"
             f" between tasks."
         )
-        # Collect events until released
-        with keyboard.Listener(on_press=self.on_press) as listener:
-            listener.join()
+
+        def for_task_direction(t_id, forward):
+            log.info(
+                f"Publishing command to move task {t_id} "
+                f"{'forward' if forward else 'backward'}"
+            )
+            return lambda: self.publish_sys_cmd(t_id, forward)
+
+        with keyboard.GlobalHotKeys({
+            "<ctrl>+<shift>+!": for_task_direction(0, True),
+            "<ctrl>+<shift>+@": for_task_direction(0, False),
+            "<ctrl>+<shift>+#": for_task_direction(1, True),
+            "<ctrl>+<shift>+$": for_task_direction(1, False),
+            "<ctrl>+<shift>+%": for_task_direction(2, True),
+            "<ctrl>+<shift>+^": for_task_direction(2, False),
+            "<ctrl>+<shift>+&": for_task_direction(3, True),
+            "<ctrl>+<shift>+*": for_task_direction(3, False),
+            "<ctrl>+<shift>+(": for_task_direction(4, True),
+            "<ctrl>+<shift>+)": for_task_direction(4, False),
+        }) as h:
+            h.join()
 
     def publish_sys_cmd(self, task_id: int, forward: bool) -> None:
         """
@@ -73,46 +89,6 @@ class KeyboardToSystemCommands(Node):
 
         log.info(f"Publishing command for task {task_id} to move {cmd_str}")
         self._sys_cmd_publisher.publish(msg)
-
-    def on_press(self, key) -> None:
-        """
-        Callback function for keypress events. Uses the number keys to advance
-        between tasks.
-        """
-        if key == keyboard.KeyCode.from_char("1"):
-            task_id = 0
-            forward = False
-        elif key == keyboard.KeyCode.from_char("2"):
-            task_id = 0
-            forward = True
-        elif key == keyboard.KeyCode.from_char("3"):
-            task_id = 1
-            forward = False
-        elif key == keyboard.KeyCode.from_char("4"):
-            task_id = 1
-            forward = True
-        elif key == keyboard.KeyCode.from_char("5"):
-            task_id = 2
-            forward = False
-        elif key == keyboard.KeyCode.from_char("6"):
-            task_id = 2
-            forward = True
-        elif key == keyboard.KeyCode.from_char("7"):
-            task_id = 3
-            forward = False
-        elif key == keyboard.KeyCode.from_char("8"):
-            task_id = 3
-            forward = True
-        elif key == keyboard.KeyCode.from_char("9"):
-            task_id = 4
-            forward = False
-        elif key == keyboard.KeyCode.from_char("0"):
-            task_id = 4
-            forward = True
-        else:
-            return  # ignore
-
-        self.publish_sys_cmd(task_id, forward)
 
 
 def main():
