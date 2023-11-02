@@ -42,10 +42,6 @@ OUT_QA_TOPIC = "system_text_response_topic"
 PARAM_MUST_CONTAIN_TARGET_PHRASE = "must_contain_target_phrase"
 TARGET_PHRASE = "hey angel"
 
-# Below configures the filtering strategy for detected objects. It should correspond to
-# VisualQuestionAnswerer.FilterType.
-PARAM_OBJECT_DETECTION_FILTER_STRATEGY = "obj_det_filter"
-
 # Below indicates how many of the last n detected objects should be surfaced
 # in the LLM prompt. These objects do NOT have to be unique.
 PARAM_OBJECT_LAST_N_OBJ_DETECTIONS = "obj_det_last_n"
