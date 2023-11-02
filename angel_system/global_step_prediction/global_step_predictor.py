@@ -13,10 +13,10 @@ class GlobalStepPredictor:
         max_step_jump=2,
         threshold_multiplier=0.8,
         threshold_multiplier_weak=0.0,
-        threshold_frame_count=8,
+        threshold_frame_count=8, # full rate = 8, half rate = 4
         threshold_frame_count_weak=0.0,
         deactivate_thresh_mult=0.3,
-        deactivate_thresh_frame_count=20,
+        deactivate_thresh_frame_count=20, # full rate = 20, half rate = 10
         recipe_types=[],
         recipe_config_dict={},
         background_threshold=0.3,

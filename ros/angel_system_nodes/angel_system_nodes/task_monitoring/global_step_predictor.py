@@ -30,6 +30,7 @@ PARAM_QUERY_TASK_GRAPH_TOPIC = "query_task_graph_topic"
 PARAM_DET_TOPIC = "det_topic"
 PARAM_MODEL_FILE = "model_file"
 PARAM_THRESH_FRAME_COUNT = "thresh_frame_count"
+PARAM_DEACTIVATE_THRESH_FRAME_COUNT = "deactivate_thresh_frame_count"
 # The step mode to use for this predictor instance. This must be either "broad"
 # or "granular"
 PARAM_STEP_MODE = "step_mode"
@@ -64,6 +65,7 @@ class GlobalStepPredictorNode(Node):
                 (PARAM_DET_TOPIC,),
                 (PARAM_MODEL_FILE,),
                 (PARAM_THRESH_FRAME_COUNT,),
+                (PARAM_DEACTIVATE_THRESH_FRAME_COUNT,),
                 (PARAM_STEP_MODE,),
                 (PARAM_GT_ACT_COCO, ""),
                 (PARAM_GT_VIDEO_ID, -1),
@@ -77,6 +79,7 @@ class GlobalStepPredictorNode(Node):
         self._det_topic = param_values[PARAM_DET_TOPIC]
         self._model_file = param_values[PARAM_MODEL_FILE]
         self._thresh_frame_count = param_values[PARAM_THRESH_FRAME_COUNT]
+        self._deactivate_thresh_frame_count = param_values[PARAM_DEACTIVATE_THRESH_FRAME_COUNT]
         self._step_mode = param_values[PARAM_STEP_MODE]
 
         if self._step_mode not in VALID_STEP_MODES:
@@ -97,6 +100,7 @@ class GlobalStepPredictorNode(Node):
         # Instantiate the GlobalStepPredictor module
         self.gsp = GlobalStepPredictor(
             threshold_frame_count=self._thresh_frame_count,
+            deactivate_thresh_frame_count=self._deactivate_thresh_frame_count,
             recipe_types=recipe_types,
             recipe_config_dict=recipe_config_dict,
         )

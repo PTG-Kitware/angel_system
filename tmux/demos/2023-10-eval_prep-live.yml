@@ -115,6 +115,7 @@ windows:
       -p det_topic:=ActivityDetections
       -p model_file:=${MODEL_DIR}/global_step_predictor_act_avgs_all_classes_v2.0_sample_rate_2.npy
       -p thresh_frame_count:=4
+      -p deactivate_thresh_frame_count:=10
       -p step_mode:=granular
       -p config_file:=${CONFIG_DIR}/tasks/multi-task-config.yaml
       -p task_state_topic:=TaskUpdates
