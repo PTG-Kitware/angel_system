@@ -104,7 +104,7 @@ windows:
       -p image_ts_topic:=PVFramesBGR_TS
       -p det_topic:=ObjectDetections2d
       -p act_topic:=ActivityDetections
-      -p model_weights:=${MODEL_DIR}/yolo_all_recipes_additional_objs_bkgd_sample_rate_2.ckpt # MUST BE SAMPLE RATE 2
+      -p model_weights:=${MODEL_DIR}/yolo_all_recipes_additional_objs_bkgd_sample_rate_2.ckpt # MUST BE SAMPLE RATE 2 if frame_rate = 15
       -p model_mapping:=${MODEL_DIR}/yolo_all_recipes_additional_objs_bkgd_act_mapping.txt
       -p model_det_label_mapping:=${MODEL_DIR}/activity_tcn-all_activities-det_label_mapping.json
       -p model_device:=cuda
