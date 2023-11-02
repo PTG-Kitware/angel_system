@@ -2,8 +2,10 @@
 # System configuration to run the ANGEL system for the 2022/11 PI meeting and
 # Evaluation 1.
 #
+# This configuration is for the Coffee task/recipe.
+#
 
-name: 2023-10-eval-live
+name: coffee_allows_skip
 root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 
 # Optional tmux socket
@@ -17,14 +19,10 @@ root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 # Runs on project start, always
 # on_project_start: command
 on_project_start: |
-  export ROS_NAMESPACE=${ROS_NAMESPACE:-/kitware}
-  export HL2_IP=${HL2_IP:-192.168.1.4}
+  export ROS_NAMESPACE=${ROS_NAMESPACE:-/debug}
   export CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/config
-  export BERKELEY_CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/angel_system/berkeley/configs
-  export NODE_CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/src/angel_system_nodes/configs
   export MODEL_DIR=${ANGEL_WORKSPACE_DIR}/model_files
   export BAGS_DIR=${ANGEL_WORKSPACE_DIR}/ros_bags
-  #export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
 
   # Changing the domain ID was important at KHQ to unblock perceived network
   # congestion slowdowns to message sending.
@@ -53,35 +51,28 @@ windows:
   - sensor_input:
       layout: even-vertical
       panes:
-        - datahub: ros2 run ros_tcp_endpoint default_server_endpoint --ros-args
-            -r __ns:=${ROS_NAMESPACE}
-            -p ROS_IP:=0.0.0.0
-        - hl2ss_bridge: ros2 run angel_system_nodes hl2ss_ros_bridge --ros-args
-            -r __ns:=${ROS_NAMESPACE}
-            -p ip_addr:=${HL2_IP}
-            -p image_topic:=PVFramesBGR
-            -p image_ts_topic:=PVFramesBGR_TS
-            -p hand_pose_topic:=disable
-            -p audio_topic:=disable
-            -p sm_topic:=disable
-            -p head_pose_topic:=disable
-            -p pv_width:=1280
-            -p pv_height:=720
-            -p pv_framerate:=15
-            -p sm_freq:=5
-            -p rm_depth_AHAT:=disable
+        - ros_bag_play: #ros2 bag play <<PATH_TO_BAG_FILE>>
+            echo ros2 bag play ${BAGS_DIR}/all_activities_20
 
-        # Visualize RGB Images being output from the headset
-        #- rqt_rgb_images: rqt -s rqt_image_view/ImageView
-        #    --args ${ROS_NAMESPACE}/PVFramesBGR
-        #    --ros-args -p _image_transport:=raw
+        # Old videos were recorded in NV12
+        - image_converter: ros2 run angel_datahub ImageConverter --ros-args
+            -r __ns:=${ROS_NAMESPACE}
+            -p topic_input_images:=PVFramesNV12
+            -p topic_output_images:=PVFramesRGB
+            -p drop_nth_frame:=2
+            -p convert_nv12_to_rgb:=true
+
+        - image_ts_relay: ros2 run angel_system_nodes  image_timestamp_relay --ros-args
+            -r __ns:=${ROS_NAMESPACE}
+            -p image_topic:=PVFramesRGB
+            -p output_topic:=PVFramesRGB_TS
 
   - object_detector:
       layout: even-vertical
       panes:
         - object_detector: ros2 run angel_system_nodes object_detection_yolo_v7 --ros-args
             -r __ns:=${ROS_NAMESPACE}
-            -p image_topic:=PVFramesBGR
+            -p image_topic:=PVFramesRGB
             -p det_topic:=ObjectDetections2d
             -p net_checkpoint:=${MODEL_DIR}/all_recipes+additional_objs+bkgd_yolov7.pt
             -p inference_img_size:=1280
@@ -90,17 +81,17 @@ windows:
 
         - simple_2d_overlay: ros2 run angel_debug Simple2dDetectionOverlay --ros-args
             -r __ns:=${ROS_NAMESPACE}
-            -p topic_input_images:=PVFramesBGR
+            -p topic_input_images:=PVFramesRGB
             -p topic_input_det_2d:=ObjectDetections2d
             -p topic_output_images:=pv_image_detections_2d
             -p filter_top_k:=-1
 
   - activity_classifier: ros2 run angel_system_nodes activity_classifier_tcn --ros-args
       -r __ns:=${ROS_NAMESPACE}
-      -p image_ts_topic:=PVFramesBGR_TS
+      -p image_ts_topic:=PVFramesRGB_TS
       -p det_topic:=ObjectDetections2d
       -p act_topic:=ActivityDetections
-      -p model_weights:=${MODEL_DIR}/yolo_all_recipes_additional_objs_bkgd_sample_rate_2.ckpt # MUST BE SAMPLE RATE 2
+      -p model_weights:=${MODEL_DIR}/yolo_all_recipes_additional_objs_bkgd_sample_rate_2.ckpt
       -p model_mapping:=${MODEL_DIR}/yolo_all_recipes_additional_objs_bkgd_act_mapping.txt
       -p model_det_label_mapping:=${MODEL_DIR}/activity_tcn-all_activities-det_label_mapping.json
       -p model_device:=cuda
@@ -114,7 +105,7 @@ windows:
       -r __ns:=${ROS_NAMESPACE}
       -p det_topic:=ActivityDetections
       -p model_file:=${MODEL_DIR}/global_step_predictor_act_avgs_all_classes_v2.0_sample_rate_2.npy
-      -p thresh_frame_count:=4
+      -p thresh_frame_count:=8
       -p step_mode:=granular
       -p config_file:=${CONFIG_DIR}/tasks/multi-task-config.yaml
       -p task_state_topic:=TaskUpdates
@@ -123,15 +114,6 @@ windows:
       #-p gt_activity_mscoco:=model_files/test_activity_preds.mscoco.json
       #-p gt_video_id:=8
       #-p gt_output_dir:="${BAGS_DIR}"
-
-  - feedback_generator: ros2 run angel_system_nodes feedback_generator --ros-args
-      -r __ns:=${ROS_NAMESPACE}
-      -p activity_detector_topic:=ActivityDetections
-      -p object_detection_topic:=ObjectDetections3d
-      -p task_monitor_topic:=TaskUpdates
-      -p arui_update_topic:=AruiUpdates
-      -p interp_user_intent_topic:=InterpUserIntents
-      -p system_text_response_topic:=system_text_response_topic
 
   - engineering-ui:
       layout: even-vertical
