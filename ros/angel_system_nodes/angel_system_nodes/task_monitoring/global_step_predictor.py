@@ -188,13 +188,16 @@ class GlobalStepPredictorNode(Node):
             elif self._step_mode == "granular" and sys_cmd_msg.next_step:
                 update_function = self.gsp.increment_granular_step
             elif self._step_mode == "granular" and sys_cmd_msg.previous_step:
-                # TODO: this function does not exist yet. Coming soon..
                 update_function = self.gsp.decrement_granular_step
             else:
                 # This should never happen
                 return
 
-            tracker_dict_list = update_function(sys_cmd_msg.task_index)
+            try:
+                tracker_dict_list = update_function(sys_cmd_msg.task_index)
+            except Exception:
+                # GSP raises exception if this fails, so just ignore it
+                return
 
             task = tracker_dict_list[sys_cmd_msg.task_index]
 
