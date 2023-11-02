@@ -65,19 +65,6 @@ PARAM_IMAGE_WIDTH = "pv_width"
 PARAM_IMAGE_HEIGHT = "pv_height"
 PARAM_DEBUG_MODE = "debug_mode"
 
-# Below is the complete set of prompt instructions.
-PROMPT_INSTRUCTIONS = """
-You are given a User Scenario. All the objects in front of and observable to the user are included.
-Your task is to use the Action Steps to answer the user's Question.
-
-Action Steps: {recipe}
-
-User Scenario:
-The User feels {emotion} while doing {action}. The User can see {observables}.
-
-User Question: {question}
-Answer: """
-
 # Below are all the variables. These should correspond to the variables defined in the
 # PROMPT_TEMPLATE_PATH and will be indicated by surrounding '{' and '}'.
 PROMPT_VARIABLES = [
