@@ -295,6 +295,24 @@ class GlobalStepPredictor:
                 f"Tried to increment tracker #{tracker_ind}: "
                 f"{tracker['recipe']} past last step."
             )
+    def increment_granular_step(self, tracker_ind):
+        """
+        Decrement a tracker's granular step, and also update the tracker's
+        broad step.
+        (Many broad steps contain several granular steps, so a granular step
+        increment may or may not entail a broad step increment.)
+        """
+        tracker = self.trackers[tracker_ind]
+        if tracker["current_granular_step"] > 0:
+            self.trackers[tracker_ind]["current_granular_step"] += 1
+            self.trackers[tracker_ind][
+                "current_broad_step"
+            ] = self.granular_to_broad_step(tracker, tracker["current_granular_step"])
+        else:
+            raise Exception(
+                f"Tried to decrement tracker #{tracker_ind}: "
+                f"{tracker['recipe']} already on step 0."
+            )
 
     def granular_to_broad_step(self, tracker, granular_step):
         """
