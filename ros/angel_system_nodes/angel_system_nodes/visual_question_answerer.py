@@ -46,6 +46,9 @@ TARGET_PHRASE = "hey angel"
 # in the LLM prompt. These objects do NOT have to be unique.
 PARAM_OBJECT_LAST_N_OBJ_DETECTIONS = "obj_det_last_n"
 
+# Comma-delimited list of objects to ignore.
+PARAM_OBJECT_DETECTION_IGNORABLES = "object_det_ignored_objects"
+
 # Below are the corresponding model thresholds.
 PARAM_OBJECT_DETECTION_THRESHOLD = "object_det_threshold"
 PARAM_ACT_CLFN_THRESHOLD = "action_classification_threshold"
@@ -116,6 +119,7 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
                 (PARAM_PROMPT_TEMPLATE_PATH,),
                 (PARAM_IMAGE_WIDTH,),
                 (PARAM_IMAGE_HEIGHT,),
+                (PARAM_OBJECT_DETECTION_IGNORABLES,""),
                 (PARAM_OBJECT_LAST_N_OBJ_DETECTIONS, 5),
                 (PARAM_OBJECT_DETECTION_THRESHOLD, 0.8),
                 (PARAM_ACT_CLFN_THRESHOLD, 0.8),
@@ -161,6 +165,12 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
                 f"Prompt Template: ~~~~~~~~~~\n{self.prompt_template}\n~~~~~~~~~~"
             )
 
+        self.object_dtctn_ignorables = set([s.strip() for s in
+                                        param_values[PARAM_OBJECT_DETECTION_IGNORABLES].split(",")])
+        self.log.info(
+            colored(f"Will be ignoring the following objects: {self.object_dtctn_ignorables}",
+            "light_red")
+        )
         self.object_dtctn_threshold = param_values[PARAM_OBJECT_DETECTION_THRESHOLD]
         self.object_dtctn_last_n_obj_detections = param_values[PARAM_OBJECT_LAST_N_OBJ_DETECTIONS]
 
@@ -379,6 +389,7 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
                     centroid, obj_score  = centered_obj_detection
                     obj, score = obj_score
                     observables.add(obj)
+            observables = observables - self.object_dtctn_ignorables
             return ", ".join(observables)
 
     def _get_latest_observables(self, curr_time: int, n: int) -> str:
@@ -401,6 +412,7 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
         for detection in detections[-n:]:
             for obj in detection.entity:
                 observables.add(obj)
+        observables = observables - self.object_dtctn_ignorables               
         return ", ".join(observables)
 
     def get_response(

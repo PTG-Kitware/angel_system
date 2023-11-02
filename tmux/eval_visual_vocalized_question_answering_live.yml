@@ -143,7 +143,6 @@ windows:
       -p task_monitor_topic:=TaskUpdates
       -p arui_update_topic:=AruiUpdates
       -p interp_user_intent_topic:=InterpUserIntents
-
   - vocal:
       layout: even-vertical
       panes:
@@ -167,31 +166,34 @@ windows:
   - intent_detection:
       layout: even-vertical
       panes:
-        - gpt_intent_detection: ros2 run angel_system_nodes gpt_intent_detector --ros-args
+        - intent_detection: ros2 run angel_system_nodes gpt_intent_detector --ros-args
            -r __ns:=${ROS_NAMESPACE}
-           -p utterances_topic:=utterances_topic
+           -p input_topic:=utterances_topic
            -p expect_user_intent_topic:=expect_user_intent_topic
            -p interp_user_intent_topic:=interp_user_intent_topic
+           -p timeout:=2
   - emotion_detection:
       layout: even-vertical
       panes:
-        - gpt_interp_emotion_detection: ros2 run angel_system_nodes gpt_emotion_detector --ros-args
+        - emotion_detection: ros2 run angel_system_nodes gpt_emotion_detector --ros-args
            -r __ns:=${ROS_NAMESPACE}
-           -p user_intent_topic:=interp_user_intent_topic
-           -p user_emotion_topic:=gpt_emotion_topic
+           -p input_topic:=interp_user_intent_topic
+           -p user_emotion_topic:=emotion_topic
+           -p timeout:=2
   - question_answering:
       layout: even-vertical
       panes:
         - gpt_qa: ros2 run angel_system_nodes visual_question_answerer --ros-args
            -r __ns:=${ROS_NAMESPACE}
-           -p input_topic:=gpt_emotion_topic
+           -p utterance_topic:=emotion_topic
            -p task_state_topic:=task_state_topic
            -p object_detections_topic:=ObjectDetections2d
            -p action_classifications_topic:=ActivityDetections
            -p system_text_response_topic:=system_text_response_topic
            -p recipe_path:=${CONFIG_DIR}/mit_ll_eval_one_coffee_recipe_steps_v2.json
            -p prompt_template_path:=${CONFIG_DIR}/llm_prompts/vis_qa_teacher_prompt
-           -p obj_det_filter:=CENTROID
+           -p obj_det_last_n:=5
            -p pv_width:=1920
            -p pv_height:=1080
+           -p object_det_ignored_objects:="hand (left),hand (right),background"
            -p debug_mode:=True

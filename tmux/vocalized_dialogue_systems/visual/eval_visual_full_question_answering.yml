@@ -195,4 +195,5 @@ windows:
            -p obj_det_last_n:=5
            -p pv_width:=1920
            -p pv_height:=1080
+           -p object_det_ignored_objects:="hand (left),hand (right),background"
            -p debug_mode:=True
