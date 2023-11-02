@@ -81,34 +81,34 @@ class KeyboardToSystemCommands(Node):
         """
         if key == keyboard.KeyCode.from_char("1"):
             task_id = 0
-            forward = True
+            forward = False
         elif key == keyboard.KeyCode.from_char("2"):
             task_id = 0
-            forward = False
+            forward = True
         elif key == keyboard.KeyCode.from_char("3"):
             task_id = 1
-            forward = True
+            forward = False
         elif key == keyboard.KeyCode.from_char("4"):
             task_id = 1
-            forward = False
+            forward = True
         elif key == keyboard.KeyCode.from_char("5"):
             task_id = 2
-            forward = True
+            forward = False
         elif key == keyboard.KeyCode.from_char("6"):
             task_id = 2
-            forward = False
+            forward = True
         elif key == keyboard.KeyCode.from_char("7"):
             task_id = 3
-            forward = True
+            forward = False
         elif key == keyboard.KeyCode.from_char("8"):
             task_id = 3
-            forward = False
+            forward = True
         elif key == keyboard.KeyCode.from_char("9"):
             task_id = 4
-            forward = True
+            forward = False
         elif key == keyboard.KeyCode.from_char("0"):
             task_id = 4
-            forward = False
+            forward = True
         else:
             return  # ignore
 
