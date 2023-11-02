@@ -167,9 +167,10 @@ class GlobalStepPredictorNode(Node):
 
         tracker_dict_list = self.gsp.process_new_confidences(conf_array)
 
+        step_mode = self._step_mode
         for task in tracker_dict_list:
             previous_step_id = self.recipe_current_step_id[task["recipe"]]
-            current_step_id = task[f"current_{self._step_mode}_step"]
+            current_step_id = task[f"current_{step_mode}_step"]
 
             # If previous and current are not the same, publish a task-update
             if previous_step_id != current_step_id:
@@ -182,6 +183,17 @@ class GlobalStepPredictorNode(Node):
                     activity_msg.source_stamp_end_frame,
                 )
                 self.recipe_current_step_id[task["recipe"]] = current_step_id
+
+            # If we are on the last step and it is not active, mark it as done
+            if current_step_id == task[f"total_num_{step_mode}_steps"] - 1 and not task["active"]:
+                # The last step activity was completed.
+                log.info(
+                    f"Final step completed: {task['recipe']}. Current step: {current_step_id}"
+                )
+                self.publish_task_state_message(
+                    task,
+                    activity_msg.source_stamp_end_frame,
+                )
 
         # Check for any skipped steps
         skipped_steps_all_trackers = self.gsp.get_skipped_steps_all_trackers()
@@ -242,6 +254,7 @@ class GlobalStepPredictorNode(Node):
             estimation of the current task state.
         """
         log = self.get_logger()
+        step_mode = self._step_mode
 
         message = TaskUpdate()
 
@@ -253,16 +266,16 @@ class GlobalStepPredictorNode(Node):
         message.latest_sensor_input_time = result_ts
 
         # Populate steps and current step
-        task_step_str = task_state[f"{self._step_mode}_step_to_full_str"][
-            task_state[f"current_{self._step_mode}_step"]
+        task_step_str = task_state[f"{step_mode}_step_to_full_str"][
+            task_state[f"current_{step_mode}_step"]
         ]
 
         log.info(f"Publish task update w/ step: {task_step_str}")
         # Exclude background
-        curr_step = task_state[f"current_{self._step_mode}_step"]
+        curr_step = task_state[f"current_{step_mode}_step"]
         task_step = curr_step - 1 if curr_step != 0 else 0
-        previous_step_str = task_state[f"{self._step_mode}_step_to_full_str"][
-            max(task_state[f"current_{self._step_mode}_step"] - 1, 0)
+        previous_step_str = task_state[f"{step_mode}_step_to_full_str"][
+            max(task_state[f"current_{step_mode}_step"] - 1, 0)
         ]
 
         message.current_step_id = task_step
@@ -271,10 +284,12 @@ class GlobalStepPredictorNode(Node):
 
         # Binary array simply hinged on everything
         completed_steps_arr = np.zeros(
-            task_state[f"total_num_{self._step_mode}_steps"] - 1,
+            task_state[f"total_num_{step_mode}_steps"] - 1,
             dtype=bool,
         )
         completed_steps_arr[:task_step] = True
+        if task_step == task_state[f"total_num_{step_mode}_steps"] and not task_state["active"]:
+            completed_steps_arr[task_step] = True
         message.completed_steps = completed_steps_arr.tolist()
 
         # Task completion confidence is currently binary.
