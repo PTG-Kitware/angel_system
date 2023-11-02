@@ -90,7 +90,9 @@ class GlobalStepPredictor:
                 )
             )
         except:
-            import ipdb; ipdb.set_trace()
+            import ipdb
+
+            ipdb.set_trace()
 
         self.recipe_configs = recipe_config_dict
 
@@ -301,6 +303,7 @@ class GlobalStepPredictor:
                 f"{tracker['recipe']} past last step."
             )
         return self.trackers
+
     def decrement_granular_step(self, tracker_ind):
         """
         Decrement a tracker's granular step, and also update the tracker's
@@ -493,7 +496,9 @@ class GlobalStepPredictor:
                     # Delete activity from flipping_on_indexes
                     next_act_ind = np.argwhere(flipping_on_indexes == next_activity)
                     if self.should_this_activity_trigger_be_used_once(next_act_ind):
-                        flipping_on_indexes = np.delete(flipping_on_indexes, next_act_ind)
+                        flipping_on_indexes = np.delete(
+                            flipping_on_indexes, next_act_ind
+                        )
                 elif next_next_activity in flipping_on_indexes:
                     # Keep track of skipped steps
                     self.add_skipped_granular_step(tracker_ind, next_granular_step)
@@ -506,7 +511,9 @@ class GlobalStepPredictor:
                     next_next_act_ind = np.argwhere(
                         flipping_on_indexes == next_next_activity
                     )
-                    if self.should_this_activity_trigger_be_used_once(next_next_act_ind):
+                    if self.should_this_activity_trigger_be_used_once(
+                        next_next_act_ind
+                    ):
                         flipping_on_indexes = np.delete(
                             flipping_on_indexes, next_next_act_ind
                         )
@@ -537,7 +544,7 @@ class GlobalStepPredictor:
 
     def conditionally_reset_irrational_trackers(self, tracker, skip=False):
         """
-        A rational recipe tracker reset. 
+        A rational recipe tracker reset.
 
         Assuming one pot of water with 12oz poured into it:
         - you can't make tea while coffee is between broad steps 1-7
@@ -553,24 +560,45 @@ class GlobalStepPredictor:
           broad steps 1-5
           (Reset pinwheel at dessert q granular step 11)
         """
-        resetter_granular_step = { 
-                # recipe: [ (gran index to trigger reset,
-                #            recipe that should reset)
-                "coffee": [20, "tea"],
-                "tea": [8, "coffee"],
-                "pinwheel": [10, "dessert_quesadilla"],
-                "dessert_quesadilla": [11, "pinwheel"],
-                }
+        resetter_granular_step = {
+            # recipe: [ (gran index to trigger reset,
+            #            recipe that should reset)
+            "coffee": [20, "tea"],
+            "tea": [8, "coffee"],
+            "pinwheel": [10, "dessert_quesadilla"],
+            "dessert_quesadilla": [11, "pinwheel"],
+        }
+        if tracker["recipe"] == "coffee" and tracker["current_granular_step"] == 20:
+            print("hey")
+            import ipdb
+
+            ipdb.set_trace()
         if not skip:
             for recipe in resetter_granular_step:
-                if tracker["recipe"] == recipe and tracker["current_granular_step"] == resetter_granular_step[recipe][0]:
-                    for tracker_ind in find_trackers_by_recipe(resetter_granular_step[recipe][1]):
+                if (
+                    tracker["recipe"] == recipe
+                    and tracker["current_granular_step"]
+                    == resetter_granular_step[recipe][0]
+                ):
+                    print("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+                    for tracker_ind in find_trackers_by_recipe(
+                        resetter_granular_step[recipe][1]
+                    ):
+                        print("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
                         reset_one_tracker(tracker_ind)
         else:
             for recipe in resetter_granular_step:
-                granular_steps = [resetter_granular_step[recipe][0], resetter_granular_step[recipe][0] + 1]
-                if tracker["recipe"] == recipe and tracker["current_granular_step"] in granular_steps:
-                    for tracker_ind in find_trackers_by_recipe(resetter_granular_step[recipe][1]):
+                granular_steps = [
+                    resetter_granular_step[recipe][0],
+                    resetter_granular_step[recipe][0] + 1,
+                ]
+                if (
+                    tracker["recipe"] == recipe
+                    and tracker["current_granular_step"] in granular_steps
+                ):
+                    for tracker_ind in find_trackers_by_recipe(
+                        resetter_granular_step[recipe][1]
+                    ):
                         reset_one_tracker(tracker_ind)
 
     def should_this_activity_trigger_be_used_once(self, activity_id):
@@ -582,8 +610,11 @@ class GlobalStepPredictor:
         shared_activity_indexes = []
         if "tea" in self.recipe_types and "coffee" in self.recipe_types:
             # the activities in broad_step 1 are the same for tea and coffee
-            shared_activity_indexes.extend([8,1,2])
-        if "pinwheel" in self.recipe_types and "dessert_quesadilla" in self.recipe_types:
+            shared_activity_indexes.extend([8, 1, 2])
+        if (
+            "pinwheel" in self.recipe_types
+            and "dessert_quesadilla" in self.recipe_types
+        ):
             shared_activity_indexes.extend([6])
         if activity_id in shared_activity_indexes:
             return False
