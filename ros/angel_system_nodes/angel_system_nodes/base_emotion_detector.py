@@ -108,9 +108,7 @@ class BaseEmotionDetector(BaseDialogueSystemNode):
             msg = self.message_queue.get()
             self.log.debug(f'Processing message:\n\n"{msg.utterance_text}"')
             classification, confidence_score = self.get_inference(msg)
-            self.publish_detected_emotion(
-                msg, classification, confidence_score
-            )
+            self.publish_detected_emotion(msg, classification, confidence_score)
 
     def publish_detected_emotion(
         self, sub_msg: DialogueUtterance, classification: str, confidence_score: float
@@ -131,6 +129,7 @@ class BaseEmotionDetector(BaseDialogueSystemNode):
             f'Publishing {{"{colored_emotion}": {confidence_score}}} '
             + f'to {self._out_interp_uemotion_topic} for:\n>>> "{colored_utterance}"'
         )
+
 
 def main():
     rclpy.init()

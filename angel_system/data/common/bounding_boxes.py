@@ -1,9 +1,15 @@
 from typing import *
 
+
 class BoundingBoxes:
-    
-    def __init__(self, left: List[int], right: List[int], top: List[int], bottom: List[int],
-                    item: List[Any]):
+    def __init__(
+        self,
+        left: List[int],
+        right: List[int],
+        top: List[int],
+        bottom: List[int],
+        item: List[Any],
+    ):
         """
         Wrapper of bounding boxes and a contained entity corresponding to each bounding box.
         The item is intentionally kept ambiguous to provide flexibility (e.g. can pass in

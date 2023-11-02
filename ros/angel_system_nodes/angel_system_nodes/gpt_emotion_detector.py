@@ -24,6 +24,7 @@ FEW_SHOT_EXAMPLES = [
 
 PARAM_TIMEOUT = "timeout"
 
+
 class GptEmotionDetector(BaseEmotionDetector):
     def __init__(self):
         super().__init__()
@@ -32,8 +33,9 @@ class GptEmotionDetector(BaseEmotionDetector):
         param_values = declare_and_get_parameters(
             self,
             [
-                (PARAM_TIMEOUT,600),
-            ])
+                (PARAM_TIMEOUT, 600),
+            ],
+        )
         self.timeout = param_values[PARAM_TIMEOUT]
 
         # This node additionally includes fields for interacting with OpenAI
@@ -87,7 +89,7 @@ class GptEmotionDetector(BaseEmotionDetector):
             openai_api_key=self.openai_api_key,
             temperature=0.0,
             max_tokens=1,
-            request_timeout=self.timeout
+            request_timeout=self.timeout,
         )
         return LLMChain(llm=openai_llm, prompt=few_shot_prompt)
 

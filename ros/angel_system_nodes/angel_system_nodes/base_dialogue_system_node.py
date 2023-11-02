@@ -4,33 +4,38 @@ from rclpy.node import Node
 
 from angel_msgs.msg import DialogueUtterance
 
+
 class BaseDialogueSystemNode(Node):
     """
     This class is used for all dialogue system nodes to inherit similar
     functionality.
     """
+
     def __init__(self):
         super().__init__(self.__class__.__name__)
         self.log = self.get_logger()
-    
-    def get_intent_or(self, src_msg: DialogueUtterance, or_value: str = "not available") -> str:
+
+    def get_intent_or(
+        self, src_msg: DialogueUtterance, or_value: str = "not available"
+    ) -> str:
         """
         Returns the src_msg intent classification information. If the value is absent,
         the or_value is passed in.
         """
         return src_msg.intent if src_msg.intent else or_value
 
-    def get_emotion_or(self, src_msg: DialogueUtterance, or_value: str = "not available") -> str:
+    def get_emotion_or(
+        self, src_msg: DialogueUtterance, or_value: str = "not available"
+    ) -> str:
         """
         Returns the src_msg emotion classification information. If the value is absent,
         the or_value is passed in.
         """
         return src_msg.emotion if src_msg.emotion else or_value
 
-    def copy_dialogue_utterance(self,
-                                src_msg: DialogueUtterance,
-                                node_name: str = "Dialogue System Node"
-                                ) -> DialogueUtterance:
+    def copy_dialogue_utterance(
+        self, src_msg: DialogueUtterance, node_name: str = "Dialogue System Node"
+    ) -> DialogueUtterance:
         msg = DialogueUtterance()
         msg.header.frame_id = node_name
         msg.utterance_text = src_msg.utterance_text
@@ -49,6 +54,7 @@ class BaseDialogueSystemNode(Node):
             msg.emotion_confidence_score = src_msg.emotion_confidence_score
 
         return msg
+
 
 def main():
     rclpy.init()

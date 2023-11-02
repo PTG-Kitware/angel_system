@@ -80,8 +80,8 @@ PROMPT_VARIABLES = [
 
 PARAM_TIMEOUT = "timeout"
 
-class VisualQuestionAnswerer(BaseDialogueSystemNode):
 
+class VisualQuestionAnswerer(BaseDialogueSystemNode):
     class TimestampedEntity:
         """
         This class is used internally as a container for recorded detections and classifications at
@@ -106,7 +106,7 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
                 (PARAM_PROMPT_TEMPLATE_PATH,),
                 (PARAM_IMAGE_WIDTH,),
                 (PARAM_IMAGE_HEIGHT,),
-                (PARAM_OBJECT_DETECTION_IGNORABLES,""),
+                (PARAM_OBJECT_DETECTION_IGNORABLES, ""),
                 (PARAM_OBJECT_LAST_N_OBJ_DETECTIONS, 5),
                 (PARAM_OBJECT_DETECTION_THRESHOLD, 0.8),
                 (PARAM_ACT_CLFN_THRESHOLD, 0.8),
@@ -128,7 +128,9 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
         if param_values[PARAM_DEBUG_MODE]:
             self.debug_mode = True
 
-        self.param_must_contain_target_phrase = param_values[PARAM_MUST_CONTAIN_TARGET_PHRASE]        
+        self.param_must_contain_target_phrase = param_values[
+            PARAM_MUST_CONTAIN_TARGET_PHRASE
+        ]
 
         # Used to obtain the center perspective point and how far detected objects
         # are from it.
@@ -152,14 +154,22 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
                 f"Prompt Template: ~~~~~~~~~~\n{self.prompt_template}\n~~~~~~~~~~"
             )
 
-        self.object_dtctn_ignorables = set([s.strip() for s in
-                                        param_values[PARAM_OBJECT_DETECTION_IGNORABLES].split(",")])
+        self.object_dtctn_ignorables = set(
+            [
+                s.strip()
+                for s in param_values[PARAM_OBJECT_DETECTION_IGNORABLES].split(",")
+            ]
+        )
         self.log.info(
-            colored(f"Will be ignoring the following objects: {self.object_dtctn_ignorables}",
-            "light_red")
+            colored(
+                f"Will be ignoring the following objects: {self.object_dtctn_ignorables}",
+                "light_red",
+            )
         )
         self.object_dtctn_threshold = param_values[PARAM_OBJECT_DETECTION_THRESHOLD]
-        self.object_dtctn_last_n_obj_detections = param_values[PARAM_OBJECT_LAST_N_OBJ_DETECTIONS]
+        self.object_dtctn_last_n_obj_detections = param_values[
+            PARAM_OBJECT_LAST_N_OBJ_DETECTIONS
+        ]
 
         # Configure supplemental input action classification criteria.
         self.action_clfn_threshold = param_values[PARAM_ACT_CLFN_THRESHOLD]
@@ -169,13 +179,13 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
         self.current_step = "Unstarted"
         self.action_classification_queue = queue.Queue()
         self.detected_objects_queue = queue.Queue()
-        self.centroid_object_queue = \
-            centroid_2d_strategy_queue.Centroid2DStrategyQueue(
-                self.object_dtctn_last_n_obj_detections,
-                self.pv_center_coordinate[0], self.pv_center_coordinate[1],
-                k=1, # the number of top-k objects to obtain from each detection.
-                )
-        
+        self.centroid_object_queue = centroid_2d_strategy_queue.Centroid2DStrategyQueue(
+            self.object_dtctn_last_n_obj_detections,
+            self.pv_center_coordinate[0],
+            self.pv_center_coordinate[1],
+            k=1,  # the number of top-k objects to obtain from each detection.
+        )
+
         self.dialogue_history = []
         self.handler_thread = threading.Thread(target=self.process_question_queue)
         self.handler_thread.start()
@@ -265,7 +275,7 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
             openai_api_key=self.openai_api_key,
             temperature=0.0,
             max_tokens=64,
-            request_timeout=self.timeout
+            request_timeout=self.timeout,
         )
         zero_shot_prompt = langchain.PromptTemplate(
             input_variables=PROMPT_VARIABLES,
@@ -312,10 +322,14 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
         self.centroid_object_queue.add(
             self._get_sec(msg),
             bounding_boxes.BoundingBoxes(
-                msg.left, msg.right, msg.top, msg.bottom,
-                item=list(zip(msg.label_vec, msg.label_confidences))
-                ))
-        
+                msg.left,
+                msg.right,
+                msg.top,
+                msg.bottom,
+                item=list(zip(msg.label_vec, msg.label_confidences)),
+            ),
+        )
+
         # We queue ALL objects above threshold, regardless if they are centered in the user's
         # perspective.
         self._add_detected_objects_above_threshold(msg)
@@ -363,17 +377,21 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
         """
         observables = set()
         #  handle 2D centroid distance queueing.
-        timestamped_detections = self.centroid_object_queue.get_n_before(timestamp=curr_time)
+        timestamped_detections = self.centroid_object_queue.get_n_before(
+            timestamp=curr_time
+        )
         if timestamped_detections:
             if self.debug_mode:
-                print(f"Timestamped detections based on centroid distance are: " +\
-                      f"{timestamped_detections}")
+                print(
+                    f"Timestamped detections based on centroid distance are: "
+                    + f"{timestamped_detections}"
+                )
             # Recall that we passed in timestamped lists of pairs of
             # (detection, confidence score).
             centered_obj_detections_lists = [j for _, j in timestamped_detections]
             for centered_obj_detections in centered_obj_detections_lists:
                 for centered_obj_detection in centered_obj_detections:
-                    centroid, obj_score  = centered_obj_detection
+                    centroid, obj_score = centered_obj_detection
                     obj, score = obj_score
                     observables.add(obj)
             observables = observables - self.object_dtctn_ignorables
@@ -399,7 +417,7 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
         for detection in detections[-n:]:
             for obj in detection.entity:
                 observables.add(obj)
-        observables = observables - self.object_dtctn_ignorables               
+        observables = observables - self.object_dtctn_ignorables
         return ", ".join(observables)
 
     def get_response(
@@ -477,13 +495,13 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
             self.log.info(f"Latest action: {action}")
 
             # Get centered detected objects.
-            centered_observables = \
-                self._get_latest_centered_observables(start_time)
+            centered_observables = self._get_latest_centered_observables(start_time)
             self.log.info(f"Observed objects: {centered_observables}")
-            
+
             # Get all detected objects.
-            all_observables = self._get_latest_observables(start_time,
-                                                       self.object_dtctn_last_n_obj_detections)
+            all_observables = self._get_latest_observables(
+                start_time, self.object_dtctn_last_n_obj_detections
+            )
             self.log.info(f"Observed objects: {all_observables}")
 
             # Generate response.

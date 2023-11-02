@@ -25,8 +25,14 @@ class Centroid2DStrategyQueue:
     q.get_n_before(2)
     """
 
-    def __init__(self, n : int, center_x: int, center_y: int,
-                 k: int = 1, log_func: Optional[Callable[..., None]] = None):
+    def __init__(
+        self,
+        n: int,
+        center_x: int,
+        center_y: int,
+        k: int = 1,
+        log_func: Optional[Callable[..., None]] = None,
+    ):
         """
         Additional arguments are passed to the logging method
         :param n: Whenever objects are retrieved, return the last n entries.
@@ -36,7 +42,7 @@ class Centroid2DStrategyQueue:
             module is used.
         """
         self._log_func = log_func
-        
+
         self.n = n
         self.k = k
 
@@ -71,9 +77,11 @@ class Centroid2DStrategyQueue:
                 break
         self.lock.release()
         if self._log_func:
-            self._log_func(f"Read up to {self.n} items from queue" +\
-                       "; ".join([f"{item} @ Time={time}" for time, item in items]))
-        return items[-self.n:] if items else items
+            self._log_func(
+                f"Read up to {self.n} items from queue"
+                + "; ".join([f"{item} @ Time={time}" for time, item in items])
+            )
+        return items[-self.n :] if items else items
 
     def _get_k_most_center_objects(self, bb: BoundingBoxes) -> List[Any]:
         """
@@ -87,11 +95,10 @@ class Centroid2DStrategyQueue:
         for item, left, right, top, bottom in zipped:
             centroid_x, centroid_y = self._get_centroid(left, right, top, bottom)
             dist = distance.euclidean(
-                [centroid_x, centroid_y],
-                [self.center_x, self.center_y]
+                [centroid_x, centroid_y], [self.center_x, self.center_y]
             )
             heapq.heappush(k_most_centered_objects, (dist, item))
-        
+
         # Return the top k centered objects based on centroid distance.
         result = []
         for _ in range(self.k):
@@ -99,9 +106,10 @@ class Centroid2DStrategyQueue:
                 break
             result.append(heapq.heappop(k_most_centered_objects))
         return result
-        
 
-    def _get_centroid(self, left: int, right: int, top: int, bottom: int) -> Tuple[int, int]:
+    def _get_centroid(
+        self, left: int, right: int, top: int, bottom: int
+    ) -> Tuple[int, int]:
         """
         Calculates the center 2D pixel of a 2D bounding box.
         """

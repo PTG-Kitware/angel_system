@@ -128,11 +128,10 @@ class BaseIntentDetector(BaseDialogueSystemNode):
         # Overwrite the user intent with the latest classification information.
         pub_msg.intent = intent
         pub_msg.intent_confidence_score = score
-        
+
         # Decide which intent topic to publish the message to.
         published_topic = None
-        if self._contains_phrase(pub_msg.utterance_text.lower(),
-                                 OVERRIDE_KEYPHRASES):
+        if self._contains_phrase(pub_msg.utterance_text.lower(), OVERRIDE_KEYPHRASES):
             pub_msg.intent_confidence_score = 1.0
             self._expected_publisher.publish(pub_msg)
             published_topic = PARAM_EXPECT_USER_INTENT_TOPIC

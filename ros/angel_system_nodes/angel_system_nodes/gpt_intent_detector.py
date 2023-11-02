@@ -23,6 +23,7 @@ FEW_SHOT_EXAMPLES = [
 
 PARAM_TIMEOUT = "timeout"
 
+
 class GptIntentDetector(BaseIntentDetector):
     def __init__(self):
         super().__init__()
@@ -31,8 +32,9 @@ class GptIntentDetector(BaseIntentDetector):
         param_values = declare_and_get_parameters(
             self,
             [
-                (PARAM_TIMEOUT,600),
-            ])
+                (PARAM_TIMEOUT, 600),
+            ],
+        )
         self.timeout = param_values[PARAM_TIMEOUT]
 
         # This node additionally includes fields for interacting with OpenAI
@@ -88,7 +90,7 @@ class GptIntentDetector(BaseIntentDetector):
             # Only 2 tokens needed for classification (tokens are delimited by use of '_', i.e.
             # 'next_step' counts as 2 tokens).
             max_tokens=2,
-            request_timeout=self.timeout
+            request_timeout=self.timeout,
         )
         return LLMChain(llm=openai_llm, prompt=few_shot_prompt)
 

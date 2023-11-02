@@ -20,6 +20,7 @@ OUT_QA_TOPIC = "system_text_response_topic"
 FEW_SHOT_PROMPT = "few_shot_prompt_file"
 PARAM_TIMEOUT = "timeout"
 
+
 class QuestionAnswerer(BaseDialogueSystemNode):
     def __init__(self):
         super().__init__()
@@ -139,7 +140,7 @@ class QuestionAnswerer(BaseDialogueSystemNode):
             "https://api.openai.com/v1/chat/completions",
             json=payload,
             headers={"Authorization": "Bearer {}".format(self.openai_api_key)},
-            timeout=self.timeout
+            timeout=self.timeout,
         )
         return (
             json.loads(req.text)["choices"][0]["message"]["content"]
