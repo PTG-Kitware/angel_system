@@ -580,11 +580,9 @@ class GlobalStepPredictor:
                     and tracker["current_granular_step"]
                     == resetter_granular_step[recipe][0]
                 ):
-                    print("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
                     for tracker_ind in find_trackers_by_recipe(
                         resetter_granular_step[recipe][1]
                     ):
-                        print("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
                         reset_one_tracker(tracker_ind)
         else:
             for recipe in resetter_granular_step:
