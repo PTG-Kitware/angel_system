@@ -30,6 +30,10 @@ on_project_start: |
   # congestion slowdowns to message sending.
   export ROS_DOMAIN_ID=77
 
+  # Set the frame-rate to be used by multiple sources. This should be in frames
+  # per second (Hz).
+  export FRAME_RATE=15
+
 # Run on project start, the first time
 # on_project_first_start: command
 
@@ -67,7 +71,7 @@ windows:
             -p head_pose_topic:=disable
             -p pv_width:=1280
             -p pv_height:=720
-            -p pv_framerate:=15
+            -p pv_framerate:=${FRAME_RATE}
             -p sm_freq:=5
             -p rm_depth_AHAT:=disable
 
@@ -114,8 +118,8 @@ windows:
       -r __ns:=${ROS_NAMESPACE}
       -p det_topic:=ActivityDetections
       -p model_file:=${MODEL_DIR}/global_step_predictor_act_avgs_all_classes_v2.0_sample_rate_2.npy
-      -p thresh_frame_count:=4
-      -p deactivate_thresh_frame_count:=10
+      -p thresh_frame_count:=$((8 / (30 / ${FRAME_RATE})))
+      -p deactivate_thresh_frame_count:=$((20 / (30 / ${FRAME_RATE})))
       -p step_mode:=granular
       -p config_file:=${CONFIG_DIR}/tasks/multi-task-config.yaml
       -p task_state_topic:=TaskUpdates
