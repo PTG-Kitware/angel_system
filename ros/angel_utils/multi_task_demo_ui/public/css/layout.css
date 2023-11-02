@@ -187,8 +187,6 @@ body {
   padding: 10px;
   height: 18%;
 
-  max-width: 45vw;
-
   text-align: left;
 }
 
@@ -216,7 +214,7 @@ body {
 
   text-align: left;
 
-  max-height: 13vh;
+  height: 80%;
 }
 .task-line {
   display: block;
@@ -248,17 +246,13 @@ body {
 /* LIVE VIEW    */
 /* ------------ */
 #HL-live{
-  float: left;
-
-  max-width: 49vw;
-  max-height: 30vh;
+  max-height: 40%;
   height: auto;
+  
 }
 
 .live-img {
-  float:left;
-
-  height: 85%;
+  height: 75%;
   width: auto; /* keep aspect ratio */
 }
 
@@ -349,6 +343,7 @@ body {
   max-height: 15vh;
   
   margin-left: 10px;
+  margin-top: 20px;
 }
 #activity-conf-chart { /* chart */
   width: 90%;

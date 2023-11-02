@@ -339,6 +339,14 @@ def add_activity_gt_to_kwcoco(dset):
                         activity_label = "insert-toothpick"
                     if activity_label in ["slice-tortilla", "continue-slicing"]:
                         activity_label = "floss-slice-tortilla"
+                    if activity_label in ["steep", "check-thermometer"]:
+                        activity_label = "background"
+                    if activity_label in ["dq-clean-knife", "pinwheel-clean-knife"]:
+                        activity_label = "clean-knife"
+                    if activity_label in ["zero-scale", "scale-turn-on"]:
+                        activity_label = "scale-press-btn"
+                    if activity_label in ["pour-water-grounds-wet"]:
+                        activity_label = "pour-water-grounds-circular"
 
             dset.imgs[gid]["activity_gt"] = activity_label
 
