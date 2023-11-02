@@ -52,7 +52,7 @@ class KeyboardToSystemCommands(Node):
 
         def for_task_direction(t_id, forward):
             log.info(
-                f"Publishing command to move task {t_id} "
+                f"Registering command to move task {t_id} "
                 f"{'forward' if forward else 'backward'}"
             )
             return lambda: self.publish_sys_cmd(t_id, forward)
