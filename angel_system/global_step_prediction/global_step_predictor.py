@@ -28,6 +28,7 @@ class GlobalStepPredictor:
         """
         with open(activity_config_fpath, "r") as stream:
             self.activity_config = yaml.safe_load(stream)
+        num_activity_classes = len(self.activity_config["labels"])
 
         # maximum number of steps that can be "jumped" to.
         # i.e. if max_step_jump is 1, from step 2, you can only jump to 3.
@@ -59,7 +60,7 @@ class GlobalStepPredictor:
         # all start at frame 30, since the TCN takes in 30 frames.
         self.current_frame = 30
 
-        self.activity_conf_history = np.empty((0, 63))
+        self.activity_conf_history = np.empty((0, num_activity_classes))
 
         self.recipe_types = recipe_types
 
