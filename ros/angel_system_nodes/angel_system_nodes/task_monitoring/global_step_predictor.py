@@ -116,12 +116,14 @@ class GlobalStepPredictorNode(Node):
         # that duplicate task error messages are not published for the same
         # skipped step
         self.recipe_skipped_step_ids = {}
+        self.recipe_published_last_msg = {}
 
         for task in self.gsp.trackers:
             self.recipe_current_step_id[task["recipe"]] = task[
                 f"current_{self._step_mode}_step"
             ]
             self.recipe_skipped_step_ids[task["recipe"]] = []
+            self.recipe_published_last_msg[task["recipe"]] = False
 
         # Initialize ROS hooks
         self._task_update_publisher = self.create_publisher(
@@ -190,14 +192,17 @@ class GlobalStepPredictorNode(Node):
 
             # If we are on the last step and it is not active, mark it as done
             if current_step_id == task[f"total_num_{step_mode}_steps"] - 1 and not task["active"]:
-                # The last step activity was completed.
-                log.info(
-                    f"Final step completed: {task['recipe']}. Current step: {current_step_id}"
-                )
-                self.publish_task_state_message(
-                    task,
-                    activity_msg.source_stamp_end_frame,
-                )
+                if not self.recipe_published_last_msg[task["recipe"]]:
+                    # The last step activity was completed.
+                    log.info(
+                        f"Final step completed: {task['recipe']}. Current step: {current_step_id}"
+                    )
+                    self.publish_task_state_message(
+                        task,
+                        activity_msg.source_stamp_end_frame,
+                    )
+
+                    self.recipe_published_last_msg[task["recipe"]] = True
 
         # Check for any skipped steps
         skipped_steps_all_trackers = self.gsp.get_skipped_steps_all_trackers()
@@ -292,7 +297,7 @@ class GlobalStepPredictorNode(Node):
             dtype=bool,
         )
         completed_steps_arr[:task_step] = True
-        if task_step == task_state[f"total_num_{step_mode}_steps"] and not task_state["active"]:
+        if task_step == len(completed_steps_arr)-1 and not task_state["active"]:
             completed_steps_arr[task_step] = True
         message.completed_steps = completed_steps_arr.tolist()
 
