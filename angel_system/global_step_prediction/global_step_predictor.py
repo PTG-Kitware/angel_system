@@ -578,7 +578,7 @@ class GlobalStepPredictor:
         resetter_granular_step = {
             # recipe: [ (gran index to trigger reset,
             #            recipe that should reset)
-            "coffee": [20, "tea"],
+            "coffee": [10, "tea"],
             "tea": [8, "coffee"],
             "pinwheel": [10, "dessert_quesadilla"],
             "dessert_quesadilla": [11, "pinwheel"],
