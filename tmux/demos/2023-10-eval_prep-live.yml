@@ -114,6 +114,10 @@ windows:
       -p image_pix_width:=1280
       -p image_pix_height:=720
 
+  - keyboard_sys_cmd: ros2 run angel_system_nodes keyboard_to_sys_cmd --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p system_command_topic:=SystemCommands
+
   - task_monitor: ros2 run angel_system_nodes global_step_predictor --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p det_topic:=ActivityDetections
