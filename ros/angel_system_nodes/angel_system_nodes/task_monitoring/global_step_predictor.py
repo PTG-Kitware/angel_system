@@ -1,4 +1,5 @@
 from pathlib import Path
+from threading import RLock
 from typing import Dict
 from typing import Optional
 
@@ -12,6 +13,7 @@ from rclpy.node import Node
 from angel_msgs.msg import (
     ActivityDetection,
     AruiUserNotification,
+    SystemCommands,
     TaskUpdate,
     TaskGraph,
 )
@@ -26,10 +28,12 @@ from angel_system.global_step_prediction.global_step_predictor import (
 PARAM_CONFIG_FILE = "config_file"
 PARAM_TASK_STATE_TOPIC = "task_state_topic"
 PARAM_TASK_ERROR_TOPIC = "task_error_topic"
+PARAM_SYS_CMD_TOPIC = "system_command_topic"
 PARAM_QUERY_TASK_GRAPH_TOPIC = "query_task_graph_topic"
 PARAM_DET_TOPIC = "det_topic"
 PARAM_MODEL_FILE = "model_file"
 PARAM_THRESH_FRAME_COUNT = "thresh_frame_count"
+PARAM_DEACTIVATE_THRESH_FRAME_COUNT = "deactivate_thresh_frame_count"
 # The step mode to use for this predictor instance. This must be either "broad"
 # or "granular"
 PARAM_STEP_MODE = "step_mode"
@@ -60,10 +64,12 @@ class GlobalStepPredictorNode(Node):
                 (PARAM_CONFIG_FILE,),
                 (PARAM_TASK_STATE_TOPIC,),
                 (PARAM_TASK_ERROR_TOPIC,),
+                (PARAM_SYS_CMD_TOPIC,),
                 (PARAM_QUERY_TASK_GRAPH_TOPIC,),
                 (PARAM_DET_TOPIC,),
                 (PARAM_MODEL_FILE,),
                 (PARAM_THRESH_FRAME_COUNT,),
+                (PARAM_DEACTIVATE_THRESH_FRAME_COUNT,),
                 (PARAM_STEP_MODE,),
                 (PARAM_GT_ACT_COCO, ""),
                 (PARAM_GT_VIDEO_ID, -1),
@@ -73,10 +79,12 @@ class GlobalStepPredictorNode(Node):
         self._config_file = param_values[PARAM_CONFIG_FILE]
         self._task_state_topic = param_values[PARAM_TASK_STATE_TOPIC]
         self._task_error_topic = param_values[PARAM_TASK_ERROR_TOPIC]
+        self._sys_cmd_topic = param_values[PARAM_SYS_CMD_TOPIC]
         self._query_task_graph_topic = param_values[PARAM_QUERY_TASK_GRAPH_TOPIC]
         self._det_topic = param_values[PARAM_DET_TOPIC]
         self._model_file = param_values[PARAM_MODEL_FILE]
         self._thresh_frame_count = param_values[PARAM_THRESH_FRAME_COUNT]
+        self._deactivate_thresh_frame_count = param_values[PARAM_DEACTIVATE_THRESH_FRAME_COUNT]
         self._step_mode = param_values[PARAM_STEP_MODE]
 
         if self._step_mode not in VALID_STEP_MODES:
@@ -88,8 +96,8 @@ class GlobalStepPredictorNode(Node):
         # Determine what recipes are in the config
         with open(self._config_file, "r") as stream:
             config = yaml.safe_load(stream)
-        recipe_types = [recipe["label"] for recipe in config["tasks"]]
-        recipe_configs = [recipe["config_file"] for recipe in config["tasks"]]
+        recipe_types = [recipe["label"] for recipe in config["tasks"] if recipe["active"]]
+        recipe_configs = [recipe["config_file"] for recipe in config["tasks"] if recipe["active"]]
 
         recipe_config_dict = dict(zip(recipe_types, recipe_configs))
         log.info(f"Recipes: {recipe_config_dict}")
@@ -97,6 +105,7 @@ class GlobalStepPredictorNode(Node):
         # Instantiate the GlobalStepPredictor module
         self.gsp = GlobalStepPredictor(
             threshold_frame_count=self._thresh_frame_count,
+            deactivate_thresh_frame_count=self._deactivate_thresh_frame_count,
             recipe_types=recipe_types,
             recipe_config_dict=recipe_config_dict,
         )
@@ -112,12 +121,21 @@ class GlobalStepPredictorNode(Node):
         # that duplicate task error messages are not published for the same
         # skipped step
         self.recipe_skipped_step_ids = {}
+        self.recipe_published_last_msg = {}
+
+        # Track the latest activity classification end time sent to the HMM
+        # Time is represented as a the ROS Time message
+        self._latest_act_classification_end_time = None
+
+        # Control access to GSP
+        self._gsp_lock = RLock()
 
         for task in self.gsp.trackers:
             self.recipe_current_step_id[task["recipe"]] = task[
                 f"current_{self._step_mode}_step"
             ]
             self.recipe_skipped_step_ids[task["recipe"]] = []
+            self.recipe_published_last_msg[task["recipe"]] = False
 
         # Initialize ROS hooks
         self._task_update_publisher = self.create_publisher(
@@ -131,6 +149,9 @@ class GlobalStepPredictorNode(Node):
         )
         self._subscription = self.create_subscription(
             ActivityDetection, self._det_topic, self.det_callback, 1
+        )
+        self._sys_cmd_subscription = self.create_subscription(
+            SystemCommands, self._sys_cmd_topic, self.sys_cmd_callback, 1
         )
         log.info("ROS services initialized.")
 
@@ -152,6 +173,56 @@ class GlobalStepPredictorNode(Node):
             )
             log.info("GT params specified, initializing data... Done")
 
+    def sys_cmd_callback(self, sys_cmd_msg: SystemCommands):
+        """
+        Callback function for the system command subscriber topic.
+        Forces an update of the GSP to a new step.
+        """
+        log = self.get_logger()
+
+        with self._gsp_lock:
+            if self._step_mode == "broad" and sys_cmd_msg.next_step:
+                update_function = self.gsp.manually_increment_current_broad_step
+            elif self._step_mode == "broad" and sys_cmd_msg.previous_step:
+                update_function = self.gsp.manually_decrement_current_step
+            elif self._step_mode == "granular" and sys_cmd_msg.next_step:
+                update_function = self.gsp.increment_granular_step
+            elif self._step_mode == "granular" and sys_cmd_msg.previous_step:
+                update_function = self.gsp.decrement_granular_step
+            else:
+                # This should never happen
+                return
+
+            try:
+                tracker_dict_list = update_function(sys_cmd_msg.task_index)
+            except Exception:
+                # GSP raises exception if this fails, so just ignore it
+                return
+
+            task = tracker_dict_list[sys_cmd_msg.task_index]
+
+            previous_step_id = self.recipe_current_step_id[task["recipe"]]
+            current_step_id = task[f"current_{self._step_mode}_step"]
+
+            if self._latest_act_classification_end_time is None:
+                # No classifications received yet, set time window to now
+                start_time = self.get_clock().now().to_msg()
+            else:
+                start_time = self._latest_act_classification_end_time
+
+            end_time = start_time
+            end_time.sec += 1
+            self._latest_act_classification_end_time = end_time
+
+            log.info(
+                f"Manual step change detected: {task['recipe']}. Current step: {current_step_id}"
+                f" Previous step: {previous_step_id}."
+            )
+            self.publish_task_state_message(
+                task, self._latest_act_classification_end_time
+            )
+            self.recipe_current_step_id[task["recipe"]] = current_step_id
+
     def det_callback(self, activity_msg: ActivityDetection):
         """
         Callback function for the activity detection subscriber topic.
@@ -165,49 +236,70 @@ class GlobalStepPredictorNode(Node):
         conf_array = np.array(activity_msg.conf_vec)
         conf_array = np.expand_dims(conf_array, 0)
 
-        tracker_dict_list = self.gsp.process_new_confidences(conf_array)
+        with self._gsp_lock:
+            tracker_dict_list = self.gsp.process_new_confidences(conf_array)
 
-        for task in tracker_dict_list:
-            previous_step_id = self.recipe_current_step_id[task["recipe"]]
-            current_step_id = task[f"current_{self._step_mode}_step"]
+            step_mode = self._step_mode
+            for task in tracker_dict_list:
+                previous_step_id = self.recipe_current_step_id[task["recipe"]]
+                current_step_id = task[f"current_{step_mode}_step"]
 
-        # If previous and current are not the same, publish a task-update
-        if previous_step_id != current_step_id:
-            log.info(
-                f"Step change detected: {task['recipe']}. Current step: {current_step_id}"
-                f" Previous step: {previous_step_id}."
+                # If previous and current are not the same, publish a task-update
+                if previous_step_id != current_step_id:
+                    log.info(
+                        f"Step change detected: {task['recipe']}. Current step: {current_step_id}"
+                        f" Previous step: {previous_step_id}."
+                    )
+                    self.publish_task_state_message(
+                        task,
+                        activity_msg.source_stamp_end_frame,
+                    )
+                    self.recipe_current_step_id[task["recipe"]] = current_step_id
+
+                # If we are on the last step and it is not active, mark it as done
+                if current_step_id == task[f"total_num_{step_mode}_steps"] - 1 and not task["active"]:
+                    if not self.recipe_published_last_msg[task["recipe"]]:
+                        # The last step activity was completed.
+                        log.info(
+                            f"Final step completed: {task['recipe']}. Current step: {current_step_id}"
+                        )
+                        self.publish_task_state_message(
+                            task,
+                            activity_msg.source_stamp_end_frame,
+                        )
+
+                        self.recipe_published_last_msg[task["recipe"]] = True
+
+            # Check for any skipped steps
+            skipped_steps_all_trackers = self.gsp.get_skipped_steps_all_trackers()
+
+            for task in skipped_steps_all_trackers:
+                for skipped_step in task:
+                    recipe = skipped_step["recipe"]
+                    skipped_step_id = skipped_step["activity_id"]
+                    broad_step_id = skipped_step["part_of_broad"]
+                    for idx, tracker_dict in enumerate(tracker_dict_list):
+                        if tracker_dict["recipe"] == recipe:
+                            broad_step_str = tracker_dict["broad_step_to_full_str"][
+                                broad_step_id
+                            ]
+                            break
+
+                    skipped_step_str = (
+                        f"Recipe: {recipe}, activity: {skipped_step['activity_str']}, "
+                        f"broad step: {broad_step_str}"
+                    )
+
+                    # New skipped step detected, publish error and add it to the list
+                    # of skipped steps
+                    if skipped_step_id not in self.recipe_skipped_step_ids[recipe]:
+                        self.publish_task_error_message(skipped_step_str)
+                        self.recipe_skipped_step_ids[recipe].append(skipped_step_id)
+
+            # Update latest classification timestamp
+            self._latest_act_classification_end_time = (
+                activity_msg.source_stamp_end_frame
             )
-            self.publish_task_state_message(
-                task,
-                activity_msg.source_stamp_end_frame,
-            )
-            self.recipe_current_step_id[task["recipe"]] = current_step_id
-
-        # Check for any skipped steps
-        skipped_steps_all_trackers = self.gsp.get_skipped_steps_all_trackers()
-
-        for task in skipped_steps_all_trackers:
-            for skipped_step in task:
-                recipe = skipped_step["recipe"]
-                skipped_step_id = skipped_step["activity_id"]
-                broad_step_id = skipped_step["part_of_broad"]
-                for idx, tracker_dict in enumerate(tracker_dict_list):
-                    if tracker_dict["recipe"] == recipe:
-                        broad_step_str = tracker_dict["broad_step_to_full_str"][
-                            broad_step_id
-                        ]
-                        break
-
-                skipped_step_str = (
-                    f"Recipe: {recipe}, activity: {skipped_step['activity_str']}, "
-                    f"broad step: {broad_step_str}"
-                )
-
-                # New skipped step detected, publish error and add it to the list
-                # of skipped steps
-                if skipped_step_id not in self.recipe_skipped_step_ids[recipe]:
-                    self.publish_task_error_message(skipped_step_str)
-                    self.recipe_skipped_step_ids[recipe].append(skipped_step_id)
 
     def publish_task_error_message(self, skipped_step: str):
         """
@@ -242,6 +334,7 @@ class GlobalStepPredictorNode(Node):
             estimation of the current task state.
         """
         log = self.get_logger()
+        step_mode = self._step_mode
 
         message = TaskUpdate()
 
@@ -253,16 +346,16 @@ class GlobalStepPredictorNode(Node):
         message.latest_sensor_input_time = result_ts
 
         # Populate steps and current step
-        task_step_str = task_state[f"{self._step_mode}_step_to_full_str"][
-            task_state[f"current_{self._step_mode}_step"]
+        task_step_str = task_state[f"{step_mode}_step_to_full_str"][
+            task_state[f"current_{step_mode}_step"]
         ]
 
         log.info(f"Publish task update w/ step: {task_step_str}")
         # Exclude background
-        curr_step = task_state[f"current_{self._step_mode}_step"]
+        curr_step = task_state[f"current_{step_mode}_step"]
         task_step = curr_step - 1 if curr_step != 0 else 0
-        previous_step_str = task_state[f"{self._step_mode}_step_to_full_str"][
-            max(task_state[f"current_{self._step_mode}_step"] - 1, 0)
+        previous_step_str = task_state[f"{step_mode}_step_to_full_str"][
+            max(task_state[f"current_{step_mode}_step"] - 1, 0)
         ]
 
         message.current_step_id = task_step
@@ -271,10 +364,12 @@ class GlobalStepPredictorNode(Node):
 
         # Binary array simply hinged on everything
         completed_steps_arr = np.zeros(
-            task_state[f"total_num_{self._step_mode}_steps"] - 1,
+            task_state[f"total_num_{step_mode}_steps"] - 1,
             dtype=bool,
         )
         completed_steps_arr[:task_step] = True
+        if task_step == len(completed_steps_arr)-1 and not task_state["active"]:
+            completed_steps_arr[task_step] = True
         message.completed_steps = completed_steps_arr.tolist()
 
         # Task completion confidence is currently binary.
@@ -292,18 +387,19 @@ class GlobalStepPredictorNode(Node):
 
         task_graphs = []  # List of TaskGraphs
         task_titles = []  # List of task titles associated with the graphs
-        for task in self.gsp.trackers:
-            # Retrieve step descriptions in the current task.
-            task_steps = task[f"{self._step_mode}_step_to_full_str"][
-                1:
-            ]  # Exclude background
+        with self._gsp_lock:
+            for task in self.gsp.trackers:
+                # Retrieve step descriptions in the current task.
+                task_steps = task[f"{self._step_mode}_step_to_full_str"][
+                    1:
+                ]  # Exclude background
 
-            task_g = TaskGraph()
-            task_g.task_steps = task_steps
-            task_g.task_levels = [0] * len(task_steps)
+                task_g = TaskGraph()
+                task_g.task_steps = task_steps
+                task_g.task_levels = [0] * len(task_steps)
 
-            task_graphs.append(task_g)
-            task_titles.append(task["recipe"])
+                task_graphs.append(task_g)
+                task_titles.append(task["recipe"])
 
         response.task_graphs = task_graphs
         response.task_titles = task_titles

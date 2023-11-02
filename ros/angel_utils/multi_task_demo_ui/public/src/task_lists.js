@@ -59,10 +59,9 @@ $.get("/topics")
   var task_title_to_steps = {};
   var step_list;
   query_task_graph.callService(request, function(result){
-    
     var task_titles = result.task_titles;
     var task_graphs = result.task_graphs;
-
+    
     // TODO: Check that we have enough fields
     // Or maybe dynamically insert fields for tasks?
     
@@ -73,7 +72,7 @@ $.get("/topics")
 
         // Load title
         var task_title = task[0];
-        task_title_to_steps[task_title] = {}
+        task_title_to_steps[task_title] = {};
         var title_container_block = document.getElementById(task_color + '-task_title');
         title_container_block.innerHTML = task_title;
 
@@ -105,6 +104,8 @@ $.get("/topics")
             max_task_len = step_list_len
         }
         
+        var task_id_tags = [];
+        var task_id_tag;
         step_list.forEach(function(step, index){
             // TODO: support different step levels
             var step_level = task_levels[index];
@@ -114,7 +115,16 @@ $.get("/topics")
       
             var checkbox = document.createElement('span');
             checkbox.className = "checkbox";
-            checkbox.id = task_title + "-" + step;
+
+            task_id_tag = task_title + "-" + step;
+            // If there are multiple instances, make unique tags
+            var num_instances = task_id_tags.filter(x => x == task_id_tag).length;
+            if(num_instances > 0){
+                task_id_tag = task_id_tag + '-' + num_instances;
+            }
+            task_id_tags.push(task_id_tag);
+
+            checkbox.id = task_id_tag;
             step_line.appendChild(checkbox);
       
             var text = document.createElement('span');
@@ -143,24 +153,36 @@ $.get("/topics")
     var step_list = task_title_to_steps[task_name]["steps"];
     var chart_id = task_title_to_steps[task_name]["chart_id"];
     var current_step_id = m.current_step_id;
+    var task_id_tags = [];
 
     const completed_steps = m.completed_steps;
+    var task_id_tag;
     completed_steps.forEach(function(completed, index){
-      let box = document.getElementById(task_name + "-" + step_list[index]);
+      task_id_tag = task_name + "-" + step_list[index];
+
+      // If there are multiple instances, make unique tags
+      var num_instances = task_id_tags.filter(x => x == task_id_tag).length;
+      if(num_instances > 0){
+          task_id_tag = task_id_tag + '-' + num_instances;
+      }
+      task_id_tags.push(task_id_tag);
 
       // Update boxes in task list
+      
+      let box = document.getElementById(task_id_tag);
       if(completed) {
         box.style.backgroundColor = "green";
       }
       else {
-        box.style.backgroundColor = "white";
+        if(index == current_step_id && m.current_step != "background"){
+            box.style.backgroundColor = "orange";
+        }
+        else{
+            box.style.backgroundColor = "white";
+        }
       }
     });
     
-    // Mark current step as yellow
-    let box = document.getElementById(task_name + "-" + step_list[current_step_id]);
-    box.style.backgroundColor = "orange";
-
     // Update line chart
     var ts = m.header.stamp.sec;
     current_step_id = current_step_id + 1;  // list doesn't include background, so index 0 = step 1
@@ -186,8 +208,5 @@ $.get("/topics")
     
         task_step_chart.update('none'); // don't animate
     }
-    
-
-    
   });
 });
