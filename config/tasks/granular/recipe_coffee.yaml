@@ -1,0 +1,99 @@
+version: "1.1"
+title: "Pour-over coffee"
+# These tasks are sourced from "PTG Evaluation Tasks Vol. 2" version 2.0
+# Provided by MASSACHUSETTS INSTITUTE OF TECHNOLOGY LINCOLN LABORATORY
+labels:
+  # Item:
+  # - id: Integer identification number of the label.
+  # - label: Short human-readable semantic string to succinctly represent the
+  #          label.
+  # - full_str: Complete sentence that fully represents the label.
+  # - activity_ids: List of activity ids that correspond to the task 
+  - id: 0
+    label: "background"
+    full_str: "background"
+    activity_ids: [0]
+  - id: 7
+    label: "measure-water"
+    full_str: "Measure 12 ounces of cold water in the liquid measuring cup."
+    activity_ids: [7]
+  - id: 1
+    label: "pour-water-kettle"
+    full_str: "Pour the water from the liquid measuring cup into the electric kettle"
+    activity_ids: [1]
+  - id: 2
+    label: "turn-on-kettle"
+    full_str: "Turn on the kettle"
+    activity_ids: [2]
+  - id: 2
+    label: "place-dipper-on-mug"
+    full_str: "Assemble the filter cone. Place the dripper on top of a coffee mug."
+    activity_ids: [23]
+  - id: 24
+    label: "filter-fold-half"
+    full_str: "Take the coffee filter and fold it in half to create a semi-circle"
+    activity_ids: [24]
+  - id: 25
+    label: "filter-fold-quarter"
+    full_str: "Fold the filter in half again to create a quarter-circle"
+    activity_ids: [25]
+  - id: 26
+    label: "place-filter"
+    full_str: "Place the folded filter into the dripper such that the the point of the quarter-circle rests in the center of the dripper"
+    activity_ids: [26]
+  - id: 27
+    label: "spread-filter"
+    full_str: "Spread the filter open to create a cone inside the dripper"
+    activity_ids: [27]
+  - id: 28
+    label: "scale-press-btn"
+    full_str: "Turn on the kitchen scale"
+    activity_ids: [28]
+  - id: 29
+    label: "place-bowl-on-scale"
+    full_str: "Place a bowl on the scale"
+    activity_ids: [29]
+  - id: 28
+    label: "scale-press-btn"
+    full_str: "Zero the kitchen scale"
+    activity_ids: [28]
+  - id: 30
+    label: "measure-coffee-beans"
+    full_str: "Add coffee beans to the bowl until the scale reads 25 grams"
+    activity_ids: [30]
+  - id: 31
+    label: "pour-coffee-grinder"
+    full_str: "Pour the measured coffee beans into the coffee grinder"
+    activity_ids: [31]
+  - id: 32
+    label: "grind-beans"
+    full_str: "Grind the coffee beans by pressing and holding down on the black part of the lid"
+    activity_ids: [32]
+  - id: 33
+    label: "pour-beans-filter"
+    full_str: "Transfer the grounds to the filter cone"
+    activity_ids: [33]
+  - id: 3
+    label: "thermometer-turn-on"
+    full_str: "Turn on the thermometer"
+    activity_ids: [3]
+  - id: 4
+    label: "thermometer-in-water"
+    full_str: "Place the end of the thermometer into the water."
+    activity_ids: [4]
+  - id: 6
+    label: pour-water-grounds-wet"
+    full_str: "Pour a small amount of water in the filter to wet the grounds. Wait about 30 seconds."
+    activity_ids: [34]
+  - id: 7
+    label: "pour-water-grounds-circular"
+    full_str: "Slowly pour the rest of the water over the grounds in a circular motion. Do not overfill beyond
+the top of the paper filter."
+    activity_ids: [34]
+
+    
+  - id: 8
+    label: "drain-and-cleanup"
+    full_str: "Let the coffee drain completely into the mug before removing the dripper. Discard the paper
+filter and coffee grounds."
+    activity_ids: [35, 36, 37, 38]

@@ -1,0 +1,27 @@
+version: "1.1"
+title: "Oatmeal"
+# These tasks are sourced from "PTG Evaluation Tasks Vol. 2" version 2.0
+# Provided by MASSACHUSETTS INSTITUTE OF TECHNOLOGY LINCOLN LABORATORY
+labels:
+  # Item:
+  # - id: Integer identification number of the label.
+  # - label: Short human-readable semantic string to succinctly represent the
+  #          label.
+  # - full_str: Complete sentence that fully represents the label.
+  # - activity_ids: List of activity ids that correspond to the task 
+  - id: 0
+    label: "background"
+    full_str: "background"
+    activity_ids: [0]
+  - id: 1
+    label: "add-oats"
+    full_str: "Measure 4 Tablespoons of quick-cook oats and place in a microwave-safe bowl."
+    activity_ids: [43, 43, 43, 43]
+  - id: 2
+    label: "measure-water"
+    full_str: "Measure 1/2 cup of water in the liquid measuring cup"
+    activity_ids: [7]
+  - id: 2
+    label: "add-water"
+    full_str: "Add water to bowl"
+    activity_ids: [42]
