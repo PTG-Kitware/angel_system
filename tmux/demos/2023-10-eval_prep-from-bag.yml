@@ -56,7 +56,7 @@ windows:
       layout: even-vertical
       panes:
         - ros_bag_play: #ros2 bag play <<PATH_TO_BAG_FILE>>
-            echo ros2 bag play ${BAGS_DIR}/all_activities_20 -r 0.5
+            echo ros2 bag play ${BAGS_DIR}/all_activities_20
 
         # Hacky fix to drop frames, shouldn't convert image
         - image_converter: ros2 run angel_datahub ImageConverter --ros-args
@@ -105,6 +105,10 @@ windows:
       -p image_pix_width:=1280
       -p image_pix_height:=720
 
+  - keyboard_sys_cmd: ros2 run angel_system_nodes keyboard_to_sys_cmd --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p system_command_topic:=SystemCommands
+
   - task_monitor: ros2 run angel_system_nodes global_step_predictor --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p det_topic:=ActivityDetections
@@ -116,6 +120,7 @@ windows:
       -p task_state_topic:=TaskUpdates
       -p query_task_graph_topic:=query_task_graph
       -p task_error_topic:=TaskErrors
+      -p system_command_topic:=SystemCommands
       #-p gt_activity_mscoco:=model_files/test_activity_preds.mscoco.json
       #-p gt_video_id:=8
       #-p gt_output_dir:="${BAGS_DIR}"
