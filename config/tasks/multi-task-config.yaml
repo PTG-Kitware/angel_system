@@ -12,22 +12,22 @@ tasks:
   #   It is expected that these paths are relative to where this tool is run.
   #   (i.e. relative to $(ANGEL_WORKSPACE)).
   - id: 0
-    label: "coffee"
+    label: "Coffee"
     config_file: "./config/tasks/recipe_coffee.yaml"
     active: true
   - id: 1
-    label: "tea"
+    label: "Tea"
     config_file: "./config/tasks/recipe_tea.yaml"
-    active: true
+    active: false
   - id: 2
-    label: "pinwheel"
+    label: "Pinwheel"
     config_file: "./config/tasks/recipe_pinwheel.yaml"
     active: false
   - id: 3
-    label: "oatmeal"
+    label: "Oatmeal"
     config_file: "./config/tasks/recipe_oatmeal.yaml"
     active: false
   - id: 4
-    label: "dessert quesadilla"
+    label: "Dessert Quesadilla"
     config_file: "./config/tasks/recipe_dessertquesadilla.yaml"
-    active: false
+    active: true
