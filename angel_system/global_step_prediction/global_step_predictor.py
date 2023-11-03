@@ -63,6 +63,7 @@ class GlobalStepPredictor:
         self.activity_conf_history = np.empty((0, num_activity_classes))
 
         self.recipe_types = recipe_types
+        self.recipe_configs = recipe_config_dict
 
         # Array of tracker dicts
         self.trackers = []
@@ -90,8 +91,6 @@ class GlobalStepPredictor:
                 2,
             )
         )
-
-        self.recipe_configs = recipe_config_dict
 
         self.gt_activities_order_from_each_config = {
             _recipe: self.get_activity_order_from_config(self.recipe_configs[_recipe])
@@ -195,23 +194,7 @@ class GlobalStepPredictor:
 
         """
         tracker_dict = {}
-        if recipe == "coffee":
-            if config_fn == None:
-                config_fn = "config/tasks/recipe_coffee.yaml"
-        elif recipe == "tea":
-            if config_fn == None:
-                config_fn = "config/tasks/recipe_tea.yaml"
-        elif recipe == "dessert_quesadilla":
-            if config_fn == None:
-                config_fn = "config/tasks/recipe_dessertquesadilla.yaml"
-        elif recipe == "oatmeal":
-            if config_fn == None:
-                config_fn = "config/tasks/recipe_oatmeal.yaml"
-        elif recipe == "pinwheel":
-            if config_fn == None:
-                config_fn = "config/tasks/recipe_pinwheel.yaml"
-        else:
-            raise ValueError(f"Invalid recipe type. Valid types: [coffee].")
+        config_fn = self.recipe_configs[recipe]
 
         # Read in task config
         with open(config_fn, "r") as stream:
