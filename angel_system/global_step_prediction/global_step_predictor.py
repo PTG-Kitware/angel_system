@@ -510,10 +510,13 @@ class GlobalStepPredictor:
                     # Each activity activation can only be used once.
                     # Delete activity from flipping_on_indexes
                     next_act_ind = np.argwhere(flipping_on_indexes == next_activity)
-                    if self.should_this_activity_trigger_be_used_once(next_act_ind):
-                        flipping_on_indexes = np.delete(
-                            flipping_on_indexes, next_act_ind
-                        )
+                    # TODO: disabling for now. All activities will
+                    # count toward any relevant trackers.
+                    if False:
+                        if self.should_this_activity_trigger_be_used_once(next_act_ind):
+                            flipping_on_indexes = np.delete(
+                                flipping_on_indexes, next_act_ind
+                            )
                 elif next_next_activity in flipping_on_indexes:
                     # Keep track of skipped steps
                     self.add_skipped_granular_step(tracker_ind, next_granular_step)
@@ -526,12 +529,15 @@ class GlobalStepPredictor:
                     next_next_act_ind = np.argwhere(
                         flipping_on_indexes == next_next_activity
                     )
-                    if self.should_this_activity_trigger_be_used_once(
-                        next_next_act_ind
-                    ):
-                        flipping_on_indexes = np.delete(
-                            flipping_on_indexes, next_next_act_ind
-                        )
+                    # TODO: disabling for now. All activities will
+                    # count toward any relevant trackers.
+                    if False:
+                        if self.should_this_activity_trigger_be_used_once(
+                            next_next_act_ind
+                        ):
+                            flipping_on_indexes = np.delete(
+                                flipping_on_indexes, next_next_act_ind
+                            )
 
                 # TODO: Try requiring that previous step is de-activated
 
@@ -591,19 +597,23 @@ class GlobalStepPredictor:
                     == resetter_granular_step[recipe][0]
                 ):
                     print("reset condition hit!!")
-                    #import ipdb; ipdb.set_trace()
+                    # import ipdb; ipdb.set_trace()
                     if tracker["recipe"] == "coffee":
                         print(f"tea step = {self.trackers[1]['current_granular_step']}")
                     for tracker_ind in self.find_trackers_by_recipe(
                         resetter_granular_step[recipe][1]
                     ):
                         if (
-                            self.trackers[tracker_ind]["current_granular_step"] 
-                            < resetter_granular_step[self.trackers[tracker_ind]["recipe"]][0]
+                            self.trackers[tracker_ind]["current_granular_step"]
+                            < resetter_granular_step[
+                                self.trackers[tracker_ind]["recipe"]
+                            ][0]
                         ):
                             self.reset_one_tracker(tracker_ind)
                     if tracker["recipe"] == "coffee":
-                        print(f"tea step after = {self.trackers[1]['current_granular_step']}")
+                        print(
+                            f"tea step after = {self.trackers[1]['current_granular_step']}"
+                        )
         else:
             for recipe in resetter_granular_step:
                 granular_steps = [
@@ -618,8 +628,10 @@ class GlobalStepPredictor:
                         resetter_granular_step[recipe][1]
                     ):
                         if (
-                            self.trackers[tracker_ind]["current_granular_step"] 
-                            < resetter_granular_step[self.trackers[tracker_ind]["recipe"]][0]
+                            self.trackers[tracker_ind]["current_granular_step"]
+                            < resetter_granular_step[
+                                self.trackers[tracker_ind]["recipe"]
+                            ][0]
                         ):
                             self.reset_one_tracker(tracker_ind)
 
