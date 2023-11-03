@@ -92,6 +92,13 @@ services:
       DISPLAY:  # pull from current environment
       XAUTHORITY: /tmp/.docker.xauth
       PYTHONDONTWRITEBYTECODE: 1  # Don't write .pyc files when in workspace
+    logging:
+      # See https://docs.docker.com/config/containers/logging/configure/#supported-logging-drivers
+      # "none": No logs are available for the container and docker logs does
+      #         not return any output.
+      # We consider "none" acceptable currently as ROS will log the output of
+      # nodes run as it is.
+      driver: "none"
 
   workspace-shell-dev-gpu:
     extends:
