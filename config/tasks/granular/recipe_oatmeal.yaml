@@ -1,0 +1,63 @@
+version: "1.1"
+title: "Oatmeal"
+# These tasks are sourced from "PTG Evaluation Tasks Vol. 2" version 2.0
+# Provided by MASSACHUSETTS INSTITUTE OF TECHNOLOGY LINCOLN LABORATORY
+labels:
+  # Item:
+  # - id: Integer identification number of the label.
+  # - label: Short human-readable semantic string to succinctly represent the
+  #          label.
+  # - full_str: Complete sentence that fully represents the label.
+  # - activity_ids: List of activity ids that correspond to the task 
+  - id: 0
+    label: "background"
+    full_str: "background"
+    activity_ids: [0]
+  - id: 1
+    label: "add-oats"
+    full_str: "Measure 4 Tablespoons of quick-cook oats and place in a microwave-safe bowl."
+    activity_ids: [43, 43, 43, 43]
+  - id: 2
+    label: "measure-water"
+    full_str: "Measure 1/2 cup of water in the liquid measuring cup"
+    activity_ids: [7]
+  - id: 3
+    label: "add-water"
+    full_str: "Add water to bowl"
+    activity_ids: [42]
+  - id: 4
+    label: "microwave-30-sec"
+    full_str: "Microwave for 30 seconds."
+    activity_ids: [45] # TODO: time requirement
+  - id: 5
+    label: "add-raisins"
+    full_str: "Add handful of raisins"
+    activity_ids: [44]
+  - id: 6
+    label: "oatmeal-stir"
+    full_str: "Stir"
+    activity_ids: [22]
+  - id: 7
+    label: "microwave-60-sec"
+    full_str: "Microwave for 60 seconds."
+    activity_ids: [45] # TODO: time requirement
+  - id: 8
+    label: "oatmeal-stir"
+    full_str: "Stir"
+    activity_ids: [22]
+  - id: 9
+    label: "slice-banana"
+    full_str: "Slice banana"
+    activity_ids: [6]
+  - id: 10
+    label: "oatmeal-top-banana-slices"
+    full_str: "Top with banana slices."
+    activity_ids: [15]
+  - id: 11 
+    label: "oatmeal-sprinkle-cinnamon"
+    full_str: "sprinkle with cinnamon"
+    activity_ids: [17]
+  - id: 12
+    label: "oatmeal-drizzle-honey"
+    full_str: "drizzle with honey"
+    activity_ids: [19]

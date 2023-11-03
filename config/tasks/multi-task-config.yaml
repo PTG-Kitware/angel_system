@@ -13,21 +13,21 @@ tasks:
   #   (i.e. relative to $(ANGEL_WORKSPACE)).
   - id: 0
     label: "coffee"
-    config_file: "./config/tasks/recipe_coffee.yaml"
+    config_file: "./config/tasks/granular/recipe_coffee.yaml"
     active: true
   - id: 1
     label: "tea"
-    config_file: "./config/tasks/recipe_tea.yaml"
-    active: true
+    config_file: "./config/tasks/granular/recipe_tea.yaml"
+    active: false
   - id: 2
     label: "pinwheel"
-    config_file: "./config/tasks/recipe_pinwheel.yaml"
+    config_file: "./config/tasks/granular/recipe_pinwheel.yaml"
     active: false
   - id: 3
     label: "oatmeal"
-    config_file: "./config/tasks/recipe_oatmeal.yaml"
+    config_file: "./config/tasks/granular/recipe_oatmeal.yaml"
     active: false
   - id: 4
-    label: "dessert quesadilla"
-    config_file: "./config/tasks/recipe_dessertquesadilla.yaml"
+    label: "dessert_quesadilla"
+    config_file: "./config/tasks/granular/recipe_dessertquesadilla.yaml"
     active: false

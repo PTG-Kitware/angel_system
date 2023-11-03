@@ -117,7 +117,7 @@ windows:
       -p thresh_frame_count:=$((8 / (30 / ${FRAME_RATE})))
       -p threshold_frame_count_weak:=2
       -p deactivate_thresh_frame_count:=$((20 / (30 / ${FRAME_RATE})))
-      -p step_mode:=granular
+      -p step_mode:=broad
       -p config_file:=${CONFIG_DIR}/tasks/multi-task-config.yaml
       -p task_state_topic:=TaskUpdates
       -p query_task_graph_topic:=query_task_graph
