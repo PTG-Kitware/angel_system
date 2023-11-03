@@ -501,9 +501,6 @@ class GlobalStepPredictor:
                     next_next_granular_step
                 ]
 
-                # TODO: prioritize a 1-step jump over a 2-step jump. Create a
-                # second loop just for the 2-step jumps, after this loop has completed
-                # searching for one-step jumps.
                 if next_activity in flipping_on_indexes:
                     self.increment_granular_step(tracker_ind)
                     self.conditionally_reset_irrational_trackers(tracker)
@@ -532,8 +529,6 @@ class GlobalStepPredictor:
                         flipping_on_indexes = np.delete(
                             flipping_on_indexes, next_next_act_ind
                         )
-
-                # TODO: Try requiring that previous step is de-activated
 
                 # Add current preds to this tracker's prediction history
                 self.record_history(
