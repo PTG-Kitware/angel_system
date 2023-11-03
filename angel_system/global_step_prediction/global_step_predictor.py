@@ -101,6 +101,11 @@ class GlobalStepPredictor:
         # Example: ["tea", "coffee"]
         self.tracker_resets = []
 
+        # Early steps: steps that activate too early and require a warning message.
+        # Example: Tea steeping should take 3 mins. If less, let the use know.
+        # Example: ["tea", "tea"]
+        self.early_steps = []
+
     def get_activity_order_from_config(self, config_fn):
         """
         Get the order of activity_ids (mapping to granular step
@@ -501,12 +506,10 @@ class GlobalStepPredictor:
                     next_next_granular_step
                 ]
 
-                # TODO: prioritize a 1-step jump over a 2-step jump. Create a
-                # second loop just for the 2-step jumps, after this loop has completed
-                # searching for one-step jumps.
                 if next_activity in flipping_on_indexes:
                     self.increment_granular_step(tracker_ind)
                     self.conditionally_reset_irrational_trackers(tracker)
+                    self.check_timing(tracker)
                     # Each activity activation can only be used once.
                     # Delete activity from flipping_on_indexes
                     next_act_ind = np.argwhere(flipping_on_indexes == next_activity)
@@ -524,6 +527,7 @@ class GlobalStepPredictor:
                     self.increment_granular_step(tracker_ind)
                     self.increment_granular_step(tracker_ind)
                     self.conditionally_reset_irrational_trackers(tracker, skip=True)
+                    self.check_timing(tracker, skip=True)
                     # Each activity activation can only be used once.
                     # Delete activity from flipping_on_indexes
                     next_next_act_ind = np.argwhere(
@@ -539,8 +543,6 @@ class GlobalStepPredictor:
                                 flipping_on_indexes, next_next_act_ind
                             )
 
-                # TODO: Try requiring that previous step is de-activated
-
                 # Add current preds to this tracker's prediction history
                 self.record_history(
                     tracker_ind,
@@ -555,6 +557,39 @@ class GlobalStepPredictor:
         )
 
         return self.trackers
+
+    def check_timing(self, tracker, skip=False):
+        """
+        Check for steps that happen "too soon," i.e. the previous
+        step should have taken longer.
+
+        Tea: "steeping" expected for 3 minutes. 
+        If framerate = 30FPS, 3 minutes = 5400 frames.
+        Conservatively cut that in half: 2700 frames.
+        """
+
+        if tracker['recipe'] != "tea":
+            return
+
+        if not skip:
+            if tracker['recipe'] == "tea" and tracker["current_granular_step"] == 9:
+                num_frames_to_check = 2700 * self.framerate / 30
+                if len(tracker["granular_prediction_history"]) > 2700 * self.framerate/30:
+                    if all(tracker["granular_prediction_history"][:-(num_frames_to_check)] == 8:
+                    return
+            else:
+                self.early_steps.append["tea"]
+        elif skip:
+            if tracker['recipe'] == "tea" and tracker["current_granular_step"] == 9:
+                self.early_steps.append["tea"]
+            elif tracker['recipe'] == "tea" and tracker["current_granular_step"] == 10:
+                num_frames_to_check = 2700 * self.framerate / 30
+                if len(tracker["granular_prediction_history"]) > 2700 * self.framerate/30:
+                    if all(tracker["granular_prediction_history"][:-(num_frames_to_check)] == 8:
+                    return
+            else:
+                self.early_steps.append["tea"]
+
 
     def find_trackers_by_recipe(self, recipe):
         tracker_index_list = []
