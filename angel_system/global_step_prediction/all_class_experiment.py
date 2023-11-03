@@ -20,7 +20,9 @@ def run_inference_all_vids(coco, recipe_config, extra_output_suffix=""):
             continue
         print(f"vid_id {vid_id}===========================")
 
-        step_predictor = GlobalStepPredictor()
+        step_predictor = GlobalStepPredictor(
+            recipe_types=["coffee", "tea", "dessert_quesadilla", "pinwheel", "oatmeal"],
+        )
         # Add a second coffee predictor
         # step_predictor.initialize_new_recipe_tracker("coffee")
 
@@ -83,11 +85,19 @@ def run_inference_all_vids(coco, recipe_config, extra_output_suffix=""):
 
 
 if __name__ == "__main__":
+    """
     coco_val = kwcoco.CocoDataset(
         "/data/PTG/cooking/training/activity_classifier/TCN_HPL/logs/yolo_all_recipes_sample_rate_2/runs/2023-10-25_12-08-48/val_activity_preds_epoch69.mscoco.json"
     )
     coco_test = kwcoco.CocoDataset(
         "/data/PTG/cooking/training/activity_classifier/TCN_HPL/logs/yolo_all_recipes_sample_rate_2/runs/2023-10-25_12-08-48/test_activity_preds.mscoco.json"
+    )
+    """
+    coco_val = kwcoco.CocoDataset(
+        "/data/PTG/cooking/training/activity_classifier/TCN_HPL/logs/yolo_all_recipes_additional_objs_bkgd_sample_rate_2/runs/2023-11-02_00-52-03/val_activity_preds_epoch43.mscoco.json"
+    )
+    coco_test = kwcoco.CocoDataset(
+        "/data/PTG/cooking/training/activity_classifier/TCN_HPL/logs/yolo_all_recipes_additional_objs_bkgd_sample_rate_2/runs/2023-11-02_00-52-03/test_activity_preds.mscoco.json"
     )
 
     recipe_config = {
