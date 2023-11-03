@@ -229,9 +229,9 @@ class GlobalStepPredictorNode(Node):
                 current_step_id = task[f"current_{step_mode}_step"]
 
                 # If previous and current are not the same, publish a task-update
-                if (
-                    previous_step_id != current_step_id
-                    or (current_step_id == task[f"total_num_{step_mode}_steps"] - 1 and task["active"]) 
+                if previous_step_id != current_step_id or (
+                    current_step_id == task[f"total_num_{step_mode}_steps"] - 1
+                    and task["active"]
                 ):
                     log.info(
                         f"Manual step change detected: {task['recipe']}. Current step: {current_step_id}"
@@ -260,7 +260,10 @@ class GlobalStepPredictorNode(Node):
                         self.recipe_published_last_msg[task["recipe"]] = True
 
                 # Undo finishing the recipe
-                if current_step_id == task[f"total_num_{step_mode}_steps"] - 1 and task["active"]:
+                if (
+                    current_step_id == task[f"total_num_{step_mode}_steps"] - 1
+                    and task["active"]
+                ):
                     log.info(
                         f"Manual step change detected: {task['recipe']}. Current step: {current_step_id}"
                         f" Previous step: {previous_step_id}."

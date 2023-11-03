@@ -285,7 +285,7 @@ class GlobalStepPredictor:
         tracker = self.trackers[tracker_ind]
         current_granular_step = tracker["current_granular_step"]
         num_granular_steps = tracker["total_num_granular_steps"] - 1
-        
+
         if current_granular_step < num_granular_steps:
             self.trackers[tracker_ind]["current_granular_step"] += 1
             self.trackers[tracker_ind][
@@ -671,7 +671,7 @@ class GlobalStepPredictor:
             #            recipe that should reset)
             "coffee": [17, "tea"],
             "tea": [7, "coffee"],
-            #"oatmeal": [],
+            # "oatmeal": [],
             "pinwheel": [10, "dessert_quesadilla"],
             "dessert_quesadilla": [11, "pinwheel"],
         }
@@ -947,8 +947,13 @@ class GlobalStepPredictor:
                 ]
                 + 1
             )
-        elif current_broad_step == num_broad_steps and self.trackers[tracker_ind]["active"] == True:
-            self.trackers[tracker_ind]["current_granular_step"] = self.trackers[tracker_ind]["total_num_granular_steps"] - 1
+        elif (
+            current_broad_step == num_broad_steps
+            and self.trackers[tracker_ind]["active"] == True
+        ):
+            self.trackers[tracker_ind]["current_granular_step"] = (
+                self.trackers[tracker_ind]["total_num_granular_steps"] - 1
+            )
             self.trackers[tracker_ind]["active"] = False
         else:
             raise Exception(
@@ -981,7 +986,7 @@ class GlobalStepPredictor:
                 f"Tried to decrement tracker #{tracker_ind}: "
                 f"{tracker['recipe']} already on step 0."
             )
-        
+
         return self.trackers
 
     def get_gt_steps_from_gt_activities(self, video_dset, config_fn):
