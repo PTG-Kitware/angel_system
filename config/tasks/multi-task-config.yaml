@@ -14,15 +14,20 @@ tasks:
   - id: 0
     label: "coffee"
     config_file: "./config/tasks/recipe_coffee.yaml"
+    active: true
   - id: 1
     label: "tea"
     config_file: "./config/tasks/recipe_tea.yaml"
+    active: true
   - id: 2
     label: "pinwheel"
     config_file: "./config/tasks/recipe_pinwheel.yaml"
+    active: false
   - id: 3
     label: "oatmeal"
     config_file: "./config/tasks/recipe_oatmeal.yaml"
+    active: false
   - id: 4
-    label: "dessert_quesadilla"
+    label: "dessert quesadilla"
     config_file: "./config/tasks/recipe_dessertquesadilla.yaml"
+    active: false

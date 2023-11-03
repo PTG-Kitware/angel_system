@@ -30,6 +30,10 @@ on_project_start: |
   # congestion slowdowns to message sending.
   export ROS_DOMAIN_ID=77
 
+  # Set the frame-rate to be used by multiple sources. This should be in frames
+  # per second (Hz).
+  export FRAME_RATE=15
+
 # Run on project start, the first time
 # on_project_first_start: command
 
@@ -67,7 +71,7 @@ windows:
             -p head_pose_topic:=disable
             -p pv_width:=1280
             -p pv_height:=720
-            -p pv_framerate:=15
+            -p pv_framerate:=${FRAME_RATE}
             -p sm_freq:=5
             -p rm_depth_AHAT:=disable
 
@@ -83,9 +87,9 @@ windows:
             -r __ns:=${ROS_NAMESPACE}
             -p image_topic:=PVFramesBGR
             -p det_topic:=ObjectDetections2d
-            -p net_checkpoint:=${MODEL_DIR}/yolov7-combined_objects-weights.pt
+            -p net_checkpoint:=${MODEL_DIR}/all_recipes+additional_objs+bkgd_yolov7.pt
             -p inference_img_size:=1280
-            -p det_conf_threshold:=0.1
+            -p det_conf_threshold:=0.25
             -p cuda_device_id:=0
 
         - simple_2d_overlay: ros2 run angel_debug Simple2dDetectionOverlay --ros-args
@@ -100,8 +104,8 @@ windows:
       -p image_ts_topic:=PVFramesBGR_TS
       -p det_topic:=ObjectDetections2d
       -p act_topic:=ActivityDetections
-      -p model_weights:=${MODEL_DIR}/yolo_all_recipes_sample_rate_2.ckpt
-      -p model_mapping:=${MODEL_DIR}/activity_tcn-all_activities-mapping.txt
+      -p model_weights:=${MODEL_DIR}/yolo_all_recipes_additional_objs_bkgd_sample_rate_2.ckpt
+      -p model_mapping:=${MODEL_DIR}/yolo_all_recipes_additional_objs_bkgd_act_mapping.txt
       -p model_det_label_mapping:=${MODEL_DIR}/activity_tcn-all_activities-det_label_mapping.json
       -p model_device:=cuda
       -p model_dets_conv_version:=5
@@ -110,16 +114,24 @@ windows:
       -p image_pix_width:=1280
       -p image_pix_height:=720
 
+  - keyboard_sys_cmd: ros2 run angel_system_nodes keyboard_to_sys_cmd --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p system_command_topic:=SystemCommands
+
   - task_monitor: ros2 run angel_system_nodes global_step_predictor --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p det_topic:=ActivityDetections
-      -p model_file:=${MODEL_DIR}/global_step_predictor_act_avgs.npy
-      -p thresh_frame_count:=4
+      -p model_file:=${MODEL_DIR}/global_step_predictor_act_avgs_all_classes_v2.0_sample_rate_2.npy
+      -p threshold_multiplier_weak:=0.05
+      -p thresh_frame_count:=$((8 / (30 / ${FRAME_RATE})))
+      -p threshold_frame_count_weak:=2
+      -p deactivate_thresh_frame_count:=$((20 / (30 / ${FRAME_RATE})))
       -p step_mode:=granular
       -p config_file:=${CONFIG_DIR}/tasks/multi-task-config.yaml
       -p task_state_topic:=TaskUpdates
       -p query_task_graph_topic:=query_task_graph
       -p task_error_topic:=TaskErrors
+      -p system_command_topic:=SystemCommands
       #-p gt_activity_mscoco:=model_files/test_activity_preds.mscoco.json
       #-p gt_video_id:=8
       #-p gt_output_dir:="${BAGS_DIR}"

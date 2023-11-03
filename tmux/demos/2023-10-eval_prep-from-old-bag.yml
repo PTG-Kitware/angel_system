@@ -19,7 +19,7 @@ root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 # Runs on project start, always
 # on_project_start: command
 on_project_start: |
-  export ROS_NAMESPACE=${ROS_NAMESPACE:-/kitware}
+  export ROS_NAMESPACE=${ROS_NAMESPACE:-/debug}
   export CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/config
   export MODEL_DIR=${ANGEL_WORKSPACE_DIR}/model_files
   export BAGS_DIR=${ANGEL_WORKSPACE_DIR}/ros_bags
@@ -58,25 +58,25 @@ windows:
         - ros_bag_play: #ros2 bag play <<PATH_TO_BAG_FILE>>
             echo ros2 bag play ${BAGS_DIR}/all_activities_20
 
-        # Hacky fix to drop frames, shouldn't convert image
+        # Old videos were recorded in NV12
         - image_converter: ros2 run angel_datahub ImageConverter --ros-args
             -r __ns:=${ROS_NAMESPACE}
-            -p topic_input_images:=PVFramesBGR
-            -p topic_output_images:=PVFramesBGR_HALF
+            -p topic_input_images:=PVFramesNV12
+            -p topic_output_images:=PVFramesRGB
             -p drop_nth_frame:=$((30 / ${FRAME_RATE}))
-            -p convert_nv12_to_rgb:=false
+            -p convert_nv12_to_rgb:=true
 
         - image_ts_relay: ros2 run angel_system_nodes  image_timestamp_relay --ros-args
             -r __ns:=${ROS_NAMESPACE}
-            -p image_topic:=PVFramesBGR_HALF
-            -p output_topic:=PVFramesBGR_TS
+            -p image_topic:=PVFramesRGB
+            -p output_topic:=PVFramesRGB_TS
 
   - object_detector:
       layout: even-vertical
       panes:
         - object_detector: ros2 run angel_system_nodes object_detection_yolo_v7 --ros-args
             -r __ns:=${ROS_NAMESPACE}
-            -p image_topic:=PVFramesBGR_HALF
+            -p image_topic:=PVFramesRGB
             -p det_topic:=ObjectDetections2d
             -p net_checkpoint:=${MODEL_DIR}/all_recipes+additional_objs+bkgd_yolov7.pt
             -p inference_img_size:=1280
@@ -85,14 +85,14 @@ windows:
 
         - simple_2d_overlay: ros2 run angel_debug Simple2dDetectionOverlay --ros-args
             -r __ns:=${ROS_NAMESPACE}
-            -p topic_input_images:=PVFramesBGR_HALF
+            -p topic_input_images:=PVFramesRGB
             -p topic_input_det_2d:=ObjectDetections2d
             -p topic_output_images:=pv_image_detections_2d
             -p filter_top_k:=-1
 
   - activity_classifier: ros2 run angel_system_nodes activity_classifier_tcn --ros-args
       -r __ns:=${ROS_NAMESPACE}
-      -p image_ts_topic:=PVFramesBGR_TS
+      -p image_ts_topic:=PVFramesRGB_TS
       -p det_topic:=ObjectDetections2d
       -p act_topic:=ActivityDetections
       -p model_weights:=${MODEL_DIR}/yolo_all_recipes_additional_objs_bkgd_sample_rate_2.ckpt
