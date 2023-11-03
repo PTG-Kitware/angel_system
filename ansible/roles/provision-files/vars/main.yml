@@ -82,6 +82,11 @@ girder_file_downloads:
     - file_id: 653c008068ef53152cbab25a
       sha512: 4dce342d356db73326106a436462ee02a5fcbad4f1b6420c34fd280c220a09fd949c174dfc95697cda980e1837b0641d5a7862c160bfa3e736a2c672c8e0c657
       dest: "{{ stage_dirs.model_files }}/yolov7-combined_objects-weights.pt"
+    # YOLO v7 Combined Objects weights -- additional objects + background
+    - file_id: 6543f33068ef53152cbab69e
+      sha512: a0e4dd249c07fcf3977dc0a5e715a1786637957bff94d348fdf7285b8b22e3f32e6c1fd135859e5443c7c45be30cd20ebaa6bc6e12ebe06e97592f76520e6b1e
+      dest: "{{ stage_dirs.model_files }}/all_recipes+additional_objs+bkgd_yolov7.pt"
+
     # Activity TCN input object detection label mapping
     - file_id: 6539a24b5be10c8fb6ed5246
       sha512: ed49b26156486f9fb30a940d18b4d32c3224ba30de42e0baa065d4406f6af9ead001a4332301db856898fdfd718bc4f13f457228f1cf2f6e359175f25296f9da
@@ -98,10 +103,23 @@ girder_file_downloads:
     - file_id: 653999935be10c8fb6ed5242
       sha512: b83b5cd4f9a56bf9e8bfff5ce6a24bda013cca1e4b8c6b905f8d819f29afbfc6d4bc214ec1f97fd6f18d8e4ce304a3f19b89cbb11aad412647d91639eff0e058
       dest: "{{ stage_dirs.model_files }}/activity_tcn-all_activities-mapping.txt"
-    # Global Step predictor model
+    # Activity TCN -- yolo_all_recipes_additional_objs_bkgd_sample_rate_2 -- weights
+    - file_id: 6543fcc368ef53152cbab6b4
+      sha512: 6d69ee7d228a7a27d57ed9e8aab2e5356aceada7cc62ab3ac2306629ed3aee93c0891045681a7488ecdfc56ddd2df34078a420b1b2599b8ad06115799a75fadf
+      dest: "{{ stage_dirs.model_files }}/yolo_all_recipes_additional_objs_bkgd_sample_rate_2.ckpt"
+    # Activity TCN -- yolo_all_recipes_additional_objs_bkgd_sample_rate_2 -- activity class mapping
+    - file_id: 6543fbeb68ef53152cbab6ae
+      sha512: 85bd2c6414cb582eba6e969726a7dc289644fb06e8b112e1fd1833351671ad701e0bdac1339c7429e4963f0058affa26fce7d7dd742bba854ad0e015085f576b
+      dest: "{{ stage_dirs.model_files }}/yolo_all_recipes_additional_objs_bkgd_act_mapping.txt"
+
+    # Global Step predictor model -- v1.0
     - file_id: 653d8c0768ef53152cbab35d
       sha512: 65d0c7f89e8a6064f9dccbe8bfc4d8abb9af6e2cd69d5900268fe7e7a0362510073b8514e764b1d42ab81a2dcbcc681eab9cc7bcd2b3380096623ca13248556b
       dest: "{{ stage_dirs.model_files }}/global_step_predictor_act_avgs.npy"
+    # Global Step predictor model -- v2.0_sample_rate_2
+    - file_id: 6543ca0a68ef53152cbab68d
+      sha512: e9cc7c7e385700acfa1e2273b18346e6c85db8e9e49fc4ccea7686f3ac1e663086209b9268bc65e8f993f37a3436cb39e6a4da0ccc06cab0e8cdc795200eaaf1
+      dest: "{{ stage_dirs.model_files }}/global_step_predictor_act_avgs_all_classes_v2.0_sample_rate_2.npy"
 
 
 # List of git repositories to check out at a specific ref and then archive.
