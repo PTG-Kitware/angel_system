@@ -832,14 +832,28 @@ class GlobalStepPredictor:
         """
         Increment to the first granular step of the next broad step.
         """
+        # TODO: Can't set last step to done yet
         tracker = self.trackers[tracker_index]
-        self.trackers[tracker_index]["current_broad_step"] += 1
-        self.trackers[tracker_index]["current_granular_step"] = (
-            tracker["last_granular_step_per_broad_step"][
-                tracker["current_broad_step"] - 1
-            ]
-            + 1
-        )
+        num_broad_steps = tracker["total_num_broad_steps"] - 1
+        current_broad_step = tracker["current_broad_step"]
+
+        if current_broad_step < num_broad_steps:
+            self.trackers[tracker_index]["current_broad_step"] += 1
+            self.trackers[tracker_index]["current_granular_step"] = (
+                tracker["last_granular_step_per_broad_step"][
+                    tracker["current_broad_step"] - 1
+                ]
+                + 1
+            )
+        elif current_broad_step == num_broad_steps:
+            self.trackers[tracker_ind]["active"] = False
+        else:
+            raise Exception(
+                f"Tried to increment tracker #{tracker_ind}: "
+                f"{tracker['recipe']} past last step."
+            )
+
+        self.conditionally_reset_irrational_trackers(tracker)
         return self.trackers
 
     def manually_decrement_current_step(self, tracker_index):
@@ -847,10 +861,24 @@ class GlobalStepPredictor:
         Decrement to the first granular step of the previous broad step.
         """
         tracker = self.trackers[tracker_index]
-        self.trackers[tracker_index]["current_broad_step"] -= 1
-        self.trackers[tracker_index]["current_granular_step"] = tracker[
-            "last_granular_step_per_broad_step"
-        ][tracker["current_broad_step"]]
+        num_broad_steps = tracker["total_num_broad_steps"] - 1
+        current_broad_step = tracker["current_broad_step"]
+
+        if current_broad_step == num_broad_steps and not tracker["active"]:
+            self.trackers[tracker_ind]["active"] = True
+            return self.trackers
+
+        if current_broad_step > 0:
+            self.trackers[tracker_index]["current_broad_step"] -= 1
+            self.trackers[tracker_index]["current_granular_step"] = tracker[
+                "last_granular_step_per_broad_step"
+            ][tracker["current_broad_step"]]
+        else:
+            raise Exception(
+                f"Tried to decrement tracker #{tracker_ind}: "
+                f"{tracker['recipe']} already on step 0."
+            )
+        
         return self.trackers
 
     def get_gt_steps_from_gt_activities(self, video_dset, config_fn):
