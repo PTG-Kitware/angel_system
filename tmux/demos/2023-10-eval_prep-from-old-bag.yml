@@ -113,7 +113,9 @@ windows:
       -r __ns:=${ROS_NAMESPACE}
       -p det_topic:=ActivityDetections
       -p model_file:=${MODEL_DIR}/global_step_predictor_act_avgs_all_classes_v2.0_sample_rate_2.npy
+      -p threshold_multiplier_weak:=0.05
       -p thresh_frame_count:=$((8 / (30 / ${FRAME_RATE})))
+      -p threshold_frame_count_weak:=2
       -p deactivate_thresh_frame_count:=$((20 / (30 / ${FRAME_RATE})))
       -p step_mode:=granular
       -p config_file:=${CONFIG_DIR}/tasks/multi-task-config.yaml

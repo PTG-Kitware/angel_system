@@ -34,6 +34,8 @@ PARAM_DET_TOPIC = "det_topic"
 PARAM_MODEL_FILE = "model_file"
 PARAM_THRESH_FRAME_COUNT = "thresh_frame_count"
 PARAM_DEACTIVATE_THRESH_FRAME_COUNT = "deactivate_thresh_frame_count"
+PARAM_THRESH_MULTIPLIER_WEAK = "threshold_multiplier_weak"
+PARAM_THRESH_FRAME_COUNT_WEAK = "threshold_frame_count_weak"
 # The step mode to use for this predictor instance. This must be either "broad"
 # or "granular"
 PARAM_STEP_MODE = "step_mode"
@@ -68,7 +70,9 @@ class GlobalStepPredictorNode(Node):
                 (PARAM_QUERY_TASK_GRAPH_TOPIC,),
                 (PARAM_DET_TOPIC,),
                 (PARAM_MODEL_FILE,),
+                (PARAM_THRESH_MULTIPLIER_WEAK,),
                 (PARAM_THRESH_FRAME_COUNT,),
+                (PARAM_THRESH_FRAME_COUNT_WEAK,),
                 (PARAM_DEACTIVATE_THRESH_FRAME_COUNT,),
                 (PARAM_STEP_MODE,),
                 (PARAM_GT_ACT_COCO, ""),
@@ -83,7 +87,9 @@ class GlobalStepPredictorNode(Node):
         self._query_task_graph_topic = param_values[PARAM_QUERY_TASK_GRAPH_TOPIC]
         self._det_topic = param_values[PARAM_DET_TOPIC]
         self._model_file = param_values[PARAM_MODEL_FILE]
+        self._threshold_multiplier_weak = param_values[PARAM_THRESH_MULTIPLIER_WEAK]
         self._thresh_frame_count = param_values[PARAM_THRESH_FRAME_COUNT]
+        self._threshold_frame_count_weak = param_values[PARAM_THRESH_FRAME_COUNT_WEAK]
         self._deactivate_thresh_frame_count = param_values[
             PARAM_DEACTIVATE_THRESH_FRAME_COUNT
         ]
@@ -110,7 +116,9 @@ class GlobalStepPredictorNode(Node):
 
         # Instantiate the GlobalStepPredictor module
         self.gsp = GlobalStepPredictor(
+            threshold_multiplier_weak=self._threshold_multiplier_weak,
             threshold_frame_count=self._thresh_frame_count,
+            threshold_frame_count_weak=self._threshold_frame_count_weak,
             deactivate_thresh_frame_count=self._deactivate_thresh_frame_count,
             recipe_types=recipe_types,
             recipe_config_dict=recipe_config_dict,

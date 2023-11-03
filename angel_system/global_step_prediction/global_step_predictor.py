@@ -12,7 +12,7 @@ class GlobalStepPredictor:
         self,
         max_step_jump=2,
         threshold_multiplier=0.8,
-        threshold_multiplier_weak=0.2,
+        threshold_multiplier_weak=0.05,
         threshold_frame_count=8,  # full rate = 8, half rate = 4
         threshold_frame_count_weak=2,
         deactivate_thresh_mult=0.3,
