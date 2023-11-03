@@ -58,11 +58,11 @@ between two toothpicks."
     full_str: "Cross the two ends of the floss over the top of the tortilla roll. Holding one end of the floss in
 each hand, pull the floss ends in opposite directions to slice."
     activity_ids: [55, 56]
+  #- id: 11
+  #  label: "continue-slicing"
+  #  full_str: "Continue slicing with floss to create 5 pinwheels."
+  #  activity_ids: [54, 55, 56, 54, 55, 56, 54, 55, 56]
   - id: 11
-    label: "continue-slicing"
-    full_str: "Continue slicing with floss to create 5 pinwheels."
-    activity_ids: [54, 55, 56, 54, 55, 56, 54, 55, 56]
-  - id: 12
     label: "plate-pinwheels"
     full_str: "Place the pinwheels on a plate."
     activity_ids: [57]
