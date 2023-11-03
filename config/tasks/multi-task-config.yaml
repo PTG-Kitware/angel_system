@@ -28,6 +28,6 @@ tasks:
     config_file: "./config/tasks/recipe_oatmeal.yaml"
     active: false
   - id: 4
-    label: "dessert_quesadilla"
+    label: "dessert quesadilla"
     config_file: "./config/tasks/recipe_dessertquesadilla.yaml"
-    active: true
+    active: false
