@@ -137,7 +137,8 @@ labels:
     full_str: "Slice tortilla in half using butter knife to create two triangular wedges"
   - id: 41
     label: "place-tortilla-wedge"
-    full_str: "Place tortilla wedge on the plate"
+    # TEMPORARY: should be singular
+    full_str: "Place tortilla wedges on the plate"
     repeat: 2
   # Labels unique to oatmeal
   - id: 42
@@ -145,7 +146,8 @@ labels:
     full_str: "Pour the water from the liquid measuring cup into the microwave safe bowl."
   - id: 43
     label: "measure-1-tbsp-oats"
-    full_str: "Measure 1 Tablespoon of quick-cook oats and place in a microwave-safe bowl."
+    # TEMPORARY changed string to 4TBSP, should be 1
+    full_str: "Measure 4 Tablespoons of quick-cook oats and place in a microwave-safe bowl."
     repeat: 4
   - id: 44
     label: "add-raisins"
@@ -172,11 +174,13 @@ labels:
     full_str: "Roll the tortilla from one end to the other into a log shape, about 1.5 inches thick. Roll it tight enough to prevent gaps, but not so tight that the filling leaks"
   - id: 51
     label: "insert-toothpick"
-    full_str: "Insert a toothpick into the tortilla. The toothpick should be placed such that 5 total toothpicks can be placed about 1 inch apart."
+    # TEMPORARY: SHould only be 1
+    full_str: "Insert 5 toothpicks into the tortilla. Each toothpick should be placed about 1 inch apart."
     repeat: 5
   - id: 52
     label: "trim-tortilla"
-    full_str: "Trim one end of the tortilla roll leaving ½” margin from the toothpick"
+    # TEMPORARY: Should be singular
+    full_str: "Trim the ends of the tortilla roll leaving ½” margin from the toothpick"
     repeat: 2
   - id: 53
     label: "discard-tortilla-ends"
