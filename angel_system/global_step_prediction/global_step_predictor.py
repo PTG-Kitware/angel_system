@@ -12,11 +12,13 @@ class GlobalStepPredictor:
         self,
         max_step_jump=2,
         threshold_multiplier=0.8,
-        threshold_multiplier_weak=0.0,
+        threshold_multiplier_weak=0.2,
         threshold_frame_count=8,  # full rate = 8, half rate = 4
-        threshold_frame_count_weak=0.0,
+        threshold_frame_count_weak=2,
         deactivate_thresh_mult=0.3,
         deactivate_thresh_frame_count=20,  # full rate = 20, half rate = 10
+        deactivate_weak_thresh_mult=1.0,
+        deactivate_thresh_frame_count_weak=2,
         recipe_types=[],
         recipe_config_dict={},
         background_threshold=0.3,
@@ -48,6 +50,9 @@ class GlobalStepPredictor:
         self.threshold_multiplier_weak = threshold_multiplier_weak
         self.threshold_frame_count = threshold_frame_count
         self.threshold_frame_count_weak = threshold_frame_count_weak
+
+        self.deactivate_weak_thresh_mult = deactivate_weak_thresh_mult
+        self.deactivate_thresh_frame_count_weak = deactivate_thresh_frame_count_weak
 
         # Threshold & nuber of consecutive below-threshold frames required
         # to deactivate an activity instance.
@@ -85,6 +90,12 @@ class GlobalStepPredictor:
         )
 
         self.activated_activities = np.zeros(
+            (
+                np.max(max_activity_id_per_recipe) + 1,
+                2,
+            )
+        )
+        self.weak_activated_activities = np.zeros(
             (
                 np.max(max_activity_id_per_recipe) + 1,
                 2,
@@ -270,7 +281,7 @@ class GlobalStepPredictor:
 
         tracker_dict["active"] = True
         tracker_dict["broad_steps"] = broad_steps
-        tracker_dict["can_skip"] = True
+        tracker_dict["can_skip"] = False
 
         self.trackers.append(tracker_dict)
 
@@ -404,14 +415,31 @@ class GlobalStepPredictor:
         assert len(activated_indexes) + len(deactivated_indexes) == len(
             self.activated_activities
         )
+        weak_activated_indexes = np.nonzero(self.weak_activated_activities[:, 0] == 1)[
+            0
+        ]
+        weak_deactivated_indexes = np.nonzero(
+            self.weak_activated_activities[:, 0] == 0
+        )[0]
 
         # activity conf = vector of all activities for one frame.
         for i, activity_conf in enumerate(activity_confs):
             # activated_confidences = classes predicted to be "happening" now.
             activated_indexes = np.nonzero(self.activated_activities[:, 0] == 1)[0]
             # deactivated_confidences = classes predicted NOT to be happening yet.
-            deactivated_indexes = np.nonzero(self.activated_activities[:, 0] == 0)[0]
 
+            # WEAK
+            deactivated_indexes = np.nonzero(self.activated_activities[:, 0] == 0)[0]
+            # activated_confidences = classes predicted to be "happening" now.
+            weak_activated_indexes = np.nonzero(
+                self.weak_activated_activities[:, 0] == 1
+            )[0]
+            # deactivated_confidences = classes predicted NOT to be happening yet.
+            weak_deactivated_indexes = np.nonzero(
+                self.weak_activated_activities[:, 0] == 0
+            )[0]
+
+            # STRONG
             # Check for activations > 80% * (avg act threshold)
             above_pos_threshold_indexes = np.nonzero(
                 activity_conf > self.threshold_multiplier * self.avg_probs
@@ -428,7 +456,25 @@ class GlobalStepPredictor:
             below_neg_threshold_indexes = np.nonzero(
                 activity_conf < self.deactivate_thresh_mult * self.avg_probs
             )[0]
+            # WEAK
+            # Check for activations > 80% * (avg act threshold)
+            above_weak_pos_threshold_indexes = np.nonzero(
+                activity_conf > self.threshold_multiplier_weak * self.avg_probs
+            )[0]
+            # ...and < 30% * (avg act threshold)
+            below_pos_weak_threshold_indexes = np.nonzero(
+                activity_conf < self.threshold_multiplier_weak * self.avg_probs
+            )[0]
+            # Check for activations > 80% * (avg act threshold)
+            above_neg_weak_threshold_indexes = np.nonzero(
+                activity_conf > self.deactivate_weak_thresh_mult * self.avg_probs
+            )[0]
+            # ...and < 30% * (avg act threshold)
+            below_neg_weak_threshold_indexes = np.nonzero(
+                activity_conf < self.deactivate_weak_thresh_mult * self.avg_probs
+            )[0]
 
+            # STRONG
             indexes_to_add_pos_threshold_increment = np.intersect1d(
                 np.array(deactivated_indexes), np.array(above_pos_threshold_indexes)
             )
@@ -437,6 +483,21 @@ class GlobalStepPredictor:
                 np.array(activated_indexes), np.array(below_neg_threshold_indexes)
             )
             self.activated_activities[indexes_to_add_neg_threshold_increment, 1] += 1
+            # WEAK
+            indexes_to_add_weak_pos_threshold_increment = np.intersect1d(
+                np.array(weak_deactivated_indexes),
+                np.array(above_weak_pos_threshold_indexes),
+            )
+            self.weak_activated_activities[
+                indexes_to_add_weak_pos_threshold_increment, 1
+            ] += 1
+            indexes_to_add_weak_neg_threshold_increment = np.intersect1d(
+                np.array(weak_activated_indexes),
+                np.array(below_neg_weak_threshold_indexes),
+            )
+            self.weak_activated_activities[
+                indexes_to_add_weak_neg_threshold_increment, 1
+            ] += 1
 
             # Not activated AND not above activation threshold?
             # Then set the activation clock back to zero.
@@ -448,6 +509,17 @@ class GlobalStepPredictor:
                 np.array(activated_indexes), np.array(above_neg_threshold_indexes)
             )
             self.activated_activities[indexes_to_reset_active, 1] = 0
+            # WEAK
+            indexes_to_reset_weak_deactive = np.intersect1d(
+                np.array(weak_deactivated_indexes),
+                np.array(below_pos_weak_threshold_indexes),
+            )
+            self.weak_activated_activities[indexes_to_reset_deactive, 1] = 0
+            indexes_to_reset_weak_active = np.intersect1d(
+                np.array(weak_activated_indexes),
+                np.array(above_neg_weak_threshold_indexes),
+            )
+            self.weak_activated_activities[indexes_to_reset_active, 1] = 0
 
             # Activate the inactive classes that have surpassed the
             # activation threshold for enough consecutive frames
@@ -471,6 +543,31 @@ class GlobalStepPredictor:
             )
             self.activated_activities[flipping_off_indexes, 0] = 0
             self.activated_activities[flipping_off_indexes, 1] = 0
+
+            # WEAK
+            # Activate the inactive classes that have surpassed the
+            # activation threshold for enough consecutive frames
+            flipping_on_weak_indexes = np.intersect1d(
+                weak_deactivated_indexes,
+                np.nonzero(
+                    self.weak_activated_activities[:, 1]
+                    >= self.threshold_frame_count_weak
+                )[0],
+            )
+            self.weak_activated_activities[flipping_on_weak_indexes, 0] = 1
+            self.weak_activated_activities[flipping_on_weak_indexes, 1] = 0
+
+            # Deactivate the active classes that have surpassed the
+            # deactivation threshold for enough consecutive frames
+            flipping_off_weak_indexes = np.intersect1d(
+                weak_activated_indexes,
+                np.nonzero(
+                    self.weak_activated_activities[:, 1]
+                    >= self.deactivate_thresh_frame_count_weak
+                )[0],
+            )
+            self.weak_activated_activities[flipping_off_weak_indexes, 0] = 0
+            self.weak_activated_activities[flipping_off_weak_indexes, 1] = 0
 
             # Now, go through ACTIVE trackers and see which corresponds to "flipping_on_indexes."
             # If a tracker's last step is ACTIVE and its last step is in "flipping_off_indexes",
@@ -507,6 +604,7 @@ class GlobalStepPredictor:
                 if next_activity in flipping_on_indexes:
                     self.increment_granular_step(tracker_ind)
                     self.conditionally_reset_irrational_trackers(tracker)
+                    self.trackers[tracker_ind]["can_skip"] = False
                     # Each activity activation can only be used once.
                     # Delete activity from flipping_on_indexes
                     next_act_ind = np.argwhere(flipping_on_indexes == next_activity)
@@ -517,13 +615,14 @@ class GlobalStepPredictor:
                             flipping_on_indexes = np.delete(
                                 flipping_on_indexes, next_act_ind
                             )
-                elif next_next_activity in flipping_on_indexes:
+                elif next_next_activity in flipping_on_indexes and tracker["can_skip"]:
                     # Keep track of skipped steps
                     self.add_skipped_granular_step(tracker_ind, next_granular_step)
                     # Increment the granular step twice
                     self.increment_granular_step(tracker_ind)
                     self.increment_granular_step(tracker_ind)
                     self.conditionally_reset_irrational_trackers(tracker, skip=True)
+                    self.trackers[tracker_ind]["can_skip"] = False
                     # Each activity activation can only be used once.
                     # Delete activity from flipping_on_indexes
                     next_next_act_ind = np.argwhere(
@@ -538,6 +637,8 @@ class GlobalStepPredictor:
                             flipping_on_indexes = np.delete(
                                 flipping_on_indexes, next_next_act_ind
                             )
+                if next_activity in flipping_on_weak_indexes:
+                    self.trackers[tracker_ind]["can_skip"] = True
 
                 # TODO: Try requiring that previous step is de-activated
 
