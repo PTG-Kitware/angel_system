@@ -221,7 +221,10 @@ class GlobalStepPredictorNode(Node):
                 current_step_id = task[f"current_{step_mode}_step"]
 
                 # If previous and current are not the same, publish a task-update
-                if previous_step_id != current_step_id:
+                if (
+                    previous_step_id != current_step_id
+                    or (current_step_id == task[f"total_num_{step_mode}_steps"] - 1 and task["active"]) 
+                ):
                     log.info(
                         f"Manual step change detected: {task['recipe']}. Current step: {current_step_id}"
                         f" Previous step: {previous_step_id}."
@@ -243,10 +246,23 @@ class GlobalStepPredictorNode(Node):
                         )
                         self.publish_task_state_message(
                             task,
-                            activity_msg.source_stamp_end_frame,
+                            self._latest_act_classification_end_time,
                         )
 
                         self.recipe_published_last_msg[task["recipe"]] = True
+
+                # Undo finishing the recipe
+                if current_step_id == task[f"total_num_{step_mode}_steps"] - 1 and task["active"]:
+                    log.info(
+                        f"Manual step change detected: {task['recipe']}. Current step: {current_step_id}"
+                        f" Previous step: {previous_step_id}."
+                    )
+                    self.publish_task_state_message(
+                        task, self._latest_act_classification_end_time
+                    )
+                    self.recipe_current_step_id[task["recipe"]] = current_step_id
+
+                    self.recipe_published_last_msg[task["recipe"]] = False
 
     def det_callback(self, activity_msg: ActivityDetection):
         """

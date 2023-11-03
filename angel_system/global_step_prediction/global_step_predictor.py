@@ -285,12 +285,13 @@ class GlobalStepPredictor:
         tracker = self.trackers[tracker_ind]
         current_granular_step = tracker["current_granular_step"]
         num_granular_steps = tracker["total_num_granular_steps"] - 1
+        
         if current_granular_step < num_granular_steps:
             self.trackers[tracker_ind]["current_granular_step"] += 1
             self.trackers[tracker_ind][
                 "current_broad_step"
             ] = self.granular_to_broad_step(tracker, current_granular_step)
-        elif current_granular_step == num_granular_steps:
+        elif current_granular_step == num_granular_steps and tracker["active"] == True:
             self.trackers[tracker_ind]["active"] = False
         else:
             raise Exception(
@@ -668,8 +669,9 @@ class GlobalStepPredictor:
         resetter_granular_step = {
             # recipe: [ (gran index to trigger reset,
             #            recipe that should reset)
-            "coffee": [10, "tea"],
-            "tea": [8, "coffee"],
+            "coffee": [17, "tea"],
+            "tea": [7, "coffee"],
+            #"oatmeal": [],
             "pinwheel": [10, "dessert_quesadilla"],
             "dessert_quesadilla": [11, "pinwheel"],
         }
@@ -933,7 +935,6 @@ class GlobalStepPredictor:
         """
         Increment to the first granular step of the next broad step.
         """
-        # TODO: Can't set last step to done yet
         tracker = self.trackers[tracker_index]
         num_broad_steps = tracker["total_num_broad_steps"] - 1
         current_broad_step = tracker["current_broad_step"]
@@ -946,7 +947,8 @@ class GlobalStepPredictor:
                 ]
                 + 1
             )
-        elif current_broad_step == num_broad_steps:
+        elif current_broad_step == num_broad_steps and self.trackers[tracker_ind]["active"] == True:
+            self.trackers[tracker_ind]["current_granular_step"] = self.trackers[tracker_ind]["total_num_granular_steps"] - 1
             self.trackers[tracker_ind]["active"] = False
         else:
             raise Exception(
