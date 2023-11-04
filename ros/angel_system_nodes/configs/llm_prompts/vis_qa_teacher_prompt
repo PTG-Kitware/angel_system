@@ -5,17 +5,9 @@ Task Steps:
 
 Chat History: 
 {chat_history}
-
-My Current Step: {current_step}
-
-My Emotion: {emotion}.
-
-My Current Action: {action}.
-
+{optional_fields}
 Objects In Front of Me: {centered_observables}.
-
 Objects Nearby: {all_observables}
-
 My Question: "{question}"
 
 Your Answer:

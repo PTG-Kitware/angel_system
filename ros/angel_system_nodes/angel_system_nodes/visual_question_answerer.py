@@ -70,14 +70,13 @@ PARAM_DEBUG_MODE = "debug_mode"
 PROMPT_VARIABLES = [
     "recipe",
     "chat_history",
-    "current_step",
-    "emotion",
-    "action",
+    "optional_fields",
     "centered_observables",
     "all_observables",
     "question",
 ]
 
+# Below configures the GPT request timeout in seconds.
 PARAM_TIMEOUT = "timeout"
 
 
@@ -176,7 +175,7 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
 
         # Configure supplemental input resources.
         self.question_queue = queue.Queue()
-        self.current_step = "Unstarted"
+        self.current_step = None
         self.action_classification_queue = queue.Queue()
         self.detected_objects_queue = queue.Queue()
         self.centroid_object_queue = centroid_2d_strategy_queue.Centroid2DStrategyQueue(
@@ -357,7 +356,7 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
         Returns the latest action classification in self.action_classification_queue
         that does not occur before a provided time.
         """
-        latest_action = "not available"
+        latest_action = None
         while not self.action_classification_queue.empty():
             next = self.action_classification_queue.queue[0]
             if next.time < curr_time:
@@ -424,10 +423,9 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
         self,
         msg: DialogueUtterance,
         chat_history: str,
-        current_step: str,
-        action: str,
         centered_observables: str,
         all_observables: str,
+        optional_fields: str
     ):
         """
         Generate a response to the utterance, enriched with the addition of
@@ -440,22 +438,18 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
             return_string = self.chain.run(
                 recipe=self.recipe,
                 chat_history=chat_history,
-                current_step=current_step,
-                action=action,
+                optional_fields=optional_fields,
                 centered_observables=centered_observables,
                 all_observables=all_observables,
-                emotion=self.get_emotion_or(msg),
                 question=msg.utterance_text,
             )
             if self.debug_mode:
                 sent_prompt = self.chain.prompt.format_prompt(
                     recipe=self.recipe,
                     chat_history=chat_history,
-                    current_step=current_step,
-                    action=action,
+                    optional_fields=optional_fields,
                     centered_observables=centered_observables,
                     all_observables=all_observables,
-                    emotion=self.get_emotion_or(msg),
                     question=msg.utterance_text,
                 ).to_string()
                 sent_prompt = colored(sent_prompt, "light_red")
@@ -464,10 +458,7 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
                 )
         except RuntimeError as err:
             self.log.info(err)
-            return_string = (
-                "I'm sorry. I don't know how to answer your statement. "
-                + f"I understand that you feel {self.get_emotion_or(msg)}."
-            )
+            return_string = "I'm sorry. I don't know how to answer your statement."
         return return_string
 
     def question_answer_callback(self, msg: DialogueUtterance):
@@ -480,6 +471,17 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
             return
         self.question_queue.put(msg)
 
+    def _get_optional_fields_string(self, emotion: str, current_step: str,
+                                    current_action: str) -> str:
+        optional_fields_string = ""
+        if emotion:
+            optional_fields_string += f"Emotion: {emotion}\n"
+        if current_step:
+            optional_fields_string += f"My Current Step: {current_step}\n"
+        if current_action:
+            optional_fields_string += f"My Current Action: {current_action}\n"
+        return optional_fields_string.strip("\n")
+
     def process_question_queue(self):
         """
         Constant loop to process received questions.
@@ -490,28 +492,23 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
             start_time = self._get_sec(question_msg)
             self.log.info(f"Processing utterance {question_msg.utterance_text}")
 
-            # Get most recently detected action.
-            action = self._get_latest_action(start_time)
-            self.log.info(f"Latest action: {action}")
-
+            # Get the optional fields.
+            optional_fields = \
+                self._get_optional_fields_string(question_msg.emotion, self._get_current_step(),
+                                                 self._get_latest_action(start_time))
             # Get centered detected objects.
             centered_observables = self._get_latest_centered_observables(start_time)
-            self.log.info(f"Observed objects: {centered_observables}")
-
             # Get all detected objects.
-            all_observables = self._get_latest_observables(
-                start_time, self.object_dtctn_last_n_obj_detections
-            )
-            self.log.info(f"Observed objects: {all_observables}")
+            all_observables = \
+                self._get_latest_observables(start_time, self.object_dtctn_last_n_obj_detections)
 
             # Generate response.
             response = self.get_response(
                 question_msg,
                 self._get_dialogue_history(),
-                self._get_current_step(),
-                action,
                 centered_observables,
                 all_observables,
+                optional_fields
             )
             self.publish_generated_response(question_msg.utterance_text, response)
             self._add_dialogue_history(question_msg.utterance_text, response)
