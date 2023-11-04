@@ -22,7 +22,8 @@ from angel_msgs.msg import (
 )
 from angel_utils import declare_and_get_parameters
 from angel_system.data.common import bounding_boxes
-from angel_system_nodes.base_dialogue_system_node import BaseDialogueSystemNode
+from angel_system_nodes.base_dialogue_system_node import BaseDialogueSystemNode 
+from angel_system_nodes.base_intent_detector import INTENT_LABELS
 from angel_system.utils.object_detection_queues import centroid_2d_strategy_queue
 
 openai.organization = os.getenv("OPENAI_ORG_ID")
@@ -79,6 +80,11 @@ PROMPT_VARIABLES = [
 # Below configures the GPT request timeout in seconds.
 PARAM_TIMEOUT = "timeout"
 
+OBJECT_CLARIFICATION_RESPONSE = """
+Based on the information provided, it seems like you are referring to an object that you are
+unsure about. I'm unable to determine what it is. Please describe the object  to me or get
+closer so that I may help you."
+"""
 
 class VisualQuestionAnswerer(BaseDialogueSystemNode):
     class TimestampedEntity:
@@ -143,14 +149,22 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
         # Read the configured recipe file.
         self._recipe_path = param_values[PARAM_RECIPE_PATH]
         self.recipe = self._configure_recipe(self._recipe_path)
-        self.log.info(f"Configured recipe to be: ~~~~~~~~~~\n{self.recipe}\n~~~~~~~~~~")
+        self.log.info(
+            colored(
+                f"Configured recipe to be: ~~~~~~~~~~\n{self.recipe}\n~~~~~~~~~~",
+                "light_red"
+            )
+        )
 
         # Read the configured prompt template.
         self._prompt_template_path = param_values[PARAM_PROMPT_TEMPLATE_PATH]
         with open(self._prompt_template_path, "r") as file:
             self.prompt_template = file.read()
             self.log.info(
-                f"Prompt Template: ~~~~~~~~~~\n{self.prompt_template}\n~~~~~~~~~~"
+                colored(
+                    f"Prompt Template: ~~~~~~~~~~\n{self.prompt_template}\n~~~~~~~~~~",
+                    "light_red"
+                )
             )
 
         self.object_dtctn_ignorables = set(
@@ -366,7 +380,7 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
                 break
         return latest_action
 
-    def _get_latest_centered_observables(self, curr_time: int) -> str:
+    def _get_latest_centered_observables(self, curr_time: int) -> Set:
         """
         Returns a comma-delimited list of "centered" objects per all
         entities in self.detected_objects_queue that occurred before a provided time.
@@ -381,10 +395,10 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
         )
         if timestamped_detections:
             if self.debug_mode:
-                print(
-                    f"Timestamped detections based on centroid distance are: "
-                    + f"{timestamped_detections}"
-                )
+                self.log.info("Timestamped detections based on centroid distance are: ")
+                for detection in timestamped_detections:
+                    self.log.info(
+                        f"- Timestamp = {detection[0]} Centroid-Dist-Object(s) = {detection[1]}")
             # Recall that we passed in timestamped lists of pairs of
             # (detection, confidence score).
             centered_obj_detections_lists = [j for _, j in timestamped_detections]
@@ -394,9 +408,9 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
                     obj, score = obj_score
                     observables.add(obj)
             observables = observables - self.object_dtctn_ignorables
-            return ", ".join(observables)
+        return observables 
 
-    def _get_latest_observables(self, curr_time: int, n: int) -> str:
+    def _get_latest_observables(self, curr_time: int, n: int) -> Set:
         """
         Returns a comma-delimited list of all observed objects per all
         entities in self.detected_objects_queue that occurred before a provided time.
@@ -417,7 +431,7 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
             for obj in detection.entity:
                 observables.add(obj)
         observables = observables - self.object_dtctn_ignorables
-        return ", ".join(observables)
+        return observables
 
     def get_response(
         self,
@@ -452,7 +466,7 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
                     all_observables=all_observables,
                     question=msg.utterance_text,
                 ).to_string()
-                sent_prompt = colored(sent_prompt, "light_red")
+                sent_prompt = colored(sent_prompt, "light_blue")
                 self.log.info(
                     f"Prompt sent over:~~~~~~~~~~\n{sent_prompt}\n:~~~~~~~~~~"
                 )
@@ -466,21 +480,21 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
         This is the main ROS node listener callback loop that will process
         all messages received via subscribed topics.
         """
-        self.log.info(f"Received message:\n\n{msg.utterance_text}")
+        self.log.info(f"Received message: \"{msg.utterance_text}\"")
         if not self._apply_filter(msg):
             return
         self.question_queue.put(msg)
 
     def _get_optional_fields_string(self, emotion: str, current_step: str,
                                     current_action: str) -> str:
-        optional_fields_string = ""
+        optional_fields_string = "\n"
         if emotion:
             optional_fields_string += f"Emotion: {emotion}\n"
         if current_step:
             optional_fields_string += f"My Current Step: {current_step}\n"
         if current_action:
             optional_fields_string += f"My Current Action: {current_action}\n"
-        return optional_fields_string.strip("\n")
+        return optional_fields_string.rstrip("\n")
 
     def process_question_queue(self):
         """
@@ -490,7 +504,7 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
         while True:
             question_msg = self.question_queue.get()
             start_time = self._get_sec(question_msg)
-            self.log.info(f"Processing utterance {question_msg.utterance_text}")
+            self.log.info(f"Processing utterance \"{question_msg.utterance_text}\"")
 
             # Get the optional fields.
             optional_fields = \
@@ -502,14 +516,27 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
             all_observables = \
                 self._get_latest_observables(start_time, self.object_dtctn_last_n_obj_detections)
 
-            # Generate response.
-            response = self.get_response(
-                question_msg,
-                self._get_dialogue_history(),
-                centered_observables,
-                all_observables,
-                optional_fields
-            )
+            response = None
+            is_object_clarification = \
+                question_msg.intent and question_msg.intent == INTENT_LABELS[3]
+            if is_object_clarification and len(centered_observables) > 1:
+                # Object Clarification override: If an associated intent exists and indicates
+                # object clarification in the presence of multiple objects, override the response with
+                # a clarification question.
+                self.log.info(
+                    "Received confusing object clarification question from user " +\
+                        f"about multiple objects: ({centered_observables}). " +\
+                        "Inquiring for more details...")
+                response = OBJECT_CLARIFICATION_RESPONSE
+            else:
+                # Normal response generation.
+                response = self.get_response(
+                    question_msg,
+                    self._get_dialogue_history(),
+                    ", ".join(centered_observables) if centered_observables else "",
+                    ", ".join(all_observables) if all_observables else "",
+                    optional_fields
+                )
             self.publish_generated_response(question_msg.utterance_text, response)
             self._add_dialogue_history(question_msg.utterance_text, response)
 
@@ -519,7 +546,7 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
         msg.header.stamp = self.get_clock().now().to_msg()
         msg.utterance_text = utterance
         msg.response = response
-        colored_utterance = colored(utterance, "light_blue")
+        colored_utterance = colored(utterance, "magenta")
         colored_response = colored(response, "light_green")
         self.log.info(
             f'Responding to utterance:\n>>> "{colored_utterance}"\n>>> with:\n'
