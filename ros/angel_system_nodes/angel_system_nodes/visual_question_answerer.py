@@ -451,19 +451,19 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
             self.log.info(f"User emotion: {msg.emotion}")
             return_string = self.chain.run(
                 recipe=self.recipe,
-                chat_history=chat_history,
                 optional_fields=optional_fields,
                 centered_observables=centered_observables,
                 all_observables=all_observables,
+                chat_history=chat_history,
                 question=msg.utterance_text,
             )
             if self.debug_mode:
                 sent_prompt = self.chain.prompt.format_prompt(
                     recipe=self.recipe,
-                    chat_history=chat_history,
                     optional_fields=optional_fields,
                     centered_observables=centered_observables,
                     all_observables=all_observables,
+                    chat_history=chat_history,
                     question=msg.utterance_text,
                 ).to_string()
                 sent_prompt = colored(sent_prompt, "light_blue")
@@ -529,12 +529,13 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
                         "Inquiring for more details...")
                 response = OBJECT_CLARIFICATION_RESPONSE
             else:
+                all_observables -= centered_observables
                 # Normal response generation.
                 response = self.get_response(
                     question_msg,
                     self._get_dialogue_history(),
-                    ", ".join(centered_observables) if centered_observables else "",
-                    ", ".join(all_observables) if all_observables else "",
+                    ", ".join(centered_observables) if centered_observables else "Nothing",
+                    ", ".join(all_observables) if all_observables else "Nothing",
                     optional_fields
                 )
             self.publish_generated_response(question_msg.utterance_text, response)
