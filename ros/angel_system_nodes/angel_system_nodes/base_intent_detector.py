@@ -17,7 +17,7 @@ OVERRIDE_KEYPHRASES = ["angel", "angel system"]
 # config/angel_system_cmds/user_intent_to_sys_cmd_v1.yaml.
 # Please refer to labels defined in
 # https://docs.google.com/document/d/1uuvSL5de3LVM9c0tKpRKYazDxckffRHf7IAcabSw9UA .
-INTENT_LABELS = ["next_step", "prev_step", "inquiry", "other"]
+INTENT_LABELS = ["next_step", "prev_step", "inquiry", "object_clarification", "other"]
 
 IN_TOPIC = "input_topic"
 PARAM_EXPECT_USER_INTENT_TOPIC = "expect_user_intent_topic"

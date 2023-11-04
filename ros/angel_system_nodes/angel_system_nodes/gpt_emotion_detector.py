@@ -16,10 +16,10 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 FEW_SHOT_EXAMPLES = [
     {
         "utterance": "Go back to the previous step you dumb machine!",
-        "label": "negative.",
+        "label": "negative[eos]",
     },
-    {"utterance": "Next step, please.", "label": "neutral"},
-    {"utterance": "We're doing great and I'm learning a lot!", "label": "positive"},
+    {"utterance": "Next step, please.", "label": "neutral[eos]"},
+    {"utterance": "We're doing great and I'm learning a lot!", "label": "positive[eos]"},
 ]
 
 PARAM_TIMEOUT = "timeout"
@@ -97,7 +97,8 @@ class GptEmotionDetector(BaseEmotionDetector):
         """
         Detects the user intent via langchain execution of GPT.
         """
-        return (self.chain.run(utterance=msg.utterance_text), 0.5)
+        emotion = self.chain.run(utterance=msg.utterance_text)
+        return emotion.split('[eos]')[0], 0.5
 
 
 def main():
