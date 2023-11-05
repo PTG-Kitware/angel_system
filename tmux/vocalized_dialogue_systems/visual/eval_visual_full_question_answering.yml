@@ -183,7 +183,7 @@ windows:
   - question_answering:
       layout: even-vertical
       panes:
-        - gpt_qa: ros2 run angel_system_nodes visual_question_answerer --ros-args
+        - gpt_qa: ros2 run angel_system_nodes visual_question_answerer --log-level visual_question_answerer:=DEBUG --ros-args
            -r __ns:=${ROS_NAMESPACE}
            -p utterance_topic:=emotion_topic
            -p task_state_topic:=task_state_topic
@@ -192,8 +192,9 @@ windows:
            -p system_text_response_topic:=system_text_response_topic
            -p recipe_path:=${CONFIG_DIR}/mit_ll_eval_one_coffee_recipe_steps_v2.json
            -p prompt_template_path:=${CONFIG_DIR}/llm_prompts/vis_qa_teacher_prompt
-           -p obj_det_last_n:=5
            -p pv_width:=1920
            -p pv_height:=1080
+           -p obj_det_last_n:=8
            -p object_det_ignored_objects:="hand (left),hand (right),background"
+           -p must_contain_target_phrase:=False
            -p debug_mode:=True

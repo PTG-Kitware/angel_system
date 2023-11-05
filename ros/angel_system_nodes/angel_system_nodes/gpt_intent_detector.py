@@ -15,10 +15,11 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # The following are few shot examples when prompting GPT.
 FEW_SHOT_EXAMPLES = [
-    {"utterance": "Go back to the previous step!", "label": "prev_step."},
-    {"utterance": "Next step, please.", "label": "next_step"},
-    {"utterance": "How should I wrap this tourniquet?", "label": "inquiry"},
-    {"utterance": "The sky is blue", "label": "other"},
+    {"utterance": "Go back to the previous step!", "label": "prev_step[eos]"},
+    {"utterance": "Next step, please.", "label": "next_step[eos]"},
+    {"utterance": "How should I wrap this tourniquet?", "label": "inquiry[eos]"},
+    {"utterance": "The sky is blue", "label": "other[eos]"},
+    {"utterance": "What is this thing?", "label": "object_clarification[eos]"},
 ]
 
 PARAM_TIMEOUT = "timeout"
@@ -89,7 +90,7 @@ class GptIntentDetector(BaseIntentDetector):
             temperature=0.0,
             # Only 2 tokens needed for classification (tokens are delimited by use of '_', i.e.
             # 'next_step' counts as 2 tokens).
-            max_tokens=2,
+            # max_tokens=10,
             request_timeout=self.timeout,
         )
         return LLMChain(llm=openai_llm, prompt=few_shot_prompt)
@@ -98,7 +99,8 @@ class GptIntentDetector(BaseIntentDetector):
         """
         Detects the user intent via langchain execution of GPT.
         """
-        return self.chain.run(utterance=msg.utterance_text), 0.5
+        intent = self.chain.run(utterance=msg.utterance_text)
+        return intent.split('[eos]')[0], 0.5
 
 
 def main():

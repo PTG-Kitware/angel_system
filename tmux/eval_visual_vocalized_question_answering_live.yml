@@ -70,8 +70,8 @@ windows:
         - hl2ss_bridge: ros2 run angel_system_nodes hl2ss_ros_bridge --ros-args
             -r __ns:=${ROS_NAMESPACE}
             -p ip_addr:=${HL2_IP}
-            -p image_topic:=PVFramesBGR
-            -p image_ts_topic:=PVFramesBGR_TS
+            -p image_topic:=PVFramesRGB
+            -p image_ts_topic:=PVFramesRGB_TS
             -p hand_pose_topic:=disable
             -p audio_topic:=HeadsetAudioData
             -p sm_topic:=disable
@@ -82,6 +82,12 @@ windows:
             -p sm_freq:=5
             -p rm_depth_AHAT:=disable
 
+        # Old videos were recorded in NV12
+        #- image_converter: ros2 run angel_datahub ImageConverter --ros-args
+        #    -r __ns:=${ROS_NAMESPACE}
+        #    -p topic_input_images:=PVFramesNV12
+        #    -p topic_output_images:=PVFramesRGB
+
         - image_ts_relay: ros2 run angel_system_nodes  image_timestamp_relay --ros-args
             -r __ns:=${ROS_NAMESPACE}
             -p image_topic:=PVFramesRGB
@@ -89,35 +95,35 @@ windows:
 
         # Visualize RGB Images being output from the headset
         - rqt_rgb_images: rqt -s rqt_image_view/ImageView
-            --args ${ROS_NAMESPACE}/PVFramesBGR
+            --args ${ROS_NAMESPACE}/PVFramesRGB
             --ros-args -p _image_transport:=raw
-
   - object_detector:
       layout: even-vertical
       panes:
-        # - berkeley_object_detector: ros2 run angel_system_nodes berkeley_object_detector --ros-args
-        #     -r __ns:=${ROS_NAMESPACE}
-        #     -p image_topic:=PVFramesBGR
-        #     -p det_topic:=ObjectDetections2d
-        #     -p det_conf_threshold:=0.1
-        #     -p model_config:=${BERKELEY_CONFIG_DIR}/MC50-InstanceSegmentation/cooking/coffee/stage2/mask_rcnn_R_50_FPN_1x_demo.yaml
-        - object_detector: ros2 run angel_system_nodes object_detection_yolo_v7 --ros-args
+        - berkeley_object_detector: ros2 run angel_system_nodes berkeley_object_detector --ros-args
             -r __ns:=${ROS_NAMESPACE}
-            -p image_topic:=PVFramesBGR
+            -p image_topic:=PVFramesRGB
             -p det_topic:=ObjectDetections2d
-            -p net_checkpoint:=${MODEL_DIR}/yolov7-combined_objects-weights.pt
-            -p inference_img_size:=1280
             -p det_conf_threshold:=0.1
             -p cuda_device_id:=0
+            -p model_config:=${BERKELEY_CONFIG_DIR}/MC50-InstanceSegmentation/cooking/coffee/stage2/mask_rcnn_R_50_FPN_1x_demo.yaml
+        # - object_detector: ros2 run angel_system_nodes object_detection_yolo_v7 --ros-args
+        #     -r __ns:=${ROS_NAMESPACE}
+        #     -p image_topic:=PVFramesRGB
+        #     -p det_topic:=ObjectDetections2d
+        #     -p net_checkpoint:=${MODEL_DIR}/yolov7-combined_objects-weights.pt
+        #     -p inference_img_size:=1280
+        #     -p det_conf_threshold:=0.5
+        #     -p cuda_device_id:=0
         - simple_2d_overlay: ros2 run angel_debug Simple2dDetectionOverlay --ros-args
             -r __ns:=${ROS_NAMESPACE}
-            -p topic_input_images:=PVFramesBGR
+            -p topic_input_images:=PVFramesRGB
             -p topic_input_det_2d:=ObjectDetections2d
             -p topic_output_images:=pv_image_detections_2d
             -p filter_top_k:=-1
   - activity_classifier: ros2 run angel_system_nodes activity_classifier_tcn --ros-args
       -r __ns:=${ROS_NAMESPACE}
-      -p image_ts_topic:=PVFramesBGR_TS
+      -p image_ts_topic:=PVFramesRGB_TS
       -p det_topic:=ObjectDetections2d
       -p act_topic:=ActivityDetections
       -p model_weights:=${MODEL_DIR}/activity_tcn-coffee-checkpoint.ckpt
@@ -136,13 +142,6 @@ windows:
       -p task_error_topic:=TaskErrors
       -p query_task_graph_topic:=query_task_graph
       -p sys_cmd_topic:=SystemCommands
-  - feedback_generator: ros2 run angel_system_nodes feedback_generator --ros-args
-      -r __ns:=${ROS_NAMESPACE}
-      -p activity_detector_topic:=ActivityDetections
-      -p object_detection_topic:=ObjectDetections3d
-      -p task_monitor_topic:=TaskUpdates
-      -p arui_update_topic:=AruiUpdates
-      -p interp_user_intent_topic:=InterpUserIntents
   - vocal:
       layout: even-vertical
       panes:
@@ -183,7 +182,7 @@ windows:
   - question_answering:
       layout: even-vertical
       panes:
-        - gpt_qa: ros2 run angel_system_nodes visual_question_answerer --ros-args
+        - gpt_qa: ros2 run angel_system_nodes visual_question_answerer --log-level visual_question_answerer:=DEBUG --ros-args
            -r __ns:=${ROS_NAMESPACE}
            -p utterance_topic:=emotion_topic
            -p task_state_topic:=task_state_topic
@@ -192,8 +191,9 @@ windows:
            -p system_text_response_topic:=system_text_response_topic
            -p recipe_path:=${CONFIG_DIR}/mit_ll_eval_one_coffee_recipe_steps_v2.json
            -p prompt_template_path:=${CONFIG_DIR}/llm_prompts/vis_qa_teacher_prompt
-           -p obj_det_last_n:=5
            -p pv_width:=1920
            -p pv_height:=1080
+           -p obj_det_last_n:=8
            -p object_det_ignored_objects:="hand (left),hand (right),background"
+           -p must_contain_target_phrase:=False
            -p debug_mode:=True
