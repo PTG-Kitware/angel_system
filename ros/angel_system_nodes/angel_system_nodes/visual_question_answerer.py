@@ -40,7 +40,7 @@ OUT_QA_TOPIC = "system_text_response_topic"
 # Below is used to filter out incoming questions. Toggle this parameter to True if questions
 # are only responded to if they contain the TARGET_PHRASE.
 PARAM_MUST_CONTAIN_TARGET_PHRASE = "must_contain_target_phrase"
-TARGET_PHRASE = "hey angel"
+TARGET_PHRASE = "angel"
 
 # Below indicates how many of the last n detected objects should be surfaced
 # in the LLM prompt. These objects do NOT have to be unique.
@@ -113,7 +113,7 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
                 (OUT_QA_TOPIC,),
                 (PARAM_CONTEXT_HISTORY_LENGTH, 3),
                 (PARAM_MUST_CONTAIN_TARGET_PHRASE, False),
-                (PARAM_TIMEOUT, 600),
+                (PARAM_TIMEOUT, 10),
                 (PARAM_DEBUG_MODE, False),
             ],
         )
@@ -349,15 +349,15 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
             )
             self.detected_objects_queue.put(te)
 
-    def _add_dialogue_history(self, question: str, response: str):
-        self.dialogue_history.append((f"Me: {question}", f"You: {response}"))
+    def _add_dialogue_history(self, question: str, response: str, emotion: str):
+        self.dialogue_history.append((f"Me ({emotion}): {question}", f"You: {response}"))
 
     def _get_latest_action(self, curr_time: int) -> str:
         """
         Returns the latest action classification in self.action_classification_queue
         that does not occur before a provided time.
         """
-        latest_action = "not available"
+        latest_action = ""
         while not self.action_classification_queue.empty():
             next = self.action_classification_queue.queue[0]
             if next.time < curr_time:
@@ -396,6 +396,8 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
                     observables.add(obj)
             observables = observables - self.object_dtctn_ignorables
             return ", ".join(observables)
+        else: 
+            return "nothing"
 
     def _get_latest_observables(self, curr_time: int, n: int) -> str:
         """
@@ -418,6 +420,8 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
             for obj in detection.entity:
                 observables.add(obj)
         observables = observables - self.object_dtctn_ignorables
+        if len(observables)==0:
+            return "nothing"
         return ", ".join(observables)
 
     def get_response(
@@ -478,6 +482,12 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
         self.log.info(f"Received message:\n\n{msg.utterance_text}")
         if not self._apply_filter(msg):
             return
+        
+        msg.utterance_text= msg.utterance_text.replace("Angel, ", "")
+        msg.utterance_text= msg.utterance_text.replace("angel, ", "")
+        msg.utterance_text= msg.utterance_text.replace("angel", "")
+        msg.utterance_text= msg.utterance_text.replace("Angel", "")
+        msg.utterance_text= msg.utterance_text.capitalize()
         self.question_queue.put(msg)
 
     def process_question_queue(self):
@@ -514,7 +524,7 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
                 all_observables,
             )
             self.publish_generated_response(question_msg.utterance_text, response)
-            self._add_dialogue_history(question_msg.utterance_text, response)
+            self._add_dialogue_history(question_msg.utterance_text, response,self.get_emotion_or(question_msg))
 
     def publish_generated_response(self, utterance: str, response: str):
         msg = SystemTextResponse()
@@ -536,7 +546,8 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
         a boolean value indicating if the message passes a filter and should be processed.
         """
         if self.param_must_contain_target_phrase:
-            return TARGET_PHRASE in msg.utterance_text.lower()
+            return TARGET_PHRASE in msg.utterance_text.lower() or "angela" in msg.utterance_text.lower() 
+
         else:
             return True
 

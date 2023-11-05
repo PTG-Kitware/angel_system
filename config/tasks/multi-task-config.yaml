@@ -18,7 +18,7 @@ tasks:
   - id: 1
     label: "tea"
     config_file: "./config/tasks/recipe_tea.yaml"
-    active: true
+    active: false
   - id: 2
     label: "pinwheel"
     config_file: "./config/tasks/recipe_pinwheel.yaml"

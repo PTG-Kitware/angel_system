@@ -33,10 +33,10 @@ class GptEmotionDetector(BaseEmotionDetector):
         param_values = declare_and_get_parameters(
             self,
             [
-                (PARAM_TIMEOUT, 600),
+                (PARAM_TIMEOUT, 10),
             ],
         )
-        self.timeout = param_values[PARAM_TIMEOUT]
+        self.timeout = 10
 
         # This node additionally includes fields for interacting with OpenAI
         # via LangChain.

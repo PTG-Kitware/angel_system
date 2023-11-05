@@ -18,7 +18,7 @@ root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 # on_project_start: command
 on_project_start: |
   export ROS_NAMESPACE=${ROS_NAMESPACE:-/kitware}
-  export HL2_IP=${HL2_IP:-192.168.4.65}
+  export HL2_IP=${HL2_IP:-192.168.0.23}
   export CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/config
   export BERKELEY_CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/angel_system/berkeley/configs
   export NODE_CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/src/angel_system_nodes/configs
@@ -29,7 +29,7 @@ on_project_start: |
   # Changing the domain ID was important at KHQ to unblock perceived network
   # congestion slowdowns to message sending.
   export ROS_DOMAIN_ID=77
-
+  
   # Set the frame-rate to be used by multiple sources. This should be in frames
   # per second (Hz).
   export FRAME_RATE=15
@@ -66,7 +66,7 @@ windows:
             -p image_topic:=PVFramesBGR
             -p image_ts_topic:=PVFramesBGR_TS
             -p hand_pose_topic:=disable
-            -p audio_topic:=disable
+            -p audio_topic:=HeadsetAudioData
             -p sm_topic:=disable
             -p head_pose_topic:=disable
             -p pv_width:=1280
@@ -79,7 +79,58 @@ windows:
         #- rqt_rgb_images: rqt -s rqt_image_view/ImageView
         #    --args ${ROS_NAMESPACE}/PVFramesBGR
         #    --ros-args -p _image_transport:=raw
-
+        
+  - vocal:
+      layout: even-vertical
+      panes:
+        - vad: ros2 run angel_system_nodes voice_activity_detector --ros-args
+            -r __ns:=${ROS_NAMESPACE}
+            -p input_audio_topic:=HeadsetAudioData
+            -p output_voice_activity_topic:=DetectedVoiceData
+            -p vad_server_url:=http://communication.cs.columbia.edu:55667/vad
+            -p vad_cadence:=4
+            -p vad_margin:=0.50
+            -p max_accumulation_length:=15
+            -p debug_mode:=True
+        - asr: ros2 run angel_system_nodes asr --ros-args
+            -r __ns:=${ROS_NAMESPACE}
+            -p audio_topic:=DetectedVoiceData
+            -p utterances_topic:=utterances_topic
+            -p asr_server_url:=http://communication.cs.columbia.edu:55667/asr
+            -p asr_req_segment_duration:=2
+            -p is_sentence_tokenize:=False
+            -p debug_mode:=True
+  - emotion_detection:
+      layout: even-vertical
+      panes:
+        - base_emotion_detection: ros2 run angel_system_nodes base_emotion_detector --ros-args
+           -r __ns:=${ROS_NAMESPACE}
+           -p input_topic:=utterances_topic
+           -p user_emotion_topic:=base_emotion_topic
+        - gpt_emotion_detection: ros2 run angel_system_nodes gpt_emotion_detector --ros-args
+           -r __ns:=${ROS_NAMESPACE}
+           -p input_topic:=utterances_topic
+           -p user_emotion_topic:=gpt_emotion_topic
+           -p timeout:=2
+  - question_answering:
+      layout: even-vertical
+      panes:
+        - gpt_qa: ros2 run angel_system_nodes visual_question_answerer --ros-args
+           -r __ns:=${ROS_NAMESPACE}
+           -p utterance_topic:=gpt_emotion_topic
+           -p task_state_topic:=TaskUpdates
+           -p object_detections_topic:=ObjectDetections2d
+           -p action_classifications_topic:=ActivityDetections
+           -p system_text_response_topic:=system_text_response_topic
+           -p recipe_path:=${NODE_CONFIG_DIR}/mit_ll_eval_one_coffee_recipe_steps_v2.json
+           -p prompt_template_path:=${NODE_CONFIG_DIR}/llm_prompts/vis_qa_teacher_prompt
+           -p obj_det_last_n:=5
+           -p pv_width:=1920
+           -p pv_height:=1080
+           -p must_contain_target_phrase:=True
+           -p object_det_ignored_objects:="hand (left),hand (right),background,cutting board,trash can,banana (peeled),microwave (open), microwave (closed)"
+           -p debug_mode:=True
+           
   - object_detector:
       layout: even-vertical
       panes:
@@ -89,7 +140,7 @@ windows:
             -p det_topic:=ObjectDetections2d
             -p net_checkpoint:=${MODEL_DIR}/all_recipes+additional_objs+bkgd_yolov7.pt
             -p inference_img_size:=1280
-            -p det_conf_threshold:=0.25
+            -p det_conf_threshold:=0.1
             -p cuda_device_id:=0
 
         - simple_2d_overlay: ros2 run angel_debug Simple2dDetectionOverlay --ros-args
@@ -117,7 +168,7 @@ windows:
   - keyboard_sys_cmd: ros2 run angel_system_nodes keyboard_to_sys_cmd --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p system_command_topic:=SystemCommands
-
+      
   - task_monitor: ros2 run angel_system_nodes global_step_predictor --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p det_topic:=ActivityDetections

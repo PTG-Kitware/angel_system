@@ -69,7 +69,7 @@ labels:
   - id: 14
     label: "pour-beans-filter"
     #full_str: "Transfer the grounds to the filter cone"
-    full_str: "pour the grounded coffee beans into the filter cone prepared in step 2"
+    full_str: "Pour the grounded coffee beans into the filter cone prepared in step 2"
     depends: [7, 13]
   - id: 15
     label: "thermometer-turn-on"
