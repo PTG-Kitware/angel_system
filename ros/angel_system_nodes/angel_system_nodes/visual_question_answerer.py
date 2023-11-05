@@ -80,11 +80,7 @@ PROMPT_VARIABLES = [
 # Below configures the GPT request timeout in seconds.
 PARAM_TIMEOUT = "timeout"
 
-OBJECT_CLARIFICATION_RESPONSE = """
-Based on the information provided, it seems like you are referring to an object that you are
-unsure about. I'm unable to determine what it is. Please describe the object  to me or get
-closer so that I may help you."
-"""
+
 
 class VisualQuestionAnswerer(BaseDialogueSystemNode):
     class TimestampedEntity:
@@ -527,7 +523,9 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
                     "Received confusing object clarification question from user " +\
                         f"about multiple objects: ({centered_observables}). " +\
                         "Inquiring for more details...")
-                response = OBJECT_CLARIFICATION_RESPONSE
+                response = "It seems you are asking about an object you are unsure about. " +\
+                    "I am detecting the following: {}. ".format(centered_observables) +\
+                    "Is the object you are referenceing one of these objects?"
             else:
                 all_observables -= centered_observables
                 # Normal response generation.
