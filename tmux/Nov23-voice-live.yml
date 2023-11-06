@@ -18,7 +18,7 @@ root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 # on_project_start: command
 on_project_start: |
   export ROS_NAMESPACE=${ROS_NAMESPACE:-/kitware}
-  export HL2_IP=${HL2_IP:-192.168.0.23}
+  export HL2_IP=${HL2_IP:-172.20.10.12}
   export CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/config
   export BERKELEY_CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/angel_system/berkeley/configs
   export NODE_CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/src/angel_system_nodes/configs
@@ -124,7 +124,7 @@ windows:
            -p system_text_response_topic:=system_text_response_topic
            -p recipe_path:=${NODE_CONFIG_DIR}/mit_ll_eval_one_coffee_recipe_steps_v2.json
            -p prompt_template_path:=${NODE_CONFIG_DIR}/llm_prompts/vis_qa_teacher_prompt
-           -p obj_det_last_n:=5
+           -p obj_det_last_n:=8
            -p pv_width:=1920
            -p pv_height:=1080
            -p must_contain_target_phrase:=True
@@ -193,6 +193,7 @@ windows:
       -p object_detection_topic:=ObjectDetections3d
       -p task_monitor_topic:=TaskUpdates
       -p arui_update_topic:=AruiUpdates
+      -p utterances_topic:=utterances_topic
       -p interp_user_intent_topic:=InterpUserIntents
       -p system_text_response_topic:=system_text_response_topic
 

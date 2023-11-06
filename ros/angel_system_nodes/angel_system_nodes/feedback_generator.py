@@ -15,6 +15,7 @@ from angel_msgs.msg import (
     SystemTextResponse,
     TaskUpdate,
     VisionBoundingBox3d,
+    DialogueUtterance,
 )
 from angel_utils import declare_and_get_parameters
 
@@ -26,6 +27,7 @@ PARAM_TASK_MONITOR_TOPIC = "task_monitor_topic"
 PARAM_ARUI_UPDATE_TOPIC = "arui_update_topic"
 PARAM_INTERP_USER_INTENT_TOPIC = "interp_user_intent_topic"
 PARAM_SYSTEM_TEXT_RESPONSE_TOPIC = "system_text_response_topic"
+PARAM_UTTERANCE_TOPIC = "utterances_topic"
 
 
 class FeedbackGenerator(Node):
@@ -55,6 +57,7 @@ class FeedbackGenerator(Node):
                 (PARAM_ARUI_UPDATE_TOPIC,),
                 (PARAM_INTERP_USER_INTENT_TOPIC,),
                 (PARAM_SYSTEM_TEXT_RESPONSE_TOPIC,),
+                (PARAM_UTTERANCE_TOPIC,),
             ],
         )
 
@@ -65,6 +68,9 @@ class FeedbackGenerator(Node):
         self._interp_uintent_topic = param_values[PARAM_INTERP_USER_INTENT_TOPIC]
         self._system_text_response_topic = param_values[
             PARAM_SYSTEM_TEXT_RESPONSE_TOPIC
+        ]
+        self._utterance_topic = param_values[
+            PARAM_UTTERANCE_TOPIC
         ]
 
         # subscribers
@@ -91,6 +97,13 @@ class FeedbackGenerator(Node):
             SystemTextResponse,
             self._system_text_response_topic,
             self.system_text_response_callback,
+            1,
+        )
+
+        self.utterance_subscriber = self.create_subscription(
+            DialogueUtterance,
+            self._utterance_topic,
+            self.utterance_callback,
             1,
         )
 
@@ -248,11 +261,41 @@ class FeedbackGenerator(Node):
         notification.category = notification.N_CAT_NOTICE
         notification.context = notification.N_CONTEXT_USER_MODELING
 
-        notification.title = f"System response for: {msg.utterance_text}"
+        notification.title = f"{msg.utterance_text}"
         notification.description = f"{msg.response}"
 
         self.publish_update(notifications=[notification])
 
+    def utterance_callback(self, msg: DialogueUtterance) -> None:
+        """
+        This is the main ROS node listener callback loop that will process
+        all messages received via subscribed topics.
+        """
+        keyword_check = msg.utterance_text[0:8]
+        if (keyword_check.contains("Angel,") or keyword_check.contains("angel,") or keyword_check.contains("Angela") or keyword_check.contains("angela,") or keyword_check.contains("Angel,") or keyword_check.contains("angel") or keyword_check.contains("Angela") or keyword_check.contains("angela")):
+            arui_message = msg.utterance_text
+            arui_message= arui_message.replace("Angel, ", "")
+            arui_message= arui_message.replace("angel, ", "")
+            arui_message= arui_message.replace("Angela, ", "")
+            arui_message= arui_message.replace("angela, ", "")
+            arui_message= arui_message.replace("Angel ", "")
+            arui_message= arui_message.replace("angel ", "")
+            arui_message= arui_message.replace("Angela ", "")
+            arui_message= arui_message.replace("angela ", "")
+            arui_message= arui_message.capitalize()
+
+            # Create an AruiUserNotification msg with this information
+            notification = AruiUserNotification()
+
+            notification.category = notification.N_CAT_NOTICE
+            notification.context = notification.N_CONTEXT_USER_MODELING
+
+            notification.title = f"{arui_message}"
+            notification.description = ""
+
+            self.publish_update(notifications=[notification])
+
+        
 
 def main():
     rclpy.init()
