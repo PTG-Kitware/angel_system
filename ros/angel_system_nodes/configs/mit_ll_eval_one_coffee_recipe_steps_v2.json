@@ -11,37 +11,37 @@
     "sub-steps": {}
   },
 
-  "Place the dripper on top of the mug.": {
+  "Turn on the Kettle.": {
     "level": 0,
     "index": 2,
     "sub-steps": {}
   },
 
-  "Take the coffee filter and fold it in half to create a semi-circle.": {
+  "Place the dripper on top of the mug.": {
     "level": 0,
     "index": 3,
     "sub-steps": {}
   },
 
-  "Fold the filter in half again to create a quarter-circle.": {
+  "Take the coffee filter and fold it in half to create a semi-circle.": {
     "level": 0,
     "index": 4,
     "sub-steps": {}
   },
 
-  "Place the folded filter into the dripper such that the the point of the quarter-circle rests in the center of the dripper.": {
+  "Fold the filter in half again to create a quarter-circle.": {
     "level": 0,
     "index": 5,
     "sub-steps": {}
   },
 
-  "Spread the filter open to create a cone inside the dripper.": {
+  "Place the folded filter into the dripper such that the the point of the quarter-circle rests in the center of the dripper.": {
     "level": 0,
     "index": 6,
     "sub-steps": {}
   },
 
-  "Turn on the kitchen scale.": {
+  "Spread the filter open to create a cone inside the dripper.": {
     "level": 0,
     "index": 7,
     "sub-steps": {}
@@ -53,7 +53,7 @@
     "sub-steps": {}
   },
 
-  "Zero the scale.": {
+  "Turn on the kitchen scale and zero the scale.": {
     "level": 0,
     "index": 9,
     "sub-steps": {}
@@ -77,7 +77,7 @@
     "sub-steps": {}
   },
 
-  "Pour the grounded coffee beans into the filter cone prepared in step 2.": {
+  "Transfer the grounds to the filter cone.": {
     "level": 0,
     "index": 13,
     "sub-steps": {}
@@ -95,51 +95,39 @@
     "sub-steps": {}
   },
 
-  "Check the temperature displayed on the thermometer.": {
+  "Slowly pour the water over the grounds in a circular motion. do not overfill beyond the top of the paper filter.": {
     "level": 0,
     "index": 16,
     "sub-steps": {}
   },
 
-  "Pour a small amount of water over the grounds in order to wet the grounds": {
+  "Continue slowly pour the water over the grounds in a circular motion. do not overfill beyond the top of the paper filter...": {
     "level": 0,
     "index": 17,
     "sub-steps": {}
   },
 
-  "Slowly pour the water over the grounds in a circular motion. do not overfill beyond the top of the paper filter": {
+  "Allow the rest of the water in the dripper to drain.": {
     "level": 0,
     "index": 18,
     "sub-steps": {}
   },
 
-  "Allow the rest of the water in the dripper to drain.": {
-    "level": 0,
-    "index": 19,
-    "sub-steps": {}
-  },
-
   "Remove the dripper from the cup.": {
     "level": 0,
-    "index": 20,
+    "index": 19,
     "sub-steps": {}
   },  
 
   "Remove the coffee grounds and paper filter from the dripper.": {
     "level": 0,
-    "index": 21,
+    "index": 20,
     "sub-steps": {}
   },
 
   "Discard the coffee grounds and paper filter.": {
     "level": 0,
-    "index": 22,
-    "sub-steps": {}
-  },
-
-  "Turn on the kettle.": {
-    "level": 0,
-    "index": 23,
+    "index": 21,
     "sub-steps": {}
   }
 }

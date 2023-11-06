@@ -242,9 +242,6 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
         self.openai_api_key = self._configure_openai_api_key()
         self.openai_org_id = self._configure_openai_org_id()
 
-        # Configure LangChain.
-        self.chain = self._configure_langchain()
-
     def _configure_openai_org_id(self):
         if not os.getenv("OPENAI_ORG_ID"):
             raise ValueError(
@@ -290,6 +287,8 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
             input_variables=PROMPT_VARIABLES,
             template=self.prompt_template,
         )
+        zero_shot_example = langchain.PromptTemplate.from_template("Tell me a joke")
+        
         return LLMChain(llm=openai_llm, prompt=zero_shot_prompt)
 
     def _get_sec(self, msg: DialogueUtterance) -> int:
@@ -472,7 +471,7 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
                 )
         except RuntimeError as err:
             self.log.info(err)
-            return_string = "I'm sorry. I don't know how to answer your statement."
+            return_string = "I'm sorry. I don't know how to answer your question."
         return return_string
 
     def question_answer_callback(self, msg: DialogueUtterance):
@@ -531,7 +530,7 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
                     "I am detecting the following: {}. ".format(centered_observables) +\
                     "Is the object you are referenceing one of these objects?"
             else:
-                all_observables -= centered_observables
+                all_observables = centered_observables
                 # Normal response generation.
                 response = self.get_response(
                     question_msg,

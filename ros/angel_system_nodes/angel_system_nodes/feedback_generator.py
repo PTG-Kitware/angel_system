@@ -272,7 +272,10 @@ class FeedbackGenerator(Node):
         all messages received via subscribed topics.
         """
         keyword_check = msg.utterance_text[0:8]
-        if (keyword_check.contains("Angel,") or keyword_check.contains("angel,") or keyword_check.contains("Angela") or keyword_check.contains("angela,") or keyword_check.contains("Angel,") or keyword_check.contains("angel") or keyword_check.contains("Angela") or keyword_check.contains("angela")):
+        if "Angel," in keyword_check or "angel," in keyword_check or\
+            "Angela," in keyword_check or "angela," in keyword_check or\
+            "Angel" in keyword_check or "angel" in keyword_check or\
+            "Angela" in keyword_check or "angela" in keyword_check:
             arui_message = msg.utterance_text
             arui_message= arui_message.replace("Angel, ", "")
             arui_message= arui_message.replace("angel, ", "")
