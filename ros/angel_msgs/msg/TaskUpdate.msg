@@ -20,6 +20,7 @@ int8 current_step_id
 
 # String of the step currently in progress.
 string current_step
+
 # Previous step is the step worked on before the current step.
 string previous_step
 

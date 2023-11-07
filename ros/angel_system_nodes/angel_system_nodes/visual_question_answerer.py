@@ -80,8 +80,6 @@ PROMPT_VARIABLES = [
 # Below configures the GPT request timeout in seconds.
 PARAM_TIMEOUT = "timeout"
 
-
-
 class VisualQuestionAnswerer(BaseDialogueSystemNode):
     class TimestampedEntity:
         """
@@ -242,6 +240,9 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
         self.openai_api_key = self._configure_openai_api_key()
         self.openai_org_id = self._configure_openai_org_id()
 
+                # Configure LangChain.
+        self.chain = self._configure_langchain()
+
     def _configure_openai_org_id(self):
         if not os.getenv("OPENAI_ORG_ID"):
             raise ValueError(
@@ -288,7 +289,7 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
             template=self.prompt_template,
         )
         zero_shot_example = langchain.PromptTemplate.from_template("Tell me a joke")
-        
+
         return LLMChain(llm=openai_llm, prompt=zero_shot_prompt)
 
     def _get_sec(self, msg: DialogueUtterance) -> int:
