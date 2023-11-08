@@ -184,6 +184,7 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
         # Configure supplemental input resources.
         self.question_queue = queue.Queue()
         self.current_step = None
+        self.completed_steps = None
         self.action_classification_queue = queue.Queue()
         self.detected_objects_queue = queue.Queue()
         self.centroid_object_queue = centroid_2d_strategy_queue.Centroid2DStrategyQueue(
@@ -213,6 +214,7 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
                 self._set_current_step,
                 1,
             )
+
         # Configure the optional object detection subscription.
         self.objects_subscription = None
         if self._in_objects_topic:
@@ -296,10 +298,14 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
         return msg.header.stamp.sec
 
     def _set_current_step(self, msg: TaskUpdate):
-        self.current_step = msg.current_step
+        self.current_step = msg.current_step_id
+        self.completed_steps = msg.completed_steps
 
     def _get_current_step(self):
         return self.current_step
+
+    def _get_completed_steps(self):
+        return self.completed_steps
 
     def _get_dialogue_history(self):
         """
@@ -404,6 +410,7 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
                     obj, score = obj_score
                     observables.add(obj)
             observables = observables - self.object_dtctn_ignorables
+            self.log.info(f"CENTERED OBJECTS:" + str(observables))
             return observables
         else: 
             return "nothing"
@@ -429,8 +436,7 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
             for obj in detection.entity:
                 observables.add(obj)
         observables = observables - self.object_dtctn_ignorables
-        if len(observables)==0:
-            return "nothing"
+        self.log.info(f"ALL OBJECTS:" + str(observables))
         return observables
 
     def get_response(
@@ -484,17 +490,42 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
         if not self._apply_filter(msg):
             return
         
-        msg.utterance_text= msg.utterance_text.replace("Angel, ", "")
-        msg.utterance_text= msg.utterance_text.replace("angel, ", "")
-        msg.utterance_text= msg.utterance_text.replace("angel", "")
-        msg.utterance_text= msg.utterance_text.replace("Angel", "")
-        msg.utterance_text= msg.utterance_text.capitalize()
-        self.question_queue.put(msg)
+        utt = msg.utterance_text
+        res = utt.split("Angel", 1)
+        if len(res)==1:
+            res = utt.split("angel", 1)
+        if len(res)==1:
+            res = utt.split("angel,", 1)    
+        if len(res)==1:
+            res = utt.split("Angel,", 1)    
+        
+        splitString = res[1]
+        splitString = splitString.lstrip(',')
+        splitString = splitString.lstrip(' ')
 
-    def _get_optional_fields_string(self, current_step: str) -> str:
+        if len(splitString)>1:
+            msg.utterance_text = splitString.capitalize()
+            self.question_queue.put(msg)
+
+    def _get_optional_fields_string(self, current_step: int, completed_steps: list) -> str:
         optional_fields_string = "\n"
-        if current_step:
-            optional_fields_string += f"I finished all steps up until: {current_step}\n"
+
+        if current_step==None:
+            #non started case
+            optional_fields_string += "I didn't start the recipe yet."
+        else:
+            if completed_steps[-1]==True:
+                #the last step is finished
+                optional_fields_string += f"I am done with all steps."
+            elif current_step==0:
+                #user is at step 1
+                optional_fields_string += f"I am doing {current_step+1}"
+                optional_fields_string += f" and I am about to do {current_step+2}"
+            else:
+                optional_fields_string += f"I am doing {current_step+1}"
+                if current_step<=len(completed_steps)-2:
+                    optional_fields_string += f" and I am about to do {current_step+2}"
+
         return optional_fields_string.rstrip("\n")
 
     def process_question_queue(self):
@@ -509,39 +540,52 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
 
             # Get the optional fields.
             optional_fields = \
-                self._get_optional_fields_string(self._get_current_step())
+                self._get_optional_fields_string(self._get_current_step(),self._get_completed_steps())
             # Get centered detected objects.
             centered_observables = self._get_latest_centered_observables(start_time)
             # Get all detected objects.
             all_observables = \
                 self._get_latest_observables(start_time, self.object_dtctn_last_n_obj_detections)
 
+            self.log.info(f"Current action detected: \"{self._get_latest_action(start_time)}\"")
             response = None
             is_object_clarification = \
                 question_msg.intent and question_msg.intent == INTENT_LABELS[3]
-            if is_object_clarification and len(centered_observables) > 1:
+            if is_object_clarification and len(all_observables) > 1:
                 # Object Clarification override: If an associated intent exists and indicates
                 # object clarification in the presence of multiple objects, override the response with
                 # a clarification question.
                 self.log.info(
                     "Received confusing object clarification question from user " +\
-                        f"about multiple objects: ({centered_observables}). " +\
+                        f"about multiple objects: ({all_observables}). " +\
                         "Inquiring for more details...")
-                response = "It seems you are asking about an object you are unsure about. " +\
-                    "I am detecting the following: {}. ".format(centered_observables) +\
-                    "Is the object you are referenceing one of these objects?"
+                response = "I am seeing the following objects: "
+                for obs in all_observables:
+                    response+= f"{str(obs)}, "
+                response.rsplit(",")
+                response +="What object are you referring to?"
+                self._add_dialogue_history("What is this?", response,"neutral")
+            elif is_object_clarification and len(all_observables) == 0:
+                output = "I don't see any objects. Could you look at it directly and ask again?"
+                self.log.info(output)
+                response = output
+                self._add_dialogue_history("What is this?", response, "neutral")
+            elif is_object_clarification and len(all_observables) == 1:
+                response = f"I think that is a {list(all_observables)[0]}?"
+                self._add_dialogue_history("What is this?", response, "neutral")
             else:
-                all_observables = centered_observables
                 # Normal response generation.
                 response = self.get_response(
                     question_msg,
                     self._get_dialogue_history(),
-                    ", ".join(centered_observables) if centered_observables else "Nothing",
-                    ", ".join(all_observables) if all_observables else "Nothing",
+                    "",
+                    ", ".join(all_observables) if len(all_observables) > 0 else "nothing",
                     optional_fields
                 )
+                self._add_dialogue_history(question_msg.utterance_text, response,self.get_emotion_or(question_msg))
+
             self.publish_generated_response(question_msg.utterance_text, response)
-            self._add_dialogue_history(question_msg.utterance_text, response,self.get_emotion_or(question_msg))
+            
 
     def publish_generated_response(self, utterance: str, response: str):
         msg = SystemTextResponse()

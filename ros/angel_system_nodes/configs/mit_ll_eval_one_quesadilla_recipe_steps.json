@@ -1,0 +1,67 @@
+{
+  "Place tortilla on cutting board": {
+    "level": 0,
+    "index": 0,
+    "sub-steps": {}
+  },
+
+  "Use the butter knife to scoop nutella from the jar.": {
+    "level": 0,
+    "index": 1,
+    "sub-steps": {}
+  },
+
+  "Spread nutella onto tortilla, leaving ½ inch uncovered at the edges.": {
+    "level": 0,
+    "index": 2,
+    "sub-steps": {}
+  },
+
+  "Clean the knife by wiping with a paper towel": {
+    "level": 0,
+    "index": 3,
+    "sub-steps": {}
+  },
+
+  "Slice one banana.": {
+    "level": 0,
+    "index": 4,
+    "sub-steps": {}
+  },
+
+  "Top with banana slices.": {
+    "level": 0,
+    "index": 5,
+    "sub-steps": {}
+  },
+
+  "Clean the knife by wiping with a paper towel ": {
+    "level": 0,
+    "index": 6,
+    "sub-steps": {}
+  },
+
+  "Sprinkle small amount of cinnamon onto tortilla.": {
+    "level": 0,
+    "index": 7,
+    "sub-steps": {}
+  },
+
+  "Fold tortilla in half into semi-cirlce": {
+    "level": 0,
+    "index": 8,
+    "sub-steps": {}
+  },
+
+  "Slice tortilla in half using butter knife to create two triangular wedges.": {
+    "level": 0,
+    "index": 9,
+    "sub-steps": {}
+  },
+
+  "Place tortilla wedge on the plate.": {
+    "level": 0,
+    "index": 10,
+    "sub-steps": {}
+  }
+}
