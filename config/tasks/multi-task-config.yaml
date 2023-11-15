@@ -14,7 +14,7 @@ tasks:
   - id: 0
     label: "coffee"
     config_file: "./config/tasks/recipe_coffee.yaml"
-    active: true
+    active: false
   - id: 1
     label: "tea"
     config_file: "./config/tasks/recipe_tea.yaml"
@@ -30,4 +30,4 @@ tasks:
   - id: 4
     label: "dessert quesadilla"
     config_file: "./config/tasks/recipe_dessertquesadilla.yaml"
-    active: false
+    active: true

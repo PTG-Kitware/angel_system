@@ -493,11 +493,7 @@ class VisualQuestionAnswerer(BaseDialogueSystemNode):
         utt = msg.utterance_text
         res = utt.split("Angel", 1)
         if len(res)==1:
-            res = utt.split("angel", 1)
-        if len(res)==1:
-            res = utt.split("angel,", 1)    
-        if len(res)==1:
-            res = utt.split("Angel,", 1)    
+            res = utt.split("angel", 1) 
         
         splitString = res[1]
         splitString = splitString.lstrip(',')

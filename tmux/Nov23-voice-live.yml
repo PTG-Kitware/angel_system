@@ -136,7 +136,7 @@ windows:
            -p object_detections_topic:=ObjectDetections2d
            -p action_classifications_topic:=ActivityDetections
            -p system_text_response_topic:=system_text_response_topic
-           -p recipe_path:=${NODE_CONFIG_DIR}/mit_ll_eval_one_coffee_recipe_steps_v2.json
+           -p recipe_path:=${NODE_CONFIG_DIR}/mit_ll_eval_one_quesadilla_recipe_steps.json
            -p prompt_template_path:=${NODE_CONFIG_DIR}/llm_prompts/vis_qa_teacher_prompt
            -p pv_width:=1920
            -p pv_height:=1080
