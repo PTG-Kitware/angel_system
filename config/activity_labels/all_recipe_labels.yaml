@@ -109,7 +109,7 @@ labels:
     full_str: "Pour the measured coffee beans into the coffee grinder"
   - id: 32
     label: "grind-beans"
-    full_str: "Grind the coffee beans by pressing and holding down on the black part of the lid"
+    full_str: "Grind the coffee beans by pressing and holding down on the black part of the lid. Grind until the coffee grounds are the consistency of coarse sand, about 20 seconds."
   - id: 33
     label: "pour-beans-filter"
     full_str: "Transfer the grounds to the filter cone"
@@ -180,7 +180,7 @@ labels:
   - id: 52
     label: "trim-tortilla"
     # TEMPORARY: Should be singular
-    full_str: "Trim the ends of the tortilla roll leaving ½” margin from the toothpick"
+    full_str: "Trim the ends of the tortilla roll with the butter knife, leaving ½” margin from the toothpick"
     repeat: 2
   - id: 53
     label: "discard-tortilla-ends"

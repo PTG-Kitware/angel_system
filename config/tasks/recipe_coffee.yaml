@@ -30,7 +30,7 @@ to create a quarter-circle. Place the paper filter in the dripper and spread ope
     label: "coffee-beans-to-grounds"
     full_str: "Weigh the coffee beans and grind until the coffee grounds are the consistency of coarse sand,
 about 20 seconds. Transfer the grounds to the filter cone."
-    activity_ids: [28, 29, 28, 30, 31, 32, 33]
+    activity_ids: [29, 28, 30, 31, 32, 33]
   - id: 5
     label: "check-temp"
     full_str: "Check the temperature of the water."

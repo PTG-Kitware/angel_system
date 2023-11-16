@@ -683,9 +683,6 @@ class GlobalStepPredictor:
                     == resetter_granular_step[recipe][0]
                 ):
                     print("reset condition hit!!")
-                    # import ipdb; ipdb.set_trace()
-                    if tracker["recipe"] == "coffee":
-                        print(f"tea step = {self.trackers[1]['current_granular_step']}")
                     for tracker_ind in self.find_trackers_by_recipe(
                         resetter_granular_step[recipe][1]
                     ):
@@ -696,10 +693,6 @@ class GlobalStepPredictor:
                             ][0]
                         ):
                             self.reset_one_tracker(tracker_ind)
-                    if tracker["recipe"] == "coffee":
-                        print(
-                            f"tea step after = {self.trackers[1]['current_granular_step']}"
-                        )
         else:
             for recipe in resetter_granular_step:
                 granular_steps = [
