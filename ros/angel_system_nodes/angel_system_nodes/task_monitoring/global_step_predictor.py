@@ -405,7 +405,7 @@ class GlobalStepPredictorNode(Node):
             task_state[f"current_{step_mode}_step"]
         ]
 
-        log.info(f"Publish task update w/ step: {task_step_str}")
+        log.info(f"Publish task {message.task_name} update w/ step: {task_step_str}")
         # Exclude background
         curr_step = task_state[f"current_{step_mode}_step"]
         task_step = curr_step - 1 if curr_step != 0 else 0
