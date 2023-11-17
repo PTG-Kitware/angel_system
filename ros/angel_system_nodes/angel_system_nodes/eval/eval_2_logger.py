@@ -9,9 +9,9 @@ monitoring node due to leveraging specific implementation/output semantics.
 import csv
 import math
 from pathlib import Path
+import re
 import time
 from threading import RLock
-from typing import Dict
 from typing import Optional
 
 import numpy as np
@@ -59,6 +59,11 @@ RECIPE_TO_ID = {
     "Oatmeal": "D",
     "Dessert Quesadilla": "E",
 }
+
+RE_ERR_DESC = re.compile(
+    r"Recipe: (?P<task_name>.*), activity: (?P<activity_str>.*), "
+    r"broad step: \(id=(?P<broad_step_id>\d+)\) (?P<broad_step_str>.*)$"
+)
 
 
 ###############################################################################
@@ -220,7 +225,22 @@ class Eval2LoggingNode(Node):
     def cb_arui_notification(self, msg: AruiUserNotification) -> None:
         # "Error" notification message has the broad step ID in it, so we can
         # parse that out via regex.
-        ...
+        if msg.context == AruiUserNotification.N_CONTEXT_TASK_ERROR:
+            m = RE_ERR_DESC.search(msg.description)
+            if m:
+                md = m.groupdict()
+                self.log_line(
+                    time.time(),
+                    md["task_name"],
+                    md["broad_step_id"],
+                    "error",
+                    msg.description,
+                )
+            else:
+                self.get_logger().error(
+                    f"Failed to parse error notification for logging: "
+                    f"{msg.description}"
+                )
 
     def destroy_node(self) -> None:
         """

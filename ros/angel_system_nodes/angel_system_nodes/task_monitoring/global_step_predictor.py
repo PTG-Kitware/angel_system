@@ -340,9 +340,10 @@ class GlobalStepPredictorNode(Node):
                             ]
                             break
 
+                    # "activity_str" is the "full_str" of the activity label.
                     skipped_step_str = (
                         f"Recipe: {recipe}, activity: {skipped_step['activity_str']}, "
-                        f"broad step: {broad_step_str}"
+                        f"broad step: (id={broad_step_id}) {broad_step_str}"
                     )
 
                     # New skipped step detected, publish error and add it to the list
