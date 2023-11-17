@@ -36,6 +36,16 @@ def time_to_int(time_msg: Time) -> int:
     return (time_msg.sec * SEC_TO_NANO) + time_msg.nanosec
 
 
+def time_to_float(time_msg: Time) -> float:
+    """
+    Convert the given time message into a floating point value representing
+    seconds.
+    :param time_msg:
+    :return: Floating point seconds.
+    """
+    return time_msg.sec + (time_msg.nanosec * NANO_TO_SEC)
+
+
 def nano_to_ros_time(timestamp: int) -> Time:
     """
     Convert an integer representing time in nanoseconds to ROS2 Time message

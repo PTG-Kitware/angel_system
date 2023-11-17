@@ -36,6 +36,8 @@ setup(
             "hl2ss_ros_bridge = angel_system_nodes.data_publishers.hl2ss_ros_bridge:main",
             "image_timestamp_relay = angel_system_nodes.data_publishers.image_timestamp_relay:main",
             "redis_ros_bridge = angel_system_nodes.data_publishers.redis_ros_bridge:main",
+            # Evaluation Components
+            "eval_2_logger = angel_system_nodes.eval.mitll_eval_2_logger:main",
             # Object detection
             "berkeley_object_detector = angel_system_nodes.object_detection.berkeley_object_detector:main",
             "object_detector = angel_system_nodes.object_detection.object_detector:main",
@@ -60,6 +62,7 @@ setup(
             "dummy_multi_task_monitor = angel_system_nodes.task_monitoring.dummy_multi_task_monitor:main",
             "global_step_predictor = angel_system_nodes.task_monitoring.global_step_predictor:main",
             "keyboard_to_sys_cmd = angel_system_nodes.task_monitoring.keyboard_to_sys_cmd:main",
+            "transform_update_lod = angel_system_nodes.task_monitoring.transform_update_lod:main",
         ],
     },
 )
