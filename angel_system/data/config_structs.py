@@ -7,6 +7,7 @@ from os import PathLike
 from pathlib import Path
 from typing import cast
 from typing import Dict
+from typing import Optional
 from typing import Sequence
 from typing import Tuple
 
@@ -54,10 +55,56 @@ def load_object_label_set(filepath: PathLike) -> ObjectLabelSet:
 
 
 @dataclass
+class ActivityLabel:
+    """
+    One activity classification ID and paired label information.
+    """
+
+    # Identifier integer for this activity label
+    id: int
+    # Concise string label for this activity. Should not contain any spaces.
+    label: str
+    # Full sentence description of this activity.
+    full_str: str
+    # Optional integer representing how many times an activity should be
+    # repeated to be considered "full"
+    # TODO: This parameter has ambiguous and violated meaning (not used as
+    #       intended if at all).
+    repeat: Optional[int] = None
+
+
+@dataclass
+class ActivityLabelSet:
+    version: str
+    title: str
+    labels: Tuple[ActivityLabel]
+
+    def __post_init__(self):
+        # coerce nested label objects into the ObjectLabel type.
+        if self.labels and not isinstance(self.labels[0], ActivityLabel):
+            raw_labels = cast(Sequence[Dict], self.labels)
+            self.labels = tuple(ActivityLabel(**rl) for rl in raw_labels)
+
+
+def load_activity_label_set(filepath: PathLike) -> ActivityLabelSet:
+    """
+    Load from YAML file an activity label set configuration.
+
+    :param filepath: Filepath to load from.
+
+    :return: Structure containing the loaded configuration.
+    """
+    with open(filepath) as infile:
+        data = yaml.safe_load(infile)
+    return ActivityLabelSet(**data)
+
+
+@dataclass
 class TaskStep:
     """
     A single task step with activity components.
     """
+
     id: int
     label: str
     full_str: str
@@ -69,6 +116,7 @@ class LinearTask:
     """
     A linear task with steps composed of activities.
     """
+
     version: str
     title: str
     labels: Tuple[TaskStep]
@@ -98,6 +146,7 @@ class OneTaskConfig:
     """
     Specification of where one task configuration is located.
     """
+
     id: int
     label: str
     config_file: Path
@@ -116,6 +165,7 @@ class MultiTaskConfig:
     """
     A collection of linear task configurations.
     """
+
     version: str
     title: str
     tasks: Tuple[OneTaskConfig]
@@ -155,5 +205,6 @@ def load_active_task_configs(cfg: MultiTaskConfig) -> Dict[str, LinearTask]:
     """
     return {
         ct.label: load_linear_task_config(ct.config_file)
-        for ct in cfg.tasks if ct.active
+        for ct in cfg.tasks
+        if ct.active
     }
