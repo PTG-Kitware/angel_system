@@ -4,7 +4,8 @@
 # This should include packages convenient for development, but not specifically
 # runtime requirements for the ROS2 system.
 #
-FROM osrf/ros:foxy-desktop AS base
+ARG ROS_VERSION
+FROM osrf/ros:${ROS_VERSION}-desktop AS base
 
 SHELL ["/bin/bash", "-c"]
 

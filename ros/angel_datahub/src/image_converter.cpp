@@ -94,10 +94,10 @@ ImageConverter
   // This two-stage declare->get allows the lack of passing a parameter to
   // throw an error with the parameter name in the error so the user has a
   // clue what is going wrong.
-  declare_parameter( PARAM_TOPIC_INPUT_IMAGES );
-  declare_parameter( PARAM_TOPIC_OUTPUT_IMAGE );
-  declare_parameter( PARAM_DROP_Nth_FRAME );
-  declare_parameter( PARAM_CONVERT_NV12_TO_RGB );
+  declare_parameter<std::string>( PARAM_TOPIC_INPUT_IMAGES );
+  declare_parameter<std::string>( PARAM_TOPIC_OUTPUT_IMAGE );
+  declare_parameter<std::string>( PARAM_DROP_Nth_FRAME );
+  declare_parameter<std::string>( PARAM_CONVERT_NV12_TO_RGB );
 
   auto topic_input_images =
     this->get_parameter( PARAM_TOPIC_INPUT_IMAGES ).as_string();
@@ -145,7 +145,7 @@ ImageConverter
 
   if(m_image_id % m_drop_nth_frame == 0){
     cv::Mat rgb_image;
-    
+
     std::string encoding;
     sensor_msgs::msg::Image::SharedPtr image_message;
     if(m_convert_nv12_to_rgb){
@@ -168,8 +168,7 @@ ImageConverter
 
       image_message = image_msg;
     }
-    
-    
+
     image_message->header.stamp = image_msg->header.stamp;
     image_message->header.frame_id = frame_id;
 
