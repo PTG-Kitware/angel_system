@@ -134,6 +134,13 @@ windows:
             -p update_topic_input:=TaskUpdates
             -p update_topic_output:=TaskUpdatesBroad
             -p task_config_file:="${CONFIG_DIR}/tasks/multi-task-config.yaml"
+        - eval_2_logger: ros2 run angel_system_nodes eval_2_logger --ros-args
+            -r __ns:=${ROS_NAMESPACE}
+            -p topic_task_updates:=TaskUpdatesBroad
+            -p topic_notifications:=TaskErrors
+            -p log_output_dir:="${BAGS_DIR}"
+            -p task_config_file:="${CONFIG_DIR}"/tasks/multi-task-config.yaml
+            -p activity_config_file:="${CONFIG_DIR}"/activity_labels/all_recipe_labels.yaml
 
   - engineering-ui:
       layout: even-vertical
