@@ -59,11 +59,18 @@ RECIPE_TO_ID = {
     "Oatmeal": "D",
     "Dessert Quesadilla": "E",
 }
+RECIPE_NULL = "null"
+
+NO_STEP_NUMBER = "null"
 
 RE_ERR_DESC = re.compile(
     r"Recipe: (?P<task_name>.*), activity: (?P<activity_str>.*), "
     r"broad step: \(id=(?P<broad_step_id>\d+)\) (?P<broad_step_str>.*)$"
 )
+
+STATUS_ACTIVE = "active"
+STATUS_ERROR = "error"
+STATUS_NULL = "null"
 
 
 ###############################################################################
@@ -148,7 +155,9 @@ class Eval2LoggingNode(Node):
 
         # Translate inputs into required format values
         try:
-            recipe_id = RECIPE_TO_ID[task_name] if task_name != "null" else task_name
+            recipe_id = (
+                RECIPE_TO_ID[task_name] if task_name != RECIPE_NULL else task_name
+            )
         except KeyError:
             log.error(
                 f'No recipe identifier for task name "{task_name}". '
@@ -184,7 +193,7 @@ class Eval2LoggingNode(Node):
         # background state, in which state the logging wants "nulls" in places.
         if msg.current_step_id == 0 and msg.current_step == "background":
             # In background, transmits "null"s appropriately
-            self.log_line(t, "null", "null", "null")
+            self.log_line(t, RECIPE_NULL, NO_STEP_NUMBER, STATUS_NULL)
         else:
             if (
                 msg.task_name == "Pinwheel"
@@ -193,13 +202,17 @@ class Eval2LoggingNode(Node):
             ):
                 # Known special case for Pinwheel task where we have omitted a
                 # step in our configuration due to algorithm performance.
-                self.log_line(t, "null", "null", "null")
-                self.log_line(t, msg.task_name, msg.current_step_id + 2, "active")
+                self.log_line(t, RECIPE_NULL, NO_STEP_NUMBER, STATUS_NULL)
+                self.log_line(t, msg.task_name, msg.current_step_id + 2, STATUS_ACTIVE)
             elif np.all(msg.completed_steps):
                 # If all steps are completed, output nulls to indicate the
                 # final "done" state.
                 self.log_line(
-                    t, "null", "null", "null", f"{msg.task_name} task completed"
+                    t,
+                    RECIPE_NULL,
+                    NO_STEP_NUMBER,
+                    STATUS_NULL,
+                    f"{msg.task_name} task completed",
                 )
             else:
                 # Emit a null line to indicate the previous task was completed,
@@ -207,9 +220,9 @@ class Eval2LoggingNode(Node):
                 if msg.previous_step != "background":
                     self.log_line(
                         t,
-                        "null",
-                        "null",
-                        "null",
+                        RECIPE_NULL,
+                        NO_STEP_NUMBER,
+                        STATUS_NULL,
                         f"Stopped performing: {msg.previous_step}",
                     )
                 self.log_line(
@@ -218,7 +231,7 @@ class Eval2LoggingNode(Node):
                     # Steps are 0-index based coming out of the TaskMonitor, bring
                     # it back into 1-indexed for logging spec.
                     msg.current_step_id + 1,
-                    "active",
+                    STATUS_ACTIVE,
                     f"Started performing: {msg.current_step}",
                 )
 
@@ -233,7 +246,7 @@ class Eval2LoggingNode(Node):
                     time.time(),
                     md["task_name"],
                     md["broad_step_id"],
-                    "error",
+                    STATUS_ERROR,
                     msg.description,
                 )
             else:
