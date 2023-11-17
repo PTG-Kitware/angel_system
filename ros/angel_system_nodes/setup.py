@@ -60,6 +60,7 @@ setup(
             "dummy_multi_task_monitor = angel_system_nodes.task_monitoring.dummy_multi_task_monitor:main",
             "global_step_predictor = angel_system_nodes.task_monitoring.global_step_predictor:main",
             "keyboard_to_sys_cmd = angel_system_nodes.task_monitoring.keyboard_to_sys_cmd:main",
+            "transform_update_lod = angel_system_nodes.task_monitoring.transform_update_lod:main",
         ],
     },
 )
