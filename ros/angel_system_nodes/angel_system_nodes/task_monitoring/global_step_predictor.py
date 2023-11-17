@@ -102,6 +102,8 @@ class GlobalStepPredictorNode(Node):
             )
 
         # Determine what recipes are in the config
+        # TODO: make use of angel_system.data.config_structs instead of
+        #       manually loading and accessing by string keys.
         with open(self._config_file, "r") as stream:
             config = yaml.safe_load(stream)
         recipe_types = [

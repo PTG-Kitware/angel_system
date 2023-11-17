@@ -28,6 +28,8 @@ class GlobalStepPredictor:
         GlobalStepPredctor: based on a TCN activity classifier's activity classification
         outputs + a set of recipes, track what step a user is on for multiple recipes.
         """
+        # TODO: make use of angel_system.data.config_structs instead of
+        #       manually loading and accessing by string keys.
         with open(activity_config_fpath, "r") as stream:
             self.activity_config = yaml.safe_load(stream)
         num_activity_classes = len(self.activity_config["labels"])
@@ -68,6 +70,8 @@ class GlobalStepPredictor:
         self.activity_conf_history = np.empty((0, num_activity_classes))
 
         self.recipe_types = recipe_types
+        # TODO: Expect use of angel_system.data.config_structs instead of
+        #       a raw dictionary.
         self.recipe_configs = recipe_config_dict
 
         # Array of tracker dicts
@@ -116,6 +120,8 @@ class GlobalStepPredictor:
         Get the order of activity_ids (mapping to granular step
         number) based on a recipe config
         """
+        # TODO: make use of angel_system.data.config_structs instead of
+        #       manually loading and accessing by string keys.
         with open(config_fn, "r") as stream:
             config = yaml.safe_load(stream)
         broad_steps = config["labels"]
@@ -208,6 +214,8 @@ class GlobalStepPredictor:
         config_fn = self.recipe_configs[recipe]
 
         # Read in task config
+        # TODO: make use of angel_system.data.config_structs instead of
+        #       manually loading and accessing by string keys.
         with open(config_fn, "r") as stream:
             config = yaml.safe_load(stream)
         labels = [self.sanitize_str(l["full_str"]) for l in config["labels"]]
@@ -1025,6 +1033,8 @@ class GlobalStepPredictor:
         def sanitize_str(str_: str):
             return str_.lower().strip(" .")
 
+        # TODO: make use of angel_system.data.config_structs instead of
+        #       manually loading and accessing by string keys.
         with open(config_fn, "r") as stream:
             config = yaml.safe_load(stream)
         labels = [sanitize_str(l["label"]) for l in config["labels"]]
