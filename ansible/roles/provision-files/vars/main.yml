@@ -3,10 +3,13 @@
 
 # Output staging directory options.
 # These directory paths are interpreted relative to the repository root.
+model_files: "model_files"
 stage_dirs:
   # Example
   #example: some/directory
-  model_files: "model_files"
+  object_detector: "{{ model_files }}/object_detector"
+  activity_classifier: "{{ model_files }}/activity_classifier"
+  task_monitor: "{{ model_files }}/task_monitor"
 
 basic_downloads:
   # Example
@@ -24,102 +27,28 @@ girder_file_downloads:
     #  sha512: "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
     #  dest: "{{ stage_dirs.build_itt_base }}/some_file.txt"
 
-    ## FasterRCNN label list text file
-    #- file_id: 6332f54b11dab814282085e9
-    #  sha512: 2a635a859135f2360c0e02f58b9c9b78311ef07bb01cf6f5daac1c4ca92b827d7eeb5369362931e266c4b813ef472306803a4534d30c3f83712bea2b8d1cceb0
-    #  dest: "{{ stage_dirs.model_files }}/fasterrcnn_label_list.txt"
-    ## FasterRCNN model weights checkpoint
-    #- file_id: 6332f52a11dab814282085e6
-    #  sha512: 73529a1c238c20417bc6197035b4307a8afb3884ed24bc5938c92ca4d42e8f0531ae9582809da9512b198ad88d64113fd557692ac0933da24d7433983eb4f0ad
-    #  dest: "{{ stage_dirs.model_files }}/fasterrcnn_res101_vg.pth"
-    ## UHO model weights checkpoint
-    #- file_id: 633b095d11dab81428208933
-    #  sha512: 15aa06bcca0d775178adfbcda0426b983f72c14883b35b80e3114dba98e59840de2e54cf6620b0ddf96231ae378eed16ab1cb82b9a95545614543bec917ab81c
-    #  dest: "{{ stage_dirs.model_files }}/uho_epoch_090.ckpt"
-    ## UHO model label list text file.
-    #- file_id: 633c957011dab814282089ab
-    #  sha512: 293ef83fbd745ba4a5882ab8d476c1c87747050223dd13dd50139dd07425a50ff265a986ea37fc91180be759eee4cbf3ae4b7f11e3050586a8e5bf1db2513136
-    #  dest: "{{ stage_dirs.model_files }}/uho_epoch_090_labels.txt"
-    #- file_id: 635c785711dab8142820abbb
-    #  sha512: 1d9d371b1c8b3377de27ac36de04c7a267c6ad5991ce9e6a19dca3f71af905a18c4510762155ca7c7ac4d85bc3959d6773871b5191372568333f4416b7b4c813
-    #  dest: "{{ stage_dirs.model_files }}/uho_checkpoint_20221022.ckpt"
-    ## Task step HMM weights
-    #- file_id: 6361524811dab8142820adff
-    #  sha512: 86f5ed4e01266c13f405f4048175d4a2b8d31c412a7170ee5ae6039062967e2b539c95f5ba16a61b893addec407648411d8a1b3ca62394e70f171fb8dd738bef
-    #  dest: "{{ stage_dirs.model_files }}/recipe_coffee_mean_std.npy"
-    #- file_id: 63643e4e11dab8142820af0e
-    #  sha512: 5b9a42e3048c0f5360d7a7f9e11e677e51a2ae3318e60222ee07c0852e464e3572eb1bb5521aaccab38f8f3085609a2a06179e69e435f42dc1ba96d05a3d160a
-    #  dest: "{{ stage_dirs.model_files }}/recipe_coffee_trimmed_mean_std.npy"
-    #- file_id: 63657f9c11dab8142820af6b
-    #  sha512: 78e9bf93fad284a6cf1ffe488b940ec8e807aed13f3bdb5a5c4b83bb649737765b4ac007359a8d68464318e5d624b226918272fe82e0ddb6f29852f4e18f50b0
-    #  dest: "{{ stage_dirs.model_files }}/recipe_coffee_trimmed_v2_mean_std.npy"
-    #- file_id: 63657eb111dab8142820af68
-    #  sha512: 9a9f9aa836dc3eb6ba187b64bdd72bb0cdce062b086996921827270783b1686bdf079bfdb34eacd5c71cb28366e8e89a4303a71f9ce0d2c27628d78fae939ab3
-    #  dest: "{{ stage_dirs.model_files }}/recipe_coffee_trimmed_v3_mean_std.npy"
-    #- file_id: 645aa4ad58fefcae81a9f73f
-    #  sha512: 1091c0fa8ca7db5364f56829b74e8bed57c6739e0633c37745ee32ebc76477eb6363e08de9cc04a26bf6ba7efcf45115f53239fd7d5136ddb48b9c474c6f851d
-    #  dest: "{{ stage_dirs.model_files }}/recipe_m2_apply_tourniquet.npy"
-    ## Coffee object detection
-    #- file_id: 63fe7dbb7b0dfcc98f66a871
-    #  sha512: c15fc5c38359d92a3a8aad41cd8a06bdfda6df7ae8ca553188ae02917ca2eb3fef92e5ea6a3d4a0676816a299e9d4253facf6cb59cab6776885fbaad57c31c39
-    #  dest: "{{ stage_dirs.model_files }}/coffee_stage1.pth"
-    #- file_id: 640b6cc67b0dfcc98f66b743
-    #  sha512: 1a9a96f201d4472d3c946e3a9a7af1e0e232abf5a2868ebf8b3184dba3b23d858e619ab24e28dd9f1921d908387e3a3986eccfb136d3c38bc9ca85b7cae78e2e
-    #  dest: "{{ stage_dirs.model_files }}/berkeley_model_r50_final.pth"
-    ## Tourniquet activity detection
-    #- file_id: 6455411e58fefcae81a9efc5
-    #  sha512: e3d44527b572cb95f1869ec33214cbaf9c721aae18f14bc9db73ea8ed5c9c9d6c52975ebc0884acd3402e8ec66fcfd6168ff5744c5a9e31069049d23a97c5fce
-    #  dest: "{{ stage_dirs.model_files }}/recipe_m2_apply_tourniquet_v0.052.pkl"
-    ## Tourniquet object detection
-    #- file_id: 645a94db58fefcae81a9f73a
-    #  sha512: 2f07f3ec2759c729d70d89cd31266e000226208fbdcf25e50018cbb6c85e5c5a51378b73049334d5472f8dfe000040dbc740e65e093c6cd114d83e96bfcdab6d
-    #  dest: "{{ stage_dirs.model_files }}/tourniquet_stage1.pth"
-    #- file_id: 645a946058fefcae81a9f737
-    #  sha512: 7382a33fe69bdb97ae218a30a5797404ef6573637a6bf28e04041f7c87b056bbb1d3e2dfb6ea8ceb869a6d73aff9e53e0d11a43e62e7c132964394bd0e033ff8
-    #  dest: "{{ stage_dirs.model_files }}/tourniquet_stage2_interstitial.pth"
-
-    # YOLO v7 Combined Objects weights
-    - file_id: 653c008068ef53152cbab25a
-      sha512: 4dce342d356db73326106a436462ee02a5fcbad4f1b6420c34fd280c220a09fd949c174dfc95697cda980e1837b0641d5a7862c160bfa3e736a2c672c8e0c657
-      dest: "{{ stage_dirs.model_files }}/yolov7-combined_objects-weights.pt"
     # YOLO v7 Combined Objects weights -- additional objects + background
     - file_id: 6543f33068ef53152cbab69e
       sha512: a0e4dd249c07fcf3977dc0a5e715a1786637957bff94d348fdf7285b8b22e3f32e6c1fd135859e5443c7c45be30cd20ebaa6bc6e12ebe06e97592f76520e6b1e
-      dest: "{{ stage_dirs.model_files }}/all_recipes+additional_objs+bkgd_yolov7.pt"
+      dest: "{{ stage_dirs.object_detector }}/all_recipes+additional_objs+bkgd_yolov7.pt"
 
     # Activity TCN input object detection label mapping
     - file_id: 6539a24b5be10c8fb6ed5246
       sha512: ed49b26156486f9fb30a940d18b4d32c3224ba30de42e0baa065d4406f6af9ead001a4332301db856898fdfd718bc4f13f457228f1cf2f6e359175f25296f9da
-      dest: "{{ stage_dirs.model_files }}/activity_tcn-all_activities-det_label_mapping.json"
-    # Activity TCN classifier model weights
-    - file_id: 653998e65be10c8fb6ed523f
-      sha512: 0e3b38d6b4b90c727f3b368bbca54bb6f019a50fa575f1afe5d8d1b0259b02928d066feaab5a8f8a4ab5011349099c0f02dd28aa1f9cbd53cb0effbd70016d77
-      dest: "{{ stage_dirs.model_files }}/activity_tcn-all_activities-checkpoint.ckpt"
-    # Activity TCN classifier model weights -- Half-rate trained, intended for 15Hz video rate / detection input
-    - file_id: 6543a72168ef53152cbab67a
-      sha512: 15ad19f1627e5b37980b306eb36690a119c5a811f8125e30853d5dc7e80bff4b6d48bf80d875524a59d712b875143fe21e5b641a75c62616494e2ae3fedbf19b
-      dest: "{{ stage_dirs.model_files }}/yolo_all_recipes_sample_rate_2.ckpt"
-    # Activity TCN classifier model label mapping
-    - file_id: 653999935be10c8fb6ed5242
-      sha512: b83b5cd4f9a56bf9e8bfff5ce6a24bda013cca1e4b8c6b905f8d819f29afbfc6d4bc214ec1f97fd6f18d8e4ce304a3f19b89cbb11aad412647d91639eff0e058
-      dest: "{{ stage_dirs.model_files }}/activity_tcn-all_activities-mapping.txt"
+      dest: "{{ stage_dirs.activity_classifier }}/activity_tcn-all_activities-det_label_mapping.json"
     # Activity TCN -- yolo_all_recipes_additional_objs_bkgd_sample_rate_2 -- weights
     - file_id: 6543fcc368ef53152cbab6b4
       sha512: 6d69ee7d228a7a27d57ed9e8aab2e5356aceada7cc62ab3ac2306629ed3aee93c0891045681a7488ecdfc56ddd2df34078a420b1b2599b8ad06115799a75fadf
-      dest: "{{ stage_dirs.model_files }}/yolo_all_recipes_additional_objs_bkgd_sample_rate_2.ckpt"
+      dest: "{{ stage_dirs.activity_classifier }}/yolo_all_recipes_additional_objs_bkgd_sample_rate_2.ckpt"
     # Activity TCN -- yolo_all_recipes_additional_objs_bkgd_sample_rate_2 -- activity class mapping
     - file_id: 6543fbeb68ef53152cbab6ae
       sha512: 85bd2c6414cb582eba6e969726a7dc289644fb06e8b112e1fd1833351671ad701e0bdac1339c7429e4963f0058affa26fce7d7dd742bba854ad0e015085f576b
-      dest: "{{ stage_dirs.model_files }}/yolo_all_recipes_additional_objs_bkgd_act_mapping.txt"
+      dest: "{{ stage_dirs.activity_classifier }}/yolo_all_recipes_additional_objs_bkgd_act_mapping.txt"
 
-    # Global Step predictor model -- v1.0
-    - file_id: 653d8c0768ef53152cbab35d
-      sha512: 65d0c7f89e8a6064f9dccbe8bfc4d8abb9af6e2cd69d5900268fe7e7a0362510073b8514e764b1d42ab81a2dcbcc681eab9cc7bcd2b3380096623ca13248556b
-      dest: "{{ stage_dirs.model_files }}/global_step_predictor_act_avgs.npy"
-    # Global Step predictor model -- v2.0_sample_rate_2
+     # Global Step predictor model -- v2.0_sample_rate_2
     - file_id: 6543ca0a68ef53152cbab68d
       sha512: e9cc7c7e385700acfa1e2273b18346e6c85db8e9e49fc4ccea7686f3ac1e663086209b9268bc65e8f993f37a3436cb39e6a4da0ccc06cab0e8cdc795200eaaf1
-      dest: "{{ stage_dirs.model_files }}/global_step_predictor_act_avgs_all_classes_v2.0_sample_rate_2.npy"
+      dest: "{{ stage_dirs.task_monitor }}/global_step_predictor_act_avgs_all_classes_v2.0_sample_rate_2.npy"
 
 
 # List of git repositories to check out at a specific ref and then archive.
