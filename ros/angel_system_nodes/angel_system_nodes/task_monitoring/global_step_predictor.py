@@ -102,6 +102,8 @@ class GlobalStepPredictorNode(Node):
             )
 
         # Determine what recipes are in the config
+        # TODO: make use of angel_system.data.config_structs instead of
+        #       manually loading and accessing by string keys.
         with open(self._config_file, "r") as stream:
             config = yaml.safe_load(stream)
         recipe_types = [
@@ -340,9 +342,10 @@ class GlobalStepPredictorNode(Node):
                             ]
                             break
 
+                    # "activity_str" is the "full_str" of the activity label.
                     skipped_step_str = (
                         f"Recipe: {recipe}, activity: {skipped_step['activity_str']}, "
-                        f"broad step: {broad_step_str}"
+                        f"broad step: (id={broad_step_id}) {broad_step_str}"
                     )
 
                     # New skipped step detected, publish error and add it to the list
@@ -405,7 +408,7 @@ class GlobalStepPredictorNode(Node):
             task_state[f"current_{step_mode}_step"]
         ]
 
-        log.info(f"Publish task update w/ step: {task_step_str}")
+        log.info(f"Publish task {message.task_name} update w/ step: {task_step_str}")
         # Exclude background
         curr_step = task_state[f"current_{step_mode}_step"]
         task_step = curr_step - 1 if curr_step != 0 else 0
