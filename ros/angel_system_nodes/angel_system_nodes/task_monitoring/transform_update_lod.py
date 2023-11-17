@@ -3,7 +3,9 @@ import rclpy
 from rclpy.node import Node
 
 from angel_system.data.config_structs import load_multi_task_config
-from angel_system.global_step_prediction.global_step_predictor import GlobalStepPredictor
+from angel_system.global_step_prediction.global_step_predictor import (
+    GlobalStepPredictor,
+)
 
 from angel_msgs.msg import TaskUpdate
 from angel_utils import declare_and_get_parameters
@@ -41,7 +43,7 @@ class TaskUpdateLodTransformerNode(Node):
                 (PARAM_TOPIC_INPUT,),
                 (PARAM_TOPIC_OUTPUT,),
                 (PARAM_TASK_CONFIG,),
-            ]
+            ],
         )
 
         # TODO: This is clearly super intrinsic to GSP implementation -- decouple?
@@ -55,16 +57,14 @@ class TaskUpdateLodTransformerNode(Node):
         config_multi = load_multi_task_config(params[PARAM_TASK_CONFIG])
         self._gsp = GlobalStepPredictor(
             recipe_types=[t.label for t in config_multi.tasks],
-            recipe_config_dict={t.label: t.config_file for t in config_multi.tasks}
+            recipe_config_dict={t.label: t.config_file for t in config_multi.tasks},
         )
         self._task_to_tracker = {t["recipe"]: t for t in self._gsp.trackers}
 
         # Track previous step ID for different
         self._prev_broad_id = {l: -1 for l in self._task_to_tracker}
 
-        self._pub = self.create_publisher(
-            TaskUpdate, params[PARAM_TOPIC_OUTPUT], 1
-        )
+        self._pub = self.create_publisher(TaskUpdate, params[PARAM_TOPIC_OUTPUT], 1)
         self._sub = self.create_subscription(
             TaskUpdate,
             params[PARAM_TOPIC_INPUT],
@@ -107,10 +107,12 @@ class TaskUpdateLodTransformerNode(Node):
         # 0 if we are actually *on* background (and leave "background" as the
         # str).
         msg.current_step_id = max(cur_broad_id - 1, 0)
-        msg.current_step = tt['broad_step_to_full_str'][cur_broad_id]
-        msg.previous_step = tt['broad_step_to_full_str'][max(prev_broad_id, 0)]
+        msg.current_step = tt["broad_step_to_full_str"][cur_broad_id]
+        msg.previous_step = tt["broad_step_to_full_str"][max(prev_broad_id, 0)]
 
-        completed_steps_arr = np.arange(tt['total_num_broad_steps'] - 1) < (cur_broad_id - 1)
+        completed_steps_arr = np.arange(tt["total_num_broad_steps"] - 1) < (
+            cur_broad_id - 1
+        )
         if msg.completed_steps[-1]:
             # If the final granular step is done, then so is the final broad step.
             completed_steps_arr[-1] = True

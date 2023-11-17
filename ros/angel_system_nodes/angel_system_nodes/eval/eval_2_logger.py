@@ -23,7 +23,9 @@ from angel_system.data.config_structs import (
     load_multi_task_config,
     load_active_task_configs,
 )
-from angel_system.global_step_prediction.global_step_predictor import GlobalStepPredictor
+from angel_system.global_step_prediction.global_step_predictor import (
+    GlobalStepPredictor,
+)
 
 from angel_msgs.msg import (
     AruiUserNotification,
@@ -61,6 +63,7 @@ RECIPE_TO_ID = {
 
 ###############################################################################
 
+
 def ts_str(t: Optional[float] = None) -> str:
     """
     Generate "now" timestamp as a string, used in both filename and log lines.
@@ -90,7 +93,7 @@ class Eval2LoggingNode(Node):
                 (PARAM_TOPIC_TASK_UPDATES,),
                 (PARAM_TOPIC_NOTIFICATIONS,),
                 (PARAM_OUTPUT_DIR,),
-            ]
+            ],
         )
 
         # Unix timestamp of this "trial" for logging.
@@ -103,7 +106,7 @@ class Eval2LoggingNode(Node):
 
         # Open file to our logging lines to. Open in non-binary mode for
         # writing.
-        self._log_file = open(self._log_output_filepath, 'w')
+        self._log_file = open(self._log_output_filepath, "w")
         self._log_csv = csv.writer(self._log_file)
         # Lock for synchronizing log file writing.
         self._log_lock = RLock()
@@ -143,7 +146,7 @@ class Eval2LoggingNode(Node):
             recipe_id = RECIPE_TO_ID[task_name] if task_name != "null" else task_name
         except KeyError:
             log.error(
-                f"No recipe identifier for task name \"{task_name}\". "
+                f'No recipe identifier for task name "{task_name}". '
                 f"Skipping logging. Otherwise input: "
                 f"step_number={step_number}, current_status={current_status}, "
                 f"comment={comment}"
@@ -176,9 +179,7 @@ class Eval2LoggingNode(Node):
         # background state, in which state the logging wants "nulls" in places.
         if msg.current_step_id == 0 and msg.current_step == "background":
             # In background, transmits "null"s appropriately
-            self.log_line(
-                t, "null", "null", "null"
-            )
+            self.log_line(t, "null", "null", "null")
         else:
             if (
                 msg.task_name == "Pinwheel"
@@ -188,19 +189,23 @@ class Eval2LoggingNode(Node):
                 # Known special case for Pinwheel task where we have omitted a
                 # step in our configuration due to algorithm performance.
                 self.log_line(t, "null", "null", "null")
-                self.log_line(t, msg.task_name, msg.current_step_id+2, "active")
+                self.log_line(t, msg.task_name, msg.current_step_id + 2, "active")
             elif np.all(msg.completed_steps):
                 # If all steps are completed, output nulls to indicate the
                 # final "done" state.
-                self.log_line(t, "null", "null", "null",
-                              f"{msg.task_name} task completed")
+                self.log_line(
+                    t, "null", "null", "null", f"{msg.task_name} task completed"
+                )
             else:
                 # Emit a null line to indicate the previous task was completed,
                 # Except if the last step was background.
                 if msg.previous_step != "background":
                     self.log_line(
-                        t, "null", "null", "null",
-                        f"Stopped performing: {msg.previous_step}"
+                        t,
+                        "null",
+                        "null",
+                        "null",
+                        f"Stopped performing: {msg.previous_step}",
                     )
                 self.log_line(
                     t,
@@ -209,7 +214,7 @@ class Eval2LoggingNode(Node):
                     # it back into 1-indexed for logging spec.
                     msg.current_step_id + 1,
                     "active",
-                    f"Started performing: {msg.current_step}"
+                    f"Started performing: {msg.current_step}",
                 )
 
     def cb_arui_notification(self, msg: AruiUserNotification) -> None:
