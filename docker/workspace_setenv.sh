@@ -2,7 +2,7 @@
 # and run-time.
 
 # Enable multicast flag on the loopback device (should always be present)
-ifconfig lo multicast
+ip link set lo multicast on
 
 # Report on ROS localhost only mode.
 if [[ "${ROS_LOCALHOST_ONLY}" -ne 0 ]]

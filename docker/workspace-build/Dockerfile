@@ -40,13 +40,15 @@ RUN apt-get -y update \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
-# For the demo-ui
-RUN curl -sL https://deb.nodesource.com/setup_14.x | bash -
-RUN apt-get install -y nodejs && node -v && npm -v
-
 # Env vars for the nvidia-container-runtime.
 ENV NVIDIA_VISIBLE_DEVICES all
 ENV NVIDIA_DRIVER_CAPABILITIES graphics,utility,compute
+
+# For the demo-ui
+# TODO: Probably upgrade what nodejs version is being used.
+# TODO: Getting a warning about this script being deprecated, so update the installation method, too.
+RUN curl -sL https://deb.nodesource.com/setup_14.x | bash -
+RUN apt-get install -y nodejs && node -v && npm -v
 
 # Bring in poetry for standard python package installation.
 # Specifying a separate virtual environment that will be natively "activated".
@@ -54,9 +56,9 @@ ENV NVIDIA_DRIVER_CAPABILITIES graphics,utility,compute
 #       not observed adverse effects yet...
 ENV VIRTUAL_ENV=/root/.local
 ENV PATH=/root/.local/bin:${PATH}
-ENV POETRY_VERSION=1.5.1
+ENV POETRY_VERSION=1.7.1
 RUN python3 -m venv --system-site-packages "${VIRTUAL_ENV}"\
- && pip3 install pip==23.0 \
+ && pip3 install pip==23.3.1 \
  && (curl -sSL 'https://install.python-poetry.org' | python3 -) \
  && poetry config virtualenvs.create false
 
@@ -98,23 +100,33 @@ RUN cd "${ANGEL_WORKSPACE_DIR}" \
     # wheels and stuff.
  && rm -r ${HOME}/.cache/pip \
           ${HOME}/.cache/pypoetry
-RUN python3 -m nltk.downloader punkt
 
-# Build the angel_system python package
+# Create editable-installation hooks for the angel_system python package.
+# * The container is intended to be environment-only, but it is highly
+#   convenient to pre-establish the editable-installed package's metadata and
+#   .pth linkage within the container. This allows importing the *real*
+#   angel_system package from anywhere within the container post-mounting.
+#   It is burdensom to require users of the environment container to "install"
+#   the angel_system python package on every container instantiation.
 # * This is intentionally separated from the above dep installation so as to
 #   not trigger re-installation of all dependencies if there is only a change
 #   in the library and not with the libraries dependencies.
-COPY ./angel_system "${ANGEL_WORKSPACE_DIR}"/angel_system
 RUN cd "${ANGEL_WORKSPACE_DIR}" \
+ && mkdir "${ANGEL_WORKSPACE_DIR}"/angel_system \
+ && touch "${ANGEL_WORKSPACE_DIR}"/angel_system/__init__.py \
  && pip install --no-deps -e .
 
-# Build the ROS workspace.
-COPY ./ros "${ANGEL_WORKSPACE_DIR}/src"
-COPY docker/workspace_build_ros.sh "${ANGEL_WORKSPACE_DIR}"/
-RUN "${ANGEL_WORKSPACE_DIR}/workspace_build_ros.sh"
-
-# Add the "build NPM stuff" script.
-COPY docker/workspace_build_npm_install.sh "${ANGEL_WORKSPACE_DIR}"/
+## TODO: Remove -- environment only container
+## Build the ROS workspace.
+#COPY ./ros "${ANGEL_WORKSPACE_DIR}/src"
+#COPY docker/workspace_build_ros.sh "${ANGEL_WORKSPACE_DIR}"/
+#RUN "${ANGEL_WORKSPACE_DIR}/workspace_build_ros.sh"
+#
+## TODO: Remove -- environment only container
+## Build the required NPM envirnment for the Engineering UI.
+#COPY docker/workspace_build_npm_install.sh "${ANGEL_WORKSPACE_DIR}"/
+#RUN cd "${ANGEL_WORKSPACE_DIR}"/src/angel_utils/demo_ui/ \
+# && "${ANGEL_WORKSPACE_DIR}/workspace_build_npm_install.sh"
 
 # Bring in tmux run configurations
 # - add symlink to tmuxinator's expected "config home"

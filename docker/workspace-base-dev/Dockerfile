@@ -17,6 +17,7 @@ RUN apt-get -y update \
         bash-completion \
         gdb \
         htop \
+        iproute2 \
         less \
         vim \
         parallel \
