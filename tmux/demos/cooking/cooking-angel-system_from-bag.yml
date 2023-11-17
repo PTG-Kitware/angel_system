@@ -1,11 +1,9 @@
 #
-# System configuration to run the ANGEL system for the 2022/11 PI meeting and
-# Evaluation 1.
-#
-# This configuration is for the Coffee task/recipe.
+# System configuration to run the ANGEL system for the 2023/11 PI meeting and
+# Evaluation 2.
 #
 
-name: coffee_allows_skip
+name: cooking-angel-system_from-bag
 root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 
 # Optional tmux socket

@@ -1,9 +1,9 @@
 #
-# System configuration to run the ANGEL system for the 2022/11 PI meeting and
-# Evaluation 1.
+# System configuration to run the ANGEL system for the 2023/11 PI meeting and
+# Evaluation 2.
 #
 
-name: 2023-10-eval-live
+name: cooking-angel-system_live
 root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 
 # Optional tmux socket
