@@ -1,5 +1,5 @@
 #
-# Used to evaluate Question Answering with vocal processing for a specified ROS bag of data 
+# Used to evaluate Emotion Detection with vocal processing for a specified ROS bag of data 
 # This configuration should be run by itself (e.g. not in combination with
 # another tmuxinator launch).
 #
@@ -10,7 +10,7 @@
 # ```
 #
 
-name: ASR Evaluation with VAD
+name: VAD + ASR + Intent Detection + Emotion Detection
 root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 
 # Optional tmux socket
@@ -86,7 +86,7 @@ windows:
       panes:
         - gpt_intent_detection: ros2 run angel_system_nodes gpt_intent_detector --ros-args
            -r __ns:=${ROS_NAMESPACE}
-           -p utterances_topic:=utterances_topic
+           -p input_topic:=utterances_topic
            -p expect_user_intent_topic:=expect_user_intent_topic
            -p interp_user_intent_topic:=interp_user_intent_topic
   - emotion_detection:
@@ -94,14 +94,5 @@ windows:
       panes:
         - gpt_emotion_detection: ros2 run angel_system_nodes gpt_emotion_detector --ros-args
            -r __ns:=${ROS_NAMESPACE}
-           -p expect_user_intent_topic:=expect_user_intent_topic
-           -p interp_user_intent_topic:=interp_user_intent_topic
+           -p input_topic:=interp_user_intent_topic
            -p user_emotion_topic:=gpt_emotion_topic
-  - question_answering:
-      layout: even-vertical
-      panes:
-        - gpt_question_answering: ros2 run angel_system_nodes question_answerer --ros-args
-           -r __ns:=${ROS_NAMESPACE}
-           -p user_emotion_topic:=gpt_emotion_topic
-           -p system_text_response_topic:=system_text_response_topic
-           -p few_shot_prompt_file:=${CONFIG_DIR}/llm_prompts/tourniquet_steps_prompt

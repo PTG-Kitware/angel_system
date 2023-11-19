@@ -5,7 +5,9 @@ import openai
 import os
 import rclpy
 
+from angel_msgs.msg import DialogueUtterance
 from angel_system_nodes.base_emotion_detector import BaseEmotionDetector, LABEL_MAPPINGS
+from angel_utils import declare_and_get_parameters
 
 openai.organization = os.getenv("OPENAI_ORG_ID")
 openai.api_key = os.getenv("OPENAI_API_KEY")
@@ -14,17 +16,27 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 FEW_SHOT_EXAMPLES = [
     {
         "utterance": "Go back to the previous step you dumb machine!",
-        "label": "negative.",
+        "label": "negative[eos]",
     },
-    {"utterance": "Next step, please.", "label": "neutral"},
-    {"utterance": "We're doing great and I'm learning a lot!", "label": "positive"},
+    {"utterance": "Next step, please.", "label": "neutral[eos]"},
+    {"utterance": "We're doing great and I'm learning a lot!", "label": "positive[eos]"},
 ]
+
+PARAM_TIMEOUT = "timeout"
 
 
 class GptEmotionDetector(BaseEmotionDetector):
     def __init__(self):
         super().__init__()
         self.log = self.get_logger()
+
+        param_values = declare_and_get_parameters(
+            self,
+            [
+                (PARAM_TIMEOUT, 600),
+            ],
+        )
+        self.timeout = param_values[PARAM_TIMEOUT]
 
         # This node additionally includes fields for interacting with OpenAI
         # via LangChain.
@@ -77,14 +89,16 @@ class GptEmotionDetector(BaseEmotionDetector):
             openai_api_key=self.openai_api_key,
             temperature=0.0,
             max_tokens=1,
+            request_timeout=self.timeout,
         )
         return LLMChain(llm=openai_llm, prompt=few_shot_prompt)
 
-    def get_inference(self, msg):
+    def get_inference(self, msg: DialogueUtterance):
         """
         Detects the user intent via langchain execution of GPT.
         """
-        return (self.chain.run(utterance=msg.utterance_text), 0.5)
+        emotion = self.chain.run(utterance=msg.utterance_text)
+        return emotion.split('[eos]')[0], 0.5
 
 
 def main():
