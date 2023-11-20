@@ -5,7 +5,10 @@ import openai
 import os
 import rclpy
 
-from ros.angel_system_nodes.angel_system_nodes.audio.emotion.base_emotion_detector import BaseEmotionDetector, LABEL_MAPPINGS
+from ros.angel_system_nodes.angel_system_nodes.audio.emotion.base_emotion_detector import (
+    BaseEmotionDetector,
+    LABEL_MAPPINGS,
+)
 
 openai.organization = os.getenv("OPENAI_ORG_ID")
 openai.api_key = os.getenv("OPENAI_API_KEY")

@@ -6,7 +6,10 @@ import openai
 import os
 import rclpy
 
-from ros.angel_system_nodes.angel_system_nodes.audio.intent.base_intent_detector import BaseIntentDetector, INTENT_LABELS
+from ros.angel_system_nodes.angel_system_nodes.audio.intent.base_intent_detector import (
+    BaseIntentDetector,
+    INTENT_LABELS,
+)
 
 openai.organization = os.getenv("OPENAI_ORG_ID")
 openai.api_key = os.getenv("OPENAI_API_KEY")
