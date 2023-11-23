@@ -88,7 +88,7 @@ services:
     environment:
       HISTFILE: ${ANGEL_WORKSPACE_DIR}/stuff/bash_history
       SETUP_WORKSPACE_INSTALL:  # from .env file or parent environment
-      ROS_LOCALHOST_ONLY:  # from .env file or parent environment
+      ROS_AUTOMATIC_DISCOVERY_RANGE:  # from .env file or parent environment
       RMW_IMPLEMENTATION:  # from .env file or parent environment
       CYCLONE_DDS_INTERFACE:  # from .env file or parent environment
       DISPLAY:  # pull from current environment
@@ -124,7 +124,7 @@ services:
     volumes:
       - /dev/shm:/dev/shm
     environment:
-      ROS_LOCALHOST_ONLY:  # from .env file or parent environment
+      ROS_AUTOMATIC_DISCOVERY_RANGE:  # from .env file or parent environment
       RMW_IMPLEMENTATION:  # from .env file or parent environment
       CYCLONE_DDS_INTERFACE:  # from .env file or parent environment
       SETUP_WORKSPACE_INSTALL: 1  # yes, activate the workspace here

@@ -4,13 +4,7 @@
 # Enable multicast flag on the loopback device (should always be present)
 ip link set lo multicast on
 
-# Report on ROS localhost only mode.
-if [[ "${ROS_LOCALHOST_ONLY}" -ne 0 ]]
-then
-  >&2 echo "[INFO] Setting ROS to localhost-only communication."
-else
-  >&2 echo "[INFO] ROS host communication unconstrained."
-fi
+>&2 echo "[INFO] ROS_AUTOMATIC_DISCOVERY_RANGE: ${ROS_AUTOMATIC_DISCOVERY_RANGE}"
 
 # Configure RMW-specific configurations depending on what is set to be used.
 if [[ "${RMW_IMPLEMENTATION}" = "rmw_fastrtps_cpp" ]]
