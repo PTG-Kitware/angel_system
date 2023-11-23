@@ -6,7 +6,7 @@
 #include <numeric>
 
 // ROS2 things
-#include <cv_bridge/cv_bridge.h>
+#include <cv_bridge/cv_bridge.hpp>
 #include <rcl_interfaces/msg/parameter_descriptor.hpp>
 #include <rcl_interfaces/msg/parameter_type.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -32,7 +32,7 @@ namespace {
 
 // Topic we expect to receive headset NV12 images from.
 DEFINE_PARAM_NAME( PARAM_TOPIC_INPUT_IMAGES, "topic_input_images" );
-// Topic we will outpit RGB8 images to.
+// Topic we will output RGB8 images to.
 DEFINE_PARAM_NAME( PARAM_TOPIC_OUTPUT_IMAGE, "topic_output_images" );
 // Drop every other Nth frame (Or None if set to 1)
 DEFINE_PARAM_NAME( PARAM_DROP_Nth_FRAME, "drop_nth_frame" );
@@ -193,7 +193,7 @@ ImageConverter
         << "Receive --> Publish Latency: " << delta_receive_publish << std::endl
         << "Capture --> Publish Latency: " << delta_image_publish << std::endl
         << "Image ID: " << m_image_id << std::endl;
-      RCLCPP_INFO( log, ss.str() );
+      RCLCPP_INFO_STREAM( log, ss.str() );
     }
   }
 }
