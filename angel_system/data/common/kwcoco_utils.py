@@ -30,7 +30,7 @@ from angel_system.data.common.load_data import (
     sanitize_str,
 )
 from angel_system.data.common.load_data import Re_order
-from angel_system.berkeley.data.update_dets_utils import load_hl_hand_bboxes
+from angel_system.data.common.hl_hands_utils import load_hl_hand_bboxes
 
 
 def load_kwcoco(dset):
@@ -133,6 +133,107 @@ def preds_to_kwcoco(
     print(f"Saved predictions to {dset.fpath}")
 
     return dset
+
+
+def replace_compound_label(
+    preds,
+    obj,
+    detected_classes,
+    using_contact,
+    obj_hand_contact_state=False,
+    obj_obj_contact_state=False,
+):
+    """
+    Check if some subset of obj is in `detected_classes`
+
+    Designed to catch and correct incorrect compound classes
+    Ex: obj is "mug + filter cone + filter" but we detected "mug + filter cone"
+    """
+
+    compound_objs = [x.strip() for x in obj.split("+")]
+    detected_objs = [[y.strip() for y in x.split("+")] for x in detected_classes]
+
+    replaced_classes = []
+    for detected_class, objs in zip(detected_classes, detected_objs):
+        for obj_ in objs:
+            if obj_ in compound_objs:
+                replaced_classes.append(detected_class)
+                break
+
+    if replaced_classes == []:
+        # Case 0, We didn't detect any of the objects
+        replaced = None
+    elif len(replaced_classes) == 1:
+        # Case 1, we detected a subset of the compound as one detection
+        replaced = replaced_classes[0]
+        # print(f'replaced {replaced} with {obj}')
+
+        preds[obj] = preds.pop(replaced)
+
+        if using_contact:
+            for i in range(len(preds[obj])):
+                preds[obj][i]["obj_hand_contact_state"] = obj_hand_contact_state
+                preds[obj][i]["obj_obj_contact_state"] = obj_obj_contact_state
+    else:
+        # Case 2, the compound was detected as separate boxes
+        replaced = replaced_classes
+        # print(f'Combining {replaced} detections into compound \"{obj}\"')
+
+        new_bbox = None
+        new_conf = None
+        new_obj_obj_conf = None
+        new_obj_hand_conf = None
+        for det_obj in replaced:
+            assert len(preds[det_obj]) == 1
+            bbox = preds[det_obj][0]["bbox"]
+            conf = preds[det_obj][0]["confidence_score"]
+
+            if new_bbox is None:
+                new_bbox = bbox
+            else:
+                # Find mix of bboxes
+                # TODO: first double check these are close enough that it makes sense to combine?
+                new_tlx, new_tly, new_brx, new_bry = new_bbox
+                tlx, tly, brx, bry = bbox
+
+                new_bbox = [
+                    min(new_tlx, tlx),
+                    min(new_tly, tly),
+                    max(new_brx, brx),
+                    max(new_bry, bry),
+                ]
+
+            new_conf = conf if new_conf is None else (new_conf + conf) / 2  # average???
+            if using_contact:
+                obj_obj_conf = preds[det_obj][0]["obj_obj_contact_conf"]
+                new_obj_obj_conf = (
+                    obj_obj_conf
+                    if new_obj_obj_conf is None
+                    else (new_obj_obj_conf + obj_obj_conf) / 2
+                )
+                obj_hand_conf = preds[det_obj][0]["obj_hand_contact_conf"]
+                new_obj_hand_conf = (
+                    obj_hand_conf
+                    if new_obj_hand_conf is None
+                    else (new_obj_hand_conf + obj_hand_conf) / 2
+                )
+
+            # remove old preds
+            preds.pop(det_obj)
+
+        new_pred = {
+            "confidence_score": new_conf,
+            "bbox": new_bbox,
+        }
+        if using_contact:
+            new_pred["obj_obj_contact_state"] = obj_obj_contact_state
+            new_pred["obj_obj_contact_conf"] = new_obj_obj_conf
+            new_pred["obj_hand_contact_state"] = obj_hand_contact_state
+            new_pred["obj_hand_contact_conf"] = new_obj_hand_conf
+
+        preds[obj] = [new_pred]
+
+    return preds, replaced
 
 
 def add_hl_hands_to_kwcoco(dset, remove_existing=True, using_contact=True):
