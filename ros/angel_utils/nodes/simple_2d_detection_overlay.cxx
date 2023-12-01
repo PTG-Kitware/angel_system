@@ -27,7 +27,7 @@ using rcl_interfaces::msg::ParameterDescriptor;
 using rcl_interfaces::msg::ParameterType;
 using std::placeholders::_1;
 
-namespace angel_debug {
+namespace angel_utils {
 
 namespace {
 

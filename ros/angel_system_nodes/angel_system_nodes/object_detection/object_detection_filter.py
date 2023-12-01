@@ -2,7 +2,7 @@ from typing import Set
 
 import numpy as np
 
-from angel_system.data.config_structs import load_object_label_set
+from angel_system.data.common.config_structs import load_object_label_set
 
 import rclpy
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
