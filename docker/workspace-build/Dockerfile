@@ -113,10 +113,8 @@ COPY ./ros "${ANGEL_WORKSPACE_DIR}/src"
 COPY docker/workspace_build_ros.sh "${ANGEL_WORKSPACE_DIR}"/
 RUN "${ANGEL_WORKSPACE_DIR}/workspace_build_ros.sh"
 
-# Build the required NPM envirnment for the Engineering UI.
+# Add the "build NPM stuff" script.
 COPY docker/workspace_build_npm_install.sh "${ANGEL_WORKSPACE_DIR}"/
-RUN cd "${ANGEL_WORKSPACE_DIR}"/src/angel_utils/demo_ui/ \
- && "${ANGEL_WORKSPACE_DIR}/workspace_build_npm_install.sh"
 
 # Bring in tmux run configurations
 # - add symlink to tmuxinator's expected "config home"
