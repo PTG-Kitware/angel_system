@@ -4,7 +4,7 @@
 # This configuration is for the M2 tourniquet task.
 #
 
-name: 2023-05-BBN-M2-Tourniquet
+name: BBN-M2-Tourniquet
 root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 
 # Optional tmux socket

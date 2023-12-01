@@ -5,7 +5,7 @@
 # This configuration is for the M2 tourniquet task.
 #
 
-name: 2023-05-Kitware-M2-Tourniquet
+name: Kitware-M2-Tourniquet
 root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 
 # Optional tmux socket
