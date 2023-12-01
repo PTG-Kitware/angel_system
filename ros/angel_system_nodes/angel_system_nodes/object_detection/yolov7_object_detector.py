@@ -51,7 +51,7 @@ class YoloObjectDetector(Node):
                 ("inference_img_size", 1280),  # inference size (pixels)
                 ("det_conf_threshold", 0.7),  # object confidence threshold
                 ("iou_threshold", 0.45),  # IOU threshold for NMS
-                ("cuda_device_id", 0, DYNAMIC_TYPE),  # cuda device, i.e. 0 or 0,1,2,3 or cpu
+                ("cuda_device_id", 0, DYNAMIC_TYPE),  # cuda device: ID int or CPU
                 ("no_trace", True),  # don`t trace model
                 ("agnostic_nms", False),  # class-agnostic NMS
                 # Runtime thread checkin heartbeat interval in seconds.
@@ -77,7 +77,9 @@ class YoloObjectDetector(Node):
         # Model
         self.model: Union[yolov7.models.yolo.Model, TracedModel]
         if not self._model_ckpt_fp.is_file():
-            raise ValueError(f"Model checkpoint file did not exist: {self._model_ckpt_fp}")
+            raise ValueError(
+                f"Model checkpoint file did not exist: {self._model_ckpt_fp}"
+            )
         (self.device, self.model, self.stride, self.imgsz) = load_model(
             str(self._cuda_device_id), self._model_ckpt_fp, self._inference_img_size
         )

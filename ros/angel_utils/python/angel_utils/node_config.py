@@ -20,11 +20,13 @@ DYNAMIC_TYPE = rclpy.node.ParameterDescriptor(dynamic_typing=True)
 
 def declare_and_get_parameters(
     node: rclpy.node.Node,
-    name_default_tuples: Sequence[Union[
-        Tuple[str],
-        Tuple[str, rclpy.node.Parameter.Type],
-        Tuple[str, Any, rclpy.node.ParameterDescriptor],
-    ]],
+    name_default_tuples: Sequence[
+        Union[
+            Tuple[str],
+            Tuple[str, rclpy.node.Parameter.Type],
+            Tuple[str, Any, rclpy.node.ParameterDescriptor],
+        ]
+    ],
     namespace="",
 ) -> Dict[str, Any]:
     """
@@ -95,8 +97,7 @@ def declare_and_get_parameters(
         # default value to deduce that typing from. If nothing is given, we
         # declare dynamic typing in a description object.
         parameters=(
-            t if len(t) > 1 else (t[0], None, DYNAMIC_TYPE)
-            for t in name_default_tuples
+            t if len(t) > 1 else (t[0], None, DYNAMIC_TYPE) for t in name_default_tuples
         ),
     )
     # Check for not-set parameters

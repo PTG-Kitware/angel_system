@@ -103,7 +103,7 @@ ptg_eval_step = "angel_system.ptg_eval.step_completion.evaluate_step:main"
 
 [tool.black]
 line-length = 88
-target-version = ['py38']
+target-version = ['py310']
 # 'extend-exclude' excludes files or directories in addition to the defaults
 extend-exclude = '''
 # A regex preceded with ^/ will apply only to files and directories
@@ -113,7 +113,6 @@ extend-exclude = '''
   | ^/angel_system/fasterrcnn
   | ^/python-tpl
   | ^/ros/(ROS-TCP-Endpoint|rosbag2)
-  | ^/src/(ROS-TCP-Endpoint|rosbag2)  # alternative for within docker container
   | ^/hl2ss
   | ^/install  # container-environment location derivative to source tree
 )
