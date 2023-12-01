@@ -71,11 +71,11 @@ ENV ANGEL_WORKSPACE_DIR="${ANGEL_WORKSPACE_DIR}"
 # Isolate package.xml files for rosdep dependency installation.
 #
 FROM base AS tmp_package_files
-COPY ./ros "${ANGEL_WORKSPACE_DIR}"/src
+COPY ./ros "${ANGEL_WORKSPACE_DIR}"/ros
 RUN mkdir "${ANGEL_WORKSPACE_DIR}"/tmp \
- && (find "${ANGEL_WORKSPACE_DIR}"/src -type f -name 'package.xml' -print | xargs -n1 -I{} cp --parents {} "${ANGEL_WORKSPACE_DIR}"/tmp) \
- && rm -r "${ANGEL_WORKSPACE_DIR}"/src \
- && mv "${ANGEL_WORKSPACE_DIR}"/tmp/"${ANGEL_WORKSPACE_DIR}"/src "${ANGEL_WORKSPACE_DIR}"/ \
+ && (find "${ANGEL_WORKSPACE_DIR}"/ros -type f -name 'package.xml' -print | xargs -n1 -I{} cp --parents {} "${ANGEL_WORKSPACE_DIR}"/tmp) \
+ && rm -r "${ANGEL_WORKSPACE_DIR}"/ros \
+ && mv "${ANGEL_WORKSPACE_DIR}"/tmp/"${ANGEL_WORKSPACE_DIR}"/ros "${ANGEL_WORKSPACE_DIR}"/ \
  && rm -r "${ANGEL_WORKSPACE_DIR}"/tmp
 
 #

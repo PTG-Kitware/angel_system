@@ -14,4 +14,4 @@ cd "$SCRIPT_DIR"
 # Activate the base ROS context and build our local workspace.
 # shellcheck disable=SC1090
 source "/opt/ros/${ROS_DISTRO}/setup.bash"
-colcon build --continue-on-error --merge-install "$@"
+colcon build --base-paths "${SCRIPT_DIR}/ros" --continue-on-error --merge-install "$@"
