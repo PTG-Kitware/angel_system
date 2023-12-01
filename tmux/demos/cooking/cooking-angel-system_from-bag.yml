@@ -76,12 +76,12 @@ windows:
             -r __ns:=${ROS_NAMESPACE}
             -p image_topic:=PVFramesBGR_HALF
             -p det_topic:=ObjectDetections2d
-            -p net_checkpoint:=${MODEL_DIR}/all_recipes+additional_objs+bkgd_yolov7.pt
+            -p net_checkpoint:=${MODEL_DIR}/object_detector/all_recipes+additional_objs+bkgd_yolov7.pt
             -p inference_img_size:=1280
             -p det_conf_threshold:=0.25
             -p cuda_device_id:=0
 
-        - simple_2d_overlay: ros2 run angel_debug Simple2dDetectionOverlay --ros-args
+        - simple_2d_overlay: ros2 run angel_utils Simple2dDetectionOverlay --ros-args
             -r __ns:=${ROS_NAMESPACE}
             -p topic_input_images:=PVFramesBGR_HALF
             -p topic_input_det_2d:=ObjectDetections2d
@@ -93,9 +93,9 @@ windows:
       -p image_ts_topic:=PVFramesBGR_TS
       -p det_topic:=ObjectDetections2d
       -p act_topic:=ActivityDetections
-      -p model_weights:=${MODEL_DIR}/yolo_all_recipes_additional_objs_bkgd_sample_rate_2.ckpt
-      -p model_mapping:=${MODEL_DIR}/yolo_all_recipes_additional_objs_bkgd_act_mapping.txt
-      -p model_det_label_mapping:=${MODEL_DIR}/activity_tcn-all_activities-det_label_mapping.json
+      -p model_weights:=${MODEL_DIR}/activity_classifier/yolo_all_recipes_additional_objs_bkgd_sample_rate_2.ckpt
+      -p model_mapping:=${MODEL_DIR}/activity_classifier/yolo_all_recipes_additional_objs_bkgd_act_mapping.txt
+      -p model_det_label_mapping:=${MODEL_DIR}/activity_classifier/activity_tcn-all_activities-det_label_mapping.json
       -p model_device:=cuda
       -p model_dets_conv_version:=5
       -p window_size:=30
@@ -113,7 +113,7 @@ windows:
         - task_monitor: ros2 run angel_system_nodes global_step_predictor --ros-args
             -r __ns:=${ROS_NAMESPACE}
             -p det_topic:=ActivityDetections
-            -p model_file:=${MODEL_DIR}/global_step_predictor_act_avgs_all_classes_v2.0_sample_rate_2.npy
+            -p model_file:=${MODEL_DIR}/task_monitor/global_step_predictor_act_avgs_all_classes_v2.0_sample_rate_2.npy
             -p threshold_multiplier_weak:=0.05
             -p thresh_frame_count:=$((8 / (30 / ${FRAME_RATE})))
             -p threshold_frame_count_weak:=2
