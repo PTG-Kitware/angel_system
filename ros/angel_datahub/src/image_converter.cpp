@@ -96,8 +96,8 @@ ImageConverter
   // clue what is going wrong.
   declare_parameter<std::string>( PARAM_TOPIC_INPUT_IMAGES );
   declare_parameter<std::string>( PARAM_TOPIC_OUTPUT_IMAGE );
-  declare_parameter<std::string>( PARAM_DROP_Nth_FRAME );
-  declare_parameter<std::string>( PARAM_CONVERT_NV12_TO_RGB );
+  declare_parameter<int>( PARAM_DROP_Nth_FRAME, 1 );
+  declare_parameter<bool>( PARAM_CONVERT_NV12_TO_RGB );
 
   auto topic_input_images =
     this->get_parameter( PARAM_TOPIC_INPUT_IMAGES ).as_string();
