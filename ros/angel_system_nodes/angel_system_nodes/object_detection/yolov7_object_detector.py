@@ -8,7 +8,8 @@ import rclpy
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup, ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 import rclpy.logging
-from rclpy.node import Node
+from rclpy.node import Node, ParameterDescriptor, Parameter
+from rclpy.parameter import Parameter
 from sensor_msgs.msg import Image
 
 from yolov7.detect_ptg import load_model, predict_image
@@ -20,7 +21,7 @@ from angel_system.utils.event import WaitAndClearEvent
 from angel_system.utils.simple_timer import SimpleTimer
 
 from angel_msgs.msg import ObjectDetection2dSet
-from angel_utils import declare_and_get_parameters, RateTracker
+from angel_utils import declare_and_get_parameters, RateTracker, DYNAMIC_TYPE
 
 
 BRIDGE = CvBridge()
@@ -50,7 +51,7 @@ class YoloObjectDetector(Node):
                 ("inference_img_size", 1280),  # inference size (pixels)
                 ("det_conf_threshold", 0.7),  # object confidence threshold
                 ("iou_threshold", 0.45),  # IOU threshold for NMS
-                ("cuda_device_id", "0"),  # cuda device, i.e. 0 or 0,1,2,3 or cpu
+                ("cuda_device_id", 0, DYNAMIC_TYPE),  # cuda device, i.e. 0 or 0,1,2,3 or cpu
                 ("no_trace", True),  # don`t trace model
                 ("agnostic_nms", False),  # class-agnostic NMS
                 # Runtime thread checkin heartbeat interval in seconds.
@@ -75,6 +76,8 @@ class YoloObjectDetector(Node):
 
         # Model
         self.model: Union[yolov7.models.yolo.Model, TracedModel]
+        if not self._model_ckpt_fp.is_file():
+            raise ValueError(f"Model checkpoint file did not exist: {self._model_ckpt_fp}")
         (self.device, self.model, self.stride, self.imgsz) = load_model(
             str(self._cuda_device_id), self._model_ckpt_fp, self._inference_img_size
         )
