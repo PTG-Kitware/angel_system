@@ -2,7 +2,7 @@ import numpy as np
 import rclpy
 from rclpy.node import Node
 
-from angel_system.data.config_structs import load_multi_task_config
+from angel_system.data.common.config_structs import load_multi_task_config
 from angel_system.global_step_prediction.global_step_predictor import (
     GlobalStepPredictor,
 )

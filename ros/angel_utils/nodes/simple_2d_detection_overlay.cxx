@@ -405,6 +405,6 @@ Simple2dDetectionOverlay
   ++m_detset_count;
 }
 
-} // namespace angel_debug
+} // namespace angel_utils
 
-RCLCPP_COMPONENTS_REGISTER_NODE( angel_debug::Simple2dDetectionOverlay )
+RCLCPP_COMPONENTS_REGISTER_NODE( angel_utils::Simple2dDetectionOverlay )

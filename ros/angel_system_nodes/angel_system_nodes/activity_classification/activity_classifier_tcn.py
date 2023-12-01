@@ -25,7 +25,7 @@ from rclpy.node import Node
 from rclpy.executors import MultiThreadedExecutor
 import torch
 
-from angel_system.tcn_hpl.predict import (
+from angel_system.activity_classification.tcn_hpl.predict import (
     load_module,
     ObjectDetectionsLTRB,
     objects_to_feats,

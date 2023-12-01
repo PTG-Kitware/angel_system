@@ -18,7 +18,7 @@ import numpy as np
 import rclpy
 from rclpy.node import Node
 
-from angel_system.data.config_structs import (
+from angel_system.data.common.config_structs import (
     load_activity_label_set,
     load_multi_task_config,
     load_active_task_configs,
