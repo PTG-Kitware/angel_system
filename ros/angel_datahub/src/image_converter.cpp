@@ -22,7 +22,7 @@ using rcl_interfaces::msg::ParameterType;
 using std::placeholders::_1;
 using std::placeholders::_2;
 
-namespace angel_utils {
+namespace angel_datahub {
 
 namespace {
 
@@ -209,6 +209,6 @@ ImageConverter
   response->image_height= m_image_height;
 }
 
-} // namespace angel_utils
+} // namespace angel_datahub
 
-RCLCPP_COMPONENTS_REGISTER_NODE( angel_utils::ImageConverter )
+RCLCPP_COMPONENTS_REGISTER_NODE( angel_datahub::ImageConverter )
