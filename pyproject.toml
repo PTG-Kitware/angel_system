@@ -11,7 +11,7 @@ description = ""
 authors = ["Kitware, Inc. <kitware@kitware.com>"]
 
 [tool.poetry.dependencies]
-python = "^3.8.10,<3.11"
+python = "^3.10.12,<3.11"
 easydict = ">=1.9"
 einops = ">=0.4.1"
 hmmlearn = ">=0.2.8"
