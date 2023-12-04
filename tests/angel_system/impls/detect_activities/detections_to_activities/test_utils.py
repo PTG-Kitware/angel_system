@@ -2,7 +2,7 @@ import numpy as np
 
 from tcn_hpl.data.components.augmentations import NormalizePixelPts
 
-from angel_system.impls.detect_activities.detections_to_activities.utils import (
+from angel_system.activity_classification.utils import (
     obj_det2d_set_to_feature_by_method,
 )
 

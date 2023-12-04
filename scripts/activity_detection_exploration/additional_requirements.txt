@@ -1,4 +1,0 @@
-jupyterlab ~= 3.4.4
-ipympl ~= 0.9.1
-ipywidgets ~= 7.7.1
-tqdm ~= 4.64.0

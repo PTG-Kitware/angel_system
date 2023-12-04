@@ -1,0 +1,92 @@
+#
+# System configuration to run the ANGEL system for the BBN system.
+#
+# This configuration is for the M2 tourniquet task.
+#
+
+name: BBN-M2-Tourniquet
+root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
+
+# Optional tmux socket
+# socket_name: foo
+
+# Note that the pre and post options have been deprecated and will be replaced by
+# project hooks.
+
+# Project hooks
+
+# Runs on project start, always
+# on_project_start: command
+on_project_start: |
+  export ROS_NAMESPACE=${ROS_NAMESPACE:-/kitware}
+  export HL2SS_API_URL=${HL2SS_API_URL:-128.33.193.178:8000}
+  export BBN_OUTPUT_URL=${BBN_OUTPUT_URL:-tcp://128.33.193.178:6667}
+  export CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/config
+  export NODE_CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/src/angel_system_nodes/configs
+  export MODEL_DIR=${ANGEL_WORKSPACE_DIR}/model_files
+# Run on project start, the first time
+# on_project_first_start: command
+
+# Run on project start, after the first time
+# on_project_restart: command
+
+# Run on project exit ( detaching from tmux session )
+# on_project_exit: command
+
+# Run on project stop
+# on_project_stop: command
+
+# Runs in each window and pane before window/pane specific commands. Useful for setting up interpreter versions.
+# pre_window: rbenv shell 2.0.0-p247
+
+# Pass command line options to tmux. Useful for specifying a different tmux.conf.
+# tmux_options: -f ~/.tmux.mac.conf
+tmux_options: -f <%= ENV["ANGEL_WORKSPACE_DIR"] %>/tmux/tmux.conf
+
+windows:
+  # Connection with the HL2 app via HL2SS sensor data streaming and the
+  # ROS-TCP-Endpoint
+  - sensor_input: ros2 run angel_system_nodes redis_ros_bridge --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p url:=${HL2SS_API_URL}
+      -p image_topic:=PVFramesBGR
+      -p hand_pose_topic:=HandJointPoseData
+
+  - object_detector: ros2 run angel_system_nodes berkeley_object_detector --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p image_topic:=PVFramesBGR
+      -p det_topic:=ObjectDetections2d
+      -p det_conf_threshold:=0.4
+      -p model_config:=${ANGEL_WORKSPACE_DIR}/angel_system/berkeley/configs/MC50-InstanceSegmentation/medical/M2/stage2/tourniquet_stage2_interstitial.yaml
+      -p cuda_device_id:=0
+
+  - activity_classifier: ros2 run angel_system_nodes activity_from_obj_dets_classifier --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p det_topic:=ObjectDetections2d
+      -p act_topic:=ActivityDetections
+      -p classifier_file:=${MODEL_DIR}/recipe_m2_apply_tourniquet_v0.052.pkl
+
+  - task_monitor: ros2 run angel_system_nodes task_monitor_v2 --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p det_topic:=ActivityDetections
+      -p config_file:=${CONFIG_DIR}/tasks/task_steps_config-recipe_m2_apply_tourniquet_v0.052.yaml
+      -p task_state_topic:=TaskUpdates
+      -p task_error_topic:=TaskErrors
+      -p query_task_graph_topic:=query_task_graph
+      -p step_complete_threshold:=0.5
+      -p sys_cmd_topic:=SystemCommands
+      -p enable_manual_progression:=false
+
+  - BBN Interface:
+      layout: even-vertical
+      panes:
+        - task-converter: ros2 run bbn_integration_py task_to_bbn_update --ros-args 
+            -r __ns:=${ROS_NAMESPACE}
+            -p task_update_topic:=TaskUpdates
+            -p bbn_update_topic:=BBNUpdates
+            -p task_graph_srv_topic:=query_task_graph
+            -p config:=${CONFIG_DIR}/bbn_integration/m2_tourniquet.yml
+        - zmq-publisher: ros2 run bbn_integration ZmqIntegrationClient --ros-args
+            -r __ns:=${ROS_NAMESPACE}
+            -p topic_update_msg:=BBNUpdates
+            -p server_address:=${BBN_OUTPUT_URL}

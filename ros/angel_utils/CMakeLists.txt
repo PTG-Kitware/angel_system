@@ -14,7 +14,12 @@ endif()
 find_package( ament_cmake REQUIRED )
 find_package( ament_cmake_python REQUIRED )
 find_package( rclcpp REQUIRED )
+find_package( rclcpp_components REQUIRED )
 find_package( rclpy REQUIRED )
+find_package( sensor_msgs REQUIRED )
+find_package( OpenCV REQUIRED COMPONENTS core )
+find_package( cv_bridge REQUIRED )
+find_package( image_transport REQUIRED )
 find_package( angel_msgs REQUIRED )
 
 #
@@ -27,6 +32,7 @@ find_package( angel_msgs REQUIRED )
 #
 add_library( angel_utils SHARED
   src/rate_tracker.cpp
+  nodes/simple_2d_detection_overlay.cxx
   )
 target_include_directories( angel_utils PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -34,6 +40,11 @@ target_include_directories( angel_utils PUBLIC
   )
 ament_target_dependencies( angel_utils
   rclcpp
+  rclcpp_components
+  sensor_msgs
+  cv_bridge
+  image_transport
+  OpenCV
   angel_msgs
   )
 ament_export_targets( angel_utils_targets HAS_LIBRARY_TARGET )
@@ -52,6 +63,11 @@ install( TARGETS angel_utils
   RUNTIME DESTINATION bin
   INCLUDES DESTINATION include
   )
+
+# Component registration
+rclcpp_components_register_node( angel_utils
+PLUGIN "angel_utils::Simple2dDetectionOverlay"
+EXECUTABLE Simple2dDetectionOverlay )
 
 #
 # Python things

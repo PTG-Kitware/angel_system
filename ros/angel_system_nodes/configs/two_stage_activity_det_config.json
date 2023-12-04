@@ -1,9 +1,0 @@
-{
-    "checkpoint_path": "model_files/two_stage_ros.ckpt",
-    "num_classes": 6,
-    "labels_file": "model_files/coffee_label_list.txt",
-    "num_frames": 8,
-    "sampling_rate": 2,
-    "torch_device": "cuda:0",
-    "det_threshold": 0.75
-}
