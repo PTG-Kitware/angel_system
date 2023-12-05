@@ -12,6 +12,7 @@ Welcome to ANGEL System's documentation!
 
    algorithms/index
    system/index
+   local_python_env
    python_tpl
 
 
