@@ -87,6 +87,7 @@ livereload = "*"
 jupyter = ">=1.0"
 spyder-kernels = ">=2.4"
 # Testing
+mypy = "*"
 pytest = "*"
 pytest-cov = "*"
 
