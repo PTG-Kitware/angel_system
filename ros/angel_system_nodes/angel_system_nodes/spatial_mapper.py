@@ -1,9 +1,4 @@
-import queue
-import socket
-import struct
-import sys
 import time
-import threading
 
 import numpy as np
 import rclpy
@@ -15,6 +10,7 @@ from angel_msgs.msg import (
     HeadsetPoseData,
 )
 from angel_msgs.srv import QueryImageSize
+from angel_utils import make_default_main
 from angel_utils.conversion import to_confidence_matrix
 from geometry_msgs.msg import Point
 
@@ -504,17 +500,7 @@ class SpatialMapSubscriber(Node):
         return scaled_point
 
 
-def main():
-    rclpy.init()
-
-    spatial_map_subscriber = SpatialMapSubscriber()
-    rclpy.spin(spatial_map_subscriber)
-
-    # Destroy the node explicitly
-    # (optional - otherwise it will be done automatically
-    # when the garbage collector destroys the node object)
-    spatial_map_subscriber.destroy_node()
-    rclpy.shutdown()
+main = make_default_main(SpatialMapSubscriber)
 
 
 if __name__ == "__main__":

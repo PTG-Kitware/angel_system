@@ -4,12 +4,8 @@ from typing import Union
 
 from cv_bridge import CvBridge
 import numpy as np
-import rclpy
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup, ReentrantCallbackGroup
-from rclpy.executors import MultiThreadedExecutor
-import rclpy.logging
 from rclpy.node import Node, ParameterDescriptor, Parameter
-from rclpy.parameter import Parameter
 from sensor_msgs.msg import Image
 
 from yolov7.detect_ptg import load_model, predict_image
@@ -22,6 +18,7 @@ from angel_system.utils.simple_timer import SimpleTimer
 
 from angel_msgs.msg import ObjectDetection2dSet
 from angel_utils import declare_and_get_parameters, RateTracker, DYNAMIC_TYPE
+from angel_utils import make_default_main
 
 
 BRIDGE = CvBridge()
@@ -226,6 +223,8 @@ class YoloObjectDetector(Node):
                 )
 
     def destroy_node(self):
+        print("Stopping runtime")
+        self.rt_stop()
         print("Shutting down runtime thread...")
         self._rt_active.clear()  # make RT active flag "False"
         self._rt_thread.join()
@@ -233,32 +232,12 @@ class YoloObjectDetector(Node):
         super().destroy_node()
 
 
-def main():
-    rclpy.init()
-    log = rclpy.logging.get_logger("main")
-
-    node = YoloObjectDetector()
-
-    # Don't really want to use *all* available threads...
-    # 3 threads because:
-    # - 1 known subscriber which has their own group
-    # - 1 for default group
-    # - 1 for publishers
-    executor = MultiThreadedExecutor(num_threads=3)
-    executor.add_node(node)
-    try:
-        executor.spin()
-    except KeyboardInterrupt:
-        log.info("Keyboard interrupt, shutting down.\n")
-    finally:
-        node.rt_stop()
-
-        # Destroy the node explicitly
-        # (optional - otherwise it will be done automatically
-        # when the garbage collector destroys the node object)
-        node.destroy_node()
-
-        rclpy.shutdown()
+# Don't really want to use *all* available threads...
+# 3 threads because:
+# - 1 known subscriber which has their own group
+# - 1 for default group
+# - 1 for publishers
+main = make_default_main(YoloObjectDetector, multithreaded_executor=3)
 
 
 if __name__ == "__main__":

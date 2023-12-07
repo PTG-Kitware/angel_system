@@ -12,6 +12,7 @@ from rclpy.node import Node
 import simpleaudio as sa
 
 from angel_msgs.msg import HeadsetAudioData, Utterance
+from angel_utils import make_default_main
 
 
 AUDIO_TOPIC = "audio_topic"
@@ -215,12 +216,7 @@ class ASR(Node):
                     self._publisher.publish(utterance_msg)
 
 
-def main():
-    rclpy.init()
-    asr = ASR()
-    rclpy.spin(asr)
-    asr.destroy_node()
-    rclpy.shutdown()
+main = make_default_main(ASR)
 
 
 if __name__ == "__main__":

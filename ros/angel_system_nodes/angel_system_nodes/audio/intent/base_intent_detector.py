@@ -1,11 +1,11 @@
 import queue
-import rclpy
 from rclpy.node import Node
 from termcolor import colored
 import threading
 
 from angel_msgs.msg import InterpretedAudioUserIntent, Utterance
 from angel_utils import declare_and_get_parameters
+from angel_utils import make_default_main
 
 NEXT_STEP_KEYPHRASES = ["skip", "next", "next step"]
 PREV_STEP_KEYPHRASES = ["previous", "previous step", "last step", "go back"]
@@ -152,12 +152,7 @@ class BaseIntentDetector(Node):
         return False
 
 
-def main():
-    rclpy.init()
-    intent_detector = BaseIntentDetector()
-    rclpy.spin(intent_detector)
-    intent_detector.destroy_node()
-    rclpy.shutdown()
+main = make_default_main(BaseIntentDetector)
 
 
 if __name__ == "__main__":

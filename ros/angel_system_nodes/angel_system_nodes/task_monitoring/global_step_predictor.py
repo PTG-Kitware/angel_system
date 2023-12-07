@@ -19,6 +19,7 @@ from angel_msgs.msg import (
 )
 from angel_msgs.srv import QueryTaskGraph
 from angel_utils import declare_and_get_parameters
+from angel_utils import make_default_main
 
 from angel_system.global_step_prediction.global_step_predictor import (
     GlobalStepPredictor,
@@ -509,29 +510,11 @@ class GlobalStepPredictorNode(Node):
         # log.info(f"Generated broad plot to: {out_p}")
 
     def destroy_node(self):
-        log = self.get_logger()
-        log.info("Shutting down runtime threads...")
-        log.info("Shutting down runtime threads... Done")
-        super()
+        self.output_gt_plotting()
+        super().destroy_node()
 
 
-def main():
-    rclpy.init()
-
-    gsp = GlobalStepPredictorNode()
-
-    try:
-        rclpy.spin(gsp)
-    except KeyboardInterrupt:
-        gsp.get_logger().info("Keyboard interrupt, shutting down.\n")
-        gsp.output_gt_plotting()
-
-    # Destroy the node explicitly
-    # (optional - otherwise it will be done automatically
-    # when the garbage collector destroys the node object)
-    gsp.destroy_node()
-
-    rclpy.shutdown()
+main = make_default_main(GlobalStepPredictorNode)
 
 
 if __name__ == "__main__":

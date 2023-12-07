@@ -5,24 +5,19 @@ trainer.predict(model=model, dataloaders=dataloaders, ckpt_path=cfg.ckpt_path)
 """
 import json
 from heapq import heappush, heappop
-import logging
 from pathlib import Path
 from threading import Condition, Event, Lock, Thread
 from typing import Callable
 from typing import Dict
 from typing import List
 from typing import Optional
-from typing import Tuple
 
 import kwcoco
 from builtin_interfaces.msg import Time
 import numpy as np
 import numpy.typing as npt
-import rclpy
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
-import rclpy.logging
 from rclpy.node import Node
-from rclpy.executors import MultiThreadedExecutor
 import torch
 
 from angel_system.activity_classification.tcn_hpl.predict import (
@@ -39,7 +34,7 @@ from angel_msgs.msg import (
     ObjectDetection2dSet,
     ActivityDetection,
 )
-from angel_utils import declare_and_get_parameters, RateTracker
+from angel_utils import declare_and_get_parameters, make_default_main, RateTracker
 from angel_utils.activity_classification import InputWindow, InputBuffer
 from angel_utils.conversion import time_to_int
 from angel_utils.object_detection import max_labels_and_confs
@@ -683,6 +678,8 @@ class ActivityClassifierTCN(Node):
 
     def destroy_node(self):
         log = self.get_logger()
+        log.info("Stopping node runtime")
+        self.rt_stop()
         with SimpleTimer("Shutting down runtime thread...", log.info):
             self._rt_active.clear()  # make RT active flag "False"
             self._rt_thread.join()
@@ -690,33 +687,7 @@ class ActivityClassifierTCN(Node):
         super().destroy_node()
 
 
-def main():
-    logging.basicConfig(
-        format="[%(levelname)s] [%(asctime)s] [%(name)s.%(funcName)s]: %(message)s"
-    )
-    logging.getLogger().setLevel(logging.INFO)
-
-    rclpy.init()
-    log = rclpy.logging.get_logger("main")
-
-    activity_classifier = ActivityClassifierTCN()
-
-    executor = MultiThreadedExecutor(num_threads=4)
-    executor.add_node(activity_classifier)
-    try:
-        executor.spin()
-    except KeyboardInterrupt:
-        log.info("Keyboard interrupt, shutting down.\n")
-    finally:
-        log.info("Stopping node runtime")
-        activity_classifier.rt_stop()
-
-        # Destroy the node explicitly
-        # (optional - otherwise it will be done automatically
-        # when the garbage collector destroys the node object)
-        activity_classifier.destroy_node()
-
-        rclpy.shutdown()
+main = make_default_main(ActivityClassifierTCN, multithreaded_executor=4)
 
 
 if __name__ == "__main__":

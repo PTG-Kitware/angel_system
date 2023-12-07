@@ -2,7 +2,6 @@ import json
 import openai
 import os
 import queue
-import rclpy
 from rclpy.node import Node
 import requests
 from termcolor import colored
@@ -10,6 +9,8 @@ import threading
 
 from angel_msgs.msg import InterpretedAudioUserEmotion, SystemTextResponse
 from angel_utils import declare_and_get_parameters
+from angel_utils import make_default_main
+
 
 openai.organization = os.getenv("OPENAI_ORG_ID")
 openai.api_key = os.getenv("OPENAI_API_KEY")
@@ -153,12 +154,7 @@ class QuestionAnswerer(Node):
         return msg
 
 
-def main():
-    rclpy.init()
-    question_answerer = QuestionAnswerer()
-    rclpy.spin(question_answerer)
-    question_answerer.destroy_node()
-    rclpy.shutdown()
+main = make_default_main(QuestionAnswerer)
 
 
 if __name__ == "__main__":

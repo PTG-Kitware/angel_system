@@ -1,11 +1,11 @@
 import threading
-import time
 
 import simpleaudio as sa
 
-import rclpy
 from rclpy.node import Node
+
 from angel_msgs.msg import HeadsetAudioData
+from angel_utils import make_default_main
 
 
 class AudioPlayer(Node):
@@ -101,18 +101,7 @@ class AudioPlayer(Node):
             audio_player_object.wait_done()
 
 
-def main():
-    rclpy.init()
-
-    audio_player = AudioPlayer()
-
-    rclpy.spin(audio_player)
-
-    # Destroy the node explicitly
-    # (optional - otherwise it will be done automatically
-    # when the garbage collector destroys the node object)
-    audio_player.destroy_node()
-    rclpy.shutdown()
+main = make_default_main(AudioPlayer)
 
 
 if __name__ == "__main__":

@@ -1,15 +1,16 @@
 from langchain import PromptTemplate, FewShotPromptTemplate
 from langchain.chains import LLMChain
 from langchain.chat_models import ChatOpenAI
-from langchain.llms import OpenAI
 import openai
 import os
 import rclpy
 
-from ros.angel_system_nodes.angel_system_nodes.audio.intent.base_intent_detector import (
+from angel_system_nodes.audio.intent.base_intent_detector import (
     BaseIntentDetector,
     INTENT_LABELS,
 )
+from angel_utils import make_default_main
+
 
 openai.organization = os.getenv("OPENAI_ORG_ID")
 openai.api_key = os.getenv("OPENAI_API_KEY")
@@ -91,12 +92,7 @@ class GptIntentDetector(BaseIntentDetector):
         return self.chain.run(utterance=msg), 0.5
 
 
-def main():
-    rclpy.init()
-    intent_detector = GptIntentDetector()
-    rclpy.spin(intent_detector)
-    intent_detector.destroy_node()
-    rclpy.shutdown()
+main = make_default_main(GptIntentDetector)
 
 
 if __name__ == "__main__":
