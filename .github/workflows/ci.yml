@@ -31,6 +31,9 @@ jobs:
       # Use scripting to perform a build for the current state of this branch.
       - name: Build image
         run: ./angel-docker-build.sh
+      # Make sure workspace builds with this environment
+      - name: Build Workspace
+        run: ./angel-workspace-shell.sh -s workspace-shell-dev ./workspace_build.sh
 
   code-style-py:
     runs-on: ubuntu-latest
