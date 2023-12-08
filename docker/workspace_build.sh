@@ -16,14 +16,6 @@
 set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# We expect this to only be run manually, thus if we're not in a TTY session
-if ! tty -s
-then
-  echo "ERROR: Not running in a TTY. Are you sure you meant to run this?"
-  exit 1
-fi
-
-
 # We don't want to auto apt update every single time, so only do it once on
 # first invocation of this script. The /tmp directory is not expected to be
 # mounted to the host filesystem, so it should be "fresh" every instantiation

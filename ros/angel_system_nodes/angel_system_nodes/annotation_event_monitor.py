@@ -2,10 +2,10 @@ import threading
 from threading import Lock
 
 from pynput import keyboard
-import rclpy
 from rclpy.node import Node
 
 from angel_msgs.msg import AnnotationEvent
+from angel_utils import make_default_main
 
 
 class AnnotationEventMonitor(Node):
@@ -90,23 +90,16 @@ class AnnotationEventMonitor(Node):
                 self._publisher.publish(msg)
 
 
-def main():
-    rclpy.init()
-
-    event_monitor = AnnotationEventMonitor()
-
-    keyboard_t = threading.Thread(target=event_monitor.monitor_keypress)
+def init_kb_thread(node):
+    """
+    Initialize the
+    """
+    keyboard_t = threading.Thread(target=node.monitor_keypress)
     keyboard_t.daemon = True
     keyboard_t.start()
 
-    rclpy.spin(event_monitor)
 
-    # Destroy the node explicitly
-    # (optional - otherwise it will be done automatically
-    # when the garbage collector destroys the node object)
-    event_monitor.destroy_node()
-
-    rclpy.shutdown()
+main = make_default_main(AnnotationEventMonitor, pre_spin_callback=init_kb_thread)
 
 
 if __name__ == "__main__":

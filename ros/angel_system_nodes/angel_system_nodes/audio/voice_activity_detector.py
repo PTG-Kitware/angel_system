@@ -11,6 +11,8 @@ from rclpy.node import Node
 from rclpy.parameter import Parameter
 
 from angel_msgs.msg import HeadsetAudioData
+from angel_utils import make_default_main
+
 
 FLOAT32_BYTE_LENGTH = 4  # Number of Bytes in a float32.
 
@@ -432,12 +434,7 @@ class VoiceActivityDetector(Node):
         return int(seconds_timestamp * sample_rate)
 
 
-def main():
-    rclpy.init()
-    vad = VoiceActivityDetector()
-    rclpy.spin(vad)
-    vad.destroy_node()
-    rclpy.shutdown()
+main = make_default_main(VoiceActivityDetector)
 
 
 if __name__ == "__main__":

@@ -3,12 +3,12 @@ from langchain.chains import LLMChain
 from langchain.chat_models import ChatOpenAI
 import openai
 import os
-import rclpy
 
-from ros.angel_system_nodes.angel_system_nodes.audio.emotion.base_emotion_detector import (
+from angel_system_nodes.audio.emotion.base_emotion_detector import (
     BaseEmotionDetector,
     LABEL_MAPPINGS,
 )
+from angel_utils import make_default_main
 
 openai.organization = os.getenv("OPENAI_ORG_ID")
 openai.api_key = os.getenv("OPENAI_API_KEY")
@@ -90,12 +90,7 @@ class GptEmotionDetector(BaseEmotionDetector):
         return (self.chain.run(utterance=msg.utterance_text), 0.5)
 
 
-def main():
-    rclpy.init()
-    emotion_detector = GptEmotionDetector()
-    rclpy.spin(emotion_detector)
-    emotion_detector.destroy_node()
-    rclpy.shutdown()
+main = make_default_main(GptEmotionDetector)
 
 
 if __name__ == "__main__":

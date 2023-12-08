@@ -6,7 +6,7 @@
 #include <numeric>
 
 // ROS2 things
-#include <cv_bridge/cv_bridge.h>
+#include <cv_bridge/cv_bridge.hpp>
 #include <rcl_interfaces/msg/parameter_descriptor.hpp>
 #include <rcl_interfaces/msg/parameter_type.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -22,7 +22,7 @@ using rcl_interfaces::msg::ParameterType;
 using std::placeholders::_1;
 using std::placeholders::_2;
 
-namespace image_converter {
+namespace angel_datahub {
 
 namespace {
 
@@ -32,7 +32,7 @@ namespace {
 
 // Topic we expect to receive headset NV12 images from.
 DEFINE_PARAM_NAME( PARAM_TOPIC_INPUT_IMAGES, "topic_input_images" );
-// Topic we will outpit RGB8 images to.
+// Topic we will output RGB8 images to.
 DEFINE_PARAM_NAME( PARAM_TOPIC_OUTPUT_IMAGE, "topic_output_images" );
 // Drop every other Nth frame (Or None if set to 1)
 DEFINE_PARAM_NAME( PARAM_DROP_Nth_FRAME, "drop_nth_frame" );
@@ -94,10 +94,10 @@ ImageConverter
   // This two-stage declare->get allows the lack of passing a parameter to
   // throw an error with the parameter name in the error so the user has a
   // clue what is going wrong.
-  declare_parameter( PARAM_TOPIC_INPUT_IMAGES );
-  declare_parameter( PARAM_TOPIC_OUTPUT_IMAGE );
-  declare_parameter( PARAM_DROP_Nth_FRAME );
-  declare_parameter( PARAM_CONVERT_NV12_TO_RGB );
+  declare_parameter<std::string>( PARAM_TOPIC_INPUT_IMAGES );
+  declare_parameter<std::string>( PARAM_TOPIC_OUTPUT_IMAGE );
+  declare_parameter<int>( PARAM_DROP_Nth_FRAME, 1 );
+  declare_parameter<bool>( PARAM_CONVERT_NV12_TO_RGB );
 
   auto topic_input_images =
     this->get_parameter( PARAM_TOPIC_INPUT_IMAGES ).as_string();
@@ -145,7 +145,7 @@ ImageConverter
 
   if(m_image_id % m_drop_nth_frame == 0){
     cv::Mat rgb_image;
-    
+
     std::string encoding;
     sensor_msgs::msg::Image::SharedPtr image_message;
     if(m_convert_nv12_to_rgb){
@@ -168,8 +168,7 @@ ImageConverter
 
       image_message = image_msg;
     }
-    
-    
+
     image_message->header.stamp = image_msg->header.stamp;
     image_message->header.frame_id = frame_id;
 
@@ -194,7 +193,7 @@ ImageConverter
         << "Receive --> Publish Latency: " << delta_receive_publish << std::endl
         << "Capture --> Publish Latency: " << delta_image_publish << std::endl
         << "Image ID: " << m_image_id << std::endl;
-      RCLCPP_INFO( log, ss.str() );
+      RCLCPP_INFO_STREAM( log, ss.str() );
     }
   }
 }
@@ -210,6 +209,6 @@ ImageConverter
   response->image_height= m_image_height;
 }
 
-} // namespace image_converter
+} // namespace angel_datahub
 
-RCLCPP_COMPONENTS_REGISTER_NODE( image_converter::ImageConverter)
+RCLCPP_COMPONENTS_REGISTER_NODE( angel_datahub::ImageConverter )

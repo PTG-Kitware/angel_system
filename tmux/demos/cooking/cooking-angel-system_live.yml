@@ -164,7 +164,7 @@ windows:
       layout: even-vertical
       panes:
         - engineering_ui_websocket: ros2 launch rosbridge_server rosbridge_websocket_launch.xml port:=9090
-        - engineering_ui_server: node src/angel_utils/multi_task_demo_ui/index.js
+        - engineering_ui_server: node ros/angel_utils/multi_task_demo_ui/index.js
             --namespace=${ROS_NAMESPACE}
             --image_topic=pv_image_detections_2d/compressed
             --query_task_graph_topic=query_task_graph

@@ -2,6 +2,8 @@ import rclpy
 from rclpy.node import Node
 
 from angel_msgs.msg import InterpretedAudioUserIntent, Utterance
+from angel_utils import make_default_main
+
 
 # Please refer to labels defined in
 # https://docs.google.com/document/d/1uuvSL5de3LVM9c0tKpRKYazDxckffRHf7IAcabSw9UA .
@@ -118,15 +120,7 @@ class IntentDetector(Node):
         return False
 
 
-def main():
-    rclpy.init()
-
-    intentDetector = IntentDetector()
-
-    rclpy.spin(intentDetector)
-
-    intentDetector.destroy_node()
-    rclpy.shutdown()
+main = make_default_main(IntentDetector)
 
 
 if __name__ == "__main__":

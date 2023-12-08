@@ -6,6 +6,7 @@ from angel_msgs.msg import (
     InterpretedAudioUserIntent,
     SystemCommands,
 )
+from angel_utils import make_default_main
 
 
 # Parameter name constants
@@ -113,18 +114,7 @@ class IntentToCommand(Node):
         self._sys_cmd_publisher.publish(sys_cmd_msg)
 
 
-def main():
-    rclpy.init()
-
-    node = IntentToCommand()
-    rclpy.spin(node)
-
-    # Destroy the node explicitly
-    # (optional - otherwise it will be done automatically
-    # when the garbage collector destroys the node object)
-    node.destroy_node()
-
-    rclpy.shutdown()
+main = make_default_main(IntentToCommand)
 
 
 if __name__ == "__main__":

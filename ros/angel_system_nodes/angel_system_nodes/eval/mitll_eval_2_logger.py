@@ -15,23 +15,14 @@ from threading import RLock
 from typing import Optional
 
 import numpy as np
-import rclpy
 from rclpy.node import Node
-
-from angel_system.data.common.config_structs import (
-    load_activity_label_set,
-    load_multi_task_config,
-    load_active_task_configs,
-)
-from angel_system.global_step_prediction.global_step_predictor import (
-    GlobalStepPredictor,
-)
 
 from angel_msgs.msg import (
     AruiUserNotification,
     TaskUpdate,
 )
 from angel_utils import declare_and_get_parameters
+from angel_utils import make_default_main
 from angel_utils.conversion import time_to_float
 
 
@@ -266,24 +257,7 @@ class Eval2LoggingNode(Node):
         super().destroy_node()
 
 
-def main():
-    rclpy.init()
-    log = rclpy.logging.get_logger("main")
-
-    node = Eval2LoggingNode()
-
-    try:
-        rclpy.spin(node)
-    except KeyboardInterrupt:
-        log.info("Keyboard interrupt, shutting down.\n")
-    finally:
-        log.info("Shutting down node and rclpy")
-        # Destroy the node explicitly
-        # (optional - otherwise it will be done automatically
-        # when the garbage collector destroys the node object)
-        node.destroy_node()
-
-        rclpy.shutdown()
+main = make_default_main(Eval2LoggingNode)
 
 
 if __name__ == "__main__":

@@ -1,14 +1,11 @@
 from threading import Event, Thread
 
 from cv_bridge import CvBridge
-import cv2
 from geometry_msgs.msg import (
     Point,
     Pose,
     Quaternion,
 )
-import numpy as np
-import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 import websockets
@@ -19,6 +16,7 @@ from angel_msgs.msg import (
     HeadsetAudioData,
 )
 from angel_utils import declare_and_get_parameters, RateTracker
+from angel_utils import make_default_main
 from angel_utils.conversion import hl2ss_stamp_to_ros_time
 from angel_utils.hand import JOINT_LIST
 from hl2ss.viewer import hl2ss
@@ -252,24 +250,14 @@ class RedisROSBridge(Node):
 
         return hand_msg
 
+    def destroy_node(self):
+        """
+        Clean up resources.
+        """
+        self.shutdown_clients()
 
-def main():
-    rclpy.init()
 
-    redis_ros_bridge = RedisROSBridge()
-
-    try:
-        rclpy.spin(redis_ros_bridge)
-    except KeyboardInterrupt:
-        redis_ros_bridge.get_logger().info("Keyboard interrupt, shutting down.\n")
-        redis_ros_bridge.shutdown_clients()
-
-    # Destroy the node explicitly
-    # (optional - otherwise it will be done automatically
-    # when the garbage collector destroys the node object)
-    redis_ros_bridge.destroy_node()
-
-    rclpy.shutdown()
+main = make_default_main(RedisROSBridge)
 
 
 if __name__ == "__main__":

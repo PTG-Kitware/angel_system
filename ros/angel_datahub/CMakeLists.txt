@@ -43,7 +43,7 @@ install( TARGETS angel_datahub
 
 # Component registration
 rclcpp_components_register_node( angel_datahub
-  PLUGIN "image_converter::ImageConverter"
+  PLUGIN "angel_datahub::ImageConverter"
   EXECUTABLE ImageConverter )
 rclcpp_components_register_node( angel_datahub
   PLUGIN "angel_datahub::AngelDataHub"

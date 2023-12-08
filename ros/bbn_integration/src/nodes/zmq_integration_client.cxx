@@ -57,8 +57,8 @@ public:
   ZmqIntegrationClient( rclcpp::NodeOptions const& options )
     : rclcpp::Node( "ZmqIntegrationClient", options )
   {
-    this->declare_parameter( "topic_update_msg" );
-    this->declare_parameter( "server_address" );
+    this->declare_parameter< std::string >( "topic_update_msg" );
+    this->declare_parameter< std::string >( "server_address" );
 
     // Separating parameter declaration and getting so the error messages are
     // more (read: at all) informative.
@@ -66,9 +66,9 @@ public:
     m_server_address = this->get_parameter( "server_address" ).as_string();
 
     // Initialize the socket with the server address
-    RCLCPP_INFO(
+    RCLCPP_INFO_STREAM(
       get_logger(),
-      "Initializing ZMQ socket for the server address: " + m_server_address );
+      "Initializing ZMQ socket for the server address: " << m_server_address );
     if( !std::regex_match( m_server_address, TCP_URL_REGEX() ) )
     {
       throw std::invalid_argument( "Input server address was not a valid TCP url. "
@@ -112,7 +112,7 @@ public:
       std::stringstream ss;
       ss        << "Failed to translate input BBNUpdate message into yaml: "
                 << ex.what();
-      RCLCPP_ERROR( log, ss.str() );
+      RCLCPP_ERROR_STREAM( log, ss.str() );
       return;
     }
 
@@ -148,7 +148,7 @@ public:
       RCLCPP_WARN( log, "Failed to receive server reply via ZMQ socket." );
       return;
     }
-    RCLCPP_INFO( log, "Received reply from server: \"" + reply_msg.to_string() + "\"" );
+    RCLCPP_INFO_STREAM( log, "Received reply from server: \"" << reply_msg.to_string() << "\"" );
   }
 };
 

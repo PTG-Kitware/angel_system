@@ -1,13 +1,13 @@
-from threading import Event, Thread
+from threading import Thread
 
 from pynput import keyboard
-import rclpy
 from rclpy.node import Node
 
 from angel_msgs.msg import (
     SystemCommands,
 )
 from angel_utils import declare_and_get_parameters
+from angel_utils import make_default_main
 
 
 PARAM_SYS_CMD_TOPIC = "system_command_topic"
@@ -93,21 +93,7 @@ class KeyboardToSystemCommands(Node):
         self._sys_cmd_publisher.publish(msg)
 
 
-def main():
-    rclpy.init()
-
-    keyboard_sys_cmd = KeyboardToSystemCommands()
-
-    try:
-        rclpy.spin(keyboard_sys_cmd)
-    except KeyboardInterrupt:
-        keyboard_sys_cmd.get_logger().info("Keyboard interrupt, shutting down.\n")
-
-    # Destroy the node explicitly
-    # (optional - otherwise it will be done automatically
-    # when the garbage collector destroys the node object)
-    keyboard_sys_cmd.destroy_node()
-    rclpy.shutdown()
+main = make_default_main(KeyboardToSystemCommands)
 
 
 if __name__ == "__main__":

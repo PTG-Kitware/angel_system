@@ -4,13 +4,12 @@ import numpy as np
 
 from angel_system.data.common.config_structs import load_object_label_set
 
-import rclpy
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
-from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 
 from angel_msgs.msg import ObjectDetection2dSet
 from angel_utils import declare_and_get_parameters, RateTracker
+from angel_utils import make_default_main
 from angel_utils.object_detection import max_labels_and_confs
 
 
@@ -120,30 +119,12 @@ class ObjectDetectionFilterNode(Node):
         )
 
 
-def main():
-    rclpy.init()
-    log = rclpy.logging.get_logger("main")
-
-    node = ObjectDetectionFilterNode()
-
-    # Don't really want to use *all* available threads...
-    # 3 threads because:
-    # - 1 known subscriber which has their own group
-    # - 1 for default group
-    # - 1 for publishers
-    executor = MultiThreadedExecutor(num_threads=2)
-    executor.add_node(node)
-    try:
-        executor.spin()
-    except KeyboardInterrupt:
-        log.info("Keyboard interrupt, shutting down.\n")
-    finally:
-        # Destroy the node explicitly
-        # (optional - otherwise it will be done automatically
-        # when the garbage collector destroys the node object)
-        node.destroy_node()
-
-        rclpy.shutdown()
+# Don't really want to use *all* available threads...
+# 3 threads because:
+# - 1 known subscriber which has their own group
+# - 1 for default group
+# - 1 for publishers
+main = make_default_main(ObjectDetectionFilterNode, multithreaded_executor=3)
 
 
 if __name__ == "__main__":

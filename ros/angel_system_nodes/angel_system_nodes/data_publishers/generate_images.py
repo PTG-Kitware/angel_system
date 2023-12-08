@@ -98,8 +98,12 @@ class GenerateImages(Node):
 
 
 def main(args=None):
+    # Not using the default main builder due to non-standard main functionality
+    # desired by this.
+
     # Hard code some parameters until we (re)learn parameterization.
     rclpy.init(args=args)
+    log = rclpy.logging.get_logger("main")
 
     # gen_images = GenerateImages()
     # rclpy.spin(gen_images)
@@ -117,9 +121,18 @@ def main(args=None):
         )
         node_list.append(node)
         executor.add_node(node)
-    executor.spin()
-    for node in node_list:
-        executor.remove_node(node)
-        node.destroy_node()
 
-    rclpy.shutdown()
+    try:
+        executor.spin()
+    except (KeyboardInterrupt, rclpy.executors.ExternalShutdownException):
+        log.warn("Interrupt/shutdown signal received.")
+    finally:
+        # Destroy the node explicitly
+        # (optional - otherwise it will be done automatically
+        # when the garbage collector destroys the node object)
+        for node in node_list:
+            executor.remove_node(node)
+            node.destroy_node()
+
+        log.info("Final try-shutdown")
+        rclpy.try_shutdown()

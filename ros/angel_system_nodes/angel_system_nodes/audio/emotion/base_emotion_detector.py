@@ -1,5 +1,4 @@
 import queue
-import rclpy
 from rclpy.node import Node
 from termcolor import colored
 import threading
@@ -7,6 +6,8 @@ from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 from angel_msgs.msg import InterpretedAudioUserEmotion, InterpretedAudioUserIntent
 from angel_utils import declare_and_get_parameters
+from angel_utils import make_default_main
+
 
 IN_EXPECT_USER_INTENT_TOPIC = "expect_user_intent_topic"
 IN_INTERP_USER_INTENT_TOPIC = "interp_user_intent_topic"
@@ -156,12 +157,7 @@ class BaseEmotionDetector(Node):
         return msg
 
 
-def main():
-    rclpy.init()
-    emotion_detector = BaseEmotionDetector()
-    rclpy.spin(emotion_detector)
-    emotion_detector.destroy_node()
-    rclpy.shutdown()
+main = make_default_main(BaseEmotionDetector)
 
 
 if __name__ == "__main__":

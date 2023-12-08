@@ -1,5 +1,4 @@
 import numpy as np
-import rclpy
 from rclpy.node import Node
 
 from angel_system.data.common.config_structs import load_multi_task_config
@@ -9,6 +8,7 @@ from angel_system.global_step_prediction.global_step_predictor import (
 
 from angel_msgs.msg import TaskUpdate
 from angel_utils import declare_and_get_parameters
+from angel_utils import make_default_main
 
 
 ###############################################################################
@@ -125,24 +125,7 @@ class TaskUpdateLodTransformerNode(Node):
         self._pub.publish(msg)
 
 
-def main():
-    rclpy.init()
-    log = rclpy.logging.get_logger("main")
-
-    node = TaskUpdateLodTransformerNode()
-
-    try:
-        rclpy.spin(node)
-    except KeyboardInterrupt:
-        log.info("Keyboard interrupt, shutting down.\n")
-    finally:
-        log.info("Shutting down node and rclpy")
-        # Destroy the node explicitly
-        # (optional - otherwise it will be done automatically
-        # when the garbage collector destroys the node object)
-        node.destroy_node()
-
-        rclpy.shutdown()
+main = make_default_main(TaskUpdateLodTransformerNode)
 
 
 if __name__ == "__main__":

@@ -7,4 +7,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # ROS2 workspace source directory.
 cd "$SCRIPT_DIR"
 
+# Run update if we have no cache yet
+if [[ ! -d ${HOME}/.ros/rosdep ]]
+then
+  rosdep update
+fi
+
 rosdep install -i --from-path "${ANGEL_WORKSPACE_DIR}" --rosdistro "${ROS_DISTRO}" -y

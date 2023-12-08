@@ -9,7 +9,6 @@ from geometry_msgs.msg import (
     Quaternion,
 )
 import numpy as np
-import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 from shape_msgs.msg import (
@@ -25,6 +24,7 @@ from angel_msgs.msg import (
     SpatialMesh,
 )
 from angel_utils import declare_and_get_parameters, RateTracker
+from angel_utils import make_default_main
 from angel_utils.hand import JOINT_LIST
 from hl2ss.viewer import hl2ss
 
@@ -656,24 +656,14 @@ class HL2SSROSBridge(Node):
 
         return hand_msg
 
+    def destroy_node(self):
+        """
+        Clean up resources.
+        """
+        self.shutdown_clients()
 
-def main():
-    rclpy.init()
 
-    hl2ss_ros_bridge = HL2SSROSBridge()
-
-    try:
-        rclpy.spin(hl2ss_ros_bridge)
-    except KeyboardInterrupt:
-        hl2ss_ros_bridge.get_logger().info("Keyboard interrupt, shutting down.\n")
-        hl2ss_ros_bridge.shutdown_clients()
-
-    # Destroy the node explicitly
-    # (optional - otherwise it will be done automatically
-    # when the garbage collector destroys the node object)
-    hl2ss_ros_bridge.destroy_node()
-
-    rclpy.shutdown()
+main = make_default_main(HL2SSROSBridge)
 
 
 if __name__ == "__main__":

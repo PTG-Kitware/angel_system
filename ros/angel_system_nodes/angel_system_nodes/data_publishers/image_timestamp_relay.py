@@ -4,13 +4,12 @@ that to the configured topic.
 """
 
 from builtin_interfaces.msg import Time
-import rclpy
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from rclpy.node import Node
-from rclpy.executors import MultiThreadedExecutor
 from sensor_msgs.msg import Image
 
 from angel_utils import declare_and_get_parameters, RateTracker
+from angel_utils import make_default_main
 
 
 PARAM_INPUT_TOPIC = "image_topic"
@@ -54,24 +53,7 @@ class ImageTimestampRelay(Node):
         )
 
 
-def main():
-    rclpy.init()
-
-    node = ImageTimestampRelay()
-
-    executor = MultiThreadedExecutor(num_threads=2)
-    executor.add_node(node)
-    try:
-        executor.spin()
-    except KeyboardInterrupt:
-        node.get_logger().info("Keyboard interrupt, shutting down.\n")
-
-    # Destroy the node explicitly
-    # (optional - otherwise it will be done automatically
-    # when the garbage collector destroys the node object)
-    node.destroy_node()
-
-    rclpy.shutdown()
+main = make_default_main(ImageTimestampRelay, multithreaded_executor=2)
 
 
 if __name__ == "__main__":

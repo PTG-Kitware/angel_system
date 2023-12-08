@@ -1,10 +1,6 @@
 [submodule "ros/ROS-TCP-Endpoint"]
 	path = ros/ROS-TCP-Endpoint
 	url = https://github.com/Unity-Technologies/ROS-TCP-Endpoint.git
-[submodule "ros/rosbag2"]
-	path = ros/rosbag2
-	url = https://github.com/ros2/rosbag2.git
-	branch = foxy-future
 [submodule "hl2ss"]
 	path = hl2ss
 	url = https://github.com/VIDA-NYU/hl2ss.git
