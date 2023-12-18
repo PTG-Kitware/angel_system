@@ -77,6 +77,9 @@ mkdir -p "${XAUTH_DIR}"
 # Exporting to be used in replacement in docker-compose file.
 XAUTH_FILEPATH="$(mktemp "${XAUTH_DIR}/local-XXXXXX.xauth")"
 export XAUTH_FILEPATH
+log "[INFO] Creating local xauth file: $XAUTH_FILEPATH"
+touch "$XAUTH_FILEPATH"
+xauth nlist "$DISPLAY" | sed -e 's/^..../ffff/' | xauth -f "$XAUTH_FILEPATH" nmerge -
 
 # Conditionally gather if jupyter is available in the current
 # environment and parameterize mounting it's runtime dir

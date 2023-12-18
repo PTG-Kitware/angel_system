@@ -78,12 +78,17 @@ Workspace root: `./ros/`
 System requirements
 * ansible
 * docker
-* docker-compose
+* (pip-installed) docker-compose
 
 Some files required from the `https://data.kitware.com` Girder service require
 authentication due to their protected nature.
 The environment variable `GIRDER_API_KEY` must be defined with a valid API key,
 otherwise an authentication token cannot be retrieved.
+
+We currently require a pip-installed `docker-compose` tool, as opposed to a
+system package-manager installed `docker-compose-plugin` package.
+The package manager docker plugin behaves a little differently that our current
+docker-compose configuration and scripting does not yet handle.
 
 ## Provision Files
 External large files should be provisioned by running the ansible tool:
