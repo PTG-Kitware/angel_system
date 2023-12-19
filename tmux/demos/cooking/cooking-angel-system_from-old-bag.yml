@@ -69,6 +69,11 @@ windows:
             -p image_topic:=PVFramesRGB
             -p output_topic:=PVFramesRGB_TS
 
+        # # Visualize RGB Images being output from the headset
+        # - rqt_rgb_images: rqt -s rqt_image_view/ImageView
+        #     --args ${ROS_NAMESPACE}/PVFramesBGR
+        #     --ros-args -p _image_transport:=raw
+
   - object_detector:
       layout: even-vertical
       panes:
