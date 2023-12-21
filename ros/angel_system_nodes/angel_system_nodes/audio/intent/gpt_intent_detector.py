@@ -5,11 +5,13 @@ import openai
 import os
 import rclpy
 
+from angel_msgs.msg import DialogueUtterance
 from angel_system_nodes.audio.intent.base_intent_detector import (
     BaseIntentDetector,
     INTENT_LABELS,
 )
-from angel_utils import make_default_main
+from angel_utils import declare_and_get_parameters, make_default_main
+
 
 
 openai.organization = os.getenv("OPENAI_ORG_ID")
@@ -17,17 +19,27 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # The following are few shot examples when prompting GPT.
 FEW_SHOT_EXAMPLES = [
-    {"utterance": "Go back to the previous step!", "label": "prev_step."},
-    {"utterance": "Next step, please.", "label": "next_step"},
-    {"utterance": "How should I wrap this tourniquet?", "label": "inquiry"},
-    {"utterance": "The sky is blue", "label": "other"},
+    {"utterance": "Go back to the previous step!", "label": "prev_step[eos]"},
+    {"utterance": "Next step, please.", "label": "next_step[eos]"},
+    {"utterance": "How should I wrap this tourniquet?", "label": "inquiry[eos]"},
+    {"utterance": "The sky is blue", "label": "other[eos]"},
+    {"utterance": "What is this thing?", "label": "object_clarification[eos]"},
 ]
 
+PARAM_TIMEOUT = "timeout"
 
 class GptIntentDetector(BaseIntentDetector):
     def __init__(self):
         super().__init__()
         self.log = self.get_logger()
+
+        param_values = declare_and_get_parameters(
+            self,
+            [
+                (PARAM_TIMEOUT, 600),
+            ],
+        )
+        self.timeout = param_values[PARAM_TIMEOUT]
 
         # This node additionally includes fields for interacting with OpenAI
         # via LangChain.
@@ -79,17 +91,16 @@ class GptIntentDetector(BaseIntentDetector):
             model_name="gpt-3.5-turbo",
             openai_api_key=self.openai_api_key,
             temperature=0.0,
-            # Only 2 tokens needed for classification (tokens are delimited by use of '_', i.e.
-            # 'next_step' counts as 2 tokens).
-            max_tokens=2,
+            request_timeout=self.timeout,
         )
         return LLMChain(llm=openai_llm, prompt=few_shot_prompt)
 
-    def detect_intents(self, msg):
+    def detect_intents(self, msg: DialogueUtterance):
         """
         Detects the user intent via langchain execution of GPT.
         """
-        return self.chain.run(utterance=msg), 0.5
+        intent = self.chain.run(utterance=msg.utterance_text)
+        return intent.split('[eos]')[0], 0.5
 
 
 main = make_default_main(GptIntentDetector)
