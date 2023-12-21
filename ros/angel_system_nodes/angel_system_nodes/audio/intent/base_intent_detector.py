@@ -3,7 +3,7 @@ from rclpy.node import Node
 from termcolor import colored
 import threading
 
-from angel_msgs.msg import InterpretedAudioUserIntent, Utterance
+from angel_msgs.msg import DialogueUtterance
 from angel_utils import declare_and_get_parameters
 from angel_utils import make_default_main
 
@@ -18,7 +18,7 @@ OVERRIDE_KEYPHRASES = ["angel", "angel system"]
 # https://docs.google.com/document/d/1uuvSL5de3LVM9c0tKpRKYazDxckffRHf7IAcabSw9UA .
 INTENT_LABELS = ["next_step", "prev_step", "inquiry", "other"]
 
-UTTERANCES_TOPIC = "utterances_topic"
+IN_TOPIC = "utterances_topic"
 PARAM_EXPECT_USER_INTENT_TOPIC = "expect_user_intent_topic"
 PARAM_INTERP_USER_INTENT_TOPIC = "interp_user_intent_topic"
 
@@ -32,24 +32,24 @@ class BaseIntentDetector(Node):
         param_values = declare_and_get_parameters(
             self,
             [
-                (UTTERANCES_TOPIC,),
+                (IN_TOPIC,),
                 (PARAM_EXPECT_USER_INTENT_TOPIC,),
                 (PARAM_INTERP_USER_INTENT_TOPIC,),
             ],
         )
-        self._utterances_topic = param_values[UTTERANCES_TOPIC]
+        self._input_topic = param_values[IN_TOPIC]
         self._expect_uintent_topic = param_values[PARAM_EXPECT_USER_INTENT_TOPIC]
         self._interp_uintent_topic = param_values[PARAM_INTERP_USER_INTENT_TOPIC]
 
         # Handle subscription/publication topics.
         self.subscription = self.create_subscription(
-            Utterance, self._utterances_topic, self.utterance_callback, 1
+            DialogueUtterance, self._input_topic, self.utterance_callback, 1
         )
         self._expected_publisher = self.create_publisher(
-            InterpretedAudioUserIntent, self._expect_uintent_topic, 1
+            DialogueUtterance, self._expect_uintent_topic, 1
         )
         self._interp_publisher = self.create_publisher(
-            InterpretedAudioUserIntent, self._interp_uintent_topic, 1
+            DialogueUtterance, self._interp_uintent_topic, 1
         )
 
         self.utterance_message_queue = queue.Queue()
@@ -63,7 +63,7 @@ class BaseIntentDetector(Node):
         This is the main ROS node listener callback loop that will process all messages received
         via subscribed topics.
         """
-        self.log.debug(f'Received message:\n\n"{msg.value}"')
+        self.log.debug(f'Received message:\n\n"{msg.utterance_text}"')
         self.utterance_message_queue.put(msg)
 
     def process_utterance_message_queue(self):
@@ -72,13 +72,10 @@ class BaseIntentDetector(Node):
         """
         while True:
             msg = self.utterance_message_queue.get()
-            self.log.debug(f'Processing message:\n\n"{msg.value}"')
-            intent, score = self.detect_intents(msg)
-            if not intent:
-                continue
-            self.publish_msg(msg.value, intent, score)
+            self.log.debug(f'Processing message:\n\n"{msg.utterance_text}"')
+            self.process_message(msg)
 
-    def detect_intents(self, msg):
+    def process_message(self, msg: DialogueUtterance):
         """
         Keyphrase search for intent detection. This implementation does simple
         string matching to assign a detected label. When multiple intents are
@@ -98,7 +95,8 @@ class BaseIntentDetector(Node):
                 )
             return classification, score
 
-        lower_utterance = msg.value.lower()
+        intent, score = self.detect_intents(msg)
+        lower_utterance = msg.utterance_text.lower()
         intents = []
         confidences = []
         if self._contains_phrase(lower_utterance, NEXT_STEP_KEYPHRASES):
@@ -111,35 +109,38 @@ class BaseIntentDetector(Node):
             intents.append(INTENT_LABELS[2])
             confidences.append(0.5)
         if not intents:
-            colored_utterance = colored(msg.value, "light_blue")
+            colored_utterance = colored(msg.utterance_text, "light_blue")
             self.log.info(f'No intents detected for:\n>>> "{colored_utterance}":')
             return None, -1.0
 
         classification, confidence = _tiebreak_intents(intents, confidences)
         classification = colored(classification, "light_green")
-        return classification, confidence
+        
+        if intent:
+            self.publish_msg(msg.utterance_text, intent, score)
 
-    def publish_msg(self, utterance, intent, score):
+    def publish_msg(self, msg: DialogueUtterance, intent: str, score: float):
         """
         Handles message publishing for an utterance with a detected intent.
         """
-        intent_msg = InterpretedAudioUserIntent()
-        intent_msg.header.frame_id = "Intent Detection"
-        intent_msg.header.stamp = self.get_clock().now().to_msg()
-        intent_msg.utterance_text = utterance
-        intent_msg.user_intent = intent
-        intent_msg.confidence = score
+        pub_msg = self.copy_dialogue_utterance(msg,
+                                               node_name="Intent Detection")
+        # Overwrite the user intent with the latest classification information.
+        pub_msg.intent = intent
+        pub_msg.intent_confidence_score = score
+
+        # Decide which intent topic to publish the message to.
         published_topic = None
-        if self._contains_phrase(utterance.lower(), OVERRIDE_KEYPHRASES):
-            intent_msg.confidence = 1.0
-            self._expected_publisher.publish(intent_msg)
+        if self._contains_phrase(pub_msg.utterance_text.lower(), OVERRIDE_KEYPHRASES):
+            pub_msg.intent_confidence_score = 1.0
+            self._expected_publisher.publish(pub_msg)
             published_topic = PARAM_EXPECT_USER_INTENT_TOPIC
         else:
-            self._interp_publisher.publish(intent_msg)
+            self._interp_publisher.publish(pub_msg)
             published_topic = PARAM_INTERP_USER_INTENT_TOPIC
 
-        colored_utterance = colored(utterance, "light_blue")
-        colored_intent = colored(intent_msg.user_intent, "light_green")
+        colored_utterance = colored(pub_msg.utterance_text, "light_blue")
+        colored_intent = colored(pub_msg.intent, "light_green")
         self.log.info(
             f'Publishing {{"{colored_intent}": {score}}} to {published_topic} '
             + f'for:\n>>> "{colored_utterance}"'
