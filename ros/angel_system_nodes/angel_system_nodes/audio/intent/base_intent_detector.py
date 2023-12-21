@@ -124,7 +124,8 @@ class BaseIntentDetector(Node):
         Handles message publishing for an utterance with a detected intent.
         """
         pub_msg = self.copy_dialogue_utterance(msg,
-                                               node_name="Intent Detection")
+                                               node_name="Intent Detection",
+                                               copy_time=self.get_clock().now().to_msg())
         # Overwrite the user intent with the latest classification information.
         pub_msg.intent = intent
         pub_msg.intent_confidence_score = score
