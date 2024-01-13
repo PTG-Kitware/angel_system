@@ -1,4 +1,4 @@
-version: "1"
+version: "2"
 labels:
   # Item:
   # - id: Integer identification number of the label.
@@ -8,13 +8,13 @@ labels:
     label: "background"
     full_str: "background"
   - id: 1
-    labek: "place-tourniquet"
+    label: "place-tourniquet"
     full_str: "Place tourniquet over affected extremity 2-3 inches above wound site (step 1)."
   - id: 2
     label: "pull-tight"
     full_str: "Pull tourniquet tight (step 2)."
   - id: 3
-    label: "apply-strap"
+    label: "apply-strap-to-strap-body"
     full_str: "Apply strap to strap body (step 3)."
   - id: 4
     label: "turn-windless"
