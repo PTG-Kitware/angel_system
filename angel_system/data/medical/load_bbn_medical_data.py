@@ -18,7 +18,6 @@ from angel_system.data.common.load_data import activities_from_dive_csv
 os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1, 2, 3"
 
 root_dir = "/data/PTG/medical/bbn_data/Release_v0.5/v0.52"
-# root_dir = '/media/hannah.defazio/Padlock_DT/Data/notpublic/PTG/Release_v0.5'
 
 
 def dive_to_activity_file(videos_dir):
@@ -254,6 +253,81 @@ def save_as_kwcoco(classes, data, save_fn="bbn-data.mscoco.json"):
 
     # print_class_freq(dset)
 
+def bbn_activity_txt_to_csv():
+    """
+    Generate DIVE csv format activity annotations from BBN's text annotations
+    """
+    task = "M2_Tourniquet"
+    print(f"{root_dir}/{task}/Data/*/*_action_labels_by_frame.txt")
+
+    for action_txt_fn in glob.glob(f"{root_dir}/{task}/Data/*/*.action_labels_by_frame.txt"):
+        track_id = 0
+        video_dir = os.path.dirname(action_txt_fn)
+        video_name = os.path.basename(video_dir)
+
+        action_f = open(action_txt_fn)
+        lines = action_f.readlines()
+
+        # Create output csv
+        task_dir = "m2_labels"
+        csv_fn = f"{activity_dir}/{task_dir}/{video_name}_activity_labels_v2.csv"
+        csv_f = open(csv_fn, "w")
+        csv_f.write("# 1: Detection or Track-id,2: Video or Image Identifier,3: Unique Frame Identifier,4-7: Img-bbox(TL_x,TL_y,BR_x,BR_y),8: Detection or Length Confidence,9: Target Length (0 or -1 if invalid),10-11+: Repeated Species,Confidence Pairs or Attributes\n")
+        csv_f.write('# metadata,fps: 1,"exported_by: ""dive:typescript"""\n')
+        
+        for line in lines:
+            data = line.split("\t")
+
+            # Find frame filenames
+            start_frame = int(data[0])
+            end_frame = int(data[1])
+
+            start_frame_fn = os.path.basename(glob.glob(f"{video_dir}/images/frame_{start_frame}_*.png")[0])
+            end_frame_fn = os.path.basename(glob.glob(f"{video_dir}/images/frame_{end_frame}_*.png")[0])
+
+            # Determine activity
+            activity_str = data[2].strip().split(" ")
+            hand = activity_str[0]
+            activity = activity_str[1]
+            target = activity_str[2] if len(activity_str) > 2 else None
+
+            # convert activity_str info to our activity labels
+            # this is hacky: fix later
+            label = None
+            if activity == "put_tourniquet_around":
+                label = "place-tourniquet"
+                label_id = 1
+            if activity == "pulls_tight":
+                label = "pull-tight"
+                label_id = 2
+            if activity == "secures" and target == "velcro_strap":
+                label = "apply-strap-to-strap-body"
+                label_id = 3
+            if activity == "twist" and target == "windlass":
+                label = "turn-windless"
+                label_id = 4
+            if activity == "locks_into_windlass_keeper" or activity == "lock_into_windlass_keeper":
+                label = "lock-windless"
+                label_id = 5
+            if activity == "wraps_remaining_strap_around" or activity == "wrap_remaining_strap_around":
+                label = "pull-remaining-strap"
+                label_id = 6
+            if activity == "secures" and target == "windlass":
+                label = "secure-strap"
+                label_id = 7
+            if activity == "writes_on" and target == "tourniquet_label":
+                label = "mark-time"
+                label_id = 8
+
+            if label is not None:
+                line1 = f"{track_id},{start_frame_fn},{start_frame},1,1,2,2,1,-1,{label_id},1"
+                csv_f.write(f"{line1}\n")
+                line2 = f"{track_id},{end_frame_fn},{end_frame},1,1,2,2,1,-1,{label_id},1"
+                csv_f.write(f"{line2}\n")
+
+                track_id += 1
+        action_f.close()
+        csv_f.close()
 
 def main():
     # Should be M1 folder, M2 folder, etc
@@ -267,4 +341,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    bbn_activity_txt_to_csv()
