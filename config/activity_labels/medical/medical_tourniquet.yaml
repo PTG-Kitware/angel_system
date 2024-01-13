@@ -5,20 +5,29 @@ labels:
   # - label: Short human-readable semantic string to succinctly represent the
   #          label.
   - id: 0
-    label: "Background"
+    label: "background"
+    full_str: "background"
   - id: 1
-    label: "Place tourniquet over affected extremity 2-3 inches above wound site (step 1)."
+    labek: "place-tourniquet"
+    full_str: "Place tourniquet over affected extremity 2-3 inches above wound site (step 1)."
   - id: 2
-    label: "Pull tourniquet tight (step 2)."
+    label: "pull-tight"
+    full_str: "Pull tourniquet tight (step 2)."
   - id: 3
-    label: "Apply strap to strap body (step 3)."
+    label: "apply-strap"
+    full_str: "Apply strap to strap body (step 3)."
   - id: 4
-    label: "Turn windless clock wise or counter clockwise until hemorrhage is controlled (step 4)."
+    label: "turn-windless"
+    full_str: "Turn windless clock wise or counter clockwise until hemorrhage is controlled (step 4)."
   - id: 5
-    label: "Lock windless into the windless keeper (step 5)."
+    label: "lock-windless"
+    full_str: "Lock windless into the windless keeper (step 5)."
   - id: 6
-    label: "Pull remaining strap over the windless keeper (step 6)."
+    label: "pull-remaining-strap"
+    full_str: "Pull remaining strap over the windless keeper (step 6)."
   - id: 7
-    label: "Secure strap and windless keeper with keeper securing device (step 7)."
+    label: "secure-strap"
+    full_str: "Secure strap and windless keeper with keeper securing device (step 7)."
   - id: 8
-    label: "Mark time on securing device strap with permanent marker (step 8)."
+    label: "mark-time"
+    full_str: "Mark time on securing device strap with permanent marker (step 8)."
