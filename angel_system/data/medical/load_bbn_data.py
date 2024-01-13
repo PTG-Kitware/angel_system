@@ -205,6 +205,33 @@ def save_as_kwcoco(classes, data, save_fn="bbn-data.mscoco.json"):
     dset.fpath = save_fn
     dset.dump(dset.fpath, newlines=True)
 
+def activity_label_fixes(activity_label, target):
+    if activity_label == "put_tourniquet_around":
+        label = "place-tourniquet"
+        label_id = 1
+    if activity_label == "pulls_tight":
+        label = "pull-tight"
+        label_id = 2
+    if activity_label == "secures" and target == "velcro_strap":
+        label = "apply-strap-to-strap-body"
+        label_id = 3
+    if activity_label == "twist" and target == "windlass":
+        label = "turn-windless"
+        label_id = 4
+    if activity_label == "locks_into_windlass_keeper" or activity_label == "lock_into_windlass_keeper":
+        label = "lock-windless"
+        label_id = 5
+    if activity_label == "wraps_remaining_strap_around" or activity_label == "wrap_remaining_strap_around":
+        label = "pull-remaining-strap"
+        label_id = 6
+    if activity_label == "secures" and target == "windlass":
+        label = "secure-strap"
+        label_id = 7
+    if activity_label == "writes_on" and target == "tourniquet_label":
+        label = "mark-time"
+        label_id = 8
+
+    return label, label_id
 
 def bbn_activity_txt_to_csv(root_dir):
     """
@@ -249,30 +276,7 @@ def bbn_activity_txt_to_csv(root_dir):
             # convert activity_str info to our activity labels
             # this is hacky: fix later
             label = None
-            if activity == "put_tourniquet_around":
-                label = "place-tourniquet"
-                label_id = 1
-            if activity == "pulls_tight":
-                label = "pull-tight"
-                label_id = 2
-            if activity == "secures" and target == "velcro_strap":
-                label = "apply-strap-to-strap-body"
-                label_id = 3
-            if activity == "twist" and target == "windlass":
-                label = "turn-windless"
-                label_id = 4
-            if activity == "locks_into_windlass_keeper" or activity == "lock_into_windlass_keeper":
-                label = "lock-windless"
-                label_id = 5
-            if activity == "wraps_remaining_strap_around" or activity == "wrap_remaining_strap_around":
-                label = "pull-remaining-strap"
-                label_id = 6
-            if activity == "secures" and target == "windlass":
-                label = "secure-strap"
-                label_id = 7
-            if activity == "writes_on" and target == "tourniquet_label":
-                label = "mark-time"
-                label_id = 8
+            label, label_id = activity_label_fixes(activity_label, target)
 
             if label is not None:
                 line1 = f"{track_id},{start_frame_fn},{start_frame},1,1,2,2,1,-1,{label_id},1"

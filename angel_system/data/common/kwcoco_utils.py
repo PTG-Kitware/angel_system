@@ -50,107 +50,6 @@ def load_kwcoco(dset):
     return dset
 
 
-def replace_compound_label(
-    preds,
-    obj,
-    detected_classes,
-    using_contact,
-    obj_hand_contact_state=False,
-    obj_obj_contact_state=False,
-):
-    """
-    Check if some subset of obj is in `detected_classes`
-
-    Designed to catch and correct incorrect compound classes
-    Ex: obj is "mug + filter cone + filter" but we detected "mug + filter cone"
-    """
-
-    compound_objs = [x.strip() for x in obj.split("+")]
-    detected_objs = [[y.strip() for y in x.split("+")] for x in detected_classes]
-
-    replaced_classes = []
-    for detected_class, objs in zip(detected_classes, detected_objs):
-        for obj_ in objs:
-            if obj_ in compound_objs:
-                replaced_classes.append(detected_class)
-                break
-
-    if replaced_classes == []:
-        # Case 0, We didn't detect any of the objects
-        replaced = None
-    elif len(replaced_classes) == 1:
-        # Case 1, we detected a subset of the compound as one detection
-        replaced = replaced_classes[0]
-        # print(f'replaced {replaced} with {obj}')
-
-        preds[obj] = preds.pop(replaced)
-
-        if using_contact:
-            for i in range(len(preds[obj])):
-                preds[obj][i]["obj_hand_contact_state"] = obj_hand_contact_state
-                preds[obj][i]["obj_obj_contact_state"] = obj_obj_contact_state
-    else:
-        # Case 2, the compound was detected as separate boxes
-        replaced = replaced_classes
-        # print(f'Combining {replaced} detections into compound \"{obj}\"')
-
-        new_bbox = None
-        new_conf = None
-        new_obj_obj_conf = None
-        new_obj_hand_conf = None
-        for det_obj in replaced:
-            assert len(preds[det_obj]) == 1
-            bbox = preds[det_obj][0]["bbox"]
-            conf = preds[det_obj][0]["confidence_score"]
-
-            if new_bbox is None:
-                new_bbox = bbox
-            else:
-                # Find mix of bboxes
-                # TODO: first double check these are close enough that it makes sense to combine?
-                new_tlx, new_tly, new_brx, new_bry = new_bbox
-                tlx, tly, brx, bry = bbox
-
-                new_bbox = [
-                    min(new_tlx, tlx),
-                    min(new_tly, tly),
-                    max(new_brx, brx),
-                    max(new_bry, bry),
-                ]
-
-            new_conf = conf if new_conf is None else (new_conf + conf) / 2  # average???
-            if using_contact:
-                obj_obj_conf = preds[det_obj][0]["obj_obj_contact_conf"]
-                new_obj_obj_conf = (
-                    obj_obj_conf
-                    if new_obj_obj_conf is None
-                    else (new_obj_obj_conf + obj_obj_conf) / 2
-                )
-                obj_hand_conf = preds[det_obj][0]["obj_hand_contact_conf"]
-                new_obj_hand_conf = (
-                    obj_hand_conf
-                    if new_obj_hand_conf is None
-                    else (new_obj_hand_conf + obj_hand_conf) / 2
-                )
-
-            # remove old preds
-            preds.pop(det_obj)
-
-        new_pred = {
-            "confidence_score": new_conf,
-            "bbox": new_bbox,
-        }
-        if using_contact:
-            new_pred["obj_obj_contact_state"] = obj_obj_contact_state
-            new_pred["obj_obj_contact_conf"] = new_obj_obj_conf
-            new_pred["obj_hand_contact_state"] = obj_hand_contact_state
-            new_pred["obj_hand_contact_conf"] = new_obj_hand_conf
-
-        preds[obj] = [new_pred]
-
-    return preds, replaced
-
-
 def add_hl_hands_to_kwcoco(dset, remove_existing=True, using_contact=True):
     """Add bounding boxes for the hands based on the Hololen's joint positions
 
@@ -256,7 +155,7 @@ def add_hl_hands_to_kwcoco(dset, remove_existing=True, using_contact=True):
     print(f"Saved predictions to {dset.fpath}")
 
 
-def add_activity_gt_to_kwcoco(dset):
+def add_activity_gt_to_kwcoco(task, dset):
     """Takes an existing kwcoco file and fills in the "activity_gt"
     field on each image based on the activity annotations.
 
@@ -268,7 +167,7 @@ def add_activity_gt_to_kwcoco(dset):
     # Load kwcoco file
     dset = load_kwcoco(dset)
 
-    data_dir = "/data/PTG/cooking/"
+    data_dir = f"/data/PTG/{task}/"
     activity_gt_dir = f"{data_dir}/activity_anns"
 
     for video_id in dset.index.videos.keys():
@@ -278,25 +177,20 @@ def add_activity_gt_to_kwcoco(dset):
 
         if "_extracted" in video_name:
             video_name = video_name.split("_extracted")[0]
-        video_recipe = video["recipe"]
+        video_skill = "m2"#video["recipe"]
 
         with open(
-            f"../config/activity_labels/recipe_{video_recipe}.yaml", "r"
+            f"../config/activity_labels/{task}/task_{video_skill}.yaml", "r"
         ) as stream:
             recipe_activity_config = yaml.safe_load(stream)
         recipe_activity_labels = recipe_activity_config["labels"]
 
-        recipe_activity_gt_dir = f"{activity_gt_dir}/{video_recipe}_labels/"
-        if video_recipe == "coffee":
-            activity_gt_fn = (
-                f"{recipe_activity_gt_dir}/{video_name}_activity_labels_v_1.1.csv"
-            )
-            gt = activities_from_dive_csv(activity_gt_fn)
-        else:
-            activity_gt_fn = (
-                f"{recipe_activity_gt_dir}/{video_name}_activity_labels_v_1.csv"
-            )
-            gt = activities_from_dive_csv(activity_gt_fn)
+        recipe_activity_gt_dir = f"{activity_gt_dir}/{video_skill}_labels/"
+
+        activity_gt_fn = (
+            f"{recipe_activity_gt_dir}/{video_name}_activity_labels_v2.csv"
+        )
+        gt = activities_from_dive_csv(activity_gt_fn)
         gt = objs_as_dataframe(gt)
 
         image_ids = dset.index.vidid_to_gids[video_id]
@@ -339,71 +233,12 @@ def add_activity_gt_to_kwcoco(dset):
                         continue
                 else:
                     activity = activity[0]
-                    activity_label = activity["label"]
-
-                    # Temp fix until we can update the groundtruth labels
-                    if activity_label in ["microwave-30-sec", "microwave-60-sec"]:
-                        activity_label = "microwave"
-                    if activity_label in ["stir-again"]:
-                        activity_label = "oatmeal-stir"
-                    if activity_label in [
-                        "measure-half-cup-water",
-                        "measure-12oz-water",
-                    ]:
-                        activity_label = "measure-water"
-                    if activity_label in ["insert-toothpick-1", "insert-toothpick-2"]:
-                        activity_label = "insert-toothpick"
-                    if activity_label in ["slice-tortilla", "continue-slicing"]:
-                        activity_label = "floss-slice-tortilla"
-                    if activity_label in ["steep", "check-thermometer"]:
-                        activity_label = "background"
-                    if activity_label in ["dq-clean-knife", "pinwheel-clean-knife"]:
-                        activity_label = "clean-knife"
-                    if activity_label in ["zero-scale", "scale-turn-on"]:
-                        activity_label = "scale-press-btn"
-                    if activity_label in ["pour-water-grounds-wet"]:
-                        activity_label = "pour-water-grounds-circular"
+                    activity_label = activity["label"]               
 
             dset.imgs[gid]["activity_gt"] = activity_label
 
     # dset.fpath = dset.fpath.split(".")[0] + "_fixed.mscoco.json"
     dset.dump(dset.fpath, newlines=True)
-
-
-def plot_class_freq_per_step(freq_dict, act_labels, cat_labels, label_frame_freq):
-    """Plot the number of objects detected, normalized by the number of frames
-    per activity
-    """
-    SMALL_SIZE = 8
-    MEDIUM_SIZE = 10
-    BIGGER_SIZE = 8
-
-    matplotlib.rc("font", size=BIGGER_SIZE + 3)
-    matplotlib.rc("xtick", labelsize=BIGGER_SIZE)
-    matplotlib.rc("ytick", labelsize=BIGGER_SIZE)
-
-    fig, ax = plt.subplots()
-
-    mat = []
-    for k, v in freq_dict.items():
-        mat.append(v)
-
-    mat = np.array(mat)
-
-    norm_mat = mat / label_frame_freq[:, None]
-    norm_mat = norm_mat.T
-
-    plt.imshow(norm_mat)
-    plt.colorbar()
-
-    plt.xlabel("activities")
-    plt.ylabel("object class")
-
-    plt.xticks(range(len(act_labels)), act_labels, rotation="vertical")
-    plt.yticks(range(len(cat_labels)), cat_labels)
-
-    # plt.show()
-    plt.savefig("obj_freq_per_act.png", bbox_inches="tight", dpi=300)
 
 
 def visualize_kwcoco_by_label(dset=None, save_dir=""):
@@ -492,67 +327,6 @@ def visualize_kwcoco_by_label(dset=None, save_dir=""):
         plt.close(fig)  # needed to remove the plot because savefig doesn't clear it
 
     plt.close("all")
-
-
-def reorder_images(dset):
-    # Data paths
-    data_dir = "/data/PTG/cooking/"
-    ros_bags_dir = f"{data_dir}/ros_bags/"
-    coffee_ros_bags_dir = f"{ros_bags_dir}/coffee/coffee_extracted/"
-    tea_ros_bags_dir = f"{ros_bags_dir}/tea/tea_extracted/"
-
-    # Load kwcoco file
-    dset = load_kwcoco(dset)
-    gid_to_aids = dset.index.gid_to_aids
-
-    new_dset = kwcoco.CocoDataset()
-
-    new_dset.dataset["info"] = dset.dataset["info"].copy()
-    for cat_id, cat in dset.cats.items():
-        new_dset.add_category(**cat)
-
-    for video_id, video in dset.index.videos.items():
-        # Add video to new dataset
-        if "_extracted" in video["name"]:
-            video["name"] = video["name"].split("_extracted")[0]
-        new_dset.add_video(**video)
-
-        # Find folder of images for video
-        video_name = video["name"]
-        if "tea" in video_name:
-            images_dir = f"{tea_ros_bags_dir}/{video_name}_extracted/images"
-        else:
-            images_dir = f"{coffee_ros_bags_dir}/{video_name}_extracted/images"
-
-        images = glob.glob(f"{images_dir}/*.png")
-        if not images:
-            warnings.warn(f"No images found in {video_name}")
-        images = Re_order(images, len(images))
-
-        for image in images:
-            # Find image in old dataset
-            image_lookup = dset.index.file_name_to_img
-            old_img = image_lookup[image]
-
-            new_im = old_img.copy()
-            del new_im["id"]
-
-            new_gid = new_dset.add_image(**new_im)
-
-            # Add annotations for image
-            old_aids = gid_to_aids[old_img["id"]]
-            old_anns = ub.dict_subset(dset.anns, old_aids)
-
-            for old_aid, old_ann in old_anns.items():
-                new_ann = old_ann.copy()
-
-                del new_ann["id"]
-                new_ann["image_id"] = new_gid
-                new_dset.add_annotation(**new_ann)
-
-    new_dset.fpath = dset.fpath.split(".mscoco.json")[0] + "_reordered_imgs.mscoco.json"
-    new_dset.dump(new_dset.fpath, newlines=True)
-    print(f"Saved dset to {new_dset.fpath}")
 
 
 def imgs_to_video(imgs_dir):
