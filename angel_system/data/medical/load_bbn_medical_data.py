@@ -264,6 +264,9 @@ def bbn_activity_txt_to_csv():
         track_id = 0
         video_dir = os.path.dirname(action_txt_fn)
         video_name = os.path.basename(video_dir)
+        if video_name is in ["M2-15"]:
+            # Known bad videos
+            continue
 
         action_f = open(action_txt_fn)
         lines = action_f.readlines()
