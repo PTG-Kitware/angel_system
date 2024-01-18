@@ -53,7 +53,7 @@ class BaseEmotionDetector(Node):
             self.emotion_detection_callback,
             1,
         )
-        self._emo_publisher = self.create_publisher(
+        self._publication = self.create_publisher(
             DialogueUtterance, self._out_topic, 1
         )
 
@@ -94,7 +94,7 @@ class BaseEmotionDetector(Node):
         """
         return self._get_vader_sentiment_analysis(msg.utterance_text)
 
-    def emotion_detection_callback(self, msg):
+    def emotion_detection_callback(self, msg: DialogueUtterance):
         """
         This is the main ROS node listener callback loop that will process
         all messages received via subscribed topics.
