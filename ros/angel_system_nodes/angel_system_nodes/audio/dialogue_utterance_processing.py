@@ -1,21 +1,5 @@
 from angel_msgs.msg import DialogueUtterance
 
-def get_intent_or(msg: DialogueUtterance,
-                  or_value: str = "not available") -> str:
-    """
-    Returns the msg intent classification information. If the value is absent,
-    the or_value is passed in.
-    """
-    return msg.intent if msg.intent else or_value
-
-def get_emotion_or(msg: DialogueUtterance,
-                   or_value: str = "not available") -> str:
-    """
-    Returns the msg emotion classification information. If the value is absent,
-    the or_value is passed in.
-    """
-    return msg.emotion if msg.emotion else or_value
-
 def copy_dialogue_utterance(msg: DialogueUtterance,
                             node_name,
                             copy_time) -> DialogueUtterance:
