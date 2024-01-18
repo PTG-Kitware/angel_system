@@ -106,7 +106,8 @@ class ASR(Node):
         self.subscription = self.create_subscription(
             HeadsetAudioData, self._audio_topic, self.listener_callback, 1
         )
-        self._publisher = self.create_publisher(Utterance
+        self._publisher = self.create_publisher(DialogueUtterance,
+                                                self._utterances_topic, 1)
 
         self.audio_stream = []
         self.t = threading.Thread()
@@ -203,12 +204,16 @@ class ASR(Node):
             if response:
                 response_text = json.loads(response.text)["text"]
                 self.log.info("Complete ASR text is:\n" + f'"{response_text}"')
-                if self._is_sentence_tokenize_mode:
-                    for sentence in sent_tokenize(response_text):
-                        self._publisher.publish(
+                self._publish_response(response_text,
+                                       self._is_sentence_tokenize_mode)
+
+    def _publish_response(self, response_text: str, tokenize_sentences: bool):
+        if tokenize_sentences:
+            for sentence in sent_tokenize(response_text):
+                self._publisher.publish(
                             self._construct_dialogue_utterance(sentence))
-                else:
-                    self._publisher.publish(
+        else:
+            self._publisher.publish(
                         self._construct_dialogue_utterance(response_text))
     
     def _construct_dialogue_utterance(self, msg_text: str) -> DialogueUtterance:
