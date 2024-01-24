@@ -141,6 +141,10 @@ def compute_feats(
         obj_obj_contact_conf = []
         obj_hand_contact_state = []
         obj_hand_contact_conf = []
+        
+        joint_left_hand_offset = []
+        joint_right_hand_offset = []
+        joint_object_offset = []
 
         for ann in ann_by_image[image_id]:
             label_vec.append(act_id_to_str[ann["category_id"]])

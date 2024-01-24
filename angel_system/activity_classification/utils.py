@@ -170,7 +170,21 @@ def obj_det2d_set_to_feature(
             use_hand_dist=True,
             use_intersection=True,
         )
-
+    elif version == 6:
+        feature_vec = obj_det2d_set_to_feature_by_method(
+            label_vec,
+            xs,
+            ys,
+            ws,
+            hs,
+            label_confidences,
+            label_to_ind,
+            use_activation=True,
+            use_hand_dist=True,
+            use_intersection=True,
+            use_joint_hand_offset=True,
+            use_joint_object_offset=True,
+        )
     else:
         raise NotImplementedError(f"Unhandled version '{version}'")
 
@@ -191,6 +205,8 @@ def obj_det2d_set_to_feature_by_method(
     use_hand_dist=False,
     use_center_dist=False,
     use_intersection=False,
+    use_joint_hand_offset=False,
+    use_joint_object_offset=False,
 ):
     """
     `label_vec`, `xs`, `ys`, `ws`, hs` are to all be parallel in association
