@@ -71,10 +71,10 @@ kwimage = ">=0.9.18"
 networkx = ">=3.1"
 
 # TCN Activity classifier
-tcn-hpl = {path = "python-tpl/TCN_HPL", develop = true}
+tcn-hpl = {path = "/home/local/KHQ/peri.akiva/projects/TCN_HPL", develop = true}
 
 # Yolo v7 object detection
-yolov7 = {path = "python-tpl/yolov7", develop = true}
+#yolov7 = {path = "python-tpl/yolov7", develop = true}
 
 [tool.poetry.dev-dependencies]
 ipython = "*"
