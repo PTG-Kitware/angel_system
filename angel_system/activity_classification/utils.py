@@ -235,13 +235,34 @@ def obj_det2d_set_to_feature_by_method(
     default_center_dist = (0, 0)  # (1280, 720)
     default_bbox = [0, 0, 0, 0]  # [0, 0, 1280, 720]
     default_center = ([[0]], [[0]])  # kwimage.Boxes([default_bbox], "xywh").center
+    width, height = 1280, 720
+    image_center = width//2
 
     #########################
     # Data
     #########################
     # Number of object detection classes
-    num_det_classes = len(label_to_ind)
-
+    num_det_classes = len(label_to_ind) + 1 # accomedate 2 hands instead of 1
+    
+    # modify label_to_ind dict to accomedate 2 hands instead of 1
+    if "hands" in label_to_ind.keys():
+        hands_label_exists = True
+        label_to_ind_tmp = {}
+        for key, value in label_to_ind.items():
+            if key == "hands":
+                label_to_ind_tmp["hands (left)"] = value
+                label_to_ind_tmp["hands (right)"] = value + 1
+            else:
+                label_to_ind_tmp[key] = value + 1
+    else:
+        hands_label_exists = False
+    
+    label_to_ind = label_to_ind_tmp
+    # print(f'label_to_ind: {label_to_ind}, label_to_ind_tmp: {label_to_ind_tmp}')
+    # print(f'label_confidences: {label_confidences}, label_to_ind_tmp: {label_to_ind_tmp}')
+    # exit()
+    # print(f"num_det_classes: {num_det_classes}")
+    
     # Maximum confidence observe per-class across input object detections.
     # If a class has not been observed, it is set to 0 confidence.
     det_class_max_conf = np.zeros(num_det_classes)
@@ -254,6 +275,15 @@ def obj_det2d_set_to_feature_by_method(
 
     # Record the most confident detection for each object class as recorded in
     # `label_to_ind` (confidence & bbox)
+    if hands_label_exists:
+        for i, label in enumerate(label_vec):
+            if label == "hands":
+                hand_center = xs[i] + ws[i]//2
+                if hand_center < image_center:
+                    label_vec[i] = "hands (left)"
+                else:
+                    label_vec[i] = "hands (right)"
+    
     for i, label in enumerate(label_vec):
         if label in label_to_ind:
             conf = label_confidences[i]
@@ -264,12 +294,14 @@ def obj_det2d_set_to_feature_by_method(
                 det_class_bbox[ind] = [xs[i], ys[i], ws[i], hs[i]]  # xywh
 
     det_class_kwboxes = kwimage.Boxes(det_class_bbox, "xywh")
-
+    # print(f'label_vec: {label_vec}')
     #########################
     # util functions
     #########################
     def find_hand(hand_str):
+        # hand_str = "hands"
         hand_idx = label_to_ind[hand_str]
+        # print(f"hand_index: {hand_idx}")
         hand_conf = det_class_max_conf[hand_idx]
         hand_bbox = kwimage.Boxes([det_class_bbox[hand_idx]], "xywh")
 
@@ -287,12 +319,12 @@ def obj_det2d_set_to_feature_by_method(
     #########################
     # Find the right hand
     (right_hand_idx, right_hand_bbox, right_hand_conf, right_hand_center) = find_hand(
-        "hand (right)"
+        "hands (right)"
     )
 
     # Find the left hand
     (left_hand_idx, left_hand_bbox, left_hand_conf, left_hand_center) = find_hand(
-        "hand (left)"
+        "hands (left)"
     )
 
     RIGHT_IDX = 0
@@ -429,6 +461,9 @@ def obj_det2d_set_to_feature_by_method(
             feature_vec.append(distances_to_center[i])
 
     feature_vec = [item for sublist in feature_vec for item in sublist]  # flatten
-    feature_vec = np.array(feature_vec, dtype=np.float64)
+    # feature_vec = np.array(feature_vec, dtype=np.float64)
+    # print(f"feature vector: {len(feature_vec)}")
 
+    # print(f"feature vector: {feature_vec.shape}")
+    
     return feature_vec

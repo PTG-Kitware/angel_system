@@ -31,7 +31,7 @@ def data_loader(
 
     :return:
         - act_map: Activity label string to id dict
-        - inv_act_map: Activity id to label string dict
+        - inv_act_ma p: Activity id to label string dict
         - image_activity_gt: Image id to activity label string dict
         - image_id_to_dataset: Image id to id in ``dset`` dict
         - label_to_ind: Object detection labels to ids dict
@@ -40,6 +40,7 @@ def data_loader(
     """
     print("Loading data....")
     # Description to ID map.
+    # print(f"act labels: {act_labels}")
     act_map = {}
     inv_act_map = {}
     for step in act_labels["labels"]:
@@ -50,6 +51,8 @@ def data_loader(
         act_map["background"] = 0
         inv_act_map[0] = "background"
 
+    # print(f"act_map: {act_map}")
+    
     # Load object detections
     if type(dset) == str or type(dset) == PosixPath:
         dset_fn = dset
@@ -61,6 +64,9 @@ def data_loader(
     image_id_to_dataset = {}
     for img_id in dset.imgs:
         im = dset.imgs[img_id]
+        
+        # print(f"image: {im}")
+        
         gid = im["id"]
         image_id_to_dataset[gid] = os.path.split(im["file_name"])[0]
 
@@ -92,6 +98,8 @@ def data_loader(
         for ann_id in anns:
             ann = dset.anns[ann_id]
             ann_by_image[gid].append(ann)
+    
+    # print(f"ann by image: 17069: {ann_by_image[17069]}")
 
     return (
         act_map,
@@ -147,20 +155,34 @@ def compute_feats(
         joint_object_offset = []
 
         for ann in ann_by_image[image_id]:
-            label_vec.append(act_id_to_str[ann["category_id"]])
-            xs.append(ann["bbox"][0])
-            ys.append(ann["bbox"][1])
-            ws.append(ann["bbox"][2])
-            hs.append(ann["bbox"][3])
-            label_confidences.append(ann["confidence"])
+            if "keypoints" in ann.keys():
+                # print(f"########### this has keypoints #################")
+                if "left_hand_offset" in ann.keys():
+                    joint_left_hand_offset.append(ann['left_hand_offset'])
+                if "right_hand_offset" in ann.keys():
+                    joint_right_hand_offset.append(ann['right_hand_offset'])
+                if "object_offset" in ann.keys():
+                    joint_object_offset.append(ann['object_offset'])
 
-            try:
-                obj_obj_contact_state.append(ann["obj-obj_contact_state"])
-                obj_obj_contact_conf.append(ann["obj-obj_contact_conf"])
-                obj_hand_contact_state.append(ann["obj-hand_contact_state"])
-                obj_hand_contact_conf.append(ann["obj-hand_contact_conf"])
-            except KeyError:
-                pass
+            if "confidence" in ann.keys():
+                label_vec.append(act_id_to_str[ann["category_id"]])
+                xs.append(ann["bbox"][0])
+                ys.append(ann["bbox"][1])
+                ws.append(ann["bbox"][2])
+                hs.append(ann["bbox"][3])
+                label_confidences.append(ann["confidence"])
+
+                try:
+                    obj_obj_contact_state.append(ann["obj-obj_contact_state"])
+                    obj_obj_contact_conf.append(ann["obj-obj_contact_conf"])
+                    obj_hand_contact_state.append(ann["obj-hand_contact_state"])
+                    obj_hand_contact_conf.append(ann["obj-hand_contact_conf"])
+                except KeyError:
+                    pass
+            
+        # print(f"joint_left_hand_offset: {len(joint_left_hand_offset)}")
+        # print(f"joint_right_hand_offset: {len(joint_right_hand_offset)}")
+        # print(f"joint_object_offset: {len(joint_object_offset)}")
 
         feature_vec = obj_det2d_set_to_feature(
             label_vec,
@@ -177,8 +199,46 @@ def compute_feats(
             label_to_ind,
             version=feat_version,
         )
+        
+        zero_offset = [0 for i in range(22)]
+        # print(len(zero_offset))
+        offset_vector = []
+        if len(joint_left_hand_offset) >= 1:
+            # print(len(joint_left_hand_offset[0]))
+            # feature_vec.append(joint_left_hand_offset[0])
+            offset_vector += joint_left_hand_offset[0]
+        else:
+            # feature_vec.append(zero_offset)
+            offset_vector += zero_offset
+        
+        if len(joint_right_hand_offset) >= 1:
+            # feature_vec.append(joint_right_hand_offset[0])
+            offset_vector += joint_right_hand_offset[0]
+        else:
+            # feature_vec.append(zero_offset)
+            offset_vector += zero_offset
+        
+        if len(joint_object_offset) >= 1:
+            # feature_vec.append(joint_object_offset[0])
+            offset_vector += joint_object_offset[0]
 
+        else:
+            # feature_vec.append(zero_offset)
+            offset_vector += zero_offset
+
+            
+            
+        # print(f"offset_vector: {len(offset_vector)}")
+        
+        feature_vec += offset_vector
+            
+        feature_vec = np.array(feature_vec, dtype=np.float64)
+        
+        # print(f"feature vector: {feature_vec.shape}")
+        
         X.append(feature_vec.ravel())
+        
+            
         try:
             dataset_id.append(image_id_to_dataset[image_id])
             last_dset = dataset_id[-1]
