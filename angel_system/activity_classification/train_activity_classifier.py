@@ -31,7 +31,7 @@ def data_loader(
 
     :return:
         - act_map: Activity label string to id dict
-        - inv_act_ma p: Activity id to label string dict
+        - inv_act_map: Activity id to label string dict
         - image_activity_gt: Image id to activity label string dict
         - image_id_to_dataset: Image id to id in ``dset`` dict
         - label_to_ind: Object detection labels to ids dict
