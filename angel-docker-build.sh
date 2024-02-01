@@ -19,7 +19,7 @@ Build the PTG ANGEL system docker container images.
 
 Options:
   -h | --help   Display this message.
-  --force       Force image building regardless of workspace hygiene.f
+  -f | --force  Force image building regardless of workspace hygiene.
 "
 }
 
@@ -32,7 +32,7 @@ do
       usage
       exit 0
       ;;
-    --force)
+    -f|--force)
       log "Forcing build regardless of workspace hygiene."
       shift
       FORCE_BUILD=1
@@ -113,4 +113,4 @@ get_docker_compose_cmd DC_CMD
   --env-file "$SCRIPT_DIR"/docker/.env \
   -f "$SCRIPT_DIR"/docker/docker-compose.yml \
   --profile build-only \
-  build "$@"
+  build "${dc_forward_params[@]}" "$@"
