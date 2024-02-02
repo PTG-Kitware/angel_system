@@ -17,7 +17,7 @@ from angel_system.data.common.load_data import activities_from_dive_csv
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1, 2, 3"
 
-root_dir = "/data/ptg/medical/bbn/data/Release_v0.5/v0.52"
+root_dir = "/data/PTG/medical/bbn_data/Release_v0.5/v0.52"
 # root_dir = '/media/hannah.defazio/Padlock_DT/Data/notpublic/PTG/Release_v0.5'
 
 
