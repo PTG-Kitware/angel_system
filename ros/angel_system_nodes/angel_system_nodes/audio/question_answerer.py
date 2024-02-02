@@ -32,6 +32,7 @@ class QuestionAnswerer(Node):
                 (INPUT_TOPIC,),
                 (OUT_QA_TOPIC,),
                 (FEW_SHOT_PROMPT,),
+                (PARAM_TIMEOUT, 600),
             ],
         )
         self._input_topic = param_values[INPUT_TOPIC]
