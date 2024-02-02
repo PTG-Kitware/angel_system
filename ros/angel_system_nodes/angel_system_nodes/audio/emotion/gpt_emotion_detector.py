@@ -25,6 +25,7 @@ FEW_SHOT_EXAMPLES = [
 
 PARAM_TIMEOUT = "timeout"
 
+
 class GptEmotionDetector(BaseEmotionDetector):
     def __init__(self):
         super().__init__()
