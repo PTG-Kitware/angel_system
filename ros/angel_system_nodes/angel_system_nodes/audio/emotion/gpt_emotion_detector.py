@@ -8,7 +8,7 @@ from angel_system_nodes.audio.emotion.base_emotion_detector import (
     BaseEmotionDetector,
     LABEL_MAPPINGS,
 )
-from angel_utils import make_default_main
+from angel_utils import declare_and_get_parameters, make_default_main
 
 openai.organization = os.getenv("OPENAI_ORG_ID")
 openai.api_key = os.getenv("OPENAI_API_KEY")
@@ -23,11 +23,20 @@ FEW_SHOT_EXAMPLES = [
     {"utterance": "We're doing great and I'm learning a lot!", "label": "positive"},
 ]
 
+PARAM_TIMEOUT = "timeout"
 
 class GptEmotionDetector(BaseEmotionDetector):
     def __init__(self):
         super().__init__()
         self.log = self.get_logger()
+
+        param_values = declare_and_get_parameters(
+            self,
+            [
+                (PARAM_TIMEOUT, 600),
+            ],
+        )
+        self.timeout = param_values[PARAM_TIMEOUT]
 
         # This node additionally includes fields for interacting with OpenAI
         # via LangChain.
