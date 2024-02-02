@@ -49,7 +49,7 @@ class BaseEmotionDetector(Node):
         # Handle subscription/publication topics.
         self._subscription = self.create_subscription(
             DialogueUtterance,
-            self._in_expect_uintent_topic,
+            self._in_topic,
             self.emotion_detection_callback,
             1,
         )
