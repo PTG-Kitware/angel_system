@@ -53,9 +53,7 @@ class BaseEmotionDetector(Node):
             self.emotion_detection_callback,
             1,
         )
-        self._publication = self.create_publisher(
-            DialogueUtterance, self._out_topic, 1
-        )
+        self._publication = self.create_publisher(DialogueUtterance, self._out_topic, 1)
 
         self.message_queue = queue.Queue()
         self.handler_thread = threading.Thread(target=self.process_message_queue)
@@ -119,8 +117,10 @@ class BaseEmotionDetector(Node):
         """
         classification, confidence_score = self.get_inference(msg)
         pub_msg = dialogue_utterance_processing.copy_dialogue_utterance(
-            msg, node_name="Emotion Detection",
-            copy_time=self.get_clock().now().to_msg())
+            msg,
+            node_name="Emotion Detection",
+            copy_time=self.get_clock().now().to_msg(),
+        )
         # Overwrite the user emotion with the latest classification information.
         pub_msg.emotion = classification
         pub_msg.emotion_confidence_score = confidence_score

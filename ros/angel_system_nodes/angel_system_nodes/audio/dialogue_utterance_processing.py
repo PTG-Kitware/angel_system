@@ -1,8 +1,9 @@
 from angel_msgs.msg import DialogueUtterance
 
-def copy_dialogue_utterance(msg: DialogueUtterance,
-                            node_name,
-                            copy_time) -> DialogueUtterance:
+
+def copy_dialogue_utterance(
+    msg: DialogueUtterance, node_name, copy_time
+) -> DialogueUtterance:
     msg = DialogueUtterance()
     msg.header.frame_id = node_name
     msg.utterance_text = msg.utterance_text

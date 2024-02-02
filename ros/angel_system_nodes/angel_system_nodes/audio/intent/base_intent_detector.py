@@ -110,30 +110,27 @@ class BaseIntentDetector(Node):
 
         if not intents:
             colored_utterance = colored(msg.utterance_text, "light_blue")
-            self.log.info(
-                f'No intents detected for:\n>>> "{colored_utterance}":')
+            self.log.info(f'No intents detected for:\n>>> "{colored_utterance}":')
             return None, -1.0
         else:
             classification, confidence = _tiebreak_intents(intents, confidences)
             classification = colored(classification, "light_green")
             self.publish_message(msg.utterance_text, classification, confidence)
 
-    def publish_message(self, msg: DialogueUtterance, intent: str,
-                        score: float):
+    def publish_message(self, msg: DialogueUtterance, intent: str, score: float):
         """
         Handles message publishing for an utterance with a detected intent.
         """
         pub_msg = self.copy_dialogue_utterance(
-            msg, node_name="Intent Detection",
-            copy_time=self.get_clock().now().to_msg())
+            msg, node_name="Intent Detection", copy_time=self.get_clock().now().to_msg()
+        )
         # Overwrite the user intent with the latest classification information.
         pub_msg.intent = intent
         pub_msg.intent_confidence_score = score
 
         # Decide which intent topic to publish the message to.
         published_topic = None
-        if self._contains_phrase(pub_msg.utterance_text.lower(),
-                                 OVERRIDE_KEYPHRASES):
+        if self._contains_phrase(pub_msg.utterance_text.lower(), OVERRIDE_KEYPHRASES):
             published_topic = PARAM_EXPECT_USER_INTENT_TOPIC
             pub_msg.intent_confidence_score = 1.0
             self._expected_publisher.publish(pub_msg)

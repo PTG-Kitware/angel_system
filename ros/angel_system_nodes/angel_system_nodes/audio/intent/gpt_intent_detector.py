@@ -13,7 +13,6 @@ from angel_system_nodes.audio.intent.base_intent_detector import (
 from angel_utils import declare_and_get_parameters, make_default_main
 
 
-
 openai.organization = os.getenv("OPENAI_ORG_ID")
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
@@ -27,6 +26,7 @@ FEW_SHOT_EXAMPLES = [
 ]
 
 PARAM_TIMEOUT = "timeout"
+
 
 class GptIntentDetector(BaseIntentDetector):
     def __init__(self):
@@ -100,7 +100,7 @@ class GptIntentDetector(BaseIntentDetector):
         Detects the user intent via langchain execution of GPT.
         """
         intent = self.chain.run(utterance=msg.utterance_text)
-        return intent.split('[eos]')[0], 0.5
+        return intent.split("[eos]")[0], 0.5
 
 
 main = make_default_main(GptIntentDetector)
