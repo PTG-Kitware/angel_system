@@ -25,7 +25,7 @@ root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 # on_project_start: command
 on_project_start: |
   export ROS_NAMESPACE=${ROS_NAMESPACE:-/debug}
-  export CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/src/angel_system_nodes/configs
+  export CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/config
   export NODE_RESOURCES_DIR=${ANGEL_WORKSPACE_DIR}/src/angel_system_nodes/resource
 # Run on project start, the first time
 # on_project_first_start: command
@@ -94,14 +94,13 @@ windows:
       panes:
         - gpt_emotion_detection: ros2 run angel_system_nodes gpt_emotion_detector --ros-args
            -r __ns:=${ROS_NAMESPACE}
-           -p expect_user_intent_topic:=expect_user_intent_topic
-           -p interp_user_intent_topic:=interp_user_intent_topic
+           -p input_topic:=interp_user_intent_topic
            -p user_emotion_topic:=gpt_emotion_topic
   - question_answering:
       layout: even-vertical
       panes:
         - gpt_question_answering: ros2 run angel_system_nodes question_answerer --ros-args
            -r __ns:=${ROS_NAMESPACE}
-           -p user_emotion_topic:=gpt_emotion_topic
+           -p input_topic:=gpt_emotion_topic
            -p system_text_response_topic:=system_text_response_topic
            -p few_shot_prompt_file:=${CONFIG_DIR}/llm_prompts/tourniquet_steps_prompt
