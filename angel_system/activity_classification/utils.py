@@ -278,26 +278,26 @@ def obj_det2d_set_to_feature_by_method(
     if hands_label_exists:
         hands_loc_dict = {}
         for i, label in enumerate(label_vec):
-            if label == "hands":
-                hand_center = xs[i] + ws[i]//2
-                if hand_center < image_center:
-                    if "hands (left)" not in hands_loc_dict.keys():
-                        label_vec[i] = "hands (left)"
-                        hands_loc_dict[label_vec[i]] = (hand_center, i)
-                    else:
-                        if hand_center > hands_loc_dict["hands (left)"][0]:
-                            label_vec[i] = "hands (right)"
-                            hands_loc_dict[label_vec[i]] = (hand_center, i)
-                else:
-                    if "hands (right)" not in hands_loc_dict.keys():
-                        label_vec[i] = "hands (right)"
-                        hands_loc_dict[label_vec[i]] = (hand_center, i)
-                    else:
-                        if hand_center < hands_loc_dict["hands (right)"][0]:
-                            label_vec[i] = "hands (right)"
-                            hands_loc_dict[label_vec[i]] = (hand_center, i)
-                    # label_vec[i] = "hands (right)"
-            elif label == "tourniquet_label":
+            # if label == "hands":
+            #     hand_center = xs[i] + ws[i]//2
+            #     if hand_center < image_center:
+            #         if "hands (left)" not in hands_loc_dict.keys():
+            #             label_vec[i] = "hands (left)"
+            #             hands_loc_dict[label_vec[i]] = (hand_center, i)
+            #         else:
+            #             if hand_center > hands_loc_dict["hands (left)"][0]:
+            #                 label_vec[i] = "hands (right)"
+            #                 hands_loc_dict[label_vec[i]] = (hand_center, i)
+            #     else:
+            #         if "hands (right)" not in hands_loc_dict.keys():
+            #             label_vec[i] = "hands (right)"
+            #             hands_loc_dict[label_vec[i]] = (hand_center, i)
+            #         else:
+            #             if hand_center < hands_loc_dict["hands (right)"][0]:
+            #                 label_vec[i] = "hands (right)"
+            #                 hands_loc_dict[label_vec[i]] = (hand_center, i)
+            #         # label_vec[i] = "hands (right)"
+            if label == "tourniquet_label":
                 label_vec[i] = "tourniquet_tourniquet"
             elif label == "tourniquet_windlass":
                 label_vec[i] = "tourniquet_tourniquet"

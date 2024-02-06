@@ -156,29 +156,24 @@ def compute_feats(
             joint_left_hand_offset = []
             joint_right_hand_offset = []
             joint_object_offset = []
-
+        
+        num_hands, num_objects = 0, 0
         for ann in ann_by_image[image_id]:
+            if "keypoints" in ann.keys():
+                pose_keypoints = ann['keypoints']
             
-            if objects_joints or hands_joints:
-                if "keypoints" in ann.keys():
-                    # print(f"########### this has keypoints #################")
-                    if hands_joints:
-                        if "left_hand_offset" in ann.keys():
-                            joint_left_hand_offset.append(ann['left_hand_offset'])
-                        if "right_hand_offset" in ann.keys():
-                            joint_right_hand_offset.append(ann['right_hand_offset'])
-                    if objects_joints:
-                        if "object_offset" in ann.keys():
-                            joint_object_offset.append(ann['object_offset'])
-
-            if "confidence" in ann.keys():
+            elif "confidence" in ann.keys():
                 label_vec.append(act_id_to_str[ann["category_id"]])
                 xs.append(ann["bbox"][0])
                 ys.append(ann["bbox"][1])
                 ws.append(ann["bbox"][2])
                 hs.append(ann["bbox"][3])
                 label_confidences.append(ann["confidence"])
-
+                
+                if ann["category_id"] == 0:
+                    num_hands += 1
+                elif ann['category_id'] in [1,2,3,4,5,6,7,8,9,10,11]:
+                    num_objects += 1
                 try:
                     obj_obj_contact_state.append(ann["obj-obj_contact_state"])
                     obj_obj_contact_conf.append(ann["obj-obj_contact_conf"])
@@ -186,6 +181,80 @@ def compute_feats(
                     obj_hand_contact_conf.append(ann["obj-hand_contact_conf"])
                 except KeyError:
                     pass
+                
+        # print(f"pose keyponts: {pose_keypoints}")
+        image_center = 1280//2
+        if num_hands > 0:
+            hands_loc_dict = {}
+            for i, label in enumerate(label_vec):
+                if label == "hands":
+                    hand_center = xs[i] + ws[i]//2
+                    if hand_center < image_center:
+                        if "hands (left)" not in hands_loc_dict.keys():
+                            label_vec[i] = "hands (left)"
+                            hands_loc_dict[label_vec[i]] = (hand_center, i)
+                        else:
+                            if hand_center > hands_loc_dict["hands (left)"][0]:
+                                label_vec[i] = "hands (right)"
+                                hands_loc_dict[label_vec[i]] = (hand_center, i)
+                            else:
+                                prev_index = hands_loc_dict["hands (left)"][1]
+                                label_vec[prev_index] = "hands (right)"
+                                label_vec[i] = "hands (left)"
+                    else:
+                        if "hands (right)" not in hands_loc_dict.keys():
+                            label_vec[i] = "hands (right)"
+                            hands_loc_dict[label_vec[i]] = (hand_center, i)
+                        else:
+                            if hand_center < hands_loc_dict["hands (right)"][0]:
+                                label_vec[i] = "hands (left)"
+                                hands_loc_dict[label_vec[i]] = (hand_center, i)
+                            else:
+                                prev_index = hands_loc_dict["hands (right)"][1]
+                                label_vec[prev_index] = "hands (left)"
+                                label_vec[i] = "hands (right)"
+        
+        if (num_hands > 0 or num_objects > 0) and (hands_joints or objects_joints):
+            for i, label in enumerate(label_vec):
+                
+                if hands_joints and num_hands > 0:
+                    
+                    if label == "hands (right)" or label == "hands (left)":
+                        bx, by, bw, bh = xs[i], ys[i], ws[i], hs[i]
+                        hcx, hcy = bx+(bw//2), by+(bh//2)
+                        hand_point = np.array((hcx, hcy))
+                        offset_vector = []
+                        for joint in pose_keypoints:
+                            jx, jy = joint['xy']
+                            joint_point = np.array((jx, jy))
+                            # print(f"joint_points: {joint_point.dtype}, hand_point: {hand_point.dtype}")
+                            dist = np.linalg.norm(joint_point - hand_point)
+                            offset_vector.append(dist)
+                            
+                        # print(f"offset vector: {offset_vector}")
+                        if label == "hands (left)":
+                        # #     # hcx, hcy = bx+bw//2, by+by//w
+                            joint_left_hand_offset = offset_vector
+                        elif label == "hands (right)":
+                            joint_right_hand_offset = offset_vector
+                            
+                    else:
+                        if objects_joints and num_objects > 0:
+                            bx, by, bw, bh = ann['bbox']
+                            ocx, ocy = bx+(bw//2), by+(bh//2)
+                            object_point = np.array((ocx, ocy))
+                            offset_vector = []
+                            for joint in pose_keypoints:
+                                jx, jy = joint['xy']
+                                joint_point = np.array((jx, jy))
+                                # print(f"joint_points: {joint_point.dtype}, object_point: {object_point.dtype}")
+                                dist = np.linalg.norm(joint_point - object_point)
+                                offset_vector.append(dist)
+                                
+                            joint_object_offset = offset_vector
+                        # object_offset_wrt = ann_id
+
+                
             
         # print(f"joint_left_hand_offset: {len(joint_left_hand_offset)}")
         # print(f"joint_right_hand_offset: {len(joint_right_hand_offset)}")
