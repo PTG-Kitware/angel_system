@@ -17,7 +17,7 @@ from angel_system.data.common.load_data import activities_from_dive_csv
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1, 2, 3"
 
-root_dir = "/data/ptg/medical/bbn/data/Release_v0.5/v0.52"
+root_dir = "/data/PTG/medical/bbn_data/Release_v0.5/v0.52"
 # root_dir = '/media/hannah.defazio/Padlock_DT/Data/notpublic/PTG/Release_v0.5'
 
 
@@ -202,9 +202,9 @@ def bbn_medical_data_loader(
     return valid_classes, data
 
 
-def data_loader(split):
+def data_loader(split, task_name):
     # Load gt bboxes for task
-    task_classes, task_bboxes = bbn_medical_data_loader("M2_Tourniquet", split=split)
+    task_classes, task_bboxes = bbn_medical_data_loader(task_name, split=split)
 
     # Combine task and person annotations
     # gt_bboxes = {**person_bboxes, **task_bboxes}
@@ -252,17 +252,18 @@ def save_as_kwcoco(classes, data, save_fn="bbn-data.mscoco.json"):
     dset.fpath = save_fn
     dset.dump(dset.fpath, newlines=True)
 
-    print_class_freq(dset)
+    # print_class_freq(dset)
 
 
 def main():
-    for split in ["train", "test"]:
-        classes, gt_bboxes = data_loader(split)
+    # Should be M1 folder, M2 folder, etc
+    subfolders = os.listdir(root_dir)
+    for task_name in subfolders:
+        for split in ["train", "test"]:
+            classes, gt_bboxes = data_loader(split, task_name)
 
-        out = f"{root_dir}/M2_Tourniquet/YoloModel/M2_YoloModel_LO_{split}.mscoco.json"
-        save_as_kwcoco(classes, gt_bboxes, save_fn=out)
-
-    # TODO: train on out kwcoco file + save
+            out = f"{root_dir}/{task_name}/YoloModel/{task_name}_YoloModel_LO_{split}.mscoco.json"
+            save_as_kwcoco(classes, gt_bboxes, save_fn=out)
 
 
 if __name__ == "__main__":
