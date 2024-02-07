@@ -20,8 +20,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1, 2, 3"
 
 
 def dive_to_activity_file(videos_dir):
-    """DIVE CSV to BBN TXT frame-level annotation file format
-    """
+    """DIVE CSV to BBN TXT frame-level annotation file format"""
     for dive_csv in glob.glob(f"{videos_dir}/*/*.csv"):
         print(dive_csv)
         video_dir = os.path.dirname(dive_csv)
@@ -205,6 +204,7 @@ def save_as_kwcoco(classes, data, save_fn="bbn-data.mscoco.json"):
     dset.fpath = save_fn
     dset.dump(dset.fpath, newlines=True)
 
+
 def activity_label_fixes(activity_label, target):
     if activity_label == "put_tourniquet_around":
         label = "place-tourniquet"
@@ -218,10 +218,16 @@ def activity_label_fixes(activity_label, target):
     if activity_label == "twist" and target == "windlass":
         label = "turn-windless"
         label_id = 4
-    if activity_label == "locks_into_windlass_keeper" or activity_label == "lock_into_windlass_keeper":
+    if (
+        activity_label == "locks_into_windlass_keeper"
+        or activity_label == "lock_into_windlass_keeper"
+    ):
         label = "lock-windless"
         label_id = 5
-    if activity_label == "wraps_remaining_strap_around" or activity_label == "wrap_remaining_strap_around":
+    if (
+        activity_label == "wraps_remaining_strap_around"
+        or activity_label == "wrap_remaining_strap_around"
+    ):
         label = "pull-remaining-strap"
         label_id = 6
     if activity_label == "secures" and target == "windlass":
@@ -233,6 +239,7 @@ def activity_label_fixes(activity_label, target):
 
     return label, label_id
 
+
 def bbn_activity_txt_to_csv(root_dir):
     """
     Generate DIVE csv format activity annotations from BBN's text annotations
@@ -240,7 +247,9 @@ def bbn_activity_txt_to_csv(root_dir):
     task = "M2_Tourniquet"
     print(f"{root_dir}/{task}/Data/*/*_action_labels_by_frame.txt")
 
-    for action_txt_fn in glob.glob(f"{root_dir}/{task}/Data/*/*.action_labels_by_frame.txt"):
+    for action_txt_fn in glob.glob(
+        f"{root_dir}/{task}/Data/*/*.action_labels_by_frame.txt"
+    ):
         track_id = 0
         video_dir = os.path.dirname(action_txt_fn)
         video_name = os.path.basename(video_dir)
@@ -254,9 +263,11 @@ def bbn_activity_txt_to_csv(root_dir):
         task_dir = "m2_labels"
         csv_fn = f"{activity_dir}/{task_dir}/{video_name}_activity_labels_v2.csv"
         csv_f = open(csv_fn, "w")
-        csv_f.write("# 1: Detection or Track-id,2: Video or Image Identifier,3: Unique Frame Identifier,4-7: Img-bbox(TL_x,TL_y,BR_x,BR_y),8: Detection or Length Confidence,9: Target Length (0 or -1 if invalid),10-11+: Repeated Species,Confidence Pairs or Attributes\n")
+        csv_f.write(
+            "# 1: Detection or Track-id,2: Video or Image Identifier,3: Unique Frame Identifier,4-7: Img-bbox(TL_x,TL_y,BR_x,BR_y),8: Detection or Length Confidence,9: Target Length (0 or -1 if invalid),10-11+: Repeated Species,Confidence Pairs or Attributes\n"
+        )
         csv_f.write('# metadata,fps: 1,"exported_by: ""dive:typescript"""\n')
-        
+
         for line in lines:
             data = line.split("\t")
 
@@ -264,8 +275,12 @@ def bbn_activity_txt_to_csv(root_dir):
             start_frame = int(data[0])
             end_frame = int(data[1])
 
-            start_frame_fn = os.path.basename(glob.glob(f"{video_dir}/images/frame_{start_frame}_*.png")[0])
-            end_frame_fn = os.path.basename(glob.glob(f"{video_dir}/images/frame_{end_frame}_*.png")[0])
+            start_frame_fn = os.path.basename(
+                glob.glob(f"{video_dir}/images/frame_{start_frame}_*.png")[0]
+            )
+            end_frame_fn = os.path.basename(
+                glob.glob(f"{video_dir}/images/frame_{end_frame}_*.png")[0]
+            )
 
             # Determine activity
             activity_str = data[2].strip().split(" ")
@@ -281,7 +296,9 @@ def bbn_activity_txt_to_csv(root_dir):
             if label is not None:
                 line1 = f"{track_id},{start_frame_fn},{start_frame},1,1,2,2,1,-1,{label_id},1"
                 csv_f.write(f"{line1}\n")
-                line2 = f"{track_id},{end_frame_fn},{end_frame},1,1,2,2,1,-1,{label_id},1"
+                line2 = (
+                    f"{track_id},{end_frame_fn},{end_frame},1,1,2,2,1,-1,{label_id},1"
+                )
                 csv_f.write(f"{line2}\n")
 
                 track_id += 1

@@ -71,7 +71,7 @@ def add_activity_gt_to_kwcoco(task, dset):
 
         if "_extracted" in video_name:
             video_name = video_name.split("_extracted")[0]
-        video_skill = "m2"#video["recipe"]
+        video_skill = "m2"  # video["recipe"]
 
         with open(
             f"../config/activity_labels/{task}/task_{video_skill}.yaml", "r"
@@ -81,9 +81,7 @@ def add_activity_gt_to_kwcoco(task, dset):
 
         recipe_activity_gt_dir = f"{activity_gt_dir}/{video_skill}_labels/"
 
-        activity_gt_fn = (
-            f"{recipe_activity_gt_dir}/{video_name}_activity_labels_v2.csv"
-        )
+        activity_gt_fn = f"{recipe_activity_gt_dir}/{video_name}_activity_labels_v2.csv"
         gt = activities_from_dive_csv(activity_gt_fn)
         gt = objs_as_dataframe(gt)
 
@@ -127,7 +125,7 @@ def add_activity_gt_to_kwcoco(task, dset):
                         continue
                 else:
                     activity = activity[0]
-                    activity_label = activity["label"]               
+                    activity_label = activity["label"]
 
             dset.imgs[gid]["activity_gt"] = activity_label
 

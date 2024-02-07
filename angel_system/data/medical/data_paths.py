@@ -11,7 +11,7 @@ objects_dir = f"{data_dir}/object_anns"
 ros_bags_dir = f"{data_dir}/ros_bags/"
 bbn_data_dir = f"/data/PTG/medical/bbn_data/"
 
-KNOWN_BAD_VIDEOS = ["M2-15"] # Videos without any usable data
+KNOWN_BAD_VIDEOS = ["M2-15"]  # Videos without any usable data
 
 # M2
 # ------
@@ -24,12 +24,46 @@ m2_bbn_data_dir = f"{bbn_data_dir}/Release_v0.5/v0.52/M2_Tourniquet/Data"
 m2_training_split = {
     "train_activity": [
         f"{m2_bbn_data_dir}/M2-{x}"
-        for x in [1, 7, 13, 19, 21, 26, 27, 29, 30,
-            31, 32, 33, 34, 35, 36, 38, 39, 40, 52, 53,
-            57, 58, 60, 63, 64, 70, 71, 72, 73, 74, 75, 
-            76, 77, 119, 122, 124,
-            132, 133
-        ] 
+        for x in [
+            1,
+            7,
+            13,
+            19,
+            21,
+            26,
+            27,
+            29,
+            30,
+            31,
+            32,
+            33,
+            34,
+            35,
+            36,
+            38,
+            39,
+            40,
+            52,
+            53,
+            57,
+            58,
+            60,
+            63,
+            64,
+            70,
+            71,
+            72,
+            73,
+            74,
+            75,
+            76,
+            77,
+            119,
+            122,
+            124,
+            132,
+            133,
+        ]
         # These videos have multiples of objects during the activities:
         # 2, 4, 8, 9, 10, 11, 12, 16, 17, 18, 20, 22,
         # 23, 41, 42, 43, 45, 46, 47, 48, 49, 50, 51,
@@ -39,19 +73,16 @@ m2_training_split = {
         # 108, 112, 113, 114, 115, 116, 117, 118, 120,
         # 123, 125, 126, 127, 129, 131, 134, 135, 136
     ],
-    "val": [ # GSP testing
-        f"{m2_bbn_data_dir}/M2-{x}" for x in [
-            5, 6, 24, 28, 37, 59
-        ]
+    "val": [  # GSP testing
+        f"{m2_bbn_data_dir}/M2-{x}"
+        for x in [5, 6, 24, 28, 37, 59]
         # 15 is a bad video
         # These videos have multiples of objects during the activities:
         # 44, 78, 79, 88, 90, 106, 110, 111, 121, 130, 138
     ],
-    "test": [ # GSP training
+    "test": [  # GSP training
         f"{m2_bbn_data_dir}/M2-{x}"
-        for x in [
-            25, 55
-        ]
+        for x in [25, 55]
         # These videos have multiples of objects during the activities:
         # 3, 14, 62, 84, 96, 109, 128, 137, 139
     ],
@@ -74,7 +105,7 @@ def grab_data(recipe, machine):
                 m2_obj_dets_dir,
                 m2_obj_config,
             )
-        
+
         else:
             raise NotImplementedError
     else:

@@ -3,7 +3,10 @@ import argparse
 
 from pathlib import Path
 
-from angel_system.data.medical.load_bbn_data import bbn_yolomodel_dataloader, save_as_kwcoco
+from angel_system.data.medical.load_bbn_data import (
+    bbn_yolomodel_dataloader,
+    save_as_kwcoco,
+)
 
 
 def main():
@@ -35,16 +38,14 @@ def main():
     subfolders = os.listdir(root_dir_version)
     for task_name in subfolders:
         print(task_name)
-        
+
         task_id = task_name.split("_")[0].lower()
         output_dir = f"{args.output_root}/{task_id}/{args.version}"
         Path(output_dir).mkdir(exist_ok=True, parents=True)
 
         for split in ["train", "test"]:
             classes, gt_bboxes = bbn_yolomodel_dataloader(
-                root_dir=root_dir_version,
-                skill=task_name,
-                split=split
+                root_dir=root_dir_version, skill=task_name, split=split
             )
 
             out = f"{output_dir}/{task_name}_YoloModel_LO_{split}.mscoco.json"

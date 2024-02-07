@@ -29,9 +29,7 @@ def object_label_fixes(obj_cat):
     if obj_cat in ["coffee grounds + paper filter + filter cone"]:
         obj_cat = "coffee grounds + paper filter (quarter - open) + dripper"
     if obj_cat in ["coffee grounds + paper filter + filter cone + mug"]:
-        obj_cat = (
-            "coffee grounds + paper filter (quarter - open) + dripper + mug"
-        )
+        obj_cat = "coffee grounds + paper filter (quarter - open) + dripper + mug"
     if obj_cat in ["paper filter + filter cone"]:
         obj_cat = "paper filter (quarter) + dripper"
     if obj_cat in ["paper filter + filter cone + mug"]:
