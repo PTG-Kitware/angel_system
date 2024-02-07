@@ -9,7 +9,9 @@ data_dir = "/data/PTG/medical/"
 activity_gt_dir = f"{data_dir}/activity_anns"
 objects_dir = f"{data_dir}/object_anns"
 ros_bags_dir = f"{data_dir}/ros_bags/"
-bbn_data_dir = f"/data/PTG/medical/bbn_data"
+bbn_data_dir = f"/data/PTG/medical/bbn_data/"
+
+KNOWN_BAD_VIDEOS = ["M2-15"] # Videos without any usable data
 
 # M2
 # ------
