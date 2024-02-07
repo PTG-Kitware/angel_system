@@ -1,9 +1,9 @@
+import os
 import argparse
 
 from pathlib import Path
 
-from angel_system.data.load_bbn_medical_data import data_loader, save_as_kwcoco
-from angel_system.data.data_paths import grab_data
+from angel_system.data.medical.load_bbn_data import bbn_yolomodel_dataloader, save_as_kwcoco
 
 
 def main():
@@ -11,39 +11,44 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--skill",
+        "--root-dir",
         type=str,
-        default="M2",
-        help=f"Title of skill to run. Options are {all_skills}",
+        default="/data/PTG/medical/bbn_data/Release_v0.5/",
+        help=f"Path to the dataset",
     )
-
+    parser.add_argument(
+        "--version",
+        type=str,
+        default="v0.56",
+        help=f"BBN dataset version",
+    )
+    parser.add_argument(
+        "--output-root",
+        type=str,
+        default="/data/PTG/medical/object_anns",
+        help=f"BBN dataset version",
+    )
     args = parser.parse_args()
-    if args.skill not in all_skills:
-        print(f"Must select one of: {all_skills}")
-        return
 
-    (
-        ptg_root,
-        data_dir,
-        activity_config_fn,
-        activity_gt_dir,
-        ros_bags_dir,
-        training_split,
-        obj_dets_dir,
-        obj_config,
-    ) = grab_data(args.recipe, "gyges")
+    root_dir_version = f"{args.root_dir}/{args.version}"
+    # Should be M1 folder, M2 folder, etc
+    subfolders = os.listdir(root_dir_version)
+    for task_name in subfolders:
+        print(task_name)
+        
+        task_id = task_name.split("_")[0].lower()
+        output_dir = f"{args.output_root}/{task_id}/{args.version}"
+        Path(output_dir).mkdir(exist_ok=True, parents=True)
 
-    dive_f = f"{obj_dets_dir}/berkeley/dive"
-    dst_dir = f"{data_dir}/images/{args.recipe}/berkeley/"
-    Path(dst_dir).mkdir(parents=True, exist_ok=True)
+        for split in ["train", "test"]:
+            classes, gt_bboxes = bbn_yolomodel_dataloader(
+                root_dir=root_dir_version,
+                skill=task_name,
+                split=split
+            )
 
-    output_dir = f"{obj_dets_dir}/berkeley/"
-
-    for split in ["train", "test"]:
-        classes, gt_bboxes = data_loader(split)
-
-        out = f"{root_dir}/M2_Tourniquet/YoloModel/M2_YoloModel_LO_{split}.mscoco.json"
-        save_as_kwcoco(classes, gt_bboxes, save_fn=out)
+            out = f"{output_dir}/{task_name}_YoloModel_LO_{split}.mscoco.json"
+            save_as_kwcoco(classes, gt_bboxes, save_fn=out)
 
 
 if __name__ == "__main__":

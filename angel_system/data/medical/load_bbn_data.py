@@ -14,13 +14,14 @@ import pandas as pd
 import numpy as np
 
 from angel_system.data.common.load_data import activities_from_dive_csv
+from angel_system.data.medical.data_paths import KNOWN_BAD_VIDEOS
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1, 2, 3"
 
-root_dir = "/data/PTG/medical/bbn_data/Release_v0.5/v0.52"
-
 
 def dive_to_activity_file(videos_dir):
+    """DIVE CSV to BBN TXT frame-level annotation file format
+    """
     for dive_csv in glob.glob(f"{videos_dir}/*/*.csv"):
         print(dive_csv)
         video_dir = os.path.dirname(dive_csv)
@@ -40,9 +41,10 @@ def bbn_activity_data_loader(
     video,
     step_map=None,
     lab_data=False,
-    add_inter_steps=False,
-    add_before_finished_task=False,
 ):
+    """Create a dictionary of start and end times for each activity in
+    the BBN TXT frame-level annotation files
+    """
     # Load ground truth activity
     if lab_data:
         skill_fn = glob.glob(f"{videos_dir}/{video}/*_skills_frame.txt")
@@ -78,48 +80,13 @@ def bbn_activity_data_loader(
 
     skill_f.close()
 
-    # Add in more time frames if applicable
-    steps = list(step_map.keys()) if step_map else {}
-    if add_inter_steps:
-        print("Adding in-between steps")
-        for i, step in enumerate(steps[:-1]):
-            sub_step_str = step_map[step][0][0].lower().strip().strip(".").strip()
-            next_sub_step_str = (
-                step_map[steps[i + 1]][0][0].lower().strip().strip(".").strip()
-            )
-            if (
-                sub_step_str in gt_activity.keys()
-                and next_sub_step_str in gt_activity.keys()
-            ):
-                start = gt_activity[sub_step_str][0]["end"]
-                end = gt_activity[next_sub_step_str][0]["start"]
-
-                gt_activity[f"In between {step} and {steps[i+1]}".lower()] = [
-                    {"start": start, "end": end}
-                ]
-
-    if add_before_finished_task:
-        print("Adding before and finished")
-        # before task
-        sub_step_str = step_map["step 1"][0][0].lower().strip().strip(".").strip()
-        if sub_step_str in gt_activity.keys():
-            end = gt_activity[sub_step_str][0]["start"]  # when the first step starts
-            gt_activity["not started"] = [{"start": 0, "end": end}]
-
-        # after task
-        sub_step_str = step_map["step 8"][0][0].lower().strip().strip(".").strip()
-        if sub_step_str in gt_activity.keys():
-            start = gt_activity[sub_step_str][0]["end"]  # when the last step ends
-            end = len(glob.glob(f"{videos_dir}/{video}/_extracted/images/*.png")) - 1
-            gt_activity["finished"] = [{"start": start, "end": end}]
-
     print(f"Loaded ground truth from {skill_fn}")
 
     return gt_activity
 
 
-def bbn_medical_data_loader(
-    skill, valid_classes="all", split="train", filter_repeated_objs=False
+def bbn_yolomodel_dataloader(
+    root_dir, skill, valid_classes="all", split="train", filter_repeated_objs=False
 ):
     """
     Load the YoloModel data
@@ -138,8 +105,6 @@ def bbn_medical_data_loader(
     bboxes_dir = f"{data_dir}/LabeledObjects/{split}"
 
     for ann_fn in glob.glob(f"{bboxes_dir}/*.txt"):
-        print(ann_fn)
-
         try:
             image_fn = ann_fn[:-3] + "png"
             assert os.path.exists(image_fn)
@@ -201,17 +166,6 @@ def bbn_medical_data_loader(
     return valid_classes, data
 
 
-def data_loader(split, task_name):
-    # Load gt bboxes for task
-    task_classes, task_bboxes = bbn_medical_data_loader(task_name, split=split)
-
-    # Combine task and person annotations
-    # gt_bboxes = {**person_bboxes, **task_bboxes}
-    # all_classes = person_classes + task_classes
-
-    return task_classes, task_bboxes
-
-
 def save_as_kwcoco(classes, data, save_fn="bbn-data.mscoco.json"):
     """
     Save the bboxes in the json file
@@ -251,9 +205,8 @@ def save_as_kwcoco(classes, data, save_fn="bbn-data.mscoco.json"):
     dset.fpath = save_fn
     dset.dump(dset.fpath, newlines=True)
 
-    # print_class_freq(dset)
 
-def bbn_activity_txt_to_csv():
+def bbn_activity_txt_to_csv(root_dir):
     """
     Generate DIVE csv format activity annotations from BBN's text annotations
     """
@@ -264,8 +217,7 @@ def bbn_activity_txt_to_csv():
         track_id = 0
         video_dir = os.path.dirname(action_txt_fn)
         video_name = os.path.basename(video_dir)
-        if video_name is in ["M2-15"]:
-            # Known bad videos
+        if video_name in KNOWN_BAD_VIDEOS:
             continue
 
         action_f = open(action_txt_fn)
@@ -331,17 +283,3 @@ def bbn_activity_txt_to_csv():
                 track_id += 1
         action_f.close()
         csv_f.close()
-
-def main():
-    # Should be M1 folder, M2 folder, etc
-    subfolders = os.listdir(root_dir)
-    for task_name in subfolders:
-        for split in ["train", "test"]:
-            classes, gt_bboxes = data_loader(split, task_name)
-
-            out = f"{root_dir}/{task_name}/YoloModel/{task_name}_YoloModel_LO_{split}.mscoco.json"
-            save_as_kwcoco(classes, gt_bboxes, save_fn=out)
-
-
-if __name__ == "__main__":
-    bbn_activity_txt_to_csv()
