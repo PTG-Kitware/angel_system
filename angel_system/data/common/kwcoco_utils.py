@@ -225,7 +225,7 @@ def imgs_to_video(imgs_dir):
     """Convert directory of images to a video"""
     video_name = imgs_dir.split("/")[-1] + ".avi"
 
-    images = glob.glob(f"{imgs_dir}/images/*.png")
+    images = glob.glob(f"{imgs_dir}/*.png")
     images = sorted(images, key=lambda x: time_from_name(x)[0])
 
     frame = cv2.imread(images[0])
@@ -592,3 +592,111 @@ def remap_category_ids_demo(dset):
     dset._build_index()
     dset.dump(dset.fpath, newlines=True)
     print(f"Saved predictions to {dset.fpath}")
+
+def filter_kwcoco_by_class(dset, good_classes=[], bad_classes=[]):
+    """Filter the kwcoco file to only include the labels in ``good_classes``
+    and/or remove annotations with the labels ``bad_classes``
+    """
+    # Load kwcoco file
+    dset = load_kwcoco(dset)
+
+    new_dset = kwcoco.CocoDataset()
+
+    # Add categories
+    classes = good_classes if good_classes else [object_label["name"] for cat_id, object_label in dset.cats.items() if object_label["name"] not in bad_classes]
+    print(classes)
+    for object_label in classes:
+        new_dset.add_category(name=object_label)
+
+    for video_id, video in dset.index.videos.items():
+        new_dset.add_video(**video)
+
+    gid_to_aids = dset.index.gid_to_aids
+    gids = ub.argsort(ub.map_vals(len, gid_to_aids))
+
+    for gid in sorted(gids):
+        im = dset.imgs[gid]
+        new_im = im.copy()
+
+        aids = gid_to_aids[gid]
+        anns = ub.dict_subset(dset.anns, aids)
+
+        # Add video
+        if hasattr(im, "video_id"):
+            old_video = dset.index.videos[im["video_id"]]["name"]
+            new_video = new_dset.index.name_to_video[old_video]
+            new_im["video_id"] = new_video["id"]
+
+        del new_im["id"]
+        new_im["file_name"] = im["file_name"]
+        new_gid = new_dset.add_image(**new_im)
+
+        for aid, ann in anns.items():
+            old_cat = dset.cats[ann["category_id"]]["name"]
+            if old_cat not in classes:
+                continue
+
+            new_cat = new_dset.index.name_to_cat[old_cat]
+
+            new_ann = ann.copy()
+
+            del new_ann["id"]
+            new_ann["category_id"] = new_cat["id"]
+            new_ann["image_id"] = new_gid
+
+            new_dset.add_annotation(**new_ann)
+
+    # Remove any images without annotations now
+    gid_to_aids = new_dset.index.gid_to_aids
+    gids = ub.argsort(ub.map_vals(len, gid_to_aids))
+    remove_imgs = []
+    for gid in sorted(gids):
+        aids = gid_to_aids[gid]
+        if len(aids) ==  0:
+            remove_imgs.append(gid)
+        
+    print(f"removing {len(remove_imgs)} images that no longer have annotations")
+    new_dset.remove_images(remove_imgs)
+
+    fpath = dset.fpath.split(".mscoco")[0]
+    if good_classes:
+        new_dset.fpath = f"{fpath}_{'_'.join(good_classes)}_only.mscoco.json"
+    else:
+        new_dset.fpath = f"{fpath}_without_{'_'.join(bad_classes)}.mscoco.json"
+
+    new_dset.dump(new_dset.fpath, newlines=True)
+    print(f"Saved predictions to {new_dset.fpath}")
+
+def filter_kwcoco_by_filename(dset, good_files_fn):
+    """Filter the kwcoco dataset by filename
+
+    :param dset: kwcoco object or a string pointing to a kwcoco file
+    :param good_files_fn: Text file containing all good image filenames to keep
+    """
+    # Load kwcoco file
+    dset = load_kwcoco(dset)
+
+    gid_to_aids = dset.index.gid_to_aids
+    gids = ub.argsort(ub.map_vals(len, gid_to_aids))
+
+    # Load good image names
+    with open(good_files_fn, "r") as good_names_f:
+        lines = good_names_f.readlines()
+        good_names = [os.path.basename(l.strip()) for l in lines]
+        print(good_names)
+
+    remove_imgs = []
+    for gid in sorted(gids):
+        im = dset.imgs[gid]
+        img_fn = im["file_name"]
+
+        if os.path.basename(img_fn) not in good_names:
+            remove_imgs.append(gid)
+
+    print(f"removing {len(remove_imgs)} images")
+    dset.remove_images(remove_imgs)
+
+    fpath = dset.fpath.split(".mscoco")[0]
+    dset.fpath = f"{fpath}_good_objects_only.mscoco.json"
+    dset.dump(dset.fpath, newlines=True)
+    print(f"Saved dset to {dset.fpath}")
