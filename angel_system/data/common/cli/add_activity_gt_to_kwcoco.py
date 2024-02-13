@@ -11,10 +11,16 @@ def main():
         default="obj_annotations.mscoco.json",
         help="kwcoco filename",
     )
+    parser.add_argument(
+        "--task",
+        type=str,
+        default="medical",
+        help="Task name",
+    )
 
     args = parser.parse_args()
 
-    add_activity_gt_to_kwcoco(args.dset)
+    add_activity_gt_to_kwcoco(args.task, args.dset)
 
 
 if __name__ == "__main__":

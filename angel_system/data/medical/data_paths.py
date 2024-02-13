@@ -1,0 +1,112 @@
+###############
+# GYGES
+###############
+ptg_root = "/home/local/KHQ/hannah.defazio/angel_system/"
+activity_config_path = f"{ptg_root}/config/activity_labels/medical"
+object_config_path = f"{ptg_root}/config/object_labels/medical"
+
+data_dir = "/data/PTG/medical/"
+activity_gt_dir = f"{data_dir}/activity_anns"
+objects_dir = f"{data_dir}/object_anns"
+ros_bags_dir = f"{data_dir}/ros_bags/"
+bbn_data_dir = f"/data/PTG/medical/bbn_data/"
+
+KNOWN_BAD_VIDEOS = ["M2-15"]  # Videos without any usable data
+
+# M2
+# ------
+m2_activity_gt_dir = f"{activity_gt_dir}/m2_labels/"
+m2_activity_config_fn = f"{activity_config_path}/recipe_m2.yaml"
+
+m2_ros_bags_dir = f"{ros_bags_dir}/m2/m2_extracted/"
+m2_bbn_data_dir = f"{bbn_data_dir}/Release_v0.5/v0.52/M2_Tourniquet/Data"
+
+m2_training_split = {
+    "train_activity": [
+        f"{m2_bbn_data_dir}/M2-{x}"
+        for x in [
+            1,
+            7,
+            13,
+            19,
+            21,
+            26,
+            27,
+            29,
+            30,
+            31,
+            32,
+            33,
+            34,
+            35,
+            36,
+            38,
+            39,
+            40,
+            52,
+            53,
+            57,
+            58,
+            60,
+            63,
+            64,
+            70,
+            71,
+            72,
+            73,
+            74,
+            75,
+            76,
+            77,
+            119,
+            122,
+            124,
+            132,
+            133,
+        ]
+        # These videos have multiples of objects during the activities:
+        # 2, 4, 8, 9, 10, 11, 12, 16, 17, 18, 20, 22,
+        # 23, 41, 42, 43, 45, 46, 47, 48, 49, 50, 51,
+        # 54, 56, 61, 65, 66, 67, 68, 69, 80, 81, 82,
+        # 83, 85, 86, 87, 89, 91, 92, 93, 94, 95, 97,
+        # 98, 99, 100, 101, 102, 103, 104, 105, 107,
+        # 108, 112, 113, 114, 115, 116, 117, 118, 120,
+        # 123, 125, 126, 127, 129, 131, 134, 135, 136
+    ],
+    "val": [  # GSP testing
+        f"{m2_bbn_data_dir}/M2-{x}"
+        for x in [5, 6, 24, 28, 37, 59]
+        # 15 is a bad video
+        # These videos have multiples of objects during the activities:
+        # 44, 78, 79, 88, 90, 106, 110, 111, 121, 130, 138
+    ],
+    "test": [  # GSP training
+        f"{m2_bbn_data_dir}/M2-{x}"
+        for x in [25, 55]
+        # These videos have multiples of objects during the activities:
+        # 3, 14, 62, 84, 96, 109, 128, 137, 139
+    ],
+}
+
+m2_obj_dets_dir = f"{objects_dir}/m2"
+m2_obj_config = f"{object_config_path}/task_m2.yaml"
+
+
+def grab_data(recipe, machine):
+    if machine == "gyges":
+        if recipe == "m2":
+            return (
+                ptg_root,
+                data_dir,
+                m2_activity_config_fn,
+                m2_activity_gt_dir,
+                m2_ros_bags_dir,
+                m2_training_split,
+                m2_obj_dets_dir,
+                m2_obj_config,
+            )
+
+        else:
+            raise NotImplementedError
+    else:
+        raise NotImplementedError
