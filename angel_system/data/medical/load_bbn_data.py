@@ -10,6 +10,8 @@ import glob
 import cv2
 import kwcoco
 import kwimage
+import shutil
+
 import pandas as pd
 import numpy as np
 
@@ -304,3 +306,18 @@ def bbn_activity_txt_to_csv(root_dir):
                 track_id += 1
         action_f.close()
         csv_f.close()
+
+
+def find_bad_images(imgs, good_imgs, output_dir):
+    good_image_fns = [os.path.basename(f) for f in glob.glob(f"{good_imgs}/*")]
+    img_fns = [os.path.basename(f) for f in glob.glob(f"{imgs}/*")]
+
+    print(len(img_fns))
+    print(len(good_image_fns))
+
+    bad_img_fns = [f for f in img_fns if f not in good_image_fns]
+
+    print(len(bad_img_fns))
+
+    for fn in bad_img_fns:
+        shutil.copy(f"{imgs}/{fn}", output_dir)
