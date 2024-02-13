@@ -593,6 +593,7 @@ def remap_category_ids_demo(dset):
     dset.dump(dset.fpath, newlines=True)
     print(f"Saved predictions to {dset.fpath}")
 
+
 def filter_kwcoco_by_class(dset, good_classes=[], bad_classes=[]):
     """Filter the kwcoco file to only include the labels in ``good_classes``
     and/or remove annotations with the labels ``bad_classes``
@@ -603,7 +604,15 @@ def filter_kwcoco_by_class(dset, good_classes=[], bad_classes=[]):
     new_dset = kwcoco.CocoDataset()
 
     # Add categories
-    classes = good_classes if good_classes else [object_label["name"] for cat_id, object_label in dset.cats.items() if object_label["name"] not in bad_classes]
+    classes = (
+        good_classes
+        if good_classes
+        else [
+            object_label["name"]
+            for cat_id, object_label in dset.cats.items()
+            if object_label["name"] not in bad_classes
+        ]
+    )
     print(classes)
     for object_label in classes:
         new_dset.add_category(name=object_label)
@@ -652,9 +661,9 @@ def filter_kwcoco_by_class(dset, good_classes=[], bad_classes=[]):
     remove_imgs = []
     for gid in sorted(gids):
         aids = gid_to_aids[gid]
-        if len(aids) ==  0:
+        if len(aids) == 0:
             remove_imgs.append(gid)
-        
+
     print(f"removing {len(remove_imgs)} images that no longer have annotations")
     new_dset.remove_images(remove_imgs)
 
@@ -666,6 +675,7 @@ def filter_kwcoco_by_class(dset, good_classes=[], bad_classes=[]):
 
     new_dset.dump(new_dset.fpath, newlines=True)
     print(f"Saved predictions to {new_dset.fpath}")
+
 
 def filter_kwcoco_by_filename(dset, good_files_fn):
     """Filter the kwcoco dataset by filename
