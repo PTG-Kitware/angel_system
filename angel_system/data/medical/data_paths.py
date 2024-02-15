@@ -18,9 +18,7 @@ KNOWN_BAD_VIDEOS = ["M2-15"]  # Videos without any usable data
 m2_activity_gt_dir = f"{activity_gt_dir}/m2_labels/"
 m2_activity_config_fn = f"{activity_config_path}/recipe_m2.yaml"
 
-m2_ros_bags_dir = f"{ros_bags_dir}/m2/m2_extracted/"
 m2_bbn_data_dir = f"{bbn_data_dir}/Release_v0.5/v0.52/M2_Tourniquet/Data"
-
 m2_training_split = {
     "train_activity": [
         f"{m2_bbn_data_dir}/M2-{x}"
@@ -91,19 +89,72 @@ m2_training_split = {
 m2_obj_dets_dir = f"{objects_dir}/m2"
 m2_obj_config = f"{object_config_path}/task_m2.yaml"
 
+# M2 Lab
+# ------
+m2_lab_bbn_data_dir = f"{bbn_data_dir}/M2_Lab_data/skills_by_frame"
+m2_lab_training_split = {
+    "train_activity": [],
+    "val": [],
+    "test": [
+        f"{m2_lab_bbn_data_dir}/tq_{x}"
+        for x in [
+            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+            16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30
+        ]
+    ],
+}
 
-def grab_data(recipe, machine):
+
+# M2 Kitware
+# ----------
+m2_kitware_data_dir = f"{ros_bags_dir}/M2/M2_extracted/"
+m2_kitware_training_split = {
+    "train_activity": [],
+    "val": [],
+    "test": [
+        f"{m2_kitware_data_dir}/kitware_m2_video_{x}_extracted"
+        for x in [
+            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
+            18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32
+        ]
+    ],
+}
+
+
+def grab_data(skill, machine="gyges"):
     if machine == "gyges":
-        if recipe == "m2":
+        if skill == "m2":
             return (
                 ptg_root,
                 data_dir,
                 m2_activity_config_fn,
                 m2_activity_gt_dir,
-                m2_ros_bags_dir,
+                None,
                 m2_training_split,
                 m2_obj_dets_dir,
                 m2_obj_config,
+            )
+        elif skill == "m2_lab":
+            return (
+                ptg_root,
+                data_dir,
+                None,
+                None,
+                m2_kitware_data_dir,
+                m2_lab_training_split,
+                None,
+                None,
+            )
+        elif skill == "m2_kitware":
+            return (
+                ptg_root,
+                data_dir,
+                None,
+                None,
+                None,
+                m2_kitware_training_split,
+                None,
+                None,
             )
 
         else:
