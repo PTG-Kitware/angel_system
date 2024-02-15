@@ -258,14 +258,10 @@ def bbn_activity_txt_to_csv(root_dir, output_dir):
     """
     print(f"{root_dir}/*/*_action_labels_by_frame.txt")
 
-    action_fns = glob.glob(
-        f"{root_dir}/*/*.action_labels_by_frame.txt"
-    )
+    action_fns = glob.glob(f"{root_dir}/*/*.action_labels_by_frame.txt")
     if not action_fns:
         # Lab videos
-        action_fns = glob.glob(
-            f"{root_dir}/*/*_skills_frame.txt"
-        )
+        action_fns = glob.glob(f"{root_dir}/*/*_skills_frame.txt")
     if not action_fns:
         warnings.warn(f"No text annotations found in {root_dir}")
         return
