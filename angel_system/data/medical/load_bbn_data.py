@@ -242,16 +242,35 @@ def activity_label_fixes(activity_label, target):
     return label, label_id
 
 
-def bbn_activity_txt_to_csv(root_dir):
+def bbn_activity_txt_to_csv(root_dir, output_dir):
     """
     Generate DIVE csv format activity annotations from BBN's text annotations
-    """
-    task = "M2_Tourniquet"
-    print(f"{root_dir}/{task}/Data/*/*_action_labels_by_frame.txt")
 
-    for action_txt_fn in glob.glob(
-        f"{root_dir}/{task}/Data/*/*.action_labels_by_frame.txt"
-    ):
+    :param root_dir: Path to a folder containing video folders
+        Expected setup:
+            root_dir/
+                {VIDEO_NAME}/
+                    {action labels by frame}.txt
+                    images/
+                        {filename}.png
+                        ...
+
+    """
+    print(f"{root_dir}/*/*_action_labels_by_frame.txt")
+
+    action_fns = glob.glob(
+        f"{root_dir}/*/*.action_labels_by_frame.txt"
+    )
+    if not action_fns:
+        # Lab videos
+        action_fns = glob.glob(
+            f"{root_dir}/*/*_skills_frame.txt"
+        )
+    if not action_fns:
+        warnings.warn(f"No text annotations found in {root_dir}")
+        return
+
+    for action_txt_fn in action_fns:
         track_id = 0
         video_dir = os.path.dirname(action_txt_fn)
         video_name = os.path.basename(video_dir)
@@ -262,8 +281,7 @@ def bbn_activity_txt_to_csv(root_dir):
         lines = action_f.readlines()
 
         # Create output csv
-        task_dir = "m2_labels"
-        csv_fn = f"{activity_dir}/{task_dir}/{video_name}_activity_labels_v2.csv"
+        csv_fn = f"{output_dir}/{video_name}_activity_labels_v2.csv"
         csv_f = open(csv_fn, "w")
         csv_f.write(
             "# 1: Detection or Track-id,2: Video or Image Identifier,3: Unique Frame Identifier,4-7: Img-bbox(TL_x,TL_y,BR_x,BR_y),8: Detection or Length Confidence,9: Target Length (0 or -1 if invalid),10-11+: Repeated Species,Confidence Pairs or Attributes\n"
