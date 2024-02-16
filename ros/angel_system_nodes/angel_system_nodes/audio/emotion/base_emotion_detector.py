@@ -4,14 +4,14 @@ from termcolor import colored
 import threading
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
-from angel_msgs.msg import InterpretedAudioUserEmotion, InterpretedAudioUserIntent
+from angel_msgs.msg import DialogueUtterance
 from angel_utils import declare_and_get_parameters
 from angel_utils import make_default_main
+from angel_system_nodes.audio import dialogue_utterance_processing
 
 
-IN_EXPECT_USER_INTENT_TOPIC = "expect_user_intent_topic"
-IN_INTERP_USER_INTENT_TOPIC = "interp_user_intent_topic"
-OUT_INTERP_USER_EMOTION_TOPIC = "user_emotion_topic"
+IN_TOPIC = "input_topic"
+OUT_TOPIC = "user_emotion_topic"
 
 # Currently supported emotions. This is tied with the emotions
 # output to VaderSentiment (https://github.com/cjhutto/vaderSentiment) and
@@ -26,8 +26,8 @@ VADER_POSITIVE_COMPOUND_THRESHOLD = 0.05
 
 class BaseEmotionDetector(Node):
     """
-    As of Q22023, emotion detection is derived via VaderSentiment
-    (https://github.com/cjhutto/vaderSentiment).
+    This is the base emotion detection node that other emotion detection nodes
+    should inherit from.
     """
 
     def __init__(self):
@@ -38,32 +38,22 @@ class BaseEmotionDetector(Node):
         param_values = declare_and_get_parameters(
             self,
             [
-                (IN_EXPECT_USER_INTENT_TOPIC,),
-                (IN_INTERP_USER_INTENT_TOPIC,),
-                (OUT_INTERP_USER_EMOTION_TOPIC,),
+                (IN_TOPIC,),
+                (OUT_TOPIC,),
             ],
         )
 
-        self._in_expect_uintent_topic = param_values[IN_EXPECT_USER_INTENT_TOPIC]
-        self._in_interp_uintent_topic = param_values[IN_INTERP_USER_INTENT_TOPIC]
-        self._out_interp_uemotion_topic = param_values[OUT_INTERP_USER_EMOTION_TOPIC]
+        self._in_topic = param_values[IN_TOPIC]
+        self._out_topic = param_values[OUT_TOPIC]
 
         # Handle subscription/publication topics.
-        self.expect_uintent_subscription = self.create_subscription(
-            InterpretedAudioUserIntent,
-            self._in_expect_uintent_topic,
-            self.intent_detection_callback,
+        self._subscription = self.create_subscription(
+            DialogueUtterance,
+            self._in_topic,
+            self.emotion_detection_callback,
             1,
         )
-        self.interp_uintent_subscription = self.create_subscription(
-            InterpretedAudioUserIntent,
-            self._in_interp_uintent_topic,
-            self.intent_detection_callback,
-            1,
-        )
-        self._interp_emo_publisher = self.create_publisher(
-            InterpretedAudioUserEmotion, self._out_interp_uemotion_topic, 1
-        )
+        self._publication = self.create_publisher(DialogueUtterance, self._out_topic, 1)
 
         self.message_queue = queue.Queue()
         self.handler_thread = threading.Thread(target=self.process_message_queue)
@@ -95,14 +85,14 @@ class BaseEmotionDetector(Node):
         )
         return (classification, confidence)
 
-    def get_inference(self, msg):
+    def get_inference(self, msg: DialogueUtterance):
         """
         Abstract away the different model inference calls depending on the
         node's configure model mode.
         """
         return self._get_vader_sentiment_analysis(msg.utterance_text)
 
-    def intent_detection_callback(self, msg):
+    def emotion_detection_callback(self, msg: DialogueUtterance):
         """
         This is the main ROS node listener callback loop that will process
         all messages received via subscribed topics.
@@ -119,29 +109,29 @@ class BaseEmotionDetector(Node):
         while True:
             msg = self.message_queue.get()
             self.log.debug(f'Processing message:\n\n"{msg.utterance_text}"')
-            classification, confidence_score = self.get_inference(msg)
-            self.publish_detected_emotion(
-                msg.utterance_text, classification, confidence_score
-            )
+            self.process_message(msg)
 
-    def publish_detected_emotion(
-        self, utterance: str, classification: str, confidence_score: float
-    ):
+    def process_message(self, msg: DialogueUtterance):
         """
         Handles message publishing for an utterance with a detected emotion classification.
         """
-        emotion_msg = InterpretedAudioUserEmotion()
-        emotion_msg.header.frame_id = "Emotion Detection"
-        emotion_msg.header.stamp = self.get_clock().now().to_msg()
-        emotion_msg.utterance_text = utterance
-        emotion_msg.user_emotion = classification
-        emotion_msg.confidence = confidence_score
-        self._interp_emo_publisher.publish(emotion_msg)
-        colored_utterance = colored(utterance, "light_blue")
-        colored_emotion = colored(classification, "light_green")
+        classification, confidence_score = self.get_inference(msg)
+        pub_msg = dialogue_utterance_processing.copy_dialogue_utterance(
+            msg,
+            node_name="Emotion Detection",
+            copy_time=self.get_clock().now().to_msg(),
+        )
+        # Overwrite the user emotion with the latest classification information.
+        pub_msg.emotion = classification
+        pub_msg.emotion_confidence_score = confidence_score
+        self.emotion_publication.publish(pub_msg)
+
+        # Log emotion detection information.
+        colored_utterance = colored(pub_msg.utterance_text, "light_blue")
+        colored_emotion = colored(pub_msg.emotion, "light_green")
         self.log.info(
             f'Publishing {{"{colored_emotion}": {confidence_score}}} '
-            + f'to {self._out_interp_uemotion_topic} for:\n>>> "{colored_utterance}"'
+            + f'to {self._out_topic} for:\n>>> "{colored_utterance}"'
         )
 
     def _apply_filter(self, msg):
@@ -150,10 +140,6 @@ class BaseEmotionDetector(Node):
         none if the message should be filtered out. Else, return the incoming
         msg if it can be included.
         """
-        # if msg.user_intent.lower() == "user inquiry":
-        #     return msg
-        # else:
-        #     return None
         return msg
 
 

@@ -20,12 +20,11 @@ setup(
     entry_points={
         "console_scripts": [
             "video_listener = angel_system_nodes.video_subscriber:main",
-            "base_intent_detector = angel_system_nodes.base_intent_detector:main",
-            "gpt_intent_detector = angel_system_nodes.gpt_intent_detector:main",
-            "base_emotion_detector = angel_system_nodes.base_emotion_detector:main",
-            "gpt_emotion_detector = angel_system_nodes.gpt_emotion_detector:main",
-            "question_answerer = angel_system_nodes.question_answerer:main",
-            "intent_detector = angel_system_nodes.intent_detector:main",
+            "base_intent_detector = angel_system_nodes.audio.intent.base_intent_detector:main",
+            "gpt_intent_detector = angel_system_nodes.audio.intent.gpt_intent_detector:main",
+            "base_emotion_detector = angel_system_nodes.audio.emotion.base_emotion_detector:main",
+            "gpt_emotion_detector = angel_system_nodes.audio.emotion.gpt_emotion_detector:main",
+            "question_answerer = angel_system_nodes.audio.question_answerer:main",
             "spatial_mapper = angel_system_nodes.spatial_mapper:main",
             "feedback_generator = angel_system_nodes.feedback_generator:main",
             "annotation_event_monitor = angel_system_nodes.annotation_event_monitor:main",
