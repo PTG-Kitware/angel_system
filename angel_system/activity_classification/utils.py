@@ -51,6 +51,7 @@ def obj_det2d_set_to_feature(
     obj_hand_contact_conf,
     label_to_ind: Dict[str, int],
     version: int = 1,
+    top_n_objects=3,
 ):
     """Convert ObjectDetection2dSet fields into a feature vector.
 
@@ -184,6 +185,7 @@ def obj_det2d_set_to_feature(
             use_intersection=True,
             use_joint_hand_offset=True,
             use_joint_object_offset=True,
+            top_n_objects=top_n_objects
         )
     else:
         raise NotImplementedError(f"Unhandled version '{version}'")
@@ -207,6 +209,7 @@ def obj_det2d_set_to_feature_by_method(
     use_intersection=False,
     use_joint_hand_offset=False,
     use_joint_object_offset=False,
+    top_n_objects=3,
 ):
     """
     `label_vec`, `xs`, `ys`, `ws`, hs` are to all be parallel in association
@@ -244,25 +247,28 @@ def obj_det2d_set_to_feature_by_method(
     # Number of object detection classes
     num_det_classes = len(label_to_ind) + 1 # accomedate 2 hands instead of 1, accomedate top 3 objects
     
+    # print(f"label_to_ind: {label_to_ind}")
+    
     # modify label_to_ind dict to accomedate 2 hands instead of 1
-    if "hands" in label_to_ind.keys():
+    if "hand" in label_to_ind.keys() or "hands (right)" in label_to_ind.keys() or "hands (left)" in label_to_ind.keys():
         hands_label_exists = True
         label_to_ind_tmp = {}
         for key, value in label_to_ind.items():
-            if key == "hands":
+            if key == "hand":
                 label_to_ind_tmp["hands (left)"] = value
                 label_to_ind_tmp["hands (right)"] = value + 1
             else:
                 label_to_ind_tmp[key] = value + 1
+        
+        label_to_ind = label_to_ind_tmp
     else:
         hands_label_exists = False
     
-    label_to_ind = label_to_ind_tmp
     # print(f'label_to_ind: {label_to_ind}, label_to_ind_tmp: {label_to_ind_tmp}')
     # print(f'label_confidences: {label_confidences}, label_to_ind_tmp: {label_to_ind_tmp}')
     # exit()
     # print(f"num_det_classes: {num_det_classes}")
-    top_n_objects = 3
+    # top_n_objects = 3
     # Maximum confidence observe per-class across input object detections.
     # If a class has not been observed, it is set to 0 confidence.
     det_class_max_conf = np.zeros((num_det_classes, top_n_objects))
@@ -275,32 +281,32 @@ def obj_det2d_set_to_feature_by_method(
 
     # Record the most confident detection for each object class as recorded in
     # `label_to_ind` (confidence & bbox)
-    if hands_label_exists:
-        hands_loc_dict = {}
-        for i, label in enumerate(label_vec):
-            # if label == "hands":
-            #     hand_center = xs[i] + ws[i]//2
-            #     if hand_center < image_center:
-            #         if "hands (left)" not in hands_loc_dict.keys():
-            #             label_vec[i] = "hands (left)"
-            #             hands_loc_dict[label_vec[i]] = (hand_center, i)
-            #         else:
-            #             if hand_center > hands_loc_dict["hands (left)"][0]:
-            #                 label_vec[i] = "hands (right)"
-            #                 hands_loc_dict[label_vec[i]] = (hand_center, i)
-            #     else:
-            #         if "hands (right)" not in hands_loc_dict.keys():
-            #             label_vec[i] = "hands (right)"
-            #             hands_loc_dict[label_vec[i]] = (hand_center, i)
-            #         else:
-            #             if hand_center < hands_loc_dict["hands (right)"][0]:
-            #                 label_vec[i] = "hands (right)"
-            #                 hands_loc_dict[label_vec[i]] = (hand_center, i)
-            #         # label_vec[i] = "hands (right)"
-            if label == "tourniquet_label":
-                label_vec[i] = "tourniquet_tourniquet"
-            elif label == "tourniquet_windlass":
-                label_vec[i] = "tourniquet_tourniquet"
+    # if hands_label_exists:
+    #     hands_loc_dict = {}
+    #     for i, label in enumerate(label_vec):
+    #         # if label == "hands":
+    #         #     hand_center = xs[i] + ws[i]//2
+    #         #     if hand_center < image_center:
+    #         #         if "hands (left)" not in hands_loc_dict.keys():
+    #         #             label_vec[i] = "hands (left)"
+    #         #             hands_loc_dict[label_vec[i]] = (hand_center, i)
+    #         #         else:
+    #         #             if hand_center > hands_loc_dict["hands (left)"][0]:
+    #         #                 label_vec[i] = "hands (right)"
+    #         #                 hands_loc_dict[label_vec[i]] = (hand_center, i)
+    #         #     else:
+    #         #         if "hands (right)" not in hands_loc_dict.keys():
+    #         #             label_vec[i] = "hands (right)"
+    #         #             hands_loc_dict[label_vec[i]] = (hand_center, i)
+    #         #         else:
+    #         #             if hand_center < hands_loc_dict["hands (right)"][0]:
+    #         #                 label_vec[i] = "hands (right)"
+    #         #                 hands_loc_dict[label_vec[i]] = (hand_center, i)
+    #         #         # label_vec[i] = "hands (right)"
+    #         if label == "tourniquet_label":
+    #             label_vec[i] = "tourniquet_tourniquet"
+    #         elif label == "tourniquet_windlass":
+    #             label_vec[i] = "tourniquet_tourniquet"
     
     # print(f"label vec: {label_vec}")
     for i, label in enumerate(label_vec):

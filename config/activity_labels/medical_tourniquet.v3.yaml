@@ -14,7 +14,7 @@ labels:
     label: "pull-tight"
     description: "Pull tourniquet tight (step 2)."
   - id: 3
-    label: "apply-strap-to-strap-body"
+    label: "apply-strap-body"
     description: "Apply strap to strap body (step 3)."
   - id: 4
     label: "turn-windless"
@@ -23,7 +23,7 @@ labels:
     label: "lock-windless"
     description: "Lock windless into the windless keeper (step 5)."
   - id: 6
-    label: "pull-remaining-strap"
+    label: "pull-remain-strap"
     description: "Pull remaining strap over the windless keeper (step 6)."
   - id: 7
     label: "secure-strap"
