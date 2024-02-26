@@ -1,0 +1,33 @@
+version: "1"
+labels:
+  # Item:
+  # - id: Integer identification number of the label.
+  # - label: Short human-readable semantic string to succinctly represent the
+  #          label.
+  - id: 0
+    label: "background"
+    description: "background"
+  - id: 1
+    label: "place-tourniquet"
+    description: "Place tourniquet over affected extremity 2-3 inches above wound site (step 1)."
+  - id: 2
+    label: "pull-tight"
+    description: "Pull tourniquet tight (step 2)."
+  - id: 3
+    label: "apply-strap-to-strap-body"
+    description: "Apply strap to strap body (step 3)."
+  - id: 4
+    label: "turn-windless"
+    description: "Turn windless clock wise or counter clockwise until hemorrhage is controlled (step 4)."
+  - id: 5
+    label: "lock-windless"
+    description: "Lock windless into the windless keeper (step 5)."
+  - id: 6
+    label: "pull-remaining-strap"
+    description: "Pull remaining strap over the windless keeper (step 6)."
+  - id: 7
+    label: "secure-strap"
+    description: "Secure strap and windless keeper with keeper securing device (step 7)."
+  - id: 8
+    label: "mark-time"
+    description: "Mark time on securing device strap with permanent marker (step 8)."
