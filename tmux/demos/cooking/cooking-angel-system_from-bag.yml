@@ -138,7 +138,7 @@ windows:
             -p topic_notifications:=TaskErrors
             -p log_output_dir:="${BAGS_DIR}"
             -p task_config_file:="${CONFIG_DIR}"/tasks/multi-task-config.yaml
-            -p activity_config_file:="${CONFIG_DIR}"/activity_labels/all_recipe_labels.yaml
+            -p activity_config_file:="${CONFIG_DIR}"/activity_labels/cooking/all_recipe_labels.yaml
 
   - engineering-ui:
       layout: even-vertical

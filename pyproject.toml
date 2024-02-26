@@ -70,16 +70,12 @@ kwcoco = ">=0.6.2"
 kwimage = ">=0.9.18"
 networkx = ">=3.1"
 
-# TCN Activity classifier /home/local/KHQ/peri.akiva/projects/TCN_HPL
+
+# TCN Activity classifier
 tcn-hpl = {path = "/home/local/KHQ/peri.akiva/projects/TCN_HPL", develop = true}
 
-# Yolo v7 and Yolo v8 object detection
+# Yolo v7 object detection
 yolov7 = {path = "/home/local/KHQ/peri.akiva/projects/yolov7", develop = true}
-#ultralytics = {path = "/home/local/KHQ/peri.akiva/projects/ultralytics", develop = true}
-
-# For Yolo V8
-# thop = ">=0.1.1" # FLOPs computation
-
 
 [tool.poetry.dev-dependencies]
 ipython = "*"

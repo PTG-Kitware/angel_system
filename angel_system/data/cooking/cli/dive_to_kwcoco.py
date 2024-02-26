@@ -3,7 +3,7 @@ import argparse
 from pathlib import Path
 
 from angel_system.data.common.kwcoco_utils import dive_csv_to_kwcoco
-from angel_system.data.data_paths import grab_data
+from angel_system.data.cooking.data_paths import grab_data
 
 
 def main():

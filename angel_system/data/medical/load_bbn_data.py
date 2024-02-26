@@ -10,18 +10,19 @@ import glob
 import cv2
 import kwcoco
 import kwimage
+import shutil
+
 import pandas as pd
 import numpy as np
 
 from angel_system.data.common.load_data import activities_from_dive_csv
+from angel_system.data.medical.data_paths import KNOWN_BAD_VIDEOS
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1, 2, 3"
 
-root_dir = "/data/ptg/medical/bbn/data/Release_v0.5/v0.52"
-# root_dir = '/media/hannah.defazio/Padlock_DT/Data/notpublic/PTG/Release_v0.5'
-
 
 def dive_to_activity_file(videos_dir):
+    """DIVE CSV to BBN TXT frame-level annotation file format"""
     for dive_csv in glob.glob(f"{videos_dir}/*/*.csv"):
         print(dive_csv)
         video_dir = os.path.dirname(dive_csv)
@@ -41,9 +42,10 @@ def bbn_activity_data_loader(
     video,
     step_map=None,
     lab_data=False,
-    add_inter_steps=False,
-    add_before_finished_task=False,
 ):
+    """Create a dictionary of start and end times for each activity in
+    the BBN TXT frame-level annotation files
+    """
     # Load ground truth activity
     if lab_data:
         skill_fn = glob.glob(f"{videos_dir}/{video}/*_skills_frame.txt")
@@ -79,48 +81,13 @@ def bbn_activity_data_loader(
 
     skill_f.close()
 
-    # Add in more time frames if applicable
-    steps = list(step_map.keys()) if step_map else {}
-    if add_inter_steps:
-        print("Adding in-between steps")
-        for i, step in enumerate(steps[:-1]):
-            sub_step_str = step_map[step][0][0].lower().strip().strip(".").strip()
-            next_sub_step_str = (
-                step_map[steps[i + 1]][0][0].lower().strip().strip(".").strip()
-            )
-            if (
-                sub_step_str in gt_activity.keys()
-                and next_sub_step_str in gt_activity.keys()
-            ):
-                start = gt_activity[sub_step_str][0]["end"]
-                end = gt_activity[next_sub_step_str][0]["start"]
-
-                gt_activity[f"In between {step} and {steps[i+1]}".lower()] = [
-                    {"start": start, "end": end}
-                ]
-
-    if add_before_finished_task:
-        print("Adding before and finished")
-        # before task
-        sub_step_str = step_map["step 1"][0][0].lower().strip().strip(".").strip()
-        if sub_step_str in gt_activity.keys():
-            end = gt_activity[sub_step_str][0]["start"]  # when the first step starts
-            gt_activity["not started"] = [{"start": 0, "end": end}]
-
-        # after task
-        sub_step_str = step_map["step 8"][0][0].lower().strip().strip(".").strip()
-        if sub_step_str in gt_activity.keys():
-            start = gt_activity[sub_step_str][0]["end"]  # when the last step ends
-            end = len(glob.glob(f"{videos_dir}/{video}/_extracted/images/*.png")) - 1
-            gt_activity["finished"] = [{"start": start, "end": end}]
-
     print(f"Loaded ground truth from {skill_fn}")
 
     return gt_activity
 
 
-def bbn_medical_data_loader(
-    skill, valid_classes="all", split="train", filter_repeated_objs=False
+def bbn_yolomodel_dataloader(
+    root_dir, skill, valid_classes="all", split="train", filter_repeated_objs=False
 ):
     """
     Load the YoloModel data
@@ -139,8 +106,6 @@ def bbn_medical_data_loader(
     bboxes_dir = f"{data_dir}/LabeledObjects/{split}"
 
     for ann_fn in glob.glob(f"{bboxes_dir}/*.txt"):
-        print(ann_fn)
-
         try:
             image_fn = ann_fn[:-3] + "png"
             assert os.path.exists(image_fn)
@@ -202,17 +167,6 @@ def bbn_medical_data_loader(
     return valid_classes, data
 
 
-def data_loader(split):
-    # Load gt bboxes for task
-    task_classes, task_bboxes = bbn_medical_data_loader("M2_Tourniquet", split=split)
-
-    # Combine task and person annotations
-    # gt_bboxes = {**person_bboxes, **task_bboxes}
-    # all_classes = person_classes + task_classes
-
-    return task_classes, task_bboxes
-
-
 def save_as_kwcoco(classes, data, save_fn="bbn-data.mscoco.json"):
     """
     Save the bboxes in the json file
@@ -252,18 +206,132 @@ def save_as_kwcoco(classes, data, save_fn="bbn-data.mscoco.json"):
     dset.fpath = save_fn
     dset.dump(dset.fpath, newlines=True)
 
-    print_class_freq(dset)
+
+def activity_label_fixes(activity_label, target):
+    if activity_label == "put_tourniquet_around":
+        label = "place-tourniquet"
+        label_id = 1
+    if activity_label == "pulls_tight":
+        label = "pull-tight"
+        label_id = 2
+    if activity_label == "secures" and target == "velcro_strap":
+        label = "apply-strap-to-strap-body"
+        label_id = 3
+    if activity_label == "twist" and target == "windlass":
+        label = "turn-windless"
+        label_id = 4
+    if (
+        activity_label == "locks_into_windlass_keeper"
+        or activity_label == "lock_into_windlass_keeper"
+    ):
+        label = "lock-windless"
+        label_id = 5
+    if (
+        activity_label == "wraps_remaining_strap_around"
+        or activity_label == "wrap_remaining_strap_around"
+    ):
+        label = "pull-remaining-strap"
+        label_id = 6
+    if activity_label == "secures" and target == "windlass":
+        label = "secure-strap"
+        label_id = 7
+    if activity_label == "writes_on" and target == "tourniquet_label":
+        label = "mark-time"
+        label_id = 8
+
+    return label, label_id
 
 
-def main():
-    for split in ["train", "test"]:
-        classes, gt_bboxes = data_loader(split)
+def bbn_activity_txt_to_csv(root_dir, output_dir):
+    """
+    Generate DIVE csv format activity annotations from BBN's text annotations
 
-        out = f"{root_dir}/M2_Tourniquet/YoloModel/M2_YoloModel_LO_{split}.mscoco.json"
-        save_as_kwcoco(classes, gt_bboxes, save_fn=out)
+    :param root_dir: Path to a folder containing video folders
+        Expected setup:
+            root_dir/
+                {VIDEO_NAME}/
+                    {action labels by frame}.txt
+                    images/
+                        {filename}.png
+                        ...
 
-    # TODO: train on out kwcoco file + save
+    """
+    print(f"{root_dir}/*/*_action_labels_by_frame.txt")
+
+    action_fns = glob.glob(f"{root_dir}/*/*.action_labels_by_frame.txt")
+    if not action_fns:
+        # Lab videos
+        action_fns = glob.glob(f"{root_dir}/*/*_skills_frame.txt")
+    if not action_fns:
+        warnings.warn(f"No text annotations found in {root_dir}")
+        return
+
+    for action_txt_fn in action_fns:
+        track_id = 0
+        video_dir = os.path.dirname(action_txt_fn)
+        video_name = os.path.basename(video_dir)
+        if video_name in KNOWN_BAD_VIDEOS:
+            continue
+
+        action_f = open(action_txt_fn)
+        lines = action_f.readlines()
+
+        # Create output csv
+        csv_fn = f"{output_dir}/{video_name}_activity_labels_v2.csv"
+        csv_f = open(csv_fn, "w")
+        csv_f.write(
+            "# 1: Detection or Track-id,2: Video or Image Identifier,3: Unique Frame Identifier,4-7: Img-bbox(TL_x,TL_y,BR_x,BR_y),8: Detection or Length Confidence,9: Target Length (0 or -1 if invalid),10-11+: Repeated Species,Confidence Pairs or Attributes\n"
+        )
+        csv_f.write('# metadata,fps: 1,"exported_by: ""dive:typescript"""\n')
+
+        for line in lines:
+            data = line.split("\t")
+
+            # Find frame filenames
+            start_frame = int(data[0])
+            end_frame = int(data[1])
+
+            start_frame_fn = os.path.basename(
+                glob.glob(f"{video_dir}/images/frame_{start_frame}_*.png")[0]
+            )
+            end_frame_fn = os.path.basename(
+                glob.glob(f"{video_dir}/images/frame_{end_frame}_*.png")[0]
+            )
+
+            # Determine activity
+            activity_str = data[2].strip().split(" ")
+            hand = activity_str[0]
+            activity = activity_str[1]
+            target = activity_str[2] if len(activity_str) > 2 else None
+
+            # convert activity_str info to our activity labels
+            # this is hacky: fix later
+            label = None
+            label, label_id = activity_label_fixes(activity_label, target)
+
+            if label is not None:
+                line1 = f"{track_id},{start_frame_fn},{start_frame},1,1,2,2,1,-1,{label_id},1"
+                csv_f.write(f"{line1}\n")
+                line2 = (
+                    f"{track_id},{end_frame_fn},{end_frame},1,1,2,2,1,-1,{label_id},1"
+                )
+                csv_f.write(f"{line2}\n")
+
+                track_id += 1
+        action_f.close()
+        csv_f.close()
 
 
-if __name__ == "__main__":
-    main()
+def find_bad_images(imgs, good_imgs, output_dir):
+    good_image_fns = [os.path.basename(f) for f in glob.glob(f"{good_imgs}/*")]
+    img_fns = [os.path.basename(f) for f in glob.glob(f"{imgs}/*")]
+
+    print(len(img_fns))
+    print(len(good_image_fns))
+
+    bad_img_fns = [f for f in img_fns if f not in good_image_fns]
+
+    print(len(bad_img_fns))
+
+    for fn in bad_img_fns:
+        shutil.copy(f"{imgs}/{fn}", output_dir)
