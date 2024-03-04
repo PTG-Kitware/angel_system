@@ -1,7 +1,9 @@
+import os
+
 ###############
 # GYGES
 ###############
-ptg_root = "/home/local/KHQ/hannah.defazio/angel_system/"
+ptg_root = "/home/local/KHQ/peri.akiva/angel_system/"
 activity_config_path = f"{ptg_root}/config/activity_labels/medical"
 object_config_path = f"{ptg_root}/config/object_labels/medical"
 
@@ -9,9 +11,18 @@ data_dir = "/data/PTG/medical/"
 activity_gt_dir = f"{data_dir}/activity_anns"
 objects_dir = f"{data_dir}/object_anns"
 ros_bags_dir = f"{data_dir}/ros_bags/"
-bbn_data_dir = f"/data/PTG/medical/bbn_data/"
+bbn_data_dir = f"/data/PTG/medical/bbn_data"
 
 KNOWN_BAD_VIDEOS = ["M2-15"]  # Videos without any usable data
+
+TASK_TO_NAME = {
+    'm1': "M1_Trauma_Assessment",
+    'm2': "M2_Tourniquet",
+    'm3': "M3_Pressure_Dressing",
+    'm4': "M4_Wound_Packing",
+    'm5': "M5_X-Stat",
+    'r18': "R18_Chest_Seal",
+}
 
 # M2
 # ------
@@ -20,13 +31,9 @@ m2_activity_config_fn = f"{activity_config_path}/recipe_m2.yaml"
 
 # M3
 
-
 # M5
-
-
-# R18
-
-
+# R18 /data/PTG/medical/bbn_data/Release_v0.5/v0.56
+bbn_data_root = f"{bbn_data_dir}/Release_v0.5/v0.56"
 m2_bbn_data_dir = f"{bbn_data_dir}/Release_v0.5/v0.52/M2_Tourniquet/Data"
 m2_training_split = {
     "train_activity": [
@@ -71,38 +78,9 @@ m2_lab_training_split = {
     "test": [
         f"{m2_lab_bbn_data_dir}/tq_{x}"
         for x in [
-            1,
-            2,
-            3,
-            4,
-            5,
-            6,
-            7,
-            8,
-            9,
-            10,
-            11,
-            12,
-            13,
-            14,
-            15,
-            16,
-            17,
-            18,
-            19,
-            20,
-            21,
-            22,
-            23,
-            24,
-            25,
-            26,
-            27,
-            28,
-            29,
-            30,
-        ]
-    ],
+            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
+            22, 23, 24, 25, 26, 27, 28, 29, 30]
+        ],
 }
 
 
@@ -154,41 +132,50 @@ m2_kitware_training_split = {
 
 def grab_data(skill, machine="gyges"):
     if machine == "gyges":
-        if skill == "m2":
-            return (
+        skill_data_root = f"{bbn_data_root}/{TASK_TO_NAME[skill]}/Data"
+        videos = os.listdir(skill_data_root)
+        
+        videos_paths = [f"{skill_data_root}/{video}" for video in videos]
+        
+        # print(f"videos_paths: {videos_paths}")
+        # print(f"m2_training_split: {m2_training_split}")
+        # if skill == "m2":
+        return (
                 ptg_root,
                 data_dir,
                 m2_activity_config_fn,
                 m2_activity_gt_dir,
                 None,
-                m2_training_split,
+                videos_paths,
                 m2_obj_dets_dir,
                 m2_obj_config,
             )
-        elif skill == "m2_lab":
-            return (
-                ptg_root,
-                data_dir,
-                None,
-                None,
-                m2_kitware_data_dir,
-                m2_lab_training_split,
-                None,
-                None,
-            )
-        elif skill == "m2_kitware":
-            return (
-                ptg_root,
-                data_dir,
-                None,
-                None,
-                None,
-                m2_kitware_training_split,
-                None,
-                None,
-            )
+        
+        
+        # elif skill == "m2_lab":
+        #     return (
+        #         ptg_root,
+        #         data_dir,
+        #         None,
+        #         None,
+        #         m2_kitware_data_dir,
+        #         m2_lab_training_split,
+        #         None,
+        #         None,
+        #     )
+        # elif skill == "m2_kitware":
+        #     return (
+        #         ptg_root,
+        #         data_dir,
+        #         None,
+        #         None,
+        #         None,
+        #         m2_kitware_training_split,
+        #         None,
+        #         None,
+        #     )
 
-        else:
-            raise NotImplementedError
+        # else:
+        #     raise NotImplementedError
     else:
         raise NotImplementedError
