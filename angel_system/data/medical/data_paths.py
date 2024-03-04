@@ -30,6 +30,7 @@ m2_activity_gt_dir = f"{activity_gt_dir}/m2_labels/"
 m2_activity_config_fn = f"{activity_config_path}/recipe_m2.yaml"
 
 # M3
+
 # M5
 # R18 /data/PTG/medical/bbn_data/Release_v0.5/v0.56
 bbn_data_root = f"{bbn_data_dir}/Release_v0.5/v0.56"
