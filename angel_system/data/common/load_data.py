@@ -549,6 +549,9 @@ def objs_as_dataframe(sequence: Sequence) -> pd.DataFrame:
 
 def find_matching_gt_activity(gt_activity, fn):
     fn = os.path.basename(fn)
+    
+    # print(f"gt_activity: {gt_activity}")
+    
     frame, time = time_from_name(fn)
 
     """

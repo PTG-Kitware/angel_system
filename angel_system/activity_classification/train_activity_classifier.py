@@ -41,6 +41,7 @@ def data_loader(
     print("Loading data....")
     # Description to ID map.
     # print(f"act labels: {act_labels}")
+    # exit()
     act_map = {}
     inv_act_map = {}
     for step in act_labels["labels"]:
@@ -143,6 +144,19 @@ def compute_feats(
     dataset_id = []
     last_dset = 0
 
+    hands_possible_labels = ['hand (right)', 'hand (left)', 'hand', 'hands']
+    non_objects_labels = ['patient', 'user']
+    # hands_inds = [label_to_ind[label] for label in hands_possible_labels if label in label_to_ind.keys()]
+    # non_object_inds = [label_to_ind[label] for label in non_objects_labels if label in label_to_ind.keys()]
+    hands_inds = [key for key, label in act_id_to_str.items() if label in hands_possible_labels]
+    non_object_inds = [key for key, label in act_id_to_str.items() if label in non_objects_labels]
+    object_inds = list(set(list(label_to_ind.values())) - set(hands_inds) - set(non_object_inds))
+    # print(f"label_to_ind: {label_to_ind}")
+    # print(f"act_id_to_str: {act_id_to_str}")
+    # print(f"hands_inds: {hands_inds}")
+    # print(f"object_inds: {object_inds}")
+    # exit()
+    
     for image_id in sorted(list(ann_by_image.keys())):
         label_vec = []
         xs = []
@@ -203,8 +217,6 @@ def compute_feats(
                     y = rot_xy[1]
                     
                     # print(f"after xy: {x}, {y}")
-
-                    
                 
                 xs.append(x)
                 ys.append(y)
@@ -212,9 +224,11 @@ def compute_feats(
                 hs.append(h)
                 label_confidences.append(ann["confidence"])
                 
-                if ann["category_id"] == 5:
+                # print(f"ann: {ann}")
+                
+                if ann["category_id"] in hands_inds:
                     num_hands += 1
-                elif ann['category_id'] in [1,2,3,4]:
+                elif ann['category_id'] in object_inds:
                     num_objects += 1
                 try:
                     obj_obj_contact_state.append(ann["obj-obj_contact_state"])
@@ -225,6 +239,7 @@ def compute_feats(
                     pass
                 
         # print(f"pose keyponts: {pose_keypoints}")
+        # print(f"label_vec: {label_vec}")
         image_center = 1280//2
         if num_hands > 0:
             hands_loc_dict = {}
@@ -232,29 +247,47 @@ def compute_feats(
                 if label == "hand":
                     hand_center = xs[i] + ws[i]//2
                     if hand_center < image_center:
-                        if "hands (left)" not in hands_loc_dict.keys():
-                            label_vec[i] = "hands (left)"
+                        if "hand (left)" not in hands_loc_dict.keys():
+                            label_vec[i] = "hand (left)"
                             hands_loc_dict[label_vec[i]] = (hand_center, i)
                         else:
-                            if hand_center > hands_loc_dict["hands (left)"][0]:
-                                label_vec[i] = "hands (right)"
+                            if hand_center > hands_loc_dict["hand (left)"][0]:
+                                label_vec[i] = "hand (right)"
                                 hands_loc_dict[label_vec[i]] = (hand_center, i)
                             else:
-                                prev_index = hands_loc_dict["hands (left)"][1]
-                                label_vec[prev_index] = "hands (right)"
-                                label_vec[i] = "hands (left)"
+                                prev_index = hands_loc_dict["hand (left)"][1]
+                                label_vec[prev_index] = "hand (right)"
+                                label_vec[i] = "hand (left)"
                     else:
-                        if "hands (right)" not in hands_loc_dict.keys():
-                            label_vec[i] = "hands (right)"
+                        if "hand (right)" not in hands_loc_dict.keys():
+                            label_vec[i] = "hand (right)"
                             hands_loc_dict[label_vec[i]] = (hand_center, i)
                         else:
-                            if hand_center < hands_loc_dict["hands (right)"][0]:
-                                label_vec[i] = "hands (left)"
+                            if hand_center < hands_loc_dict["hand (right)"][0]:
+                                label_vec[i] = "hand (left)"
                                 hands_loc_dict[label_vec[i]] = (hand_center, i)
                             else:
-                                prev_index = hands_loc_dict["hands (right)"][1]
-                                label_vec[prev_index] = "hands (left)"
-                                label_vec[i] = "hands (right)"
+                                prev_index = hands_loc_dict["hand (right)"][1]
+                                label_vec[prev_index] = "hand (left)"
+                                label_vec[i] = "hand (right)"
+        
+        if "hand" in label_to_ind.keys():
+            # hands_label_exists = True
+            label_to_ind_tmp = {}
+            for key, value in label_to_ind.items():
+                if key == "hand":
+                    label_to_ind_tmp["hand (left)"] = value
+                    label_to_ind_tmp["hand (right)"] = value + 1
+                elif key in non_objects_labels:
+                    continue
+                else:
+                    label_to_ind_tmp[key] = value + 1
+            
+            label_to_ind = label_to_ind_tmp
+        # else:
+        #     hands_label_exists = False
+        # print(f"num_hands: {num_hands}")
+        # print(f"label_vec: {label_vec}")
         zero_offset = [0 for i in range(22)]
         if (num_hands > 0 or num_objects > 0) and (hands_joints or objects_joints):
             joint_object_offset = []
@@ -262,26 +295,27 @@ def compute_feats(
                 
                 if hands_joints and num_hands > 0:
                     
-                    if label == "hands (right)" or label == "hands (left)":
+                    if label == "hand (right)" or label == "hand (left)":
                         bx, by, bw, bh = xs[i], ys[i], ws[i], hs[i]
                         hcx, hcy = bx+(bw//2), by+(bh//2)
                         hand_point = np.array((hcx, hcy))
+                        
                         offset_vector = []
                         if 'pose_keypoints' in locals():
                             for joint in pose_keypoints:
                                 jx, jy = joint['xy']
                                 joint_point = np.array((jx, jy))
-                                # print(f"joint_points: {joint_point.dtype}, hand_point: {hand_point.dtype}")
                                 dist = np.linalg.norm(joint_point - hand_point)
+                                # print(f"joint_points: {joint_point}, hand_point: {hand_point}, hand_label: {label}, distance: {dist}")
                                 offset_vector.append(dist)
                         else:
                             offset_vector = zero_offset
                             
                         # print(f"offset vector: {offset_vector}")
-                        if label == "hands (left)":
+                        if label == "hand (left)":
                         # #     # hcx, hcy = bx+bw//2, by+by//w
                             joint_left_hand_offset = offset_vector
-                        elif label == "hands (right)":
+                        elif label == "hand (right)":
                             joint_right_hand_offset = offset_vector
                             
                     else:
@@ -305,9 +339,11 @@ def compute_feats(
 
                 
             
-        # print(f"joint_left_hand_offset: {len(joint_left_hand_offset)}")
-        # print(f"joint_right_hand_offset: {len(joint_right_hand_offset)}")
-        # print(f"joint_object_offset: {len(joint_object_offset)}")
+        # print(f"joint_left_hand_offset: {joint_left_hand_offset}")
+        # print(f"joint_right_hand_offset: {joint_right_hand_offset}")
+        # print(f"joint_object_offset: {joint_object_offset}")
+        # print(f"label_confidences: {label_confidences}")
+        # print(f"label_vec: {label_vec}")
 
         feature_vec = obj_det2d_set_to_feature(
             label_vec,
@@ -326,6 +362,7 @@ def compute_feats(
             top_n_objects=top_n_objects,
         )
         
+        # exit()
         if objects_joints or hands_joints:
             zero_offset = [0 for i in range(22)]
             offset_vector = []
@@ -360,8 +397,10 @@ def compute_feats(
             
             feature_vec.extend(offset_vector)
             
-            
+        # print(f"offset_vector: {len(offset_vector)}")
+        # print(f"feature_vec: {len(feature_vec)}")
         # print(f"feature_vec: {feature_vec}")
+        # exit()
         
             
         feature_vec = np.array(feature_vec, dtype=np.float64)
