@@ -30,6 +30,8 @@ class GlobalStepPredictor:
         """
         # TODO: make use of angel_system.data.config_structs instead of
         #       manually loading and accessing by string keys.
+        
+        print(f"activity_config_fpath: {activity_config_fpath}")
         with open(activity_config_fpath, "r") as stream:
             self.activity_config = yaml.safe_load(stream)
         num_activity_classes = len(self.activity_config["labels"])
@@ -211,6 +213,7 @@ class GlobalStepPredictor:
 
         """
         tracker_dict = {}
+        print(f"self.recipe_configs[recipe]: {self.recipe_configs}")
         config_fn = self.recipe_configs[recipe]
 
         # Read in task config
