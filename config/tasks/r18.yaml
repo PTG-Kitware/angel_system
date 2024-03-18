@@ -1,0 +1,36 @@
+version: "1.1"
+title: "r18"
+# These tasks are sourced from "PTG Evaluation Tasks Vol. 2" version 2.0
+# Provided by MASSACHUSETTS INSTITUTE OF TECHNOLOGY LINCOLN LABORATORY
+labels:
+  # Item:
+  # - id: Integer identification number of the label.
+  # - label: Short human-readable semantic string to succinctly represent the
+  #          label.
+  # - full_str: Complete sentence that fully represents the label.
+  # - activity_ids: List of activity ids that correspond to the task 
+  - id: 0
+    label: "background"
+    full_str: "background"
+    activity_ids: [0]
+  - id: 1
+    label: "cover-seal-wound"
+    full_str: "With gloved hand, cover and seal wound site."
+    activity_ids: [1]
+  - id: 2
+    label: "open-pack"
+    full_str: "Open vented chest seal package."
+    activity_ids: [2]
+  - id: 3
+    label: "clean-wound-site"
+    full_str: "Wipe blood and body fluids from wound site."
+    activity_ids: [3]
+  - id: 4
+    label: "peel-seal-backer"
+    full_str: "Peel away chest seal backer."
+    activity_ids: [4]
+  - id: 5
+    label: "place-seal"
+    full_str: "Place chest seal with circle of vents over wound site and seal to chest."
+    activity_ids: [5]
+
