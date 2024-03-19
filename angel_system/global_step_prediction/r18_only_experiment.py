@@ -7,13 +7,14 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
 import scipy.ndimage as ndi
 
-#from angel_system.global_step_prediction.global_step_predictor import (
-from global_step_predictor import (
+from angel_system.global_step_prediction.global_step_predictor import (
     GlobalStepPredictor,
 )
 
 
-def run_inference_all_vids(coco_train, coco_test, recipe_config, extra_output_suffix=""):
+def run_inference_all_vids(
+    coco_train, coco_test, recipe_config, extra_output_suffix=""
+):
     all_vid_ids = np.unique(np.asarray(coco_test.images().lookup("video_id")))
     avg_probs = None
     for vid_id in all_vid_ids:
@@ -24,9 +25,9 @@ def run_inference_all_vids(coco_train, coco_test, recipe_config, extra_output_su
         step_predictor = GlobalStepPredictor(
             recipe_types=["r18"],
             activity_config_fpath="config/activity_labels/r18.yaml",
-            recipe_config_dict={"r18":"config/tasks/r18.yaml"},
-            #threshold_multiplier=0.3,
-            #threshold_frame_count=2
+            recipe_config_dict={"r18": "config/tasks/r18.yaml"},
+            # threshold_multiplier=0.3,
+            # threshold_frame_count=2
         )
         # Add a second coffee predictor
         # step_predictor.initialize_new_recipe_tracker("coffee")
@@ -98,10 +99,9 @@ if __name__ == "__main__":
         "/data/users/cameron.johnson/datasets/R18/TCN_HPL/logs/p_r18_feat_v6_with_pose_v3_aug_False_reshuffle_True/runs/2024-03-11_09-44-03/test_activity_preds.mscoco.json"
     )
 
-    recipe_config = {
-        "r18": "config/tasks/r18.yaml"
-    }
+    recipe_config = {"r18": "config/tasks/r18.yaml"}
 
-    run_inference_all_vids(coco_train, coco_test, recipe_config, extra_output_suffix="test_set")
+    run_inference_all_vids(
+        coco_train, coco_test, recipe_config, extra_output_suffix="test_set"
+    )
     # run_inference_all_vids(coco_val, recipe_config, extra_output_suffix="val_set")
-
