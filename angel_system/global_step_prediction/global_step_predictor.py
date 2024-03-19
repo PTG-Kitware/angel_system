@@ -183,8 +183,9 @@ class GlobalStepPredictor:
         tracker dict fields:
             {
             "recipe":"coffee"
-                - all options: ["coffee", "tea", "dessert_quesadilla",
+                - all cooking options: ["coffee", "tea", "dessert_quesadilla",
                   "oatmeal", "pinwheel"]
+                - all medical options: ["r18"]
             "current_step": 5
                 - int type.
                 - 0 = background.
