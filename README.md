@@ -119,9 +119,20 @@ Docker functionality is located under the `./docker/` directory.
 * `workspace-build` provides a build of our workspace.
 
 ### Building Docker Images
-Run `./angel-docker-build.sh`.
+Quick-start
+```bash
+./angel-docker-build.sh
+```
 
 ### Developing within Docker
+Quick-start
+```bash
+# Start the containerized environment shell.
+./angel-workspace-shell.sh
+# Build your local workspace for use.
+./workspace_build.sh
+```
+
 To develop adequately in docker, the container environment needs to have access
 to the source code that is being edited, likely by an IDE on the host.
 Running `./angel-workspace-shell.sh` will create a temporary docker container
