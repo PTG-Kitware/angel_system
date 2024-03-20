@@ -10,7 +10,7 @@
 	branch = main
 [submodule "python-tpl/yolov7"]
 	path = python-tpl/yolov7
-	url = https://github.com/cameron-a-johnson/yolov7.git
+	url = https://github.com/PTG-Kitware/yolov7
 [submodule "ros/rosbag2"]
 	path = ros/rosbag2
 	url = https://github.com/ros2/rosbag2.git
