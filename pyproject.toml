@@ -11,7 +11,7 @@ description = ""
 authors = ["Kitware, Inc. <kitware@kitware.com>"]
 
 [tool.poetry.dependencies]
-python = "^3.10.12,<3.11"
+python = "^3.8.1,<3.9"
 easydict = ">=1.9"
 einops = ">=0.4.1"
 hmmlearn = ">=0.2.8"
@@ -20,6 +20,7 @@ langchain = "^0.0.223"
 matplotlib = ">=3.5.1"
 numpy = ">=1.22.2"
 openai = "^0.27.8"
+opencv-python = "^4.7.0.72"
 openpyxl = "^3.0.10"
 pandas = ">=1.4.3"
 Pillow = ">=8"
@@ -32,8 +33,8 @@ seaborn = ">=0.12.1"
 simpleaudio = "^1.0.4"
 smqtk-detection = ">=0.20.0"
 timm = "^0.5.4"
-torch = ">=1.10.2,!=2.0.1"
-torchvision = ">=0.11.3"
+torch = ">=1.9.1,<2"
+torchvision = ">=0.10.1"
 transitions = ">=0.8.11"
 trimesh = {extras = ["easy"], version = "^3.10.2"}
 
@@ -50,14 +51,12 @@ setuptools = ">=59.5.0"
 # For BBN Redis comms
 websockets = "^11.0"
 
-# For Berkeley classifier
-cloudpickle = "^2.2.1"
-opencv-python = "^4.7.0.72"
-iopath = ">=0.1.7,<0.1.10"
-pycocotools = "^2.0.6"
-future = "^0.18.3"
-#omegaconf = ">=2.1,<=2.2.0"
-black = "22.3.0"
+## For Berkeley classifier
+#cloudpickle = "^2.2.1"
+#iopath = ">=0.1.7,<0.1.10"
+#pycocotools = "^2.0.6"
+#future = "^0.18.3"
+##omegaconf = ">=2.1,<=2.2.0"
 
 # For Columbia ASR
 nltk = "^3.8.1"
@@ -76,6 +75,11 @@ tcn-hpl = {path = "python-tpl/TCN_HPL", develop = true}
 # Yolo v7 object detection
 yolov7 = {path = "python-tpl/yolov7", develop = true}
 
+# TODO: new dependencies
+#torch, 1.9
+#detectron, 0.6
+#mmpose, 0.24
+
 [tool.poetry.dev-dependencies]
 ipython = "*"
 # Docs
@@ -87,6 +91,7 @@ livereload = "*"
 jupyter = ">=1.0"
 spyder-kernels = ">=2.4"
 # Testing
+black = "*"
 mypy = "*"
 pytest = "*"
 pytest-cov = "*"
@@ -104,7 +109,7 @@ ptg_eval_step = "angel_system.ptg_eval.step_completion.evaluate_step:main"
 
 [tool.black]
 line-length = 88
-target-version = ['py310']
+target-version = ['py38']
 # 'extend-exclude' excludes files or directories in addition to the defaults
 extend-exclude = '''
 # A regex preceded with ^/ will apply only to files and directories

@@ -6,7 +6,8 @@
 
 // ROS2 things
 #include <builtin_interfaces/msg/time.hpp>
-#include <cv_bridge/cv_bridge.hpp>
+#include <cv_bridge/cv_bridge.h>
+//#include <cv_bridge/cv_bridge.hpp>
 #include <image_transport/image_transport.hpp>
 #include <rcl_interfaces/msg/parameter_descriptor.hpp>
 #include <rcl_interfaces/msg/parameter_type.hpp>
@@ -148,9 +149,13 @@ Simple2dDetectionOverlay
   // This two-stage declare->get allows the lack of passing a parameter to
   // throw an error with the parameter name in the error so the user has a
   // clue what is going wrong.
-  declare_parameter< std::string >( PARAM_TOPIC_INPUT_IMAGES );
-  declare_parameter< std::string >( PARAM_TOPIC_INPUT_DET_2D );
-  declare_parameter< std::string >( PARAM_TOPIC_OUTPUT_IMAGE );
+  declare_parameter( PARAM_TOPIC_INPUT_IMAGES );
+  declare_parameter( PARAM_TOPIC_INPUT_DET_2D );
+  declare_parameter( PARAM_TOPIC_OUTPUT_IMAGE );
+  // ROS2 Iron version
+  //declare_parameter< std::string >( PARAM_TOPIC_INPUT_IMAGES );
+  //declare_parameter< std::string >( PARAM_TOPIC_INPUT_DET_2D );
+  //declare_parameter< std::string >( PARAM_TOPIC_OUTPUT_IMAGE );
   declare_parameter( PARAM_MAX_IMAGE_HISTORY, 30 );
   declare_parameter( PARAM_FILTER_TOP_K, -1 );
 
