@@ -192,51 +192,40 @@ class YoloObjectDetector(Node):
                 dflt_conf_vec = np.zeros(n_classes, dtype=np.float64)
                 right_hand_cid = n_classes - 2
                 left_hand_cid = n_classes - 1
-                
-                hand_cid_label_dict = {
-                    "hand (right)": right_hand_cid,
-                    "hand (left)": left_hand_cid,
-                }
 
-                hand_boxes, hand_labels, hand_confs = predict_hands(hand_model=self.hand_model, 
-                                                                    img0=img0, 
-                                                                    img_size=self._inference_img_size, 
-                                                                    device=self.device)
+                hands_preds = predict_hands(hand_model=self.hand_model, img0=img0, 
+                                            img_size=self._inference_img_size, device=self.device)
+
+                hand_centers = [center.xywh.tolist()[0][0] for center in hands_preds.boxes][:2]
+                hands_label = []
+                if len(hand_centers) == 2:
+                    if hand_centers[0] > hand_centers[1]:
+                        hands_label.append(right_hand_cid)
+                        hands_label.append(left_hand_cid)
+                    elif hand_centers[0] <= hand_centers[1]:
+                        hands_label.append(left_hand_cid)
+                        hands_label.append(right_hand_cid)
+                elif len(hand_centers) == 1:
+                    if hand_centers[0] > width//2:
+                        hands_label.append(right_hand_cid)
+                    elif hand_centers[0] <= width//2:
+                        hands_label.append(left_hand_cid)
                 
-                hand_classids = [hand_cid_label_dict[label] for label in hand_labels]
                 
                 
-                objcet_boxes, object_confs, objects_classids = predict_image(
-                                                                            img0,
-                                                                            self.device,
-                                                                            self.model,
-                                                                            self.stride,
-                                                                            self.imgsz,
-                                                                            self.half,
-                                                                            False,
-                                                                            self._det_conf_thresh,
-                                                                            self._iou_thr,
-                                                                            None,
-                                                                            self._agnostic_nms,
-                                                                        )
-                
-                objcet_boxes.extend(hand_boxes)
-                object_confs.extend(hand_confs)
-                objects_classids.extend(hand_classids)
-                for xyxy, conf, cls_id in zip(objcet_boxes, object_confs, objects_classids):
-                # for xyxy, conf, cls_id in predict_image(
-                #     img0,
-                #     self.device,
-                #     self.model,
-                #     self.stride,
-                #     self.imgsz,
-                #     self.half,
-                #     False,
-                #     self._det_conf_thresh,
-                #     self._iou_thr,
-                #     None,
-                #     self._agnostic_nms,
-                # ):
+                for xyxy, conf, cls_id in predict_image(
+                    img0,
+                    self.device,
+                    self.model,
+                    self.stride,
+                    self.imgsz,
+                    self.half,
+                    False,
+                    self._det_conf_thresh,
+                    self._iou_thr,
+                    None,
+                    self._agnostic_nms,
+                ):
                     n_dets += 1
                     msg.left.append(xyxy[0])
                     msg.top.append(xyxy[1])

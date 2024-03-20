@@ -41,6 +41,7 @@ ultralytics = "==8.1.27"
 rootutils = "==1.0.7"
 torchmetrics = "==0.11.4"
 rich = "==13.7.1"
+chumpy = "==0.70"
 
 
 ## For UHO Activity Classifier
@@ -78,10 +79,10 @@ networkx = ">=3.1"
 
 
 # TCN Activity classifier
-tcn-hpl = {path = "/home/local/KHQ/peri.akiva/projects/TCN_HPL", develop = true}
+tcn-hpl = {path = "python-tpl/TCN_HPL", develop = true}
 
 # Yolo v7 object detection
-yolov7 = {path = "/home/local/KHQ/peri.akiva/projects/yolov7", develop = true}
+yolov7 = {path = "python-tpl/yolov7", develop = true}
 
 [tool.poetry.dev-dependencies]
 ipython = "*"
