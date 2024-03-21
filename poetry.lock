@@ -158,6 +158,16 @@ files = [
 ]
 
 [[package]]
+name = "antlr4-python3-runtime"
+version = "4.8"
+description = "ANTLR 4.8 runtime for Python 3.7"
+optional = false
+python-versions = "*"
+files = [
+    {file = "antlr4-python3-runtime-4.8.tar.gz", hash = "sha256:15793f5d0512a372b4e7d2284058ad32ce7dd27126b105fb0b2245130445db33"},
+]
+
+[[package]]
 name = "anyio"
 version = "4.3.0"
 description = "High level compatibility layer for multiple asynchronous event loop implementations"
@@ -1994,6 +2004,7 @@ test = ["flaky", "ipyparallel", "pre-commit", "pytest (>=7.0)", "pytest-asyncio 
 
 [[package]]
 name = "ipython"
+
 version = "8.12.3"
 description = "IPython: Productive Interactive Computing"
 optional = false
@@ -2019,17 +2030,21 @@ traitlets = ">=5"
 typing-extensions = {version = "*", markers = "python_version < \"3.10\""}
 
 [package.extras]
+
 all = ["black", "curio", "docrepr", "ipykernel", "ipyparallel", "ipywidgets", "matplotlib", "matplotlib (!=3.2.0)", "nbconvert", "nbformat", "notebook", "numpy (>=1.21)", "pandas", "pytest (<7)", "pytest (<7.1)", "pytest-asyncio", "qtconsole", "setuptools (>=18.5)", "sphinx (>=1.3)", "sphinx-rtd-theme", "stack-data", "testpath", "trio", "typing-extensions"]
 black = ["black"]
 doc = ["docrepr", "ipykernel", "matplotlib", "pytest (<7)", "pytest (<7.1)", "pytest-asyncio", "setuptools (>=18.5)", "sphinx (>=1.3)", "sphinx-rtd-theme", "stack-data", "testpath", "typing-extensions"]
+
 kernel = ["ipykernel"]
 nbconvert = ["nbconvert"]
 nbformat = ["nbformat"]
 notebook = ["ipywidgets", "notebook"]
 parallel = ["ipyparallel"]
 qtconsole = ["qtconsole"]
+
 test = ["pytest (<7.1)", "pytest-asyncio", "testpath"]
 test-extra = ["curio", "matplotlib (!=3.2.0)", "nbformat", "numpy (>=1.21)", "pandas", "pytest (<7.1)", "pytest-asyncio", "testpath", "trio"]
+
 
 [[package]]
 name = "ipywidgets"
@@ -2541,7 +2556,9 @@ files = [
 async-lru = ">=1.0.0"
 httpx = ">=0.25.0"
 importlib-metadata = {version = ">=4.8.3", markers = "python_version < \"3.10\""}
+
 importlib-resources = {version = ">=1.4", markers = "python_version < \"3.9\""}
+
 ipykernel = "*"
 jinja2 = ">=3.0.3"
 jupyter-core = "*"
@@ -2764,6 +2781,7 @@ jsonschema = ">=3.2.0"
 kwarray = ">=0.6.7"
 kwimage = ">=0.9.19"
 networkx = {version = ">=2.7", markers = "python_version < \"3.11\" and python_version >= \"3.8\""}
+
 numpy = {version = ">=1.19.2", markers = "python_version < \"3.9\" and python_version >= \"3.8\""}
 packaging = ">=21.3"
 pandas = {version = ">=1.4.0", markers = "python_version < \"3.9\" and python_version >= \"3.8\""}
@@ -2808,6 +2826,7 @@ affine = ">=2.3.0"
 distinctipy = {version = ">=1.2.1", markers = "python_version < \"4.0\" and python_version >= \"3.8\""}
 kwarray = ">=0.6.7"
 networkx = {version = ">=2.7", markers = "python_version < \"3.11\" and python_version >= \"3.8\""}
+
 numpy = {version = ">=1.19.2", markers = "python_version < \"3.9\" and python_version >= \"3.8\""}
 parse = ">=1.14.0"
 Pillow = {version = ">=8.0.0", markers = "python_version < \"3.10\" and python_version >= \"3.6\""}
@@ -3129,6 +3148,7 @@ docs = ["mdx-gh-links (>=0.2)", "mkdocs (>=1.5)", "mkdocs-gen-files", "mkdocs-li
 testing = ["coverage", "pyyaml"]
 
 [[package]]
+
 name = "markdown-it-py"
 version = "3.0.0"
 description = "Python port of markdown-it. Markdown parsing, done right!"
@@ -3301,6 +3321,7 @@ contourpy = ">=1.0.1"
 cycler = ">=0.10"
 fonttools = ">=4.22.0"
 importlib-resources = {version = ">=3.2.0", markers = "python_version < \"3.10\""}
+
 kiwisolver = ">=1.0.1"
 numpy = ">=1.20,<2"
 packaging = ">=20.0"
@@ -3830,6 +3851,7 @@ files = [
 ]
 
 [[package]]
+
 name = "oauthlib"
 version = "3.2.2"
 description = "A generic, spec-compliant, thorough implementation of the OAuth request-signing logic"
@@ -3852,6 +3874,7 @@ description = "A flexible configuration library"
 optional = false
 python-versions = ">=3.6"
 files = [
+
     {file = "omegaconf-2.3.0-py3-none-any.whl", hash = "sha256:7b4df175cdb08ba400f45cae3bdcae7ba8365db4d165fc65fd04b050ab63b46b"},
     {file = "omegaconf-2.3.0.tar.gz", hash = "sha256:d5d4b6d29955cc50ad50c46dc269bcd92c6e00f5f90d23ab5fee7bfca4ba4cc7"},
 ]
@@ -3913,7 +3936,6 @@ files = [
 ]
 
 [package.dependencies]
-numpy = [
     {version = ">=1.21.0", markers = "python_version <= \"3.9\" and platform_system == \"Darwin\" and platform_machine == \"arm64\" and python_version >= \"3.8\""},
     {version = ">=1.19.3", markers = "platform_system == \"Linux\" and platform_machine == \"aarch64\" and python_version >= \"3.8\""},
     {version = ">=1.17.3", markers = "python_version > \"3.9\" and platform_system != \"Linux\" or python_version > \"3.9\" and platform_machine != \"aarch64\" or (platform_system != \"Darwin\" and platform_system != \"Linux\") and python_version >= \"3.8\" or platform_system != \"Darwin\" and python_version >= \"3.8\" and platform_machine != \"aarch64\" or platform_machine != \"arm64\" and python_version >= \"3.8\" and platform_system != \"Linux\" or (platform_machine != \"arm64\" and platform_machine != \"aarch64\") and python_version >= \"3.8\""},
@@ -4170,6 +4192,7 @@ files = [
 [package.extras]
 docs = ["olefile", "sphinx (>=2.4)", "sphinx-copybutton", "sphinx-issues (>=3.0.1)", "sphinx-removed-in", "sphinx-rtd-theme (>=1.0)", "sphinxext-opengraph"]
 tests = ["check-manifest", "coverage", "defusedxml", "markdown2", "olefile", "packaging", "pyroma", "pytest", "pytest-cov", "pytest-timeout"]
+
 
 [[package]]
 name = "pkgutil-resolve-name"
@@ -4559,6 +4582,7 @@ files = [
 ]
 
 [[package]]
+
 name = "pydot"
 version = "2.0.0"
 description = "Python interface to Graphviz's Dot"
@@ -5332,6 +5356,7 @@ files = [
 ]
 
 [[package]]
+
 name = "rich"
 version = "13.7.1"
 description = "Render rich text, tables, progress bars, syntax highlighting, markdown and more to the terminal"
@@ -5708,11 +5733,13 @@ win32 = ["pywin32"]
 
 [[package]]
 name = "setuptools"
+
 version = "59.5.0"
 description = "Easily download, build, install, upgrade, and uninstall Python packages"
 optional = false
 python-versions = ">=3.6"
 files = [
+
     {file = "setuptools-59.5.0-py3-none-any.whl", hash = "sha256:6d10741ff20b89cd8c6a536ee9dc90d3002dec0226c78fb98605bfb9ef8a7adf"},
     {file = "setuptools-59.5.0.tar.gz", hash = "sha256:d144f85102f999444d06f9c0e8c737fd0194f10f2f7e5fdb77573f6e2fa4fad0"},
 ]
@@ -6169,6 +6196,7 @@ files = [
 [package.dependencies]
 cloudpickle = "*"
 ipykernel = {version = ">=6.29.3,<7", markers = "python_version >= \"3.8\""}
+
 ipython = {version = ">=8.12.2,<8.13", markers = "python_version == \"3.8\""}
 jupyter-client = {version = ">=7.4.9,<9", markers = "python_version >= \"3\""}
 pyzmq = {version = ">=24.0.0", markers = "python_version >= \"3\""}
@@ -6340,6 +6368,7 @@ doc = ["reno", "sphinx", "tornado (>=4.5)"]
 
 [[package]]
 name = "tensorboard"
+
 version = "2.14.0"
 description = "TensorBoard lets you watch Tensors Flow"
 optional = false
@@ -6350,6 +6379,7 @@ files = [
 
 [package.dependencies]
 absl-py = ">=0.4"
+
 google-auth = ">=1.6.3,<3"
 google-auth-oauthlib = ">=0.5,<1.1"
 grpcio = ">=1.48.2"
@@ -6507,16 +6537,19 @@ files = [
 
 [[package]]
 name = "torch"
+
 version = "1.9.1+cu111"
 description = "Tensors and Dynamic neural networks in Python with strong GPU acceleration"
 optional = false
 python-versions = ">=3.6.2"
 files = [
+
     {file = "torch-1.9.1+cu111-cp38-cp38-linux_x86_64.whl", hash = "sha256:2546dcaae81ac74f3f88dd4b29f5ead28852a5e8e66ca85b4f46f2eea306033c"},
 ]
 
 [package.dependencies]
 typing-extensions = "*"
+
 
 [package.source]
 type = "url"
@@ -6537,6 +6570,7 @@ files = [
 numpy = ">=1.17.2"
 packaging = "*"
 torch = ">=1.8.1"
+
 typing-extensions = {version = "*", markers = "python_version < \"3.9\""}
 
 [package.extras]
@@ -6550,6 +6584,7 @@ text = ["nltk (>=3.6)", "regex (>=2021.9.24)", "tqdm (>=4.41.0)"]
 
 [[package]]
 name = "torchvision"
+
 version = "0.10.1+cu111"
 description = "image and video datasets and models for torch deep learning"
 optional = false
@@ -6996,6 +7031,7 @@ MarkupSafe = ">=2.1.1"
 watchdog = ["watchdog (>=2.3)"]
 
 [[package]]
+
 name = "wheel"
 version = "0.43.0"
 description = "A built-package format for Python"
@@ -7362,7 +7398,23 @@ files = [
 docs = ["furo", "jaraco.packaging (>=9.3)", "jaraco.tidelift (>=1.4)", "rst.linker (>=1.9)", "sphinx (>=3.5)", "sphinx-lint"]
 testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=2.2)", "pytest-ignore-flaky", "pytest-mypy", "pytest-ruff (>=0.2.1)"]
 
+[[package]]
+name = "zipp"
+version = "3.18.0"
+description = "Backport of pathlib-compatible object wrapper for zip files"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "zipp-3.18.0-py3-none-any.whl", hash = "sha256:c1bb803ed69d2cce2373152797064f7e79bc43f0a3748eb494096a867e0ebf79"},
+    {file = "zipp-3.18.0.tar.gz", hash = "sha256:df8d042b02765029a09b157efd8e820451045890acc30f8e37dd2f94a060221f"},
+]
+
+[package.extras]
+docs = ["furo", "jaraco.packaging (>=9.3)", "jaraco.tidelift (>=1.4)", "rst.linker (>=1.9)", "sphinx (>=3.5)", "sphinx-lint"]
+testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=2.2)", "pytest-ignore-flaky", "pytest-mypy", "pytest-ruff (>=0.2.1)"]
+
 [metadata]
 lock-version = "2.0"
+
 python-versions = "==3.8.10"
 content-hash = "e17e6aebc00d2f082ff6418a0096f760989a32c10df1b836d325213abfe26dcd"
