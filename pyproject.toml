@@ -11,7 +11,7 @@ description = ""
 authors = ["Kitware, Inc. <kitware@kitware.com>"]
 
 [tool.poetry.dependencies]
-python = "==3.9.18"
+python = "==3.8.10"
 easydict = ">=1.9"
 einops = ">=0.4.1"
 hmmlearn = ">=0.2.8"
@@ -26,6 +26,7 @@ pandas = ">=1.4.3"
 Pillow = "=9.1.0"
 pyarrow = ">=9.0.0"  # for feature file support
 pynput = "^1.7.6"
+wheel = "<=0.43.0"
 python-dotenv = ">=1.0.0"
 pytorchvideo = "^0.1.5"
 scikit-learn = "==1.2.1"
@@ -33,8 +34,6 @@ seaborn = ">=0.12.1"
 simpleaudio = "^1.0.4"
 smqtk-detection = ">=0.20.0"
 timm = "^0.5.4"
-torch = "==1.9.1"
-torchvision = "==0.10.1"
 transitions = ">=0.8.11"
 trimesh = {extras = ["easy"], version = "^3.10.2"}
 moviepy = "==1.0.3"
@@ -42,8 +41,11 @@ ultralytics = "==8.1.27"
 rootutils = "==1.0.7"
 torchmetrics = "==0.11.4"
 rich = "==13.7.1"
-chumpy = "==0.70"
-
+chumpy = "==0.66"
+mmpose = "==0.24"
+torch = {url = "https://download.pytorch.org/whl/cu111/torch-1.9.1%2Bcu111-cp38-cp38-linux_x86_64.whl"}
+torchvision = {url = "https://download.pytorch.org/whl/cu111/torchvision-0.10.1%2Bcu111-cp38-cp38-linux_x86_64.whl"}
+detectron2 = {url = "https://dl.fbaipublicfiles.com/detectron2/wheels/cu111/torch1.9/detectron2-0.6%2Bcu111-cp38-cp38-linux_x86_64.whl"}
 
 ## For UHO Activity Classifier
 ## - see arisia: /data/dawei.du/ptg-activity-recognition/activity_hydra/requirements.txt
@@ -60,7 +62,6 @@ websockets = "^11.0"
 
 # For Berkeley classifier
 cloudpickle = "^2.2.1"
-opencv-python = "^4.7.0.72"
 iopath = ">=0.1.7,<0.1.10"
 pycocotools = "^2.0.6"
 future = "^0.18.3"
