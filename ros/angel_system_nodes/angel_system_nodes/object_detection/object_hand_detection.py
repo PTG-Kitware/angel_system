@@ -237,6 +237,8 @@ class YoloObjectDetector(Node):
                 #     None,
                 #     self._agnostic_nms,
                 # ):
+
+
                     n_dets += 1
                     msg.left.append(xyxy[0])
                     msg.top.append(xyxy[1])
