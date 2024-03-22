@@ -106,9 +106,10 @@ def make_default_main(
     return closure
 
 
-# Convenience instance of a ParameterDescriptor with the dynamic_typing field
-# set to True.
-DYNAMIC_TYPE = rclpy.node.ParameterDescriptor(dynamic_typing=True)
+# ROS2 Iron concept.
+# # Convenience instance of a ParameterDescriptor with the dynamic_typing field
+# # set to True.
+# DYNAMIC_TYPE = rclpy.node.ParameterDescriptor(dynamic_typing=True)
 
 
 def declare_and_get_parameters(
@@ -137,6 +138,14 @@ def declare_and_get_parameters(
     Examples of allowed values for the ``name_default_tuples`` argument are::
 
         (
+            # ROS2 Foxy Specification
+            ("parameter1_name",),      # <-- no default value
+            ("parameter2_name", 2.5),  # <-- Default int value of 2.5
+
+            # !!!
+            # The following is valid only for ROS2 Iron
+            # !!!
+
             # No default value, requires CLI to provide one. Any type of input
             # is accepted from the CLI when only a parameter name is provided.
             ("parameter1_name",),
@@ -185,13 +194,15 @@ def declare_and_get_parameters(
     log = node.get_logger()
     parameters = node.declare_parameters(
         namespace=namespace,
-        # Declaring a parameter only providing its name is deprecated. This
-        # seems to do with static-typing parameters by default and not having a
-        # default value to deduce that typing from. If nothing is given, we
-        # declare dynamic typing in a description object.
-        parameters=(
-            t if len(t) > 1 else (t[0], None, DYNAMIC_TYPE) for t in name_default_tuples
-        ),
+        parameters=name_default_tuples,
+        # ROS2 Iron support
+        # # Declaring a parameter only providing its name is deprecated. This
+        # # seems to do with static-typing parameters by default and not having a
+        # # default value to deduce that typing from. If nothing is given, we
+        # # declare dynamic typing in a description object.
+        # parameters=(
+        #     t if len(t) > 1 else (t[0], None, DYNAMIC_TYPE) for t in name_default_tuples
+        # ),
     )
     # Check for not-set parameters
     params_not_set = []

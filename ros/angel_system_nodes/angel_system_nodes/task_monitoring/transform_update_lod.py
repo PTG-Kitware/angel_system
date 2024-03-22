@@ -19,6 +19,7 @@ PARAM_TOPIC_OUTPUT = "update_topic_output"
 
 # File for broad/granular step configuration also given to the GSP node.
 PARAM_TASK_CONFIG = "task_config_file"
+PARAM_TASK_ACTIVITY_CONFIG = "task_activity_config_file"
 
 
 class TaskUpdateLodTransformerNode(Node):
@@ -43,6 +44,7 @@ class TaskUpdateLodTransformerNode(Node):
                 (PARAM_TOPIC_INPUT,),
                 (PARAM_TOPIC_OUTPUT,),
                 (PARAM_TASK_CONFIG,),
+                (PARAM_TASK_ACTIVITY_CONFIG,),
             ],
         )
 
@@ -58,6 +60,7 @@ class TaskUpdateLodTransformerNode(Node):
         self._gsp = GlobalStepPredictor(
             recipe_types=[t.label for t in config_multi.tasks],
             recipe_config_dict={t.label: t.config_file for t in config_multi.tasks},
+            activity_config_fpath=params[PARAM_TASK_ACTIVITY_CONFIG],
         )
         self._task_to_tracker = {t["recipe"]: t for t in self._gsp.trackers}
 

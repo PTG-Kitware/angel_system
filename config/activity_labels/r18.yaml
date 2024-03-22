@@ -1,0 +1,24 @@
+version: "1"
+labels:
+  # Item:
+  # - id: Integer identification number of the label.
+  # - label: Short human-readable semantic string to succinctly represent the
+  #          label.
+  - id: 0
+    label: "background"
+    description: "background"
+  - id: 1
+    label: "cover-seal-wound"
+    description: "With gloved hand, cover and seal wound site."
+  - id: 2
+    label: "open-pack"
+    description: "Open vented chest seal package."
+  - id: 3
+    label: "clean-wound-site"
+    description: "Wipe blood and body fluids from wound site."
+  - id: 4
+    label: "peel-seal-backer"
+    description: "Peel away chest seal backer."
+  - id: 5
+    label: "place-seal"
+    description: "Place chest seal with circle of vents over wound site and seal to chest."

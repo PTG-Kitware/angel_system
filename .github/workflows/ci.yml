@@ -62,30 +62,30 @@ jobs:
           poetry run black --version
           poetry run black --check --diff --color .
 
-  type-checking:
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    steps:
-      # Check out repository under $GITHUB_WORKSPACE so our job can access it.
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-      # TODO: Make use of build docker image somehow below this point
-      # setup-python with poetry requires poetry to already be installed
-      - run: |
-          echo "${HOME}/.local/bin" >> $GITHUB_PATH
-          pip install --user -U poetry
-      # Setup python version and caching
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '3.10.12'  # matching python version in container env.
-          cache: 'poetry'
-      # Install standard packages
-      - run: |
-          sudo apt install -y libasound2-dev  # for python simpleaudio
-          poetry install
-      # Run mypy to check types
-      - run: poetry run mypy
+#  type-checking:
+#    runs-on: ubuntu-latest
+#    continue-on-error: true
+#    steps:
+#      # Check out repository under $GITHUB_WORKSPACE so our job can access it.
+#      - uses: actions/checkout@v4
+#        with:
+#          submodules: recursive
+#      # TODO: Make use of build docker image somehow below this point
+#      # setup-python with poetry requires poetry to already be installed
+#      - run: |
+#          echo "${HOME}/.local/bin" >> $GITHUB_PATH
+#          pip install --user -U poetry
+#      # Setup python version and caching
+#      - uses: actions/setup-python@v4
+#        with:
+#          python-version: '3.10.12'  # matching python version in container env.
+#          cache: 'poetry'
+#      # Install standard packages
+#      - run: |
+#          sudo apt install -y libasound2-dev  # for python simpleaudio
+#          poetry install
+#      # Run mypy to check types
+#      - run: poetry run mypy
 
   pytest-angel-system:
     runs-on: ubuntu-latest

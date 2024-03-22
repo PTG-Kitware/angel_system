@@ -7,4 +7,4 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # `poetry.lock` and `pyproject.toml` files.
 cd "$SCRIPT_DIR"
 
-poetry install
+poetry install --no-root

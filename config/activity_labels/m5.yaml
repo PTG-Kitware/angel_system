@@ -1,0 +1,24 @@
+version: "1"
+labels:
+  # Item:
+  # - id: Integer identification number of the label.
+  # - label: Short human-readable semantic string to succinctly represent the
+  #          label.
+  - id: 0
+    label: "background"
+    description: "background"
+  - id: 1
+    label: "open-pack-remove-app"
+    description: "Open inner packaging and remove applicator."
+  - id: 2
+    label: "insert-applicator"
+    description: "Insert applicator into wound track as close to bleeding source as possible."
+  - id: 3
+    label: "insert-plunger-w-pressure"
+    description: "Insert plunger into applicator."
+  - id: 4
+    label: "push-plunger"
+    description: "Push plunger firmly to deploy sponges into wound."
+  - id: 5
+    label: "apply-pressure"
+    description: "Apply manual pressure if necessary."
