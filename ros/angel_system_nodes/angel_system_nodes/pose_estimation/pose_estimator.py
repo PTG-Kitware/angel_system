@@ -9,6 +9,7 @@ from rclpy.node import Node, ParameterDescriptor, Parameter
 from sensor_msgs.msg import Image
 
 from yolov7.detect_ptg import load_model, predict_image, predict_hands
+from tcn_hpl.data.utils.pose_generation import predict_single
 from yolov7.models.experimental import attempt_load
 import yolov7.models.yolo
 from yolov7.utils.torch_utils import TracedModel
@@ -16,15 +17,78 @@ from yolov7.utils.torch_utils import TracedModel
 from angel_system.utils.event import WaitAndClearEvent
 from angel_system.utils.simple_timer import SimpleTimer
 
-from angel_msgs.msg import ObjectDetection2dSet
+from angel_msgs.msg import ObjectDetection2dSet, JointKeypoints
 from angel_utils import declare_and_get_parameters, RateTracker, DYNAMIC_TYPE
 from angel_utils import make_default_main
+
+from mmpose.apis import (inference_top_down_pose_model, init_pose_model,
+                         vis_pose_result)
+
+from detectron2.config import get_cfg
+from detectron2.data.detection_utils import read_image
+from predictor import VisualizationDemo
+import argparse
 
 
 BRIDGE = CvBridge()
 
+def get_parser(config_file):
+    parser = argparse.ArgumentParser(description="Detectron2 demo for builtin configs")
+    parser.add_argument(
+        "--config-file",
+        default=config_file,
+        metavar="FILE",
+        help="path to config file",
+    )
+    parser.add_argument("--webcam", action="store_true", help="Take inputs from webcam.")
+    parser.add_argument("--video-input", help="Path to video file."
+                        # , default='/shared/niudt/detectron2/images/Videos/k2/4.MP4'
+    )
+    parser.add_argument(
+        "--input",
+        nargs="+",
+        help="A list of space separated input images; "
+        "or a single glob pattern such as 'directory/*.jpg'"
+        , default= ['/shared/niudt/DATASET/Medical/Maydemo/2023-4-25/selected_videos/new/M2-16/*.jpg'] # please change here to the path where you put the images
+    )
+    parser.add_argument(
+        "--output",
+        help="A file or directory to save output visualizations. "
+        "If not given, will show output in an OpenCV window."
+        , default='./bbox_detection_results'
+    )
 
-class YoloObjectDetector(Node):
+    parser.add_argument(
+        "--confidence-threshold",
+        type=float,
+        default=0.8,
+        help="Minimum score for instance predictions to be shown",
+    )
+    parser.add_argument(
+        "--opts",
+        help="Modify config options using the command-line 'KEY VALUE' pairs",
+        default=[],
+        nargs=argparse.REMAINDER,
+    )
+    return parser
+
+
+def setup_detectron_cfg(args):
+    # load config from file and command-line arguments
+    cfg = get_cfg()
+    # To use demo for Panoptic-DeepLab, please uncomment the following two lines.
+    # from detectron2.projects.panoptic_deeplab import add_panoptic_deeplab_config  # noqa
+    # add_panoptic_deeplab_config(cfg)
+    cfg.merge_from_file(args.config_file)
+    cfg.merge_from_list(args.opts)
+    # Set score_threshold for builtin models
+    cfg.MODEL.RETINANET.SCORE_THRESH_TEST = args.confidence_threshold
+    cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = args.confidence_threshold
+    cfg.MODEL.PANOPTIC_FPN.COMBINE.INSTANCES_CONFIDENCE_THRESH = args.confidence_threshold
+    cfg.freeze()
+    return cfg
+
+class PoseEstimator(Node):
     """
     ROS node that runs the yolov7 object detector model and outputs
     `ObjectDetection2dSet` messages.
@@ -42,7 +106,10 @@ class YoloObjectDetector(Node):
                 # Required parameter (no defaults)
                 ("image_topic",),
                 ("det_topic",),
-                ("net_checkpoint",),
+                ("det_net_checkpoint",),
+                ("pose_net_checkpoint",),
+                ("det_config",),
+                ("pose_config",),
                 ##################################
                 # Defaulted parameters
                 ("inference_img_size", 1280),  # inference size (pixels)
@@ -60,30 +127,29 @@ class YoloObjectDetector(Node):
         )
         self._image_topic = param_values["image_topic"]
         self._det_topic = param_values["det_topic"]
-        self._model_ckpt_fp = Path(param_values["net_checkpoint"])
-
+        self.det_model_ckpt_fp = Path(param_values["det_net_checkpoint"])
+        self.pose_model_ckpt_fp = Path(param_values["pose_net_checkpoint"])
+        
         self._inference_img_size = param_values["inference_img_size"]
         self._det_conf_thresh = param_values["det_conf_threshold"]
         self._iou_thr = param_values["iou_threshold"]
         self._cuda_device_id = param_values["cuda_device_id"]
         self._no_trace = param_values["no_trace"]
         self._agnostic_nms = param_values["agnostic_nms"]
+        
+        # Detectron Model
+        self.args = get_parser(param_values["det_config"]).parse_args()
+        detecron_cfg = setup_detectron_cfg(self.args)
+        self.predictor = VisualizationDemo(detecron_cfg)
+        
+        # Pose model
+        self.pose_model = init_pose_model(param_values["pose_config"], 
+                                        self.pose_model_ckpt_fp, 
+                                        device=self._cuda_device_id)
+
 
         self._enable_trace_logging = param_values["enable_time_trace_logging"]
 
-        # Model
-        self.model: Union[yolov7.models.yolo.Model, TracedModel]
-        if not self._model_ckpt_fp.is_file():
-            raise ValueError(
-                f"Model checkpoint file did not exist: {self._model_ckpt_fp}"
-            )
-        (self.device, self.model, self.stride, self.imgsz) = load_model(
-            str(self._cuda_device_id), self._model_ckpt_fp, self._inference_img_size
-        )
-        log.info(
-            f"Loaded model with classes:\n"
-            + "\n".join(f'\t- "{n}"' for n in self.model.names)
-        )
 
         # Single slot for latest image message to process detection over.
         self._cur_image_msg: Image = None
@@ -99,6 +165,13 @@ class YoloObjectDetector(Node):
         )
         self._det_publisher = self.create_publisher(
             ObjectDetection2dSet,
+            self._det_topic,
+            1,
+            callback_group=MutuallyExclusiveCallbackGroup(),
+        )
+        
+        self._pose_publisher = self.create_publisher(
+            JointKeypoints,
             self._det_topic,
             1,
             callback_group=MutuallyExclusiveCallbackGroup(),
