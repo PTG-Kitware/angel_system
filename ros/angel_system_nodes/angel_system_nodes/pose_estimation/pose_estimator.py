@@ -9,7 +9,7 @@ from rclpy.node import Node, ParameterDescriptor, Parameter
 from sensor_msgs.msg import Image
 
 from yolov7.detect_ptg import load_model, predict_image, predict_hands
-from tcn_hpl.data.utils.pose_generation import predict_single
+from tcn_hpl.data.utils.pose_generation.generate_pose_data import predict_single
 from yolov7.models.experimental import attempt_load
 import yolov7.models.yolo
 from yolov7.utils.torch_utils import TracedModel
@@ -26,7 +26,7 @@ from mmpose.apis import (inference_top_down_pose_model, init_pose_model,
 
 from detectron2.config import get_cfg
 from detectron2.data.detection_utils import read_image
-from predictor import VisualizationDemo
+from .predictor import VisualizationDemo
 import argparse
 
 

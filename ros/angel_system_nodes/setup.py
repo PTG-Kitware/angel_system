@@ -63,6 +63,8 @@ setup(
             "global_step_predictor = angel_system_nodes.task_monitoring.global_step_predictor:main",
             "keyboard_to_sys_cmd = angel_system_nodes.task_monitoring.keyboard_to_sys_cmd:main",
             "transform_update_lod = angel_system_nodes.task_monitoring.transform_update_lod:main",
+            # Pose Estimator
+            "pose_estimator = angel_system_nodes.pose_estimation.pose_estimator:main",
         ],
     },
 )
