@@ -15,7 +15,7 @@ import numpy.typing as npt
 # ROS Message types
 from builtin_interfaces.msg import Time
 
-from angel_msgs.msg import ActivityDetection, HandJointPosesUpdate, ObjectDetection2dSet
+from angel_msgs.msg import ActivityDetection, HandJointPosesUpdate, ObjectDetection2dSet, JointKeypoints
 
 from angel_system.utils.matching import descending_match_with_tolerance
 from angel_utils.conversion import time_to_int
@@ -41,6 +41,8 @@ class InputWindow:
     hand_pose_right: List[Optional[HandJointPosesUpdate]]
     # Buffer of object detection predictions
     obj_dets: List[Optional[ObjectDetection2dSet]]
+    # Buffer for patient poses
+    patient_joint_kps: List[Optional[JointKeypoints]]
 
     def __len__(self):
         return len(self.frames)
@@ -104,6 +106,10 @@ class InputBuffer:
     )
     # Buffer of object detection predictions
     obj_dets: Deque[ObjectDetection2dSet] = field(
+        default_factory=deque, init=False, repr=False
+    )
+    
+    patient_joint_kps: Deque[JointKeypoints] = field(
         default_factory=deque, init=False, repr=False
     )
 
@@ -204,6 +210,23 @@ class InputBuffer:
                 return False
             self.obj_dets.append(msg)
             return True
+    
+    def queue_joint_keypoints(self, msg: JointKeypoints) -> bool:
+        """
+        Queue up an object detection set for the
+        """
+        with self.__state_lock:
+            # before the current lead pose?
+            if self.patient_joint_kps and time_to_int(msg.header.stamp) <= time_to_int(
+                self.patient_joint_kps[-1].header.stamp
+            ):
+                self.get_logger_fn().warn(
+                    f"Input object detection result was NOT after the previous latest: "
+                    f"(prev) {self.patient_joint_kps[-1].header.stamp} !< {msg.header.stamp} (new)"
+                )
+                return False
+            self.patient_joint_kps.append(msg)
+            return True
 
     @staticmethod
     def _hand_msg_to_time_ns(msg: HandJointPosesUpdate):
@@ -211,6 +234,11 @@ class InputBuffer:
 
     @staticmethod
     def _objdet_msg_to_time_ns(msg: ObjectDetection2dSet):
+        # Using stamp that should associate to the source image
+        return time_to_int(msg.source_stamp)
+
+    @staticmethod
+    def _joints_msg_to_time_ns(msg: JointKeypoints):
         # Using stamp that should associate to the source image
         return time_to_int(msg.source_stamp)
 
@@ -273,12 +301,20 @@ class InputBuffer:
                 0,  # we expect exact matches for object detections.
                 time_from_value_fn=self._objdet_msg_to_time_ns,
             )
+            
+            window_joint_kps = descending_match_with_tolerance(
+                window_frame_times_ns,
+                self.patient_joint_kps,
+                0,  # we expect exact matches for object detections.
+                time_from_value_fn=self._joints_msg_to_time_ns,
+            )
 
             output = InputWindow(
                 frames=window_frames,
                 hand_pose_left=window_lhand,
                 hand_pose_right=window_rhand,
                 obj_dets=window_dets,
+                patient_joint_kps=window_joint_kps,
             )
             return output
 
@@ -306,3 +342,8 @@ class InputBuffer:
                 self.obj_dets and time_to_int(self.obj_dets[0].source_stamp) < time_nsec
             ):
                 self.obj_dets.popleft()
+            
+            while (
+                self.patient_joint_kps and time_to_int(self.patient_joint_kps[0].source_stamp) < time_nsec
+            ):
+                self.patient_joint_kps.popleft()

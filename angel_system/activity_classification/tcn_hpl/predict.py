@@ -172,6 +172,7 @@ def objects_to_feats(
                         None,
                         det_label_to_idx,
                         version=feat_version,
+                        top_n_objects=3,
                     )
                     .ravel()
                     .astype(np.float32)
