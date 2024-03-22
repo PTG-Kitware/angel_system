@@ -3,6 +3,7 @@
 #
 
 std_msgs/Header header
+frame_id
 
 # List of joints
-geometry_msgs/PoseArray[] poses
+float64[] keypoints

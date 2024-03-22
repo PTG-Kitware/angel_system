@@ -140,7 +140,7 @@ class PoseEstimator(Node):
         # Detectron Model
         self.args = get_parser(param_values["det_config"]).parse_args()
         detecron_cfg = setup_detectron_cfg(self.args)
-        self.predictor = VisualizationDemo(detecron_cfg)
+        self.det_model = VisualizationDemo(detecron_cfg)
         
         # Pose model
         self.pose_model = init_pose_model(param_values["pose_config"], 
@@ -253,67 +253,44 @@ class PoseEstimator(Node):
                 print(f"img0: {img0.shape}")
                 width, height = self._inference_img_size
 
-                msg = ObjectDetection2dSet()
-                msg.header.stamp = self.get_clock().now().to_msg()
-                msg.header.frame_id = image.header.frame_id
-                msg.source_stamp = image.header.stamp
-                msg.label_vec[:] = self.model.names
+                det_msg = ObjectDetection2dSet()
+                det_msg.header.stamp = self.get_clock().now().to_msg()
+                det_msg.header.frame_id = image.header.frame_id
+                det_msg.source_stamp = image.header.stamp
+                det_msg.label_vec[:] = self.model.names
+                
+                pose_msg = JointKeypoints()
+                pose_msg.header.stamp = self.get_clock().now().to_msg()
+                pose_msg.header.frame_id = image.header.frame_id
+                pose_msg.source_stamp = image.header.stamp
+                # pose_msg.label_vec[:] = self.model.names
 
-                n_classes = len(self.model.names) + 2 # accomedate 2 hands
+                boxes, labels, keypoints = predict_single(det_model=self.det_model,
+                                                          pose_model=self.pose_model,
+                                                          image=img0)
+                
+                # at most, we have 1 set of keypoints for 1 patient
+                for keypoints_ in keypoints:
+                    pose_msg.keypoints = keypoints_
+                    self._pose_publisher.publish(pose_msg)
+                
                 n_dets = 0
-
-                dflt_conf_vec = np.zeros(n_classes, dtype=np.float64)
-                right_hand_cid = n_classes - 2
-                left_hand_cid = n_classes - 1
-
-                hands_preds = predict_hands(hand_model=self.hand_model, img0=img0, 
-                                            img_size=self._inference_img_size, device=self.device)
-
-                hand_centers = [center.xywh.tolist()[0][0] for center in hands_preds.boxes][:2]
-                hands_label = []
-                if len(hand_centers) == 2:
-                    if hand_centers[0] > hand_centers[1]:
-                        hands_label.append(right_hand_cid)
-                        hands_label.append(left_hand_cid)
-                    elif hand_centers[0] <= hand_centers[1]:
-                        hands_label.append(left_hand_cid)
-                        hands_label.append(right_hand_cid)
-                elif len(hand_centers) == 1:
-                    if hand_centers[0] > width//2:
-                        hands_label.append(right_hand_cid)
-                    elif hand_centers[0] <= width//2:
-                        hands_label.append(left_hand_cid)
-                
-                
-                
-                for xyxy, conf, cls_id in predict_image(
-                    img0,
-                    self.device,
-                    self.model,
-                    self.stride,
-                    self.imgsz,
-                    self.half,
-                    False,
-                    self._det_conf_thresh,
-                    self._iou_thr,
-                    None,
-                    self._agnostic_nms,
-                ):
+                for xyxy, labels in zip(boxes, labels):
                     n_dets += 1
-                    msg.left.append(xyxy[0])
-                    msg.top.append(xyxy[1])
-                    msg.right.append(xyxy[2])
-                    msg.bottom.append(xyxy[3])
+                    det_msg.left.append(xyxy[0])
+                    det_msg.top.append(xyxy[1])
+                    det_msg.right.append(xyxy[2])
+                    det_msg.bottom.append(xyxy[3])
 
-                    dflt_conf_vec[cls_id] = conf
+                    # dflt_conf_vec[cls_id] = conf
                     # copies data into array
-                    msg.label_confidences.extend(dflt_conf_vec)
+                    det_msg.label_confidences.extend(1.0)
                     # reset before next passthrough
-                    dflt_conf_vec[cls_id] = 0.0
+                    # dflt_conf_vec[cls_id] = 0.0
 
-                msg.num_detections = n_dets
+                det_msg.num_detections = n_dets
 
-                self._det_publisher.publish(msg)
+                self._det_publisher.publish(det_msg)
 
                 self._rate_tracker.tick()
                 log.info(
@@ -335,7 +312,7 @@ class PoseEstimator(Node):
 # - 1 known subscriber which has their own group
 # - 1 for default group
 # - 1 for publishers
-main = make_default_main(YoloObjectDetector, multithreaded_executor=3)
+main = make_default_main(PoseEstimator, multithreaded_executor=3)
 
 
 if __name__ == "__main__":

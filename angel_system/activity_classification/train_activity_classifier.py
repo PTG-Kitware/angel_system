@@ -151,11 +151,6 @@ def compute_feats(
     hands_inds = [key for key, label in act_id_to_str.items() if label in hands_possible_labels]
     non_object_inds = [key for key, label in act_id_to_str.items() if label in non_objects_labels]
     object_inds = list(set(list(label_to_ind.values())) - set(hands_inds) - set(non_object_inds))
-    # print(f"label_to_ind: {label_to_ind}")
-    # print(f"act_id_to_str: {act_id_to_str}")
-    # print(f"hands_inds: {hands_inds}")
-    # print(f"object_inds: {object_inds}")
-    # exit()
     
     for image_id in sorted(list(ann_by_image.keys())):
         label_vec = []
@@ -238,8 +233,8 @@ def compute_feats(
                 except KeyError:
                     pass
                 
-        # print(f"pose keyponts: {pose_keypoints}")
-        # print(f"label_vec: {label_vec}")
+        
+        # hardcoded width?
         image_center = 1280//2
         if num_hands > 0:
             hands_loc_dict = {}
@@ -272,7 +267,6 @@ def compute_feats(
                                 label_vec[i] = "hand (right)"
         
         if "hand" in label_to_ind.keys():
-            # hands_label_exists = True
             label_to_ind_tmp = {}
             for key, value in label_to_ind.items():
                 if key == "hand":
@@ -284,10 +278,7 @@ def compute_feats(
                     label_to_ind_tmp[key] = value + 1
             
             label_to_ind = label_to_ind_tmp
-        # else:
-        #     hands_label_exists = False
-        # print(f"num_hands: {num_hands}")
-        # print(f"label_vec: {label_vec}")
+
         zero_offset = [0 for i in range(22)]
         if (num_hands > 0 or num_objects > 0) and (hands_joints or objects_joints):
             joint_object_offset = []
@@ -306,14 +297,11 @@ def compute_feats(
                                 jx, jy = joint['xy']
                                 joint_point = np.array((jx, jy))
                                 dist = np.linalg.norm(joint_point - hand_point)
-                                # print(f"joint_points: {joint_point}, hand_point: {hand_point}, hand_label: {label}, distance: {dist}")
                                 offset_vector.append(dist)
                         else:
                             offset_vector = zero_offset
                             
-                        # print(f"offset vector: {offset_vector}")
                         if label == "hand (left)":
-                        # #     # hcx, hcy = bx+bw//2, by+by//w
                             joint_left_hand_offset = offset_vector
                         elif label == "hand (right)":
                             joint_right_hand_offset = offset_vector
@@ -337,14 +325,6 @@ def compute_feats(
                             joint_object_offset.append(offset_vector)
                         # object_offset_wrt = ann_id
 
-                
-            
-        # print(f"joint_left_hand_offset: {joint_left_hand_offset}")
-        # print(f"joint_right_hand_offset: {joint_right_hand_offset}")
-        # print(f"joint_object_offset: {joint_object_offset}")
-        # print(f"label_confidences: {label_confidences}")
-        # print(f"label_vec: {label_vec}")
-
         feature_vec = obj_det2d_set_to_feature(
             label_vec,
             xs,
@@ -362,17 +342,12 @@ def compute_feats(
             top_n_objects=top_n_objects,
         )
         
-        # exit()
         if objects_joints or hands_joints:
             zero_offset = [0 for i in range(22)]
             offset_vector = []
             if hands_joints:
                 
-                # print(f"joint_left_hand_offset: {len(joint_left_hand_offset)}")
-                # print(f"joint_right_hand_offset: {len(joint_right_hand_offset)}")
-                
                 if len(joint_left_hand_offset) >= 1:
-                    # print(f"joint_left_hand_offset[0]: {joint_left_hand_offset}")
                     offset_vector.extend(joint_left_hand_offset)
                 else:
                     offset_vector.extend(zero_offset)
@@ -383,29 +358,16 @@ def compute_feats(
                     offset_vector.extend(zero_offset)
             if objects_joints:
                 
-                # print(f"joint_object_offset: {len(joint_object_offset)}")
-                # print(f"joint_object_offset: {joint_object_offset}")
-                
                 for i in range(top_n_objects):
                     if len(joint_object_offset) > i:
                         offset_vector.extend(joint_object_offset[i])
                     else:
-                        # print(f"offset_vector: {offset_vector}")
-                        # print(f"zero_offset: {zero_offset}")
                         offset_vector.extend(zero_offset)
 
             
             feature_vec.extend(offset_vector)
-            
-        # print(f"offset_vector: {len(offset_vector)}")
-        # print(f"feature_vec: {len(feature_vec)}")
-        # print(f"feature_vec: {feature_vec}")
-        # exit()
         
-            
         feature_vec = np.array(feature_vec, dtype=np.float64)
-        
-        # print(f"feature vector: {feature_vec.shape}")
         
         X.append(feature_vec.ravel())
         
