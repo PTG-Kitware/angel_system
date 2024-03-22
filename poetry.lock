@@ -12,6 +12,17 @@ files = [
 ]
 
 [[package]]
+name = "addict"
+version = "2.4.0"
+description = "Addict is a dictionary whose items can be set using both attribute and item syntax."
+optional = false
+python-versions = "*"
+files = [
+    {file = "addict-2.4.0-py3-none-any.whl", hash = "sha256:249bb56bbfd3cdc2a004ea0ff4c2b6ddc84d53bc2194761636eb314d5cfa5dfc"},
+    {file = "addict-2.4.0.tar.gz", hash = "sha256:b3b2210e0e067a281f5646c8c5db92e99b7231ea8b0eb5f74dbdf9e259d4e494"},
+]
+
+[[package]]
 name = "affine"
 version = "2.4.0"
 description = "Matrices describing affine transformation of the plane"
@@ -3342,19 +3353,36 @@ files = [
 ]
 
 [[package]]
+name = "mmcv"
+version = "1.3.8"
+description = "OpenMMLab Computer Vision Foundation"
+optional = false
+python-versions = "*"
+files = [
+    {file = "mmcv-1.3.8.tar.gz", hash = "sha256:febf73714993eb5ca43432839d7187ec2e2af6efda3c4804925253de82eeee58"},
+]
+
+[package.dependencies]
+addict = "*"
+numpy = "*"
+opencv-python = ">=3"
+Pillow = "*"
+pyyaml = "*"
+regex = {version = "*", markers = "sys_platform == \"win32\""}
+yapf = "*"
+
+[[package]]
 name = "mmpose"
 version = "0.24.0"
 description = "OpenMMLab Pose Estimation Toolbox and Benchmark."
 optional = false
 python-versions = "*"
-files = [
-    {file = "mmpose-0.24.0-py2.py3-none-any.whl", hash = "sha256:b0aa8e28dd62d25fc8c2313532d76af162d5e8dbf8b9d9a5f81ed1baa764c1a2"},
-    {file = "mmpose-0.24.0.tar.gz", hash = "sha256:bebbf2ad11db5edfca6a62d64b81ddd99fe9fecc1e3bdc33d2823a76738a0d76"},
-]
+files = []
+develop = false
 
 [package.dependencies]
 chumpy = "*"
-json-tricks = "*"
+json_tricks = "*"
 matplotlib = "*"
 munkres = "*"
 numpy = "*"
@@ -3366,8 +3394,14 @@ xtcocotools = ">=1.8"
 
 [package.extras]
 build = ["numpy", "torch (>=1.3)"]
-runtime = ["chumpy", "dataclasses", "json-tricks", "matplotlib", "munkres", "numpy", "opencv-python", "pillow", "scipy", "torchvision", "xtcocotools (>=1.8)"]
+runtime = ["chumpy", "dataclasses", "json_tricks", "matplotlib", "munkres", "numpy", "opencv-python", "pillow", "scipy", "torchvision", "xtcocotools (>=1.8)"]
 tests = ["coverage", "flake8", "interrogate", "isort (==4.3.21)", "pytest", "pytest-runner", "smplx (>=0.1.28)", "xdoctest (>=0.10.0)", "yapf"]
+
+[package.source]
+type = "git"
+url = "git@github.com:periakiva/mmpose.git"
+reference = "exp"
+resolved_reference = "866d6ff38402db428dc0e8b0fac807290e9c6ba4"
 
 [[package]]
 name = "more-itertools"
@@ -3596,13 +3630,13 @@ test = ["flaky", "ipykernel (>=6.19.3)", "ipython", "ipywidgets", "nbconvert (>=
 
 [[package]]
 name = "nbconvert"
-version = "7.16.2"
+version = "7.16.3"
 description = "Converting Jupyter Notebooks (.ipynb files) to other formats.  Output formats include asciidoc, html, latex, markdown, pdf, py, rst, script.  nbconvert can be used both as a Python library (`import nbconvert`) or as a command line tool (invoked as `jupyter nbconvert ...`)."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "nbconvert-7.16.2-py3-none-any.whl", hash = "sha256:0c01c23981a8de0220255706822c40b751438e32467d6a686e26be08ba784382"},
-    {file = "nbconvert-7.16.2.tar.gz", hash = "sha256:8310edd41e1c43947e4ecf16614c61469ebc024898eb808cce0999860fc9fb16"},
+    {file = "nbconvert-7.16.3-py3-none-any.whl", hash = "sha256:ddeff14beeeedf3dd0bc506623e41e4507e551736de59df69a91f86700292b3b"},
+    {file = "nbconvert-7.16.3.tar.gz", hash = "sha256:a6733b78ce3d47c3f85e504998495b07e6ea9cf9bf6ec1c98dda63ec6ad19142"},
 ]
 
 [package.dependencies]
@@ -3629,7 +3663,7 @@ docs = ["ipykernel", "ipython", "myst-parser", "nbsphinx (>=0.2.12)", "pydata-sp
 qtpdf = ["nbconvert[qtpng]"]
 qtpng = ["pyqtwebengine (>=5.15)"]
 serve = ["tornado (>=6.1)"]
-test = ["flaky", "ipykernel", "ipywidgets (>=7.5)", "pytest"]
+test = ["flaky", "ipykernel", "ipywidgets (>=7.5)", "pytest (>=7)"]
 webpdf = ["playwright"]
 
 [[package]]
@@ -7216,6 +7250,22 @@ files = [
 PyYAML = "*"
 
 [[package]]
+name = "yapf"
+version = "0.40.2"
+description = "A formatter for Python code"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "yapf-0.40.2-py3-none-any.whl", hash = "sha256:adc8b5dd02c0143108878c499284205adb258aad6db6634e5b869e7ee2bd548b"},
+    {file = "yapf-0.40.2.tar.gz", hash = "sha256:4dab8a5ed7134e26d57c1647c7483afb3f136878b579062b786c9ba16b94637b"},
+]
+
+[package.dependencies]
+importlib-metadata = ">=6.6.0"
+platformdirs = ">=3.5.1"
+tomli = ">=2.0.1"
+
+[[package]]
 name = "yarl"
 version = "1.9.4"
 description = "Yet another URL library"
@@ -7362,4 +7412,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "==3.8.10"
-content-hash = "e17e6aebc00d2f082ff6418a0096f760989a32c10df1b836d325213abfe26dcd"
+content-hash = "06c2e0526f984cce2171a4351aaddb1b664b36f98de41f5ed2ef5bbb9f89d3c4"
