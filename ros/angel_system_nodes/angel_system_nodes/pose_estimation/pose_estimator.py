@@ -9,7 +9,6 @@ from rclpy.node import Node, ParameterDescriptor, Parameter
 from sensor_msgs.msg import Image
 
 # from yolov7.detect_ptg import load_model, predict_image, predict_hands
-from tcn_hpl.data.utils.pose_generation.generate_pose_data import predict_single
 # from yolov7.models.experimental import attempt_load
 # import yolov7.models.yolo
 # from yolov7.utils.torch_utils import TracedModel
@@ -21,13 +20,14 @@ from angel_msgs.msg import ObjectDetection2dSet #, JointKeypoints
 from angel_utils import declare_and_get_parameters, RateTracker#, DYNAMIC_TYPE
 from angel_utils import make_default_main
 
-from mmpose.apis import (inference_top_down_pose_model, init_pose_model,
-                         vis_pose_result)
+# from tcn_hpl.data.utils.pose_generation.generate_pose_data import predict_single
+from tcn_hpl.data.utils.pose_generation.rt_pose_generation import predict_single
+from mmpose.apis import init_pose_model
 
 from detectron2.config import get_cfg
-from detectron2.data.detection_utils import read_image
+# from detectron2.data.detection_utils import read_image
 from tcn_hpl.data.utils.pose_generation.predictor import VisualizationDemo
-import argparse
+# import argparse
 
 
 BRIDGE = CvBridge()
@@ -73,25 +73,25 @@ BRIDGE = CvBridge()
 #     return parser
 
 
-def setup_detectron_cfg(config_file):
-    # load config from file and command-line arguments
-    cfg = get_cfg()
-    # To use demo for Panoptic-DeepLab, please uncomment the following two lines.
-    # from detectron2.projects.panoptic_deeplab import add_panoptic_deeplab_config  # noqa
-    # add_panoptic_deeplab_config(cfg)
-    cfg.merge_from_file(config_file)
-    # cfg.merge_from_list(args.opts)
-    # Set score_threshold for builtin models
-    cfg.MODEL.RETINANET.SCORE_THRESH_TEST = 0.8
-    cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.8
-    cfg.MODEL.PANOPTIC_FPN.COMBINE.INSTANCES_CONFIDENCE_THRESH = 0.8
-    cfg.freeze()
-    return cfg
+# def setup_detectron_cfg(config_file):
+#     # load config from file and command-line arguments
+#     cfg = get_cfg()
+#     # To use demo for Panoptic-DeepLab, please uncomment the following two lines.
+#     # from detectron2.projects.panoptic_deeplab import add_panoptic_deeplab_config  # noqa
+#     # add_panoptic_deeplab_config(cfg)
+#     cfg.merge_from_file(config_file)
+#     # cfg.merge_from_list(args.opts)
+#     # Set score_threshold for builtin models
+#     cfg.MODEL.RETINANET.SCORE_THRESH_TEST = 0.8
+#     cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.8
+#     cfg.MODEL.PANOPTIC_FPN.COMBINE.INSTANCES_CONFIDENCE_THRESH = 0.8
+#     cfg.freeze()
+#     return cfg
 
 class PoseEstimator(Node):
     """
-    ROS node that runs the yolov7 object detector model and outputs
-    `ObjectDetection2dSet` messages.
+    ROS node that runs the pose estimation model and outputs
+    `ObjectDetection2dSet` and 'JointKeypoints' messages.
     """
 
     def __init__(self):
@@ -148,7 +148,7 @@ class PoseEstimator(Node):
         # Detectron Model
         # self.args = get_parser(self.det_config).parse_args()
         # print(self.args)
-        detecron_cfg = setup_detectron_cfg(self.det_config)
+        detecron_cfg = self.setup_detectron_cfg(self.det_config)
         self.det_model = VisualizationDemo(detecron_cfg)
         
         
@@ -217,6 +217,21 @@ class PoseEstimator(Node):
         self._rt_thread.daemon = True
         self._rt_thread.start()
 
+    def setup_detectron_cfg(self, config_file):
+        # load config from file and command-line arguments
+        cfg = get_cfg()
+        # To use demo for Panoptic-DeepLab, please uncomment the following two lines.
+        # from detectron2.projects.panoptic_deeplab import add_panoptic_deeplab_config  # noqa
+        # add_panoptic_deeplab_config(cfg)
+        cfg.merge_from_file(config_file)
+        # cfg.merge_from_list(args.opts)
+        # Set score_threshold for builtin models
+        cfg.MODEL.RETINANET.SCORE_THRESH_TEST = 0.8
+        cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.8
+        cfg.MODEL.PANOPTIC_FPN.COMBINE.INSTANCES_CONFIDENCE_THRESH = 0.8
+        cfg.freeze()
+        return cfg
+    
     def listener_callback(self, image: Image):
         """
         Callback function for image messages. Runs the berkeley object detector

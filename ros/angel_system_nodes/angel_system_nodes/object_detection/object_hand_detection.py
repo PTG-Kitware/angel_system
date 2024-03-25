@@ -25,7 +25,7 @@ from angel_utils import make_default_main
 BRIDGE = CvBridge()
 
 
-class YoloObjectDetector(Node):
+class ObjectHandDetector(Node):
     """
     ROS node that runs the yolov7 object detector model and outputs
     `ObjectDetection2dSet` messages.
@@ -64,6 +64,7 @@ class YoloObjectDetector(Node):
         self._det_topic = param_values["det_topic"]
         self._model_ckpt_fp = Path(param_values["net_checkpoint"])
         self._hand_model_chpt_fp = Path(param_values["hand_net_checkpoint"])
+        
         self._inference_img_size = param_values["inference_img_size"]
         self._det_conf_thresh = param_values["det_conf_threshold"]
         self._iou_thr = param_values["iou_threshold"]
@@ -228,20 +229,6 @@ class YoloObjectDetector(Node):
                 object_confs.extend(hand_confs)
                 objects_classids.extend(hand_classids)
                 for xyxy, conf, cls_id in zip(objcet_boxes, object_confs, objects_classids):
-                # for xyxy, conf, cls_id in predict_image(
-                #     img0,
-                #     self.device,
-                #     self.model,
-                #     self.stride,
-                #     self.imgsz,
-                #     self.half,
-                #     False,
-                #     self._det_conf_thresh,
-                #     self._iou_thr,
-                #     None,
-                #     self._agnostic_nms,
-                # ):
-
 
                     n_dets += 1
                     msg.left.append(xyxy[0])
@@ -279,7 +266,7 @@ class YoloObjectDetector(Node):
 # - 1 known subscriber which has their own group
 # - 1 for default group
 # - 1 for publishers
-main = make_default_main(YoloObjectDetector, multithreaded_executor=3)
+main = make_default_main(ObjectHandDetector, multithreaded_executor=3)
 
 
 if __name__ == "__main__":
