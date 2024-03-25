@@ -8,17 +8,17 @@ from rclpy.callback_groups import MutuallyExclusiveCallbackGroup, ReentrantCallb
 from rclpy.node import Node, ParameterDescriptor, Parameter
 from sensor_msgs.msg import Image
 
-from yolov7.detect_ptg import load_model, predict_image, predict_hands
+# from yolov7.detect_ptg import load_model, predict_image, predict_hands
 from tcn_hpl.data.utils.pose_generation.generate_pose_data import predict_single
-from yolov7.models.experimental import attempt_load
-import yolov7.models.yolo
-from yolov7.utils.torch_utils import TracedModel
+# from yolov7.models.experimental import attempt_load
+# import yolov7.models.yolo
+# from yolov7.utils.torch_utils import TracedModel
 
 from angel_system.utils.event import WaitAndClearEvent
 from angel_system.utils.simple_timer import SimpleTimer
 
-from angel_msgs.msg import ObjectDetection2dSet, JointKeypoints
-from angel_utils import declare_and_get_parameters, RateTracker, DYNAMIC_TYPE
+from angel_msgs.msg import ObjectDetection2dSet #, JointKeypoints
+from angel_utils import declare_and_get_parameters, RateTracker#, DYNAMIC_TYPE
 from angel_utils import make_default_main
 
 from mmpose.apis import (inference_top_down_pose_model, init_pose_model,
@@ -26,65 +26,65 @@ from mmpose.apis import (inference_top_down_pose_model, init_pose_model,
 
 from detectron2.config import get_cfg
 from detectron2.data.detection_utils import read_image
-from .predictor import VisualizationDemo
+from tcn_hpl.data.utils.pose_generation.predictor import VisualizationDemo
 import argparse
 
 
 BRIDGE = CvBridge()
 
-def get_parser(config_file):
-    parser = argparse.ArgumentParser(description="Detectron2 demo for builtin configs")
-    parser.add_argument(
-        "--config-file",
-        default=config_file,
-        metavar="FILE",
-        help="path to config file",
-    )
-    parser.add_argument("--webcam", action="store_true", help="Take inputs from webcam.")
-    parser.add_argument("--video-input", help="Path to video file."
-                        # , default='/shared/niudt/detectron2/images/Videos/k2/4.MP4'
-    )
-    parser.add_argument(
-        "--input",
-        nargs="+",
-        help="A list of space separated input images; "
-        "or a single glob pattern such as 'directory/*.jpg'"
-        , default= ['/shared/niudt/DATASET/Medical/Maydemo/2023-4-25/selected_videos/new/M2-16/*.jpg'] # please change here to the path where you put the images
-    )
-    parser.add_argument(
-        "--output",
-        help="A file or directory to save output visualizations. "
-        "If not given, will show output in an OpenCV window."
-        , default='./bbox_detection_results'
-    )
+# def get_parser(config_file):
+#     parser = argparse.ArgumentParser(description="Detectron2 demo for builtin configs")
+#     parser.add_argument(
+#         "--config-file",
+#         default=config_file,
+#         metavar="FILE",
+#         help="path to config file",
+#     )
+#     parser.add_argument("--webcam", action="store_true", help="Take inputs from webcam.")
+#     parser.add_argument("--video-input", help="Path to video file."
+#                         # , default='/shared/niudt/detectron2/images/Videos/k2/4.MP4'
+#     )
+#     parser.add_argument(
+#         "--input",
+#         nargs="+",
+#         help="A list of space separated input images; "
+#         "or a single glob pattern such as 'directory/*.jpg'"
+#         # , default= ['/shared/niudt/DATASET/Medical/Maydemo/2023-4-25/selected_videos/new/M2-16/*.jpg'] # please change here to the path where you put the images
+#     )
+#     # parser.add_argument(
+#     #     "--output",
+#     #     help="A file or directory to save output visualizations. "
+#     #     "If not given, will show output in an OpenCV window."
+#     #     , default='./bbox_detection_results'
+#     # )
 
-    parser.add_argument(
-        "--confidence-threshold",
-        type=float,
-        default=0.8,
-        help="Minimum score for instance predictions to be shown",
-    )
-    parser.add_argument(
-        "--opts",
-        help="Modify config options using the command-line 'KEY VALUE' pairs",
-        default=[],
-        nargs=argparse.REMAINDER,
-    )
-    return parser
+#     parser.add_argument(
+#         "--confidence-threshold",
+#         type=float,
+#         default=0.8,
+#         help="Minimum score for instance predictions to be shown",
+#     )
+#     parser.add_argument(
+#         "--opts",
+#         help="Modify config options using the command-line 'KEY VALUE' pairs",
+#         default=[],
+#         nargs=argparse.REMAINDER,
+#     )
+#     return parser
 
 
-def setup_detectron_cfg(args):
+def setup_detectron_cfg(config_file):
     # load config from file and command-line arguments
     cfg = get_cfg()
     # To use demo for Panoptic-DeepLab, please uncomment the following two lines.
     # from detectron2.projects.panoptic_deeplab import add_panoptic_deeplab_config  # noqa
     # add_panoptic_deeplab_config(cfg)
-    cfg.merge_from_file(args.config_file)
-    cfg.merge_from_list(args.opts)
+    cfg.merge_from_file(config_file)
+    # cfg.merge_from_list(args.opts)
     # Set score_threshold for builtin models
-    cfg.MODEL.RETINANET.SCORE_THRESH_TEST = args.confidence_threshold
-    cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = args.confidence_threshold
-    cfg.MODEL.PANOPTIC_FPN.COMBINE.INSTANCES_CONFIDENCE_THRESH = args.confidence_threshold
+    cfg.MODEL.RETINANET.SCORE_THRESH_TEST = 0.8
+    cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.8
+    cfg.MODEL.PANOPTIC_FPN.COMBINE.INSTANCES_CONFIDENCE_THRESH = 0.8
     cfg.freeze()
     return cfg
 
@@ -96,9 +96,12 @@ class PoseEstimator(Node):
 
     def __init__(self):
         super().__init__(self.__class__.__name__)
+        
+        print("getting logger")
         log = self.get_logger()
 
         # Inputs
+        print("getting params")
         param_values = declare_and_get_parameters(
             self,
             [
@@ -115,7 +118,7 @@ class PoseEstimator(Node):
                 ("inference_img_size", 1280),  # inference size (pixels)
                 ("det_conf_threshold", 0.7),  # object confidence threshold
                 ("iou_threshold", 0.45),  # IOU threshold for NMS
-                ("cuda_device_id", 0, DYNAMIC_TYPE),  # cuda device: ID int or CPU
+                ("cuda_device_id", 0),  # cuda device: ID int or CPU
                 ("no_trace", True),  # don`t trace model
                 ("agnostic_nms", False),  # class-agnostic NMS
                 # Runtime thread checkin heartbeat interval in seconds.
@@ -129,6 +132,8 @@ class PoseEstimator(Node):
         self._det_topic = param_values["det_topic"]
         self.det_model_ckpt_fp = Path(param_values["det_net_checkpoint"])
         self.pose_model_ckpt_fp = Path(param_values["pose_net_checkpoint"])
+        self.det_config = Path(param_values["det_config"])
+        self.pose_config = Path(param_values["pose_config"])
         
         self._inference_img_size = param_values["inference_img_size"]
         self._det_conf_thresh = param_values["det_conf_threshold"]
@@ -137,13 +142,19 @@ class PoseEstimator(Node):
         self._no_trace = param_values["no_trace"]
         self._agnostic_nms = param_values["agnostic_nms"]
         
+        print("finished setting params")
+        
+        print("loading detectron model")
         # Detectron Model
-        self.args = get_parser(param_values["det_config"]).parse_args()
-        detecron_cfg = setup_detectron_cfg(self.args)
+        # self.args = get_parser(self.det_config).parse_args()
+        # print(self.args)
+        detecron_cfg = setup_detectron_cfg(self.det_config)
         self.det_model = VisualizationDemo(detecron_cfg)
         
+        
+        print("loading pose model")
         # Pose model
-        self.pose_model = init_pose_model(param_values["pose_config"], 
+        self.pose_model = init_pose_model(self.pose_config, 
                                         self.pose_model_ckpt_fp, 
                                         device=self._cuda_device_id)
 
@@ -155,6 +166,7 @@ class PoseEstimator(Node):
         self._cur_image_msg: Image = None
         self._cur_image_msg_lock = Lock()
 
+        print("creating subscription to image topic")
         # Initialize ROS hooks
         self._subscription = self.create_subscription(
             Image,
@@ -163,6 +175,8 @@ class PoseEstimator(Node):
             1,
             callback_group=MutuallyExclusiveCallbackGroup(),
         )
+        
+        print("creating publisher to detections")
         self._det_publisher = self.create_publisher(
             ObjectDetection2dSet,
             self._det_topic,
@@ -170,15 +184,15 @@ class PoseEstimator(Node):
             callback_group=MutuallyExclusiveCallbackGroup(),
         )
         
-        self._pose_publisher = self.create_publisher(
-            JointKeypoints,
-            self._det_topic,
-            1,
-            callback_group=MutuallyExclusiveCallbackGroup(),
-        )
+        # self._pose_publisher = self.create_publisher(
+        #     JointKeypoints,
+        #     self._det_topic,
+        #     1,
+        #     callback_group=MutuallyExclusiveCallbackGroup(),
+        # )
 
-        if not self._no_trace:
-            self.model = TracedModel(self.model, self.device, self._inference_img_size)
+        # if not self._no_trace:
+        #     self.model = TracedModel(self.model, self.device, self._inference_img_size)
 
         self.half = half = (
             self.device.type != "cpu"
@@ -250,6 +264,9 @@ class PoseEstimator(Node):
                 # Convert ROS img msg to CV2 image
                 img0 = BRIDGE.imgmsg_to_cv2(image, desired_encoding="bgr8")
                 
+                
+                # print()
+                
                 print(f"img0: {img0.shape}")
                 width, height = self._inference_img_size
 
@@ -259,10 +276,10 @@ class PoseEstimator(Node):
                 det_msg.source_stamp = image.header.stamp
                 det_msg.label_vec[:] = self.model.names
                 
-                pose_msg = JointKeypoints()
-                pose_msg.header.stamp = self.get_clock().now().to_msg()
-                pose_msg.header.frame_id = image.header.frame_id
-                pose_msg.source_stamp = image.header.stamp
+                # pose_msg = JointKeypoints()
+                # pose_msg.header.stamp = self.get_clock().now().to_msg()
+                # pose_msg.header.frame_id = image.header.frame_id
+                # pose_msg.source_stamp = image.header.stamp
                 # pose_msg.label_vec[:] = self.model.names
 
                 boxes, labels, keypoints = predict_single(det_model=self.det_model,
@@ -270,9 +287,9 @@ class PoseEstimator(Node):
                                                           image=img0)
                 
                 # at most, we have 1 set of keypoints for 1 patient
-                for keypoints_ in keypoints:
-                    pose_msg.keypoints = keypoints_
-                    self._pose_publisher.publish(pose_msg)
+                # for keypoints_ in keypoints:
+                #     pose_msg.keypoints = keypoints_
+                #     self._pose_publisher.publish(pose_msg)
                 
                 n_dets = 0
                 for xyxy, labels in zip(boxes, labels):
@@ -312,8 +329,12 @@ class PoseEstimator(Node):
 # - 1 known subscriber which has their own group
 # - 1 for default group
 # - 1 for publishers
+print("executing make_default_main")
 main = make_default_main(PoseEstimator, multithreaded_executor=3)
 
 
 if __name__ == "__main__":
+    print("executing main")
+    # node = PoseEstimator()
+    print(f"before main: {node}")
     main()

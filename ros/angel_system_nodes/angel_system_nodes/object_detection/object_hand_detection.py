@@ -12,6 +12,7 @@ from yolov7.detect_ptg import load_model, predict_image, predict_hands
 from yolov7.models.experimental import attempt_load
 import yolov7.models.yolo
 from yolov7.utils.torch_utils import TracedModel
+from ultralytics import YOLO
 
 from angel_system.utils.event import WaitAndClearEvent
 from angel_system.utils.simple_timer import SimpleTimer
@@ -43,6 +44,7 @@ class YoloObjectDetector(Node):
                 ("image_topic",),
                 ("det_topic",),
                 ("net_checkpoint",),
+                ("hand_net_checkpoint",),
                 ##################################
                 # Defaulted parameters
                 ("inference_img_size", 1280),  # inference size (pixels)
@@ -61,7 +63,7 @@ class YoloObjectDetector(Node):
         self._image_topic = param_values["image_topic"]
         self._det_topic = param_values["det_topic"]
         self._model_ckpt_fp = Path(param_values["net_checkpoint"])
-
+        self._hand_model_chpt_fp = Path(param_values["hand_net_checkpoint"])
         self._inference_img_size = param_values["inference_img_size"]
         self._det_conf_thresh = param_values["det_conf_threshold"]
         self._iou_thr = param_values["iou_threshold"]
@@ -104,6 +106,8 @@ class YoloObjectDetector(Node):
             callback_group=MutuallyExclusiveCallbackGroup(),
         )
 
+        self.hand_model = YOLO(self._hand_model_chpt_fp)
+        
         if not self._no_trace:
             self.model = TracedModel(self.model, self.device, self._inference_img_size)
 

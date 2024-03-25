@@ -45,6 +45,7 @@ setup(
             "object_detector_with_descriptors_v2 = angel_system_nodes.object_detection.object_detector_with_descriptors_v2:main",
             "object_detection_yolo_v7 = angel_system_nodes.object_detection.yolov7_object_detector:main",
             "object_detection_filter = angel_system_nodes.object_detection.object_detection_filter:main",
+            "object_hand_detector = angel_system_nodes.object_detection.object_hand_detection:main",
             # Activity Classification
             "activity_classifier_tcn = angel_system_nodes.activity_classification.activity_classifier_tcn:main",
             "activity_detector = angel_system_nodes.activity_classification.activity_detector:main",
