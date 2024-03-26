@@ -1,7 +1,7 @@
 from pathlib import Path
 from threading import Event, Lock, Thread
 from typing import Union
-
+import torch
 from cv_bridge import CvBridge
 import numpy as np
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup, ReentrantCallbackGroup
@@ -16,9 +16,10 @@ from sensor_msgs.msg import Image
 from angel_system.utils.event import WaitAndClearEvent
 from angel_system.utils.simple_timer import SimpleTimer
 
-from angel_msgs.msg import ObjectDetection2dSet #, JointKeypoints
+from angel_msgs.msg import ObjectDetection2dSet, HandJointPosesUpdate, HandJointPose, ActivityDetection
 from angel_utils import declare_and_get_parameters, RateTracker#, DYNAMIC_TYPE
 from angel_utils import make_default_main
+from geometry_msgs.msg import Point, Pose, Quaternion
 
 # from tcn_hpl.data.utils.pose_generation.generate_pose_data import predict_single
 from tcn_hpl.data.utils.pose_generation.rt_pose_generation import predict_single
@@ -32,61 +33,22 @@ from tcn_hpl.data.utils.pose_generation.predictor import VisualizationDemo
 
 BRIDGE = CvBridge()
 
-# def get_parser(config_file):
-#     parser = argparse.ArgumentParser(description="Detectron2 demo for builtin configs")
-#     parser.add_argument(
-#         "--config-file",
-#         default=config_file,
-#         metavar="FILE",
-#         help="path to config file",
-#     )
-#     parser.add_argument("--webcam", action="store_true", help="Take inputs from webcam.")
-#     parser.add_argument("--video-input", help="Path to video file."
-#                         # , default='/shared/niudt/detectron2/images/Videos/k2/4.MP4'
-#     )
-#     parser.add_argument(
-#         "--input",
-#         nargs="+",
-#         help="A list of space separated input images; "
-#         "or a single glob pattern such as 'directory/*.jpg'"
-#         # , default= ['/shared/niudt/DATASET/Medical/Maydemo/2023-4-25/selected_videos/new/M2-16/*.jpg'] # please change here to the path where you put the images
-#     )
-#     # parser.add_argument(
-#     #     "--output",
-#     #     help="A file or directory to save output visualizations. "
-#     #     "If not given, will show output in an OpenCV window."
-#     #     , default='./bbox_detection_results'
-#     # )
 
-#     parser.add_argument(
-#         "--confidence-threshold",
-#         type=float,
-#         default=0.8,
-#         help="Minimum score for instance predictions to be shown",
-#     )
-#     parser.add_argument(
-#         "--opts",
-#         help="Modify config options using the command-line 'KEY VALUE' pairs",
-#         default=[],
-#         nargs=argparse.REMAINDER,
-#     )
-#     return parser
-
-
-# def setup_detectron_cfg(config_file):
-#     # load config from file and command-line arguments
-#     cfg = get_cfg()
-#     # To use demo for Panoptic-DeepLab, please uncomment the following two lines.
-#     # from detectron2.projects.panoptic_deeplab import add_panoptic_deeplab_config  # noqa
-#     # add_panoptic_deeplab_config(cfg)
-#     cfg.merge_from_file(config_file)
-#     # cfg.merge_from_list(args.opts)
-#     # Set score_threshold for builtin models
-#     cfg.MODEL.RETINANET.SCORE_THRESH_TEST = 0.8
-#     cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.8
-#     cfg.MODEL.PANOPTIC_FPN.COMBINE.INSTANCES_CONFIDENCE_THRESH = 0.8
-#     cfg.freeze()
-#     return cfg
+def setup_detectron_cfg(config_file, model_checkpoint):
+    # load config from file and command-line arguments
+    cfg = get_cfg()
+    # To use demo for Panoptic-DeepLab, please uncomment the following two lines.
+    # from detectron2.projects.panoptic_deeplab import add_panoptic_deeplab_config  # noqa
+    # add_panoptic_deeplab_config(cfg)
+    cfg.merge_from_file(config_file)
+    # cfg.merge_from_list(args.opts)
+    # Set score_threshold for builtin models
+    cfg.MODEL.RETINANET.SCORE_THRESH_TEST = 0.8
+    cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.8
+    cfg.MODEL.PANOPTIC_FPN.COMBINE.INSTANCES_CONFIDENCE_THRESH = 0.8
+    cfg.MODEL.WEIGHTS = model_checkpoint
+    cfg.freeze()
+    return cfg
 
 class PoseEstimator(Node):
     """
@@ -109,6 +71,7 @@ class PoseEstimator(Node):
                 # Required parameter (no defaults)
                 ("image_topic",),
                 ("det_topic",),
+                ("pose_topic",),
                 ("det_net_checkpoint",),
                 ("pose_net_checkpoint",),
                 ("det_config",),
@@ -130,10 +93,11 @@ class PoseEstimator(Node):
         )
         self._image_topic = param_values["image_topic"]
         self._det_topic = param_values["det_topic"]
-        self.det_model_ckpt_fp = Path(param_values["det_net_checkpoint"])
-        self.pose_model_ckpt_fp = Path(param_values["pose_net_checkpoint"])
-        self.det_config = Path(param_values["det_config"])
-        self.pose_config = Path(param_values["pose_config"])
+        self._pose_topic = param_values["pose_topic"]
+        self.det_model_ckpt_fp = param_values["det_net_checkpoint"]
+        self.pose_model_ckpt_fp = param_values["pose_net_checkpoint"]
+        self.det_config = param_values["det_config"]
+        self.pose_config = param_values["pose_config"]
         
         self._inference_img_size = param_values["inference_img_size"]
         self._det_conf_thresh = param_values["det_conf_threshold"]
@@ -142,13 +106,22 @@ class PoseEstimator(Node):
         self._no_trace = param_values["no_trace"]
         self._agnostic_nms = param_values["agnostic_nms"]
         
+        self.keypoints_cats = [
+                        "nose", "mouth", "throat","chest","stomach","left_upper_arm",
+                        "right_upper_arm","left_lower_arm","right_lower_arm","left_wrist",
+                        "right_wrist","left_hand","right_hand","left_upper_leg",
+                        "right_upper_leg","left_knee","right_knee","left_lower_leg", 
+                        "right_lower_leg", "left_foot", "right_foot", "back"
+                    ]
+        
         print("finished setting params")
         
         print("loading detectron model")
         # Detectron Model
         # self.args = get_parser(self.det_config).parse_args()
-        # print(self.args)
-        detecron_cfg = self.setup_detectron_cfg(self.det_config)
+        print(f"model_checkpoint: {self.det_model_ckpt_fp}")
+        detecron_cfg = setup_detectron_cfg(self.det_config, model_checkpoint=self.det_model_ckpt_fp)
+        
         self.det_model = VisualizationDemo(detecron_cfg)
         
         
@@ -158,6 +131,7 @@ class PoseEstimator(Node):
                                         self.pose_model_ckpt_fp, 
                                         device=self._cuda_device_id)
 
+        self.device = torch.device(f'cuda:{self._cuda_device_id}')
 
         self._enable_trace_logging = param_values["enable_time_trace_logging"]
 
@@ -177,28 +151,28 @@ class PoseEstimator(Node):
         )
         
         print("creating publisher to detections")
-        self._det_publisher = self.create_publisher(
+        self.patient_det_publisher = self.create_publisher(
             ObjectDetection2dSet,
             self._det_topic,
             1,
             callback_group=MutuallyExclusiveCallbackGroup(),
         )
-        
-        # self._pose_publisher = self.create_publisher(
-        #     JointKeypoints,
-        #     self._det_topic,
-        #     1,
-        #     callback_group=MutuallyExclusiveCallbackGroup(),
-        # )
+        print("creating publisher for poses")
+        self.patient_pose_publisher = self.create_publisher(
+            HandJointPosesUpdate,
+            self._pose_topic,
+            1,
+            callback_group=MutuallyExclusiveCallbackGroup(),
+        )
 
         # if not self._no_trace:
         #     self.model = TracedModel(self.model, self.device, self._inference_img_size)
 
-        self.half = half = (
-            self.device.type != "cpu"
-        )  # half precision only supported on CUDA
-        if half:
-            self.model.half()  # to FP16
+        # self.half = half = (
+        #     self.device.type != "cpu"
+        # )  # half precision only supported on CUDA
+        # if half:
+        #     self.model.half()  # to FP16
 
         self._rate_tracker = RateTracker()
         log.info("Detector initialized")
@@ -216,21 +190,6 @@ class PoseEstimator(Node):
         self._rt_thread = Thread(target=self.rt_loop, name="prediction_runtime")
         self._rt_thread.daemon = True
         self._rt_thread.start()
-
-    def setup_detectron_cfg(self, config_file):
-        # load config from file and command-line arguments
-        cfg = get_cfg()
-        # To use demo for Panoptic-DeepLab, please uncomment the following two lines.
-        # from detectron2.projects.panoptic_deeplab import add_panoptic_deeplab_config  # noqa
-        # add_panoptic_deeplab_config(cfg)
-        cfg.merge_from_file(config_file)
-        # cfg.merge_from_list(args.opts)
-        # Set score_threshold for builtin models
-        cfg.MODEL.RETINANET.SCORE_THRESH_TEST = 0.8
-        cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.8
-        cfg.MODEL.PANOPTIC_FPN.COMBINE.INSTANCES_CONFIDENCE_THRESH = 0.8
-        cfg.freeze()
-        return cfg
     
     def listener_callback(self, image: Image):
         """
@@ -283,50 +242,81 @@ class PoseEstimator(Node):
                 # print()
                 
                 print(f"img0: {img0.shape}")
-                width, height = self._inference_img_size
+                # height, width, chans = img0.shape
 
-                det_msg = ObjectDetection2dSet()
-                det_msg.header.stamp = self.get_clock().now().to_msg()
-                det_msg.header.frame_id = image.header.frame_id
-                det_msg.source_stamp = image.header.stamp
-                det_msg.label_vec[:] = self.model.names
+                patient_det_msg = ObjectDetection2dSet()
+                patient_det_msg.header.stamp = self.get_clock().now().to_msg()
+                patient_det_msg.header.frame_id = image.header.frame_id
+                patient_det_msg.source_stamp = image.header.stamp
+                # patient_det_msg.label_vec[:] = self.model.names
                 
-                # pose_msg = JointKeypoints()
-                # pose_msg.header.stamp = self.get_clock().now().to_msg()
-                # pose_msg.header.frame_id = image.header.frame_id
-                # pose_msg.source_stamp = image.header.stamp
+                all_poses_msg = HandJointPosesUpdate()
+                all_poses_msg.header.stamp = self.get_clock().now().to_msg()
+                all_poses_msg.header.frame_id = image.header.frame_id
+                all_poses_msg.source_stamp = image.header.stamp
+                all_poses_msg.hand = "patient"
                 # pose_msg.label_vec[:] = self.model.names
 
                 boxes, labels, keypoints = predict_single(det_model=self.det_model,
                                                           pose_model=self.pose_model,
                                                           image=img0)
                 
+                print(f"len(boxes): {len(boxes)}, len(keypoints): {len(keypoints)}")
+                
                 # at most, we have 1 set of keypoints for 1 patient
-                # for keypoints_ in keypoints:
-                #     pose_msg.keypoints = keypoints_
-                #     self._pose_publisher.publish(pose_msg)
+                for keypoints_ in keypoints:
+                    joints_msg_list = []
+                    for label, keypoint in zip(self.keypoints_cats, keypoints_):
+                        print(f"labe: {label}, keypoint: {keypoint}")
+                        position = Point()
+                        position.x = float(keypoint[0])
+                        position.y = float(keypoint[1])
+                        position.z = float(keypoint[2])
+
+                        # Extract the orientation
+                        orientation = Quaternion()
+                        orientation.x = float(0)
+                        orientation.y = float(0)
+                        orientation.z = float(0)
+                        orientation.w = float(0)
+
+                        # Form the geometry pose message
+                        pose_msg = Pose()
+                        pose_msg.position = position
+                        pose_msg.orientation = orientation
+
+                        # Create the hand joint pose message
+                        joint_msg = HandJointPose()
+                        joint_msg.joint = label
+                        joint_msg.pose = pose_msg
+                        all_poses_msg.joints.append(joint_msg)
+                        # joints_msg_list.append(pose_msg)
+                        
+                    print(f"keypoints: {keypoints_}")
+                    # pose_msg.conf_vec = keypoints_
+                    self.patient_pose_publisher.publish(all_poses_msg)
                 
                 n_dets = 0
                 for xyxy, labels in zip(boxes, labels):
                     n_dets += 1
-                    det_msg.left.append(xyxy[0])
-                    det_msg.top.append(xyxy[1])
-                    det_msg.right.append(xyxy[2])
-                    det_msg.bottom.append(xyxy[3])
+                    patient_det_msg.left.append(xyxy[0])
+                    patient_det_msg.top.append(xyxy[1])
+                    patient_det_msg.right.append(xyxy[2])
+                    patient_det_msg.bottom.append(xyxy[3])
 
                     # dflt_conf_vec[cls_id] = conf
                     # copies data into array
-                    det_msg.label_confidences.extend(1.0)
+                    patient_det_msg.label_confidences.append(1.0)
                     # reset before next passthrough
                     # dflt_conf_vec[cls_id] = 0.0
 
-                det_msg.num_detections = n_dets
+                patient_det_msg.num_detections = n_dets
 
-                self._det_publisher.publish(det_msg)
+                self.patient_det_publisher.publish(patient_det_msg)
 
                 self._rate_tracker.tick()
                 log.info(
-                    f"Objects Detection Rate: {self._rate_tracker.get_rate_avg()} Hz",
+                    f"Pose Estimation Rate: {self._rate_tracker.get_rate_avg()} Hz",
                 )
 
     def destroy_node(self):

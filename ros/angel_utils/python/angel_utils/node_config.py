@@ -69,27 +69,18 @@ def make_default_main(
 
     def closure() -> None:
         # Initialize ROS2
-        print("intislizing ros2")
         rclpy.init()
-        print("getting logger")
         log = rclpy.logging.get_logger("main")
 
         # Construct the node instance
-        print("construct node instance")
-        print(f"node type: {node_type}")
-        print(f"node type: {dir(node_type)}")
-        print(f"node_args: {node_args}")
-        print(f"node_kwargs: {node_kwargs}")
         node = node_type(*node_args, **(node_kwargs or {}))
         # node = node_type
         
 
-        print("pre spin callback")
         # Execute pre-spin callback, if provided
         if pre_spin_callback is not None:
             pre_spin_callback(node)
 
-        print("create executor")
         # Create the executor
         executor = (
             rclpy.executors.MultiThreadedExecutor(num_threads=multithreaded_executor)
@@ -97,12 +88,10 @@ def make_default_main(
             else rclpy.executors.SingleThreadedExecutor()
         )
 
-        print("add node to executor")
         # Add the node to the executor
         executor.add_node(node)
 
         try:
-            print("spin node")
             # Spin the node
             executor.spin()
         except (KeyboardInterrupt, ExternalShutdownException):

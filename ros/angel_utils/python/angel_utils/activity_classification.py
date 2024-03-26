@@ -15,7 +15,7 @@ import numpy.typing as npt
 # ROS Message types
 from builtin_interfaces.msg import Time
 
-from angel_msgs.msg import ActivityDetection, HandJointPosesUpdate, ObjectDetection2dSet, JointKeypoints
+from angel_msgs.msg import ActivityDetection, HandJointPosesUpdate, ObjectDetection2dSet, HandJointPose
 
 from angel_system.utils.matching import descending_match_with_tolerance
 from angel_utils.conversion import time_to_int
@@ -42,7 +42,7 @@ class InputWindow:
     # Buffer of object detection predictions
     obj_dets: List[Optional[ObjectDetection2dSet]]
     # Buffer for patient poses
-    patient_joint_kps: List[Optional[JointKeypoints]]
+    patient_joint_kps: List[Optional[HandJointPose]]
 
     def __len__(self):
         return len(self.frames)
@@ -109,7 +109,7 @@ class InputBuffer:
         default_factory=deque, init=False, repr=False
     )
     
-    patient_joint_kps: Deque[JointKeypoints] = field(
+    patient_joint_kps: Deque[HandJointPosesUpdate] = field(
         default_factory=deque, init=False, repr=False
     )
 
@@ -211,10 +211,11 @@ class InputBuffer:
             self.obj_dets.append(msg)
             return True
     
-    def queue_joint_keypoints(self, msg: JointKeypoints) -> bool:
+    def queue_joint_keypoints(self, msg: HandJointPose) -> bool:
         """
         Queue up an object detection set for the
         """
+        
         with self.__state_lock:
             # before the current lead pose?
             if self.patient_joint_kps and time_to_int(msg.header.stamp) <= time_to_int(
@@ -238,7 +239,7 @@ class InputBuffer:
         return time_to_int(msg.source_stamp)
 
     @staticmethod
-    def _joints_msg_to_time_ns(msg: JointKeypoints):
+    def _joints_msg_to_time_ns(msg: HandJointPose):
         # Using stamp that should associate to the source image
         return time_to_int(msg.source_stamp)
 

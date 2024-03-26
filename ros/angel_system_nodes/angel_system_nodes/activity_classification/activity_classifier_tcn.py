@@ -33,6 +33,8 @@ from angel_system.utils.simple_timer import SimpleTimer
 from angel_msgs.msg import (
     ObjectDetection2dSet,
     ActivityDetection,
+    HandJointPosesUpdate,
+    HandJointPose
 )
 from angel_utils import declare_and_get_parameters, make_default_main, RateTracker
 from angel_utils.activity_classification import InputWindow, InputBuffer
@@ -83,6 +85,8 @@ PARAM_INPUT_COCO_FILEPATH = "input_obj_det_kwcoco"
 # receive and process data.
 PARAM_TIME_TRACE_LOGGING = "enable_time_trace_logging"
 
+PARAM_POSE_TOPIC = "pose_det"
+
 
 class NoActivityClassification(Exception):
     """
@@ -106,6 +110,7 @@ class ActivityClassifierTCN(Node):
             [
                 (PARAM_IMG_TS_TOPIC,),
                 (PARAM_DET_TOPIC,),
+                (PARAM_POSE_TOPIC,),
                 (PARAM_ACT_TOPIC,),
                 (PARAM_MODEL_WEIGHTS,),
                 (PARAM_MODEL_MAPPING,),
@@ -124,6 +129,9 @@ class ActivityClassifierTCN(Node):
         )
         self._img_ts_topic = param_values[PARAM_IMG_TS_TOPIC]
         self._det_topic = param_values[PARAM_DET_TOPIC]
+        
+        self._pose_topic = param_values[PARAM_POSE_TOPIC]
+        
         self._act_topic = param_values[PARAM_ACT_TOPIC]
         self._img_pix_width = param_values[PARAM_IMAGE_PIX_WIDTH]
         self._img_pix_height = param_values[PARAM_IMAGE_PIX_HEIGHT]
@@ -230,6 +238,7 @@ class ActivityClassifierTCN(Node):
             1,
             callback_group=MutuallyExclusiveCallbackGroup(),
         )
+        
         self._det_subscriber = self.create_subscription(
             ObjectDetection2dSet,
             self._det_topic,
@@ -237,6 +246,15 @@ class ActivityClassifierTCN(Node):
             1,
             callback_group=MutuallyExclusiveCallbackGroup(),
         )
+        
+        self._pose_subscriber = self.create_subscription(
+            HandJointPosesUpdate,
+            self._pose_topic,
+            self.det_callback,
+            1,
+            callback_group=MutuallyExclusiveCallbackGroup(),
+        )
+        
         self._activity_publisher = self.create_publisher(
             ActivityDetection,
             self._act_topic,
@@ -375,6 +393,20 @@ class ActivityClassifierTCN(Node):
         and publish the `ActivityDetection` message.
         """
         if self.rt_alive() and self._buffer.queue_object_detections(msg):
+            if self._enable_trace_logging:
+                self.get_logger().info(
+                    f"Queueing object detections (ts={msg.header.stamp})"
+                )
+            # Let the runtime know we've queued something.
+            # self._rt_awake_evt.set()
+        
+    def pose_callback(self, msg: HandJointPosesUpdate) -> None:
+        """
+        Callback function for `HandJointPosesUpdate` messages. Runs the classifier,
+        creates an `ActivityDetection` message from the results the classifier,
+        and publish the `ActivityDetection` message.
+        """
+        if self.rt_alive() and self._buffer.queue_joint_keypoints(msg): #TODO: need to change the queue function
             if self._enable_trace_logging:
                 self.get_logger().info(
                     f"Queueing object detections (ts={msg.header.stamp})"
@@ -580,6 +612,8 @@ class ActivityClassifierTCN(Node):
             f"[_process_window] Window vector presence: "
             f"{[(v is not None) for v in frame_object_detections]}"
         )
+
+        
 
         with SimpleTimer("[_process_window] Detections embedding", log.info):
             try:

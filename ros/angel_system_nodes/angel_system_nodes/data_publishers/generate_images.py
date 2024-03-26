@@ -1,14 +1,40 @@
 import time
-
+import os
 from cv_bridge import CvBridge
 import numpy as np
 import rclpy
 import rclpy.executors
 from rclpy.node import Node
 from sensor_msgs.msg import Image, CompressedImage
+from random import sample 
+from glob import glob
+from PIL import Image as pillow_image
 
+def dictionary_contents(path: str, types: list, recursive: bool = False) -> list:
+    """
+    Extract files of specified types from directories, optionally recursively.
 
-def random_image(height=720, width=1280, channels=3):
+    Parameters:
+        path (str): Root directory path.
+        types (list): List of file types (extensions) to be extracted.
+        recursive (bool, optional): Search for files in subsequent directories if True. Default is False.
+
+    Returns:
+        list: List of file paths with full paths.
+    """
+    files = []
+    if recursive:
+        path = path + "/**/*"
+    for type in types:
+        if recursive:
+            for x in glob(path + type, recursive=True):
+                files.append(os.path.join(path, x))
+        else:
+            for x in glob(path + type):
+                files.append(os.path.join(path, x))
+    return files
+
+def random_image(height=720, width=1280, channels=3, images_root="/angel_workspace/model_files/sample_images/"):
     """
     Generate a new random
     :param height: Pixel height
@@ -16,7 +42,17 @@ def random_image(height=720, width=1280, channels=3):
     :param channels: image channels
     :return: Numpy image matrix
     """
-    return np.random.randint(0, 255, (height, width, channels), np.uint8)
+    # print(f"images_root: {images_root}")
+    images_paths = dictionary_contents(images_root, types=["*.png"])
+    # print(f"images_paths: {images_paths}")
+    image_path = sample(images_paths, 1)[0]
+    # print(f"image_path: {image_path}")
+    
+    image = np.array(pillow_image.open(image_path))
+    print(image.max())
+
+    return image
+    # return np.random.randint(0, 255, (height, width, channels), np.uint8)
 
 
 bridge = CvBridge()

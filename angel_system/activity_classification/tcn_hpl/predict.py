@@ -10,7 +10,7 @@ from typing import Sequence
 from typing import Tuple
 
 import kwcoco
-import lightning.fabric.utilities.seed
+# import lightning.fabric.utilities.seed
 import numpy as np
 import numpy.typing as npt
 import torch
@@ -173,6 +173,11 @@ def objects_to_feats(
                         det_label_to_idx,
                         version=feat_version,
                         top_n_objects=3,
+                        use_activation=True,
+                        use_hand_dist=True,
+                        use_intersection=True,
+                        use_joint_hand_offset=True,
+                        use_joint_object_offset=True,
                     )
                     .ravel()
                     .astype(np.float32)
