@@ -14,6 +14,27 @@ Note: This repository contains submodules that will need to be initialized upon 
 $ git submodule update --init --recursive
 ```
 
+# Table of Contents
+<!--
+    Updating this section is currently a manual process (or use an LLM?).
+    New sections at the top and second level should be added here manually.
+-->
+* [Windows Development for HL2](#Windows-Development-for-HL2)
+  * [Tool versions used](#Tool-versions-used)
+  * [First time build/deploy instructions](#First-time-builddeploy-instructions)
+  * [ROS Unity Setup](#ROS-Unity-Setup)
+  * [Running application without a development environment](#Running-application-without-a-development-environment)
+  * [Misc. notes](#Misc-notes)
+* [ROS 2 System](#ROS-2-System)
+  * [Provision Files](#Provision-Files)
+  * [Developing with Submodules](#Developing-with-Submodules)
+  * [Docker-based Workflow](#Docker-based-Workflow)
+  * [Run Configurations -- Tmuxinator](#Run-Configurations----Tmuxinator)
+  * [Configuring ROS nodes that utilize SMQTK-Core](#Configuring-ROS-nodes-that-utilize-SMQTK-Core)
+  * [Setting up the foot pedal for annotations](#Setting-up-the-foot-pedal-for-annotations)
+  * [ANGEL System Python Package](#ANGEL-System-Python-Package)
+  * [Lessons Learned](#Lessons-Learned)
+
 # Windows Development for HL2
 
 ## Tool versions used
@@ -105,6 +126,25 @@ your environment in order to satisfy some permissions:
 
 The configuration that controls what is staged and where is located
 in the `ansible/roles/provision-files/vars/main.yml` file.
+
+## Developing with Submodules
+We incorporate various submodules in this repository to reference externally
+developed or maintained packages.
+
+Some of these packages however are things that we have authored to support this
+system but in a modular way to decouple their usage and functionality from this
+system.
+We may desire to develop or fix aspects of those submodules while developing or
+testing aspects of ANGEL System.
+We can test/develop/fix these submodules right in their checked-out locations
+within this repository.
+* `cd` into the submodule in question.
+* [Optional] Update the current, or checkout any alternative branch as desired.
+* [Optional] Check out a new branch to house development for the submodule's
+  repository.
+* Modify submodule content as desired.
+* Run `./angel-workspace-shell.sh`, build and test as desired.
+
 
 ## Docker-based Workflow
 **Intention**: Use containerization to standardize development and runtime
