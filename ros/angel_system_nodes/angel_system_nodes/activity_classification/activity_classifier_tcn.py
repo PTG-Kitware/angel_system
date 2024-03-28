@@ -253,13 +253,13 @@ class ActivityClassifierTCN(Node):
             callback_group=MutuallyExclusiveCallbackGroup(),
         )
         
-        self._pose_subscriber = self.create_subscription(
-            HandJointPosesUpdate,
-            self._pose_topic,
-            self.det_callback,
-            1,
-            callback_group=MutuallyExclusiveCallbackGroup(),
-        )
+        # self._pose_subscriber = self.create_subscription(
+        #     HandJointPosesUpdate,
+        #     self._pose_topic,
+        #     self.pose_callback,
+        #     1,
+        #     callback_group=MutuallyExclusiveCallbackGroup(),
+        # )
         
         self._activity_publisher = self.create_publisher(
             ActivityDetection,
@@ -271,6 +271,8 @@ class ActivityClassifierTCN(Node):
         # Rate tracker used in the window processing function.
         # This needs to be initialized before starting the runtime-loop which
         # calls that method.
+        
+        
         self._rate_tracker = RateTracker()
 
         # Start windowed prediction runtime thread.
@@ -283,7 +285,7 @@ class ActivityClassifierTCN(Node):
         self._rt_active_heartbeat = param_values[PARAM_RT_HEARTBEAT]
         # Condition that the runtime should perform processing
         self._rt_awake_evt = WaitAndClearEvent()
-        self._rt_thread = Thread(target=self.rt_loop, name="prediction_runtime")
+        self._rt_thread = Thread(target=self.rt_loop, name="prediction_runtime2")
         self._rt_thread.daemon = True
         # Thread start at bottom of constructor.
 
@@ -291,6 +293,7 @@ class ActivityClassifierTCN(Node):
         # Should be the last part of the constructor.
         log.info("Starting runtime thread...")
         self._rt_thread.start()
+        log.info(f"coco load thread: {self._coco_load_thread}")
         if self._coco_load_thread:
             log.info("Starting COCO loading thread...")
             self._coco_load_thread.start()
@@ -366,6 +369,7 @@ class ActivityClassifierTCN(Node):
             # window bounds, creating a new window for processing.
             log.info(f"Queuing from COCO: n_dets={n_dets}, image_ts={image_ts}")
             self.det_callback(det_msg)
+            # self.pose_callback(det_msg)
             self.img_ts_callback(image_ts)
 
             # Wait until `image_ts` was considered in the runtime loop before
@@ -385,9 +389,13 @@ class ActivityClassifierTCN(Node):
         """
         Capture a detection source image timestamp message.
         """
+        log = self.get_logger()
+        # log.info("image call back")
+        # log.info(f"self.rt_alive(): {self.rt_alive()}")
+        # log.info(f"self._buffer.queue_image(None, msg): {self._buffer.queue_image(None, msg)}")
         if self.rt_alive() and self._buffer.queue_image(None, msg):
             if self._enable_trace_logging:
-                self.get_logger().info(f"Queueing image TS {msg}")
+                log.info(f"Queueing image TS {msg}")
             # Let the runtime know we've queued something.
             # Only triggering here as a new image frame (TS) is the
             self._rt_awake_evt.set()
@@ -500,7 +508,7 @@ class ActivityClassifierTCN(Node):
         Activity classification prediction runtime function.
         """
         log = self.get_logger()
-        log.debug("Runtime loop starting")
+        log.info("Runtime loop starting")
         enable_time_trace_logging = self._enable_trace_logging
 
         # These criterion predicates must all return true for us to proceed
@@ -517,11 +525,16 @@ class ActivityClassifierTCN(Node):
                 self._window_criterion_coco_input_mode
             )
 
+        log.info("keep looping starting...")
+        log.info(f"_rt_keep_looping: {self._rt_keep_looping()}")
         while self._rt_keep_looping():
+            log.info(f"self._rt_awake_evt.wait_and_clear(self._rt_active_heartbeat): {self._rt_awake_evt.wait_and_clear(self._rt_active_heartbeat)}")
             if self._rt_awake_evt.wait_and_clear(self._rt_active_heartbeat):
                 # We want to fire off a prediction if the current window of
                 # data is "valid" based on our registered criterion.
                 window = self._buffer.get_window(self._window_size)
+                
+                
 
                 # Time of the leading frame of the extracted window.
                 window_time_ns: Optional[int] = None
@@ -532,11 +545,13 @@ class ActivityClassifierTCN(Node):
                     self._window_extracted_time_ns = window_time_ns
                     self._window_extracted_time_ns_cond.notify_all()
 
+                log.info(f"if func for window process: {all(fn(window) for fn in window_processing_criterion_fn_list)}")
                 if all(fn(window) for fn in window_processing_criterion_fn_list):
                     # After validating a window, and before processing it, clear
                     # out older data at and before the first item in the window.
                     self._buffer.clear_before(time_to_int(window.frames[1][0]))
 
+                    
                     try:
                         if enable_time_trace_logging:
                             log.info(
@@ -599,6 +614,7 @@ class ActivityClassifierTCN(Node):
 
         # TCN wants to know the label and confidence for the maximally
         # confident class only. Input object detection messages
+        log.info("processing window...")
         frame_object_detections: List[Optional[ObjectDetectionsLTRB]]
         frame_patient_poses: List[Optional[PatientPose]]
         frame_object_detections = [None] * len(window)
@@ -635,7 +651,7 @@ class ActivityClassifierTCN(Node):
                     )
                     heappush(memo_preproc_input_h_poses, msg_id)
                 else:
-                    v = memo_preproc_input[msg_id]
+                    v = memo_preproc_input_poses[msg_id]
                 frame_patient_poses[i] = v
         log.debug(
             f"[_process_window] Window vector presence: "

@@ -71,7 +71,7 @@ class GenerateImages(Node):
         node_name: str = None,
         output_topic_name: str = "/image",
         fps: float = 30,
-        fps_avg_window: int = 30,
+        fps_avg_window: int = 15,
         height: int = 720,
         width: int = 1280,
         rgb: bool = True,
@@ -106,9 +106,12 @@ class GenerateImages(Node):
         log = self.get_logger()
         new_img = random_image(*self._img_shape)
         img_msg = bridge.cv2_to_imgmsg(new_img, encoding="rgb8")
+        img_msg.header.stamp = self.get_clock().now().to_msg()
+        log.info(f"img_msg.header.stamp: {img_msg.header.stamp}")
         # img_msg = bridge.cv2_to_compressed_imgmsg(new_img, dst_format='jpg')
         self.pub_generated_image.publish(img_msg)
         time_since_last_pub = time.time()
+        # self._last_pub_time = 
 
         # Manage publish rate measurement
         window_size = self._fps_window
