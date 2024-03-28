@@ -42,7 +42,7 @@ class InputWindow:
     # Buffer of object detection predictions
     obj_dets: List[Optional[ObjectDetection2dSet]]
     # Buffer for patient poses
-    patient_joint_kps: List[Optional[HandJointPose]]
+    patient_joint_kps: List[Optional[HandJointPosesUpdate]]
 
     def __len__(self):
         return len(self.frames)
@@ -211,7 +211,7 @@ class InputBuffer:
             self.obj_dets.append(msg)
             return True
     
-    def queue_joint_keypoints(self, msg: HandJointPose) -> bool:
+    def queue_joint_keypoints(self, msg: HandJointPosesUpdate) -> bool:
         """
         Queue up an object detection set for the
         """
@@ -222,7 +222,7 @@ class InputBuffer:
                 self.patient_joint_kps[-1].header.stamp
             ):
                 self.get_logger_fn().warn(
-                    f"Input object detection result was NOT after the previous latest: "
+                    f"Input pose estimation results was NOT after the previous latest: "
                     f"(prev) {self.patient_joint_kps[-1].header.stamp} !< {msg.header.stamp} (new)"
                 )
                 return False
@@ -239,7 +239,7 @@ class InputBuffer:
         return time_to_int(msg.source_stamp)
 
     @staticmethod
-    def _joints_msg_to_time_ns(msg: HandJointPose):
+    def _joints_msg_to_time_ns(msg: HandJointPosesUpdate):
         # Using stamp that should associate to the source image
         return time_to_int(msg.source_stamp)
 

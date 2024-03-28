@@ -191,6 +191,8 @@ class ObjectHandDetector(Node):
                 msg.source_stamp = image.header.stamp
                 msg.label_vec[:] = self.model.names
 
+                print(f"model names: {self.model.names}")
+                
                 n_classes = len(self.model.names) + 2 # accomedate 2 hands
                 n_dets = 0
 

@@ -26,6 +26,7 @@ from angel_system.activity_classification.tcn_hpl.predict import (
     objects_to_feats,
     predict,
     ResultsCollector,
+    PatientPose
 )
 from angel_system.utils.event import WaitAndClearEvent
 from angel_system.utils.simple_timer import SimpleTimer
@@ -85,7 +86,7 @@ PARAM_INPUT_COCO_FILEPATH = "input_obj_det_kwcoco"
 # receive and process data.
 PARAM_TIME_TRACE_LOGGING = "enable_time_trace_logging"
 
-PARAM_POSE_TOPIC = "pose_det"
+PARAM_POSE_TOPIC = "pose_topic"
 
 
 class NoActivityClassification(Exception):
@@ -117,10 +118,10 @@ class ActivityClassifierTCN(Node):
                 (PARAM_MODEL_OD_MAPPING,),
                 (PARAM_MODEL_DEVICE, "cuda"),
                 (PARAM_MODEL_DETS_CONV_VERSION, 6),
-                (PARAM_WINDOW_FRAME_SIZE,),
-                (PARAM_BUFFER_MAX_SIZE_SECONDS,),
-                (PARAM_IMAGE_PIX_WIDTH,),
-                (PARAM_IMAGE_PIX_HEIGHT,),
+                (PARAM_WINDOW_FRAME_SIZE,30),
+                (PARAM_BUFFER_MAX_SIZE_SECONDS,15),
+                (PARAM_IMAGE_PIX_WIDTH,1280),
+                (PARAM_IMAGE_PIX_HEIGHT,720),
                 (PARAM_RT_HEARTBEAT, 0.1),
                 (PARAM_OUTPUT_COCO_FILEPATH, ""),
                 (PARAM_INPUT_COCO_FILEPATH, ""),
@@ -147,15 +148,19 @@ class ActivityClassifierTCN(Node):
             ).eval()
 
         # Load labels list from configured activity_labels YAML file.
+        print(f"json path: {param_values[PARAM_MODEL_OD_MAPPING]}")
         with open(param_values[PARAM_MODEL_OD_MAPPING]) as infile:
             det_label_list = json.load(infile)
         self._det_label_to_id = {c: i for i, c in enumerate(det_label_list)}
+        # self._det_label_to_id = {c: int(i) for i, c in det_label_list.items()}
+        print(self._det_label_to_id)
         # Feature version aligned with model current architecture
         self._feat_version = param_values[PARAM_MODEL_DETS_CONV_VERSION]
 
         # Memoization structure for structures created as input to feature
         # embedding function in the `_predict` method.
         self._memo_preproc_input: Dict[int, ObjectDetectionsLTRB] = {}
+        self._memo_preproc_input_poses: Dict[int, PatientPose] = {}
         # Memoization structure for feature embedding function used in the
         # `_predict` method.
         self._memo_objects_to_feats: Dict[int, npt.NDArray] = {}
@@ -163,6 +168,7 @@ class ActivityClassifierTCN(Node):
         # older than what will be processed going forward. That way we don't
         # keep content around forever and "leak" memory.
         self._memo_preproc_input_id_heap = []
+        self._memo_preproc_input_id_heap_poses = []
         self._memo_objects_to_feats_id_heap = []
 
         # Optionally initialize buffer-feeding from input COCO-file of object
@@ -585,12 +591,16 @@ class ActivityClassifierTCN(Node):
         log = self.get_logger()
         memo_preproc_input = self._memo_preproc_input
         memo_preproc_input_h = self._memo_preproc_input_id_heap
+        memo_preproc_input_poses = self._memo_preproc_input_poses
+        memo_preproc_input_h_poses = self._memo_preproc_input_id_heap_poses
+        
         memo_object_to_feats = self._memo_objects_to_feats
         memo_object_to_feats_h = self._memo_objects_to_feats_id_heap
 
         # TCN wants to know the label and confidence for the maximally
         # confident class only. Input object detection messages
         frame_object_detections: List[Optional[ObjectDetectionsLTRB]]
+        frame_patient_poses: List[Optional[PatientPose]]
         frame_object_detections = [None] * len(window)
         for i, det_msg in enumerate(window.obj_dets):
             if det_msg is not None:
@@ -612,8 +622,27 @@ class ActivityClassifierTCN(Node):
             f"[_process_window] Window vector presence: "
             f"{[(v is not None) for v in frame_object_detections]}"
         )
-
         
+        for i, pose_msg in enumerate(window.patient_joint_kps):
+            if pose_msg is not None:
+                msg_id = time_to_int(pose_msg.source_stamp)
+                if msg_id not in memo_preproc_input_poses:
+                    memo_preproc_input_poses[msg_id] = v = PatientPose(
+                        msg_id,
+                        pose_msg.positions,
+                        # pose_msg.orientations,
+                        pose_msg.labels,
+                    )
+                    heappush(memo_preproc_input_h_poses, msg_id)
+                else:
+                    v = memo_preproc_input[msg_id]
+                frame_patient_poses[i] = v
+        log.debug(
+            f"[_process_window] Window vector presence: "
+            f"{[(v is not None) for v in frame_patient_poses]}"
+        )
+
+        print(f"frame_object_detections: {frame_object_detections}")
 
         with SimpleTimer("[_process_window] Detections embedding", log.info):
             try:

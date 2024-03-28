@@ -73,6 +73,16 @@ class ObjectDetectionsLTRB:
     # Vectorized detection confidence value of the most confidence class.
     confidences: Tuple[float]
 
+@dataclass
+class PatientPose:
+    # Identifier for this set of detections.
+    id: int
+    # Vectorized keypoints
+    positions: list
+    # Vectorized orientations
+    # orientations: list
+    # Vectorized keypoint label
+    labels: Tuple[str]
 
 def normalize_detection_features(
     det_feats: npt.ArrayLike,
