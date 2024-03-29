@@ -71,7 +71,7 @@ class GlobalStepPredictor:
 
         self.recipe_types = recipe_types
         # TODO: Expect use of angel_system.data.config_structs instead of
-        #       a raw dictionary.
+        #       a raw dictionary with no enumeration of possible values.
         self.recipe_configs = recipe_config_dict
 
         # Array of tracker dicts
