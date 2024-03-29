@@ -125,7 +125,7 @@ class ActivityClassifierTCN(Node):
                 (PARAM_RT_HEARTBEAT, 0.1),
                 (PARAM_OUTPUT_COCO_FILEPATH, ""),
                 (PARAM_INPUT_COCO_FILEPATH, ""),
-                (PARAM_TIME_TRACE_LOGGING, False),
+                (PARAM_TIME_TRACE_LOGGING, True),
             ],
         )
         self._img_ts_topic = param_values[PARAM_IMG_TS_TOPIC]
@@ -253,13 +253,13 @@ class ActivityClassifierTCN(Node):
             callback_group=MutuallyExclusiveCallbackGroup(),
         )
         
-        # self._pose_subscriber = self.create_subscription(
-        #     HandJointPosesUpdate,
-        #     self._pose_topic,
-        #     self.pose_callback,
-        #     1,
-        #     callback_group=MutuallyExclusiveCallbackGroup(),
-        # )
+        self._pose_subscriber = self.create_subscription(
+            HandJointPosesUpdate,
+            self._pose_topic,
+            self.pose_callback,
+            1,
+            callback_group=MutuallyExclusiveCallbackGroup(),
+        )
         
         self._activity_publisher = self.create_publisher(
             ActivityDetection,
@@ -606,8 +606,6 @@ class ActivityClassifierTCN(Node):
         log = self.get_logger()
         memo_preproc_input = self._memo_preproc_input
         memo_preproc_input_h = self._memo_preproc_input_id_heap
-        memo_preproc_input_poses = self._memo_preproc_input_poses
-        memo_preproc_input_h_poses = self._memo_preproc_input_id_heap_poses
         
         memo_object_to_feats = self._memo_objects_to_feats
         memo_object_to_feats_h = self._memo_objects_to_feats_id_heap
@@ -616,7 +614,6 @@ class ActivityClassifierTCN(Node):
         # confident class only. Input object detection messages
         log.info("processing window...")
         frame_object_detections: List[Optional[ObjectDetectionsLTRB]]
-        frame_patient_poses: List[Optional[PatientPose]]
         frame_object_detections = [None] * len(window)
         for i, det_msg in enumerate(window.obj_dets):
             if det_msg is not None:
@@ -639,16 +636,22 @@ class ActivityClassifierTCN(Node):
             f"{[(v is not None) for v in frame_object_detections]}"
         )
         
+        memo_preproc_input_poses = self._memo_preproc_input_poses
+        memo_preproc_input_h_poses = self._memo_preproc_input_id_heap_poses
+        frame_patient_poses: List[Optional[PatientPose]]
+        frame_patient_poses = [None] * len(window)
         for i, pose_msg in enumerate(window.patient_joint_kps):
             if pose_msg is not None:
                 msg_id = time_to_int(pose_msg.source_stamp)
                 if msg_id not in memo_preproc_input_poses:
-                    memo_preproc_input_poses[msg_id] = v = PatientPose(
-                        msg_id,
-                        pose_msg.positions,
-                        # pose_msg.orientations,
-                        pose_msg.labels,
-                    )
+                    # for pose in memo_preproc_input_poses[msg_id]:
+                        
+                    memo_preproc_input_poses[msg_id] = v = [PatientPose(msg_id, pm.pose.position) for pm in pose_msg.joints]
+                    #     msg_id,
+                    #     pm.positions,
+                    #     # pose_msg.orientations,
+                    #     pm.labels,
+                    # )
                     heappush(memo_preproc_input_h_poses, msg_id)
                 else:
                     v = memo_preproc_input_poses[msg_id]
@@ -663,12 +666,13 @@ class ActivityClassifierTCN(Node):
         with SimpleTimer("[_process_window] Detections embedding", log.info):
             try:
                 feats, mask = objects_to_feats(
-                    frame_object_detections,
-                    self._det_label_to_id,
-                    self._feat_version,
-                    self._img_pix_width,
-                    self._img_pix_height,
-                    memo_object_to_feats,
+                    frame_object_detections=frame_object_detections,
+                    frame_patient_poses=frame_patient_poses,
+                    det_label_to_idx=self._det_label_to_id,
+                    feat_version=self._feat_version,
+                    image_width=self._img_pix_width,
+                    image_height=self._img_pix_height,
+                    feature_memo=memo_object_to_feats,
                 )
             except ValueError:
                 # feature detections were all None
@@ -676,7 +680,9 @@ class ActivityClassifierTCN(Node):
 
         feats = feats.to(self._model_device)
         mask = mask.to(self._model_device)
-
+        feats = feats.unsqueeze(0)
+        mask = mask.unsqueeze(0)
+        log.info(f"feats shape: {feats.shape}")
         with SimpleTimer("[_process_window] Model processing", log.info):
             proba = predict(self._model, feats, mask).cpu()
         pred = torch.argmax(proba)

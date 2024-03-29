@@ -111,11 +111,13 @@ def normalize_detection_features(
 
 def objects_to_feats(
     frame_object_detections: Sequence[Optional[ObjectDetectionsLTRB]],
+    frame_patient_poses: Sequence[Optional[PatientPose]],
     det_label_to_idx: Dict[str, int],
     feat_version: int,
     image_width: int,
     image_height: int,
     feature_memo: Optional[Dict[int, npt.NDArray]] = None,
+    top_n_objects: int =3
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Convert some object detections for some window of frames into a feature
@@ -150,10 +152,70 @@ def objects_to_feats(
     feat_memo = {} if feature_memo is None else feature_memo
 
     window_size = len(frame_object_detections)
+    print(f"frame_object_detections: {frame_object_detections}")
+    print(f"frame_patient_poses: {frame_patient_poses}")
     # Shape [window_size, None|n_feats]
     feature_list: List[Optional[npt.NDArray]] = [None] * window_size
     feature_ndim = None
     feature_dtype = None
+    
+    # hands-joints offset vectors
+    zero_offset = [0 for i in range(22)]
+    joint_left_hand_offset = []
+    joint_right_hand_offset = []
+    joint_object_offset = []
+    for pose in frame_patient_poses:
+        for i, detection in enumerate(frame_object_detections):
+            if detection is None:
+                continue
+            label = detection.labels[0]
+            bx, by, bw, bh = tlbr_to_xywh(
+                    detection.top,
+                    detection.left,
+                    detection.bottom,
+                    detection.right,
+                )
+            print(f"detection: {detection}")
+            cx, cy = bx+(bw//2), by+(bh//2)
+            if label == "hand (right)" or label == "hand (left)":
+                # bx, by, bw, bh = xs[i], ys[i], ws[i], hs[i]
+                hand_point = np.array((cx, cy))
+                
+                offset_vector = []
+                if pose is not None:
+                    print(f"pose: {pose}")
+                    for joint in pose:
+                        jx, jy = joint['xy']
+                        joint_point = np.array((jx, jy))
+                        dist = np.linalg.norm(joint_point - hand_point)
+                        offset_vector.append(dist)
+                else:
+                    offset_vector = zero_offset
+                
+                if label == "hand (left)":
+                    joint_left_hand_offset = offset_vector
+                elif label == "hand (right)":
+                    joint_right_hand_offset = offset_vector
+            else:
+                # if objects_joints and num_objects > 0:
+                # bx, by, bw, bh = xs[i], ys[i], ws[i], hs[i]
+                # ocx, ocy = bx+(bw//2), by+(bh//2)
+                object_point = np.array((cx, cy))
+                offset_vector = []
+                if pose is not None:
+                    for joint in pose:
+                        jx, jy = joint['xy']
+                        joint_point = np.array((jx, jy))
+                        # print(f"joint_points: {joint_point.dtype}, object_point: {object_point.dtype}")
+                        dist = np.linalg.norm(joint_point - object_point)
+                        offset_vector.append(dist)
+                else:
+                    offset_vector = zero_offset
+                    
+                joint_object_offset.append(offset_vector)
+    
+    
+    
     for i, frame_dets in enumerate(frame_object_detections):
         frame_dets: ObjectDetectionsLTRB
         if frame_dets is not None:
@@ -180,18 +242,35 @@ def objects_to_feats(
                         None,
                         None,
                         None,
-                        det_label_to_idx,
+                        label_to_ind=det_label_to_idx,
                         version=feat_version,
-                        top_n_objects=3,
-                        use_activation=True,
-                        use_hand_dist=True,
-                        use_intersection=True,
-                        use_joint_hand_offset=True,
-                        use_joint_object_offset=True,
+                        top_n_objects=top_n_objects
                     )
-                    .ravel()
-                    .astype(np.float32)
+                    # .ravel()
+                    # .astype(np.float32)
                 )
+                
+                offset_vector = []
+                # if hands_joints:
+                    
+                if len(joint_left_hand_offset) >= 1:
+                    offset_vector.extend(joint_left_hand_offset)
+                else:
+                    offset_vector.extend(zero_offset)
+                    
+                if len(joint_right_hand_offset) >= 1:
+                    offset_vector.extend(joint_right_hand_offset)
+                else:
+                    offset_vector.extend(zero_offset)
+                    
+                for i in range(top_n_objects):
+                    if len(joint_object_offset) > i:
+                        offset_vector.extend(joint_object_offset[i])
+                    else:
+                        offset_vector.extend(zero_offset)
+                
+                feat.extend(offset_vector)
+                feat = np.array(feat, dtype=np.float64).ravel()
                 feat_memo[f_id] = feat
             else:
                 feat = feat_memo[f_id]

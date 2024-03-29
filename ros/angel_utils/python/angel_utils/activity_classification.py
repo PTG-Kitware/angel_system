@@ -153,7 +153,7 @@ class InputBuffer:
         :returns: True if the image was queued, otherwise false because it was
             not newer than the current latest frame.
         """
-        self.get_logger_fn().info(f"image header stamp: {img_header_stamp}")
+        # self.get_logger_fn().info(f"image header stamp: {img_header_stamp}")
         # self.get_logger_fn().info(f"self.frames[-1][0] header stamp: {self.frames[-1][0]}")
         with self.__state_lock:
             # before the current lead frame?
