@@ -118,14 +118,14 @@ class ActivityClassifierTCN(Node):
                 (PARAM_MODEL_OD_MAPPING,),
                 (PARAM_MODEL_DEVICE, "cuda"),
                 (PARAM_MODEL_DETS_CONV_VERSION, 6),
-                (PARAM_WINDOW_FRAME_SIZE,30),
+                (PARAM_WINDOW_FRAME_SIZE,45),
                 (PARAM_BUFFER_MAX_SIZE_SECONDS,15),
                 (PARAM_IMAGE_PIX_WIDTH,1280),
                 (PARAM_IMAGE_PIX_HEIGHT,720),
                 (PARAM_RT_HEARTBEAT, 0.1),
                 (PARAM_OUTPUT_COCO_FILEPATH, ""),
                 (PARAM_INPUT_COCO_FILEPATH, ""),
-                (PARAM_TIME_TRACE_LOGGING, True),
+                (PARAM_TIME_TRACE_LOGGING, False),
             ],
         )
         self._img_ts_topic = param_values[PARAM_IMG_TS_TOPIC]
@@ -161,6 +161,15 @@ class ActivityClassifierTCN(Node):
         # embedding function in the `_predict` method.
         self._memo_preproc_input: Dict[int, ObjectDetectionsLTRB] = {}
         self._memo_preproc_input_poses: Dict[int, PatientPose] = {}
+        
+        self.keypoints_cats = [
+                        "nose", "mouth", "throat","chest","stomach","left_upper_arm",
+                        "right_upper_arm","left_lower_arm","right_lower_arm","left_wrist",
+                        "right_wrist","left_hand","right_hand","left_upper_leg",
+                        "right_upper_leg","left_knee","right_knee","left_lower_leg", 
+                        "right_lower_leg", "left_foot", "right_foot", "back"
+                    ]
+        
         # Memoization structure for feature embedding function used in the
         # `_predict` method.
         self._memo_objects_to_feats: Dict[int, npt.NDArray] = {}
@@ -526,9 +535,9 @@ class ActivityClassifierTCN(Node):
             )
 
         log.info("keep looping starting...")
-        log.info(f"_rt_keep_looping: {self._rt_keep_looping()}")
+        # log.info(f"_rt_keep_looping: {self._rt_keep_looping()}")
         while self._rt_keep_looping():
-            log.info(f"self._rt_awake_evt.wait_and_clear(self._rt_active_heartbeat): {self._rt_awake_evt.wait_and_clear(self._rt_active_heartbeat)}")
+            # log.info(f"self._rt_awake_evt.wait_and_clear(self._rt_active_heartbeat): {self._rt_awake_evt.wait_and_clear(self._rt_active_heartbeat)}")
             if self._rt_awake_evt.wait_and_clear(self._rt_active_heartbeat):
                 # We want to fire off a prediction if the current window of
                 # data is "valid" based on our registered criterion.
@@ -545,7 +554,7 @@ class ActivityClassifierTCN(Node):
                     self._window_extracted_time_ns = window_time_ns
                     self._window_extracted_time_ns_cond.notify_all()
 
-                log.info(f"if func for window process: {all(fn(window) for fn in window_processing_criterion_fn_list)}")
+                # log.info(f"if func for window process: {all(fn(window) for fn in window_processing_criterion_fn_list)}")
                 if all(fn(window) for fn in window_processing_criterion_fn_list):
                     # After validating a window, and before processing it, clear
                     # out older data at and before the first item in the window.
@@ -559,6 +568,7 @@ class ActivityClassifierTCN(Node):
                                 f"{window.frames[-1][0]}"
                             )
                         act_msg = self._process_window(window)
+                        log.info(f"activity message: {act_msg}")
                         self._collect_results(act_msg)
                         self._activity_publisher.publish(act_msg)
                     except NoActivityClassification:
@@ -646,7 +656,8 @@ class ActivityClassifierTCN(Node):
                 if msg_id not in memo_preproc_input_poses:
                     # for pose in memo_preproc_input_poses[msg_id]:
                         
-                    memo_preproc_input_poses[msg_id] = v = [PatientPose(msg_id, pm.pose.position) for pm in pose_msg.joints]
+                    memo_preproc_input_poses[msg_id] = v = [PatientPose(msg_id, pm.pose.position, self.keypoints_cats[i]) for i, pm in enumerate(pose_msg.joints)]
+                    
                     #     msg_id,
                     #     pm.positions,
                     #     # pose_msg.orientations,
@@ -661,7 +672,7 @@ class ActivityClassifierTCN(Node):
             f"{[(v is not None) for v in frame_patient_poses]}"
         )
 
-        print(f"frame_object_detections: {frame_object_detections}")
+        # print(f"frame_object_detections: {frame_object_detections}")
 
         with SimpleTimer("[_process_window] Detections embedding", log.info):
             try:
@@ -680,9 +691,9 @@ class ActivityClassifierTCN(Node):
 
         feats = feats.to(self._model_device)
         mask = mask.to(self._model_device)
-        feats = feats.unsqueeze(0)
-        mask = mask.unsqueeze(0)
-        log.info(f"feats shape: {feats.shape}")
+        # feats = feats.unsqueeze(0)
+        # mask = mask.unsqueeze(0)
+        # log.info(f"feats shape: {feats.shape}")
         with SimpleTimer("[_process_window] Model processing", log.info):
             proba = predict(self._model, feats, mask).cpu()
         pred = torch.argmax(proba)

@@ -250,6 +250,9 @@ def obj_det2d_set_to_feature_by_method(
     remove_classes_count = [1 for label in non_objects_labels if label in label_to_ind.keys()]
     num_det_classes = len(label_to_ind) - len(remove_classes_count)# accomedate 2 hands instead of 1, accomedate top 3 objects
 
+    # print(f"label_to_ind: {label_to_ind}")
+    # print(f"num_det_classes: {num_det_classes}")
+    
     det_class_max_conf = np.zeros((num_det_classes, top_n_objects))
     # The bounding box of the maximally confident detection
     det_class_bbox = np.zeros((top_n_objects, num_det_classes, 4), dtype=np.float64)
@@ -451,14 +454,19 @@ def obj_det2d_set_to_feature_by_method(
             if use_center_dist:
                 feature_vec.append(distances_to_center[hand_idx])
 
+        # print(f"top-N objects feature_vec: {len(feature_vec)}")
         # Add distance and intersection between hands. 
         # This is already there since the hands are in dets_class
         
         if use_hand_dist:
             feature_vec.append(right_hand_dist[left_hand_idx])
+        
+        # print(f"use_hand_dist feature_vec: {len(feature_vec)}")
+        
         if use_intersection:
             feature_vec.append([right_hand_intersection[left_hand_idx]])
 
+        # print(f"use_hand_dist feature_vec: {len(feature_vec)}")
         # Add object data
         for i in range(num_det_classes):
             if i in [right_hand_idx, left_hand_idx]:
@@ -473,6 +481,8 @@ def obj_det2d_set_to_feature_by_method(
             if use_center_dist:
                 feature_vec.append(distances_to_center[i])
 
+        
+        
     feature_vec = [item for sublist in feature_vec for item in sublist]  # flatten
     
     return feature_vec

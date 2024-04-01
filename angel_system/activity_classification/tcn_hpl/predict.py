@@ -82,7 +82,7 @@ class PatientPose:
     # Vectorized orientations
     # orientations: list
     # Vectorized keypoint label
-    labels: Tuple[str]
+    labels: str
 
 def normalize_detection_features(
     det_feats: npt.ArrayLike,
@@ -152,8 +152,9 @@ def objects_to_feats(
     feat_memo = {} if feature_memo is None else feature_memo
 
     window_size = len(frame_object_detections)
-    print(f"frame_object_detections: {frame_object_detections}")
-    print(f"frame_patient_poses: {frame_patient_poses}")
+    
+    # print(f"frame_object_detections: {frame_object_detections}")
+    # print(f"frame_patient_poses: {frame_patient_poses}")
     # Shape [window_size, None|n_feats]
     feature_list: List[Optional[npt.NDArray]] = [None] * window_size
     feature_ndim = None
@@ -175,7 +176,7 @@ def objects_to_feats(
                     detection.bottom,
                     detection.right,
                 )
-            print(f"detection: {detection}")
+            # print(f"detection: {detection}")
             cx, cy = bx+(bw//2), by+(bh//2)
             if label == "hand (right)" or label == "hand (left)":
                 # bx, by, bw, bh = xs[i], ys[i], ws[i], hs[i]
@@ -183,9 +184,11 @@ def objects_to_feats(
                 
                 offset_vector = []
                 if pose is not None:
-                    print(f"pose: {pose}")
+                    # print(f"pose: {pose}")
                     for joint in pose:
-                        jx, jy = joint['xy']
+                        # print(f"joint: {joint}")
+                        jx, jy = joint.positions.x, joint.positions.y
+                        # jx, jy = joint['xy']
                         joint_point = np.array((jx, jy))
                         dist = np.linalg.norm(joint_point - hand_point)
                         offset_vector.append(dist)
@@ -203,8 +206,11 @@ def objects_to_feats(
                 object_point = np.array((cx, cy))
                 offset_vector = []
                 if pose is not None:
+                    # print(f"pose: {pose}")
                     for joint in pose:
-                        jx, jy = joint['xy']
+                        # print(f"joint: {joint}")
+                        jx, jy = joint.positions.x, joint.positions.y
+                        # jx, jy = joint['xy']
                         joint_point = np.array((jx, jy))
                         # print(f"joint_points: {joint_point.dtype}, object_point: {object_point.dtype}")
                         dist = np.linalg.norm(joint_point - object_point)
@@ -215,6 +221,7 @@ def objects_to_feats(
                 joint_object_offset.append(offset_vector)
     
     
+    # print(f"det_label_to_idx: {det_label_to_idx}")
     
     for i, frame_dets in enumerate(frame_object_detections):
         frame_dets: ObjectDetectionsLTRB
@@ -268,6 +275,9 @@ def objects_to_feats(
                         offset_vector.extend(joint_object_offset[i])
                     else:
                         offset_vector.extend(zero_offset)
+                
+                # print(f"feat length: {len(feat)}")
+                # print(f"offset_vector length: {len(offset_vector)}")
                 
                 feat.extend(offset_vector)
                 feat = np.array(feat, dtype=np.float64).ravel()
@@ -337,8 +347,12 @@ def predict(
 
     :return: Probabilities (softmax) of the activity classes.
     """
+    x = window_feats.T.unsqueeze(0).float()
+    m = mask[None, :]
+    # print(f"window_feats: {x.shape}")
+    # print(f"mask: {m.shape}")
     with torch.no_grad():
-        logits = model(window_feats.T, mask[None, :])
+        logits = model(x, m)
     # Logits access mirrors model step function argmax access here:
     #   tcn_hpl.models.ptg_module --> PTGLitModule.model_step
     # ¯\_(ツ)_/¯

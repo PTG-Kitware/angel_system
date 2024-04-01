@@ -131,8 +131,11 @@ class GlobalStepPredictorNode(Node):
             activity_config_fpath=self._activity_config_file,
         )
 
-        self.gsp.get_average_TP_activations_from_file(self._model_file)
-        log.info("Global state predictor loaded")
+        #model_file = coco file with confidence predictions
+        coco = kwcoco.CocoDataset(self._model_file)
+        avg_probs = self.gsp.compute_average_TP_activations(coco)
+        # self.gsp.get_average_TP_activations_from_file(self._model_file)
+        # log.info("Global state predictor loaded")
 
         # Mapping from recipe to current step. Used to track state changes
         # of the GSP and determine when to publish a TaskUpdate msg.
