@@ -48,7 +48,7 @@ class ObjectHandDetector(Node):
                 ##################################
                 # Defaulted parameters
                 ("inference_img_size", 1280),  # inference size (pixels)
-                ("det_conf_threshold", 0.7),  # object confidence threshold
+                ("det_conf_threshold", 0.2),  # object confidence threshold
                 ("iou_threshold", 0.45),  # IOU threshold for NMS
                 ("cuda_device_id", 0, DYNAMIC_TYPE),  # cuda device: ID int or CPU
                 ("no_trace", True),  # don`t trace model

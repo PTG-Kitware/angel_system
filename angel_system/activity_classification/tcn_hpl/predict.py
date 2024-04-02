@@ -167,6 +167,7 @@ def objects_to_feats(
     joint_object_offset = []
     for pose in frame_patient_poses:
         for i, detection in enumerate(frame_object_detections):
+            print(f"detection: {detection}")
             if detection is None:
                 continue
             label = detection.labels[0]
@@ -176,7 +177,6 @@ def objects_to_feats(
                     detection.bottom,
                     detection.right,
                 )
-            # print(f"detection: {detection}")
             cx, cy = bx+(bw//2), by+(bh//2)
             if label == "hand (right)" or label == "hand (left)":
                 # bx, by, bw, bh = xs[i], ys[i], ws[i], hs[i]
