@@ -47,15 +47,18 @@ windows:
   # Connection with the HL2 app via HL2SS sensor data streaming and the
   # ROS-TCP-Endpoint
   - sensor_input: ros2 run angel_system_nodes redis_ros_bridge --ros-args
+      -r __ns:=${ROS_NAMESPACE}
       -p url:=${HL2SS_API_URL}
       -p image_topic:=\image_0
       -p hand_pose_topic:=HandJointPoseData
 
   - run_image_timestamp: ros2 run angel_system_nodes image_timestamp_relay --ros-args 
+      -r __ns:=${ROS_NAMESPACE}
       -p image_topic:=\image_0 
       -p output_topic:=\image_0_ts
 
   - pose_estimation: ros2 run angel_system_nodes pose_estimator --ros-args 
+      -r __ns:=${ROS_NAMESPACE}
       -p image_topic:=\image_0 
       -p det_topic:=pose_dets 
       -p pose_topic:=PatientPose 
@@ -66,11 +69,13 @@ windows:
       -p cuda_device_id:=0
 
   - objects_hands_detection: ros2 run angel_system_nodes object_detection_yolo_v7 --ros-args 
+      -r __ns:=${ROS_NAMESPACE}
       -p image_topic:=\image_0 
       -p det_topic:=ObjectDetections2d 
       -p net_checkpoint:=${ANGEL_WORKSPACE_DIR}/model_files/models/r18_det.pt
 
   - run_tcn: ros2 run angel_system_nodes activity_classifier_tcn --ros-args 
+      -r __ns:=${ROS_NAMESPACE}
       -p image_ts_topic:=\image_0_ts 
       -p det_topic:=ObjectDetections2d 
       -p pose_topic:=PatientPose 
@@ -80,6 +85,7 @@ windows:
       -p act_topic:=activity_topic
 
   - task_monitor: ros2 run angel_system_nodes global_step_predictor --ros-args
+      -r __ns:=${ROS_NAMESPACE}
       -p config_file:=${CONFIG_DIR}/tasks/multi-task-config-medical.yaml
       -p activity_config_file:=${CONFIG_DIR}/activity_labels/r18.yaml
       -p task_state_topic:=TaskUpdates
