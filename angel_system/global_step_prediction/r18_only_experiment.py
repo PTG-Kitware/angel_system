@@ -88,6 +88,8 @@ def run_inference_all_vids(
             fname_suffix=f"{str(vid_id)}_broad_{extra_output_suffix}",
             granular_or_broad="broad",
         )
+        
+        
 
 
 if __name__ == "__main__":
