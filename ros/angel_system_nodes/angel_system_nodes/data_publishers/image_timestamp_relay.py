@@ -45,6 +45,7 @@ class ImageTimestampRelay(Node):
         )
 
     def input_callback(self, msg: Image) -> None:
+        msg.header.stamp = self.get_clock().now().to_msg()
         self._pub.publish(msg.header.stamp)
         self._rate_tracker.tick()
         self.get_logger().info(

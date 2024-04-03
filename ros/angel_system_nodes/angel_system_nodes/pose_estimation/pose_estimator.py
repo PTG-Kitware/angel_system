@@ -12,7 +12,7 @@ from sensor_msgs.msg import Image
 # from yolov7.models.experimental import attempt_load
 # import yolov7.models.yolo
 # from yolov7.utils.torch_utils import TracedModel
-
+import cv2
 from angel_system.utils.event import WaitAndClearEvent
 from angel_system.utils.simple_timer import SimpleTimer
 
@@ -89,6 +89,7 @@ class PoseEstimator(Node):
                 # If we should enable additional logging to the info level
                 # about when we receive and process data.
                 ("enable_time_trace_logging", False),
+                ("image_resize", True)
             ],
         )
         self._image_topic = param_values["image_topic"]
@@ -98,6 +99,8 @@ class PoseEstimator(Node):
         self.pose_model_ckpt_fp = param_values["pose_net_checkpoint"]
         self.det_config = param_values["det_config"]
         self.pose_config = param_values["pose_config"]
+        
+        self._ensure_image_resize = param_values["image_resize"]
         
         self._inference_img_size = param_values["inference_img_size"]
         self._det_conf_thresh = param_values["det_conf_threshold"]
@@ -239,9 +242,11 @@ class PoseEstimator(Node):
                 img0 = BRIDGE.imgmsg_to_cv2(image, desired_encoding="bgr8")
                 
                 
+                if self._ensure_image_resize:
+                    img0 = cv2.resize(img0, dsize=(1280, 720), interpolation=cv2.INTER_CUBIC)
                 # print()
                 
-                print(f"img0: {img0.shape}")
+                # print(f"img0: {img0.shape}")
                 # height, width, chans = img0.shape
 
                 patient_det_msg = ObjectDetection2dSet()
@@ -261,13 +266,13 @@ class PoseEstimator(Node):
                                                           pose_model=self.pose_model,
                                                           image=img0)
                 
-                print(f"len(boxes): {len(boxes)}, len(keypoints): {len(keypoints)}")
+                # print(f"len(boxes): {len(boxes)}, len(keypoints): {len(keypoints)}")
                 
                 # at most, we have 1 set of keypoints for 1 patient
                 for keypoints_ in keypoints:
                     joints_msg_list = []
                     for label, keypoint in zip(self.keypoints_cats, keypoints_):
-                        print(f"labe: {label}, keypoint: {keypoint}")
+                        # print(f"labe: {label}, keypoint: {keypoint}")
                         position = Point()
                         position.x = float(keypoint[0])
                         position.y = float(keypoint[1])
@@ -292,7 +297,7 @@ class PoseEstimator(Node):
                         all_poses_msg.joints.append(joint_msg)
                         # joints_msg_list.append(pose_msg)
                         
-                    print(f"keypoints: {keypoints_}")
+                    # print(f"keypoints: {keypoints_}")
                     # pose_msg.conf_vec = keypoints_
                     self.patient_pose_publisher.publish(all_poses_msg)
                 
@@ -316,7 +321,7 @@ class PoseEstimator(Node):
 
                 self._rate_tracker.tick()
                 log.info(
-                    f"Pose Estimation Rate: {self._rate_tracker.get_rate_avg()} Hz",
+                    f"Pose Estimation Rate: {self._rate_tracker.get_rate_avg()} Hz, Poses: {len(keypoints)}",
                 )
 
     def destroy_node(self):

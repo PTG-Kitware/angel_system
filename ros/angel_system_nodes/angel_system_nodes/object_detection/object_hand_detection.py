@@ -3,6 +3,7 @@ from threading import Event, Lock, Thread
 from typing import Union
 
 from cv_bridge import CvBridge
+import cv2
 import numpy as np
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup, ReentrantCallbackGroup
 from rclpy.node import Node, ParameterDescriptor, Parameter
@@ -18,7 +19,7 @@ from angel_system.utils.event import WaitAndClearEvent
 from angel_system.utils.simple_timer import SimpleTimer
 
 from angel_msgs.msg import ObjectDetection2dSet
-from angel_utils import declare_and_get_parameters, RateTracker, DYNAMIC_TYPE
+from angel_utils import declare_and_get_parameters, RateTracker#, DYNAMIC_TYPE
 from angel_utils import make_default_main
 
 
@@ -50,7 +51,7 @@ class ObjectHandDetector(Node):
                 ("inference_img_size", 1280),  # inference size (pixels)
                 ("det_conf_threshold", 0.2),  # object confidence threshold
                 ("iou_threshold", 0.45),  # IOU threshold for NMS
-                ("cuda_device_id", 0, DYNAMIC_TYPE),  # cuda device: ID int or CPU
+                ("cuda_device_id", 0),  # cuda device: ID int or CPU
                 ("no_trace", True),  # don`t trace model
                 ("agnostic_nms", False),  # class-agnostic NMS
                 # Runtime thread checkin heartbeat interval in seconds.
@@ -58,12 +59,15 @@ class ObjectHandDetector(Node):
                 # If we should enable additional logging to the info level
                 # about when we receive and process data.
                 ("enable_time_trace_logging", False),
+                ("image_resize", True)
             ],
         )
         self._image_topic = param_values["image_topic"]
         self._det_topic = param_values["det_topic"]
         self._model_ckpt_fp = Path(param_values["net_checkpoint"])
         self._hand_model_chpt_fp = Path(param_values["hand_net_checkpoint"])
+        
+        self._ensure_image_resize = param_values["image_resize"]
         
         self._inference_img_size = param_values["inference_img_size"]
         self._det_conf_thresh = param_values["det_conf_threshold"]
@@ -182,8 +186,14 @@ class ObjectHandDetector(Node):
                 # Convert ROS img msg to CV2 image
                 img0 = BRIDGE.imgmsg_to_cv2(image, desired_encoding="bgr8")
                 
+                
                 print(f"img0: {img0.shape}")
-                width, height = self._inference_img_size
+                print(f"img0 type: {type(img0)}")
+                # width, height = self._inference_img_size
+                if self._ensure_image_resize:
+                    img0 = cv2.resize(img0, dsize=(1280, 720), interpolation=cv2.INTER_CUBIC)
+                
+                print(f"img0: {img0.shape}")
 
                 msg = ObjectDetection2dSet()
                 msg.header.stamp = self.get_clock().now().to_msg()
@@ -207,7 +217,6 @@ class ObjectHandDetector(Node):
 
                 hand_boxes, hand_labels, hand_confs = predict_hands(hand_model=self.hand_model, 
                                                                     img0=img0, 
-                                                                    img_size=self._inference_img_size, 
                                                                     device=self.device)
                 
                 hand_classids = [hand_cid_label_dict[label] for label in hand_labels]
@@ -250,7 +259,7 @@ class ObjectHandDetector(Node):
 
                 self._rate_tracker.tick()
                 log.info(
-                    f"Objects Detection Rate: {self._rate_tracker.get_rate_avg()} Hz",
+                    f"Objects Detection Rate: {self._rate_tracker.get_rate_avg()} Hz, Num objects detected: {n_dets}",
                 )
 
     def destroy_node(self):
