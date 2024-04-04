@@ -6,19 +6,19 @@ labels:
   #          label.
   - id: 0
     label: "background"
-    description: "background"
+    full_str: "background"
   - id: 1
     label: "open-pack-remove-app"
-    description: "Open inner packaging and remove applicator."
+    full_str: "Open inner packaging and remove applicator."
   - id: 2
     label: "insert-applicator"
-    description: "Insert applicator into wound track as close to bleeding source as possible."
+    full_str: "Insert applicator into wound track as close to bleeding source as possible."
   - id: 3
     label: "insert-plunger-w-pressure"
-    description: "Insert plunger into applicator."
+    full_str: "Insert plunger into applicator."
   - id: 4
     label: "push-plunger"
-    description: "Push plunger firmly to deploy sponges into wound."
+    full_str: "Push plunger firmly to deploy sponges into wound."
   - id: 5
     label: "apply-pressure"
-    description: "Apply manual pressure if necessary."
+    full_str: "Apply manual pressure if necessary."

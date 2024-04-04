@@ -6,28 +6,28 @@ labels:
   #          label.
   - id: 0
     label: "background"
-    description: "background"
+    full_str: "background"
   - id: 1
     label: "place-tourniquet"
-    description: "Place tourniquet over affected extremity 2-3 inches above wound site."
+    full_str: "Place tourniquet over affected extremity 2-3 inches above wound site."
   - id: 2
     label: "pull-tight"
-    description: "Pull tourniquet tight."
+    full_str: "Pull tourniquet tight."
   - id: 3
     label: "apply-strap-to-strap-body"
-    description: "Apply strap to strap body."
+    full_str: "Apply strap to strap body."
   - id: 4
     label: "turn-windless"
-    description: "Turn windless clock wise or counter clockwise until hemorrhage is controlled."
+    full_str: "Turn windless clock wise or counter clockwise until hemorrhage is controlled."
   - id: 5
     label: "lock-windless"
-    description: "Lock windless into the windless keeper."
+    full_str: "Lock windless into the windless keeper."
   - id: 6
     label: "pull-remaining-strap"
-    description: "Pull remaining strap over the windless keeper."
+    full_str: "Pull remaining strap over the windless keeper."
   - id: 7
     label: "secure-strap"
-    description: "Secure strap and windless keeper with keeper securing device."
+    full_str: "Secure strap and windless keeper with keeper securing device."
   - id: 8
     label: "mark-time"
-    description: "Mark time on securing device strap with permanent marker."
+    full_str: "Mark time on securing device strap with permanent marker."

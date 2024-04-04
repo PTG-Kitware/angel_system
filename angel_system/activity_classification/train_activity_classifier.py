@@ -364,8 +364,8 @@ def compute_feats(
                     else:
                         offset_vector.extend(zero_offset)
 
-            print(f"feat length: {len(feature_vec)}")
-            print(f"offset_vector length: {len(offset_vector)}")
+            # print(f"feat length: {len(feature_vec)}")
+            # print(f"offset_vector length: {len(offset_vector)}")
             
             feature_vec.extend(offset_vector)
         
