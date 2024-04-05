@@ -1,4 +1,5 @@
 version: "1"
+title: "m3"
 labels:
   # Item:
   # - id: Integer identification number of the label.
@@ -6,25 +7,25 @@ labels:
   #          label.
   - id: 0
     label: "background"
-    description: "background"
+    full_str: "background"
     activity_ids: [0]
   - id: 1
     label: "apply-pressure"
-    description: "Apply direct hand pressure."
+    full_str: "Apply direct hand pressure."
     activity_ids: [1]
   - id: 2
     label: "open-pack"
-    description: "Open dressing packaging."
+    full_str: "Open dressing packaging."
     activity_ids: [2]
   - id: 3
     label: "apply-dress-w-pressure"
-    description: "Apply dressing with pressure point directly over wound site."
+    full_str: "Apply dressing with pressure point directly over wound site."
     activity_ids: [3]
   - id: 4
     label: "wrap-dressing-around"
-    description: "Wrap dressing around affected area extremity or trunk with 80 percent elastic stretch."
+    full_str: "Wrap dressing around affected area extremity or trunk with 80 percent elastic stretch."
     activity_ids: [4]
   - id: 5
     label: "secure-dress"
-    description: "Secure dressing with securing device."
+    full_str: "Secure dressing with securing device."
     activity_ids: [5]

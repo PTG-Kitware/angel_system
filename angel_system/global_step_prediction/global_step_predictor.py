@@ -405,7 +405,7 @@ class GlobalStepPredictor:
 
     def process_new_confidences(self, activity_confs):
         # assert np.array(activity_confs).shape[1] <= len(self.activated_activities)
-
+        # print(f"activity_confs: {activity_confs}")
         activated_indexes = np.nonzero(self.activated_activities[:, 0] == 1)[0]
         deactivated_indexes = np.nonzero(self.activated_activities[:, 0] == 0)[0]
         assert len(activated_indexes) + len(deactivated_indexes) == len(
@@ -437,6 +437,10 @@ class GlobalStepPredictor:
 
             # STRONG
             # Check for activations > 80% * (avg act threshold)
+            
+            # print(f"self.avg_probs: {self.avg_probs.shape}")
+            # print(f"self.activity_conf: {activity_conf.shape}")
+            # print(f"self.threshold_multiplier: {self.threshold_multiplier.shape}")
             above_pos_threshold_indexes = np.nonzero(
                 activity_conf > self.threshold_multiplier * self.avg_probs
             )[0]

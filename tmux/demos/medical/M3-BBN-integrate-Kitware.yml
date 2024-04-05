@@ -73,6 +73,7 @@ windows:
       -p image_topic:=\image_0 
       -p det_topic:=ObjectDetections2d 
       -p net_checkpoint:=${ANGEL_WORKSPACE_DIR}/model_files/models/m3_det.pt
+      -p hand_net_checkpoint:=${ANGEL_WORKSPACE_DIR}/model_files/models/hands_model.pt
 
   - run_tcn: ros2 run angel_system_nodes activity_classifier_tcn --ros-args 
       -r __ns:=${ROS_NAMESPACE}

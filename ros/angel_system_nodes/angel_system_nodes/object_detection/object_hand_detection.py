@@ -173,6 +173,22 @@ class ObjectHandDetector(Node):
         log.info("Runtime loop starting")
         enable_trace_logging = self._enable_trace_logging
 
+        if "background" in self.model.names:
+            label_vector = self.model.names[1:] # remove background label
+        else:
+            label_vector = self.model.names
+            
+        label_vector.append("hand (left)")
+        label_vector.append("hand (right)")
+        n_classes = len(label_vector)
+        
+        left_hand_cid = n_classes - 2
+        right_hand_cid = n_classes - 1
+        
+        hand_cid_label_dict = {
+            "hand (right)": right_hand_cid,
+            "hand (left)": left_hand_cid,
+        }
         while self._rt_active.wait(0):  # will quickly return false if cleared.
             if self._rt_awake_evt.wait_and_clear(self._rt_active_heartbeat):
                 with self._cur_image_msg_lock:
@@ -189,31 +205,24 @@ class ObjectHandDetector(Node):
                 
                 print(f"img0: {img0.shape}")
                 print(f"img0 type: {type(img0)}")
+                
                 # width, height = self._inference_img_size
                 if self._ensure_image_resize:
                     img0 = cv2.resize(img0, dsize=(1280, 720), interpolation=cv2.INTER_CUBIC)
                 
                 print(f"img0: {img0.shape}")
-
+                
                 msg = ObjectDetection2dSet()
                 msg.header.stamp = self.get_clock().now().to_msg()
                 msg.header.frame_id = image.header.frame_id
                 msg.source_stamp = image.header.stamp
-                msg.label_vec[:] = self.model.names
+                msg.label_vec[:] = label_vector
 
                 print(f"model names: {self.model.names}")
                 
-                n_classes = len(self.model.names) + 2 # accomedate 2 hands
                 n_dets = 0
 
                 dflt_conf_vec = np.zeros(n_classes, dtype=np.float64)
-                right_hand_cid = n_classes - 2
-                left_hand_cid = n_classes - 1
-                
-                hand_cid_label_dict = {
-                    "hand (right)": right_hand_cid,
-                    "hand (left)": left_hand_cid,
-                }
 
                 hand_boxes, hand_labels, hand_confs = predict_hands(hand_model=self.hand_model, 
                                                                     img0=img0, 
@@ -258,9 +267,8 @@ class ObjectHandDetector(Node):
                 self._det_publisher.publish(msg)
 
                 self._rate_tracker.tick()
-                log.info(
-                    f"Objects Detection Rate: {self._rate_tracker.get_rate_avg()} Hz, Num objects detected: {n_dets}",
-                )
+                log.info(f"Objects Detection Rate: {self._rate_tracker.get_rate_avg()} Hz, Num objects detected: {n_dets}\nnum of hands: {len(hand_boxes)}, other objects: {n_dets - len(hand_boxes)}]")
+                log.info(f"msg: {msg}")
 
     def destroy_node(self):
         print("Stopping runtime")

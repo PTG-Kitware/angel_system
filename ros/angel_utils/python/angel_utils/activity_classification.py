@@ -36,9 +36,9 @@ class InputWindow:
     # Set at construction time with the known window of frames.
     frames: List[Tuple[Time, npt.NDArray]]
     # Buffer of left-hand pose messages
-    hand_pose_left: List[Optional[HandJointPosesUpdate]]
+    # hand_pose_left: List[Optional[HandJointPosesUpdate]]
     # Buffer of right-hand pose messages
-    hand_pose_right: List[Optional[HandJointPosesUpdate]]
+    # hand_pose_right: List[Optional[HandJointPosesUpdate]]
     # Buffer of object detection predictions
     obj_dets: List[Optional[ObjectDetection2dSet]]
     # Buffer for patient poses
@@ -265,7 +265,7 @@ class InputBuffer:
 
         with self.__state_lock:
             # Cache self accesses
-            hand_nsec_tol = self.hand_msg_tolerance_nsec
+            # hand_nsec_tol = self.hand_msg_tolerance_nsec
 
             # This window's frame in ascending time order
             # deques don't support slicing, so thus the following madness
@@ -283,28 +283,33 @@ class InputBuffer:
             #   tolerance, which triggers moving on to the next frame.
             # - carry variable for when the item being checked in previous
             #   iteration did not match the current frame.
-            window_lhand = descending_match_with_tolerance(
-                window_frame_times_ns,
-                self.hand_pose_left,
-                hand_nsec_tol,
-                time_from_value_fn=self._hand_msg_to_time_ns,
-            )
-            window_rhand = descending_match_with_tolerance(
-                window_frame_times_ns,
-                self.hand_pose_right,
-                hand_nsec_tol,
-                time_from_value_fn=self._hand_msg_to_time_ns,
-            )
+            # window_lhand = descending_match_with_tolerance(
+            #     window_frame_times_ns,
+            #     self.hand_pose_left,
+            #     hand_nsec_tol,
+            #     time_from_value_fn=self._hand_msg_to_time_ns,
+            # )
+            # window_rhand = descending_match_with_tolerance(
+            #     window_frame_times_ns,
+            #     self.hand_pose_right,
+            #     hand_nsec_tol,
+            #     time_from_value_fn=self._hand_msg_to_time_ns,
+            # )
 
             # Direct associate object detections within window time. For
             # detections known to be in the window, creating a mapping (key=ts)
             # to access the detection for a specific time.
+            
+            # print(f"Window buffer detections: {type(self.obj_dets)}")
+            
             window_dets = descending_match_with_tolerance(
                 window_frame_times_ns,
                 self.obj_dets,
                 0,  # we expect exact matches for object detections.
                 time_from_value_fn=self._objdet_msg_to_time_ns,
             )
+            
+            # print(f"Window window detections: {window_dets}")
             
             window_joint_kps = descending_match_with_tolerance(
                 window_frame_times_ns,
@@ -315,8 +320,8 @@ class InputBuffer:
 
             output = InputWindow(
                 frames=window_frames,
-                hand_pose_left=window_lhand,
-                hand_pose_right=window_rhand,
+                # hand_pose_left=window_lhand,
+                # hand_pose_right=window_rhand,
                 obj_dets=window_dets,
                 patient_joint_kps=window_joint_kps,
             )

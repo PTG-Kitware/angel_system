@@ -48,6 +48,9 @@ def load_module(checkpoint_file, label_mapping_file, torch_device) -> PTGLitModu
         mapping_file_name=mapping_file_name,
     )
 
+    # print(f"CLASSES IN MODEL: {model.classes}")
+    # print(f"class_ids IN MODEL: {model.class_ids}")
+    # exit()
     return model
 
 
@@ -146,8 +149,8 @@ def objects_to_feats(
         detections (shape=[window_size, n_feats]), and an appropriate mask
         vector for use with activity classification (shape=[window_size]).
     """
-    if all([d is None for d in frame_object_detections]):
-        raise ValueError("No frames with detections in input.")
+    # if all([d is None for d in frame_object_detections]):
+    #     raise ValueError("No frames with detections in input.")
 
     feat_memo = {} if feature_memo is None else feature_memo
 
@@ -155,6 +158,7 @@ def objects_to_feats(
     
     # print(f"frame_object_detections: {frame_object_detections}")
     # print(f"frame_patient_poses: {frame_patient_poses}")
+    # print(f"frame_patient_poses: {len(frame_patient_poses)}")
     # Shape [window_size, None|n_feats]
     feature_list: List[Optional[npt.NDArray]] = [None] * window_size
     feature_ndim = None
@@ -162,24 +166,30 @@ def objects_to_feats(
     
     # hands-joints offset vectors
     zero_offset = [0 for i in range(22)]
-    joint_left_hand_offset = []
-    joint_right_hand_offset = []
-    joint_object_offset = []
-    for pose in frame_patient_poses:
-        for i, detection in enumerate(frame_object_detections):
-            print(f"detection: {detection}")
-            if detection is None:
-                continue
-            label = detection.labels[0]
-            bx, by, bw, bh = tlbr_to_xywh(
-                    detection.top,
-                    detection.left,
-                    detection.bottom,
-                    detection.right,
-                )
-            cx, cy = bx+(bw//2), by+(bh//2)
+    joint_left_hand_offset_all_frames = [None] * window_size
+    joint_right_hand_offset_all_frames = [None] * window_size
+    joint_object_offset_all_frames = [None] * window_size
+    # for pose in frame_patient_poses:
+    for i, (pose, detection) in enumerate(zip(frame_patient_poses, frame_object_detections)):
+        # print(f"detection: {detection}")
+        if detection is None:
+            continue
+        labels = detection.labels
+        bx, by, bw, bh = tlbr_to_xywh(
+                detection.top,
+                detection.left,
+                detection.bottom,
+                detection.right,
+            )
+        
+        # iterate over all detections in that frame
+        joint_object_offset = []
+        for j, label in enumerate(labels):
+            # print(f"label: {label}")
             if label == "hand (right)" or label == "hand (left)":
-                # bx, by, bw, bh = xs[i], ys[i], ws[i], hs[i]
+                x, y, w, h = bx[j], by[j], bw[j], bh[j]
+                
+                cx, cy = x+(w//2), y+(h//2)
                 hand_point = np.array((cx, cy))
                 
                 offset_vector = []
@@ -196,13 +206,15 @@ def objects_to_feats(
                     offset_vector = zero_offset
                 
                 if label == "hand (left)":
-                    joint_left_hand_offset = offset_vector
+                    joint_left_hand_offset_all_frames[i] = offset_vector
                 elif label == "hand (right)":
-                    joint_right_hand_offset = offset_vector
+                    joint_right_hand_offset_all_frames[i] = offset_vector
             else:
                 # if objects_joints and num_objects > 0:
                 # bx, by, bw, bh = xs[i], ys[i], ws[i], hs[i]
                 # ocx, ocy = bx+(bw//2), by+(bh//2)
+                x, y, w, h = bx[j], by[j], bw[j], bh[j]
+                cx, cy = x+(w//2), y+(h//2)
                 object_point = np.array((cx, cy))
                 offset_vector = []
                 if pose is not None:
@@ -217,9 +229,9 @@ def objects_to_feats(
                         offset_vector.append(dist)
                 else:
                     offset_vector = zero_offset
-                    
                 joint_object_offset.append(offset_vector)
-    
+                
+        joint_object_offset_all_frames[i] = joint_object_offset
     
     # print(f"det_label_to_idx: {det_label_to_idx}")
     
@@ -260,24 +272,29 @@ def objects_to_feats(
                 offset_vector = []
                 # if hands_joints:
                     
-                if len(joint_left_hand_offset) >= 1:
-                    offset_vector.extend(joint_left_hand_offset)
+                if joint_left_hand_offset_all_frames[i] is not None:
+                    offset_vector.extend(joint_left_hand_offset_all_frames[i])
                 else:
                     offset_vector.extend(zero_offset)
                     
-                if len(joint_right_hand_offset) >= 1:
-                    offset_vector.extend(joint_right_hand_offset)
+                if joint_right_hand_offset_all_frames[i] is not None:
+                    offset_vector.extend(joint_right_hand_offset_all_frames[i])
                 else:
                     offset_vector.extend(zero_offset)
                     
-                for i in range(top_n_objects):
-                    if len(joint_object_offset) > i:
-                        offset_vector.extend(joint_object_offset[i])
+                for j in range(top_n_objects):
+                    if joint_object_offset_all_frames[i] is not None:
+                        if len(joint_object_offset_all_frames[i]) > j:
+                            offset_vector.extend(joint_object_offset_all_frames[i][j])
+                        else:
+                            offset_vector.extend(zero_offset)
                     else:
                         offset_vector.extend(zero_offset)
                 
+                # print(f"num of dets: {len(frame_dets.labels)}")
                 # print(f"feat length: {len(feat)}")
                 # print(f"offset_vector length: {len(offset_vector)}")
+                # print(f"offset_vector: {offset_vector}")
                 
                 feat.extend(offset_vector)
                 feat = np.array(feat, dtype=np.float64).ravel()

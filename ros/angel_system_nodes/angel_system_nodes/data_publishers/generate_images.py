@@ -69,7 +69,7 @@ class GenerateImages(Node):
     def __init__(
         self,
         node_name: str = None,
-        output_topic_name: str = "/image",
+        output_topic_name: str = "image",
         fps: float = 30,
         fps_avg_window: int = 15,
         height: int = 720,
@@ -156,7 +156,7 @@ def main(args=None):
     for i in range(num_nodes):
         node = GenerateImages(
             node_name=f"generator_{i}",
-            output_topic_name=f"/image_{i}",
+            output_topic_name=f"image_{i}",
         )
         node_list.append(node)
         executor.add_node(node)

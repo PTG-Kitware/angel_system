@@ -249,10 +249,10 @@ class PoseEstimator(Node):
                 # print(f"img0: {img0.shape}")
                 # height, width, chans = img0.shape
 
-                patient_det_msg = ObjectDetection2dSet()
-                patient_det_msg.header.stamp = self.get_clock().now().to_msg()
-                patient_det_msg.header.frame_id = image.header.frame_id
-                patient_det_msg.source_stamp = image.header.stamp
+                # patient_det_msg = ObjectDetection2dSet()
+                # patient_det_msg.header.stamp = self.get_clock().now().to_msg()
+                # patient_det_msg.header.frame_id = image.header.frame_id
+                # patient_det_msg.source_stamp = image.header.stamp
                 # patient_det_msg.label_vec[:] = self.model.names
                 
                 all_poses_msg = HandJointPosesUpdate()
@@ -268,9 +268,11 @@ class PoseEstimator(Node):
                 
                 # print(f"len(boxes): {len(boxes)}, len(keypoints): {len(keypoints)}")
                 
+                    # joints_msg_list = []
+                
                 # at most, we have 1 set of keypoints for 1 patient
+                keypoints = keypoints[:1]
                 for keypoints_ in keypoints:
-                    joints_msg_list = []
                     for label, keypoint in zip(self.keypoints_cats, keypoints_):
                         # print(f"labe: {label}, keypoint: {keypoint}")
                         position = Point()
@@ -296,32 +298,32 @@ class PoseEstimator(Node):
                         joint_msg.pose = pose_msg
                         all_poses_msg.joints.append(joint_msg)
                         # joints_msg_list.append(pose_msg)
-                        
-                    # print(f"keypoints: {keypoints_}")
-                    # pose_msg.conf_vec = keypoints_
+                            
+                        # print(f"keypoints: {keypoints_}")
+                        # pose_msg.conf_vec = keypoints_
                     self.patient_pose_publisher.publish(all_poses_msg)
                 
-                n_dets = 0
-                for xyxy, labels in zip(boxes, labels):
-                    n_dets += 1
-                    patient_det_msg.left.append(xyxy[0])
-                    patient_det_msg.top.append(xyxy[1])
-                    patient_det_msg.right.append(xyxy[2])
-                    patient_det_msg.bottom.append(xyxy[3])
+                # n_dets = 0
+                # for xyxy, labels in zip(boxes, labels):
+                #     n_dets += 1
+                #     patient_det_msg.left.append(xyxy[0])
+                #     patient_det_msg.top.append(xyxy[1])
+                #     patient_det_msg.right.append(xyxy[2])
+                #     patient_det_msg.bottom.append(xyxy[3])
 
-                    # dflt_conf_vec[cls_id] = conf
-                    # copies data into array
-                    patient_det_msg.label_confidences.append(1.0)
-                    # reset before next passthrough
-                    # dflt_conf_vec[cls_id] = 0.0
+                #     # dflt_conf_vec[cls_id] = conf
+                #     # copies data into array
+                #     patient_det_msg.label_confidences.append(1.0)
+                #     # reset before next passthrough
+                #     # dflt_conf_vec[cls_id] = 0.0
 
-                patient_det_msg.num_detections = n_dets
+                # patient_det_msg.num_detections = n_dets
 
-                self.patient_det_publisher.publish(patient_det_msg)
+                # self.patient_det_publisher.publish(patient_det_msg)
 
                 self._rate_tracker.tick()
                 log.info(
-                    f"Pose Estimation Rate: {self._rate_tracker.get_rate_avg()} Hz, Poses: {len(keypoints)}",
+                    f"Pose Estimation Rate: {self._rate_tracker.get_rate_avg()} Hz, Poses: {len(keypoints)}, pose message: {all_poses_msg}",
                 )
 
     def destroy_node(self):
