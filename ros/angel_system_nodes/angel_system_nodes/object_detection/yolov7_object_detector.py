@@ -17,7 +17,7 @@ from angel_system.utils.event import WaitAndClearEvent
 from angel_system.utils.simple_timer import SimpleTimer
 
 from angel_msgs.msg import ObjectDetection2dSet
-from angel_utils import declare_and_get_parameters, RateTracker, DYNAMIC_TYPE
+from angel_utils import declare_and_get_parameters, RateTracker#, DYNAMIC_TYPE
 from angel_utils import make_default_main
 
 
@@ -48,7 +48,7 @@ class YoloObjectDetector(Node):
                 ("inference_img_size", 1280),  # inference size (pixels)
                 ("det_conf_threshold", 0.7),  # object confidence threshold
                 ("iou_threshold", 0.45),  # IOU threshold for NMS
-                ("cuda_device_id", 0, DYNAMIC_TYPE),  # cuda device: ID int or CPU
+                ("cuda_device_id", 0),  # cuda device: ID int or CPU
                 ("no_trace", True),  # don`t trace model
                 ("agnostic_nms", False),  # class-agnostic NMS
                 # Runtime thread checkin heartbeat interval in seconds.

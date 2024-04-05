@@ -6,19 +6,19 @@ labels:
   #          label.
   - id: 0
     label: "background"
-    description: "background"
+    full_str: "background"
   - id: 1
     label: "cover-seal-wound"
-    description: "With gloved hand, cover and seal wound site."
+    full_str: "With gloved hand, cover and seal wound site."
   - id: 2
     label: "open-pack"
-    description: "Open vented chest seal package."
+    full_str: "Open vented chest seal package."
   - id: 3
     label: "clean-wound-site"
-    description: "Wipe blood and body fluids from wound site."
+    full_str: "Wipe blood and body fluids from wound site."
   - id: 4
     label: "peel-seal-backer"
-    description: "Peel away chest seal backer."
+    full_str: "Peel away chest seal backer."
   - id: 5
     label: "place-seal"
-    description: "Place chest seal with circle of vents over wound site and seal to chest."
+    full_str: "Place chest seal with circle of vents over wound site and seal to chest."

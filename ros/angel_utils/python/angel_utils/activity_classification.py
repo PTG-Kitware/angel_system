@@ -15,7 +15,7 @@ import numpy.typing as npt
 # ROS Message types
 from builtin_interfaces.msg import Time
 
-from angel_msgs.msg import ActivityDetection, HandJointPosesUpdate, ObjectDetection2dSet
+from angel_msgs.msg import ActivityDetection, HandJointPosesUpdate, ObjectDetection2dSet, HandJointPose
 
 from angel_system.utils.matching import descending_match_with_tolerance
 from angel_utils.conversion import time_to_int
@@ -36,11 +36,13 @@ class InputWindow:
     # Set at construction time with the known window of frames.
     frames: List[Tuple[Time, npt.NDArray]]
     # Buffer of left-hand pose messages
-    hand_pose_left: List[Optional[HandJointPosesUpdate]]
+    # hand_pose_left: List[Optional[HandJointPosesUpdate]]
     # Buffer of right-hand pose messages
-    hand_pose_right: List[Optional[HandJointPosesUpdate]]
+    # hand_pose_right: List[Optional[HandJointPosesUpdate]]
     # Buffer of object detection predictions
     obj_dets: List[Optional[ObjectDetection2dSet]]
+    # Buffer for patient poses
+    patient_joint_kps: List[Optional[HandJointPosesUpdate]]
 
     def __len__(self):
         return len(self.frames)
@@ -106,6 +108,10 @@ class InputBuffer:
     obj_dets: Deque[ObjectDetection2dSet] = field(
         default_factory=deque, init=False, repr=False
     )
+    
+    patient_joint_kps: Deque[HandJointPosesUpdate] = field(
+        default_factory=deque, init=False, repr=False
+    )
 
     __state_lock: RLock = field(default_factory=RLock, init=False, repr=False)
 
@@ -147,6 +153,8 @@ class InputBuffer:
         :returns: True if the image was queued, otherwise false because it was
             not newer than the current latest frame.
         """
+        # self.get_logger_fn().info(f"image header stamp: {img_header_stamp}")
+        # self.get_logger_fn().info(f"self.frames[-1][0] header stamp: {self.frames[-1][0]}")
         with self.__state_lock:
             # before the current lead frame?
             if self.frames and time_to_int(img_header_stamp) <= time_to_int(
@@ -197,12 +205,31 @@ class InputBuffer:
             if self.obj_dets and time_to_int(msg.header.stamp) <= time_to_int(
                 self.obj_dets[-1].header.stamp
             ):
+                
                 self.get_logger_fn().warn(
                     f"Input object detection result was NOT after the previous latest: "
                     f"(prev) {self.obj_dets[-1].header.stamp} !< {msg.header.stamp} (new)"
                 )
                 return False
             self.obj_dets.append(msg)
+            return True
+    
+    def queue_joint_keypoints(self, msg: HandJointPosesUpdate) -> bool:
+        """
+        Queue up an object detection set for the
+        """
+        
+        with self.__state_lock:
+            # before the current lead pose?
+            if self.patient_joint_kps and time_to_int(msg.header.stamp) <= time_to_int(
+                self.patient_joint_kps[-1].header.stamp
+            ):
+                self.get_logger_fn().warn(
+                    f"Input pose estimation results was NOT after the previous latest: "
+                    f"(prev) {self.patient_joint_kps[-1].header.stamp} !< {msg.header.stamp} (new)"
+                )
+                return False
+            self.patient_joint_kps.append(msg)
             return True
 
     @staticmethod
@@ -211,6 +238,11 @@ class InputBuffer:
 
     @staticmethod
     def _objdet_msg_to_time_ns(msg: ObjectDetection2dSet):
+        # Using stamp that should associate to the source image
+        return time_to_int(msg.source_stamp)
+
+    @staticmethod
+    def _joints_msg_to_time_ns(msg: HandJointPosesUpdate):
         # Using stamp that should associate to the source image
         return time_to_int(msg.source_stamp)
 
@@ -233,7 +265,7 @@ class InputBuffer:
 
         with self.__state_lock:
             # Cache self accesses
-            hand_nsec_tol = self.hand_msg_tolerance_nsec
+            # hand_nsec_tol = self.hand_msg_tolerance_nsec
 
             # This window's frame in ascending time order
             # deques don't support slicing, so thus the following madness
@@ -251,34 +283,47 @@ class InputBuffer:
             #   tolerance, which triggers moving on to the next frame.
             # - carry variable for when the item being checked in previous
             #   iteration did not match the current frame.
-            window_lhand = descending_match_with_tolerance(
-                window_frame_times_ns,
-                self.hand_pose_left,
-                hand_nsec_tol,
-                time_from_value_fn=self._hand_msg_to_time_ns,
-            )
-            window_rhand = descending_match_with_tolerance(
-                window_frame_times_ns,
-                self.hand_pose_right,
-                hand_nsec_tol,
-                time_from_value_fn=self._hand_msg_to_time_ns,
-            )
+            # window_lhand = descending_match_with_tolerance(
+            #     window_frame_times_ns,
+            #     self.hand_pose_left,
+            #     hand_nsec_tol,
+            #     time_from_value_fn=self._hand_msg_to_time_ns,
+            # )
+            # window_rhand = descending_match_with_tolerance(
+            #     window_frame_times_ns,
+            #     self.hand_pose_right,
+            #     hand_nsec_tol,
+            #     time_from_value_fn=self._hand_msg_to_time_ns,
+            # )
 
             # Direct associate object detections within window time. For
             # detections known to be in the window, creating a mapping (key=ts)
             # to access the detection for a specific time.
+            
+            # print(f"Window buffer detections: {type(self.obj_dets)}")
+            
             window_dets = descending_match_with_tolerance(
                 window_frame_times_ns,
                 self.obj_dets,
                 0,  # we expect exact matches for object detections.
                 time_from_value_fn=self._objdet_msg_to_time_ns,
             )
+            
+            # print(f"Window window detections: {window_dets}")
+            
+            window_joint_kps = descending_match_with_tolerance(
+                window_frame_times_ns,
+                self.patient_joint_kps,
+                0,  # we expect exact matches for object detections.
+                time_from_value_fn=self._joints_msg_to_time_ns,
+            )
 
             output = InputWindow(
                 frames=window_frames,
-                hand_pose_left=window_lhand,
-                hand_pose_right=window_rhand,
+                # hand_pose_left=window_lhand,
+                # hand_pose_right=window_rhand,
                 obj_dets=window_dets,
+                patient_joint_kps=window_joint_kps,
             )
             return output
 
@@ -306,3 +351,8 @@ class InputBuffer:
                 self.obj_dets and time_to_int(self.obj_dets[0].source_stamp) < time_nsec
             ):
                 self.obj_dets.popleft()
+            
+            while (
+                self.patient_joint_kps and time_to_int(self.patient_joint_kps[0].source_stamp) < time_nsec
+            ):
+                self.patient_joint_kps.popleft()

@@ -33,4 +33,3 @@ labels:
     label: "place-seal"
     full_str: "Place chest seal with circle of vents over wound site and seal to chest."
     activity_ids: [5]
-

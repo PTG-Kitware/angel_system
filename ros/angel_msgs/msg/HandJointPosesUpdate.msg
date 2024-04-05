@@ -7,6 +7,9 @@
 
 std_msgs/Header header
 
+# Timestamp of the source image these predictions pertain to.
+builtin_interfaces/Time source_stamp
+
 # Which hand this update is for ('left' or 'right')
 string hand
 

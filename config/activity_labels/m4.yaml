@@ -6,13 +6,13 @@ labels:
   #          label.
   - id: 0
     label: "background"
-    description: "background"
+    full_str: "background"
   - id: 1
     label: "apply-pressure"
-    description: "Apply direct hand pressure."
+    full_str: "Apply direct hand pressure."
   - id: 2
     label: "open-pack"
-    description: "Open dressing packaging."
+    full_str: "Open dressing packaging."
   - id: 3
     label: "apply-dress-w-pressure"
-    description: "Apply dressing with pressure point directly over wound site."
+    full_str: "Apply dressing with pressure point directly over wound site."

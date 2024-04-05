@@ -1,40 +1,69 @@
 from pathlib import Path
 from threading import Event, Lock, Thread
 from typing import Union
-
+import torch
 from cv_bridge import CvBridge
 import numpy as np
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup, ReentrantCallbackGroup
 from rclpy.node import Node, ParameterDescriptor, Parameter
 from sensor_msgs.msg import Image
 
-from yolov7.detect_ptg import load_model, predict_image, predict_hands
-from yolov7.models.experimental import attempt_load
-import yolov7.models.yolo
-from yolov7.utils.torch_utils import TracedModel
-
+# from yolov7.detect_ptg import load_model, predict_image, predict_hands
+# from yolov7.models.experimental import attempt_load
+# import yolov7.models.yolo
+# from yolov7.utils.torch_utils import TracedModel
+import cv2
 from angel_system.utils.event import WaitAndClearEvent
 from angel_system.utils.simple_timer import SimpleTimer
 
-from angel_msgs.msg import ObjectDetection2dSet
-from angel_utils import declare_and_get_parameters, RateTracker, DYNAMIC_TYPE
+from angel_msgs.msg import ObjectDetection2dSet, HandJointPosesUpdate, HandJointPose, ActivityDetection
+from angel_utils import declare_and_get_parameters, RateTracker#, DYNAMIC_TYPE
 from angel_utils import make_default_main
+from geometry_msgs.msg import Point, Pose, Quaternion
+
+# from tcn_hpl.data.utils.pose_generation.generate_pose_data import predict_single
+from tcn_hpl.data.utils.pose_generation.rt_pose_generation import predict_single
+from mmpose.apis import init_pose_model
+
+from detectron2.config import get_cfg
+# from detectron2.data.detection_utils import read_image
+from tcn_hpl.data.utils.pose_generation.predictor import VisualizationDemo
+# import argparse
 
 
 BRIDGE = CvBridge()
 
 
-class YoloObjectDetector(Node):
+def setup_detectron_cfg(config_file, model_checkpoint):
+    # load config from file and command-line arguments
+    cfg = get_cfg()
+    # To use demo for Panoptic-DeepLab, please uncomment the following two lines.
+    # from detectron2.projects.panoptic_deeplab import add_panoptic_deeplab_config  # noqa
+    # add_panoptic_deeplab_config(cfg)
+    cfg.merge_from_file(config_file)
+    # cfg.merge_from_list(args.opts)
+    # Set score_threshold for builtin models
+    cfg.MODEL.RETINANET.SCORE_THRESH_TEST = 0.8
+    cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.8
+    cfg.MODEL.PANOPTIC_FPN.COMBINE.INSTANCES_CONFIDENCE_THRESH = 0.8
+    cfg.MODEL.WEIGHTS = model_checkpoint
+    cfg.freeze()
+    return cfg
+
+class PoseEstimator(Node):
     """
-    ROS node that runs the yolov7 object detector model and outputs
-    `ObjectDetection2dSet` messages.
+    ROS node that runs the pose estimation model and outputs
+    `ObjectDetection2dSet` and 'JointKeypoints' messages.
     """
 
     def __init__(self):
         super().__init__(self.__class__.__name__)
+        
+        print("getting logger")
         log = self.get_logger()
 
         # Inputs
+        print("getting params")
         param_values = declare_and_get_parameters(
             self,
             [
@@ -42,13 +71,17 @@ class YoloObjectDetector(Node):
                 # Required parameter (no defaults)
                 ("image_topic",),
                 ("det_topic",),
-                ("net_checkpoint",),
+                ("pose_topic",),
+                ("det_net_checkpoint",),
+                ("pose_net_checkpoint",),
+                ("det_config",),
+                ("pose_config",),
                 ##################################
                 # Defaulted parameters
                 ("inference_img_size", 1280),  # inference size (pixels)
                 ("det_conf_threshold", 0.7),  # object confidence threshold
                 ("iou_threshold", 0.45),  # IOU threshold for NMS
-                ("cuda_device_id", 0, DYNAMIC_TYPE),  # cuda device: ID int or CPU
+                ("cuda_device_id", 0),  # cuda device: ID int or CPU
                 ("no_trace", True),  # don`t trace model
                 ("agnostic_nms", False),  # class-agnostic NMS
                 # Runtime thread checkin heartbeat interval in seconds.
@@ -56,39 +89,61 @@ class YoloObjectDetector(Node):
                 # If we should enable additional logging to the info level
                 # about when we receive and process data.
                 ("enable_time_trace_logging", False),
+                ("image_resize", True)
             ],
         )
         self._image_topic = param_values["image_topic"]
         self._det_topic = param_values["det_topic"]
-        self._model_ckpt_fp = Path(param_values["net_checkpoint"])
-
+        self._pose_topic = param_values["pose_topic"]
+        self.det_model_ckpt_fp = param_values["det_net_checkpoint"]
+        self.pose_model_ckpt_fp = param_values["pose_net_checkpoint"]
+        self.det_config = param_values["det_config"]
+        self.pose_config = param_values["pose_config"]
+        
+        self._ensure_image_resize = param_values["image_resize"]
+        
         self._inference_img_size = param_values["inference_img_size"]
         self._det_conf_thresh = param_values["det_conf_threshold"]
         self._iou_thr = param_values["iou_threshold"]
         self._cuda_device_id = param_values["cuda_device_id"]
         self._no_trace = param_values["no_trace"]
         self._agnostic_nms = param_values["agnostic_nms"]
+        
+        self.keypoints_cats = [
+                        "nose", "mouth", "throat","chest","stomach","left_upper_arm",
+                        "right_upper_arm","left_lower_arm","right_lower_arm","left_wrist",
+                        "right_wrist","left_hand","right_hand","left_upper_leg",
+                        "right_upper_leg","left_knee","right_knee","left_lower_leg", 
+                        "right_lower_leg", "left_foot", "right_foot", "back"
+                    ]
+        
+        print("finished setting params")
+        
+        print("loading detectron model")
+        # Detectron Model
+        # self.args = get_parser(self.det_config).parse_args()
+        print(f"model_checkpoint: {self.det_model_ckpt_fp}")
+        detecron_cfg = setup_detectron_cfg(self.det_config, model_checkpoint=self.det_model_ckpt_fp)
+        
+        self.det_model = VisualizationDemo(detecron_cfg)
+        
+        
+        print("loading pose model")
+        # Pose model
+        self.pose_model = init_pose_model(self.pose_config, 
+                                        self.pose_model_ckpt_fp, 
+                                        device=self._cuda_device_id)
+
+        self.device = torch.device(f'cuda:{self._cuda_device_id}')
 
         self._enable_trace_logging = param_values["enable_time_trace_logging"]
 
-        # Model
-        self.model: Union[yolov7.models.yolo.Model, TracedModel]
-        if not self._model_ckpt_fp.is_file():
-            raise ValueError(
-                f"Model checkpoint file did not exist: {self._model_ckpt_fp}"
-            )
-        (self.device, self.model, self.stride, self.imgsz) = load_model(
-            str(self._cuda_device_id), self._model_ckpt_fp, self._inference_img_size
-        )
-        log.info(
-            f"Loaded model with classes:\n"
-            + "\n".join(f'\t- "{n}"' for n in self.model.names)
-        )
 
         # Single slot for latest image message to process detection over.
         self._cur_image_msg: Image = None
         self._cur_image_msg_lock = Lock()
 
+        print("creating subscription to image topic")
         # Initialize ROS hooks
         self._subscription = self.create_subscription(
             Image,
@@ -97,21 +152,30 @@ class YoloObjectDetector(Node):
             1,
             callback_group=MutuallyExclusiveCallbackGroup(),
         )
-        self._det_publisher = self.create_publisher(
+        
+        print("creating publisher to detections")
+        self.patient_det_publisher = self.create_publisher(
             ObjectDetection2dSet,
             self._det_topic,
             1,
             callback_group=MutuallyExclusiveCallbackGroup(),
         )
+        print("creating publisher for poses")
+        self.patient_pose_publisher = self.create_publisher(
+            HandJointPosesUpdate,
+            self._pose_topic,
+            1,
+            callback_group=MutuallyExclusiveCallbackGroup(),
+        )
 
-        if not self._no_trace:
-            self.model = TracedModel(self.model, self.device, self._inference_img_size)
+        # if not self._no_trace:
+        #     self.model = TracedModel(self.model, self.device, self._inference_img_size)
 
-        self.half = half = (
-            self.device.type != "cpu"
-        )  # half precision only supported on CUDA
-        if half:
-            self.model.half()  # to FP16
+        # self.half = half = (
+        #     self.device.type != "cpu"
+        # )  # half precision only supported on CUDA
+        # if half:
+        #     self.model.half()  # to FP16
 
         self._rate_tracker = RateTracker()
         log.info("Detector initialized")
@@ -129,7 +193,7 @@ class YoloObjectDetector(Node):
         self._rt_thread = Thread(target=self.rt_loop, name="prediction_runtime")
         self._rt_thread.daemon = True
         self._rt_thread.start()
-
+    
     def listener_callback(self, image: Image):
         """
         Callback function for image messages. Runs the berkeley object detector
@@ -177,74 +241,89 @@ class YoloObjectDetector(Node):
                 # Convert ROS img msg to CV2 image
                 img0 = BRIDGE.imgmsg_to_cv2(image, desired_encoding="bgr8")
                 
-                print(f"img0: {img0.shape}")
-                width, height = self._inference_img_size
-
-                msg = ObjectDetection2dSet()
-                msg.header.stamp = self.get_clock().now().to_msg()
-                msg.header.frame_id = image.header.frame_id
-                msg.source_stamp = image.header.stamp
-                msg.label_vec[:] = self.model.names
-
-                n_classes = len(self.model.names) + 2 # accomedate 2 hands
-                n_dets = 0
-
-                dflt_conf_vec = np.zeros(n_classes, dtype=np.float64)
-                right_hand_cid = n_classes - 2
-                left_hand_cid = n_classes - 1
-
-                hands_preds = predict_hands(hand_model=self.hand_model, img0=img0, 
-                                            img_size=self._inference_img_size, device=self.device)
-
-                hand_centers = [center.xywh.tolist()[0][0] for center in hands_preds.boxes][:2]
-                hands_label = []
-                if len(hand_centers) == 2:
-                    if hand_centers[0] > hand_centers[1]:
-                        hands_label.append(right_hand_cid)
-                        hands_label.append(left_hand_cid)
-                    elif hand_centers[0] <= hand_centers[1]:
-                        hands_label.append(left_hand_cid)
-                        hands_label.append(right_hand_cid)
-                elif len(hand_centers) == 1:
-                    if hand_centers[0] > width//2:
-                        hands_label.append(right_hand_cid)
-                    elif hand_centers[0] <= width//2:
-                        hands_label.append(left_hand_cid)
                 
+                if self._ensure_image_resize:
+                    img0 = cv2.resize(img0, dsize=(1280, 720), interpolation=cv2.INTER_CUBIC)
+                # print()
                 
+                # print(f"img0: {img0.shape}")
+                # height, width, chans = img0.shape
+
+                # patient_det_msg = ObjectDetection2dSet()
+                # patient_det_msg.header.stamp = self.get_clock().now().to_msg()
+                # patient_det_msg.header.frame_id = image.header.frame_id
+                # patient_det_msg.source_stamp = image.header.stamp
+                # patient_det_msg.label_vec[:] = self.model.names
                 
-                for xyxy, conf, cls_id in predict_image(
-                    img0,
-                    self.device,
-                    self.model,
-                    self.stride,
-                    self.imgsz,
-                    self.half,
-                    False,
-                    self._det_conf_thresh,
-                    self._iou_thr,
-                    None,
-                    self._agnostic_nms,
-                ):
-                    n_dets += 1
-                    msg.left.append(xyxy[0])
-                    msg.top.append(xyxy[1])
-                    msg.right.append(xyxy[2])
-                    msg.bottom.append(xyxy[3])
+                all_poses_msg = HandJointPosesUpdate()
+                all_poses_msg.header.stamp = self.get_clock().now().to_msg()
+                all_poses_msg.header.frame_id = image.header.frame_id
+                all_poses_msg.source_stamp = image.header.stamp
+                all_poses_msg.hand = "patient"
+                # pose_msg.label_vec[:] = self.model.names
 
-                    dflt_conf_vec[cls_id] = conf
-                    # copies data into array
-                    msg.label_confidences.extend(dflt_conf_vec)
-                    # reset before next passthrough
-                    dflt_conf_vec[cls_id] = 0.0
+                boxes, labels, keypoints = predict_single(det_model=self.det_model,
+                                                          pose_model=self.pose_model,
+                                                          image=img0)
+                
+                # print(f"len(boxes): {len(boxes)}, len(keypoints): {len(keypoints)}")
+                
+                    # joints_msg_list = []
+                
+                # at most, we have 1 set of keypoints for 1 patient
+                keypoints = keypoints[:1]
+                for keypoints_ in keypoints:
+                    for label, keypoint in zip(self.keypoints_cats, keypoints_):
+                        # print(f"labe: {label}, keypoint: {keypoint}")
+                        position = Point()
+                        position.x = float(keypoint[0])
+                        position.y = float(keypoint[1])
+                        position.z = float(keypoint[2])
 
-                msg.num_detections = n_dets
+                        # Extract the orientation
+                        orientation = Quaternion()
+                        orientation.x = float(0)
+                        orientation.y = float(0)
+                        orientation.z = float(0)
+                        orientation.w = float(0)
 
-                self._det_publisher.publish(msg)
+                        # Form the geometry pose message
+                        pose_msg = Pose()
+                        pose_msg.position = position
+                        pose_msg.orientation = orientation
+
+                        # Create the hand joint pose message
+                        joint_msg = HandJointPose()
+                        joint_msg.joint = label
+                        joint_msg.pose = pose_msg
+                        all_poses_msg.joints.append(joint_msg)
+                        # joints_msg_list.append(pose_msg)
+                            
+                        # print(f"keypoints: {keypoints_}")
+                        # pose_msg.conf_vec = keypoints_
+                    self.patient_pose_publisher.publish(all_poses_msg)
+                
+                # n_dets = 0
+                # for xyxy, labels in zip(boxes, labels):
+                #     n_dets += 1
+                #     patient_det_msg.left.append(xyxy[0])
+                #     patient_det_msg.top.append(xyxy[1])
+                #     patient_det_msg.right.append(xyxy[2])
+                #     patient_det_msg.bottom.append(xyxy[3])
+
+                #     # dflt_conf_vec[cls_id] = conf
+                #     # copies data into array
+                #     patient_det_msg.label_confidences.append(1.0)
+                #     # reset before next passthrough
+                #     # dflt_conf_vec[cls_id] = 0.0
+
+                # patient_det_msg.num_detections = n_dets
+
+                # self.patient_det_publisher.publish(patient_det_msg)
 
                 self._rate_tracker.tick()
                 log.info(
-                    f"Objects Detection Rate: {self._rate_tracker.get_rate_avg()} Hz",
+                    f"Pose Estimation Rate: {self._rate_tracker.get_rate_avg()} Hz, Poses: {len(keypoints)}, pose message: {all_poses_msg}",
                 )
 
     def destroy_node(self):
@@ -262,8 +341,12 @@ class YoloObjectDetector(Node):
 # - 1 known subscriber which has their own group
 # - 1 for default group
 # - 1 for publishers
-main = make_default_main(YoloObjectDetector, multithreaded_executor=3)
+print("executing make_default_main")
+main = make_default_main(PoseEstimator, multithreaded_executor=3)
 
 
 if __name__ == "__main__":
+    print("executing main")
+    # node = PoseEstimator()
+    print(f"before main: {node}")
     main()

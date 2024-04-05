@@ -1,4 +1,5 @@
 version: "1"
+title: "m5"
 labels:
   # Item:
   # - id: Integer identification number of the label.
@@ -6,25 +7,25 @@ labels:
   #          label.
   - id: 0
     label: "background"
-    description: "background"
+    full_str: "background"
     activity_ids: [0]
   - id: 1
     label: "open-pack-remove-app"
-    description: "Open inner packaging and remove applicator."
+    full_str: "Open inner packaging and remove applicator."
     activity_ids: [1]
   - id: 2
     label: "insert-applicator"
-    description: "Insert applicator into wound track as close to bleeding source as possible."
+    full_str: "Insert applicator into wound track as close to bleeding source as possible."
     activity_ids: [2]
   - id: 3
     label: "insert-plunger-w-pressure"
-    description: "Insert plunger into applicator."
+    full_str: "Insert plunger into applicator."
     activity_ids: [3]
   - id: 4
     label: "push-plunger"
-    description: "Push plunger firmly to deploy sponges into wound."
+    full_str: "Push plunger firmly to deploy sponges into wound."
     activity_ids: [4]
   - id: 5
     label: "apply-pressure"
-    description: "Apply manual pressure if necessary."
+    full_str: "Apply manual pressure if necessary."
     activity_ids: [5]

@@ -58,11 +58,16 @@ def descending_match_with_tolerance(
         closest_value = None
         for value in value_riter:
             # in python, if-statements are faster than passthrough functions...
+            # print(f"value: {value}")
             if time_from_value_fn is not None:
                 vt = time_from_value_fn(value)
             else:
                 vt = value
+                
             t_delta = abs(kt - vt)
+            # print(f"t_delta: {t_delta}")
+            # print(f"kt: {kt}")
+            # print(f"vt: {vt}")
             if t_delta <= tol and t_delta < closest_delta:
                 closest_delta = t_delta
                 closest_value = value
@@ -79,6 +84,8 @@ def descending_match_with_tolerance(
             value_riter = itertools.chain([carried_value], value_riter)
             carried_value = None  # clear carried value
         # Could be a time, or could be None still indicating no match.
+        # print(f"carried_value: {carried_value}")
+        # print(f"closest_value: {closest_value}")
         match_list.append(closest_value)
 
     # hands were added in reverse order (descending time), so flip it back into
