@@ -81,8 +81,8 @@ We take the following steps:
 ##### Example with R18
 ```
 cd yolo7
-python yolov7/train.py --workers 8 --device 0 --batch-size 4 --data configs/data/PTG/medical/r18_task_objects.yaml --img 768 768 --cfg configs/model/training/PTG/medical/yolov7_r18.yaml --weights weights/yolov7.pt --project /data/PTG/medical/training/yolo_object_detector/train/ --name r18_all_v1
-python yolov7/detect_ptg.py --tasks r18 --weights /data/PTG/medical/training/yolo_object_detector/train/r18_all_v1/weights/best.pt --project /data/PTG/medical/training/yolo_object_detector/detect/ --name r18_all --device 0 --img-size 768 --conf-thres 0.25
+python yolov7/train.py --workers 8 --device 0 --batch-size 4 --data configs/data/PTG/medical/r18_task_objects.yaml --img 768 768 --cfg configs/model/training/PTG/medical/yolov7_r18.yaml --weights weights/yolov7.pt --project /data/PTG/medical/training/yolo_object_detector/train/ --name r18_all_v1_example
+python yolov7/detect_ptg.py --tasks r18 --weights /data/PTG/medical/training/yolo_object_detector/train/r18_all_v1_example/weights/best.pt --project /data/PTG/medical/training/yolo_object_detector/detect/ --name r18_all_example --device 0 --img-size 768 --conf-thres 0.25
 cd TCN_HPL/tcn_hpl/data/utils/pose_generation/configs
 ```
 Edit main.yaml with the task in hand (here, we use r18)
