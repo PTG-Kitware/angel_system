@@ -85,12 +85,35 @@ python yolov7/train.py --workers 8 --device 0 --batch-size 4 --data configs/data
 python yolov7/detect_ptg.py --tasks r18 --weights /data/PTG/medical/training/yolo_object_detector/train/r18_all_v1_example/weights/best.pt --project /data/PTG/medical/training/yolo_object_detector/detect/ --name r18_all_example --device 0 --img-size 768 --conf-thres 0.25
 cd TCN_HPL/tcn_hpl/data/utils/pose_generation/configs
 ```
-Edit main.yaml with the task in hand (here, we use r18)
+
+with the above scripts, we should get a kwcoco file at:
+```
+/data/PTG/medical/training/yolo_object_detector/detect/r18_all_example/
+```
+
+Edit main.yaml with the task in hand (here, we use r18), with the newly trained detection model, and where to output kwcoco files from our pose generation step.
 ```
 cd ..
 python generate_pose_data.py
 cd TCN_HPL/tcn_hpl/data/utils
-python  ptg_datagenerator –task r18
+```
+At this stage, there should be a new kwcoco file generated in the field defined at `main.yaml`:
+```
+data:
+    save_root: <path-to-kwcoco-file-with-pose-and-detections>
+```
+
+Next, edit the `/TCN_HPL/configs/experiment/r18/feat_v6.yaml` file with the correct experiment name and kwcoco file in the following fields:
+
+```
+exp_name: <experiment-name>
+path:
+    dataset_kwcoco: <path-to-kwcoco-with-poses-and-dets>
+```
+
+Then run the following commands to generate features:
+```
+python  ptg_datagenerator –task r18 --data_type <bbn or gyges> --config-root <root-to-TCN-HPL-configs> --ptg-root <path-to-local-angel-systen-repo>
 cd TCN_HPL/tcn_hpl
 python train.py experiment=r18/feat_v6
 ```
