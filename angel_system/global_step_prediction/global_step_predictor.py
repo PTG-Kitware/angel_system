@@ -821,8 +821,10 @@ class GlobalStepPredictor:
         sn.set(font_scale=1)
         step_gts = [float(i) for i in step_gts]
         plt.plot(step_gts, label=f"{granular_or_broad}_step_gt")
+        preds = []
         for i, tracker in enumerate(self.trackers):
             step_predictions = tracker[f"{granular_or_broad}_step_prediction_history"]
+            preds.extend(step_predictions)
             plt.plot(
                 step_predictions,
                 label=f"estimated_{granular_or_broad}_steps_{tracker['recipe']}_{i}",
@@ -837,7 +839,7 @@ class GlobalStepPredictor:
         plt.title(title)
         output_file_path = output_dir_p / title
         fig.savefig(output_file_path)
-        return output_file_path
+        return output_file_path, preds, step_gts
 
     def determine_recipe_from_gt_first_activity(self, activity_gts):
         """

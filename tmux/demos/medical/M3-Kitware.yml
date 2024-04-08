@@ -93,9 +93,9 @@ windows:
       -p model_file:=${ANGEL_WORKSPACE_DIR}/model_files/coco/m3_test_activity_preds.mscoco.json
       -p thresh_frame_count:=3
       -p deactivate_thresh_frame_count:=10
-      -p threshold_multiplier_weak:=0.05
+      -p threshold_multiplier_weak:=0.00
       -p threshold_frame_count_weak:=3
-      -p step_mode:=broad
+      -p step_mode:=granular
       -p query_task_graph_topic:=query_task_graph
 
 
