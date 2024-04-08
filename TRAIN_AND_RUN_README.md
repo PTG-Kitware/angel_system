@@ -123,3 +123,16 @@ tmuxinator stop demos/medical/Kitware-R18
 
 
 ## Docker real-time <a name = "realtime"></a>
+
+This step requires a user on the BBN systems to login to the Kitware machine. After it is set up:
+
+```
+ssh <username>@kitware-ptg-magic.eln.bbn.com
+cd angel/angel_system
+git pull
+git submodule update --init --recursive
+./angel-workspace-shell.sh
+./workspace_build.sh; source install/setup.sh
+tmuxinator start demos/medical/BBN-integrate-Kitware-R18
+```
+
