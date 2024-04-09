@@ -125,6 +125,7 @@ python train.py experiment=r18/feat_v6
 ```
 
 ==At this point, we have our trained model at the path specified in our config file. For real-time execurtion, we would need to copy it over to angel_system/model_files==
+The TCN training script produced a `text_activity_preds.mscoco.json` which is used by the Global Step Predictor. That file should be copied to `/angel_system/model_files/coco/`.
 
 
 ## Docker local testing <a name = "local"></a>
