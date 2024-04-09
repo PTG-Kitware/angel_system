@@ -91,7 +91,7 @@ with the above scripts, we should get a kwcoco file at:
 /data/PTG/medical/training/yolo_object_detector/detect/r18_all_example/
 ```
 
-Edit main.yaml with the task in hand (here, we use r18), with the newly trained detection model, and where to output kwcoco files from our pose generation step.
+Edit `TCN_HPL/tcn_hpl/data/utils/pose_generation/configs/main.yaml` with the task in hand (here, we use r18), the path to the output detection kwcoco, and where to output kwcoco files from our pose generation step.
 ```
 cd ..
 python generate_pose_data.py
