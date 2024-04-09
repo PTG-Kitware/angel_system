@@ -79,9 +79,15 @@ We take the following steps:
 5. train the TCN
 
 ##### Example with R18
+
+First we train the detection model on annotated data. This would be the same data source for both the lab and professional data
 ```
 cd yolo7
 python yolov7/train.py --workers 8 --device 0 --batch-size 4 --data configs/data/PTG/medical/r18_task_objects.yaml --img 768 768 --cfg configs/model/training/PTG/medical/yolov7_r18.yaml --weights weights/yolov7.pt --project /data/PTG/medical/training/yolo_object_detector/train/ --name r18_all_v1_example
+```
+
+Next, we generate detection predictions in kwcoco file using the following script. Note that this 
+```
 python yolov7/detect_ptg.py --tasks r18 --weights /data/PTG/medical/training/yolo_object_detector/train/r18_all_v1_example/weights/best.pt --project /data/PTG/medical/training/yolo_object_detector/detect/ --name r18_all_example --device 0 --img-size 768 --conf-thres 0.25
 cd TCN_HPL/tcn_hpl/data/utils/pose_generation/configs
 ```
