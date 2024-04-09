@@ -1,0 +1,7 @@
+data_dir: /data/PTG/medical/
+activity_gt_dir: /data/PTG/medical/activity_anns/
+objects_dir: /data/PTG/medical/object_anns/
+ros_bags_dir: /data/PTG/medical/ros_bags/
+bbn_data_dir: /data/PTG/medical/bbn_data/
+bbn_data_root: /data/PTG/medical/bbn_data/Release_v0.5/v0.56
+lab_bbn_data_root: /data/PTG/medical/bbn_data/lab_data
