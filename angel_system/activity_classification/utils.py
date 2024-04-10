@@ -250,8 +250,6 @@ def obj_det2d_set_to_feature_by_method(
     remove_classes_count = [1 for label in non_objects_labels if label in label_to_ind.keys()]
     num_det_classes = len(label_to_ind) - len(remove_classes_count)# accomedate 2 hands instead of 1, accomedate top 3 objects
 
-    # print(f"label_to_ind: {label_to_ind}")
-    # print(f"num_det_classes: {num_det_classes}")
     
     det_class_max_conf = np.zeros((num_det_classes, top_n_objects))
     # The bounding box of the maximally confident detection
@@ -284,9 +282,7 @@ def obj_det2d_set_to_feature_by_method(
     # util functions
     #########################
     def find_hand(hand_str):
-        # hand_str = "hands"
         hand_idx = label_to_ind[hand_str]
-        # print(f"hand_index: {hand_idx}")
         hand_conf = det_class_max_conf[hand_idx][0]
         hand_bbox = kwimage.Boxes([det_class_bbox[0, hand_idx]], "xywh")
 
@@ -461,12 +457,9 @@ def obj_det2d_set_to_feature_by_method(
         if use_hand_dist:
             feature_vec.append(right_hand_dist[left_hand_idx])
         
-        # print(f"use_hand_dist feature_vec: {len(feature_vec)}")
-        
         if use_intersection:
             feature_vec.append([right_hand_intersection[left_hand_idx]])
 
-        # print(f"use_hand_dist feature_vec: {len(feature_vec)}")
         # Add object data
         for i in range(num_det_classes):
             if i in [right_hand_idx, left_hand_idx]:

@@ -156,9 +156,6 @@ def objects_to_feats(
 
     window_size = len(frame_object_detections)
     
-    # print(f"frame_object_detections: {frame_object_detections}")
-    # print(f"frame_patient_poses: {frame_patient_poses}")
-    # print(f"frame_patient_poses: {len(frame_patient_poses)}")
     # Shape [window_size, None|n_feats]
     feature_list: List[Optional[npt.NDArray]] = [None] * window_size
     feature_ndim = None
@@ -171,7 +168,6 @@ def objects_to_feats(
     joint_object_offset_all_frames = [None] * window_size
     # for pose in frame_patient_poses:
     for i, (pose, detection) in enumerate(zip(frame_patient_poses, frame_object_detections)):
-        # print(f"detection: {detection}")
         if detection is None:
             continue
         labels = detection.labels
@@ -185,7 +181,6 @@ def objects_to_feats(
         # iterate over all detections in that frame
         joint_object_offset = []
         for j, label in enumerate(labels):
-            # print(f"label: {label}")
             if label == "hand (right)" or label == "hand (left)":
                 x, y, w, h = bx[j], by[j], bw[j], bh[j]
                 
@@ -194,11 +189,8 @@ def objects_to_feats(
                 
                 offset_vector = []
                 if pose is not None:
-                    # print(f"pose: {pose}")
                     for joint in pose:
-                        # print(f"joint: {joint}")
                         jx, jy = joint.positions.x, joint.positions.y
-                        # jx, jy = joint['xy']
                         joint_point = np.array((jx, jy))
                         dist = np.linalg.norm(joint_point - hand_point)
                         offset_vector.append(dist)
@@ -211,20 +203,14 @@ def objects_to_feats(
                     joint_right_hand_offset_all_frames[i] = offset_vector
             else:
                 # if objects_joints and num_objects > 0:
-                # bx, by, bw, bh = xs[i], ys[i], ws[i], hs[i]
-                # ocx, ocy = bx+(bw//2), by+(bh//2)
                 x, y, w, h = bx[j], by[j], bw[j], bh[j]
                 cx, cy = x+(w//2), y+(h//2)
                 object_point = np.array((cx, cy))
                 offset_vector = []
                 if pose is not None:
-                    # print(f"pose: {pose}")
                     for joint in pose:
-                        # print(f"joint: {joint}")
                         jx, jy = joint.positions.x, joint.positions.y
-                        # jx, jy = joint['xy']
                         joint_point = np.array((jx, jy))
-                        # print(f"joint_points: {joint_point.dtype}, object_point: {object_point.dtype}")
                         dist = np.linalg.norm(joint_point - object_point)
                         offset_vector.append(dist)
                 else:
@@ -233,7 +219,6 @@ def objects_to_feats(
                 
         joint_object_offset_all_frames[i] = joint_object_offset
     
-    # print(f"det_label_to_idx: {det_label_to_idx}")
     
     for i, frame_dets in enumerate(frame_object_detections):
         frame_dets: ObjectDetectionsLTRB
@@ -270,7 +255,6 @@ def objects_to_feats(
                 )
                 
                 offset_vector = []
-                # if hands_joints:
                     
                 if joint_left_hand_offset_all_frames[i] is not None:
                     offset_vector.extend(joint_left_hand_offset_all_frames[i])
@@ -290,11 +274,6 @@ def objects_to_feats(
                             offset_vector.extend(zero_offset)
                     else:
                         offset_vector.extend(zero_offset)
-                
-                # print(f"num of dets: {len(frame_dets.labels)}")
-                # print(f"feat length: {len(feat)}")
-                # print(f"offset_vector length: {len(offset_vector)}")
-                # print(f"offset_vector: {offset_vector}")
                 
                 feat.extend(offset_vector)
                 feat = np.array(feat, dtype=np.float64).ravel()

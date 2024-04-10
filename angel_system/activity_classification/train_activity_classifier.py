@@ -39,9 +39,7 @@ def data_loader(
         - ann_by_image: Image id to annotation dict
     """
     print("Loading data....")
-    # Description to ID map.
-    # print(f"act labels: {act_labels}")
-    # exit()
+    
     act_map = {}
     inv_act_map = {}
     for step in act_labels["labels"]:
@@ -316,7 +314,6 @@ def compute_feats(
                                 for joint in pose_keypoints:
                                     jx, jy = joint['xy']
                                     joint_point = np.array((jx, jy))
-                                    # print(f"joint_points: {joint_point.dtype}, object_point: {object_point.dtype}")
                                     dist = np.linalg.norm(joint_point - object_point)
                                     offset_vector.append(dist)
                             else:
@@ -363,9 +360,6 @@ def compute_feats(
                         offset_vector.extend(joint_object_offset[i])
                     else:
                         offset_vector.extend(zero_offset)
-
-            # print(f"feat length: {len(feature_vec)}")
-            # print(f"offset_vector length: {len(offset_vector)}")
             
             feature_vec.extend(offset_vector)
         
