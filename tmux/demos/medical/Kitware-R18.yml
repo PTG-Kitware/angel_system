@@ -50,10 +50,12 @@ windows:
     # - sensor_input: ros2 bag play ${ANGEL_WORKSPACE_DIR}/ros_bags/rosbag2_2024_04_02-19_57_59-R18_naked_mannequin_no_blue_tarp-timestamp_unconfident/rosbag2_2024_04_02-19_57_59_0.db3 
 
     - run_image_timestamp: ros2 run angel_system_nodes image_timestamp_relay --ros-args
+        -r __ns:=${ROS_NAMESPACE}
         -p image_topic:=image_0 
         -p output_topic:=image_0_ts
 
     - pose_estimation: ros2 run angel_system_nodes pose_estimator --ros-args 
+        -r __ns:=${ROS_NAMESPACE}
         -p image_topic:=image_0 
         -p det_topic:=pose_dets 
         -p pose_topic:=PatientPose 
@@ -63,13 +65,15 @@ windows:
         -p pose_config:=${ANGEL_WORKSPACE_DIR}/python-tpl/TCN_HPL/tcn_hpl/data/utils/pose_generation/configs/ViTPose_base_medic_casualty_256x192.py
         -p cuda_device_id:=0
 
-    - objects_hands_detection: ros2 run angel_system_nodes object_hand_detector --ros-args 
+    - objects_hands_detection: ros2 run angel_system_nodes object_hand_detector --ros-args
+        -r __ns:=${ROS_NAMESPACE} 
         -p image_topic:=image_0 
         -p det_topic:=ObjectDetections2d 
         -p net_checkpoint:=${ANGEL_WORKSPACE_DIR}/model_files/models/r18_det.pt
         -p hand_net_checkpoint:=${ANGEL_WORKSPACE_DIR}/model_files/models/hands_model.pt
 
-    - run_tcn: ros2 run angel_system_nodes activity_classifier_tcn --ros-args 
+    - run_tcn: ros2 run angel_system_nodes activity_classifier_tcn --ros-args
+        -r __ns:=${ROS_NAMESPACE}
         -p image_ts_topic:=image_0_ts 
         -p det_topic:=ObjectDetections2d 
         -p pose_topic:=PatientPose 
@@ -79,6 +83,7 @@ windows:
         -p act_topic:=activity_topic
 
     - task_monitor: ros2 run angel_system_nodes global_step_predictor --ros-args
+        -r __ns:=${ROS_NAMESPACE}
         -p config_file:=${CONFIG_DIR}/tasks/multi-task-config-medical-r18.yaml
         -p activity_config_file:=${CONFIG_DIR}/activity_labels/r18.yaml
         -p task_state_topic:=TaskUpdates
@@ -86,11 +91,11 @@ windows:
         -p system_command_topic:=SystemCommands
         -p det_topic:=activity_topic
         -p model_file:=${ANGEL_WORKSPACE_DIR}/model_files/coco/r18_test_activity_preds.mscoco.json
-        -p thresh_frame_count:=8
-        -p deactivate_thresh_frame_count:=20
-        -p threshold_multiplier_weak:=0.05
-        -p threshold_frame_count_weak:=8
-        -p step_mode:=broad
+        -p thresh_frame_count:=3
+        -p deactivate_thresh_frame_count:=10
+        -p threshold_multiplier_weak:=0.00
+        -p threshold_frame_count_weak:=3
+        -p step_mode:=granular
         -p query_task_graph_topic:=query_task_graph
 
 

@@ -278,6 +278,10 @@ def objects_to_feats(
                 feat.extend(offset_vector)
                 feat = np.array(feat, dtype=np.float64).ravel()
                 feat_memo[f_id] = feat
+                
+                print(f"feat: {feat}")
+                print(f"feat shape: {feat.shape}")
+                
             else:
                 feat = feat_memo[f_id]
             feature_ndim = feat.shape
