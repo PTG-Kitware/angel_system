@@ -3,17 +3,6 @@ from glob import glob
 ###############
 # GYGES
 ###############
-ptg_root = "/home/local/KHQ/peri.akiva/angel_system/"
-activity_config_path = f"{ptg_root}/config/activity_labels/medical"
-object_config_path = f"{ptg_root}/config/object_labels/medical"
-
-data_dir = "/data/PTG/medical/"
-activity_gt_dir = f"{data_dir}/activity_anns"
-objects_dir = f"{data_dir}/object_anns"
-ros_bags_dir = f"{data_dir}/ros_bags/"
-bbn_data_dir = f"/data/PTG/medical/bbn_data"
-
-KNOWN_BAD_VIDEOS = ["M2-15"]  # Videos without any usable data
 
 TASK_TO_NAME = {
     'm1': "M1_Trauma_Assessment",
@@ -33,9 +22,6 @@ LAB_TASK_TO_NAME = {
     'r18': "R18_Lab_Skills",
 }
 
-
-bbn_data_root = f"{bbn_data_dir}/Release_v0.5/v0.56"
-lab_bbn_data_root = f"{bbn_data_dir}/lab_data"
 
 def dictionary_contents(path: str, types: list, recursive: bool = False) -> list:
     """
@@ -97,25 +83,3 @@ class GrabData(object):
         else:
             raise NotImplementedError
 
-
-def grab_data(skill, machine="pro"):
-    if machine == "pro":
-        skill_data_root = f"{bbn_data_root}/{TASK_TO_NAME[skill]}/Data"
-        videos = os.listdir(skill_data_root)
-        
-        videos_paths = [f"{skill_data_root}/{video}" for video in videos]
-        
-        return videos_paths
-        
-    elif machine == 'lab':
-        skill_data_root = f"{lab_bbn_data_root}/{LAB_TASK_TO_NAME[skill]}/"
-        
-        videos_paths = dictionary_contents(skill_data_root, types=['*.mp4'])
-        # videos = os.listdir(skill_data_root)
-        
-        # videos_paths = [f"{skill_data_root}/{video}" for video in videos]
-        
-        return videos_paths
-        
-    else:
-        raise NotImplementedError
