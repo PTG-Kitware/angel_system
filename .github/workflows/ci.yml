@@ -50,7 +50,7 @@ jobs:
       # Setup python version and caching
       - uses: actions/setup-python@v4
         with:
-          python-version: '3.10.12'  # matching python version in container env.
+          python-version: '3.8.10'  # matching python version in container env.
           cache: 'poetry'
       # Install standard packages
       - run: |
@@ -78,7 +78,7 @@ jobs:
 #      # Setup python version and caching
 #      - uses: actions/setup-python@v4
 #        with:
-#          python-version: '3.10.12'  # matching python version in container env.
+#          python-version: '3.8.10'  # matching python version in container env.
 #          cache: 'poetry'
 #      # Install standard packages
 #      - run: |
@@ -102,7 +102,7 @@ jobs:
       # Setup python version and caching
       - uses: actions/setup-python@v4
         with:
-          python-version: '3.10.12'  # matching python version in container env.
+          python-version: '3.8.10'  # matching python version in container env.
           cache: 'poetry'
       # Install standard packages
       - run: |

@@ -20,7 +20,7 @@ root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 on_project_start: |
   export ROS_NAMESPACE=${ROS_NAMESPACE:-/kitware}
   export HL2SS_API_URL=${HL2SS_API_URL:-128.33.193.178:8000}
-  export BBN_OUTPUT_URL=${BBN_OUTPUT_URL:-tcp://128.33.193.178:5557}
+  export BBN_OUTPUT_URL=${BBN_OUTPUT_URL:-tcp://128.33.193.178:6669}
   export CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/config
   export NODE_CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/src/angel_system_nodes/configs
   export MODEL_DIR=${ANGEL_WORKSPACE_DIR}/model_files
@@ -47,7 +47,7 @@ windows:
   # Connection with the HL2 app via HL2SS sensor data streaming and the
   # ROS-TCP-Endpoint
   # - sensor_input: ros2 run angel_system_nodes generate_images
-  - sensor_input: ros2 bag play ${ANGEL_WORKSPACE_DIR}/ros_bags/rosbag2_2024_04_02-20_01_26-M3_naked_mannequin_no_blue_tarp/rosbag2_2024_04_02-20_01_26_0.db3 
+  - sensor_input: echo ros2 bag play ${ANGEL_WORKSPACE_DIR}/ros_bags/rosbag2_2024_04_02-20_01_26-M3_naked_mannequin_no_blue_tarp/rosbag2_2024_04_02-20_01_26_0.db3
 
   - run_image_timestamp: ros2 run angel_system_nodes image_timestamp_relay --ros-args
       -r __ns:=${ROS_NAMESPACE}

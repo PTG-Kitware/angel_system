@@ -44,9 +44,12 @@ on_project_start: |
 tmux_options: -f <%= ENV["ANGEL_WORKSPACE_DIR"] %>/tmux/tmux.conf
 
 windows:
-
-    # Read sensor input from bag file.
-    - sensor_input: echo ros2 bag play ${ANGEL_WORKSPACE_DIR}/ros_bags/rosbag2_2024_04_10-18_57_36-R18_Chris_live/
+    # Connection with the HL2 app via HL2SS/REDIS sensor data streaming.
+    - sensor_input: ros2 run angel_system_nodes redis_ros_bridge --ros-args
+        -r __ns:=${ROS_NAMESPACE}
+        -p url:=${HL2SS_API_URL}
+        -p image_topic:=image_0
+        -p hand_pose_topic:=HandJointPoseData
 
     - run_image_timestamp: ros2 run angel_system_nodes image_timestamp_relay --ros-args
         -r __ns:=${ROS_NAMESPACE}
@@ -78,7 +81,7 @@ windows:
         -p topic_output_images:=pv_image_detections_2d
         -p filter_top_k:=5
 
-    - run_tcn: ros2 run angel_system_nodes activity_classifier_tcn --ros-args
+    - run_tcn: ros2 run angel_system_nodes activity_classifier_tcn --ros-args 
         -r __ns:=${ROS_NAMESPACE}
         -p image_ts_topic:=image_0_ts 
         -p det_topic:=ObjectDetections2d 
