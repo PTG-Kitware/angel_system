@@ -4,6 +4,8 @@ from glob import glob
 # GYGES
 ###############
 
+KNOWN_BAD_VIDEOS = ["M2-15"]  # Videos without any usable data
+
 TASK_TO_NAME = {
     'm1': "M1_Trauma_Assessment",
     'm2': "M2_Tourniquet",
