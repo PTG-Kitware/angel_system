@@ -75,7 +75,7 @@ class GrabData(object):
         elif data_type == 'lab':
             skill_data_root = f"{self.lab_bbn_data_root}/{LAB_TASK_TO_NAME[skill]}/"
             
-            videos_paths = dictionary_contents(self.skill_data_root, types=['*.mp4'])
+            videos_paths = dictionary_contents(skill_data_root, types=['*.mp4'])
             
             return videos_paths
         
