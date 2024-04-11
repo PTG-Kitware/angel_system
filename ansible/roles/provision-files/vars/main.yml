@@ -10,6 +10,7 @@ stage_dirs:
   object_detector: "{{ model_files }}/object_detector"
   activity_classifier: "{{ model_files }}/activity_classifier"
   task_monitor: "{{ model_files }}/task_monitor"
+  pose_estimation: "{{ model_files }}/pose_estimation"
 
 basic_downloads:
   # Example
@@ -27,6 +28,7 @@ girder_file_downloads:
     #  sha512: "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
     #  dest: "{{ stage_dirs.build_itt_base }}/some_file.txt"
 
+    # ======== COOKING ========
     # YOLO v7 Combined Objects weights -- additional objects + background
     - file_id: 6543f33068ef53152cbab69e
       sha512: a0e4dd249c07fcf3977dc0a5e715a1786637957bff94d348fdf7285b8b22e3f32e6c1fd135859e5443c7c45be30cd20ebaa6bc6e12ebe06e97592f76520e6b1e
@@ -45,12 +47,92 @@ girder_file_downloads:
       sha512: 85bd2c6414cb582eba6e969726a7dc289644fb06e8b112e1fd1833351671ad701e0bdac1339c7429e4963f0058affa26fce7d7dd742bba854ad0e015085f576b
       dest: "{{ stage_dirs.activity_classifier }}/yolo_all_recipes_additional_objs_bkgd_act_mapping.txt"
 
-     # Global Step predictor model -- v2.0_sample_rate_2
+    # Global Step predictor model -- v2.0_sample_rate_2
     - file_id: 6543ca0a68ef53152cbab68d
       sha512: e9cc7c7e385700acfa1e2273b18346e6c85db8e9e49fc4ccea7686f3ac1e663086209b9268bc65e8f993f37a3436cb39e6a4da0ccc06cab0e8cdc795200eaaf1
       dest: "{{ stage_dirs.task_monitor }}/global_step_predictor_act_avgs_all_classes_v2.0_sample_rate_2.npy"
 
+    # ======== MEDICAL ========
+    # Pose estimation
+    - file_id: 6605cad48b763ca20ae99f7a
+      sha512: 50def808463afbeac8c2cb28dfb92ec0b45eb57672dc771d443ce89b2f94a938411328b79fdb25e33977db370922b2d3126c31d028f0caeb923209e2a4028c65
+      dest: "{{ stage_dirs.pose_estimation }}/pose_det_model.pth"
+    - file_id: 6605cc438b763ca20ae99f7d
+      sha512: 7ded5cb71ef0efe2444a19c7452073c63a34d65e3038b24236b304836abd47e8911e3d3023d2ba7e5a8d8c1e337e6f4b8e3080709827eb2b0daaedb0b6248561
+      dest: "{{ stage_dirs.pose_estimation }}/pose_model.pth"
+    # Hand detector
+    - file_id: 6605ca2e8b763ca20ae99f77
+      sha512: 42b56f34c0c443ad00d71e66334d6e852a7811011b22a60da9b5e2721565c21d1b5daad17c8a708908c9658ded81a663729090526feb5286bd0a591cf4fb5d8f
+      dest: "{{ stage_dirs.object_detector }}/hands_model.pt"
+    
+    # ---- M2 ----
+    # Object detector
+    - file_id: 6617e7ce2357cf6b55ca8dd6
+      sha512: e6b382f5ba3d4d7f17d29caa3f6ea06dd5db24fee3bf59b12ff748d58b1b064c374741c805ee7c07a2a6950761a38e5398f3707ed3e83d7d53218972c57d12a2
+      dest: "{{ stage_dirs.object_detector }}/m2_det.pt"
+    # Activity classifier
+    - file_id: 6605d2c58b763ca20ae99f80
+      sha512: 5c463bba54dc689c57a3688fffc51b63c520c4fb74dfe7f2d527c6d2bfd42e2055747cb09ceeb21edcda4e695cbae0b10d1421a8453cf811d735c2496300bd2f
+      dest: "{{ stage_dirs.activity_classifier }}/m2_tcn.ckpt"
+    - file_id: 660ebb0aaa5c8de3874c43bd
+      sha512: fe4697156ca48739d635b46eeb367122dbadf88f270d1a4f9566f0de6a1bc314566bcbe858e85a6926316a612dc29cba0f917b20b58380ac26a50c008c471a7f
+      dest: "{{ stage_dirs.activity_classifier }}/m2_mapping.txt"
+    # Global Step predictor model
+    - file_id: 660ebb1aaa5c8de3874c43c0
+      sha512: 6b04eaa2b68ba8de8d879364302b6b256487b5d0ffca87ae5e52423abc2ce855a258b8dcb5d1bc46aa0b7f8b09e8ff0d29fb50a2e7f929da373196538b7dce31
+      dest: "{{ stage_dirs.task_monitor }}/m2_test_activity_preds.mscoco.json"
 
+    # ---- M3 ----
+    # Object detector
+    - file_id: 6605e0248b763ca20ae99f8f
+      sha512: b87dbb141e5446e9edce9e9e3691523b8a8a8695bd5eb420e1227e0f1b281303ceed2850d4df9b81a098e38d0f2fd452828b236eebe6dbd511134cffe38ef0aa
+      dest: "{{ stage_dirs.object_detector }}/m3_det.pt"
+    # Activity classifier
+    - file_id: 660eb920aa5c8de3874c43b4
+      sha512: bc42099d0c18a225ba387afec2bb12fb01b61b8f51e0cce053e0f1a026a6d0086fbac116c9c46e0c919da517c7b88fd92fa99facbd2df3d491d05eaa5cb1dfe9
+      dest: "{{ stage_dirs.activity_classifier }}/m3_tcn.ckpt"
+    - file_id: 660ebb09aa5c8de3874c43ba
+      sha512: 828d836ebd71c5a97603a28a42803b68536a2324a9637ed0441afab3096eb6810071d769cf9d9b472f265d44273ccbfd5110a2d702668ca9e3dfd511f23ab6bb
+      dest: "{{ stage_dirs.activity_classifier }}/m3_mapping.txt"
+    # Global Step predictor model
+    - file_id: 660ebb1baa5c8de3874c43c3
+      sha512: fae5d696d6b1a03daa52a8094b8be8f6cc675cd3487270dbfee212551813869af22eedbcc1dc89bd62bbebdfa411819a8584083e198c3d6ab0b35f266a524054
+      dest: "{{ stage_dirs.task_monitor }}/m3_test_activity_preds.mscoco.json"
+    
+    # ---- M5 ----
+    # Object detector
+    - file_id: 6605e0808b763ca20ae99f92
+      sha512: da5ff992609762cb09579c5c2c263dc229d01e8a23737f73de9040cf1fe07776e0c19a65aa416dd6fcdeccb556899a9b50f8365fe419e9c80645487d05ca5b4e
+      dest: "{{ stage_dirs.object_detector }}/m5_det.pt"
+    # Activity classifier
+    - file_id: 6605d9318b763ca20ae99f89
+      sha512: 73c2e81d6e071b780dcee5365fbb2fa2001d8f8543f2b6b9503b7d11674cf311251137a4f6519b107528cbbd1d209b067c7676c123726667d0e6558615c2a9b0
+      dest: "{{ stage_dirs.activity_classifier }}/m5_tcn.ckpt"
+    - file_id: 660ebb09aa5c8de3874c43b7
+      sha512: 21ee374c5733dd255544113f6a80fc0224388bf5a54964c8b45c0b2acf35fc13d60d2cc65a57c246a7df0045f92246f7b56edf69e83ec695a024804b4fef857f
+      dest: "{{ stage_dirs.activity_classifier }}/m5_mapping.txt"
+    # Global Step predictor model
+    - file_id: 660ebb1caa5c8de3874c43c6
+      sha512: 8e2f77310455460b9e0769d78469d752fca2313a31ed498ddd4eeb4b6b501cbee6f069e4f3c9921f6db2e77f07a2e2ad47714afb80617d08df775bcdcbd15168
+      dest: "{{ stage_dirs.task_monitor }}/m5_test_activity_preds.mscoco.json"
+    
+    # ---- R18 ----
+    # Object detector
+    - file_id: 6605e0958b763ca20ae99f95
+      sha512: 7183385f8eaca85997725a107a76034de2bd4a59c1434b4bdb7c1ac8931cf4b68a53f6e736734643386364b9f0856de795a14965b6a02bc5eb5891252e6a73c9
+      dest: "{{ stage_dirs.object_detector }}/r18_det.pt"
+    # Activity classifier
+    - file_id: 6605dfc78b763ca20ae99f8c
+      sha512: 0091b751e046f7816061ab11e99ffc709dd5506453e711407a7a5925d168f29ce9fd2a3d97eeeb6f08008aa62d76c7a99279024d27ce42cbd9544a590c528960
+      dest: "{{ stage_dirs.activity_classifier }}/r18_tcn.ckpt"
+    - file_id: 6606b6e9aa5c8de3874c3f4a
+      sha512: 3c84333390ee6b12327bb7e5debed37149c7f95cc437b16939f77b599d1a0b3b8c4f0995820b95973170b94df695494000a1c45fbf46632267c212e125fe58a3
+      dest: "{{ stage_dirs.activity_classifier }}/r18_mapping.txt"
+    # Global Step predictor model
+    - file_id: 660ebb1caa5c8de3874c43c9
+      sha512: 20c168a220626aaa07192c234366cbc4e998314430632e18b7ea7eb4b1bff491bcd22f131a67ba7713ade9efb49d43ce37010fdc398890deaff13c6022373667
+      dest: "{{ stage_dirs.task_monitor }}/r18_test_activity_preds.mscoco.json"
+    
 # List of git repositories to check out at a specific ref and then archive.
 # Destination files will be written as GZipped TAR files, so please suffix
 # appropriately.

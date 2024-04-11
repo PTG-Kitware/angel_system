@@ -19,8 +19,6 @@ def run_inference_all_vids(
     avg_probs = None
     preds, gt = [], []
     for vid_id in all_vid_ids:
-        if vid_id == 18:
-            continue
         print(f"vid_id {vid_id}===========================")
 
         step_predictor = GlobalStepPredictor(
@@ -30,8 +28,6 @@ def run_inference_all_vids(
             # threshold_multiplier=0.3,
             # threshold_frame_count=2
         )
-        # Add a second coffee predictor
-        # step_predictor.initialize_new_recipe_tracker("coffee")
 
         if avg_probs is not None:
             step_predictor.get_average_TP_activations_from_array(avg_probs)
@@ -150,9 +146,8 @@ if __name__ == "__main__":
         "/home/local/KHQ/peri.akiva/projects/angel_system/model_files/coco/r18_test_activity_preds.mscoco.json"
     )
 
-    recipe_config = {"r18": "/home/local/KHQ/peri.akiva/projects/angel_system/config/tasks/r18.yaml"}
+    recipe_config = {"r18": "config/tasks/medical/r18.yaml"}
 
     run_inference_all_vids(
         coco_train, coco_test, recipe_config, extra_output_suffix="test_set"
     )
-    # run_inference_all_vids(coco_val, recipe_config, extra_output_suffix="val_set")

@@ -8,10 +8,6 @@ from rclpy.callback_groups import MutuallyExclusiveCallbackGroup, ReentrantCallb
 from rclpy.node import Node, ParameterDescriptor, Parameter
 from sensor_msgs.msg import Image
 
-# from yolov7.detect_ptg import load_model, predict_image, predict_hands
-# from yolov7.models.experimental import attempt_load
-# import yolov7.models.yolo
-# from yolov7.utils.torch_utils import TracedModel
 import cv2
 from angel_system.utils.event import WaitAndClearEvent
 from angel_system.utils.simple_timer import SimpleTimer
@@ -21,14 +17,11 @@ from angel_utils import declare_and_get_parameters, RateTracker#, DYNAMIC_TYPE
 from angel_utils import make_default_main
 from geometry_msgs.msg import Point, Pose, Quaternion
 
-# from tcn_hpl.data.utils.pose_generation.generate_pose_data import predict_single
 from tcn_hpl.data.utils.pose_generation.rt_pose_generation import predict_single
 from mmpose.apis import init_pose_model
 
 from detectron2.config import get_cfg
-# from detectron2.data.detection_utils import read_image
 from tcn_hpl.data.utils.pose_generation.predictor import VisualizationDemo
-# import argparse
 
 
 BRIDGE = CvBridge()
@@ -41,7 +34,6 @@ def setup_detectron_cfg(config_file, model_checkpoint):
     # from detectron2.projects.panoptic_deeplab import add_panoptic_deeplab_config  # noqa
     # add_panoptic_deeplab_config(cfg)
     cfg.merge_from_file(config_file)
-    # cfg.merge_from_list(args.opts)
     # Set score_threshold for builtin models
     cfg.MODEL.RETINANET.SCORE_THRESH_TEST = 0.8
     cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.8
@@ -121,7 +113,6 @@ class PoseEstimator(Node):
         
         print("loading detectron model")
         # Detectron Model
-        # self.args = get_parser(self.det_config).parse_args()
         print(f"model_checkpoint: {self.det_model_ckpt_fp}")
         detecron_cfg = setup_detectron_cfg(self.det_config, model_checkpoint=self.det_model_ckpt_fp)
         
@@ -167,15 +158,6 @@ class PoseEstimator(Node):
             1,
             callback_group=MutuallyExclusiveCallbackGroup(),
         )
-
-        # if not self._no_trace:
-        #     self.model = TracedModel(self.model, self.device, self._inference_img_size)
-
-        # self.half = half = (
-        #     self.device.type != "cpu"
-        # )  # half precision only supported on CUDA
-        # if half:
-        #     self.model.half()  # to FP16
 
         self._rate_tracker = RateTracker()
         log.info("Detector initialized")
@@ -244,37 +226,24 @@ class PoseEstimator(Node):
                 
                 if self._ensure_image_resize:
                     img0 = cv2.resize(img0, dsize=(1280, 720), interpolation=cv2.INTER_CUBIC)
-                # print()
                 
                 # print(f"img0: {img0.shape}")
                 # height, width, chans = img0.shape
 
-                # patient_det_msg = ObjectDetection2dSet()
-                # patient_det_msg.header.stamp = self.get_clock().now().to_msg()
-                # patient_det_msg.header.frame_id = image.header.frame_id
-                # patient_det_msg.source_stamp = image.header.stamp
-                # patient_det_msg.label_vec[:] = self.model.names
-                
                 all_poses_msg = HandJointPosesUpdate()
                 all_poses_msg.header.stamp = self.get_clock().now().to_msg()
                 all_poses_msg.header.frame_id = image.header.frame_id
                 all_poses_msg.source_stamp = image.header.stamp
                 all_poses_msg.hand = "patient"
-                # pose_msg.label_vec[:] = self.model.names
 
                 boxes, labels, keypoints = predict_single(det_model=self.det_model,
                                                           pose_model=self.pose_model,
                                                           image=img0)
                 
-                # print(f"len(boxes): {len(boxes)}, len(keypoints): {len(keypoints)}")
-                
-                    # joints_msg_list = []
-                
                 # at most, we have 1 set of keypoints for 1 patient
                 keypoints = keypoints[:1]
                 for keypoints_ in keypoints:
                     for label, keypoint in zip(self.keypoints_cats, keypoints_):
-                        # print(f"labe: {label}, keypoint: {keypoint}")
                         position = Point()
                         position.x = float(keypoint[0])
                         position.y = float(keypoint[1])
@@ -297,30 +266,9 @@ class PoseEstimator(Node):
                         joint_msg.joint = label
                         joint_msg.pose = pose_msg
                         all_poses_msg.joints.append(joint_msg)
-                        # joints_msg_list.append(pose_msg)
-                            
-                        # print(f"keypoints: {keypoints_}")
-                        # pose_msg.conf_vec = keypoints_
+
                     self.patient_pose_publisher.publish(all_poses_msg)
                 
-                # n_dets = 0
-                # for xyxy, labels in zip(boxes, labels):
-                #     n_dets += 1
-                #     patient_det_msg.left.append(xyxy[0])
-                #     patient_det_msg.top.append(xyxy[1])
-                #     patient_det_msg.right.append(xyxy[2])
-                #     patient_det_msg.bottom.append(xyxy[3])
-
-                #     # dflt_conf_vec[cls_id] = conf
-                #     # copies data into array
-                #     patient_det_msg.label_confidences.append(1.0)
-                #     # reset before next passthrough
-                #     # dflt_conf_vec[cls_id] = 0.0
-
-                # patient_det_msg.num_detections = n_dets
-
-                # self.patient_det_publisher.publish(patient_det_msg)
-
                 self._rate_tracker.tick()
                 log.info(
                     f"Pose Estimation Rate: {self._rate_tracker.get_rate_avg()} Hz, Poses: {len(keypoints)}, pose message: {all_poses_msg}",
@@ -348,5 +296,5 @@ main = make_default_main(PoseEstimator, multithreaded_executor=3)
 if __name__ == "__main__":
     print("executing main")
     # node = PoseEstimator()
-    print(f"before main: {node}")
+    # print(f"before main: {node}")
     main()

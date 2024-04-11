@@ -52,7 +52,6 @@ def random_image(height=720, width=1280, channels=3, images_root="/angel_workspa
     print(image.max())
 
     return image
-    # return np.random.randint(0, 255, (height, width, channels), np.uint8)
 
 
 bridge = CvBridge()
@@ -91,7 +90,6 @@ class GenerateImages(Node):
 
         self.pub_generated_image = self.create_publisher(
             Image,
-            # CompressedImage,
             self._output_topic_name,
             10,  # TODO: Learn QoS meanings
         )
@@ -108,10 +106,8 @@ class GenerateImages(Node):
         img_msg = bridge.cv2_to_imgmsg(new_img, encoding="rgb8")
         img_msg.header.stamp = self.get_clock().now().to_msg()
         log.info(f"img_msg.header.stamp: {img_msg.header.stamp}")
-        # img_msg = bridge.cv2_to_compressed_imgmsg(new_img, dst_format='jpg')
         self.pub_generated_image.publish(img_msg)
         time_since_last_pub = time.time()
-        # self._last_pub_time = 
 
         # Manage publish rate measurement
         window_size = self._fps_window
@@ -144,14 +140,10 @@ def main(args=None):
     rclpy.init(args=args)
     log = rclpy.logging.get_logger("main")
 
-    # gen_images = GenerateImages()
-    # rclpy.spin(gen_images)
-    # gen_images.destroy_node()
-
     num_nodes = 4
 
     executor = rclpy.executors.SingleThreadedExecutor()
-    # executor = rclpy.executors.MultiThreadedExecutor()
+    
     node_list = []
     for i in range(num_nodes):
         node = GenerateImages(

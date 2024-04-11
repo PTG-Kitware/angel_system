@@ -172,11 +172,6 @@ AngelDataHub
   declare_parameter( PARAM_TOPIC_INPUT_DET_3D );
   declare_parameter( PARAM_TOPIC_OUTPUT_HEADSET_POSE );
   declare_parameter( PARAM_TOPIC_INPUT_TASK_UPDATE );
-  // ROS2 Iron version
-  //declare_parameter< std::string >( PARAM_TCP_SERVER_ADDR );
-  //declare_parameter< std::string >( PARAM_TOPIC_INPUT_DET_3D );
-  //declare_parameter< std::string >( PARAM_TOPIC_OUTPUT_HEADSET_POSE );
-  //declare_parameter< std::string >( PARAM_TOPIC_INPUT_TASK_UPDATE );
 
   tcp_server_uri =
     this->get_parameter( PARAM_TCP_SERVER_ADDR ).as_string();

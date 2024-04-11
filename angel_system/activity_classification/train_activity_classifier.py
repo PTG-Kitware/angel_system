@@ -64,8 +64,6 @@ def data_loader(
     for img_id in dset.imgs:
         im = dset.imgs[img_id]
         
-        # print(f"image: {im}")
-        
         gid = im["id"]
         image_id_to_dataset[gid] = os.path.split(im["file_name"])[0]
 
@@ -98,8 +96,6 @@ def data_loader(
             ann = dset.anns[ann_id]
             ann_by_image[gid].append(ann)
     
-    # print(f"ann by image: 17069: {ann_by_image[17069]}")
-
     return (
         act_map,
         inv_act_map,
@@ -144,8 +140,6 @@ def compute_feats(
 
     hands_possible_labels = ['hand (right)', 'hand (left)', 'hand', 'hands']
     non_objects_labels = ['patient', 'user']
-    # hands_inds = [label_to_ind[label] for label in hands_possible_labels if label in label_to_ind.keys()]
-    # non_object_inds = [label_to_ind[label] for label in non_objects_labels if label in label_to_ind.keys()]
     hands_inds = [key for key, label in act_id_to_str.items() if label in hands_possible_labels]
     non_object_inds = [key for key, label in act_id_to_str.items() if label in non_objects_labels]
     object_inds = list(set(list(label_to_ind.values())) - set(hands_inds) - set(non_object_inds))
@@ -180,12 +174,10 @@ def compute_feats(
                 
                 if aug_trans_range != None and aug_rot_range != None:
                     
-                    # print(f"performing augmentation")
+                    print(f"performing augmentation")
                     random_translation_x = np.random.uniform(aug_trans_range[0], aug_trans_range[1])
                     random_translation_y = np.random.uniform(aug_trans_range[0], aug_trans_range[1])
                     random_rotation = np.random.uniform(aug_rot_range[0], aug_rot_range[1])
-                    
-                    # print(f"random_translation_x: {random_translation_x}, random_translation_y: {random_translation_y}")
                     
                     object_center_x, object_center_y = x + w//2, y + h//2
                     
@@ -193,31 +185,19 @@ def compute_feats(
                                                 [np.sin(random_rotation), np.cos(random_rotation), random_translation_y],
                                                 [0, 0, 1]])
                     
-                    # print(f"before xy: {x}, {y}")
-                    
-                    # x += random_translation_x
-                    # y += random_translation_y
-                    
                     xy = np.array([x, y, 1])
                     xy_center = np.array([object_center_x, object_center_y, 1])
                     
                     rot_xy = (xy-xy_center) @ rotation_matrix.T + xy_center
-                    
-                    # print(f"rot_xy: {rot_xy}")
-                    # rot_xy = np.linalg.
-                    
+                      
                     x = rot_xy[0]
                     y = rot_xy[1]
                     
-                    # print(f"after xy: {x}, {y}")
-                
                 xs.append(x)
                 ys.append(y)
                 ws.append(w)
                 hs.append(h)
                 label_confidences.append(ann["confidence"])
-                
-                # print(f"ann: {ann}")
                 
                 if ann["category_id"] in hands_inds:
                     num_hands += 1
@@ -320,7 +300,6 @@ def compute_feats(
                                 offset_vector = zero_offset
                                 
                             joint_object_offset.append(offset_vector)
-                        # object_offset_wrt = ann_id
 
         feature_vec = obj_det2d_set_to_feature(
             label_vec,

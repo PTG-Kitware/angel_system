@@ -156,7 +156,6 @@ class ActivityClassifierTCN(Node):
         with open(param_values[PARAM_MODEL_OD_MAPPING]) as infile:
             det_label_list = json.load(infile)
         self._det_label_to_id = {c: i for i, c in enumerate(det_label_list)}
-        # self._det_label_to_id = {c: int(i) for i, c in det_label_list.items()}
         print(self._det_label_to_id)
         # Feature version aligned with model current architecture
         self._feat_version = param_values[PARAM_MODEL_DETS_CONV_VERSION]
@@ -701,8 +700,6 @@ class ActivityClassifierTCN(Node):
 
         # print(f"frame_object_detections: {frame_object_detections}")
 
-        # with SimpleTimer("[_process_window] Detections embedding", log.info):
-        #     try:
         feats, mask = objects_to_feats(
             frame_object_detections=frame_object_detections,
             frame_patient_poses=frame_patient_poses,
@@ -718,9 +715,7 @@ class ActivityClassifierTCN(Node):
 
         feats = feats.to(self._model_device)
         mask = mask.to(self._model_device)
-        # feats = feats.unsqueeze(0)
-        # mask = mask.unsqueeze(0)
-        # log.info(f"feats shape: {feats.shape}")
+        
         with SimpleTimer("[_process_window] Model processing", log.info):
             proba = predict(self._model, feats, mask).cpu()
         
