@@ -5,6 +5,7 @@
 - [Docker installation](#dockerinstallation)
 - [Data and pretrained models](#data)
 - [Training](#training)
+- [Training on lab data](#lab_data)
 - [Docker local testing with pre-recorded data](#local)
 - [Real-time](#realtime)
 
@@ -85,6 +86,9 @@ First we train the detection model on annotated data. This would be the same dat
 cd yolo7
 python yolov7/train.py --workers 8 --device 0 --batch-size 4 --data configs/data/PTG/medical/r18_task_objects.yaml --img 768 768 --cfg configs/model/training/PTG/medical/yolov7_r18.yaml --weights weights/yolov7.pt --project /data/PTG/medical/training/yolo_object_detector/train/ --name r18_all_v1_example
 ```
+
+###### Note on training on lab data <a name = "lab_data"></a>:
+since we do not have detection GT for lab data, this is our start point for training the TCN on the lab data
 
 Next, we generate detection predictions in kwcoco file using the following script. Note that this 
 ```
