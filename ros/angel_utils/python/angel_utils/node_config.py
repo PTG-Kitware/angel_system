@@ -74,9 +74,7 @@ def make_default_main(
 
         # Construct the node instance
         node = node_type(*node_args, **(node_kwargs or {}))
-        # node = node_type
         
-
         # Execute pre-spin callback, if provided
         if pre_spin_callback is not None:
             pre_spin_callback(node)
@@ -106,12 +104,6 @@ def make_default_main(
             rclpy.try_shutdown()
 
     return closure
-
-
-# ROS2 Iron concept.
-# # Convenience instance of a ParameterDescriptor with the dynamic_typing field
-# # set to True.
-# DYNAMIC_TYPE = rclpy.node.ParameterDescriptor(dynamic_typing=True)
 
 
 def declare_and_get_parameters(
@@ -197,14 +189,6 @@ def declare_and_get_parameters(
     parameters = node.declare_parameters(
         namespace=namespace,
         parameters=name_default_tuples,
-        # ROS2 Iron support
-        # # Declaring a parameter only providing its name is deprecated. This
-        # # seems to do with static-typing parameters by default and not having a
-        # # default value to deduce that typing from. If nothing is given, we
-        # # declare dynamic typing in a description object.
-        # parameters=(
-        #     t if len(t) > 1 else (t[0], None, DYNAMIC_TYPE) for t in name_default_tuples
-        # ),
     )
     # Check for not-set parameters
     params_not_set = []

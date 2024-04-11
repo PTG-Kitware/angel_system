@@ -59,9 +59,6 @@ public:
   {
     this->declare_parameter( "topic_update_msg" );
     this->declare_parameter( "server_address" );
-    // ROS2 Iron version
-    //this->declare_parameter< std::string >( "topic_update_msg" );
-    //this->declare_parameter< std::string >( "server_address" );
 
     // Separating parameter declaration and getting so the error messages are
     // more (read: at all) informative.

@@ -7,7 +7,6 @@
 
 // ROS2 things
 #include <cv_bridge/cv_bridge.h>
-//#include <cv_bridge/cv_bridge.hpp>
 #include <rcl_interfaces/msg/parameter_descriptor.hpp>
 #include <rcl_interfaces/msg/parameter_type.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -99,11 +98,6 @@ ImageConverter
   declare_parameter( PARAM_TOPIC_OUTPUT_IMAGE );
   declare_parameter( PARAM_DROP_Nth_FRAME );
   declare_parameter( PARAM_CONVERT_NV12_TO_RGB );
-  // ROS2 Iron version
-  //declare_parameter<std::string>( PARAM_TOPIC_INPUT_IMAGES );
-  //declare_parameter<std::string>( PARAM_TOPIC_OUTPUT_IMAGE );
-  //declare_parameter<int>( PARAM_DROP_Nth_FRAME, 1 );
-  //declare_parameter<bool>( PARAM_CONVERT_NV12_TO_RGB );
 
   auto topic_input_images =
     this->get_parameter( PARAM_TOPIC_INPUT_IMAGES ).as_string();
@@ -199,8 +193,7 @@ ImageConverter
         << "Receive --> Publish Latency: " << delta_receive_publish << std::endl
         << "Capture --> Publish Latency: " << delta_image_publish << std::endl
         << "Image ID: " << m_image_id << std::endl;
-      // Foxy version?
-      //RCLCPP_INFO( log, ss.str() );
+
       RCLCPP_INFO_STREAM( log, ss.str() );
     }
   }

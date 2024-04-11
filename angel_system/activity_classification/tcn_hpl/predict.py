@@ -10,7 +10,6 @@ from typing import Sequence
 from typing import Tuple
 
 import kwcoco
-# import lightning.fabric.utilities.seed
 import numpy as np
 import numpy.typing as npt
 import torch
@@ -50,7 +49,7 @@ def load_module(checkpoint_file, label_mapping_file, torch_device) -> PTGLitModu
 
     # print(f"CLASSES IN MODEL: {model.classes}")
     # print(f"class_ids IN MODEL: {model.class_ids}")
-    # exit()
+
     return model
 
 
@@ -149,9 +148,6 @@ def objects_to_feats(
         detections (shape=[window_size, n_feats]), and an appropriate mask
         vector for use with activity classification (shape=[window_size]).
     """
-    # if all([d is None for d in frame_object_detections]):
-    #     raise ValueError("No frames with detections in input.")
-
     feat_memo = {} if feature_memo is None else feature_memo
 
     window_size = len(frame_object_detections)
@@ -250,8 +246,6 @@ def objects_to_feats(
                         version=feat_version,
                         top_n_objects=top_n_objects
                     )
-                    # .ravel()
-                    # .astype(np.float32)
                 )
                 
                 offset_vector = []

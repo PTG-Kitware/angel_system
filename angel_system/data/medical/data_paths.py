@@ -1,8 +1,5 @@
 import os
 from glob import glob
-###############
-# GYGES
-###############
 
 KNOWN_BAD_VIDEOS = ["M2-15"]  # Videos without any usable data
 
