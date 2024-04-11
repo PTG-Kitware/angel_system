@@ -13,5 +13,5 @@ tasks:
   #   (i.e. relative to $(ANGEL_WORKSPACE)).
   - id: 0
     label: "r18"
-    config_file: "./config/tasks/r18.yaml"
+    config_file: "./config/tasks/medical/r18.yaml"
     active: true

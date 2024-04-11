@@ -13,5 +13,5 @@ tasks:
   #   (i.e. relative to $(ANGEL_WORKSPACE)).
   - id: 0
     label: "m2"
-    config_file: "./config/tasks/m2.yaml"
+    config_file: "./config/tasks/medical/m2.yaml"
     active: true
