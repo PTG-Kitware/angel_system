@@ -88,10 +88,10 @@ if __name__ == "__main__":
     )
 
     config = {
-        "m2": "/home/local/KHQ/peri.akiva/projects/angel_system/config/tasks/m2.yaml",
-        "m3": "/home/local/KHQ/peri.akiva/projects/angel_system/config/tasks/m3.yaml",
-        "m5": "/home/local/KHQ/peri.akiva/projects/angel_system/config/tasks/m5.yaml",
-        "r18": "/home/local/KHQ/peri.akiva/projects/angel_system/config/tasks/r18.yaml",
+        "m2": "config/medical/tasks/m2.yaml",
+        "m3": "config/medical/tasks/m3.yaml",
+        "m5": "config/medical/tasks/m5.yaml",
+        "r18": "config/medical/tasks/r18.yaml",
     }
 
     run_inference_all_vids(coco_test, config, extra_output_suffix="test_set")

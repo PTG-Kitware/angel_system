@@ -93,8 +93,8 @@ windows:
         panes:
           - gsp: ros2 run angel_system_nodes global_step_predictor --ros-args
               -r __ns:=${ROS_NAMESPACE}
-              -p config_file:=${CONFIG_DIR}/tasks/multi-task-config-medical-r18.yaml
-              -p activity_config_file:=${CONFIG_DIR}/activity_labels/r18.yaml
+              -p config_file:=${CONFIG_DIR}/tasks/medical/multi-task-config-medical-r18.yaml
+              -p activity_config_file:=${CONFIG_DIR}/activity_labels/medical/r18.yaml
               -p task_state_topic:=TaskUpdates
               -p task_error_topic:=TaskErrors
               -p system_command_topic:=SystemCommands
@@ -128,7 +128,7 @@ windows:
                 -p task_update_topic:=TaskUpdates
                 -p bbn_update_topic:=BBNUpdates
                 -p task_graph_srv_topic:=query_task_graph
-                -p config:=${CONFIG_DIR}/bbn_integration/m2_tourniquet.yml
+                -p config:=${CONFIG_DIR}/bbn_integration/m2.yml
             - echo: sleep 0.5 && ros2 topic echo "${ROS_NAMESPACE}/BBNUpdates"
             - zmq-publisher: ros2 run bbn_integration ZmqIntegrationClient --ros-args
                 -r __ns:=${ROS_NAMESPACE}

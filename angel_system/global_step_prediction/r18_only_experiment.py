@@ -146,7 +146,7 @@ if __name__ == "__main__":
         "/home/local/KHQ/peri.akiva/projects/angel_system/model_files/coco/r18_test_activity_preds.mscoco.json"
     )
 
-    recipe_config = {"r18": "/home/local/KHQ/peri.akiva/projects/angel_system/config/tasks/r18.yaml"}
+    recipe_config = {"r18": "config/tasks/medical/r18.yaml"}
 
     run_inference_all_vids(
         coco_train, coco_test, recipe_config, extra_output_suffix="test_set"
