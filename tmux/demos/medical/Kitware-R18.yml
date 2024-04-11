@@ -128,7 +128,6 @@ windows:
                 -p task_update_topic:=TaskUpdates
                 -p bbn_update_topic:=BBNUpdates
                 -p task_graph_srv_topic:=query_task_graph
-                -p config:=${CONFIG_DIR}/bbn_integration/m2.yml
             - echo: sleep 0.5 && ros2 topic echo "${ROS_NAMESPACE}/BBNUpdates"
             - zmq-publisher: ros2 run bbn_integration ZmqIntegrationClient --ros-args
                 -r __ns:=${ROS_NAMESPACE}
