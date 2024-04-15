@@ -165,7 +165,8 @@ class TestUtil_obj_det2d_set_to_feature_by_method_v5:
                 "water jug (open)": 5,
                 "water jug lid": 4,
             },
-            version=5
+            version=5,
+            top_n_objects=1
         )
 
         feature_vec = obj_det2d_set_to_feature(**test_input)
