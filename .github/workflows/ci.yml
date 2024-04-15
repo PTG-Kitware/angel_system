@@ -22,7 +22,7 @@ defaults:
 #       fields, parameters and steps.
 jobs:
   docker-image-build-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       # Check out repository under $GITHUB_WORKSPACE so our job can access it.
       - uses: actions/checkout@v4
@@ -36,7 +36,7 @@ jobs:
         run: ./angel-workspace-shell.sh -s workspace-shell-dev ./workspace_build.sh
 
   code-style-py:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       # Check out repository under $GITHUB_WORKSPACE so our job can access it.
       - uses: actions/checkout@v4
@@ -63,7 +63,7 @@ jobs:
           poetry run black --check --diff --color .
 
 #  type-checking:
-#    runs-on: ubuntu-latest
+#    runs-on: ubuntu-20.04
 #    continue-on-error: true
 #    steps:
 #      # Check out repository under $GITHUB_WORKSPACE so our job can access it.
@@ -88,7 +88,7 @@ jobs:
 #      - run: poetry run mypy
 
   pytest-angel-system:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       # Check out repository under $GITHUB_WORKSPACE so our job can access it.
       - uses: actions/checkout@v4

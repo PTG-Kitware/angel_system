@@ -101,6 +101,7 @@ jupyter = ">=1.0"
 spyder-kernels = ">=2.4"
 # Testing
 black = "*"
+click = "*,<8.1"  # latest black for python 3.8.10 is not compatible with click >=8.1
 mypy = "*"
 pytest = "*"
 pytest-cov = "*"
