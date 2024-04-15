@@ -3,7 +3,7 @@ import numpy as np
 from tcn_hpl.data.components.augmentations import NormalizePixelPts
 
 from angel_system.activity_classification.utils import (
-    obj_det2d_set_to_feature_by_method,
+    obj_det2d_set_to_feature,
 )
 
 
@@ -165,14 +165,12 @@ class TestUtil_obj_det2d_set_to_feature_by_method_v5:
                 "water jug (open)": 5,
                 "water jug lid": 4,
             },
-            # v5 variation
-            use_activation=True,
-            use_hand_dist=True,
-            use_intersection=True,
+            version=5
         )
 
-        feature_vec = obj_det2d_set_to_feature_by_method(**test_input)
+        feature_vec = obj_det2d_set_to_feature(**test_input)
         feature_vec_normalized = feature_vec.copy()
+        print("feature_vec_normalized: ", feature_vec_normalized)
         norm(feature_vec_normalized[None, ...])
 
         # Where normalization happened, nothing should be out of the [0, 1]
