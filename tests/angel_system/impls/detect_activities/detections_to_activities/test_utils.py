@@ -170,6 +170,7 @@ class TestUtil_obj_det2d_set_to_feature_by_method_v5:
         )
 
         feature_vec = obj_det2d_set_to_feature(**test_input)
+        print("feature_vec: ", feature_vec)
         feature_vec_normalized = feature_vec.copy()
         print("feature_vec_normalized: ", feature_vec_normalized)
         norm(feature_vec_normalized[None, ...])
