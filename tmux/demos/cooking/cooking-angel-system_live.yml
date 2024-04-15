@@ -131,6 +131,7 @@ windows:
             -p deactivate_thresh_frame_count:=$((20 / (30 / ${FRAME_RATE})))
             -p step_mode:=granular
             -p config_file:=${CONFIG_DIR}/tasks/multi-task-config.yaml
+            -p activity_config_file:=${CONFIG_DIR}/activity_labels/cooking/all_recipe_labels.yaml
             -p task_state_topic:=TaskUpdates
             -p query_task_graph_topic:=query_task_graph
             -p task_error_topic:=TaskErrors
@@ -143,6 +144,7 @@ windows:
             -p update_topic_input:=TaskUpdates
             -p update_topic_output:=TaskUpdatesBroad
             -p task_config_file:="${CONFIG_DIR}/tasks/multi-task-config.yaml"
+            -p task_activity_config_file:="${CONFIG_DIR}/activity_labels/cooking/all_recipe_labels.yaml"
         - eval_2_logger: ros2 run angel_system_nodes eval_2_logger --ros-args
             -r __ns:=${ROS_NAMESPACE}
             -p topic_task_updates:=TaskUpdatesBroad

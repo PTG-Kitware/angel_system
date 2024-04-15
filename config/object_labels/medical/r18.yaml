@@ -1,0 +1,26 @@
+version: "1.0"
+title: "R18"
+labels:
+  # Item:
+  # - id: Integer identification number of the label.
+  # - label: Short human-readable semantic string to succinctly represent the
+  #          label.
+  - id: 0
+    label: "background"
+  # Shared labels
+  - id: 1
+    label: "chest_seal"
+  - id: 2
+    label: "chest_seal_package"
+  - id: 3
+    label: "chest_seal_wipe"
+  - id: 4
+    label: "chest_seal_wound"
+  - id: 5
+    label: "hand (left)"
+  - id: 6
+    label: "hand (right)"
+  - id: 7
+    label: "patient"
+  - id: 8
+    label: "user"

@@ -98,15 +98,6 @@ class TranslateTaskUpdateForBBN(Node):
         self._input_task_update_topic = parameter_values["task_update_topic"]
         self._output_bbn_update_topic = parameter_values["bbn_update_topic"]
         self._task_graph_service_topic = parameter_values["task_graph_srv_topic"]
-        self._step_mapping_config_path = Path(parameter_values["config"])
-
-        with open(self._step_mapping_config_path) as f:
-            self._config = yaml.load(f, yaml.CSafeLoader)
-
-        # Mapping of different task names to a list of (sequential) task steps
-        # for BBN consumption steps, each of which also relating which KW task
-        # steps relate to the BBN step.
-        self._bbn_step_mapping: Dict[str, List[Dict]] = self._config["bbn_to_kw_steps"]
 
         # Mapping, for different task names, of KW task step index to BBN task
         # step node. Not all KW task step indices may be represented here
@@ -213,16 +204,20 @@ class TranslateTaskUpdateForBBN(Node):
         # rclpy.spin_until_future_complete(self, future)
         # resp: QueryTaskGraph.Response = future.result()
         log.info("Querying for task-monitor task graph -- Done")
-        if resp.task_title != msg.task_name:
-            self.get_logger().warn(
-                f"Received QueryTaskGraph response with mismatching title "
-                f"({resp.task_title}) compared to the current task update "
-                f"name ({msg.task_name})."
-            )
-            return False
+        if msg.task_name not in resp.task_titles:
+          self.get_logger().warn(
+              f"Received QueryTaskGraph response with mismatching title "
+              f"({resp.task_title}) compared to the current task update "
+              f"name ({msg.task_name})."
+          )
+          return False
+
+        # There are multiple task graphs in this message, get the index via the
+        # tile and extract the steps from that specific graph.
+        graph_idx = resp.task_titles.index(msg.task_name)
 
         # Store the list of step strings for this task
-        self._task_to_step_list[msg.task_name] = resp.task_graph.task_steps
+        self._task_to_step_list[msg.task_name] = resp.task_graphs[graph_idx].task_steps
         return True
 
     def _callback_input_task_update(self, msg: TaskUpdate) -> None:
@@ -271,8 +266,7 @@ class TranslateTaskUpdateForBBN(Node):
         #
         current_step_id = msg.current_step_id
         task_step_state_map = {}
-        # Equivalent to check `in` against `_bbn_step_mapping` or  `_kw_step_to_bbn_idx`.
-        mapping_in_effect = task_name in self._kw_step_to_bbn_idx
+        
         for step_i, (step_name, step_completed) in enumerate(
             zip(current_kw_task_steps, msg.completed_steps)
         ):
@@ -307,26 +301,10 @@ class TranslateTaskUpdateForBBN(Node):
             else:  # current_step_id < step_i
                 state = BBNStepState.STATE_UNOBSERVED
 
-            # If the current task has configured translations, adjust the
-            # `step_i` and `step_name`, or even skip this KW task step if it
-            # does not map to something.
-            if mapping_in_effect:
-                mapping = self._kw_step_to_bbn_idx[task_name]
-                if step_i in mapping:
-                    bbn_step = mapping[step_i]
-                    log.info(
-                        f'Mapping KW step ({step_i}) "{step_name}" '
-                        f'into BBN step ({bbn_step.bbn_idx}) "{bbn_step.text}".'
-                    )
-                    # Translate into new index and naming.
-                    step_i = bbn_step.bbn_idx
-                    step_name = bbn_step.text
-                else:
-                    # Current KW step has no mapping into BBN steps, skipping.
-                    continue
-
+            # BBN expects 1-based indexing in the `number` field as opposed to
+            # 0-based indexing that is output by python's `enumerate()`.
             task_step_state_map[step_i] = BBNStepState(
-                number=step_i, name=step_name, state=state, confidence=1.0
+                number=step_i + 1, name=step_name, state=state, confidence=1.0
             )
 
         # Check that the index-to-step mapping is contiguous across step indices.

@@ -57,8 +57,8 @@ public:
   ZmqIntegrationClient( rclcpp::NodeOptions const& options )
     : rclcpp::Node( "ZmqIntegrationClient", options )
   {
-    this->declare_parameter< std::string >( "topic_update_msg" );
-    this->declare_parameter< std::string >( "server_address" );
+    this->declare_parameter( "topic_update_msg" );
+    this->declare_parameter( "server_address" );
 
     // Separating parameter declaration and getting so the error messages are
     // more (read: at all) informative.

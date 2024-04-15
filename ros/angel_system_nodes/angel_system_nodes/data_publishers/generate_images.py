@@ -1,14 +1,40 @@
 import time
-
+import os
 from cv_bridge import CvBridge
 import numpy as np
 import rclpy
 import rclpy.executors
 from rclpy.node import Node
 from sensor_msgs.msg import Image, CompressedImage
+from random import sample 
+from glob import glob
+from PIL import Image as pillow_image
 
+def dictionary_contents(path: str, types: list, recursive: bool = False) -> list:
+    """
+    Extract files of specified types from directories, optionally recursively.
 
-def random_image(height=720, width=1280, channels=3):
+    Parameters:
+        path (str): Root directory path.
+        types (list): List of file types (extensions) to be extracted.
+        recursive (bool, optional): Search for files in subsequent directories if True. Default is False.
+
+    Returns:
+        list: List of file paths with full paths.
+    """
+    files = []
+    if recursive:
+        path = path + "/**/*"
+    for type in types:
+        if recursive:
+            for x in glob(path + type, recursive=True):
+                files.append(os.path.join(path, x))
+        else:
+            for x in glob(path + type):
+                files.append(os.path.join(path, x))
+    return files
+
+def random_image(height=720, width=1280, channels=3, images_root="/angel_workspace/model_files/sample_images/"):
     """
     Generate a new random
     :param height: Pixel height
@@ -16,7 +42,16 @@ def random_image(height=720, width=1280, channels=3):
     :param channels: image channels
     :return: Numpy image matrix
     """
-    return np.random.randint(0, 255, (height, width, channels), np.uint8)
+    # print(f"images_root: {images_root}")
+    images_paths = dictionary_contents(images_root, types=["*.png"])
+    # print(f"images_paths: {images_paths}")
+    image_path = sample(images_paths, 1)[0]
+    # print(f"image_path: {image_path}")
+    
+    image = np.array(pillow_image.open(image_path))
+    print(image.max())
+
+    return image
 
 
 bridge = CvBridge()
@@ -33,9 +68,9 @@ class GenerateImages(Node):
     def __init__(
         self,
         node_name: str = None,
-        output_topic_name: str = "/image",
+        output_topic_name: str = "image",
         fps: float = 30,
-        fps_avg_window: int = 30,
+        fps_avg_window: int = 15,
         height: int = 720,
         width: int = 1280,
         rgb: bool = True,
@@ -55,7 +90,6 @@ class GenerateImages(Node):
 
         self.pub_generated_image = self.create_publisher(
             Image,
-            # CompressedImage,
             self._output_topic_name,
             10,  # TODO: Learn QoS meanings
         )
@@ -70,7 +104,8 @@ class GenerateImages(Node):
         log = self.get_logger()
         new_img = random_image(*self._img_shape)
         img_msg = bridge.cv2_to_imgmsg(new_img, encoding="rgb8")
-        # img_msg = bridge.cv2_to_compressed_imgmsg(new_img, dst_format='jpg')
+        img_msg.header.stamp = self.get_clock().now().to_msg()
+        log.info(f"img_msg.header.stamp: {img_msg.header.stamp}")
         self.pub_generated_image.publish(img_msg)
         time_since_last_pub = time.time()
 
@@ -105,19 +140,15 @@ def main(args=None):
     rclpy.init(args=args)
     log = rclpy.logging.get_logger("main")
 
-    # gen_images = GenerateImages()
-    # rclpy.spin(gen_images)
-    # gen_images.destroy_node()
-
     num_nodes = 4
 
     executor = rclpy.executors.SingleThreadedExecutor()
-    # executor = rclpy.executors.MultiThreadedExecutor()
+    
     node_list = []
     for i in range(num_nodes):
         node = GenerateImages(
             node_name=f"generator_{i}",
-            output_topic_name=f"/image_{i}",
+            output_topic_name=f"image_{i}",
         )
         node_list.append(node)
         executor.add_node(node)

@@ -1,0 +1,18 @@
+version: "1"
+labels:
+  # Item:
+  # - id: Integer identification number of the label.
+  # - label: Short human-readable semantic string to succinctly represent the
+  #          label.
+  - id: 0
+    label: "background"
+    full_str: "background"
+  - id: 1
+    label: "apply-pressure"
+    full_str: "Apply direct hand pressure."
+  - id: 2
+    label: "open-pack"
+    full_str: "Open dressing packaging."
+  - id: 3
+    label: "apply-dress-w-pressure"
+    full_str: "Apply dressing with pressure point directly over wound site."

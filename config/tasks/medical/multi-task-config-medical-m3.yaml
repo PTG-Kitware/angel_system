@@ -1,0 +1,17 @@
+# Schema version.
+version: "1.0"
+
+# Task title for display purposes.
+title: "Multi task example"
+
+# Layout of the steps that define this task.
+tasks:
+  # Item format:
+  # - id: Identifying integer for the task.
+  # - config_file: Path to the task config file representing this task.
+  #   It is expected that these paths are relative to where this tool is run.
+  #   (i.e. relative to $(ANGEL_WORKSPACE)).
+  - id: 0
+    label: "m3"
+    config_file: "./config/tasks/medical/m3.yaml"
+    active: true

@@ -30,6 +30,8 @@ class GlobalStepPredictor:
         """
         # TODO: make use of angel_system.data.config_structs instead of
         #       manually loading and accessing by string keys.
+        
+        print(f"activity_config_fpath: {activity_config_fpath}")
         with open(activity_config_fpath, "r") as stream:
             self.activity_config = yaml.safe_load(stream)
         num_activity_classes = len(self.activity_config["labels"])
@@ -71,7 +73,7 @@ class GlobalStepPredictor:
 
         self.recipe_types = recipe_types
         # TODO: Expect use of angel_system.data.config_structs instead of
-        #       a raw dictionary.
+        #       a raw dictionary with no enumeration of possible values.
         self.recipe_configs = recipe_config_dict
 
         # Array of tracker dicts
@@ -183,8 +185,9 @@ class GlobalStepPredictor:
         tracker dict fields:
             {
             "recipe":"coffee"
-                - all options: ["coffee", "tea", "dessert_quesadilla",
+                - all cooking options: ["coffee", "tea", "dessert_quesadilla",
                   "oatmeal", "pinwheel"]
+                - all medical options: ["r18"]
             "current_step": 5
                 - int type.
                 - 0 = background.
@@ -211,6 +214,7 @@ class GlobalStepPredictor:
 
         """
         tracker_dict = {}
+        print(f"self.recipe_configs[recipe]: {self.recipe_configs}")
         config_fn = self.recipe_configs[recipe]
 
         # Read in task config
@@ -231,9 +235,9 @@ class GlobalStepPredictor:
                 },
             )
 
-        tracker_dict[
-            "last_granular_step_per_broad_step"
-        ] = self.get_last_granular_step_per_broad_step(broad_steps)
+        tracker_dict["last_granular_step_per_broad_step"] = (
+            self.get_last_granular_step_per_broad_step(broad_steps)
+        )
         tracker_dict["recipe"] = recipe
 
         tracker_dict["current_broad_step"] = 0
@@ -250,9 +254,9 @@ class GlobalStepPredictor:
         tracker_dict["broad_step_to_activity_ids"] = [
             self.get_unique(step["activity_ids"]) for step in broad_steps
         ]
-        tracker_dict[
-            "granular_step_to_activity_id"
-        ] = self.get_activity_per_granular_step(broad_steps)
+        tracker_dict["granular_step_to_activity_id"] = (
+            self.get_activity_per_granular_step(broad_steps)
+        )
 
         # Labels
         tracker_dict["broad_step_to_label"] = [step["label"] for step in broad_steps]
@@ -296,9 +300,9 @@ class GlobalStepPredictor:
 
         if current_granular_step < num_granular_steps:
             self.trackers[tracker_ind]["current_granular_step"] += 1
-            self.trackers[tracker_ind][
-                "current_broad_step"
-            ] = self.granular_to_broad_step(tracker, current_granular_step)
+            self.trackers[tracker_ind]["current_broad_step"] = (
+                self.granular_to_broad_step(tracker, current_granular_step)
+            )
         elif current_granular_step == num_granular_steps and tracker["active"] == True:
             self.trackers[tracker_ind]["active"] = False
         else:
@@ -331,9 +335,9 @@ class GlobalStepPredictor:
 
         if current_granular_step > 0:
             self.trackers[tracker_ind]["current_granular_step"] -= 1
-            self.trackers[tracker_ind][
-                "current_broad_step"
-            ] = self.granular_to_broad_step(tracker, current_granular_step)
+            self.trackers[tracker_ind]["current_broad_step"] = (
+                self.granular_to_broad_step(tracker, current_granular_step)
+            )
         else:
             raise Exception(
                 f"Tried to decrement tracker #{tracker_ind}: "
@@ -401,7 +405,7 @@ class GlobalStepPredictor:
 
     def process_new_confidences(self, activity_confs):
         # assert np.array(activity_confs).shape[1] <= len(self.activated_activities)
-
+        # print(f"activity_confs: {activity_confs}")
         activated_indexes = np.nonzero(self.activated_activities[:, 0] == 1)[0]
         deactivated_indexes = np.nonzero(self.activated_activities[:, 0] == 0)[0]
         assert len(activated_indexes) + len(deactivated_indexes) == len(
@@ -433,6 +437,10 @@ class GlobalStepPredictor:
 
             # STRONG
             # Check for activations > 80% * (avg act threshold)
+            
+            # print(f"self.avg_probs: {self.avg_probs.shape}")
+            # print(f"self.activity_conf: {activity_conf.shape}")
+            # print(f"self.threshold_multiplier: {self.threshold_multiplier.shape}")
             above_pos_threshold_indexes = np.nonzero(
                 activity_conf > self.threshold_multiplier * self.avg_probs
             )[0]
@@ -813,8 +821,10 @@ class GlobalStepPredictor:
         sn.set(font_scale=1)
         step_gts = [float(i) for i in step_gts]
         plt.plot(step_gts, label=f"{granular_or_broad}_step_gt")
+        preds = []
         for i, tracker in enumerate(self.trackers):
             step_predictions = tracker[f"{granular_or_broad}_step_prediction_history"]
+            preds.extend(step_predictions)
             plt.plot(
                 step_predictions,
                 label=f"estimated_{granular_or_broad}_steps_{tracker['recipe']}_{i}",
@@ -829,7 +839,7 @@ class GlobalStepPredictor:
         plt.title(title)
         output_file_path = output_dir_p / title
         fig.savefig(output_file_path)
-        return output_file_path
+        return output_file_path, preds, step_gts
 
     def determine_recipe_from_gt_first_activity(self, activity_gts):
         """

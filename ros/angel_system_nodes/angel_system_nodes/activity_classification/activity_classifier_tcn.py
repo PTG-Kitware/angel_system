@@ -26,6 +26,7 @@ from angel_system.activity_classification.tcn_hpl.predict import (
     objects_to_feats,
     predict,
     ResultsCollector,
+    PatientPose
 )
 from angel_system.utils.event import WaitAndClearEvent
 from angel_system.utils.simple_timer import SimpleTimer
@@ -33,6 +34,8 @@ from angel_system.utils.simple_timer import SimpleTimer
 from angel_msgs.msg import (
     ObjectDetection2dSet,
     ActivityDetection,
+    HandJointPosesUpdate,
+    HandJointPose
 )
 from angel_utils import declare_and_get_parameters, make_default_main, RateTracker
 from angel_utils.activity_classification import InputWindow, InputBuffer
@@ -83,6 +86,8 @@ PARAM_INPUT_COCO_FILEPATH = "input_obj_det_kwcoco"
 # receive and process data.
 PARAM_TIME_TRACE_LOGGING = "enable_time_trace_logging"
 
+PARAM_POSE_TOPIC = "pose_topic"
+
 
 class NoActivityClassification(Exception):
     """
@@ -106,24 +111,28 @@ class ActivityClassifierTCN(Node):
             [
                 (PARAM_IMG_TS_TOPIC,),
                 (PARAM_DET_TOPIC,),
+                (PARAM_POSE_TOPIC,),
                 (PARAM_ACT_TOPIC,),
                 (PARAM_MODEL_WEIGHTS,),
                 (PARAM_MODEL_MAPPING,),
                 (PARAM_MODEL_OD_MAPPING,),
                 (PARAM_MODEL_DEVICE, "cuda"),
-                (PARAM_MODEL_DETS_CONV_VERSION, 2),
-                (PARAM_WINDOW_FRAME_SIZE,),
-                (PARAM_BUFFER_MAX_SIZE_SECONDS,),
-                (PARAM_IMAGE_PIX_WIDTH,),
-                (PARAM_IMAGE_PIX_HEIGHT,),
+                (PARAM_MODEL_DETS_CONV_VERSION, 6),
+                (PARAM_WINDOW_FRAME_SIZE,45),
+                (PARAM_BUFFER_MAX_SIZE_SECONDS,15),
+                (PARAM_IMAGE_PIX_WIDTH,1280),
+                (PARAM_IMAGE_PIX_HEIGHT,720),
                 (PARAM_RT_HEARTBEAT, 0.1),
                 (PARAM_OUTPUT_COCO_FILEPATH, ""),
                 (PARAM_INPUT_COCO_FILEPATH, ""),
-                (PARAM_TIME_TRACE_LOGGING, False),
+                (PARAM_TIME_TRACE_LOGGING, True),
             ],
         )
         self._img_ts_topic = param_values[PARAM_IMG_TS_TOPIC]
         self._det_topic = param_values[PARAM_DET_TOPIC]
+        
+        self._pose_topic = param_values[PARAM_POSE_TOPIC]
+        
         self._act_topic = param_values[PARAM_ACT_TOPIC]
         self._img_pix_width = param_values[PARAM_IMAGE_PIX_WIDTH]
         self._img_pix_height = param_values[PARAM_IMAGE_PIX_HEIGHT]
@@ -137,17 +146,33 @@ class ActivityClassifierTCN(Node):
                 param_values[PARAM_MODEL_MAPPING],
                 self._model_device,
             ).eval()
-
+            # from pytorch_lightning.utilities.model_summary import summarize
+            # from torchsummary import summary
+            # print(summary(self._model))
+            # print(self._model)
+        
         # Load labels list from configured activity_labels YAML file.
+        print(f"json path: {param_values[PARAM_MODEL_OD_MAPPING]}")
         with open(param_values[PARAM_MODEL_OD_MAPPING]) as infile:
             det_label_list = json.load(infile)
         self._det_label_to_id = {c: i for i, c in enumerate(det_label_list)}
+        print(self._det_label_to_id)
         # Feature version aligned with model current architecture
         self._feat_version = param_values[PARAM_MODEL_DETS_CONV_VERSION]
 
         # Memoization structure for structures created as input to feature
         # embedding function in the `_predict` method.
         self._memo_preproc_input: Dict[int, ObjectDetectionsLTRB] = {}
+        self._memo_preproc_input_poses: Dict[int, PatientPose] = {}
+        
+        self.keypoints_cats = [
+                        "nose", "mouth", "throat","chest","stomach","left_upper_arm",
+                        "right_upper_arm","left_lower_arm","right_lower_arm","left_wrist",
+                        "right_wrist","left_hand","right_hand","left_upper_leg",
+                        "right_upper_leg","left_knee","right_knee","left_lower_leg", 
+                        "right_lower_leg", "left_foot", "right_foot", "back"
+                    ]
+        
         # Memoization structure for feature embedding function used in the
         # `_predict` method.
         self._memo_objects_to_feats: Dict[int, npt.NDArray] = {}
@@ -155,6 +180,7 @@ class ActivityClassifierTCN(Node):
         # older than what will be processed going forward. That way we don't
         # keep content around forever and "leak" memory.
         self._memo_preproc_input_id_heap = []
+        self._memo_preproc_input_id_heap_poses = []
         self._memo_objects_to_feats_id_heap = []
 
         # Optionally initialize buffer-feeding from input COCO-file of object
@@ -230,6 +256,7 @@ class ActivityClassifierTCN(Node):
             1,
             callback_group=MutuallyExclusiveCallbackGroup(),
         )
+        
         self._det_subscriber = self.create_subscription(
             ObjectDetection2dSet,
             self._det_topic,
@@ -237,6 +264,15 @@ class ActivityClassifierTCN(Node):
             1,
             callback_group=MutuallyExclusiveCallbackGroup(),
         )
+        
+        self._pose_subscriber = self.create_subscription(
+            HandJointPosesUpdate,
+            self._pose_topic,
+            self.pose_callback,
+            1,
+            callback_group=MutuallyExclusiveCallbackGroup(),
+        )
+        
         self._activity_publisher = self.create_publisher(
             ActivityDetection,
             self._act_topic,
@@ -247,6 +283,8 @@ class ActivityClassifierTCN(Node):
         # Rate tracker used in the window processing function.
         # This needs to be initialized before starting the runtime-loop which
         # calls that method.
+        
+        
         self._rate_tracker = RateTracker()
 
         # Start windowed prediction runtime thread.
@@ -267,6 +305,7 @@ class ActivityClassifierTCN(Node):
         # Should be the last part of the constructor.
         log.info("Starting runtime thread...")
         self._rt_thread.start()
+        log.info(f"coco load thread: {self._coco_load_thread}")
         if self._coco_load_thread:
             log.info("Starting COCO loading thread...")
             self._coco_load_thread.start()
@@ -342,6 +381,7 @@ class ActivityClassifierTCN(Node):
             # window bounds, creating a new window for processing.
             log.info(f"Queuing from COCO: n_dets={n_dets}, image_ts={image_ts}")
             self.det_callback(det_msg)
+            # self.pose_callback(det_msg)
             self.img_ts_callback(image_ts)
 
             # Wait until `image_ts` was considered in the runtime loop before
@@ -361,9 +401,13 @@ class ActivityClassifierTCN(Node):
         """
         Capture a detection source image timestamp message.
         """
+        log = self.get_logger()
+        # log.info("image call back")
+        # log.info(f"self.rt_alive(): {self.rt_alive()}")
+        # log.info(f"self._buffer.queue_image(None, msg): {self._buffer.queue_image(None, msg)}")
         if self.rt_alive() and self._buffer.queue_image(None, msg):
             if self._enable_trace_logging:
-                self.get_logger().info(f"Queueing image TS {msg}")
+                log.info(f"Queueing image TS {msg}")
             # Let the runtime know we've queued something.
             # Only triggering here as a new image frame (TS) is the
             self._rt_awake_evt.set()
@@ -374,11 +418,31 @@ class ActivityClassifierTCN(Node):
         creates an `ActivityDetection` message from the results the classifier,
         and publish the `ActivityDetection` message.
         """
+        
         if self.rt_alive() and self._buffer.queue_object_detections(msg):
             if self._enable_trace_logging:
                 self.get_logger().info(
                     f"Queueing object detections (ts={msg.header.stamp})"
                 )
+                # self.get_logger().info(f"message contents: {msg}")
+                # self.get_logger().info(f"buffer contents: {self._buffer.obj_dets}")
+                
+            # Let the runtime know we've queued something.
+            # self._rt_awake_evt.set()
+            
+        
+    def pose_callback(self, msg: HandJointPosesUpdate) -> None:
+        """
+        Callback function for `HandJointPosesUpdate` messages. Runs the classifier,
+        creates an `ActivityDetection` message from the results the classifier,
+        and publish the `ActivityDetection` message.
+        """
+        if self.rt_alive() and self._buffer.queue_joint_keypoints(msg):
+            if self._enable_trace_logging:
+                self.get_logger().info(
+                    f"Queueing pose estimations (ts={msg.header.stamp})"
+                )
+                # self.get_logger().info(f"message contents: {msg}")
             # Let the runtime know we've queued something.
             # self._rt_awake_evt.set()
 
@@ -462,7 +526,7 @@ class ActivityClassifierTCN(Node):
         Activity classification prediction runtime function.
         """
         log = self.get_logger()
-        log.debug("Runtime loop starting")
+        log.info("Runtime loop starting")
         enable_time_trace_logging = self._enable_trace_logging
 
         # These criterion predicates must all return true for us to proceed
@@ -479,12 +543,23 @@ class ActivityClassifierTCN(Node):
                 self._window_criterion_coco_input_mode
             )
 
+        log.info("keep looping starting...")
+        # log.info(f"_rt_keep_looping: {self._rt_keep_looping()}")
         while self._rt_keep_looping():
+            # log.info(f"self._rt_awake_evt.wait_and_clear(self._rt_active_heartbeat): {self._rt_awake_evt.wait_and_clear(self._rt_active_heartbeat)}")
             if self._rt_awake_evt.wait_and_clear(self._rt_active_heartbeat):
                 # We want to fire off a prediction if the current window of
                 # data is "valid" based on our registered criterion.
+                
+                # log.info(f"buffer contents: {self._buffer.obj_dets}")
+                
                 window = self._buffer.get_window(self._window_size)
+                
+                # log.info(f"buffer contents: {window.obj_dets}")
+                
 
+                # if enable_time_trace_logging:
+                #     log.info(f"window: {window.patient_joint_kps}")
                 # Time of the leading frame of the extracted window.
                 window_time_ns: Optional[int] = None
                 if window.frames:  # maybe there are no frames yet in there.
@@ -494,18 +569,23 @@ class ActivityClassifierTCN(Node):
                     self._window_extracted_time_ns = window_time_ns
                     self._window_extracted_time_ns_cond.notify_all()
 
+                # log.info(f"if func for window process: {all(fn(window) for fn in window_processing_criterion_fn_list)}")
+                    
                 if all(fn(window) for fn in window_processing_criterion_fn_list):
                     # After validating a window, and before processing it, clear
                     # out older data at and before the first item in the window.
                     self._buffer.clear_before(time_to_int(window.frames[1][0]))
 
+                    
                     try:
                         if enable_time_trace_logging:
                             log.info(
                                 f"Processing window with leading image TS: "
                                 f"{window.frames[-1][0]}"
                             )
+                            
                         act_msg = self._process_window(window)
+                        # log.info(f"activity message: {act_msg}")
                         self._collect_results(act_msg)
                         self._activity_publisher.publish(act_msg)
                     except NoActivityClassification:
@@ -553,11 +633,14 @@ class ActivityClassifierTCN(Node):
         log = self.get_logger()
         memo_preproc_input = self._memo_preproc_input
         memo_preproc_input_h = self._memo_preproc_input_id_heap
+        
         memo_object_to_feats = self._memo_objects_to_feats
         memo_object_to_feats_h = self._memo_objects_to_feats_id_heap
 
         # TCN wants to know the label and confidence for the maximally
         # confident class only. Input object detection messages
+        log.info("processing window...")
+        # log.info(f"window object detections: {window.obj_dets}")
         frame_object_detections: List[Optional[ObjectDetectionsLTRB]]
         frame_object_detections = [None] * len(window)
         for i, det_msg in enumerate(window.obj_dets):
@@ -572,6 +655,7 @@ class ActivityClassifierTCN(Node):
                         det_msg.bottom,
                         *max_labels_and_confs(det_msg),
                     )
+                    # print(f"DETECTION memo_preproc_input[msg_id]: {memo_preproc_input[msg_id]}")
                     heappush(memo_preproc_input_h, msg_id)
                 else:
                     v = memo_preproc_input[msg_id]
@@ -580,27 +664,64 @@ class ActivityClassifierTCN(Node):
             f"[_process_window] Window vector presence: "
             f"{[(v is not None) for v in frame_object_detections]}"
         )
+        
+        # log.info(f"window patient_joint_kps: {window.patient_joint_kps}")
+        memo_preproc_input_poses = self._memo_preproc_input_poses
+        memo_preproc_input_h_poses = self._memo_preproc_input_id_heap_poses
+        frame_patient_poses: List[Optional[PatientPose]]
+        frame_patient_poses = [None] * len(window)
+        for i, pose_msg in enumerate(window.patient_joint_kps):
+            if pose_msg is not None:
+                msg_id = time_to_int(pose_msg.source_stamp)
+                if msg_id not in memo_preproc_input_poses:
+                    # for pose in memo_preproc_input_poses[msg_id]:
+                    # print(f"num of joints: {len(pose_msg.joints)}")
+                    # if len(pose_msg.joints) > len(self.keypoints_cats):
+                    #     print(f"num of joints: {pose_msg}")
+                    # print(f"num of keypoints cats: {len(self.keypoints_cats)}")
+                    # print(f"message id: {msg_id}")
+                    # print(f"memo_preproc_input_poses length: {len(memo_preproc_input_poses)}")
+                    memo_preproc_input_poses[msg_id] = v = [PatientPose(msg_id, pm.pose.position, self.keypoints_cats[i]) for i, pm in enumerate(pose_msg.joints)]
+                    
+                    # print(f"POSE memo_preproc_input_poses[msg_id]: {memo_preproc_input_poses[msg_id]}")
+                    #     msg_id,
+                    #     pm.positions,
+                    #     # pose_msg.orientations,
+                    #     pm.labels,
+                    # )
+                    heappush(memo_preproc_input_h_poses, msg_id)
+                else:
+                    v = memo_preproc_input_poses[msg_id]
+                frame_patient_poses[i] = v
+        log.debug(
+            f"[_process_window] Window vector presence: "
+            f"{[(v is not None) for v in frame_patient_poses]}"
+        )
 
-        with SimpleTimer("[_process_window] Detections embedding", log.info):
-            try:
-                feats, mask = objects_to_feats(
-                    frame_object_detections,
-                    self._det_label_to_id,
-                    self._feat_version,
-                    self._img_pix_width,
-                    self._img_pix_height,
-                    memo_object_to_feats,
-                )
-            except ValueError:
-                # feature detections were all None
-                raise NoActivityClassification()
+        # print(f"frame_object_detections: {frame_object_detections}")
+
+        feats, mask = objects_to_feats(
+            frame_object_detections=frame_object_detections,
+            frame_patient_poses=frame_patient_poses,
+            det_label_to_idx=self._det_label_to_id,
+            feat_version=self._feat_version,
+            image_width=self._img_pix_width,
+            image_height=self._img_pix_height,
+            feature_memo=memo_object_to_feats,
+        )
+            # except ValueError:
+            #     # feature detections were all None
+            #     raise NoActivityClassification()
 
         feats = feats.to(self._model_device)
         mask = mask.to(self._model_device)
-
+        
         with SimpleTimer("[_process_window] Model processing", log.info):
             proba = predict(self._model, feats, mask).cpu()
+        
         pred = torch.argmax(proba)
+        log.info(f"activity probabilities: {proba}, prediction class: {pred}")
+        log.info(f"self._model.classes: {self._model.classes}")
 
         # Prepare output message
         activity_msg = ActivityDetection()

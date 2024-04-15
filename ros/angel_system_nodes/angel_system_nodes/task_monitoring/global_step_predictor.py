@@ -27,6 +27,7 @@ from angel_system.global_step_prediction.global_step_predictor import (
 
 
 PARAM_CONFIG_FILE = "config_file"
+PARAM_ACTIVITY_CONFIG_FILE = "activity_config_file"
 PARAM_TASK_STATE_TOPIC = "task_state_topic"
 PARAM_TASK_ERROR_TOPIC = "task_error_topic"
 PARAM_SYS_CMD_TOPIC = "system_command_topic"
@@ -65,6 +66,7 @@ class GlobalStepPredictorNode(Node):
             self,
             [
                 (PARAM_CONFIG_FILE,),
+                (PARAM_ACTIVITY_CONFIG_FILE,),
                 (PARAM_TASK_STATE_TOPIC,),
                 (PARAM_TASK_ERROR_TOPIC,),
                 (PARAM_SYS_CMD_TOPIC,),
@@ -82,6 +84,7 @@ class GlobalStepPredictorNode(Node):
             ],
         )
         self._config_file = param_values[PARAM_CONFIG_FILE]
+        self._activity_config_file = param_values[PARAM_ACTIVITY_CONFIG_FILE]
         self._task_state_topic = param_values[PARAM_TASK_STATE_TOPIC]
         self._task_error_topic = param_values[PARAM_TASK_ERROR_TOPIC]
         self._sys_cmd_topic = param_values[PARAM_SYS_CMD_TOPIC]
@@ -125,10 +128,14 @@ class GlobalStepPredictorNode(Node):
             deactivate_thresh_frame_count=self._deactivate_thresh_frame_count,
             recipe_types=recipe_types,
             recipe_config_dict=recipe_config_dict,
+            activity_config_fpath=self._activity_config_file,
         )
 
-        self.gsp.get_average_TP_activations_from_file(self._model_file)
-        log.info("Global state predictor loaded")
+        #model_file = coco file with confidence predictions
+        coco = kwcoco.CocoDataset(self._model_file)
+        avg_probs = self.gsp.compute_average_TP_activations(coco)
+        # self.gsp.get_average_TP_activations_from_file(self._model_file)
+        # log.info("Global state predictor loaded")
 
         # Mapping from recipe to current step. Used to track state changes
         # of the GSP and determine when to publish a TaskUpdate msg.
@@ -291,13 +298,21 @@ class GlobalStepPredictorNode(Node):
         conf_array = np.array(activity_msg.conf_vec)
         conf_array = np.expand_dims(conf_array, 0)
 
+        
         with self._gsp_lock:
             tracker_dict_list = self.gsp.process_new_confidences(conf_array)
 
+            print(f"conf_array: {conf_array}")
+            print(f"tracker_dict_list: {tracker_dict_list}")
+            
             step_mode = self._step_mode
             for task in tracker_dict_list:
+                # print(f"task: {task}")
                 previous_step_id = self.recipe_current_step_id[task["recipe"]]
                 current_step_id = task[f"current_{step_mode}_step"]
+                
+                print(f"previous_step_id: {previous_step_id}")
+                print(f"current_step_id: {current_step_id}")
 
                 # If previous and current are not the same, publish a task-update
                 if previous_step_id != current_step_id:
