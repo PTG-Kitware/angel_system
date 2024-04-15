@@ -157,11 +157,7 @@ def compute_feats(
         ws = []
         hs = []
         label_confidences = []
-        obj_obj_contact_state = []
-        obj_obj_contact_conf = []
-        obj_hand_contact_state = []
-        obj_hand_contact_conf = []
-
+        
         if objects_joints or hands_joints:
             joint_left_hand_offset = []
             joint_right_hand_offset = []
@@ -227,14 +223,8 @@ def compute_feats(
                     num_hands += 1
                 elif ann["category_id"] in object_inds:
                     num_objects += 1
-                try:
-                    obj_obj_contact_state.append(ann["obj-obj_contact_state"])
-                    obj_obj_contact_conf.append(ann["obj-obj_contact_conf"])
-                    obj_hand_contact_state.append(ann["obj-hand_contact_state"])
-                    obj_hand_contact_conf.append(ann["obj-hand_contact_conf"])
-                except KeyError:
-                    pass
-
+                
+        
         # hardcoded width?
         image_center = 1280 // 2
         if num_hands > 0:
@@ -331,11 +321,6 @@ def compute_feats(
             ws,
             hs,
             label_confidences,
-            None,
-            obj_obj_contact_state,
-            obj_obj_contact_conf,
-            obj_hand_contact_state,
-            obj_hand_contact_conf,
             label_to_ind,
             version=feat_version,
             top_n_objects=top_n_objects,
