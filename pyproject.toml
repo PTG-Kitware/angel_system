@@ -88,6 +88,7 @@ tcn-hpl = {path = "python-tpl/TCN_HPL", develop = true}
 
 # Yolo v7 object detection
 yolov7 = {path = "python-tpl/yolov7", develop = true}
+click = "8.0.2"
 
 [tool.poetry.dev-dependencies]
 ipython = "*"
