@@ -115,11 +115,7 @@ def compute_feats(
     act_id_to_str: dict,
     ann_by_image: dict,
     feat_version=1,
-    objects_joints: bool = False,
-    hands_joints: bool = False,
-    aug_trans_range=None,
-    aug_rot_range=None,
-    top_n_objects=3,
+    top_n_objects=1,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Compute features from object detections
 
@@ -137,6 +133,9 @@ def compute_feats(
     Y = []
     dataset_id = []
     last_dset = 0
+    zero_joint_offset = [0 for i in range(22)]
+
+    image_center = 1280//2 # hardcoded width?
 
     hands_possible_labels = ["hand (right)", "hand (left)", "hand", "hands"]
     non_objects_labels = ["patient", "user"]
@@ -157,106 +156,63 @@ def compute_feats(
         ws = []
         hs = []
         label_confidences = []
+        pose_keypoints = []
         
-        if objects_joints or hands_joints:
-            joint_left_hand_offset = []
-            joint_right_hand_offset = []
-            joint_object_offset = []
-
         num_hands, num_objects = 0, 0
-
-        for ann in ann_by_image[image_id]:
-            if "keypoints" in ann.keys():
-                pose_keypoints = ann["keypoints"]
-
-            elif "confidence" in ann.keys():
-                label_vec.append(act_id_to_str[ann["category_id"]])
-                x, y = ann["bbox"][0], ann["bbox"][1]
-                w, h = ann["bbox"][2], ann["bbox"][3]
-
-                if aug_trans_range != None and aug_rot_range != None:
-
-                    print(f"performing augmentation")
-                    random_translation_x = np.random.uniform(
-                        aug_trans_range[0], aug_trans_range[1]
-                    )
-                    random_translation_y = np.random.uniform(
-                        aug_trans_range[0], aug_trans_range[1]
-                    )
-                    random_rotation = np.random.uniform(
-                        aug_rot_range[0], aug_rot_range[1]
-                    )
-
-                    object_center_x, object_center_y = x + w // 2, y + h // 2
-
-                    rotation_matrix = np.array(
-                        [
-                            [
-                                np.cos(random_rotation),
-                                -np.sin(random_rotation),
-                                random_translation_x,
-                            ],
-                            [
-                                np.sin(random_rotation),
-                                np.cos(random_rotation),
-                                random_translation_y,
-                            ],
-                            [0, 0, 1],
-                        ]
-                    )
-
-                    xy = np.array([x, y, 1])
-                    xy_center = np.array([object_center_x, object_center_y, 1])
-
-                    rot_xy = (xy - xy_center) @ rotation_matrix.T + xy_center
-
-                    x = rot_xy[0]
-                    y = rot_xy[1]
-
-                xs.append(x)
-                ys.append(y)
-                ws.append(w)
-                hs.append(h)
-                label_confidences.append(ann["confidence"])
-
-                if ann["category_id"] in hands_inds:
-                    num_hands += 1
-                elif ann["category_id"] in object_inds:
-                    num_objects += 1
-                
         
-        # hardcoded width?
-        image_center = 1280 // 2
+        # Reorganize detections into lists
+        pose_keypoints = ann_by_image[image_id][0].get('keypoints', zero_joint_offset)
+        for ann in ann_by_image[image_id]:
+            label_vec.append(act_id_to_str[ann["category_id"]])
+
+            x, y, w, h = ann["bbox"]
+            xs.append(x)
+            ys.append(y)
+            ws.append(w)
+            hs.append(h)
+
+            label_confidences.append(ann["confidence"])
+            
+            if ann["category_id"] in hands_inds:
+                num_hands += 1
+            elif ann['category_id'] in object_inds:
+                num_objects += 1
+        
+        # Update hand/hands labels to be left and right specific
         if num_hands > 0:
             hands_loc_dict = {}
             for i, label in enumerate(label_vec):
-                if label == "hand":
-                    hand_center = xs[i] + ws[i] // 2
-                    if hand_center < image_center:
-                        if "hand (left)" not in hands_loc_dict.keys():
-                            label_vec[i] = "hand (left)"
-                            hands_loc_dict[label_vec[i]] = (hand_center, i)
-                        else:
-                            if hand_center > hands_loc_dict["hand (left)"][0]:
-                                label_vec[i] = "hand (right)"
-                                hands_loc_dict[label_vec[i]] = (hand_center, i)
-                            else:
-                                prev_index = hands_loc_dict["hand (left)"][1]
-                                label_vec[prev_index] = "hand (right)"
-                                label_vec[i] = "hand (left)"
+                if label not in hands_possible_labels:
+                    continue
+
+                hand_center = (xs[i] + ws[i])//2
+                if hand_center < image_center:
+                    if "hand (left)" not in hands_loc_dict.keys():
+                        label_vec[i] = "hand (left)"
+                        hands_loc_dict[label_vec[i]] = (hand_center, i)
                     else:
-                        if "hand (right)" not in hands_loc_dict.keys():
+                        if hand_center > hands_loc_dict["hand (left)"][0]:
                             label_vec[i] = "hand (right)"
                             hands_loc_dict[label_vec[i]] = (hand_center, i)
                         else:
-                            if hand_center < hands_loc_dict["hand (right)"][0]:
-                                label_vec[i] = "hand (left)"
-                                hands_loc_dict[label_vec[i]] = (hand_center, i)
-                            else:
-                                prev_index = hands_loc_dict["hand (right)"][1]
-                                label_vec[prev_index] = "hand (left)"
-                                label_vec[i] = "hand (right)"
-
+                            prev_index = hands_loc_dict["hand (left)"][1]
+                            label_vec[prev_index] = "hand (right)"
+                            label_vec[i] = "hand (left)"
+                else:
+                    if "hand (right)" not in hands_loc_dict.keys():
+                        label_vec[i] = "hand (right)"
+                        hands_loc_dict[label_vec[i]] = (hand_center, i)
+                    else:
+                        if hand_center < hands_loc_dict["hand (right)"][0]:
+                            label_vec[i] = "hand (left)"
+                            hands_loc_dict[label_vec[i]] = (hand_center, i)
+                        else:
+                            prev_index = hands_loc_dict["hand (right)"][1]
+                            label_vec[prev_index] = "hand (left)"
+                            label_vec[i] = "hand (right)"
+        
+        # Remap the label ids to include left and right hand labels
+        # And remove the non object labels
         if "hand" in label_to_ind.keys():
             label_to_ind_tmp = {}
             for key, value in label_to_ind.items():
@@ -270,50 +226,6 @@ def compute_feats(
 
             label_to_ind = label_to_ind_tmp
 
-        zero_offset = [0 for i in range(22)]
-        if (num_hands > 0 or num_objects > 0) and (hands_joints or objects_joints):
-            joint_object_offset = []
-            for i, label in enumerate(label_vec):
-
-                if hands_joints and num_hands > 0:
-
-                    if label == "hand (right)" or label == "hand (left)":
-                        bx, by, bw, bh = xs[i], ys[i], ws[i], hs[i]
-                        hcx, hcy = bx + (bw // 2), by + (bh // 2)
-                        hand_point = np.array((hcx, hcy))
-
-                        offset_vector = []
-                        if "pose_keypoints" in locals():
-                            for joint in pose_keypoints:
-                                jx, jy = joint["xy"]
-                                joint_point = np.array((jx, jy))
-                                dist = np.linalg.norm(joint_point - hand_point)
-                                offset_vector.append(dist)
-                        else:
-                            offset_vector = zero_offset
-
-                        if label == "hand (left)":
-                            joint_left_hand_offset = offset_vector
-                        elif label == "hand (right)":
-                            joint_right_hand_offset = offset_vector
-
-                    else:
-                        if objects_joints and num_objects > 0:
-                            bx, by, bw, bh = xs[i], ys[i], ws[i], hs[i]
-                            ocx, ocy = bx + (bw // 2), by + (bh // 2)
-                            object_point = np.array((ocx, ocy))
-                            offset_vector = []
-                            if "pose_keypoints" in locals():
-                                for joint in pose_keypoints:
-                                    jx, jy = joint["xy"]
-                                    joint_point = np.array((jx, jy))
-                                    dist = np.linalg.norm(joint_point - object_point)
-                                    offset_vector.append(dist)
-                            else:
-                                offset_vector = zero_offset
-
-                            joint_object_offset.append(offset_vector)
-
         feature_vec = obj_det2d_set_to_feature(
             label_vec,
             xs,
@@ -321,39 +233,14 @@ def compute_feats(
             ws,
             hs,
             label_confidences,
+            pose_keypoints,
             label_to_ind,
             version=feat_version,
             top_n_objects=top_n_objects,
         )
-
-        if objects_joints or hands_joints:
-            zero_offset = [0 for i in range(22)]
-            offset_vector = []
-            if hands_joints:
-
-                if len(joint_left_hand_offset) >= 1:
-                    offset_vector.extend(joint_left_hand_offset)
-                else:
-                    offset_vector.extend(zero_offset)
-
-                if len(joint_right_hand_offset) >= 1:
-                    offset_vector.extend(joint_right_hand_offset)
-                else:
-                    offset_vector.extend(zero_offset)
-            if objects_joints:
-
-                for i in range(top_n_objects):
-                    if len(joint_object_offset) > i:
-                        offset_vector.extend(joint_object_offset[i])
-                    else:
-                        offset_vector.extend(zero_offset)
-
-            feature_vec.extend(offset_vector)
-
-        feature_vec = np.array(feature_vec, dtype=np.float64)
-
+        
         X.append(feature_vec.ravel())
-
+         
         try:
             dataset_id.append(image_id_to_dataset[image_id])
             last_dset = dataset_id[-1]

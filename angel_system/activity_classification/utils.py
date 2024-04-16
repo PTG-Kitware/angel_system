@@ -167,6 +167,25 @@ def obj_det2d_set_to_feature(
             use_intersection=True,
         )
     elif version == 6:
+        """
+        Feature vector that encodes the distance of each object from each hand,
+        the intersection of each object to the hands,
+        the distance from the center of the hands to each patient joint,
+        and the distance from the center of each object to each patient joint,
+        and the activation features
+
+        Len: 1 + ((N-2)*2) + 1 + ((N-2)*2) + 2 + 1 + (3 * (N-2)), where N is the number of object classes
+
+        [
+            A[right hand],
+            D[right hand, obj1]x, D[right hand, obj1]y, ... , D[right hand, objN]y,
+            A[left hand],
+            D[left hand, obj1]x, D[left hand, obj1]y, ... , D[left hand, objN]y,
+            D[right hand, left hand]x, D[right hand, left hand]y,
+            I[right hand, left hand]
+            A[obj1] I[right hand, obj1] I[left hand, obj1], ... , I[left hand, objN]
+        ]
+        """
         feature_vec = obj_det2d_set_to_feature_by_method(
             label_vec,
             xs,
@@ -197,6 +216,7 @@ def obj_det2d_set_to_feature_by_method(
     ws,
     hs,
     label_confidences,
+    pose_keypoints,
     label_to_ind: Dict[str, int],
     use_activation=False,
     use_hand_dist=False,
@@ -204,28 +224,7 @@ def obj_det2d_set_to_feature_by_method(
     use_intersection=False,
     use_joint_hand_offset=False,
     use_joint_object_offset=False,
-    top_n_objects=3,
 ):
-    """
-    `label_vec`, `xs`, `ys`, `ws`, hs` are to all be parallel in association
-    and describe the object detections to create an embedding from.
-
-    :param label_vec: Object label of the most confident class for each
-        detection.
-    :param xs: Upper-left X coordinate for each detection.
-    :param ys: Upper-left Y coordinate for each detection.
-    :param ws: Pixel width for each detection.
-    :param hs: Pixel height for each detection.
-    :param label_confidences: Confidence value of the most confident class for
-        each detection.
-    :param label_to_ind: Mapping of detection class indices
-    :param use_activation:
-    :param use_hand_dist:
-    :param use_center_dist:
-    :param use_intersection:
-
-    :return: Feature vector embedding of the input detections.
-    """
     #########################
     # Default values
     #########################
@@ -233,45 +232,36 @@ def obj_det2d_set_to_feature_by_method(
     default_center_dist = (0, 0)  # (1280, 720)
     default_bbox = [0, 0, 0, 0]  # [0, 0, 1280, 720]
     default_center = ([[0]], [[0]])  # kwimage.Boxes([default_bbox], "xywh").center
-    width, height = 1280, 720
-    image_center = width // 2
+    zero_joint_offset = [0 for i in range(22)]
 
     #########################
     # Data
     #########################
     # Number of object detection classes
-    hand_labels = ["hand (right)", "hand (left)", "hand", "hands"]
-    non_objects_labels = ["patient", "user"]
-    remove_classes_count = [
-        1 for label in non_objects_labels if label in label_to_ind.keys()
-    ]
-    num_det_classes = len(label_to_ind) - len(
-        remove_classes_count
-    )  # accomedate 2 hands instead of 1, accomedate top 3 objects
+    num_det_classes = len(label_to_ind)
 
-    det_class_max_conf = np.zeros((num_det_classes, top_n_objects))
+    # Maximum confidence observe per-class across input object detections.
+    # If a class has not been observed, it is set to 0 confidence.
+    det_class_max_conf = np.zeros(num_det_classes)
     # The bounding box of the maximally confident detection
-    det_class_bbox = np.zeros((top_n_objects, num_det_classes, 4), dtype=np.float64)
+    det_class_bbox = np.zeros((num_det_classes, 4), dtype=np.float64)
     det_class_bbox[:] = default_bbox
 
     # Binary mask indicate which detection classes are present on this frame.
     det_class_mask = np.zeros(num_det_classes, dtype=np.bool_)
 
-    # print(f"label vec: {label_vec}")
+    # Record the most confident detection for each object class as recorded in
+    # `label_to_ind` (confidence & bbox)
     for i, label in enumerate(label_vec):
         if label in label_to_ind:
             conf = label_confidences[i]
+
             ind = label_to_ind[label]
             det_class_mask[ind] = True
-            conf_list = det_class_max_conf[ind, :]
-            if conf > det_class_max_conf[ind].min():
-                first_zero = np.where(conf_list == conf_list.min())  # [0][0]
-                first_zero = first_zero[0][0]
-                conf_list[first_zero] = conf
-                obj_index = np.where(conf_list == conf)
-
-                det_class_max_conf[ind] = conf_list
-                det_class_bbox[obj_index, ind] = [xs[i], ys[i], ws[i], hs[i]]  # xywh
+            
+            if conf > det_class_max_conf[ind]:
+                det_class_max_conf[ind] = conf
+                det_class_bbox[ind] = [xs[i], ys[i], ws[i], hs[i]]  # xywh
 
     det_class_kwboxes = kwimage.Boxes(det_class_bbox, "xywh")
 
@@ -280,8 +270,8 @@ def obj_det2d_set_to_feature_by_method(
     #########################
     def find_hand(hand_str):
         hand_idx = label_to_ind[hand_str]
-        hand_conf = det_class_max_conf[hand_idx][0]
-        hand_bbox = kwimage.Boxes([det_class_bbox[0, hand_idx]], "xywh")
+        hand_conf = det_class_max_conf[hand_idx]
+        hand_bbox = kwimage.Boxes([det_class_bbox[hand_idx]], "xywh")
 
         return hand_idx, hand_bbox, hand_conf, hand_bbox.center
 
@@ -307,7 +297,7 @@ def obj_det2d_set_to_feature_by_method(
 
     RIGHT_IDX = 0
     LEFT_IDX = 1
-    right_left_hand_kwboxes = det_class_kwboxes[0, [right_hand_idx, left_hand_idx]]
+    right_left_hand_kwboxes = det_class_kwboxes[[right_hand_idx, left_hand_idx]]
     # Mask detailing hand presence in the scene.
     hand_mask = det_class_mask[[right_hand_idx, left_hand_idx]]
     # 2-D mask object class gate per hand
@@ -321,45 +311,30 @@ def obj_det2d_set_to_feature_by_method(
         # is defined by `hand.center - object.center`.
         # `kwcoco.Boxes.center` returns a tuple of two arrays, each shaped
         # [n_boxes, 1].
-
-        all_obj_centers_x, all_obj_centers_y = det_class_kwboxes.center  # [n_dets, 1]
+        obj_centers_x, obj_centers_y = det_class_kwboxes.center  # [n_dets, 1]
         hand_centers_x, hand_centers_y = right_left_hand_kwboxes.center  # [2, 1]
         # Hand distances from objects. Shape: [2, n_dets]
-        right_hand_dist_n = np.zeros(
-            (top_n_objects, hand_by_object_mask.shape[1], hand_by_object_mask.shape[0])
+        hand_dist_x = np.subtract(
+            hand_centers_x,
+            obj_centers_x.T,
+            where=hand_by_object_mask,
+            # required, otherwise indices may be left uninitialized.
+            out=np.zeros(shape=hand_by_object_mask.shape),
         )
-        left_hand_dist_n = np.zeros(
-            (top_n_objects, hand_by_object_mask.shape[1], hand_by_object_mask.shape[0])
+        hand_dist_y = np.subtract(
+            hand_centers_y,
+            obj_centers_y.T,
+            where=hand_by_object_mask,
+            # required, otherwise indices may be left uninitialized.
+            out=np.zeros(shape=hand_by_object_mask.shape),
         )
-        # print(f"left_hand_dist_n: {left_hand_dist_n.shape}")
-        for object_index in range(top_n_objects):
-            obj_centers_x = all_obj_centers_x[object_index]
-            obj_centers_y = all_obj_centers_y[object_index]  # [n_dets, 1]
-
-            hand_dist_x = np.subtract(
-                hand_centers_x,
-                obj_centers_x.T,
-                where=hand_by_object_mask,
-                # required, otherwise indices may be left uninitialized.
-                out=np.zeros(shape=hand_by_object_mask.shape),
-            )
-            hand_dist_y = np.subtract(
-                hand_centers_y,
-                obj_centers_y.T,
-                where=hand_by_object_mask,
-                # required, otherwise indices may be left uninitialized.
-                out=np.zeros(shape=hand_by_object_mask.shape),
-            )
-            # Collate into arrays of (x, y) coordinates.
-            right_hand_dist = np.stack(
-                [hand_dist_x[RIGHT_IDX], hand_dist_y[RIGHT_IDX]], axis=1
-            )
-            left_hand_dist = np.stack(
-                [hand_dist_x[LEFT_IDX], hand_dist_y[LEFT_IDX]], axis=1
-            )
-
-            right_hand_dist_n[object_index] = right_hand_dist
-            left_hand_dist_n[object_index] = left_hand_dist
+        # Collate into arrays of (x, y) coordinates.
+        right_hand_dist = np.stack(
+            [hand_dist_x[RIGHT_IDX], hand_dist_y[RIGHT_IDX]], axis=1
+        )
+        left_hand_dist = np.stack(
+            [hand_dist_x[LEFT_IDX], hand_dist_y[LEFT_IDX]], axis=1
+        )
 
     else:
         right_hand_dist = left_hand_dist = None
@@ -392,92 +367,112 @@ def obj_det2d_set_to_feature_by_method(
         # intersected by the representative object bounding-box.
         # If a hand or object is not present in the scene, then their
         # respective intersection area is 0.
-        right_hand_intersection_n = np.zeros(
-            (top_n_objects, hand_by_object_mask.shape[1])
+        hand_obj_intersection_vol = right_left_hand_kwboxes.isect_area(
+            det_class_kwboxes
         )
-        left_hand_intersection_n = np.zeros(
-            (top_n_objects, hand_by_object_mask.shape[1])
+        right_left_hand_area = right_left_hand_kwboxes.area
+        # Handling avoiding div-by-zero using the `where` parameter.
+        hand_obj_intersection = np.divide(
+            hand_obj_intersection_vol,
+            right_left_hand_area,
+            where=right_left_hand_area != 0,
+            # Specifying out otherwise there may be uninitialized values in
+            # indices where `right_left_hand_area == 0`.
+            out=np.zeros_like(hand_obj_intersection_vol),
         )
-        for object_index in range(top_n_objects):
-
-            hand_obj_intersection_vol = right_left_hand_kwboxes.isect_area(
-                det_class_kwboxes[object_index]
-            )
-            right_left_hand_area = right_left_hand_kwboxes.area
-
-            # Handling avoiding div-by-zero using the `where` parameter.
-            hand_obj_intersection = np.divide(
-                hand_obj_intersection_vol,
-                right_left_hand_area,
-                where=right_left_hand_area != 0,
-                # Specifying out otherwise there may be uninitialized values in
-                # indices where `right_left_hand_area == 0`.
-                out=np.zeros_like(hand_obj_intersection_vol),
-            )
-
-            right_hand_intersection = hand_obj_intersection[0]
-            left_hand_intersection = hand_obj_intersection[1]
-
-            right_hand_intersection_n[object_index] = right_hand_intersection
-            left_hand_intersection_n[object_index] = left_hand_intersection
+        right_hand_intersection = hand_obj_intersection[0]
+        left_hand_intersection = hand_obj_intersection[1]
 
     else:
         right_hand_intersection = left_hand_intersection = None
+
+    #########################
+    # Joints
+    #########################
+    def calc_joint_offset(bbox_center):
+        hand_point = np.array(bbox_center) # TODO: check x,y order
+        
+        offset_vector = []
+        if pose_keypoints == zero_joint_offset:
+            return zero_joint_offset
+        
+        for joint in pose_keypoints:
+            jx, jy = joint['xy']
+            joint_point = np.array((jx, jy))
+            dist = np.linalg.norm(joint_point - hand_point)
+            offset_vector.append(dist)
+            
+        return offset_vector
+
+    # HAND - JOINTS
+    if use_joint_hand_offset:
+        joint_left_hand_offset = calc_joint_offset(left_hand_center)
+        joint_right_hand_offset = calc_joint_offset(right_hand_center)
+
+    # OBJECTS - JOINTS
+    if use_joint_object_offset:
+        joint_object_offset = []
+        for i in range(num_det_classes):
+            obj_bbox = kwimage.Boxes([det_class_bbox[i]], "xywh")
+            obj_center = obj_bbox.center
+
+            offset_vector = calc_joint_offset(obj_center)
+            joint_object_offset.append(offset_vector)
 
     #########################
     # Feature vector
     #########################
     feature_vec = []
     # Add hand data
-    for object_index in range(top_n_objects):
-
-        right_hand_dist = right_hand_dist_n[object_index]
-        left_hand_dist = left_hand_dist_n[object_index]
-
-        right_hand_intersection = right_hand_intersection_n[object_index]
-        left_hand_intersection = left_hand_intersection_n[object_index]
-
-        for hand_conf, hand_idx, hand_dist, hand_intersection in [
-            (right_hand_conf, right_hand_idx, right_hand_dist, right_hand_intersection),
-            (left_hand_conf, left_hand_idx, left_hand_dist, left_hand_intersection),
-        ]:
-            if use_activation:
-                feature_vec.append([hand_conf])
-            if use_hand_dist:
-                hd1 = [
-                    item
-                    for ii, tupl in enumerate(hand_dist)
-                    for item in tupl
-                    if ii not in [right_hand_idx, left_hand_idx]
-                ]
-                feature_vec.append(hd1)
-            if use_center_dist:
-                feature_vec.append(distances_to_center[hand_idx])
-
-        # print(f"top-N objects feature_vec: {len(feature_vec)}")
-        # Add distance and intersection between hands.
-        # This is already there since the hands are in dets_class
-
+    for hand_conf, hand_idx, hand_dist, hand_intersection in [
+        (right_hand_conf, right_hand_idx, right_hand_dist, right_hand_intersection),
+        (left_hand_conf, left_hand_idx, left_hand_dist, left_hand_intersection),
+    ]:
+        if use_activation:
+            feature_vec.append([hand_conf])
         if use_hand_dist:
-            feature_vec.append(right_hand_dist[left_hand_idx])
+            hd1 = [
+                item
+                for ii, tupl in enumerate(hand_dist)
+                for item in tupl
+                if ii not in [right_hand_idx, left_hand_idx]
+            ]
+            feature_vec.append(hd1)
+        if use_center_dist:
+            feature_vec.append(distances_to_center[hand_idx])
 
+    # Add distance and intersection between hands.
+    if use_hand_dist:
+        feature_vec.append(right_hand_dist[left_hand_idx])
+    if use_intersection:
+        feature_vec.append([right_hand_intersection[left_hand_idx]])
+
+    # Add object data
+    for i in range(num_det_classes):
+        if i in [right_hand_idx, left_hand_idx]:
+            # We already have the hand data
+            continue
+
+        if use_activation:
+            feature_vec.append([det_class_max_conf[i]])
         if use_intersection:
-            feature_vec.append([right_hand_intersection[left_hand_idx]])
-
-        # Add object data
+            feature_vec.append([right_hand_intersection[i]])
+            feature_vec.append([left_hand_intersection[i]])
+        if use_center_dist:
+            feature_vec.append(distances_to_center[i])
+    
+    # Add joint data
+    if use_joint_hand_offset:
+        feature_vec.append(joint_left_hand_offset)
+        feature_vec.append(joint_right_hand_offset)
+    if use_joint_object_offset:
         for i in range(num_det_classes):
             if i in [right_hand_idx, left_hand_idx]:
                 # We already have the hand data
                 continue
-
-            if use_activation:
-                feature_vec.append([det_class_max_conf[i][object_index]])
-            if use_intersection:
-                feature_vec.append([right_hand_intersection[i]])
-                feature_vec.append([left_hand_intersection[i]])
-            if use_center_dist:
-                feature_vec.append(distances_to_center[i])
+            feature_vec.append(joint_object_offset[i])
 
     feature_vec = [item for sublist in feature_vec for item in sublist]  # flatten
+    feature_vec = np.array(feature_vec, dtype=np.float64)
 
     return feature_vec
