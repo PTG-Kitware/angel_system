@@ -59,15 +59,12 @@ class ObjectHandDetector(Node):
                 # If we should enable additional logging to the info level
                 # about when we receive and process data.
                 ("enable_time_trace_logging", False),
-                ("image_resize", False)
             ],
         )
         self._image_topic = param_values["image_topic"]
         self._det_topic = param_values["det_topic"]
         self._model_ckpt_fp = Path(param_values["net_checkpoint"])
         self._hand_model_chpt_fp = Path(param_values["hand_net_checkpoint"])
-        
-        self._ensure_image_resize = param_values["image_resize"]
         
         self._inference_img_size = param_values["inference_img_size"]
         self._det_conf_thresh = param_values["det_conf_threshold"]
@@ -201,16 +198,8 @@ class ObjectHandDetector(Node):
                     log.info(f"[rt-loop] Processing image TS={image.header.stamp}")
                 # Convert ROS img msg to CV2 image
                 img0 = BRIDGE.imgmsg_to_cv2(image, desired_encoding="bgr8")
-                
-                
                 print(f"img0: {img0.shape}")
                 print(f"img0 type: {type(img0)}")
-                
-                # width, height = self._inference_img_size
-                if self._ensure_image_resize:
-                    img0 = cv2.resize(img0, dsize=(1280, 720), interpolation=cv2.INTER_CUBIC)
-                
-                print(f"img0: {img0.shape}")
                 
                 msg = ObjectDetection2dSet()
                 msg.header.stamp = self.get_clock().now().to_msg()
@@ -226,7 +215,8 @@ class ObjectHandDetector(Node):
 
                 hand_boxes, hand_labels, hand_confs = predict_hands(hand_model=self.hand_model, 
                                                                     img0=img0, 
-                                                                    device=self.device)
+                                                                    device=self.device,
+                                                                    imgsz=self._inference_img_size)
                 
                 hand_classids = [hand_cid_label_dict[label] for label in hand_labels]
                 
