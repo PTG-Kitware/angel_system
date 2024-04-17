@@ -74,7 +74,7 @@ windows:
                 -r __ns:=${ROS_NAMESPACE}
                 -p image_topic:=image_0 
                 -p det_topic:=ObjectDetections2d 
-                -p net_checkpoint:=${MODEL_DIR}/object_detector/r18_det.pt
+                -p object_net_checkpoint:=${MODEL_DIR}/object_detector/r18_det.pt
                 -p hand_net_checkpoint:=${MODEL_DIR}/object_detector/hands_model.pt
 
             - simple_2d_overlay: ros2 run angel_utils Simple2dDetectionOverlay --ros-args
