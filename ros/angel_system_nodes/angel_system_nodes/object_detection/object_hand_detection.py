@@ -9,7 +9,8 @@ from rclpy.callback_groups import MutuallyExclusiveCallbackGroup, ReentrantCallb
 from rclpy.node import Node, ParameterDescriptor, Parameter
 from sensor_msgs.msg import Image
 
-from yolov7.detect_ptg import load_model, predict_image, predict_hands
+from yolov7.detect_ptg import load_model, predict_image
+from angel_system.object_detection.yolov8_detect import predict_hands
 from yolov7.models.experimental import attempt_load
 import yolov7.models.yolo
 from yolov7.utils.torch_utils import TracedModel
