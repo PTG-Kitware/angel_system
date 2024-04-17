@@ -3,6 +3,7 @@
 #include <exception>
 #include <memory>
 #include <numeric>
+#include <map>
 
 // ROS2 things
 #include <builtin_interfaces/msg/time.hpp>
@@ -19,9 +20,11 @@
 
 // Our stuff
 #include <angel_msgs/msg/object_detection2d_set.hpp>
+#include <angel_msgs/msg/hand_joint_poses_update.hpp>
 #include <angel_utils/rate_tracker.hpp>
 
 using angel_msgs::msg::ObjectDetection2dSet;
+using angel_msgs::msg::HandJointPosesUpdate;
 using angel_utils::RateTracker;
 using rcl_interfaces::msg::ParameterDescriptor;
 using rcl_interfaces::msg::ParameterType;
@@ -39,6 +42,8 @@ namespace {
 DEFINE_PARAM_NAME( PARAM_TOPIC_INPUT_IMAGES, "topic_input_images" );
 // Topic we expect to receive 2D detections from.
 DEFINE_PARAM_NAME( PARAM_TOPIC_INPUT_DET_2D, "topic_input_det_2d" );
+// Topic we expect to receive joints from.
+DEFINE_PARAM_NAME( PARAM_TOPIC_INPUT_JOINTS, "topic_input_joints" );
 // Topic we will output debug overlay images to. This needs to be a compressed
 // image-transport topic.
 DEFINE_PARAM_NAME( PARAM_TOPIC_OUTPUT_IMAGE, "topic_output_images" );
@@ -105,6 +110,9 @@ public:
   /// Receive and record emitted detections.
   void collect_detections( ObjectDetection2dSet::SharedPtr const det_set );
 
+  /// Receive and record emitted joints.
+  void collect_joints( HandJointPosesUpdate::SharedPtr const joints_msg );
+
 private:
   // Maximum number of images to retain as "history" for incoming detection set
   // messages to potentialy match against.
@@ -121,6 +129,7 @@ private:
 
   rclcpp::Subscription< sensor_msgs::msg::Image >::SharedPtr m_sub_input_image;
   rclcpp::Subscription< ObjectDetection2dSet >::SharedPtr m_sub_input_det_2d;
+  rclcpp::Subscription< HandJointPosesUpdate >::SharedPtr m_sub_input_joints;
   std::shared_ptr< image_transport::Publisher > m_pub_overlay_image;
   // TODO: Just add a compressed output topic here? In construction below, just
   //       know to add the `/compressed` suffix.
@@ -150,6 +159,7 @@ Simple2dDetectionOverlay
   // clue what is going wrong.
   declare_parameter( PARAM_TOPIC_INPUT_IMAGES );
   declare_parameter( PARAM_TOPIC_INPUT_DET_2D );
+  declare_parameter( PARAM_TOPIC_INPUT_JOINTS );
   declare_parameter( PARAM_TOPIC_OUTPUT_IMAGE );
   declare_parameter( PARAM_MAX_IMAGE_HISTORY, 30 );
   declare_parameter( PARAM_FILTER_TOP_K, -1 );
@@ -158,6 +168,8 @@ Simple2dDetectionOverlay
     this->get_parameter( PARAM_TOPIC_INPUT_IMAGES ).as_string();
   auto topic_input_detections_2d =
     this->get_parameter( PARAM_TOPIC_INPUT_DET_2D ).as_string();
+  auto topic_input_joints =
+    this->get_parameter( PARAM_TOPIC_INPUT_JOINTS ).as_string();
   auto topic_output_image =
     this->get_parameter( PARAM_TOPIC_OUTPUT_IMAGE ).as_string();
 
@@ -194,6 +206,11 @@ Simple2dDetectionOverlay
   m_sub_input_det_2d = this->create_subscription< ObjectDetection2dSet >(
     topic_input_detections_2d, 1,
     std::bind( &Simple2dDetectionOverlay::collect_detections, this, _1 )
+    );
+  RCLCPP_INFO( log, "Creating subscribers and publishers -- Input joints" );
+  m_sub_input_joints = this->create_subscription< HandJointPosesUpdate >(
+    topic_input_joints, 1,
+    std::bind( &Simple2dDetectionOverlay::collect_joints, this, _1 )
     );
   RCLCPP_INFO( log, "Creating subscribers and publishers -- Output image" );
   // Do we have to keep `it` around for `m_pub_overlay_image` to continue
@@ -402,6 +419,129 @@ Simple2dDetectionOverlay
   // Because we like to know how fast this is going.
   m_det_rate_tracker.tick();
   RCLCPP_DEBUG( log, "Plotted detection set #%lu (hz: %f)",
+                m_detset_count, m_det_rate_tracker.get_rate_avg() );
+  ++m_detset_count;
+}
+
+// ----------------------------------------------------------------------------
+void
+Simple2dDetectionOverlay
+::collect_joints( HandJointPosesUpdate::SharedPtr const joints_msg )
+{
+  auto log = this->get_logger();
+
+  // lookup image for joints_msg->source_stamp
+  // check that detection header frame_id matches
+  size_t source_nanosec_key =
+    time_key_from_header( joints_msg->source_stamp );
+  RCLCPP_DEBUG( log, "Joint source key: %zu", source_nanosec_key );
+
+  // Check that we have the image in our history that matches our joints
+  // received.
+  auto find_it = m_frame_map.find( source_nanosec_key );
+  if( find_it == m_frame_map.end() )
+  {
+    auto history_min_key = m_frame_map.begin()->first;
+    RCLCPP_WARN(
+      log,
+      "Failed to find an image in our history that matches received joints. "
+      "joint source (%zu) < (%zu) history min.",
+      source_nanosec_key, history_min_key
+      );
+    return;
+  }
+
+  // Found something. Double-checking frame source is set to the same thing?
+  if( joints_msg->header.frame_id != find_it->second->header.frame_id )
+  {
+    RCLCPP_WARN(
+      log,
+      "Received joints frame-id does not match the aligned image in "
+      "our history? d-set (%s) != (%s) image",
+      joints_msg->header.frame_id.c_str(),
+      find_it->second->header.frame_id.c_str()
+      );
+    return;
+  }
+
+  // Only plot the patient skeleton
+  if(joints_msg->hand != "patient")
+  {
+    return;
+  }
+
+  // Make a copy of the message image to plot on.
+  cv_bridge::CvImagePtr img_ptr =
+    cv_bridge::toCvCopy( find_it->second, "rgb8" );
+
+  std::map<std::string, std::vector<double>> joint_positions = {};
+  std::map<std::string, std::vector<std::string>> connection_lines = { // mapping of joint line connections
+    {"nose", {"mouth"}},
+    {"mouth", {"throat"}},
+    {"throat", {"chest", "left_upper_arm", "right_upper_arm"}},
+    {"chest", {"back"}},
+    {"left_upper_arm", {"left_lower_arm"}},
+    {"left_lower_arm", {"left_wrist"}},
+    {"left_wrist", {"left_hand"}},
+    {"right_upper_arm", {"right_lower_arm"}},
+    {"right_lower_arm", {"right_wrist"}},
+    {"right_wrist", {"right_hand"}},
+    {"back", {"left_upper_leg", "right_upper_leg"}},
+    {"left_upper_leg", {"left_knee"}},
+    {"left_knee", {"left_lower_leg"}},
+    {"left_lower_leg", {"left_foot"}},
+    {"right_upper_leg", {"right_knee"}},
+    {"right_knee", {"right_lower_leg"}},
+    {"right_lower_leg", {"right_foot"}}
+  };
+
+  static auto const COLOR_PT = cv::Scalar{ 0, 255, 0 }; 
+  int line_thickness = thickness_for_drawing( img_ptr->image );
+  RCLCPP_DEBUG( log, "Using line thickness: %d", line_thickness );
+
+  // Draw the joint points
+  for( auto const& joint : joints_msg->joints )
+  {
+    double x = joint.pose.position.x;
+    double y = joint.pose.position.y;
+    joint_positions[joint.joint] = {x, y}; // save for later
+
+    // Plot the point
+    cv::Point pt = { (int) round( x ),
+                     (int) round( y ) };
+    cv::circle( img_ptr->image, pt, line_thickness*3,
+                COLOR_PT, cv::FILLED);
+  }
+
+  // Draw the joint connections
+  for(auto const& connection : connection_lines)
+  {
+    std::string joint_name = connection.first;
+    std::vector<std::string> joint_connections = connection.second;
+    std::vector<double> first_joint = joint_positions[joint_name];
+    cv::Point pt1 = { 
+      (int) round( first_joint[0] ),
+      (int) round( first_joint[1] ) 
+    };
+
+    for(auto const& connecting_joint : joint_connections)
+    {
+      std::vector<double> connecting_pt = joint_positions[connecting_joint];
+      cv::Point pt2 = { 
+        (int) round( connecting_pt[0] ),
+        (int) round( connecting_pt[1] ) 
+      };
+
+      cv::line(img_ptr->image, pt1, pt2, COLOR_PT, line_thickness, cv::LINE_8);
+    }
+  }
+
+  auto out_img_msg = img_ptr->toImageMsg();
+  m_pub_overlay_image->publish( *out_img_msg );
+
+  // Because we like to know how fast this is going.
+  m_det_rate_tracker.tick();
+  RCLCPP_DEBUG( log, "Plotted joints #%lu (hz: %f)",
                 m_detset_count, m_det_rate_tracker.get_rate_avg() );
   ++m_detset_count;
 }
