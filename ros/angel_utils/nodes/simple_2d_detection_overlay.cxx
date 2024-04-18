@@ -163,6 +163,7 @@ private:
   using frame_map_t = std::map< size_t, sensor_msgs::msg::Image::SharedPtr >;
 
   frame_map_t m_frame_map;
+  std::map< size_t, cv_bridge::CvImagePtr > m_drawn_frame_map;
 };
 
 // ----------------------------------------------------------------------------
@@ -347,9 +348,21 @@ Simple2dDetectionOverlay
     return;
   }
 
-  // Make a copy of the message image to plot on.
-  cv_bridge::CvImagePtr img_ptr =
-    cv_bridge::toCvCopy( find_it->second, "rgb8" );
+  // Check if we have already drawn something on this image
+  auto find_drawn_it = m_drawn_frame_map.find( source_nanosec_key );
+  bool insert = false;
+  cv_bridge::CvImagePtr img_ptr;
+  if( find_drawn_it == m_drawn_frame_map.end() )
+  {
+    insert = true;
+    // Make a copy of the message image to plot on.
+    img_ptr =
+      cv_bridge::toCvCopy( find_it->second, "rgb8" );
+  }
+  else
+  {
+    img_ptr = find_drawn_it->second;
+  }
 
   size_t num_detections = det_set->num_detections;
   size_t num_labels = det_set->label_vec.size();
@@ -433,14 +446,33 @@ Simple2dDetectionOverlay
 
   }
 
-  auto out_img_msg = img_ptr->toImageMsg();
-  m_pub_overlay_image->publish( *out_img_msg );
+  if(insert)
+  {
+    // Insert this frame into our drawing history.
+    m_drawn_frame_map.insert( { source_nanosec_key, img_ptr } );
 
-  // Because we like to know how fast this is going.
-  m_det_rate_tracker.tick();
-  RCLCPP_DEBUG( log, "Plotted detection set #%lu (hz: %f)",
-                m_detset_count, m_det_rate_tracker.get_rate_avg() );
-  ++m_detset_count;
+    // If we've got too much, remove the lowest key-valued entry (oldest image)
+    // Since std::map is ordered, map.begin() when size>0 references the first
+    // element, which is what we want to remove because it will have the
+    // least-valued key.
+    if( m_drawn_frame_map.size() == m_max_image_history )
+    {
+      m_drawn_frame_map.erase( m_drawn_frame_map.begin() );
+    }
+  }
+  else{
+    // Frame was already drawn on by the other message, time to publish
+    auto out_img_msg = img_ptr->toImageMsg();
+    m_pub_overlay_image->publish( *out_img_msg );
+
+    // Because we like to know how fast this is going.
+    m_det_rate_tracker.tick();
+    RCLCPP_DEBUG( log, "Plotted detection set #%lu (hz: %f)",
+                  m_detset_count, m_det_rate_tracker.get_rate_avg() );
+    ++m_detset_count;
+  }
+
+  
 }
 
 // ----------------------------------------------------------------------------
@@ -496,9 +528,21 @@ Simple2dDetectionOverlay
     return;
   }
 
-  // Make a copy of the message image to plot on.
-  cv_bridge::CvImagePtr img_ptr =
-    cv_bridge::toCvCopy( find_it->second, "rgb8" );
+  // Check if we have already drawn something on this image
+  auto find_drawn_it = m_drawn_frame_map.find( source_nanosec_key );
+  bool insert = false;
+  cv_bridge::CvImagePtr img_ptr;
+  if( find_drawn_it == m_drawn_frame_map.end() )
+  {
+    insert = true;
+    // Make a copy of the message image to plot on.
+    img_ptr =
+      cv_bridge::toCvCopy( find_it->second, "rgb8" );
+  }
+  else
+  {
+    img_ptr = find_drawn_it->second;
+  }
 
   std::map<std::string, std::vector<double>> joint_positions = {};
   
@@ -545,14 +589,31 @@ Simple2dDetectionOverlay
     }
   }
 
-  auto out_img_msg = img_ptr->toImageMsg();
-  m_pub_overlay_image->publish( *out_img_msg );
+  if(insert)
+  {
+    // Insert this frame into our drawing history.
+    m_drawn_frame_map.insert( { source_nanosec_key, img_ptr } );
 
-  // Because we like to know how fast this is going.
-  m_det_rate_tracker.tick();
-  RCLCPP_DEBUG( log, "Plotted joints #%lu (hz: %f)",
-                m_detset_count, m_det_rate_tracker.get_rate_avg() );
-  ++m_detset_count;
+    // If we've got too much, remove the lowest key-valued entry (oldest image)
+    // Since std::map is ordered, map.begin() when size>0 references the first
+    // element, which is what we want to remove because it will have the
+    // least-valued key.
+    if( m_drawn_frame_map.size() == m_max_image_history )
+    {
+      m_drawn_frame_map.erase( m_drawn_frame_map.begin() );
+    }
+  }
+  else{
+    // Frame was already drawn on by the other message, time to publish
+    auto out_img_msg = img_ptr->toImageMsg();
+    m_pub_overlay_image->publish( *out_img_msg );
+
+    // Because we like to know how fast this is going.
+    m_det_rate_tracker.tick();
+    RCLCPP_DEBUG( log, "Plotted detection set #%lu (hz: %f)",
+                  m_detset_count, m_det_rate_tracker.get_rate_avg() );
+    ++m_detset_count;
+  }
 }
 
 } // namespace angel_utils
