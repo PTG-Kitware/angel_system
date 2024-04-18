@@ -63,6 +63,26 @@ static constexpr size_t const TENe9 = 1000000000;
 static constexpr double const LINE_FACTOR = 0.0015;
 // Max length of the bounding box label displayed before wrapping the tezt
 static constexpr int const MAX_LINE_LEN = 15;
+// Map indicating joint->joint connecting lines
+static std::map<std::string, std::vector<std::string>> JOINT_CONNECTION_LINES = { // mapping of joint line connections
+    {"nose", {"mouth"}},
+    {"mouth", {"throat"}},
+    {"throat", {"chest", "left_upper_arm", "right_upper_arm"}},
+    {"chest", {"back"}},
+    {"left_upper_arm", {"left_lower_arm"}},
+    {"left_lower_arm", {"left_wrist"}},
+    {"left_wrist", {"left_hand"}},
+    {"right_upper_arm", {"right_lower_arm"}},
+    {"right_lower_arm", {"right_wrist"}},
+    {"right_wrist", {"right_hand"}},
+    {"back", {"left_upper_leg", "right_upper_leg"}},
+    {"left_upper_leg", {"left_knee"}},
+    {"left_knee", {"left_lower_leg"}},
+    {"left_lower_leg", {"left_foot"}},
+    {"right_upper_leg", {"right_knee"}},
+    {"right_knee", {"right_lower_leg"}},
+    {"right_lower_leg", {"right_foot"}}
+  };
 
 /// Convert a header instance into a single-value time component to be used as
 /// and order-able key.
@@ -467,6 +487,12 @@ Simple2dDetectionOverlay
   // Only plot the patient skeleton
   if(joints_msg->hand != "patient")
   {
+    RCLCPP_WARN(
+      log,
+      "Received joints that do not belong to the patient."
+      "joint source: (%s)",
+      joints_msg->hand
+      );
     return;
   }
 
@@ -475,26 +501,7 @@ Simple2dDetectionOverlay
     cv_bridge::toCvCopy( find_it->second, "rgb8" );
 
   std::map<std::string, std::vector<double>> joint_positions = {};
-  std::map<std::string, std::vector<std::string>> connection_lines = { // mapping of joint line connections
-    {"nose", {"mouth"}},
-    {"mouth", {"throat"}},
-    {"throat", {"chest", "left_upper_arm", "right_upper_arm"}},
-    {"chest", {"back"}},
-    {"left_upper_arm", {"left_lower_arm"}},
-    {"left_lower_arm", {"left_wrist"}},
-    {"left_wrist", {"left_hand"}},
-    {"right_upper_arm", {"right_lower_arm"}},
-    {"right_lower_arm", {"right_wrist"}},
-    {"right_wrist", {"right_hand"}},
-    {"back", {"left_upper_leg", "right_upper_leg"}},
-    {"left_upper_leg", {"left_knee"}},
-    {"left_knee", {"left_lower_leg"}},
-    {"left_lower_leg", {"left_foot"}},
-    {"right_upper_leg", {"right_knee"}},
-    {"right_knee", {"right_lower_leg"}},
-    {"right_lower_leg", {"right_foot"}}
-  };
-
+  
   static auto const COLOR_PT = cv::Scalar{ 0, 255, 0 }; 
   int line_thickness = thickness_for_drawing( img_ptr->image );
   RCLCPP_DEBUG( log, "Using line thickness: %d", line_thickness );
@@ -514,12 +521,14 @@ Simple2dDetectionOverlay
   }
 
   // Draw the joint connections
-  for(auto const& connection : connection_lines)
+  cv::Point pt1;
+  cv::Point pt2;
+  for(auto const& connection : JOINT_CONNECTION_LINES)
   {
     std::string joint_name = connection.first;
     std::vector<std::string> joint_connections = connection.second;
     std::vector<double> first_joint = joint_positions[joint_name];
-    cv::Point pt1 = { 
+    pt1 = { 
       (int) round( first_joint[0] ),
       (int) round( first_joint[1] ) 
     };
@@ -527,7 +536,7 @@ Simple2dDetectionOverlay
     for(auto const& connecting_joint : joint_connections)
     {
       std::vector<double> connecting_pt = joint_positions[connecting_joint];
-      cv::Point pt2 = { 
+      pt2 = { 
         (int) round( connecting_pt[0] ),
         (int) round( connecting_pt[1] ) 
       };
