@@ -27,7 +27,7 @@ from angel_utils import make_default_main
 BRIDGE = CvBridge()
 
 
-class ObjectHandDetector(Node):
+class ObjectAndHandDetector(Node):
     """
     ROS node that runs the yolov7 object detector model and outputs
     `ObjectDetection2dSet` messages.
@@ -281,7 +281,7 @@ class ObjectHandDetector(Node):
 # - 1 known subscriber which has their own group
 # - 1 for default group
 # - 1 for publishers
-main = make_default_main(ObjectHandDetector, multithreaded_executor=3)
+main = make_default_main(ObjectAndHandDetector, multithreaded_executor=3)
 
 
 if __name__ == "__main__":

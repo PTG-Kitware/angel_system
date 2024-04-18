@@ -70,7 +70,7 @@ windows:
     - object_detector:
         layout: even-vertical
         panes:
-            - objects_hands_detection: ros2 run angel_system_nodes object_hand_detector --ros-args 
+            - object_and_hand_detection: ros2 run angel_system_nodes object_and_hand_detector --ros-args 
                 -r __ns:=${ROS_NAMESPACE}
                 -p image_topic:=image_0 
                 -p det_topic:=ObjectDetections2d 
