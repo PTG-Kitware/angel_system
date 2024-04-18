@@ -75,6 +75,7 @@ class ObjectDetectionsLTRB:
     # Vectorized detection confidence value of the most confidence class.
     confidences: Tuple[float]
 
+
 @dataclass
 class PatientPose:
     # Identifier for this set of detections.
@@ -85,6 +86,7 @@ class PatientPose:
     # orientations: list
     # Vectorized keypoint label
     labels: str
+
 
 def normalize_detection_features(
     det_feats: npt.ArrayLike,
@@ -119,7 +121,7 @@ def objects_to_feats(
     image_width: int,
     image_height: int,
     feature_memo: Optional[Dict[int, npt.NDArray]] = None,
-    top_n_objects: int =3
+    top_n_objects: int = 3,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Convert some object detections for some window of frames into a feature
@@ -151,38 +153,40 @@ def objects_to_feats(
     feat_memo = {} if feature_memo is None else feature_memo
 
     window_size = len(frame_object_detections)
-    
+
     # Shape [window_size, None|n_feats]
     feature_list: List[Optional[npt.NDArray]] = [None] * window_size
     feature_ndim = None
     feature_dtype = None
-    
+
     # hands-joints offset vectors
     zero_offset = [0 for i in range(22)]
     joint_left_hand_offset_all_frames = [None] * window_size
     joint_right_hand_offset_all_frames = [None] * window_size
     joint_object_offset_all_frames = [None] * window_size
     # for pose in frame_patient_poses:
-    for i, (pose, detection) in enumerate(zip(frame_patient_poses, frame_object_detections)):
+    for i, (pose, detection) in enumerate(
+        zip(frame_patient_poses, frame_object_detections)
+    ):
         if detection is None:
             continue
         labels = detection.labels
         bx, by, bw, bh = tlbr_to_xywh(
-                detection.top,
-                detection.left,
-                detection.bottom,
-                detection.right,
-            )
-        
+            detection.top,
+            detection.left,
+            detection.bottom,
+            detection.right,
+        )
+
         # iterate over all detections in that frame
         joint_object_offset = []
         for j, label in enumerate(labels):
             if label == "hand (right)" or label == "hand (left)":
                 x, y, w, h = bx[j], by[j], bw[j], bh[j]
-                
-                cx, cy = x+(w//2), y+(h//2)
+
+                cx, cy = x + (w // 2), y + (h // 2)
                 hand_point = np.array((cx, cy))
-                
+
                 offset_vector = []
                 if pose is not None:
                     for joint in pose:
@@ -192,7 +196,7 @@ def objects_to_feats(
                         offset_vector.append(dist)
                 else:
                     offset_vector = zero_offset
-                
+
                 if label == "hand (left)":
                     joint_left_hand_offset_all_frames[i] = offset_vector
                 elif label == "hand (right)":
@@ -200,7 +204,7 @@ def objects_to_feats(
             else:
                 # if objects_joints and num_objects > 0:
                 x, y, w, h = bx[j], by[j], bw[j], bh[j]
-                cx, cy = x+(w//2), y+(h//2)
+                cx, cy = x + (w // 2), y + (h // 2)
                 object_point = np.array((cx, cy))
                 offset_vector = []
                 if pose is not None:
@@ -212,10 +216,9 @@ def objects_to_feats(
                 else:
                     offset_vector = zero_offset
                 joint_object_offset.append(offset_vector)
-                
+
         joint_object_offset_all_frames[i] = joint_object_offset
-    
-    
+
     for i, frame_dets in enumerate(frame_object_detections):
         frame_dets: ObjectDetectionsLTRB
         if frame_dets is not None:
@@ -229,37 +232,35 @@ def objects_to_feats(
                     frame_dets.bottom,
                     frame_dets.right,
                 )
-                feat = (
-                    obj_det2d_set_to_feature(
-                        frame_dets.labels,
-                        xs,
-                        ys,
-                        ws,
-                        hs,
-                        frame_dets.confidences,
-                        None,
-                        None,
-                        None,
-                        None,
-                        None,
-                        label_to_ind=det_label_to_idx,
-                        version=feat_version,
-                        top_n_objects=top_n_objects
-                    )
+                feat = obj_det2d_set_to_feature(
+                    frame_dets.labels,
+                    xs,
+                    ys,
+                    ws,
+                    hs,
+                    frame_dets.confidences,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    label_to_ind=det_label_to_idx,
+                    version=feat_version,
+                    top_n_objects=top_n_objects,
                 )
-                
+
                 offset_vector = []
-                    
+
                 if joint_left_hand_offset_all_frames[i] is not None:
                     offset_vector.extend(joint_left_hand_offset_all_frames[i])
                 else:
                     offset_vector.extend(zero_offset)
-                    
+
                 if joint_right_hand_offset_all_frames[i] is not None:
                     offset_vector.extend(joint_right_hand_offset_all_frames[i])
                 else:
                     offset_vector.extend(zero_offset)
-                    
+
                 for j in range(top_n_objects):
                     if joint_object_offset_all_frames[i] is not None:
                         if len(joint_object_offset_all_frames[i]) > j:
@@ -268,14 +269,14 @@ def objects_to_feats(
                             offset_vector.extend(zero_offset)
                     else:
                         offset_vector.extend(zero_offset)
-                
+
                 feat.extend(offset_vector)
                 feat = np.array(feat, dtype=np.float64).ravel()
                 feat_memo[f_id] = feat
-                
+
                 print(f"feat: {feat}")
                 print(f"feat shape: {feat.shape}")
-                
+
             else:
                 feat = feat_memo[f_id]
             feature_ndim = feat.shape

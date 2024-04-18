@@ -74,7 +74,7 @@ def make_default_main(
 
         # Construct the node instance
         node = node_type(*node_args, **(node_kwargs or {}))
-        
+
         # Execute pre-spin callback, if provided
         if pre_spin_callback is not None:
             pre_spin_callback(node)

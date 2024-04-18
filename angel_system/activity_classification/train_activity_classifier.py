@@ -39,7 +39,7 @@ def data_loader(
         - ann_by_image: Image id to annotation dict
     """
     print("Loading data....")
-    
+
     act_map = {}
     inv_act_map = {}
     for step in act_labels["labels"]:
@@ -51,7 +51,7 @@ def data_loader(
         inv_act_map[0] = "background"
 
     # print(f"act_map: {act_map}")
-    
+
     # Load object detections
     if type(dset) == str or type(dset) == PosixPath:
         dset_fn = dset
@@ -63,7 +63,7 @@ def data_loader(
     image_id_to_dataset = {}
     for img_id in dset.imgs:
         im = dset.imgs[img_id]
-        
+
         gid = im["id"]
         image_id_to_dataset[gid] = os.path.split(im["file_name"])[0]
 
@@ -95,7 +95,7 @@ def data_loader(
         for ann_id in anns:
             ann = dset.anns[ann_id]
             ann_by_image[gid].append(ann)
-    
+
     return (
         act_map,
         inv_act_map,
@@ -115,10 +115,10 @@ def compute_feats(
     act_id_to_str: dict,
     ann_by_image: dict,
     feat_version=1,
-    objects_joints: bool =False,
-    hands_joints: bool =False,
-    aug_trans_range = None,
-    aug_rot_range = None,
+    objects_joints: bool = False,
+    hands_joints: bool = False,
+    aug_trans_range=None,
+    aug_rot_range=None,
     top_n_objects=3,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Compute features from object detections
@@ -138,12 +138,18 @@ def compute_feats(
     dataset_id = []
     last_dset = 0
 
-    hands_possible_labels = ['hand (right)', 'hand (left)', 'hand', 'hands']
-    non_objects_labels = ['patient', 'user']
-    hands_inds = [key for key, label in act_id_to_str.items() if label in hands_possible_labels]
-    non_object_inds = [key for key, label in act_id_to_str.items() if label in non_objects_labels]
-    object_inds = list(set(list(label_to_ind.values())) - set(hands_inds) - set(non_object_inds))
-    
+    hands_possible_labels = ["hand (right)", "hand (left)", "hand", "hands"]
+    non_objects_labels = ["patient", "user"]
+    hands_inds = [
+        key for key, label in act_id_to_str.items() if label in hands_possible_labels
+    ]
+    non_object_inds = [
+        key for key, label in act_id_to_str.items() if label in non_objects_labels
+    ]
+    object_inds = list(
+        set(list(label_to_ind.values())) - set(hands_inds) - set(non_object_inds)
+    )
+
     for image_id in sorted(list(ann_by_image.keys())):
         label_vec = []
         xs = []
@@ -155,53 +161,71 @@ def compute_feats(
         obj_obj_contact_conf = []
         obj_hand_contact_state = []
         obj_hand_contact_conf = []
-        
+
         if objects_joints or hands_joints:
             joint_left_hand_offset = []
             joint_right_hand_offset = []
             joint_object_offset = []
-        
+
         num_hands, num_objects = 0, 0
-        
+
         for ann in ann_by_image[image_id]:
             if "keypoints" in ann.keys():
-                pose_keypoints = ann['keypoints']
-            
+                pose_keypoints = ann["keypoints"]
+
             elif "confidence" in ann.keys():
                 label_vec.append(act_id_to_str[ann["category_id"]])
                 x, y = ann["bbox"][0], ann["bbox"][1]
                 w, h = ann["bbox"][2], ann["bbox"][3]
-                
+
                 if aug_trans_range != None and aug_rot_range != None:
-                    
+
                     print(f"performing augmentation")
-                    random_translation_x = np.random.uniform(aug_trans_range[0], aug_trans_range[1])
-                    random_translation_y = np.random.uniform(aug_trans_range[0], aug_trans_range[1])
-                    random_rotation = np.random.uniform(aug_rot_range[0], aug_rot_range[1])
-                    
-                    object_center_x, object_center_y = x + w//2, y + h//2
-                    
-                    rotation_matrix = np.array([[np.cos(random_rotation), -np.sin(random_rotation), random_translation_x], 
-                                                [np.sin(random_rotation), np.cos(random_rotation), random_translation_y],
-                                                [0, 0, 1]])
-                    
+                    random_translation_x = np.random.uniform(
+                        aug_trans_range[0], aug_trans_range[1]
+                    )
+                    random_translation_y = np.random.uniform(
+                        aug_trans_range[0], aug_trans_range[1]
+                    )
+                    random_rotation = np.random.uniform(
+                        aug_rot_range[0], aug_rot_range[1]
+                    )
+
+                    object_center_x, object_center_y = x + w // 2, y + h // 2
+
+                    rotation_matrix = np.array(
+                        [
+                            [
+                                np.cos(random_rotation),
+                                -np.sin(random_rotation),
+                                random_translation_x,
+                            ],
+                            [
+                                np.sin(random_rotation),
+                                np.cos(random_rotation),
+                                random_translation_y,
+                            ],
+                            [0, 0, 1],
+                        ]
+                    )
+
                     xy = np.array([x, y, 1])
                     xy_center = np.array([object_center_x, object_center_y, 1])
-                    
-                    rot_xy = (xy-xy_center) @ rotation_matrix.T + xy_center
-                      
+
+                    rot_xy = (xy - xy_center) @ rotation_matrix.T + xy_center
+
                     x = rot_xy[0]
                     y = rot_xy[1]
-                    
+
                 xs.append(x)
                 ys.append(y)
                 ws.append(w)
                 hs.append(h)
                 label_confidences.append(ann["confidence"])
-                
+
                 if ann["category_id"] in hands_inds:
                     num_hands += 1
-                elif ann['category_id'] in object_inds:
+                elif ann["category_id"] in object_inds:
                     num_objects += 1
                 try:
                     obj_obj_contact_state.append(ann["obj-obj_contact_state"])
@@ -210,15 +234,14 @@ def compute_feats(
                     obj_hand_contact_conf.append(ann["obj-hand_contact_conf"])
                 except KeyError:
                     pass
-                
-        
+
         # hardcoded width?
-        image_center = 1280//2
+        image_center = 1280 // 2
         if num_hands > 0:
             hands_loc_dict = {}
             for i, label in enumerate(label_vec):
                 if label == "hand":
-                    hand_center = xs[i] + ws[i]//2
+                    hand_center = xs[i] + ws[i] // 2
                     if hand_center < image_center:
                         if "hand (left)" not in hands_loc_dict.keys():
                             label_vec[i] = "hand (left)"
@@ -243,7 +266,7 @@ def compute_feats(
                                 prev_index = hands_loc_dict["hand (right)"][1]
                                 label_vec[prev_index] = "hand (left)"
                                 label_vec[i] = "hand (right)"
-        
+
         if "hand" in label_to_ind.keys():
             label_to_ind_tmp = {}
             for key, value in label_to_ind.items():
@@ -254,51 +277,51 @@ def compute_feats(
                     continue
                 else:
                     label_to_ind_tmp[key] = value + 1
-            
+
             label_to_ind = label_to_ind_tmp
 
         zero_offset = [0 for i in range(22)]
         if (num_hands > 0 or num_objects > 0) and (hands_joints or objects_joints):
             joint_object_offset = []
             for i, label in enumerate(label_vec):
-                
+
                 if hands_joints and num_hands > 0:
-                    
+
                     if label == "hand (right)" or label == "hand (left)":
                         bx, by, bw, bh = xs[i], ys[i], ws[i], hs[i]
-                        hcx, hcy = bx+(bw//2), by+(bh//2)
+                        hcx, hcy = bx + (bw // 2), by + (bh // 2)
                         hand_point = np.array((hcx, hcy))
-                        
+
                         offset_vector = []
-                        if 'pose_keypoints' in locals():
+                        if "pose_keypoints" in locals():
                             for joint in pose_keypoints:
-                                jx, jy = joint['xy']
+                                jx, jy = joint["xy"]
                                 joint_point = np.array((jx, jy))
                                 dist = np.linalg.norm(joint_point - hand_point)
                                 offset_vector.append(dist)
                         else:
                             offset_vector = zero_offset
-                            
+
                         if label == "hand (left)":
                             joint_left_hand_offset = offset_vector
                         elif label == "hand (right)":
                             joint_right_hand_offset = offset_vector
-                            
+
                     else:
                         if objects_joints and num_objects > 0:
                             bx, by, bw, bh = xs[i], ys[i], ws[i], hs[i]
-                            ocx, ocy = bx+(bw//2), by+(bh//2)
+                            ocx, ocy = bx + (bw // 2), by + (bh // 2)
                             object_point = np.array((ocx, ocy))
                             offset_vector = []
-                            if 'pose_keypoints' in locals():
+                            if "pose_keypoints" in locals():
                                 for joint in pose_keypoints:
-                                    jx, jy = joint['xy']
+                                    jx, jy = joint["xy"]
                                     joint_point = np.array((jx, jy))
                                     dist = np.linalg.norm(joint_point - object_point)
                                     offset_vector.append(dist)
                             else:
                                 offset_vector = zero_offset
-                                
+
                             joint_object_offset.append(offset_vector)
 
         feature_vec = obj_det2d_set_to_feature(
@@ -317,36 +340,35 @@ def compute_feats(
             version=feat_version,
             top_n_objects=top_n_objects,
         )
-        
+
         if objects_joints or hands_joints:
             zero_offset = [0 for i in range(22)]
             offset_vector = []
             if hands_joints:
-                
+
                 if len(joint_left_hand_offset) >= 1:
                     offset_vector.extend(joint_left_hand_offset)
                 else:
                     offset_vector.extend(zero_offset)
-                
+
                 if len(joint_right_hand_offset) >= 1:
                     offset_vector.extend(joint_right_hand_offset)
                 else:
                     offset_vector.extend(zero_offset)
             if objects_joints:
-                
+
                 for i in range(top_n_objects):
                     if len(joint_object_offset) > i:
                         offset_vector.extend(joint_object_offset[i])
                     else:
                         offset_vector.extend(zero_offset)
-            
+
             feature_vec.extend(offset_vector)
-        
+
         feature_vec = np.array(feature_vec, dtype=np.float64)
-        
+
         X.append(feature_vec.ravel())
-        
-            
+
         try:
             dataset_id.append(image_id_to_dataset[image_id])
             last_dset = dataset_id[-1]

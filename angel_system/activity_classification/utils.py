@@ -185,7 +185,7 @@ def obj_det2d_set_to_feature(
             use_intersection=True,
             use_joint_hand_offset=True,
             use_joint_object_offset=True,
-            top_n_objects=top_n_objects
+            top_n_objects=top_n_objects,
         )
     else:
         raise NotImplementedError(f"Unhandled version '{version}'")
@@ -239,18 +239,21 @@ def obj_det2d_set_to_feature_by_method(
     default_bbox = [0, 0, 0, 0]  # [0, 0, 1280, 720]
     default_center = ([[0]], [[0]])  # kwimage.Boxes([default_bbox], "xywh").center
     width, height = 1280, 720
-    image_center = width//2
+    image_center = width // 2
 
     #########################
     # Data
     #########################
     # Number of object detection classes
-    hand_labels = ['hand (right)', 'hand (left)', 'hand', 'hands']
-    non_objects_labels = ['patient', 'user']
-    remove_classes_count = [1 for label in non_objects_labels if label in label_to_ind.keys()]
-    num_det_classes = len(label_to_ind) - len(remove_classes_count)# accomedate 2 hands instead of 1, accomedate top 3 objects
+    hand_labels = ["hand (right)", "hand (left)", "hand", "hands"]
+    non_objects_labels = ["patient", "user"]
+    remove_classes_count = [
+        1 for label in non_objects_labels if label in label_to_ind.keys()
+    ]
+    num_det_classes = len(label_to_ind) - len(
+        remove_classes_count
+    )  # accomedate 2 hands instead of 1, accomedate top 3 objects
 
-    
     det_class_max_conf = np.zeros((num_det_classes, top_n_objects))
     # The bounding box of the maximally confident detection
     det_class_bbox = np.zeros((top_n_objects, num_det_classes, 4), dtype=np.float64)
@@ -259,7 +262,6 @@ def obj_det2d_set_to_feature_by_method(
     # Binary mask indicate which detection classes are present on this frame.
     det_class_mask = np.zeros(num_det_classes, dtype=np.bool_)
 
-    
     # print(f"label vec: {label_vec}")
     for i, label in enumerate(label_vec):
         if label in label_to_ind:
@@ -268,10 +270,10 @@ def obj_det2d_set_to_feature_by_method(
             det_class_mask[ind] = True
             conf_list = det_class_max_conf[ind, :]
             if conf > det_class_max_conf[ind].min():
-                first_zero = np.where(conf_list==conf_list.min())#[0][0]
+                first_zero = np.where(conf_list == conf_list.min())  # [0][0]
                 first_zero = first_zero[0][0]
                 conf_list[first_zero] = conf
-                obj_index = np.where(conf_list==conf)
+                obj_index = np.where(conf_list == conf)
 
                 det_class_max_conf[ind] = conf_list
                 det_class_bbox[obj_index, ind] = [xs[i], ys[i], ws[i], hs[i]]  # xywh
@@ -310,12 +312,12 @@ def obj_det2d_set_to_feature_by_method(
 
     RIGHT_IDX = 0
     LEFT_IDX = 1
-    right_left_hand_kwboxes = det_class_kwboxes[0,[right_hand_idx, left_hand_idx]]
+    right_left_hand_kwboxes = det_class_kwboxes[0, [right_hand_idx, left_hand_idx]]
     # Mask detailing hand presence in the scene.
     hand_mask = det_class_mask[[right_hand_idx, left_hand_idx]]
     # 2-D mask object class gate per hand
     hand_by_object_mask = np.dot(hand_mask[:, None], det_class_mask[None, :])
-    
+
     #########################
     # Distances
     #########################
@@ -324,17 +326,21 @@ def obj_det2d_set_to_feature_by_method(
         # is defined by `hand.center - object.center`.
         # `kwcoco.Boxes.center` returns a tuple of two arrays, each shaped
         # [n_boxes, 1].
-        
+
         all_obj_centers_x, all_obj_centers_y = det_class_kwboxes.center  # [n_dets, 1]
         hand_centers_x, hand_centers_y = right_left_hand_kwboxes.center  # [2, 1]
         # Hand distances from objects. Shape: [2, n_dets]
-        right_hand_dist_n = np.zeros((top_n_objects, hand_by_object_mask.shape[1], hand_by_object_mask.shape[0]))
-        left_hand_dist_n = np.zeros((top_n_objects, hand_by_object_mask.shape[1], hand_by_object_mask.shape[0]))
+        right_hand_dist_n = np.zeros(
+            (top_n_objects, hand_by_object_mask.shape[1], hand_by_object_mask.shape[0])
+        )
+        left_hand_dist_n = np.zeros(
+            (top_n_objects, hand_by_object_mask.shape[1], hand_by_object_mask.shape[0])
+        )
         # print(f"left_hand_dist_n: {left_hand_dist_n.shape}")
         for object_index in range(top_n_objects):
-            obj_centers_x =  all_obj_centers_x[object_index]
+            obj_centers_x = all_obj_centers_x[object_index]
             obj_centers_y = all_obj_centers_y[object_index]  # [n_dets, 1]
-            
+
             hand_dist_x = np.subtract(
                 hand_centers_x,
                 obj_centers_x.T,
@@ -356,7 +362,7 @@ def obj_det2d_set_to_feature_by_method(
             left_hand_dist = np.stack(
                 [hand_dist_x[LEFT_IDX], hand_dist_y[LEFT_IDX]], axis=1
             )
-            
+
             right_hand_dist_n[object_index] = right_hand_dist
             left_hand_dist_n[object_index] = left_hand_dist
 
@@ -391,10 +397,14 @@ def obj_det2d_set_to_feature_by_method(
         # intersected by the representative object bounding-box.
         # If a hand or object is not present in the scene, then their
         # respective intersection area is 0.
-        right_hand_intersection_n = np.zeros((top_n_objects, hand_by_object_mask.shape[1]))
-        left_hand_intersection_n = np.zeros((top_n_objects, hand_by_object_mask.shape[1]))
+        right_hand_intersection_n = np.zeros(
+            (top_n_objects, hand_by_object_mask.shape[1])
+        )
+        left_hand_intersection_n = np.zeros(
+            (top_n_objects, hand_by_object_mask.shape[1])
+        )
         for object_index in range(top_n_objects):
-            
+
             hand_obj_intersection_vol = right_left_hand_kwboxes.isect_area(
                 det_class_kwboxes[object_index]
             )
@@ -409,13 +419,12 @@ def obj_det2d_set_to_feature_by_method(
                 # indices where `right_left_hand_area == 0`.
                 out=np.zeros_like(hand_obj_intersection_vol),
             )
-            
+
             right_hand_intersection = hand_obj_intersection[0]
             left_hand_intersection = hand_obj_intersection[1]
-            
+
             right_hand_intersection_n[object_index] = right_hand_intersection
             left_hand_intersection_n[object_index] = left_hand_intersection
-            
 
     else:
         right_hand_intersection = left_hand_intersection = None
@@ -426,13 +435,13 @@ def obj_det2d_set_to_feature_by_method(
     feature_vec = []
     # Add hand data
     for object_index in range(top_n_objects):
-        
+
         right_hand_dist = right_hand_dist_n[object_index]
         left_hand_dist = left_hand_dist_n[object_index]
-        
+
         right_hand_intersection = right_hand_intersection_n[object_index]
         left_hand_intersection = left_hand_intersection_n[object_index]
-        
+
         for hand_conf, hand_idx, hand_dist, hand_intersection in [
             (right_hand_conf, right_hand_idx, right_hand_dist, right_hand_intersection),
             (left_hand_conf, left_hand_idx, left_hand_dist, left_hand_intersection),
@@ -451,12 +460,12 @@ def obj_det2d_set_to_feature_by_method(
                 feature_vec.append(distances_to_center[hand_idx])
 
         # print(f"top-N objects feature_vec: {len(feature_vec)}")
-        # Add distance and intersection between hands. 
+        # Add distance and intersection between hands.
         # This is already there since the hands are in dets_class
-        
+
         if use_hand_dist:
             feature_vec.append(right_hand_dist[left_hand_idx])
-        
+
         if use_intersection:
             feature_vec.append([right_hand_intersection[left_hand_idx]])
 
@@ -474,8 +483,6 @@ def obj_det2d_set_to_feature_by_method(
             if use_center_dist:
                 feature_vec.append(distances_to_center[i])
 
-        
-        
     feature_vec = [item for sublist in feature_vec for item in sublist]  # flatten
-    
+
     return feature_vec

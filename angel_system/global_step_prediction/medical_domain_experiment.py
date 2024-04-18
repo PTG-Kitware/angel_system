@@ -19,8 +19,8 @@ def run_inference_all_vids(coco, config, extra_output_suffix=""):
         print(f"vid_id {vid_id}===========================")
 
         step_predictor = GlobalStepPredictor(
-            recipe_types=['r18'],
-            activity_config_fpath=config['r18'],
+            recipe_types=["r18"],
+            activity_config_fpath=config["r18"],
             recipe_config_dict=config,
         )
 

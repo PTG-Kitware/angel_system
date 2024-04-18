@@ -17,7 +17,7 @@ from angel_system.utils.event import WaitAndClearEvent
 from angel_system.utils.simple_timer import SimpleTimer
 
 from angel_msgs.msg import ObjectDetection2dSet
-from angel_utils import declare_and_get_parameters, RateTracker#, DYNAMIC_TYPE
+from angel_utils import declare_and_get_parameters, RateTracker  # , DYNAMIC_TYPE
 from angel_utils import make_default_main
 
 
