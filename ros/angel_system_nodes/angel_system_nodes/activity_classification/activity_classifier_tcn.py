@@ -26,7 +26,7 @@ from angel_system.activity_classification.tcn_hpl.predict import (
     objects_to_feats,
     predict,
     ResultsCollector,
-    PatientPose
+    PatientPose,
 )
 from angel_system.utils.event import WaitAndClearEvent
 from angel_system.utils.simple_timer import SimpleTimer
@@ -35,7 +35,7 @@ from angel_msgs.msg import (
     ObjectDetection2dSet,
     ActivityDetection,
     HandJointPosesUpdate,
-    HandJointPose
+    HandJointPose,
 )
 from angel_utils import declare_and_get_parameters, make_default_main, RateTracker
 from angel_utils.activity_classification import InputWindow, InputBuffer
@@ -118,10 +118,10 @@ class ActivityClassifierTCN(Node):
                 (PARAM_MODEL_OD_MAPPING,),
                 (PARAM_MODEL_DEVICE, "cuda"),
                 (PARAM_MODEL_DETS_CONV_VERSION, 6),
-                (PARAM_WINDOW_FRAME_SIZE,45),
-                (PARAM_BUFFER_MAX_SIZE_SECONDS,15),
-                (PARAM_IMAGE_PIX_WIDTH,1280),
-                (PARAM_IMAGE_PIX_HEIGHT,720),
+                (PARAM_WINDOW_FRAME_SIZE, 45),
+                (PARAM_BUFFER_MAX_SIZE_SECONDS, 15),
+                (PARAM_IMAGE_PIX_WIDTH, 1280),
+                (PARAM_IMAGE_PIX_HEIGHT, 720),
                 (PARAM_RT_HEARTBEAT, 0.1),
                 (PARAM_OUTPUT_COCO_FILEPATH, ""),
                 (PARAM_INPUT_COCO_FILEPATH, ""),
@@ -130,9 +130,9 @@ class ActivityClassifierTCN(Node):
         )
         self._img_ts_topic = param_values[PARAM_IMG_TS_TOPIC]
         self._det_topic = param_values[PARAM_DET_TOPIC]
-        
+
         self._pose_topic = param_values[PARAM_POSE_TOPIC]
-        
+
         self._act_topic = param_values[PARAM_ACT_TOPIC]
         self._img_pix_width = param_values[PARAM_IMAGE_PIX_WIDTH]
         self._img_pix_height = param_values[PARAM_IMAGE_PIX_HEIGHT]
@@ -150,7 +150,7 @@ class ActivityClassifierTCN(Node):
             # from torchsummary import summary
             # print(summary(self._model))
             # print(self._model)
-        
+
         # Load labels list from configured activity_labels YAML file.
         print(f"json path: {param_values[PARAM_MODEL_OD_MAPPING]}")
         with open(param_values[PARAM_MODEL_OD_MAPPING]) as infile:
@@ -164,15 +164,32 @@ class ActivityClassifierTCN(Node):
         # embedding function in the `_predict` method.
         self._memo_preproc_input: Dict[int, ObjectDetectionsLTRB] = {}
         self._memo_preproc_input_poses: Dict[int, PatientPose] = {}
-        
+
         self.keypoints_cats = [
-                        "nose", "mouth", "throat","chest","stomach","left_upper_arm",
-                        "right_upper_arm","left_lower_arm","right_lower_arm","left_wrist",
-                        "right_wrist","left_hand","right_hand","left_upper_leg",
-                        "right_upper_leg","left_knee","right_knee","left_lower_leg", 
-                        "right_lower_leg", "left_foot", "right_foot", "back"
-                    ]
-        
+            "nose",
+            "mouth",
+            "throat",
+            "chest",
+            "stomach",
+            "left_upper_arm",
+            "right_upper_arm",
+            "left_lower_arm",
+            "right_lower_arm",
+            "left_wrist",
+            "right_wrist",
+            "left_hand",
+            "right_hand",
+            "left_upper_leg",
+            "right_upper_leg",
+            "left_knee",
+            "right_knee",
+            "left_lower_leg",
+            "right_lower_leg",
+            "left_foot",
+            "right_foot",
+            "back",
+        ]
+
         # Memoization structure for feature embedding function used in the
         # `_predict` method.
         self._memo_objects_to_feats: Dict[int, npt.NDArray] = {}
@@ -256,7 +273,7 @@ class ActivityClassifierTCN(Node):
             1,
             callback_group=MutuallyExclusiveCallbackGroup(),
         )
-        
+
         self._det_subscriber = self.create_subscription(
             ObjectDetection2dSet,
             self._det_topic,
@@ -264,7 +281,7 @@ class ActivityClassifierTCN(Node):
             1,
             callback_group=MutuallyExclusiveCallbackGroup(),
         )
-        
+
         self._pose_subscriber = self.create_subscription(
             HandJointPosesUpdate,
             self._pose_topic,
@@ -272,7 +289,7 @@ class ActivityClassifierTCN(Node):
             1,
             callback_group=MutuallyExclusiveCallbackGroup(),
         )
-        
+
         self._activity_publisher = self.create_publisher(
             ActivityDetection,
             self._act_topic,
@@ -283,8 +300,7 @@ class ActivityClassifierTCN(Node):
         # Rate tracker used in the window processing function.
         # This needs to be initialized before starting the runtime-loop which
         # calls that method.
-        
-        
+
         self._rate_tracker = RateTracker()
 
         # Start windowed prediction runtime thread.
@@ -418,7 +434,7 @@ class ActivityClassifierTCN(Node):
         creates an `ActivityDetection` message from the results the classifier,
         and publish the `ActivityDetection` message.
         """
-        
+
         if self.rt_alive() and self._buffer.queue_object_detections(msg):
             if self._enable_trace_logging:
                 self.get_logger().info(
@@ -426,11 +442,10 @@ class ActivityClassifierTCN(Node):
                 )
                 # self.get_logger().info(f"message contents: {msg}")
                 # self.get_logger().info(f"buffer contents: {self._buffer.obj_dets}")
-                
+
             # Let the runtime know we've queued something.
             # self._rt_awake_evt.set()
-            
-        
+
     def pose_callback(self, msg: HandJointPosesUpdate) -> None:
         """
         Callback function for `HandJointPosesUpdate` messages. Runs the classifier,
@@ -550,13 +565,12 @@ class ActivityClassifierTCN(Node):
             if self._rt_awake_evt.wait_and_clear(self._rt_active_heartbeat):
                 # We want to fire off a prediction if the current window of
                 # data is "valid" based on our registered criterion.
-                
+
                 # log.info(f"buffer contents: {self._buffer.obj_dets}")
-                
+
                 window = self._buffer.get_window(self._window_size)
-                
+
                 # log.info(f"buffer contents: {window.obj_dets}")
-                
 
                 # if enable_time_trace_logging:
                 #     log.info(f"window: {window.patient_joint_kps}")
@@ -570,20 +584,19 @@ class ActivityClassifierTCN(Node):
                     self._window_extracted_time_ns_cond.notify_all()
 
                 # log.info(f"if func for window process: {all(fn(window) for fn in window_processing_criterion_fn_list)}")
-                    
+
                 if all(fn(window) for fn in window_processing_criterion_fn_list):
                     # After validating a window, and before processing it, clear
                     # out older data at and before the first item in the window.
                     self._buffer.clear_before(time_to_int(window.frames[1][0]))
 
-                    
                     try:
                         if enable_time_trace_logging:
                             log.info(
                                 f"Processing window with leading image TS: "
                                 f"{window.frames[-1][0]}"
                             )
-                            
+
                         act_msg = self._process_window(window)
                         # log.info(f"activity message: {act_msg}")
                         self._collect_results(act_msg)
@@ -633,7 +646,7 @@ class ActivityClassifierTCN(Node):
         log = self.get_logger()
         memo_preproc_input = self._memo_preproc_input
         memo_preproc_input_h = self._memo_preproc_input_id_heap
-        
+
         memo_object_to_feats = self._memo_objects_to_feats
         memo_object_to_feats_h = self._memo_objects_to_feats_id_heap
 
@@ -664,7 +677,7 @@ class ActivityClassifierTCN(Node):
             f"[_process_window] Window vector presence: "
             f"{[(v is not None) for v in frame_object_detections]}"
         )
-        
+
         # log.info(f"window patient_joint_kps: {window.patient_joint_kps}")
         memo_preproc_input_poses = self._memo_preproc_input_poses
         memo_preproc_input_h_poses = self._memo_preproc_input_id_heap_poses
@@ -681,8 +694,11 @@ class ActivityClassifierTCN(Node):
                     # print(f"num of keypoints cats: {len(self.keypoints_cats)}")
                     # print(f"message id: {msg_id}")
                     # print(f"memo_preproc_input_poses length: {len(memo_preproc_input_poses)}")
-                    memo_preproc_input_poses[msg_id] = v = [PatientPose(msg_id, pm.pose.position, self.keypoints_cats[i]) for i, pm in enumerate(pose_msg.joints)]
-                    
+                    memo_preproc_input_poses[msg_id] = v = [
+                        PatientPose(msg_id, pm.pose.position, self.keypoints_cats[i])
+                        for i, pm in enumerate(pose_msg.joints)
+                    ]
+
                     # print(f"POSE memo_preproc_input_poses[msg_id]: {memo_preproc_input_poses[msg_id]}")
                     #     msg_id,
                     #     pm.positions,
@@ -709,16 +725,16 @@ class ActivityClassifierTCN(Node):
             image_height=self._img_pix_height,
             feature_memo=memo_object_to_feats,
         )
-            # except ValueError:
-            #     # feature detections were all None
-            #     raise NoActivityClassification()
+        # except ValueError:
+        #     # feature detections were all None
+        #     raise NoActivityClassification()
 
         feats = feats.to(self._model_device)
         mask = mask.to(self._model_device)
-        
+
         with SimpleTimer("[_process_window] Model processing", log.info):
             proba = predict(self._model, feats, mask).cpu()
-        
+
         pred = torch.argmax(proba)
         log.info(f"activity probabilities: {proba}, prediction class: {pred}")
         log.info(f"self._model.classes: {self._model.classes}")

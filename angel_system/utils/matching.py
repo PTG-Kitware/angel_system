@@ -63,7 +63,7 @@ def descending_match_with_tolerance(
                 vt = time_from_value_fn(value)
             else:
                 vt = value
-                
+
             t_delta = abs(kt - vt)
             # print(f"t_delta: {t_delta}")
             # print(f"kt: {kt}")

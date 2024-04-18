@@ -20,7 +20,7 @@ from angel_system.utils.event import WaitAndClearEvent
 from angel_system.utils.simple_timer import SimpleTimer
 
 from angel_msgs.msg import ObjectDetection2dSet
-from angel_utils import declare_and_get_parameters, RateTracker#, DYNAMIC_TYPE
+from angel_utils import declare_and_get_parameters, RateTracker  # , DYNAMIC_TYPE
 from angel_utils import make_default_main
 
 
@@ -67,7 +67,7 @@ class ObjectAndHandDetector(Node):
 
         self._object_model_ckpt_fp = Path(param_values["object_net_checkpoint"])
         self._hand_model_chpt_fp = Path(param_values["hand_net_checkpoint"])
-        
+
         self._inference_img_size = param_values["inference_img_size"]
         self._det_conf_thresh = param_values["det_conf_threshold"]
         self._iou_thr = param_values["iou_threshold"]
@@ -84,7 +84,9 @@ class ObjectAndHandDetector(Node):
                 f"Model checkpoint file did not exist: {self._object_model_ckpt_fp}"
             )
         (self.device, self.object_model, self.stride, self.imgsz) = load_model(
-            str(self._cuda_device_id), self._object_model_ckpt_fp, self._inference_img_size
+            str(self._cuda_device_id),
+            self._object_model_ckpt_fp,
+            self._inference_img_size,
         )
         log.info(
             f"Loaded model with classes:\n"
@@ -111,9 +113,11 @@ class ObjectAndHandDetector(Node):
         )
 
         self.hand_model = YOLOv8(self._hand_model_chpt_fp)
-        
+
         if not self._no_trace:
-            self.object_model = TracedModel(self.object_model, self.device, self._inference_img_size)
+            self.object_model = TracedModel(
+                self.object_model, self.device, self._inference_img_size
+            )
 
         self.half = half = (
             self.device.type != "cpu"
@@ -173,17 +177,17 @@ class ObjectAndHandDetector(Node):
         enable_trace_logging = self._enable_trace_logging
 
         if "background" in self.object_model.names:
-            label_vector = self.object_model.names[1:] # remove background label
+            label_vector = self.object_model.names[1:]  # remove background label
         else:
             label_vector = self.object_model.names
-            
+
         label_vector.append("hand (left)")
         label_vector.append("hand (right)")
         n_classes = len(label_vector)
-        
+
         left_hand_cid = n_classes - 2
         right_hand_cid = n_classes - 1
-        
+
         hand_cid_label_dict = {
             "hand (right)": right_hand_cid,
             "hand (left)": left_hand_cid,
@@ -198,12 +202,12 @@ class ObjectAndHandDetector(Node):
 
                 if enable_trace_logging:
                     log.info(f"[rt-loop] Processing image TS={image.header.stamp}")
-                
+
                 # Convert ROS img msg to CV2 image
                 img0 = BRIDGE.imgmsg_to_cv2(image, desired_encoding="bgr8")
                 print(f"img0: {img0.shape}")
                 print(f"img0 type: {type(img0)}")
-                
+
                 msg = ObjectDetection2dSet()
                 msg.header.stamp = self.get_clock().now().to_msg()
                 msg.header.frame_id = image.header.frame_id
@@ -211,21 +215,21 @@ class ObjectAndHandDetector(Node):
                 msg.label_vec[:] = label_vector
 
                 print(f"object model names: {self.object_model.names}")
-                
+
                 n_dets = 0
 
                 dflt_conf_vec = np.zeros(n_classes, dtype=np.float64)
 
                 # Detect hands
                 hand_boxes, hand_labels, hand_confs = predict_hands(
-                    hand_model=self.hand_model, 
-                    img0=img0, 
+                    hand_model=self.hand_model,
+                    img0=img0,
                     device=self.device,
-                    imgsz=self._inference_img_size
+                    imgsz=self._inference_img_size,
                 )
-                
+
                 hand_classids = [hand_cid_label_dict[label] for label in hand_labels]
-                
+
                 # Detect objects
                 objcet_boxes, object_confs, objects_classids = predict_image(
                     img0,
@@ -240,11 +244,13 @@ class ObjectAndHandDetector(Node):
                     None,
                     self._agnostic_nms,
                 )
-                
+
                 objcet_boxes.extend(hand_boxes)
                 object_confs.extend(hand_confs)
                 objects_classids.extend(hand_classids)
-                for xyxy, conf, cls_id in zip(objcet_boxes, object_confs, objects_classids):
+                for xyxy, conf, cls_id in zip(
+                    objcet_boxes, object_confs, objects_classids
+                ):
 
                     n_dets += 1
                     msg.left.append(xyxy[0])
@@ -263,7 +269,9 @@ class ObjectAndHandDetector(Node):
                 self._det_publisher.publish(msg)
 
                 self._rate_tracker.tick()
-                log.info(f"Objects Detection Rate: {self._rate_tracker.get_rate_avg()} Hz, Num objects detected: {n_dets}\nnum of hands: {len(hand_boxes)}, other objects: {n_dets - len(hand_boxes)}]")
+                log.info(
+                    f"Objects Detection Rate: {self._rate_tracker.get_rate_avg()} Hz, Num objects detected: {n_dets}\nnum of hands: {len(hand_boxes)}, other objects: {n_dets - len(hand_boxes)}]"
+                )
                 log.info(f"msg: {msg}")
 
     def destroy_node(self):

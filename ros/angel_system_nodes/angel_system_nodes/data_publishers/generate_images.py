@@ -6,9 +6,10 @@ import rclpy
 import rclpy.executors
 from rclpy.node import Node
 from sensor_msgs.msg import Image, CompressedImage
-from random import sample 
+from random import sample
 from glob import glob
 from PIL import Image as pillow_image
+
 
 def dictionary_contents(path: str, types: list, recursive: bool = False) -> list:
     """
@@ -34,7 +35,13 @@ def dictionary_contents(path: str, types: list, recursive: bool = False) -> list
                 files.append(os.path.join(path, x))
     return files
 
-def random_image(height=720, width=1280, channels=3, images_root="/angel_workspace/model_files/sample_images/"):
+
+def random_image(
+    height=720,
+    width=1280,
+    channels=3,
+    images_root="/angel_workspace/model_files/sample_images/",
+):
     """
     Generate a new random
     :param height: Pixel height
@@ -47,7 +54,7 @@ def random_image(height=720, width=1280, channels=3, images_root="/angel_workspa
     # print(f"images_paths: {images_paths}")
     image_path = sample(images_paths, 1)[0]
     # print(f"image_path: {image_path}")
-    
+
     image = np.array(pillow_image.open(image_path))
     print(image.max())
 
@@ -143,7 +150,7 @@ def main(args=None):
     num_nodes = 4
 
     executor = rclpy.executors.SingleThreadedExecutor()
-    
+
     node_list = []
     for i in range(num_nodes):
         node = GenerateImages(

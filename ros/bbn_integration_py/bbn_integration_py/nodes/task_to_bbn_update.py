@@ -193,12 +193,12 @@ class TranslateTaskUpdateForBBN(Node):
         # resp: QueryTaskGraph.Response = future.result()
         log.info("Querying for task-monitor task graph -- Done")
         if msg.task_name not in resp.task_titles:
-          self.get_logger().warn(
-              f"Received QueryTaskGraph response with mismatching title "
-              f"({resp.task_title}) compared to the current task update "
-              f"name ({msg.task_name})."
-          )
-          return False
+            self.get_logger().warn(
+                f"Received QueryTaskGraph response with mismatching title "
+                f"({resp.task_title}) compared to the current task update "
+                f"name ({msg.task_name})."
+            )
+            return False
 
         # There are multiple task graphs in this message, get the index via the
         # tile and extract the steps from that specific graph.
@@ -254,7 +254,7 @@ class TranslateTaskUpdateForBBN(Node):
         #
         current_step_id = msg.current_step_id
         task_step_state_map = {}
-        
+
         for step_i, (step_name, step_completed) in enumerate(
             zip(current_kw_task_steps, msg.completed_steps)
         ):

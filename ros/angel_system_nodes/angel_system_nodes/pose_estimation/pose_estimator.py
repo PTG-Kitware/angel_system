@@ -12,8 +12,13 @@ import cv2
 from angel_system.utils.event import WaitAndClearEvent
 from angel_system.utils.simple_timer import SimpleTimer
 
-from angel_msgs.msg import ObjectDetection2dSet, HandJointPosesUpdate, HandJointPose, ActivityDetection
-from angel_utils import declare_and_get_parameters, RateTracker#, DYNAMIC_TYPE
+from angel_msgs.msg import (
+    ObjectDetection2dSet,
+    HandJointPosesUpdate,
+    HandJointPose,
+    ActivityDetection,
+)
+from angel_utils import declare_and_get_parameters, RateTracker  # , DYNAMIC_TYPE
 from angel_utils import make_default_main
 from geometry_msgs.msg import Point, Pose, Quaternion
 
@@ -42,6 +47,7 @@ def setup_detectron_cfg(config_file, model_checkpoint):
     cfg.freeze()
     return cfg
 
+
 class PoseEstimator(Node):
     """
     ROS node that runs the pose estimation model and outputs
@@ -50,7 +56,7 @@ class PoseEstimator(Node):
 
     def __init__(self):
         super().__init__(self.__class__.__name__)
-        
+
         print("getting logger")
         log = self.get_logger()
 
@@ -81,7 +87,7 @@ class PoseEstimator(Node):
                 # If we should enable additional logging to the info level
                 # about when we receive and process data.
                 ("enable_time_trace_logging", False),
-                ("image_resize", False)
+                ("image_resize", False),
             ],
         )
         self._image_topic = param_values["image_topic"]
@@ -91,44 +97,61 @@ class PoseEstimator(Node):
         self.pose_model_ckpt_fp = param_values["pose_net_checkpoint"]
         self.det_config = param_values["det_config"]
         self.pose_config = param_values["pose_config"]
-        
+
         self._ensure_image_resize = param_values["image_resize"]
-        
+
         self._inference_img_size = param_values["inference_img_size"]
         self._det_conf_thresh = param_values["det_conf_threshold"]
         self._iou_thr = param_values["iou_threshold"]
         self._cuda_device_id = param_values["cuda_device_id"]
         self._no_trace = param_values["no_trace"]
         self._agnostic_nms = param_values["agnostic_nms"]
-        
+
         self.keypoints_cats = [
-                        "nose", "mouth", "throat","chest","stomach","left_upper_arm",
-                        "right_upper_arm","left_lower_arm","right_lower_arm","left_wrist",
-                        "right_wrist","left_hand","right_hand","left_upper_leg",
-                        "right_upper_leg","left_knee","right_knee","left_lower_leg", 
-                        "right_lower_leg", "left_foot", "right_foot", "back"
-                    ]
-        
+            "nose",
+            "mouth",
+            "throat",
+            "chest",
+            "stomach",
+            "left_upper_arm",
+            "right_upper_arm",
+            "left_lower_arm",
+            "right_lower_arm",
+            "left_wrist",
+            "right_wrist",
+            "left_hand",
+            "right_hand",
+            "left_upper_leg",
+            "right_upper_leg",
+            "left_knee",
+            "right_knee",
+            "left_lower_leg",
+            "right_lower_leg",
+            "left_foot",
+            "right_foot",
+            "back",
+        ]
+
         print("finished setting params")
-        
+
         print("loading detectron model")
         # Detectron Model
         print(f"model_checkpoint: {self.det_model_ckpt_fp}")
-        detecron_cfg = setup_detectron_cfg(self.det_config, model_checkpoint=self.det_model_ckpt_fp)
-        
+        detecron_cfg = setup_detectron_cfg(
+            self.det_config, model_checkpoint=self.det_model_ckpt_fp
+        )
+
         self.det_model = VisualizationDemo(detecron_cfg)
-        
-        
+
         print("loading pose model")
         # Pose model
-        self.pose_model = init_pose_model(self.pose_config, 
-                                        self.pose_model_ckpt_fp, 
-                                        device=self._cuda_device_id)
+        self.pose_model = init_pose_model(
+            self.pose_config, self.pose_model_ckpt_fp, device=self._cuda_device_id
+        )
 
-        self.device = torch.device(f'cuda:{self._cuda_device_id}')
+        self.device = torch.device(f"cuda:{self._cuda_device_id}")
 
         self._enable_trace_logging = param_values["enable_time_trace_logging"]
-
 
         # Single slot for latest image message to process detection over.
         self._cur_image_msg: Image = None
@@ -143,7 +166,7 @@ class PoseEstimator(Node):
             1,
             callback_group=MutuallyExclusiveCallbackGroup(),
         )
-        
+
         print("creating publisher to detections")
         self.patient_det_publisher = self.create_publisher(
             ObjectDetection2dSet,
@@ -175,7 +198,7 @@ class PoseEstimator(Node):
         self._rt_thread = Thread(target=self.rt_loop, name="prediction_runtime")
         self._rt_thread.daemon = True
         self._rt_thread.start()
-    
+
     def listener_callback(self, image: Image):
         """
         Callback function for image messages. Runs the berkeley object detector
@@ -222,11 +245,12 @@ class PoseEstimator(Node):
                     log.info(f"[rt-loop] Processing image TS={image.header.stamp}")
                 # Convert ROS img msg to CV2 image
                 img0 = BRIDGE.imgmsg_to_cv2(image, desired_encoding="bgr8")
-                
-                
+
                 if self._ensure_image_resize:
-                    img0 = cv2.resize(img0, dsize=(1280, 720), interpolation=cv2.INTER_CUBIC)
-                
+                    img0 = cv2.resize(
+                        img0, dsize=(1280, 720), interpolation=cv2.INTER_CUBIC
+                    )
+
                 # print(f"img0: {img0.shape}")
                 # height, width, chans = img0.shape
 
@@ -236,10 +260,10 @@ class PoseEstimator(Node):
                 all_poses_msg.source_stamp = image.header.stamp
                 all_poses_msg.hand = "patient"
 
-                boxes, labels, keypoints = predict_single(det_model=self.det_model,
-                                                          pose_model=self.pose_model,
-                                                          image=img0)
-                
+                boxes, labels, keypoints = predict_single(
+                    det_model=self.det_model, pose_model=self.pose_model, image=img0
+                )
+
                 # at most, we have 1 set of keypoints for 1 patient
                 keypoints = keypoints[:1]
                 for keypoints_ in keypoints:
@@ -268,7 +292,7 @@ class PoseEstimator(Node):
                         all_poses_msg.joints.append(joint_msg)
 
                     self.patient_pose_publisher.publish(all_poses_msg)
-                
+
                 self._rate_tracker.tick()
                 log.info(
                     f"Pose Estimation Rate: {self._rate_tracker.get_rate_avg()} Hz, Poses: {len(keypoints)}, pose message: {all_poses_msg}",
