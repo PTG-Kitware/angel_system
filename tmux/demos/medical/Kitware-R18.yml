@@ -45,13 +45,16 @@ tmux_options: -f <%= ENV["ANGEL_WORKSPACE_DIR"] %>/tmux/tmux.conf
 
 windows:
 
-    # Read sensor input from bag file.
-    - sensor_input: echo ros2 bag play ${ANGEL_WORKSPACE_DIR}/ros_bags/rosbag2_2024_04_10-18_57_36-R18_Chris_live/
+    - sensor_input:
+        layout: even-vertical
+        panes:
+            # Read sensor input from bag file.
+            - sensor_input: echo ros2 bag play ${ANGEL_WORKSPACE_DIR}/ros_bags/rosbag2_2024_04_10-18_57_36-R18_Chris_live/
 
-    - run_image_timestamp: ros2 run angel_system_nodes image_timestamp_relay --ros-args
-        -r __ns:=${ROS_NAMESPACE}
-        -p image_topic:=image_0 
-        -p output_topic:=image_0_ts
+            - run_image_timestamp: ros2 run angel_system_nodes image_timestamp_relay --ros-args
+                -r __ns:=${ROS_NAMESPACE}
+                -p image_topic:=image_0 
+                -p output_topic:=image_0_ts
 
     - pose_estimation: ros2 run angel_system_nodes pose_estimator --ros-args 
         -r __ns:=${ROS_NAMESPACE}
@@ -64,21 +67,17 @@ windows:
         -p pose_config:=${ANGEL_WORKSPACE_DIR}/python-tpl/TCN_HPL/tcn_hpl/data/utils/pose_generation/configs/ViTPose_base_medic_casualty_256x192.py
         -p cuda_device_id:=0
 
-    - objects_hands_detection: ros2 run angel_system_nodes object_hand_detector --ros-args 
-        -r __ns:=${ROS_NAMESPACE}
-        -p image_topic:=image_0 
-        -p det_topic:=ObjectDetections2d 
-        -p net_checkpoint:=${MODEL_DIR}/object_detector/r18_det.pt
-        -p hand_net_checkpoint:=${MODEL_DIR}/object_detector/hands_model.pt
+    - object_detector:
+        layout: even-vertical
+        panes:
+            - object_and_hand_detection: ros2 run angel_system_nodes object_and_hand_detector --ros-args 
+                -r __ns:=${ROS_NAMESPACE}
+                -p image_topic:=image_0 
+                -p det_topic:=ObjectDetections2d 
+                -p object_net_checkpoint:=${MODEL_DIR}/object_detector/r18_det.pt
+                -p hand_net_checkpoint:=${MODEL_DIR}/object_detector/hands_model.pt
 
-    - simple_2d_overlay: ros2 run angel_utils Simple2dDetectionOverlay --ros-args
-        -r __ns:=${ROS_NAMESPACE}
-        -p topic_input_images:=image_0
-        -p topic_input_det_2d:=ObjectDetections2d
-        -p topic_output_images:=pv_image_detections_2d
-        -p filter_top_k:=5
-
-    - run_tcn: ros2 run angel_system_nodes activity_classifier_tcn --ros-args
+    - activity_classifier: ros2 run angel_system_nodes activity_classifier_tcn --ros-args
         -r __ns:=${ROS_NAMESPACE}
         -p image_ts_topic:=image_0_ts 
         -p det_topic:=ObjectDetections2d 
@@ -108,28 +107,22 @@ windows:
               -p query_task_graph_topic:=query_task_graph
           - echo: sleep 0.5 && ros2 topic echo --no-arr "${ROS_NAMESPACE}/TaskUpdates"
 
-    # - engineering-ui:
-    #     layout: even-vertical
-    #     panes:
-    #       - websocket: ros2 launch rosbridge_server rosbridge_websocket_launch.xml port:=9090
-    #       - engineering_ui_server: node ros/angel_utils/multi_task_demo_ui/index.js
-    #           --namespace=${ROS_NAMESPACE}
-    #           --image_topic=pv_image_detections_2d/compressed
-    #           --query_task_graph_topic=query_task_graph
-    #           --task_updates_topic=TaskUpdates
-    #           --activity_detections_topic=activity_topic
-    #           --task_errors_topic=TaskErrors
-
-    - BBN Interface:
+    - engineering-ui:
         layout: even-vertical
         panes:
-            - task-converter: ros2 run bbn_integration_py task_to_bbn_update --ros-args 
+          - simple_2d_overlay: ros2 run angel_utils Simple2dDetectionOverlay --ros-args
                 -r __ns:=${ROS_NAMESPACE}
-                -p task_update_topic:=TaskUpdates
-                -p bbn_update_topic:=BBNUpdates
-                -p task_graph_srv_topic:=query_task_graph
-            - echo: sleep 0.5 && ros2 topic echo "${ROS_NAMESPACE}/BBNUpdates"
-            - zmq-publisher: ros2 run bbn_integration ZmqIntegrationClient --ros-args
-                -r __ns:=${ROS_NAMESPACE}
-                -p topic_update_msg:=BBNUpdates
-                -p server_address:=${BBN_OUTPUT_URL}
+                -p topic_input_images:=image_0
+                -p topic_input_det_2d:=ObjectDetections2d
+                -p topic_input_joints:=PatientPose
+                -p topic_output_images:=pv_image_detections_2d
+                -p filter_top_k:=5
+          - websocket: ros2 launch rosbridge_server rosbridge_websocket_launch.xml port:=9090
+          - engineering_ui_server: node ros/angel_utils/multi_task_demo_ui/index.js
+              --namespace=${ROS_NAMESPACE}
+              --image_topic=pv_image_detections_2d/compressed
+              --query_task_graph_topic=query_task_graph
+              --task_updates_topic=TaskUpdates
+              --activity_detections_topic=activity_topic
+              --task_errors_topic=TaskErrors
+

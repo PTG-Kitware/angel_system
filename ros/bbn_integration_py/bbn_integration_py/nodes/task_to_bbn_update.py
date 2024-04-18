@@ -92,23 +92,11 @@ class TranslateTaskUpdateForBBN(Node):
                 ("task_update_topic",),
                 ("bbn_update_topic",),
                 ("task_graph_srv_topic",),
-                ("config",),
             ],
         )
         self._input_task_update_topic = parameter_values["task_update_topic"]
         self._output_bbn_update_topic = parameter_values["bbn_update_topic"]
         self._task_graph_service_topic = parameter_values["task_graph_srv_topic"]
-
-        # Mapping, for different task names, of KW task step index to BBN task
-        # step node. Not all KW task step indices may be represented here
-        # because there may be intentional gaps in the translation.
-        self._kw_step_to_bbn_idx: Dict[str, Dict[int, BbnStep]] = {}
-        for task_name, bbn_steps in self._bbn_step_mapping.items():
-            local_kw_to_bbn = {}
-            self._kw_step_to_bbn_idx[task_name] = local_kw_to_bbn
-            for bbn_i, bbn_to_kw in enumerate(bbn_steps):
-                bbn_step = BbnStep(bbn_idx=bbn_i, **bbn_to_kw)
-                local_kw_to_bbn[bbn_step.kw_id] = bbn_step
 
         # State capture of task name to the list of task steps.
         # Pre-initialize with

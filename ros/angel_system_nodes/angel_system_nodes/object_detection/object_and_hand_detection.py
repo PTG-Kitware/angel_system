@@ -9,11 +9,12 @@ from rclpy.callback_groups import MutuallyExclusiveCallbackGroup, ReentrantCallb
 from rclpy.node import Node, ParameterDescriptor, Parameter
 from sensor_msgs.msg import Image
 
-from yolov7.detect_ptg import load_model, predict_image, predict_hands
+from yolov7.detect_ptg import load_model, predict_image
+from angel_system.object_detection.yolov8_detect import predict_hands
 from yolov7.models.experimental import attempt_load
 import yolov7.models.yolo
 from yolov7.utils.torch_utils import TracedModel
-from ultralytics import YOLO
+from ultralytics import YOLO as YOLOv8
 
 from angel_system.utils.event import WaitAndClearEvent
 from angel_system.utils.simple_timer import SimpleTimer
@@ -26,7 +27,7 @@ from angel_utils import make_default_main
 BRIDGE = CvBridge()
 
 
-class ObjectHandDetector(Node):
+class ObjectAndHandDetector(Node):
     """
     ROS node that runs the yolov7 object detector model and outputs
     `ObjectDetection2dSet` messages.
@@ -44,7 +45,7 @@ class ObjectHandDetector(Node):
                 # Required parameter (no defaults)
                 ("image_topic",),
                 ("det_topic",),
-                ("net_checkpoint",),
+                ("object_net_checkpoint",),
                 ("hand_net_checkpoint",),
                 ##################################
                 # Defaulted parameters
@@ -59,15 +60,13 @@ class ObjectHandDetector(Node):
                 # If we should enable additional logging to the info level
                 # about when we receive and process data.
                 ("enable_time_trace_logging", False),
-                ("image_resize", False)
             ],
         )
         self._image_topic = param_values["image_topic"]
         self._det_topic = param_values["det_topic"]
-        self._model_ckpt_fp = Path(param_values["net_checkpoint"])
+
+        self._object_model_ckpt_fp = Path(param_values["object_net_checkpoint"])
         self._hand_model_chpt_fp = Path(param_values["hand_net_checkpoint"])
-        
-        self._ensure_image_resize = param_values["image_resize"]
         
         self._inference_img_size = param_values["inference_img_size"]
         self._det_conf_thresh = param_values["det_conf_threshold"]
@@ -78,18 +77,18 @@ class ObjectHandDetector(Node):
 
         self._enable_trace_logging = param_values["enable_time_trace_logging"]
 
-        # Model
-        self.model: Union[yolov7.models.yolo.Model, TracedModel]
-        if not self._model_ckpt_fp.is_file():
+        # Object Model
+        self.object_model: Union[yolov7.models.yolo.Model, TracedModel]
+        if not self._object_model_ckpt_fp.is_file():
             raise ValueError(
-                f"Model checkpoint file did not exist: {self._model_ckpt_fp}"
+                f"Model checkpoint file did not exist: {self._object_model_ckpt_fp}"
             )
-        (self.device, self.model, self.stride, self.imgsz) = load_model(
-            str(self._cuda_device_id), self._model_ckpt_fp, self._inference_img_size
+        (self.device, self.object_model, self.stride, self.imgsz) = load_model(
+            str(self._cuda_device_id), self._object_model_ckpt_fp, self._inference_img_size
         )
         log.info(
             f"Loaded model with classes:\n"
-            + "\n".join(f'\t- "{n}"' for n in self.model.names)
+            + "\n".join(f'\t- "{n}"' for n in self.object_model.names)
         )
 
         # Single slot for latest image message to process detection over.
@@ -111,16 +110,16 @@ class ObjectHandDetector(Node):
             callback_group=MutuallyExclusiveCallbackGroup(),
         )
 
-        self.hand_model = YOLO(self._hand_model_chpt_fp)
+        self.hand_model = YOLOv8(self._hand_model_chpt_fp)
         
         if not self._no_trace:
-            self.model = TracedModel(self.model, self.device, self._inference_img_size)
+            self.object_model = TracedModel(self.object_model, self.device, self._inference_img_size)
 
         self.half = half = (
             self.device.type != "cpu"
         )  # half precision only supported on CUDA
         if half:
-            self.model.half()  # to FP16
+            self.object_model.half()  # to FP16
 
         self._rate_tracker = RateTracker()
         log.info("Detector initialized")
@@ -173,10 +172,10 @@ class ObjectHandDetector(Node):
         log.info("Runtime loop starting")
         enable_trace_logging = self._enable_trace_logging
 
-        if "background" in self.model.names:
-            label_vector = self.model.names[1:] # remove background label
+        if "background" in self.object_model.names:
+            label_vector = self.object_model.names[1:] # remove background label
         else:
-            label_vector = self.model.names
+            label_vector = self.object_model.names
             
         label_vector.append("hand (left)")
         label_vector.append("hand (right)")
@@ -199,18 +198,11 @@ class ObjectHandDetector(Node):
 
                 if enable_trace_logging:
                     log.info(f"[rt-loop] Processing image TS={image.header.stamp}")
+                
                 # Convert ROS img msg to CV2 image
                 img0 = BRIDGE.imgmsg_to_cv2(image, desired_encoding="bgr8")
-                
-                
                 print(f"img0: {img0.shape}")
                 print(f"img0 type: {type(img0)}")
-                
-                # width, height = self._inference_img_size
-                if self._ensure_image_resize:
-                    img0 = cv2.resize(img0, dsize=(1280, 720), interpolation=cv2.INTER_CUBIC)
-                
-                print(f"img0: {img0.shape}")
                 
                 msg = ObjectDetection2dSet()
                 msg.header.stamp = self.get_clock().now().to_msg()
@@ -218,32 +210,36 @@ class ObjectHandDetector(Node):
                 msg.source_stamp = image.header.stamp
                 msg.label_vec[:] = label_vector
 
-                print(f"model names: {self.model.names}")
+                print(f"object model names: {self.object_model.names}")
                 
                 n_dets = 0
 
                 dflt_conf_vec = np.zeros(n_classes, dtype=np.float64)
 
-                hand_boxes, hand_labels, hand_confs = predict_hands(hand_model=self.hand_model, 
-                                                                    img0=img0, 
-                                                                    device=self.device)
+                # Detect hands
+                hand_boxes, hand_labels, hand_confs = predict_hands(
+                    hand_model=self.hand_model, 
+                    img0=img0, 
+                    device=self.device,
+                    imgsz=self._inference_img_size
+                )
                 
                 hand_classids = [hand_cid_label_dict[label] for label in hand_labels]
                 
-                
+                # Detect objects
                 objcet_boxes, object_confs, objects_classids = predict_image(
-                                                                            img0,
-                                                                            self.device,
-                                                                            self.model,
-                                                                            self.stride,
-                                                                            self.imgsz,
-                                                                            self.half,
-                                                                            False,
-                                                                            self._det_conf_thresh,
-                                                                            self._iou_thr,
-                                                                            None,
-                                                                            self._agnostic_nms,
-                                                                        )
+                    img0,
+                    self.device,
+                    self.object_model,
+                    self.stride,
+                    self.imgsz,
+                    self.half,
+                    False,
+                    self._det_conf_thresh,
+                    self._iou_thr,
+                    None,
+                    self._agnostic_nms,
+                )
                 
                 objcet_boxes.extend(hand_boxes)
                 object_confs.extend(hand_confs)
@@ -285,7 +281,7 @@ class ObjectHandDetector(Node):
 # - 1 known subscriber which has their own group
 # - 1 for default group
 # - 1 for publishers
-main = make_default_main(ObjectHandDetector, multithreaded_executor=3)
+main = make_default_main(ObjectAndHandDetector, multithreaded_executor=3)
 
 
 if __name__ == "__main__":
