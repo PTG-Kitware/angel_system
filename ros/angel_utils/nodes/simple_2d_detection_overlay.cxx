@@ -4,6 +4,7 @@
 #include <memory>
 #include <numeric>
 #include <map>
+#include <mutex>
 
 // ROS2 things
 #include <builtin_interfaces/msg/time.hpp>
@@ -164,6 +165,9 @@ private:
 
   frame_map_t m_frame_map;
   std::map< size_t, cv_bridge::CvImagePtr > m_drawn_frame_map;
+
+  // Lock to make sure we are publishing the drawn images correctly
+  std::mutex m_draw_lock;
 };
 
 // ----------------------------------------------------------------------------
@@ -313,6 +317,9 @@ Simple2dDetectionOverlay
 ::collect_detections( ObjectDetection2dSet::SharedPtr const det_set )
 {
   auto log = this->get_logger();
+
+  // Lock
+  std::lock_guard<std::mutex> guard(m_draw_lock);
 
   // lookup image for det_set->source_stamp
   // check that detection header frame_id matches
@@ -471,8 +478,6 @@ Simple2dDetectionOverlay
                   m_detset_count, m_det_rate_tracker.get_rate_avg() );
     ++m_detset_count;
   }
-
-  
 }
 
 // ----------------------------------------------------------------------------
@@ -481,6 +486,9 @@ Simple2dDetectionOverlay
 ::collect_joints( HandJointPosesUpdate::SharedPtr const joints_msg )
 {
   auto log = this->get_logger();
+
+  // Lock
+  std::lock_guard<std::mutex> guard(m_draw_lock);
 
   // lookup image for joints_msg->source_stamp
   // check that detection header frame_id matches
