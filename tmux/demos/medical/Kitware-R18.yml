@@ -125,4 +125,3 @@ windows:
               --task_updates_topic=TaskUpdates
               --activity_detections_topic=activity_topic
               --task_errors_topic=TaskErrors
-
