@@ -19,11 +19,15 @@ root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 # on_project_start: command
 on_project_start: |
     export ROS_NAMESPACE=${ROS_NAMESPACE:-/kitware}
-    export HL2SS_API_URL=${HL2SS_API_URL:-128.33.193.178:8000}
-    export BBN_OUTPUT_URL=${BBN_OUTPUT_URL:-tcp://128.33.193.178:6669}
+    export HL2_IP=${HL2_IP:-192.168.1.3}
     export CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/config
     export NODE_CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/src/angel_system_nodes/configs
     export MODEL_DIR=${ANGEL_WORKSPACE_DIR}/model_files
+    
+    # Set the frame-rate to be used by multiple sources. This should be in frames
+    # per second (Hz).
+    export FRAME_RATE=15
+    
 # Run on project start, the first time
 # on_project_first_start: command
 
@@ -49,7 +53,25 @@ windows:
         layout: even-vertical
         panes:
             # Read sensor input from bag file.
-            - sensor_input: echo ros2 bag play ${ANGEL_WORKSPACE_DIR}/ros_bags/rosbag2_2024_04_10-18_57_36-R18_Chris_live/
+            #- sensor_input: echo ros2 bag play ${ANGEL_WORKSPACE_DIR}/ros_bags/rosbag2_2024_04_10-18_57_36-R18_Chris_live/
+
+            - datahub: ros2 run ros_tcp_endpoint default_server_endpoint --ros-args
+                -r __ns:=${ROS_NAMESPACE}
+                -p ROS_IP:=0.0.0.0
+            - hl2ss_bridge: ros2 run angel_system_nodes hl2ss_ros_bridge --ros-args
+                -r __ns:=${ROS_NAMESPACE}
+                -p ip_addr:=${HL2_IP}
+                -p image_topic:=image_0
+                -p image_ts_topic:=image_0_ts
+                -p hand_pose_topic:=disable
+                -p audio_topic:=disable
+                -p sm_topic:=disable
+                -p head_pose_topic:=disable
+                -p pv_width:=1280
+                -p pv_height:=720
+                -p pv_framerate:=${FRAME_RATE}
+                -p sm_freq:=5
+                -p rm_depth_AHAT:=disable
 
             - run_image_timestamp: ros2 run angel_system_nodes image_timestamp_relay --ros-args
                 -r __ns:=${ROS_NAMESPACE}
