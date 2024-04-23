@@ -11,7 +11,9 @@ from cv_bridge import CvBridge
 from rclpy.serialization import serialize_message
 
 
-def convert_video_to_bag(video_fn, output_bag_folder, output_image_topic="/kitware/image_0"):
+def convert_video_to_bag(
+    video_fn, output_bag_folder, output_image_topic="/kitware/image_0"
+):
     """Convert a mp4 video to a ros bag
 
     :param video_fn: Path to an mp4 video file
@@ -19,7 +21,9 @@ def convert_video_to_bag(video_fn, output_bag_folder, output_image_topic="/kitwa
     :param output_image_topic: ROS topic to publish the images to in the ROS bag. Must include the namespace
     """
     # Create output bag
-    storage_options = rosbag2_py.StorageOptions(uri=output_bag_folder, storage_id="sqlite3")
+    storage_options = rosbag2_py.StorageOptions(
+        uri=output_bag_folder, storage_id="sqlite3"
+    )
     serialization_fmt = "cdr"
     converter_options = rosbag2_py.ConverterOptions(
         input_serialization_format=serialization_fmt,
