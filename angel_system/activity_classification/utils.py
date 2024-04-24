@@ -10,6 +10,70 @@ import matplotlib.patches as patches
 from PIL import Image
 
 
+def convert_labels_to_left_right_hands(
+    label_vec,
+    xs, ys,
+):
+    """
+    Update any hand labels in ``label_vec`` to be 
+    hand (left) or hand (right) based on the bbox's position relative to
+    the center of the image
+    """
+    hands_possible_labels = ['hand (right)', 'hand (left)', 'hand', 'hands']
+    non_objects_labels = ['patient', 'user']
+    image_center = 1280//2 # hardcoded width?
+    hands_loc_dict = {}
+    for i, label in enumerate(label_vec):
+        if label not in hands_possible_labels:
+            continue
+
+        hand_center = (xs[i] + ws[i])//2
+        # Roughly determine if the hand is left or right based on 
+        # which side of the image it appears on (assumes ego centric view)
+        if hand_center < image_center:
+            # left hand
+            if "hand (left)" not in hands_loc_dict.keys():
+                label_vec[i] = "hand (left)"
+                hands_loc_dict[label_vec[i]] = (hand_center, i)
+            else:
+                if hand_center > hands_loc_dict["hand (left)"][0]:
+                    label_vec[i] = "hand (right)"
+                    hands_loc_dict[label_vec[i]] = (hand_center, i)
+                else:
+                    prev_index = hands_loc_dict["hand (left)"][1]
+                    label_vec[prev_index] = "hand (right)"
+                    label_vec[i] = "hand (left)"
+        else:
+            # right hand
+            if "hand (right)" not in hands_loc_dict.keys():
+                label_vec[i] = "hand (right)"
+                hands_loc_dict[label_vec[i]] = (hand_center, i)
+            else:
+                if hand_center < hands_loc_dict["hand (right)"][0]:
+                    label_vec[i] = "hand (left)"
+                    hands_loc_dict[label_vec[i]] = (hand_center, i)
+                else:
+                    prev_index = hands_loc_dict["hand (right)"][1]
+                    label_vec[prev_index] = "hand (left)"
+                    label_vec[i] = "hand (right)"
+    
+    # Remap the label ids to include left and right hand labels
+    # And remove the non object labels
+    if "hand" in label_to_ind.keys():
+        label_to_ind_tmp = {}
+        for key, value in label_to_ind.items():
+            if key == "hand":
+                label_to_ind_tmp["hand (left)"] = value
+                label_to_ind_tmp["hand (right)"] = value + 1
+            elif key in non_objects_labels:
+                continue
+            else:
+                label_to_ind_tmp[key] = value + 1
+        
+        label_to_ind = label_to_ind_tmp
+    
+    return label_vec, label_to_ind
+
 def tlbr_to_xywh(
     top: npt.ArrayLike,
     left: npt.ArrayLike,

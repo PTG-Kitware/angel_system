@@ -135,20 +135,6 @@ def compute_feats(
     last_dset = 0
     zero_joint_offset = [0 for i in range(22)]
 
-    image_center = 1280//2 # hardcoded width?
-
-    hands_possible_labels = ["hand (right)", "hand (left)", "hand", "hands"]
-    non_objects_labels = ["patient", "user"]
-    hands_inds = [
-        key for key, label in act_id_to_str.items() if label in hands_possible_labels
-    ]
-    non_object_inds = [
-        key for key, label in act_id_to_str.items() if label in non_objects_labels
-    ]
-    object_inds = list(
-        set(list(label_to_ind.values())) - set(hands_inds) - set(non_object_inds)
-    )
-
     for image_id in sorted(list(ann_by_image.keys())):
         label_vec = []
         xs = []
@@ -157,8 +143,6 @@ def compute_feats(
         hs = []
         label_confidences = []
         pose_keypoints = []
-        
-        num_hands, num_objects = 0, 0
         
         # Reorganize detections into lists
         pose_keypoints = ann_by_image[image_id][0].get('keypoints', zero_joint_offset)
@@ -172,60 +156,14 @@ def compute_feats(
             hs.append(h)
 
             label_confidences.append(ann["confidence"])
-            
-            if ann["category_id"] in hands_inds:
-                num_hands += 1
-            elif ann['category_id'] in object_inds:
-                num_objects += 1
         
-        # Update hand/hands labels to be left and right specific
-        if num_hands > 0:
-            hands_loc_dict = {}
-            for i, label in enumerate(label_vec):
-                if label not in hands_possible_labels:
-                    continue
+        # convert any hand labels to left and right hands
+        # and remove patient labels
+        label_vec, label_to_ind = convert_labels_to_left_right_hands(
+            label_vec, xs, ys
+        )
 
-                hand_center = (xs[i] + ws[i])//2
-                if hand_center < image_center:
-                    if "hand (left)" not in hands_loc_dict.keys():
-                        label_vec[i] = "hand (left)"
-                        hands_loc_dict[label_vec[i]] = (hand_center, i)
-                    else:
-                        if hand_center > hands_loc_dict["hand (left)"][0]:
-                            label_vec[i] = "hand (right)"
-                            hands_loc_dict[label_vec[i]] = (hand_center, i)
-                        else:
-                            prev_index = hands_loc_dict["hand (left)"][1]
-                            label_vec[prev_index] = "hand (right)"
-                            label_vec[i] = "hand (left)"
-                else:
-                    if "hand (right)" not in hands_loc_dict.keys():
-                        label_vec[i] = "hand (right)"
-                        hands_loc_dict[label_vec[i]] = (hand_center, i)
-                    else:
-                        if hand_center < hands_loc_dict["hand (right)"][0]:
-                            label_vec[i] = "hand (left)"
-                            hands_loc_dict[label_vec[i]] = (hand_center, i)
-                        else:
-                            prev_index = hands_loc_dict["hand (right)"][1]
-                            label_vec[prev_index] = "hand (left)"
-                            label_vec[i] = "hand (right)"
-        
-        # Remap the label ids to include left and right hand labels
-        # And remove the non object labels
-        if "hand" in label_to_ind.keys():
-            label_to_ind_tmp = {}
-            for key, value in label_to_ind.items():
-                if key == "hand":
-                    label_to_ind_tmp["hand (left)"] = value
-                    label_to_ind_tmp["hand (right)"] = value + 1
-                elif key in non_objects_labels:
-                    continue
-                else:
-                    label_to_ind_tmp[key] = value + 1
-
-            label_to_ind = label_to_ind_tmp
-
+        # Compute feature vector
         feature_vec = obj_det2d_set_to_feature(
             label_vec,
             xs,
