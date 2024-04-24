@@ -26,7 +26,6 @@ from PIL import Image
 from angel_system.data.common.load_data import (
     activities_from_dive_csv,
     objs_as_dataframe,
-    time_from_name,
     sanitize_str,
 )
 from angel_system.data.common.load_data import Re_order
@@ -49,7 +48,7 @@ def load_kwcoco(dset):
     return dset
 
 
-def add_activity_gt_to_kwcoco(task, dset):
+def add_activity_gt_to_kwcoco(topic, task, dset):
     """Takes an existing kwcoco file and fills in the "activity_gt"
     field on each image based on the activity annotations.
 
@@ -58,12 +57,28 @@ def add_activity_gt_to_kwcoco(task, dset):
 
     :param dset: kwcoco object or a string pointing to a kwcoco file
     """
+    if topic == "medical":
+        from angel_system.data.medical.load_bbn_data import time_from_name
+    elif topic == "cooking": 
+        from angel_system.data.cooking.load_kitware_data import time_from_name
+    
     # Load kwcoco file
     dset = load_kwcoco(dset)
 
-    data_dir = f"/data/PTG/{task}/"
+    data_dir = f"/data/PTG/{topic}/"
     activity_gt_dir = f"{data_dir}/activity_anns"
 
+    # Load activity config
+    with open(
+        f"config/activity_labels/{topic}/{task}.yaml", "r"
+    ) as stream:
+        activity_config = yaml.safe_load(stream)
+    activity_labels = activity_config["labels"]
+    label_version = activity_config["version"]
+
+    activity_gt_dir = f"{activity_gt_dir}/{task}_labels/"
+
+    # Add ground truth to kwcoco
     for video_id in dset.index.videos.keys():
         video = dset.index.videos[video_id]
         video_name = video["name"]
@@ -71,18 +86,9 @@ def add_activity_gt_to_kwcoco(task, dset):
 
         if "_extracted" in video_name:
             video_name = video_name.split("_extracted")[0]
-        video_skill = "m2"  # video["recipe"]
 
-        with open(
-            f"../config/activity_labels/{task}/task_{video_skill}.yaml", "r"
-        ) as stream:
-            recipe_activity_config = yaml.safe_load(stream)
-        recipe_activity_labels = recipe_activity_config["labels"]
-
-        recipe_activity_gt_dir = f"{activity_gt_dir}/{video_skill}_labels/"
-
-        activity_gt_fn = f"{recipe_activity_gt_dir}/{video_name}_activity_labels_v2.csv"
-        gt = activities_from_dive_csv(activity_gt_fn)
+        activity_gt_fn = f"{activity_gt_dir}/{video_name}_activity_labels_v{label_version}.csv"
+        gt = activities_from_dive_csv(topic, activity_gt_fn)
         gt = objs_as_dataframe(gt)
 
         image_ids = dset.index.vidid_to_gids[video_id]
@@ -92,7 +98,10 @@ def add_activity_gt_to_kwcoco(task, dset):
             im = dset.imgs[gid]
             frame_idx, time = time_from_name(im["file_name"])
 
-            matching_gt = gt.loc[(gt["start"] <= time) & (gt["end"] >= time)]
+            if time:
+                matching_gt = gt.loc[(gt["start"] <= time) & (gt["end"] >= time)]
+            else:
+                matching_gt = gt.loc[(gt["start_frame"] <= frame_idx) & (gt["end_frame"] >= frame_idx)]
 
             if matching_gt.empty:
                 label = "background"
@@ -106,7 +115,7 @@ def add_activity_gt_to_kwcoco(task, dset):
                 try:
                     activity = [
                         x
-                        for x in recipe_activity_labels
+                        for x in activity_labels
                         if int(x["id"]) == int(float(label))
                     ]
                 except:
@@ -131,6 +140,7 @@ def add_activity_gt_to_kwcoco(task, dset):
 
     # dset.fpath = dset.fpath.split(".")[0] + "_fixed.mscoco.json"
     dset.dump(dset.fpath, newlines=True)
+    return dset
 
 
 def visualize_kwcoco_by_label(dset=None, save_dir=""):

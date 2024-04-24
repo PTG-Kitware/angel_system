@@ -43,34 +43,6 @@ def Re_order(image_list, image_number):
         new_list.append(image_list[idx])
     return new_list
 
-
-RE_FILENAME_TIME = re.compile(
-    r"frame_(?P<frame>\d+)_(?P<ts>\d+(?:_|.)\d+).(?P<ext>\w+)"
-)
-
-
-def time_from_name(fname):
-    """
-    Extract the float timestamp from the filename.
-
-    :param fname: Filename of an image in the format
-        frame_<frame number>_<seconds>_<nanoseconds>.<extension>
-
-    :return: timestamp (float) in seconds
-    """
-    fname = os.path.basename(fname)
-    match = RE_FILENAME_TIME.match(fname)
-    time = match.group("ts")
-    if "_" in time:
-        time = time.split("_")
-        time = float(time[0]) + (float(time[1]) * 1e-9)
-    elif "." in time:
-        time = float(time)
-
-    frame = match.group("frame")
-    return int(frame), time
-
-
 def load_from_file(
     gt_fn, detections_fn
 ) -> Tuple[List[str], pd.DataFrame, pd.DataFrame]:
@@ -138,7 +110,7 @@ def load_from_file(
     return labels, gt, detections
 
 
-def activities_from_dive_csv(filepath: str) -> List[Activity]:
+def activities_from_dive_csv(topic, filepath: str) -> List[Activity]:
     """
     Load from a DIVE output CSV file a sequence of ground truth activity
     annotations.
@@ -149,6 +121,11 @@ def activities_from_dive_csv(filepath: str) -> List[Activity]:
     :param filepath: Filesystem path to the CSV file.
     :return: List of loaded activity annotations.
     """
+    if topic == "medical":
+        from angel_system.data.medical.load_bbn_data import time_from_name
+    elif topic == "cooking": 
+        from angel_system.data.cooking.load_kitware_data import time_from_name
+    
     print(f"Loading ground truth activities from: {filepath}")
     df = pd.read_csv(filepath)
 

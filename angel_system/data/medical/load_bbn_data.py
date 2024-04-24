@@ -22,6 +22,29 @@ from angel_system.data.medical.data_paths import KNOWN_BAD_VIDEOS
 os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1, 2, 3"
 
 
+
+RE_FILENAME_TIME = re.compile(
+    r"(?P<task>\w+)-(?P<vid>\d+)_(?P<frame>\d+).(?P<ext>\w+)"
+)
+
+
+def time_from_name(fname):
+    """
+    Extract the float timestamp from the filename.
+
+    :param fname: Filename of an image in the format
+        frame_<frame number>_<seconds>_<nanoseconds>.<extension>
+
+    :return: timestamp (float) in seconds
+    """
+    fname = os.path.basename(fname)
+    match = RE_FILENAME_TIME.match(fname)
+
+    frame = match.group("frame")
+    time = None
+    return int(frame), time
+
+
 def dive_to_activity_file(videos_dir):
     """DIVE CSV to BBN TXT frame-level annotation file format"""
     for dive_csv in glob.glob(f"{videos_dir}/*/*.csv"):
@@ -313,10 +336,10 @@ def bbn_activity_txt_to_csv(task, root_dir, output_dir, label_version):
             end_frame = int(data[1])
 
             start_frame_fn = os.path.basename(
-                glob.glob(f"{video_dir}/images/*_{start_frame}*.png")[0]
+                glob.glob(f"{video_dir}/images/*_{start_frame}.png")[0]
             )
             end_frame_fn = os.path.basename(
-                glob.glob(f"{video_dir}/images/*_{end_frame}*.png")[0]
+                glob.glob(f"{video_dir}/images/*_{end_frame}.png")[0]
             )
 
             # Determine activity
