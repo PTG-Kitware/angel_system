@@ -11,7 +11,9 @@ SHELL ["/bin/bash", "-c"]
 
 # System Package dependencies
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get -y update \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get -y update \
  && apt-get -y dist-upgrade \
  && apt-get -y install \
         bash-completion \
@@ -22,9 +24,7 @@ RUN apt-get -y update \
         vim \
         parallel \
         tmux \
-    # Clean up apt resources.
- && apt-get clean \
- && rm -rf /var/lib/apt/lists/*
+        tree
 
 # Activate some bash completion
 RUN echo "source /etc/bash_completion" >> ~/.bashrc \
