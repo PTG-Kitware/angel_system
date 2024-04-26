@@ -235,7 +235,9 @@ def visualize_kwcoco_by_label(dset=None, save_dir=""):
 
                 for kp_cat, connects in kp_connections.items():
                     for connect in connects:
-                        ax.plot(kps[kp_cat], kps[connect],  color=color, marker='o',)
+                        pt1 = kps[kp_cat]
+                        pt2 = kps[connect]
+                        ax.plot([pt1[0], pt2[0]], [pt1[1], pt2[1]], color=color, marker='o',)
 
             ax.annotate(label, (x, y), color="black", annotation_clip=False)
 
