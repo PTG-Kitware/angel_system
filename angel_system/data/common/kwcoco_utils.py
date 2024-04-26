@@ -27,6 +27,7 @@ from angel_system.data.common.load_data import (
     activities_from_dive_csv,
     objs_as_dataframe,
     sanitize_str,
+    time_from_name
 )
 from angel_system.data.common.load_data import Re_order
 
@@ -48,7 +49,7 @@ def load_kwcoco(dset):
     return dset
 
 
-def add_activity_gt_to_kwcoco(topic, task, dset):
+def add_activity_gt_to_kwcoco(topic, task, dset, activity_config_fn):
     """Takes an existing kwcoco file and fills in the "activity_gt"
     field on each image based on the activity annotations.
 
@@ -57,11 +58,6 @@ def add_activity_gt_to_kwcoco(topic, task, dset):
 
     :param dset: kwcoco object or a string pointing to a kwcoco file
     """
-    if topic == "medical":
-        from angel_system.data.medical.load_bbn_data import time_from_name
-    elif topic == "cooking": 
-        from angel_system.data.cooking.load_kitware_data import time_from_name
-    
     # Load kwcoco file
     dset = load_kwcoco(dset)
 
@@ -69,9 +65,7 @@ def add_activity_gt_to_kwcoco(topic, task, dset):
     activity_gt_dir = f"{data_dir}/activity_anns"
 
     # Load activity config
-    with open(
-        f"config/activity_labels/{topic}/{task}.yaml", "r"
-    ) as stream:
+    with open(activity_config_fn, "r") as stream:
         activity_config = yaml.safe_load(stream)
     activity_labels = activity_config["labels"]
     label_version = activity_config["version"]
@@ -96,7 +90,7 @@ def add_activity_gt_to_kwcoco(topic, task, dset):
         # Update the activity gt for each image
         for gid in sorted(image_ids):
             im = dset.imgs[gid]
-            frame_idx, time = time_from_name(im["file_name"])
+            frame_idx, time = time_from_name(im["file_name"], topic)
 
             if time:
                 matching_gt = gt.loc[(gt["start"] <= time) & (gt["end"] >= time)]
@@ -142,7 +136,7 @@ def add_activity_gt_to_kwcoco(topic, task, dset):
     dset.dump(dset.fpath, newlines=True)
     return dset
 
-
+    
 def visualize_kwcoco_by_label(dset=None, save_dir=""):
     """Draw the bounding boxes from the kwcoco file on
     the associated images
@@ -173,9 +167,6 @@ def visualize_kwcoco_by_label(dset=None, save_dir=""):
 
         fn = im["file_name"].split("/")[-1]
         gt = im.get("activity_gt", "")
-        if not gt:
-            gt = ""
-        # act_pred = im.get("activity_pred", "")
 
         fig, ax = plt.subplots()
         # title = f"GT: {gt}, PRED: {act_pred}"
@@ -194,8 +185,7 @@ def visualize_kwcoco_by_label(dset=None, save_dir=""):
             conf = ann.get("confidence", 1)
             # if conf < 0.1:
             #    continue
-
-            x, y, w, h = ann["bbox"]  # xywh
+            
             cat_id = ann["category_id"]
             cat = dset.cats[cat_id]["name"]
 
@@ -203,6 +193,8 @@ def visualize_kwcoco_by_label(dset=None, save_dir=""):
 
             color = colors[obj_labels.index(cat)]
 
+            # bbox
+            x, y, w, h = ann["bbox"]  # xywh
             rect = patches.Rectangle(
                 (x, y),
                 w,
@@ -214,6 +206,37 @@ def visualize_kwcoco_by_label(dset=None, save_dir=""):
             )
 
             ax.add_patch(rect)
+
+            # keypoints
+            if "keypoints" in ann.keys():
+                kp_connections = {
+                    "nose": ["mouth"],
+                    "mouth": ["throat"],
+                    "throat": ["chest", "left_upper_arm", "right_upper_arm"],
+                    "chest": ["back"],
+                    "left_upper_arm": ["left_lower_arm"],
+                    "left_lower_arm": ["left_wrist"],
+                    "left_wrist": ["left_hand"],
+                    "right_upper_arm": ["right_lower_arm"],
+                    "right_lower_arm": ["right_wrist"],
+                    "right_wrist": ["right_hand"],
+                    "back": ["left_upper_leg", "right_upper_leg"],
+                    "left_upper_leg": ["left_knee"],
+                    "left_knee": ["left_lower_leg"],
+                    "left_lower_leg": ["left_foot"],
+                    "right_upper_leg": ["right_knee"],
+                    "right_knee": ["right_lower_leg"],
+                    "right_lower_leg": ["right_foot"]
+                }
+                kps = {}
+
+                for kp in ann["keypoints"]:
+                    kps[kp["keypoint_category"]] = kp["xy"]
+
+                for kp_cat, connects in kp_connections.items():
+                    for connect in connects:
+                        ax.plot(kps[kp_cat], kps[connect],  color=color, marker='o',)
+
             ax.annotate(label, (x, y), color="black", annotation_clip=False)
 
         video_dir = (
