@@ -180,7 +180,7 @@ def visualize_kwcoco_by_label(dset=None, save_dir=""):
 
         aids = gid_to_aids[gid]
         anns = ub.dict_subset(dset.anns, aids)
-        using_contact = False
+
         for aid, ann in anns.items():
             conf = ann.get("confidence", 1)
             # if conf < 0.1:
@@ -256,12 +256,12 @@ def visualize_kwcoco_by_label(dset=None, save_dir=""):
     plt.close("all")
 
 
-def imgs_to_video(imgs_dir):
+def imgs_to_video(imgs_dir, topic):
     """Convert directory of images to a video"""
     video_name = imgs_dir.split("/")[-1] + ".avi"
 
     images = glob.glob(f"{imgs_dir}/*.png")
-    images = sorted(images, key=lambda x: time_from_name(x)[0])
+    images = sorted(images, key=lambda x: time_from_name(x, topic)[0])
 
     frame = cv2.imread(images[0])
     height, width, layers = frame.shape
