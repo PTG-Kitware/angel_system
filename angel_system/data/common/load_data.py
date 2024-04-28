@@ -29,6 +29,14 @@ def sanitize_str(str_: str):
     """
     return str_.lower().strip(" .")
 
+def time_from_name(fname, topic="cooking"):
+    if topic == "medical":
+        from angel_system.data.medical.load_bbn_data import time_from_name as tfn
+    elif topic == "cooking":
+        from angel_system.data.cooking.load_kitware_data import time_from_name as tfn
+
+    return tfn(fname)
+
 
 def Re_order(image_list, image_number):
     img_id_list = []
