@@ -34,8 +34,8 @@ def data_loader(
         - inv_act_map: Activity id to label string dict
         - image_activity_gt: Image id to activity label string dict
         - image_id_to_dataset: Image id to id in ``dset`` dict
-        - label_to_ind: Object detection labels to ids dict
-        - act_id_to_str: Object detection ids to labels dict
+        - obj_label_to_ind: Object detection labels to ids dict
+        - obj_ind_to_label: Object detection ids to labels dict
         - ann_by_image: Image id to annotation dict
     """
     print("Loading data....")
@@ -80,14 +80,11 @@ def data_loader(
 
     min_cat = min([dset.cats[i]["id"] for i in dset.cats])
     num_act = len(dset.cats)
-    label_to_ind = {
+    obj_label_to_ind = {
         dset.cats[i]["name"]: dset.cats[i]["id"] - min_cat for i in dset.cats
     }
-    print(
-        f"Object label mapping:\n\t"
-        f"{json.dumps([o['name'] for o in dset.categories().objs])}"
-    )
-    act_id_to_str = {dset.cats[i]["id"]: dset.cats[i]["name"] for i in dset.cats}
+    print(f"Object label mapping:\n\t", obj_label_to_ind)
+    obj_ind_to_label = {dset.cats[i]["id"]: dset.cats[i]["name"] for i in dset.cats}
 
     ann_by_image = {}
     for gid, anns in dset.index.gid_to_aids.items():
@@ -101,8 +98,8 @@ def data_loader(
         inv_act_map,
         image_activity_gt,
         image_id_to_dataset,
-        label_to_ind,
-        act_id_to_str,
+        obj_label_to_ind,
+        obj_ind_to_label,
         ann_by_image,
     )
 
@@ -111,8 +108,8 @@ def compute_feats(
     act_map: dict,
     image_activity_gt: dict,
     image_id_to_dataset: dict,
-    label_to_ind: dict,
-    act_id_to_str: dict,
+    obj_label_to_ind: dict,
+    obj_ind_to_label: dict,
     ann_by_image: dict,
     feat_version=1,
     top_n_objects=1,
@@ -122,8 +119,8 @@ def compute_feats(
     :param act_map: Activity label string to id
     :param image_activity_gt: Image id to activity label string dict
     :param image_id_to_dataset: Image id to id in ``dset`` dict
-    :param label_to_ind: Object detection labels to ids dict
-    :param act_id_to_str: Object detection ids to labels dict
+    :param obj_label_to_ind: Object detection labels to ids dict
+    :param obj_ind_to_label: Object detection ids to labels dict
     :param ann_by_image: Image id to annotation dict
 
     :return: resulting feature data and its labels
@@ -145,9 +142,19 @@ def compute_feats(
         pose_keypoints = []
         
         # Reorganize detections into lists
-        pose_keypoints = ann_by_image[image_id][0].get('keypoints', zero_joint_offset)
+        if len(ann_by_image[image_id]) == 0:
+            continue
+        pose_keypoints = zero_joint_offset
         for ann in ann_by_image[image_id]:
-            label_vec.append(act_id_to_str[ann["category_id"]])
+            cat = obj_ind_to_label[ann["category_id"]]
+
+            # Ignore the patient and user bboxes, use the pose from the patient
+            if cat in ["patient", "user"]:
+                if cat == "patient":
+                    pose_keypoints = ann["keypoints"]
+                continue
+
+            label_vec.append(cat)
 
             x, y, w, h = ann["bbox"]
             xs.append(x)
@@ -156,12 +163,9 @@ def compute_feats(
             hs.append(h)
 
             label_confidences.append(ann["confidence"])
-        
-        # convert any hand labels to left and right hands
-        # and remove patient labels
-        label_vec, label_to_ind = convert_labels_to_left_right_hands(
-            label_vec, xs, ys
-        )
+
+        # Ignore the patient and user labels in the feature vector
+        only_obj_label_to_ind = {k:i for i, (k, v) in enumerate(obj_label_to_ind.items()) if k not in ["patient", "user"]}
 
         # Compute feature vector
         feature_vec = obj_det2d_set_to_feature(
@@ -172,7 +176,7 @@ def compute_feats(
             hs,
             label_confidences,
             pose_keypoints,
-            label_to_ind,
+            only_obj_label_to_ind,
             version=feat_version,
             top_n_objects=top_n_objects,
         )
@@ -287,19 +291,19 @@ def validate(
 def save(
     output_dir: Union[str, PosixPath],
     act_str_list: List[str],
-    label_to_ind: dict,
+    obj_label_to_ind: dict,
     clf: RandomForestClassifier,
 ):
     """Save the model to a pickle file
 
     :param output_dir: Path to save the model to
     :param act_str_list: List of activity label strings
-    :param label_to_ind: Object detection labels to ids dict
+    :param obj_label_to_ind: Object detection labels to ids dict
     :param clf: model
     """
     output_fn = f"{output_dir}/activity_weights.pkl"
     with open(output_fn, "wb") as of:
-        pickle.dump([label_to_ind, 1, clf, act_str_list], of)
+        pickle.dump([obj_label_to_ind, 1, clf, act_str_list], of)
     print(f"Saved weights to {output_fn}")
 
 
@@ -319,16 +323,16 @@ def train_activity_classifier(args: argparse.Namespace):
         inv_act_map,
         image_activity_gt,
         image_id_to_dataset,
-        label_to_ind,
-        act_id_to_str,
+        obj_label_to_ind,
+        obj_ind_to_label,
         ann_by_image,
     ) = data_loader(args.train_fn, act_labels)
     X, y = compute_feats(
         act_map,
         image_activity_gt,
         image_id_to_dataset,
-        label_to_ind,
-        act_id_to_str,
+        obj_label_to_ind,
+        obj_ind_to_label,
         ann_by_image,
     )
     plot_dataset_counts(X, y, args.output_dir, "train")
@@ -339,16 +343,16 @@ def train_activity_classifier(args: argparse.Namespace):
         val_inv_act_map,
         val_image_activity_gt,
         val_image_id_to_dataset,
-        val_label_to_ind,
-        val_act_id_to_str,
+        val_obj_label_to_ind,
+        val_obj_ind_to_label,
         val_ann_by_image,
     ) = data_loader(args.val_fn, act_labels)
     X_final_test, y_final_test = compute_feats(
         val_act_map,
         val_image_activity_gt,
         val_image_id_to_dataset,
-        val_label_to_ind,
-        val_act_id_to_str,
+        val_obj_label_to_ind,
+        val_obj_ind_to_label,
         val_ann_by_image,
     )
     plot_dataset_counts(X_final_test, y_final_test, args.output_dir, "val")
@@ -359,7 +363,7 @@ def train_activity_classifier(args: argparse.Namespace):
 
     # Save
     act_str_list = [inv_act_map[key] for key in sorted(list(set(y)))]
-    save(args.output_dir, act_str_list, label_to_ind, clf)
+    save(args.output_dir, act_str_list, obj_label_to_ind, clf)
 
 
 def main():
