@@ -112,7 +112,7 @@ def compute_feats(
     obj_ind_to_label: dict,
     ann_by_image: dict,
     feat_version=1,
-    top_n_objects=1,
+    top_k_objects=1,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Compute features from object detections
 
@@ -178,7 +178,7 @@ def compute_feats(
             pose_keypoints,
             only_obj_label_to_ind,
             version=feat_version,
-            top_n_objects=top_n_objects,
+            top_k_objects=top_k_objects,
         )
         
         X.append(feature_vec.ravel())
