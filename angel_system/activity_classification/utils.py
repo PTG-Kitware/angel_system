@@ -119,16 +119,21 @@ def feature_version_to_options(feature_version):
     the intersection of each object to the hands,
     and the activation features
 
-    Len: 1 + ((num_obj_classes-2)*2) + 1 + ((num_obj_classes-2)*2) + 2 + 1 + (3 * (num_obj_classes-2))
-
+    Len: 1 + 1 + 2 + 1 +
+    top_k_objects * (
+        2 * (num_obj_classes-2) + 2 * (num_obj_classes-2) + (1 + 1 + 1) * (num_obj_classes-2)
+    )
+    
     [
         A[right hand],
-        D[right hand, obj1]x, D[right hand, obj1]y, ... , D[right hand, objN]y,
         A[left hand],
-        D[left hand, obj1]x, D[left hand, obj1]y, ... , D[left hand, objN]y,
         D[right hand, left hand]x, D[right hand, left hand]y,
         I[right hand, left hand]
-        A[obj1] I[right hand, obj1] I[left hand, obj1], ... , I[left hand, objN]
+
+        for k_obj in top_k_objects:
+            D[right hand, obj1]x, D[right hand, obj1]y, ... , D[right hand, objN]y,
+            D[left hand, obj1]x, D[left hand, obj1]y, ... , D[left hand, objN]y,
+            A[obj1] I[right hand, obj1] I[left hand, obj1], ... , I[left hand, objN]
     ]
     """
     options[5] = {
