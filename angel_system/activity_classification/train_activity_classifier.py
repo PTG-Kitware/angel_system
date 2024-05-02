@@ -122,7 +122,10 @@ def compute_feats(
     :param obj_label_to_ind: Object detection labels to ids dict
     :param obj_ind_to_label: Object detection ids to labels dict
     :param ann_by_image: Image id to annotation dict
-
+    :param feat_version:
+        Version of the feature conversion approach.
+    :param top_k_objects: Number top confidence objects to use per label, defaults to 1
+    
     :return: resulting feature data and its labels
     """
     print("Computing features...")

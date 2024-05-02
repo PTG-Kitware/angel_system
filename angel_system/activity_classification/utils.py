@@ -1,7 +1,6 @@
 import os
 
-from typing import Dict
-from typing import Tuple
+from typing import Dict, Tuple, List
 
 import kwimage
 import random
@@ -43,7 +42,8 @@ def tlbr_to_xywh(
     :param bottom: Array-like of bottom box coordinate values.
     :param right: Array-like of right box coordinate values.
 
-    :return:
+    :return: 
+        List of x values, List of y values, List of width values, List of height values
     """
     assert (
         len(top) == len(left) == len(bottom) == len(right)
@@ -54,7 +54,16 @@ def tlbr_to_xywh(
     hs = np.asarray(bottom) - ys
     return xs, ys, ws, hs
 
-def feature_version_to_options(feature_version):
+def feature_version_to_options(feature_version: int) -> Dict[str, bool]:
+    """Convert the feature version number to a dict of
+    boolean flags indicating which data values should be added to the feature vector
+
+    :param feature_version: Version of the feature conversion approach.
+    
+    :return:
+        Dictionary of flag names and boolean values that match the input parameters
+        to the functions that create/utilize the feature vector
+    """
     options = {}
 
     """
@@ -183,24 +192,34 @@ def feature_version_to_options(feature_version):
     return options[feature_version]
 
 def obj_det2d_set_to_feature(
-    label_vec,
-    xs,
-    ys,
-    ws,
-    hs,
-    label_confidences,
-    pose_keypoints,
-    label_to_ind: Dict[str, int],
+    label_vec: List[str],
+    xs: List[float],
+    ys: List[float],
+    ws: List[float],
+    hs: List[float],
+    label_confidences: List[float],
+    pose_keypoints: List[Dict],
+    obj_label_to_ind: Dict[str, int],
     version: int = 1,
-    top_k_objects=1,
+    top_k_objects: int=1,
 ):
     """Convert ObjectDetection2dSet fields into a feature vector.
 
-    :param label_to_ind:
+    :param label_vec: List of object labels for each detection (length: # detections)
+    :param xs: List of x values for each detection (length: # detections)
+    :param ys: List of y values for each detection (length: # detections)
+    :param ws: List of width values for each detection (length: # detections)
+    :param hs: List of height values for each detection (length: # detections)
+    :param label_confidences: List of confidence values for each detection (length: # detections)
+    :param pose_keypoints:
+        List of joints, represented by a dictionary contining the x and y corrdinates of the points and the category id and string
+    :param obj_label_to_ind:
         Dictionary mapping a label str and returns the index within the feature vector.
-
     :param version:
         Version of the feature conversion approach.
+    :param top_k_objects: Number top confidence objects to use per label, defaults to 1
+    
+    :return: resulting feature data
     """
     opts = feature_version_to_options(version)
     feature_vec = obj_det2d_set_to_feature_by_method(
@@ -211,9 +230,9 @@ def obj_det2d_set_to_feature(
         hs,
         label_confidences,
         pose_keypoints,
-        label_to_ind,
-        **opts,
-        top_k_objects=top_k_objects
+        obj_label_to_ind,
+        top_k_objects=top_k_objects,
+        **opts
     )
 
     # print(f"feat {feature_vec}")
@@ -221,19 +240,41 @@ def obj_det2d_set_to_feature(
     return feature_vec
 
 def plot_feature_vec(
-        image_fn,
-        right_hand_center, left_hand_center, feature_vec,
-        obj_label_to_ind, joint_names=["nose", "mouth", "throat", "chest", "stomach", "left_upper_arm", "right_upper_arm", "left_lower_arm", "right_lower_arm", "left_wrist", "right_wrist", "left_hand", "right_hand", "left_upper_leg", "right_upper_leg", "left_knee", "right_knee", "left_lower_leg", "right_lower_leg", "left_foot", "right_foot", "back"],
-        use_activation=False,
-        use_hand_dist=False,
-        use_center_dist=False,
-        use_intersection=False,
-        use_joint_hand_offset=False,
-        use_joint_object_offset=False,
-        top_k_objects=1,
-        colors=['yellow', 'red', 'green', 'lightblue', 'blue', 'purple', 'orange'],
-        output_dir="feature_visualization"
+        image_fn: str,
+        right_hand_center: list,
+        left_hand_center: list,
+        feature_vec: np.array,
+        obj_label_to_ind: Dict[str, int],
+        output_dir: str,
+        top_k_objects: int=1,
+        use_activation: bool=False,
+        use_hand_dist: bool=False,
+        use_center_dist: bool=False,
+        use_intersection: bool=False,
+        use_joint_hand_offset: bool=False,
+        use_joint_object_offset: bool=False,
+        joint_names: List[str]=["nose", "mouth", "throat", "chest", "stomach", "left_upper_arm", "right_upper_arm", "left_lower_arm", "right_lower_arm", "left_wrist", "right_wrist", "left_hand", "right_hand", "left_upper_leg", "right_upper_leg", "left_knee", "right_knee", "left_lower_leg", "right_lower_leg", "left_foot", "right_foot", "back"],
+        colors: List[str]=['yellow', 'red', 'green', 'lightblue', 'blue', 'purple', 'orange'],
     ):
+    """Plot the object and joint points based on the hand bbox centers and the distance values
+    in the feature vector
+
+    :param image_fn: Path to the image to draw on
+    :param right_hand_center: List of the x and y coordinates of the right hand box center
+    :param left_hand_center: List of the x and y coordinates of the left hand box center
+    :param feature_vec: Numpy array of values determined by the provided flags
+    :param obj_label_to_ind:
+        Dictionary mapping a label str and returns the index within the feature vector.
+    :param output_dir: Path to a folder to save the generated images to
+    :param top_k_objects: Number top confidence objects to use per label, defaults to 1
+    :param use_activation: If True, add the confidence values of the detections to the feature vector, defaults to False
+    :param use_hand_dist: If True, add the distance of the detection centers to both hand centers to the feature vector, defaults to False
+    :param use_intersection: If True, add the intersection of the detection boxes with the hand boxes to the feature vector, defaults to False
+    :param use_joint_hand_offset: If True, add the distance of the hand centers to the patient joints to the feature vector, defaults to False
+    :param use_joint_object_offset: If True, add the distance of the object centers to the patient joints to the feature vector, defaults to False
+    :param joint_names: List of the joint names
+    :param colors: List of colors to use when plotting points
+    """
     Path(output_dir).mkdir(parents=True, exist_ok=True)
 
     rh_joint_dists = []
@@ -489,27 +530,48 @@ def plot_feature_vec(
     
 
 def obj_det2d_set_to_feature_by_method(
-    label_vec,
-    xs,
-    ys,
-    ws,
-    hs,
-    label_confidences,
-    pose_keypoints,
-    label_to_ind: Dict[str, int],
-    use_activation=False,
-    use_hand_dist=False,
-    use_center_dist=False,
-    use_intersection=False,
-    use_joint_hand_offset=False,
-    use_joint_object_offset=False,
-    top_k_objects=1
+    label_vec: List[str],
+    xs: List[float],
+    ys: List[float],
+    ws: List[float],
+    hs: List[float],
+    label_confidences: List[float],
+    pose_keypoints: List[Dict],
+    obj_label_to_ind: Dict[str, int],
+    top_k_objects: int=1,
+    use_activation: bool=False,
+    use_hand_dist: bool=False,
+    use_center_dist: bool=False,
+    use_intersection: bool=False,
+    use_joint_hand_offset: bool=False,
+    use_joint_object_offset: bool=False,
 ):
+    """
+    :param label_vec: List of object labels for each detection (length: # detections)
+    :param xs: List of x values for each detection (length: # detections)
+    :param ys: List of y values for each detection (length: # detections)
+    :param ws: List of width values for each detection (length: # detections)
+    :param hs: List of height values for each detection (length: # detections)
+    :param label_confidences: List of confidence values for each detection (length: # detections)
+    :param pose_keypoints:
+        List of joints, represented by a dictionary contining the x and y corrdinates of the points and the category id and string
+    :param obj_label_to_ind:
+        Dictionary mapping a label str and returns the index within the feature vector.
+    :param top_k_objects: Number top confidence objects to use per label, defaults to 1
+    :param use_activation: If True, add the confidence values of the detections to the feature vector, defaults to False
+    :param use_hand_dist: If True, add the distance of the detection centers to both hand centers to the feature vector, defaults to False
+    :param use_intersection: If True, add the intersection of the detection boxes with the hand boxes to the feature vector, defaults to False
+    :param use_joint_hand_offset: If True, add the distance of the hand centers to the patient joints to the feature vector, defaults to False
+    :param use_joint_object_offset: If True, add the distance of the object centers to the patient joints to the feature vector, defaults to False
+    
+    :return: 
+        resulting feature data
+    """
     #########################
     # Data
     #########################
     # Number of object detection classes
-    num_det_classes = len(label_to_ind)
+    num_det_classes = len(obj_label_to_ind)
 
     # Maximum confidence observe per-class across input object detections.
     # If a class has not been observed, it is set to 0 confidence.
@@ -522,11 +584,11 @@ def obj_det2d_set_to_feature_by_method(
     det_class_mask = np.zeros((top_k_objects, num_det_classes), dtype=np.bool_)
 
     # Record the most confident detection for each object class as recorded in
-    # `label_to_ind` (confidence & bbox)
+    # `obj_label_to_ind` (confidence & bbox)
     for i, label in enumerate(label_vec):
-        if label in label_to_ind:
+        if label in obj_label_to_ind:
             conf = label_confidences[i]
-            ind = label_to_ind[label]
+            ind = obj_label_to_ind[label]
             
             conf_list = det_class_max_conf[ind, :]
             if conf > det_class_max_conf[ind].min():
@@ -546,7 +608,7 @@ def obj_det2d_set_to_feature_by_method(
     # util functions
     #########################
     def find_hand(hand_str):
-        hand_idx = label_to_ind[hand_str]
+        hand_idx = obj_label_to_ind[hand_str]
         hand_conf = det_class_max_conf[hand_idx][0]
         hand_bbox = kwimage.Boxes([det_class_bbox[0, hand_idx]], "xywh")
 
