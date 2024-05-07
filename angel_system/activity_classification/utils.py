@@ -821,10 +821,10 @@ def obj_det2d_set_to_feature_by_method(
     if use_hand_dist:
         feature_vec.append(right_hand_dist_k[0][left_hand_idx])
     if use_intersection:
-        feature_vec.append([right_hand_intersection[left_hand_idx]])
+        feature_vec.append([right_hand_intersection_k[0][left_hand_idx]])
     if use_center_dist:
-        feature_vec.append(image_center_obj_dist_k[right_hand_idx])
-        feature_vec.append(image_center_obj_dist_k[left_hand_idx])
+        feature_vec.append(image_center_obj_dist_k[0][right_hand_idx])
+        feature_vec.append(image_center_obj_dist_k[0][left_hand_idx])
     if use_joint_hand_offset:
         for rh_offset in joint_right_hand_offset:
             feature_vec.append(rh_offset)
