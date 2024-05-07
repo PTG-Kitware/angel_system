@@ -81,6 +81,8 @@ services:
       - ${WORKSPACE_SHELL_HOST_DIR}/stuff:${ANGEL_WORKSPACE_DIR}/stuff
       - ${WORKSPACE_SHELL_HOST_DIR}/ros_home:/root/.ros
       - ${WORKSPACE_SHELL_HOST_DIR}/cache/torch:/root/.cache/torch
+      - ${WORKSPACE_SHELL_HOST_DIR}/cache/pip:/root/.cache/pip
+      - ${WORKSPACE_SHELL_HOST_DIR}/cache/poetry:/root/.cache/pypoetry
       # X11 things
       - /tmp/.X11-unix:/tmp/.X11-unix
       # assume this file exists, should be created before running.
