@@ -16,7 +16,9 @@ ENV LC_ALL=C.UTF-8 \
     LANG=C.UTF-8
 
 # Basic system package installations
-RUN apt-get -y update \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get -y update \
  && apt-get -y install \
         gettext-base \
         python3-pip \
@@ -36,9 +38,7 @@ RUN apt-get -y update \
         libglx0 \
         libegl1 \
         libxext6 \
-        libx11-6 \
- && apt-get clean \
- && rm -rf /var/lib/apt/lists/*
+        libx11-6
 
 # Env vars for the nvidia-container-runtime.
 ENV NVIDIA_VISIBLE_DEVICES all
@@ -47,8 +47,12 @@ ENV NVIDIA_DRIVER_CAPABILITIES graphics,utility,compute
 # For the demo-ui
 # TODO: Probably upgrade what nodejs version is being used.
 # TODO: Getting a warning about this script being deprecated, so update the installation method, too.
-RUN curl -sL https://deb.nodesource.com/setup_14.x | bash -
-RUN apt-get install -y nodejs && node -v && npm -v
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    (curl -sL https://deb.nodesource.com/setup_14.x | bash -) \
+ && apt-get install -y nodejs \
+ && node -v \
+ && npm -v
 
 # Bring in poetry for standard python package installation.
 # Specifying a separate virtual environment that will be natively "activated".
@@ -57,7 +61,9 @@ RUN apt-get install -y nodejs && node -v && npm -v
 ENV VIRTUAL_ENV=/root/.local
 ENV PATH=/root/.local/bin:${PATH}
 ENV POETRY_VERSION=1.7.1
-RUN python3 -m venv --system-site-packages "${VIRTUAL_ENV}"\
+RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked \
+    --mount=type=cache,target=/root/.cache/pypoetry,sharing=locked \
+    python3 -m venv --system-site-packages "${VIRTUAL_ENV}"\
  && pip3 install pip==23.3.1 \
  && (curl -sSL 'https://install.python-poetry.org' | python3 -) \
  && poetry config virtualenvs.create false
@@ -86,20 +92,18 @@ FROM base AS build
 # Bring in just package files from source tree for rosdep to use.
 COPY --from=tmp_package_files "${ANGEL_WORKSPACE_DIR}" "${ANGEL_WORKSPACE_DIR}"
 COPY docker/workspace_build_rosdep_install.sh "${ANGEL_WORKSPACE_DIR}/"
-RUN apt-get -y update \
- && "${ANGEL_WORKSPACE_DIR}/workspace_build_rosdep_install.sh" \
- && apt-get clean \
- && rm -rf /var/lib/apt/lists/*
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get -y update \
+ && "${ANGEL_WORKSPACE_DIR}/workspace_build_rosdep_install.sh"
 
 # Install tracked python dependencies
 COPY poetry.lock pyproject.toml docker/workspace_build_pydep_install.sh "${ANGEL_WORKSPACE_DIR}"/
 COPY ./python-tpl "${ANGEL_WORKSPACE_DIR}/python-tpl"
-RUN cd "${ANGEL_WORKSPACE_DIR}" \
- && "${ANGEL_WORKSPACE_DIR}/workspace_build_pydep_install.sh" \
-    # Cleaning up quite a bit of space by clearing the built-up caches of \
-    # wheels and stuff.
- && rm -r ${HOME}/.cache/pip \
-          ${HOME}/.cache/pypoetry
+RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked \
+    --mount=type=cache,target=/root/.cache/pypoetry,sharing=locked \
+    cd "${ANGEL_WORKSPACE_DIR}" \
+ && "${ANGEL_WORKSPACE_DIR}/workspace_build_pydep_install.sh"
 
 # Create editable-installation hooks for the angel_system python package.
 # * The container is intended to be environment-only, but it is highly
