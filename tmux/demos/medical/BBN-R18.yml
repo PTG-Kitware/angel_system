@@ -3,8 +3,7 @@
 #
 # This configuration is for the M2 tourniquet task.
 #
-
-name: R18-Chest-Seal
+name: BBN-R18-Chest-Seal
 root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 
 # Optional tmux socket
@@ -51,40 +50,40 @@ windows:
             - sensor_input: ros2 run angel_system_nodes redis_ros_bridge --ros-args
                 -r __ns:=${ROS_NAMESPACE}
                 -p url:=${HL2SS_API_URL}
-                -p image_topic:=image_0
+                -p image_topic:=PVFramesBGR
                 -p hand_pose_topic:=HandJointPoseData
 
             - run_image_timestamp: ros2 run angel_system_nodes image_timestamp_relay --ros-args
                 -r __ns:=${ROS_NAMESPACE}
-                -p image_topic:=image_0 
-                -p output_topic:=image_0_ts
+                -p image_topic:=PVFramesBGR
+                -p output_topic:=PVFramesBGR_ts
 
-    - pose_estimation: ros2 run angel_system_nodes pose_estimator --ros-args 
+    - pose_estimation: ros2 run angel_system_nodes pose_estimator --ros-args
         -r __ns:=${ROS_NAMESPACE}
-        -p image_topic:=image_0 
-        -p det_topic:=pose_dets 
-        -p pose_topic:=PatientPose 
-        -p det_net_checkpoint:=${MODEL_DIR}/pose_estimation/pose_det_model.pth 
-        -p pose_net_checkpoint:=${MODEL_DIR}/pose_estimation/pose_model.pth 
-        -p det_config:=${ANGEL_WORKSPACE_DIR}/python-tpl/TCN_HPL/tcn_hpl/data/utils/pose_generation/configs/medic_pose.yaml 
+        -p image_topic:=PVFramesBGR
+        -p det_topic:=pose_dets
+        -p pose_topic:=PatientPose
+        -p det_net_checkpoint:=${MODEL_DIR}/pose_estimation/pose_det_model.pth
+        -p pose_net_checkpoint:=${MODEL_DIR}/pose_estimation/pose_model.pth
+        -p det_config:=${ANGEL_WORKSPACE_DIR}/python-tpl/TCN_HPL/tcn_hpl/data/utils/pose_generation/configs/medic_pose.yaml
         -p pose_config:=${ANGEL_WORKSPACE_DIR}/python-tpl/TCN_HPL/tcn_hpl/data/utils/pose_generation/configs/ViTPose_base_medic_casualty_256x192.py
         -p cuda_device_id:=0
 
-    - object_and_hand_detection: ros2 run angel_system_nodes object_and_hand_detector --ros-args 
+    - object_and_hand_detection: ros2 run angel_system_nodes object_and_hand_detector --ros-args
         -r __ns:=${ROS_NAMESPACE}
-        -p image_topic:=image_0 
-        -p det_topic:=ObjectDetections2d 
+        -p image_topic:=PVFramesBGR
+        -p det_topic:=ObjectDetections2d
         -p object_net_checkpoint:=${MODEL_DIR}/object_detector/r18_det.pt
         -p hand_net_checkpoint:=${MODEL_DIR}/object_detector/hands_model.pt
 
-    - activity_classifier: ros2 run angel_system_nodes activity_classifier_tcn --ros-args 
+    - activity_classifier: ros2 run angel_system_nodes activity_classifier_tcn --ros-args
         -r __ns:=${ROS_NAMESPACE}
-        -p image_ts_topic:=image_0_ts 
-        -p det_topic:=ObjectDetections2d 
-        -p pose_topic:=PatientPose 
-        -p model_weights:=${MODEL_DIR}/activity_classifier/r18_tcn.ckpt 
-        -p model_mapping:=${MODEL_DIR}/activity_classifier/r18_mapping.txt 
-        -p model_det_label_mapping:=${ANGEL_WORKSPACE_DIR}/config/object_labels/medical/r18.json 
+        -p image_ts_topic:=PVFramesBGR_ts
+        -p det_topic:=ObjectDetections2d
+        -p pose_topic:=PatientPose
+        -p model_weights:=${MODEL_DIR}/activity_classifier/r18_tcn.ckpt
+        -p model_mapping:=${MODEL_DIR}/activity_classifier/r18_mapping.txt
+        -p model_det_label_mapping:=${ANGEL_WORKSPACE_DIR}/config/object_labels/medical/r18.json
         -p act_topic:=activity_topic
 
     - task_monitor:
@@ -107,26 +106,12 @@ windows:
               -p query_task_graph_topic:=query_task_graph
           - echo: sleep 0.5 && ros2 topic echo --no-arr "${ROS_NAMESPACE}/TaskUpdates"
 
-    - BBN Interface:
-        layout: even-vertical
-        panes:
-            - task-converter: ros2 run bbn_integration_py task_to_bbn_update --ros-args 
-                -r __ns:=${ROS_NAMESPACE}
-                -p task_update_topic:=TaskUpdates
-                -p bbn_update_topic:=BBNUpdates
-                -p task_graph_srv_topic:=query_task_graph
-            - echo: sleep 0.5 && ros2 topic echo "${ROS_NAMESPACE}/BBNUpdates"
-            - zmq-publisher: ros2 run bbn_integration ZmqIntegrationClient --ros-args
-                -r __ns:=${ROS_NAMESPACE}
-                -p topic_update_msg:=BBNUpdates
-                -p server_address:=${BBN_OUTPUT_URL}
-
     - engineering-ui:
         layout: even-vertical
         panes:
           - simple_2d_overlay: ros2 run angel_utils Simple2dDetectionOverlay --ros-args
                 -r __ns:=${ROS_NAMESPACE}
-                -p topic_input_images:=image_0
+                -p topic_input_images:=PVFramesBGR
                 -p topic_input_det_2d:=ObjectDetections2d
                 -p topic_input_joints:=PatientPose
                 -p topic_output_images:=pv_image_detections_2d
@@ -139,3 +124,17 @@ windows:
               --task_updates_topic=TaskUpdates
               --activity_detections_topic=activity_topic
               --task_errors_topic=TaskErrors
+
+    - BBN Interface:
+        layout: even-vertical
+        panes:
+            - task-converter: ros2 run bbn_integration_py task_to_bbn_update --ros-args
+                -r __ns:=${ROS_NAMESPACE}
+                -p task_update_topic:=TaskUpdates
+                -p bbn_update_topic:=BBNUpdates
+                -p task_graph_srv_topic:=query_task_graph
+            - echo: sleep 0.5 && ros2 topic echo "${ROS_NAMESPACE}/BBNUpdates"
+            - zmq-publisher: ros2 run bbn_integration ZmqIntegrationClient --ros-args
+                -r __ns:=${ROS_NAMESPACE}
+                -p topic_update_msg:=BBNUpdates
+                -p server_address:=${BBN_OUTPUT_URL}
