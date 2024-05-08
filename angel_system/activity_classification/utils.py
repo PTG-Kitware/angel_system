@@ -69,9 +69,12 @@ def feature_version_to_options(feature_version: int) -> Dict[str, bool]:
     """
     Feature vector that encodes the activation feature of each class
 
-    Len: num_obj_classes
+    Len: top_k_objects * num_obj_classes
 
-    [A[obj1] ... A[objN]]
+    [
+        for k_obj in top_k_object:
+            A[obj1] ... A[objN]
+    ]
     """
     options[1] = {      
         "use_activation": True
@@ -81,15 +84,19 @@ def feature_version_to_options(feature_version: int) -> Dict[str, bool]:
     Feature vector that encodes the distance of each object from each hand,
     and the activation features
 
-    Len: 1 + (num_obj_classes-2)*2 + 1 + (num_obj_classes-2)*2 + 2 + num_obj_classes-2
+    Len:
+    top_k_objects * (
+        1 + (num_obj_classes-2)*2 + 1 + (num_obj_classes-2)*2 + 2 + (num_obj_classes-2)
+    )
 
     [
-        A[right hand],
-        D[right hand, obj1]x, D[right hand, obj1]y, ... , D[right hand, objN]y,
-        A[left hand],
-        D[left hand, obj1]x, D[left hand, obj1]y, ... , D[left hand, objN]y,
-        D[right hand, left hand]x, D[right hand, left hand]y,
-        A[obj1] ... A[objN]
+        for k_obj in top_k_object:
+            A[right hand],
+            D[right hand, obj1_k]x, D[right hand, obj1_k]y, ... , D[right hand, objN_k]y,
+            A[left hand],
+            D[left hand, obj1_k]x, D[left hand, obj1_k]y, ... , D[left hand, objN_k]y,
+            D[right hand, left hand]x, D[right hand, left hand]y,
+            A[obj1_k] ... A[objN_k]
     ]
     """
     options[2] = {
@@ -102,19 +109,19 @@ def feature_version_to_options(feature_version: int) -> Dict[str, bool]:
     the intersection of each object to the hands,
     and the activation features
 
-    Len: 1 + 2 + 1 + 2 + 1 + (1+1+1+2)*(num_obj_classes-2)
+    Len:
+    top_k_objects * (
+        1 + 2 + 1 + 2 + 1 + (1 + 1 + 1 + 2) * (num_obj_classes-2)
+    )
 
     [
-        A[right hand],
-        D[right hand, center]x, D[right hand, center]y,
-        A[left hand],
-        D[left hand, center]x, D[left hand, center]y,
-        I[right hand, left hand]
-        A[obj1],
-        I[right hand, obj1],
-        I[left hand, obj1]
-        D[obj1, center]x, D[obj1, center]y
-        ...
+        for k_obj in top_k_object:
+            A[right hand],
+            D[right hand, center]x, D[right hand, center]y,
+            A[left hand],
+            D[left hand, center]x, D[left hand, center]y,
+            I[right hand, left hand],
+            A[obj1_k] I[right hand, obj1_k] I[left hand, obj1_k], D[obj1_k, center]x, D[obj1_k, center]y ... , D[objN_k, center]y
     ]
     """
     options[3] = {
@@ -128,21 +135,20 @@ def feature_version_to_options(feature_version: int) -> Dict[str, bool]:
     the intersection of each object to the hands,
     and the activation features
 
-    Len: 1 + 1 + 2 + 1 +
+    Len: 
     top_k_objects * (
-        2 * (num_obj_classes-2) + 2 * (num_obj_classes-2) + (1 + 1 + 1) * (num_obj_classes-2)
+        1 + 2 * (num_obj_classes-2) + 1 + 2 * (num_obj_classes-2) + 2 + 1 + (1 + 1 + 1) * (num_obj_classes-2)
     )
     
     [
-        A[right hand],
-        A[left hand],
-        D[right hand, left hand]x, D[right hand, left hand]y,
-        I[right hand, left hand]
-
-        for k_obj in top_k_objects:
-            D[right hand, obj1]x, D[right hand, obj1]y, ... , D[right hand, objN]y,
-            D[left hand, obj1]x, D[left hand, obj1]y, ... , D[left hand, objN]y,
-            A[obj1] I[right hand, obj1] I[left hand, obj1], ... , I[left hand, objN]
+        for k_obj in top_k_object:
+            A[right hand],
+            D[right hand, obj1_k]x, D[right hand, obj1_k]y, ... , D[right hand, objN_k]y,
+            A[left hand],
+            D[left hand, obj1_k]x, D[left hand, obj1_k]y, ... , D[left hand, objN_k]y,
+            D[right hand, left hand]x, D[right hand, left hand]y,
+            I[right hand, left hand],
+            A[obj1_k] I[right hand, obj1_k] I[left hand, obj1_k], ... , I[left hand, objN_k]
     ]
     """
     options[5] = {
@@ -159,23 +165,26 @@ def feature_version_to_options(feature_version: int) -> Dict[str, bool]:
     and the activation features
 
     Len: 
-    1 + 1 + 2 + 1 + (22*2) + (22*2) + 
     top_k_objects * (
-        (2 * (num_obj_classes-2)) + (2 * (num_obj_classes-2)) + (1+1+1)*(num_obj_classes-2) + (22*2)*(num_obj_classes-2)
+        (1 + (num_obj_classes-2)*2 + 2) * 2  + 2 + 1
+        + (num_obj_classes-2) * (1+1+1+2)
     )
+    + 22*2 + 22*2
+    + top_k_objects * ((22*2)*(num_obj_classes-2))
+
     
     [
-        A[right hand],
-        A[left hand],
-        D[right hand, left hand]x, D[right hand, left hand]y,
-        I[right hand, left hand],
-        D[right hand, joint1]x, ... , D[right hand, joint 22]y,
-        D[left hand, joint1]x, ... , D[left hand, joint 22]y,
-
         for k_obj in top_k_object:
+            A[right hand],
             D[right hand, obj1_k]x, D[right hand, obj1_k]y, ... , D[right hand, objN_k]y,
+            A[left hand],
             D[left hand, obj1_k]x, D[left hand, obj1_k]y, ... , D[left hand, objN_k]y,
+            D[right hand, left hand]x, D[right hand, left hand]y,
+            I[right hand, left hand],
             A[obj1_k] I[right hand, obj1_k] I[left hand, obj1_k], ... , I[left hand, objN_k],
+        D[left hand, joint1]x, ... , D[left hand, joint 22]y,
+        D[right hand, joint1]x, ... , D[right hand, joint 22]y,
+        for k_obj in top_k_object:
             D[obj1_k, joint1]x, ... , D[obj1_k, joint22]y,
             ..., 
             D[objN_k, joint1]x, ... , D[objN_k, joint22]y
@@ -290,54 +299,15 @@ def plot_feature_vec(
     for non_obj_label in non_object_labels:
         labels.remove(non_obj_label)
 
-    # HANDS
-    if use_activation:
-        ind = 0
-        right_hand_conf = feature_vec[ind]
-        ind +=1
-        left_hand_conf = feature_vec[ind]
-    # Right - left hand
-    if use_hand_dist:
-        # Right - left hand distance
-        ind += 1
-        rh_lh_dist_x = feature_vec[ind]
-        ind += 1
-        rh_lh_dist_y = feature_vec[ind]
-    if use_intersection:
-        ind += 1
-        lh_rh_intersect = feature_vec[ind]
-    if use_center_dist:
-        ind += 1
-        rh_im_center_dist_x = feature_vec[ind]
-        ind +=1 
-        rh_im_center_dist_y = feature_vec[ind]
-        ind += 1
-        lh_im_center_dist_x = feature_vec[ind]
-        ind += 1
-        lh_im_center_dist_y = feature_vec[ind]
-    if use_joint_hand_offset:
-        # right hand - joints distances
-        for i in range(22):
-            ind += 1
-            rh_jointi_dist_x = feature_vec[ind]
-            ind += 1
-            rh_jointi_dist_y = feature_vec[ind]
 
-            rh_joint_dists.append([rh_jointi_dist_x, rh_jointi_dist_y])
     
-        # left hand - joints distances
-        for i in range(22):
-            ind += 1
-            lh_jointi_dist_x = feature_vec[ind]
-            ind += 1
-            lh_jointi_dist_y = feature_vec[ind]
-
-            lh_joint_dists.append([lh_jointi_dist_x, lh_jointi_dist_y])
-
-    # TOP K OBJECTS
     for object_k_index in range(top_k_objects):
+        # RIGHT HAND
+        if use_activation:
+            ind = 0
+            right_hand_conf = feature_vec[ind]
+
         if use_hand_dist:
-            # Right hand distances
             for obj_label in labels:
                 ind += 1
                 obj_rh_dist_x = feature_vec[ind]
@@ -346,6 +316,18 @@ def plot_feature_vec(
 
                 rh_dists_k[object_k_index].append([obj_rh_dist_x, obj_rh_dist_y])
 
+        if use_center_dist:
+            ind += 1
+            rh_im_center_dist_x = feature_vec[ind]
+            ind +=1 
+            rh_im_center_dist_y = feature_vec[ind]
+
+        # LEFT HAND
+        if use_activation:
+            ind +=1
+            left_hand_conf = feature_vec[ind]
+
+        if use_hand_dist:
             # Left hand distances
             for obj_label in labels:
                 ind += 1
@@ -354,7 +336,25 @@ def plot_feature_vec(
                 obj_lh_dist_y = feature_vec[ind]
 
                 lh_dists_k[object_k_index].append([obj_lh_dist_x, obj_lh_dist_y])
+        
+        if use_center_dist:
+            ind += 1
+            lh_im_center_dist_x = feature_vec[ind]
+            ind += 1
+            lh_im_center_dist_y = feature_vec[ind]
 
+        # Right - left hand
+        if use_hand_dist:
+            # Right - left hand distance
+            ind += 1
+            rh_lh_dist_x = feature_vec[ind]
+            ind += 1
+            rh_lh_dist_y = feature_vec[ind]
+        if use_intersection:
+            ind += 1
+            lh_rh_intersect = feature_vec[ind]
+
+        # OBJECTS
         for obj_label in labels:
             if use_activation:
                 # Object confidence
@@ -380,7 +380,29 @@ def plot_feature_vec(
 
                 obj_im_center_dists_k[object_k_index].append([obj_im_center_dist_x, obj_im_center_dist_y])
 
-        if use_joint_object_offset:
+    # HANDS-JOINTS
+    if use_joint_hand_offset:
+        # left hand - joints distances
+        for i in range(22):
+            ind += 1
+            lh_jointi_dist_x = feature_vec[ind]
+            ind += 1
+            lh_jointi_dist_y = feature_vec[ind]
+
+            lh_joint_dists.append([lh_jointi_dist_x, lh_jointi_dist_y])
+            
+        # right hand - joints distances
+        for i in range(22):
+            ind += 1
+            rh_jointi_dist_x = feature_vec[ind]
+            ind += 1
+            rh_jointi_dist_y = feature_vec[ind]
+
+            rh_joint_dists.append([rh_jointi_dist_x, rh_jointi_dist_y])
+
+    # OBJS-JOINTS
+    if use_joint_object_offset:
+        for object_k_index in range(top_k_objects):
             # obj - joints distances
             for obj_label in labels:
                 joints_dists = []
@@ -586,20 +608,23 @@ def obj_det2d_set_to_feature_by_method(
     # Record the most confident detection for each object class as recorded in
     # `obj_label_to_ind` (confidence & bbox)
     for i, label in enumerate(label_vec):
-        if label in obj_label_to_ind:
-            conf = label_confidences[i]
-            ind = obj_label_to_ind[label]
-            
-            conf_list = det_class_max_conf[ind, :]
-            if conf > det_class_max_conf[ind].min():
-                first_zero = np.where(conf_list == conf_list.min())  # [0][0]
-                first_zero = first_zero[0][0]
-                conf_list[first_zero] = conf
-                object_k_index = np.where(conf_list == conf)[0][0]
+        if label not in obj_label_to_ind:
+            # why???
+            exit(1)
 
-                det_class_max_conf[ind] = conf_list
-                det_class_bbox[object_k_index, ind] = [xs[i], ys[i], ws[i], hs[i]]
-                det_class_mask[object_k_index, ind] = True
+        conf = label_confidences[i]
+        ind = obj_label_to_ind[label]
+        
+        conf_list = det_class_max_conf[ind, :]
+        if conf > det_class_max_conf[ind].min():
+            first_zero = np.where(conf_list == conf_list.min())  # [0][0]
+            first_zero = first_zero[0][0]
+
+            conf_list[first_zero] = conf
+
+            det_class_max_conf[ind] = conf_list
+            det_class_bbox[first_zero, ind] = [xs[i], ys[i], ws[i], hs[i]]
+            det_class_mask[first_zero, ind] = True
 
     det_class_kwboxes = kwimage.Boxes(det_class_bbox, "xywh")
 
@@ -815,36 +840,32 @@ def obj_det2d_set_to_feature_by_method(
     #########################
     feature_vec = []
 
-    if use_activation:
-        feature_vec.append([right_hand_conf])
-        feature_vec.append([left_hand_conf])
-    if use_hand_dist:
-        feature_vec.append(right_hand_dist_k[0][left_hand_idx])
-    if use_intersection:
-        feature_vec.append([right_hand_intersection_k[0][left_hand_idx]])
-    if use_center_dist:
-        feature_vec.append(image_center_obj_dist_k[0][right_hand_idx])
-        feature_vec.append(image_center_obj_dist_k[0][left_hand_idx])
-    if use_joint_hand_offset:
-        for rh_offset in joint_right_hand_offset:
-            feature_vec.append(rh_offset)
-        for lh_offset in joint_left_hand_offset:
-            feature_vec.append(lh_offset)
-
     for object_k_index in range(top_k_objects):
+        # HANDS
+        for hand_conf, hand_idx, hand_dist in [
+            (right_hand_conf, right_hand_idx, right_hand_dist_k[object_k_index]),
+            (left_hand_conf, left_hand_idx, left_hand_dist_k[object_k_index]),
+        ]:
+            if use_activation:
+                feature_vec.append([hand_conf])
+            if use_hand_dist:
+                hd1 = [
+                    item
+                    for ii, tupl in enumerate(hand_dist)
+                    for item in tupl
+                    if ii not in [right_hand_idx, left_hand_idx]
+                ]
+                feature_vec.append(hd1)
+            if use_center_dist:
+                feature_vec.append(image_center_obj_dist_k[0][hand_idx])
+
+        # RIGHT-LEFT HAND
         if use_hand_dist:
-            for obj_ind in range(num_det_classes):
-                if obj_ind in [right_hand_idx, left_hand_idx]:
-                    # We already have the hand data
-                    continue
-                feature_vec.append(right_hand_dist_k[object_k_index][obj_ind])
-                
-            for obj_ind in range(num_det_classes):
-                if obj_ind in [right_hand_idx, left_hand_idx]:
-                    # We already have the hand data
-                    continue
-                feature_vec.append(left_hand_dist_k[object_k_index][obj_ind])
-        
+            feature_vec.append(right_hand_dist_k[0][left_hand_idx])
+        if use_intersection:
+            feature_vec.append([right_hand_intersection_k[0][left_hand_idx]])
+
+        # OBJECTS
         for obj_ind in range(num_det_classes):
             if obj_ind in [right_hand_idx, left_hand_idx]:
                 # We already have the hand data
@@ -857,8 +878,18 @@ def obj_det2d_set_to_feature_by_method(
                 feature_vec.append([left_hand_intersection_k[object_k_index][obj_ind]])
             if use_center_dist:
                 feature_vec.append(image_center_obj_dist_k[object_k_index][obj_ind])
-        
-        if use_joint_object_offset:
+
+    # HANDS-JOINTS
+    if use_joint_hand_offset:
+        for lh_offset in joint_left_hand_offset:
+            feature_vec.append(lh_offset)
+    
+        for rh_offset in joint_right_hand_offset:
+            feature_vec.append(rh_offset)
+
+    # OBJ-JOINTS
+    if use_joint_object_offset:
+        for object_k_index in range(top_k_objects):
             for obj_ind in range(num_det_classes):
                 if obj_ind in [right_hand_idx, left_hand_idx]:
                     # We already have the hand data
@@ -868,5 +899,7 @@ def obj_det2d_set_to_feature_by_method(
 
     feature_vec = [item for sublist in feature_vec for item in sublist]  # flatten
     feature_vec = np.array(feature_vec, dtype=np.float64)
+
+
 
     return feature_vec
