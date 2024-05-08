@@ -80,7 +80,7 @@ windows:
   - BBN Interface:
       layout: even-vertical
       panes:
-        - task-converter: ros2 run bbn_integration_py task_to_bbn_update --ros-args 
+        - task-converter: ros2 run bbn_integration_py task_to_bbn_update --ros-args
             -r __ns:=${ROS_NAMESPACE}
             -p task_update_topic:=TaskUpdates
             -p bbn_update_topic:=BBNUpdates
