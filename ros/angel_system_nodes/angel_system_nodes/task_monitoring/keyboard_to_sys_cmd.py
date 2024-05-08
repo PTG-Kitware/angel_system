@@ -79,6 +79,7 @@ class KeyboardToSystemCommands(Node):
         """
         log = self.get_logger()
         msg = SystemCommands()
+        msg.stamp = self.get_clock().now().to_msg()
         msg.task_index = task_id
         if forward:
             msg.next_step = True

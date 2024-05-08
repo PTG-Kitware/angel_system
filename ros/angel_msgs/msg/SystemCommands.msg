@@ -8,6 +8,11 @@
 # received message instance.
 #
 
+# Time at which this command was emitted.
+# -> Not using a `std_msgs/Header` here as the use of frame_id is currently
+#    undefined.
+builtin_interfaces/Time stamp
+
 
 # =====================
 # Task Monitor commands
