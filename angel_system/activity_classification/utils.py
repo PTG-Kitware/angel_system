@@ -166,8 +166,8 @@ def feature_version_to_options(feature_version: int) -> Dict[str, bool]:
 
     Len: 
     top_k_objects * (
-        (1 + (num_obj_classes-2)*2 + 2) * 2  + 2 + 1
-        + (num_obj_classes-2) * (1+1+1+2)
+        (1 + (num_obj_classes-2)*2) * 2  + 2 + 1
+        + (num_obj_classes-2) * (1+1+1)
     )
     + 22*2 + 22*2
     + top_k_objects * ((22*2)*(num_obj_classes-2))
@@ -608,23 +608,32 @@ def obj_det2d_set_to_feature_by_method(
     # Record the most confident detection for each object class as recorded in
     # `obj_label_to_ind` (confidence & bbox)
     for i, label in enumerate(label_vec):
-        if label not in obj_label_to_ind:
-            # why???
-            exit(1)
+        assert label in obj_label_to_ind, f"Label {label} is unknown"
 
         conf = label_confidences[i]
         ind = obj_label_to_ind[label]
-        
+
         conf_list = det_class_max_conf[ind, :]
         if conf > det_class_max_conf[ind].min():
-            first_zero = np.where(conf_list == conf_list.min())  # [0][0]
-            first_zero = first_zero[0][0]
+            # Replace the lowest confidence object with our new higher confidence object
+            min_conf_ind = np.where(conf_list == conf_list.min())[0][0]
 
-            conf_list[first_zero] = conf
+            conf_list[min_conf_ind] = conf
+            det_class_bbox[min_conf_ind, ind] = [xs[i], ys[i], ws[i], hs[i]]
+            det_class_mask[min_conf_ind, ind] = True
+            
+            # Sort the confidences to determine the top_k order
+            sorted_index = np.argsort(conf_list)[::-1]
+            sorted_conf_list = np.array([conf_list[k] for k in sorted_index])
 
-            det_class_max_conf[ind] = conf_list
-            det_class_bbox[first_zero, ind] = [xs[i], ys[i], ws[i], hs[i]]
-            det_class_mask[first_zero, ind] = True
+            # Reorder the values to match the confidence top_k order
+            det_class_max_conf[ind] = sorted_conf_list
+            
+            bboxes = det_class_bbox.copy()
+            mask = det_class_mask.copy()
+            for idx, sorted_ind in enumerate(sorted_index):
+                det_class_bbox[idx, ind] = bboxes[sorted_ind, ind]
+                det_class_mask[idx, ind] = mask[sorted_ind, ind]
 
     det_class_kwboxes = kwimage.Boxes(det_class_bbox, "xywh")
 
