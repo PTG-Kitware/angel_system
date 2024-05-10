@@ -300,11 +300,11 @@ def plot_feature_vec(
         labels.remove(non_obj_label)
 
 
-    
+    ind = -1
     for object_k_index in range(top_k_objects):
         # RIGHT HAND
         if use_activation:
-            ind = 0
+            ind += 1
             right_hand_conf = feature_vec[ind]
 
         if use_hand_dist:
