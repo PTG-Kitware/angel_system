@@ -244,7 +244,7 @@ def objects_to_feats(
                     None,
                     None,
                     None,
-                    label_to_ind=det_label_to_idx,
+                    obj_label_to_ind=det_label_to_idx,
                     version=feat_version,
                     top_n_objects=top_n_objects,
                 )
