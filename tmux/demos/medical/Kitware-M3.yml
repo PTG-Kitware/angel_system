@@ -2,7 +2,7 @@
 # System configuration to run the ANGEL system for the Kitware system with the
 # Kitware HL2 ARUI app.
 #
-# This configuration is for the M3 wound bandaging.
+# This configuration is for the M3 Pressure-Dressing task.
 #
 
 name: Kitware-M3-Pressure-Dressing

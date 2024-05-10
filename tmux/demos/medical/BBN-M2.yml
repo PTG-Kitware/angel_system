@@ -20,10 +20,19 @@ root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 on_project_start: |
   export ROS_NAMESPACE=${ROS_NAMESPACE:-/kitware}
   export HL2SS_API_URL=${HL2SS_API_URL:-128.33.193.178:8000}
-  export BBN_OUTPUT_URL=${BBN_OUTPUT_URL:-tcp://128.33.193.178:6667}
+  export BBN_OUTPUT_URL=${BBN_OUTPUT_URL:-tcp://128.33.193.178:6669}
   export CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/config
   export NODE_CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/src/angel_system_nodes/configs
   export MODEL_DIR=${ANGEL_WORKSPACE_DIR}/model_files
+
+  # Changing the domain ID was important at KHQ to unblock perceived network
+  # congestion slowdowns to message sending.
+  export ROS_DOMAIN_ID=77
+
+  # Set the frame-rate to be used by multiple sources. This should be in frames
+  # per second (Hz).
+  export FRAME_RATE=15
+
 # Run on project start, the first time
 # on_project_first_start: command
 
@@ -44,38 +53,87 @@ on_project_start: |
 tmux_options: -f <%= ENV["ANGEL_WORKSPACE_DIR"] %>/tmux/tmux.conf
 
 windows:
-  # Connection with the HL2 app via HL2SS sensor data streaming and the
-  # ROS-TCP-Endpoint
-  - sensor_input: ros2 run angel_system_nodes redis_ros_bridge --ros-args
-      -r __ns:=${ROS_NAMESPACE}
-      -p url:=${HL2SS_API_URL}
-      -p image_topic:=PVFramesBGR
-      -p hand_pose_topic:=HandJointPoseData
+  - sensor_input:
+      layout: even-vertical
+      panes:
+        # Connection with the HL2 app via HL2SS/REDIS sensor data streaming.
+        - sensor_input: ros2 run angel_system_nodes redis_ros_bridge --ros-args
+            -r __ns:=${ROS_NAMESPACE}
+            -p url:=${HL2SS_API_URL}
+            -p image_topic:=PVFramesBGR
+            -p hand_pose_topic:=HandJointPoseData
 
-  - object_detector: ros2 run angel_system_nodes berkeley_object_detector --ros-args
+        - run_image_timestamp: ros2 run angel_system_nodes image_timestamp_relay --ros-args
+            -r __ns:=${ROS_NAMESPACE}
+            -p image_topic:=PVFramesBGR
+            -p output_topic:=PVFramesBGR_ts
+
+  - pose_estimation: ros2 run angel_system_nodes pose_estimator --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p image_topic:=PVFramesBGR
-      -p det_topic:=ObjectDetections2d
-      -p det_conf_threshold:=0.4
-      -p model_config:=${ANGEL_WORKSPACE_DIR}/angel_system/berkeley/configs/MC50-InstanceSegmentation/medical/M2/stage2/tourniquet_stage2_interstitial.yaml
+      -p det_topic:=pose_dets
+      -p pose_topic:=PatientPose
+      -p det_net_checkpoint:=${MODEL_DIR}/pose_estimation/pose_det_model.pth
+      -p pose_net_checkpoint:=${MODEL_DIR}/pose_estimation/pose_model.pth
+      -p det_config:=${ANGEL_WORKSPACE_DIR}/python-tpl/TCN_HPL/tcn_hpl/data/utils/pose_generation/configs/medic_pose.yaml
+      -p pose_config:=${ANGEL_WORKSPACE_DIR}/python-tpl/TCN_HPL/tcn_hpl/data/utils/pose_generation/configs/ViTPose_base_medic_casualty_256x192.py
       -p cuda_device_id:=0
 
-  - activity_classifier: ros2 run angel_system_nodes activity_from_obj_dets_classifier --ros-args
+  - object_and_hand_detection: ros2 run angel_system_nodes object_and_hand_detector --ros-args
       -r __ns:=${ROS_NAMESPACE}
+      -p image_topic:=PVFramesBGR
       -p det_topic:=ObjectDetections2d
-      -p act_topic:=ActivityDetections
-      -p classifier_file:=${MODEL_DIR}/recipe_m2_apply_tourniquet_v0.052.pkl
+      -p object_net_checkpoint:=${MODEL_DIR}/object_detector/m2_det.pt
+      -p hand_net_checkpoint:=${MODEL_DIR}/object_detector/hands_model.pt
 
-  - task_monitor: ros2 run angel_system_nodes task_monitor_v2 --ros-args
+  - activity_classifier: ros2 run angel_system_nodes activity_classifier_tcn --ros-args
       -r __ns:=${ROS_NAMESPACE}
-      -p det_topic:=ActivityDetections
-      -p config_file:=${CONFIG_DIR}/tasks/medical/task_steps_config-recipe_m2_apply_tourniquet_v0.052.yaml
-      -p task_state_topic:=TaskUpdates
-      -p task_error_topic:=TaskErrors
-      -p query_task_graph_topic:=query_task_graph
-      -p step_complete_threshold:=0.5
-      -p sys_cmd_topic:=SystemCommands
-      -p enable_manual_progression:=false
+      -p image_ts_topic:=PVFramesBGR_ts
+      -p det_topic:=ObjectDetections2d
+      -p pose_topic:=PatientPose
+      -p model_weights:=${MODEL_DIR}/activity_classifier/m2_tcn.ckpt
+      -p model_mapping:=${MODEL_DIR}/activity_classifier/m2_mapping.txt
+      -p model_det_label_mapping:=${ANGEL_WORKSPACE_DIR}/config/object_labels/medical/m2.json
+      -p act_topic:=activity_topic
+
+  - task_monitor:
+      layout: even-vertical
+      panes:
+        - gsp: ros2 run angel_system_nodes global_step_predictor --ros-args
+            -r __ns:=${ROS_NAMESPACE}
+            -p config_file:=${CONFIG_DIR}/tasks/medical/multi-task-config-medical-m2.yaml
+            -p activity_config_file:=${CONFIG_DIR}/activity_labels/medical/m2.yaml
+            -p task_state_topic:=TaskUpdates
+            -p task_error_topic:=TaskErrors
+            -p system_command_topic:=SystemCommands
+            -p det_topic:=activity_topic
+            -p model_file:=${MODEL_DIR}/task_monitor/m2_test_activity_preds.mscoco.json
+            -p thresh_frame_count:=3
+            -p deactivate_thresh_frame_count:=10
+            -p threshold_multiplier_weak:=0.00
+            -p threshold_frame_count_weak:=3
+            -p step_mode:=granular
+            -p query_task_graph_topic:=query_task_graph
+        - echo: sleep 0.5 && ros2 topic echo --no-arr "${ROS_NAMESPACE}/TaskUpdates"
+
+  - engineering-ui:
+      layout: even-vertical
+      panes:
+        - simple_2d_overlay: ros2 run angel_utils Simple2dDetectionOverlay --ros-args
+            -r __ns:=${ROS_NAMESPACE}
+            -p topic_input_images:=PVFramesBGR
+            -p topic_input_det_2d:=ObjectDetections2d
+            -p topic_input_joints:=PatientPose
+            -p topic_output_images:=pv_image_detections_2d
+            -p filter_top_k:=5
+        - websocket: ros2 launch rosbridge_server rosbridge_websocket_launch.xml port:=9090
+        - engineering_ui_server: node ros/angel_utils/multi_task_demo_ui/index.js
+            --namespace=${ROS_NAMESPACE}
+            --image_topic=pv_image_detections_2d/compressed
+            --query_task_graph_topic=query_task_graph
+            --task_updates_topic=TaskUpdates
+            --activity_detections_topic=activity_topic
+            --task_errors_topic=TaskErrors
 
   - BBN Interface:
       layout: even-vertical
