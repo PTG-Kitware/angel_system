@@ -1,13 +1,16 @@
+import os.path
 from pathlib import Path
-from threading import Event, Lock, Thread
-from typing import Union
+from threading import Event, RLock, Thread
+from typing import Dict, Union
 
 from cv_bridge import CvBridge
 import cv2
 import numpy as np
+from pydantic import BaseModel, validator
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup, ReentrantCallbackGroup
 from rclpy.node import Node, ParameterDescriptor, Parameter
 from sensor_msgs.msg import Image
+import yaml
 
 from yolov7.detect_ptg import load_model, predict_image
 from angel_system.object_detection.yolov8_detect import predict_hands
@@ -19,12 +22,42 @@ from ultralytics import YOLO as YOLOv8
 from angel_system.utils.event import WaitAndClearEvent
 from angel_system.utils.simple_timer import SimpleTimer
 
-from angel_msgs.msg import ObjectDetection2dSet
+from angel_msgs.msg import ObjectDetection2dSet, SystemCommands
 from angel_utils import declare_and_get_parameters, RateTracker  # , DYNAMIC_TYPE
 from angel_utils import make_default_main
+from angel_utils.system_commands import task_int_to_str
 
 
 BRIDGE = CvBridge()
+
+
+class OaHDTaskConfig(BaseModel):
+    """
+    Structure of the configuration for a single task
+    for representation and validation.
+    """
+    object_net_checkpoint: Path
+
+    @validator("object_net_checkpoint")
+    @classmethod
+    def expand_vars(cls, v: Path) -> Path:
+        """
+        Expand path values with environment variables via os.path.expandvars
+        """
+        p = Path(os.path.expandvars(v))
+        if not p.is_file():
+            raise ValueError(f"The file \"{p}\" does not exist or was not a file.")
+        elif not os.access(p, os.R_OK):
+            raise ValueError(f"The file \"{p}\" is not readable.")
+        return p
+
+
+class OaHDPerTaskConfig(BaseModel):
+    """
+    Structure of the whole configuration file across multiple tasks
+    for representation and validation.
+    """
+    task_config: Dict[str, OaHDTaskConfig]
 
 
 class ObjectAndHandDetector(Node):
@@ -45,8 +78,15 @@ class ObjectAndHandDetector(Node):
                 # Required parameter (no defaults)
                 ("image_topic",),
                 ("det_topic",),
-                ("object_net_checkpoint",),
+                ("system_commands_topic",),
                 ("hand_net_checkpoint",),
+                ("per_task_config",),
+                # The task to load parameters for initially, from our per-task
+                # config. This of course needs to be a valid "task_config"
+                # entry in the input configuration file. Intentionally not
+                # setting a default as this probably depends on the system
+                # configuration.
+                ("default_task",),
                 ##################################
                 # Defaulted parameters
                 ("inference_img_size", 1280),  # inference size (pixels)
@@ -64,9 +104,14 @@ class ObjectAndHandDetector(Node):
         )
         self._image_topic = param_values["image_topic"]
         self._det_topic = param_values["det_topic"]
-
-        self._object_model_ckpt_fp = Path(param_values["object_net_checkpoint"])
+        self._system_commands_topic = param_values["system_commands_topic"]
         self._hand_model_chpt_fp = Path(param_values["hand_net_checkpoint"])
+        with open(param_values["per_task_config"]) as config_file:
+            # Load and validate config into structure.
+            self._per_task_config = OaHDPerTaskConfig(
+                **yaml.load(config_file, yaml.Loader)
+            )
+        self._default_task = param_values["default_task"]
 
         self._inference_img_size = param_values["inference_img_size"]
         self._det_conf_thresh = param_values["det_conf_threshold"]
@@ -77,7 +122,23 @@ class ObjectAndHandDetector(Node):
 
         self._enable_trace_logging = param_values["enable_time_trace_logging"]
 
+        # Lock to protect task-dependent logic. A simple mutex is appropriate
+        # for this implementation because the critical sections here will be
+        # the logic that changes task configuration and the object detection
+        # inference logic. If configuration usage becomes something that
+        # multiple concurrent agents use, then a reader-writer lock will need
+        # to be utilized.
+        self._task_dependent_lock = RLock()
+
+        # Timestamp of the latest configuration change. Input messages before
+        # this time should not be processed as they are stale relative to the
+        # configuration change. This should be in nanoseconds format.
+        self._timestamp_min = 0
+
         # Object Model
+        # TODO: handle with task change logic. Initially "task change" to the
+        #  default task configured.
+        self._object_model_ckpt_fp = Path(param_values["object_net_checkpoint"])
         self.object_model: Union[yolov7.models.yolo.Model, TracedModel]
         if not self._object_model_ckpt_fp.is_file():
             raise ValueError(
@@ -95,13 +156,20 @@ class ObjectAndHandDetector(Node):
 
         # Single slot for latest image message to process detection over.
         self._cur_image_msg: Image = None
-        self._cur_image_msg_lock = Lock()
+        self._cur_image_msg_lock = RLock()
 
         # Initialize ROS hooks
-        self._subscription = self.create_subscription(
+        self._image_subscription = self.create_subscription(
             Image,
             self._image_topic,
             self.listener_callback,
+            1,
+            callback_group=MutuallyExclusiveCallbackGroup(),
+        )
+        self._sys_cmd_subscription = self.create_subscription(
+            Image,
+            self._system_commands_topic,
+            self.system_commands_callback,
             1,
             callback_group=MutuallyExclusiveCallbackGroup(),
         )
@@ -142,6 +210,18 @@ class ObjectAndHandDetector(Node):
         self._rt_thread.daemon = True
         self._rt_thread.start()
 
+    def load_task_configuration(self, task_name: str) -> None:
+        """
+        Load task specific configuration parameters for the given task name.
+        If the task name provided is not one supported, an exception is raised.
+
+        :param task_name: Name of the task to change to.
+        """
+        with self._task_dependent_lock:
+            self._object_model_ckpt_fp = (
+                self._per_task_config.task_config[task_name].object_net_checkpoint
+            )
+
     def listener_callback(self, image: Image):
         """
         Callback function for image messages. Runs the berkeley object detector
@@ -153,6 +233,17 @@ class ObjectAndHandDetector(Node):
         with self._cur_image_msg_lock:
             self._cur_image_msg = image
             self._rt_awake_evt.set()
+
+    def system_commands_callback(self, msg: SystemCommands):
+        """
+        Handle receiving a SystemCommands message.
+        """
+        # Handle a request to changing the task
+        if msg.change_task != SystemCommands.TASK_NO_CHANGE:
+            raise NotImplementedError(
+                f"Not yet handling task changes for requested task "
+                f"{task_int_to_str(msg.change_task)}"
+            )
 
     def rt_alive(self) -> bool:
         """

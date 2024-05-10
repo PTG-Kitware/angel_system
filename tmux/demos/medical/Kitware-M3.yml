@@ -20,7 +20,7 @@ root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 on_project_start: |
   export ROS_NAMESPACE=${ROS_NAMESPACE:-/kitware}
   export HL2SS_API_URL=${HL2SS_API_URL:-128.33.193.178:8000}
-  export BBN_OUTPUT_URL=${BBN_OUTPUT_URL:-tcp://128.33.193.178:5557}
+  export BBN_OUTPUT_URL=${BBN_OUTPUT_URL:-tcp://128.33.193.178:6669}
   export CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/config
   export NODE_CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/src/angel_system_nodes/configs
   export MODEL_DIR=${ANGEL_WORKSPACE_DIR}/model_files
@@ -46,66 +46,63 @@ tmux_options: -f <%= ENV["ANGEL_WORKSPACE_DIR"] %>/tmux/tmux.conf
 windows:
   # Connection with the HL2 app via HL2SS sensor data streaming and the
   # ROS-TCP-Endpoint
-  - sensor_input: ros2 run angel_system_nodes redis_ros_bridge --ros-args
-      -r __ns:=${ROS_NAMESPACE}
-      -p url:=${HL2SS_API_URL}
-      -p image_topic:=\image_0
-      -p hand_pose_topic:=HandJointPoseData
+  # - sensor_input: ros2 run angel_system_nodes generate_images
+  - sensor_input: echo ros2 bag play ${ANGEL_WORKSPACE_DIR}/ros_bags/rosbag2_2024_04_02-20_01_26-M3_naked_mannequin_no_blue_tarp/rosbag2_2024_04_02-20_01_26_0.db3
 
-  - run_image_timestamp: ros2 run angel_system_nodes image_timestamp_relay --ros-args 
+  - run_image_timestamp: ros2 run angel_system_nodes image_timestamp_relay --ros-args
       -r __ns:=${ROS_NAMESPACE}
-      -p image_topic:=\image_0 
-      -p output_topic:=\image_0_ts
+      -p image_topic:=PVFramesBGR
+      -p output_topic:=PVFramesBGR_ts
 
-  - pose_estimation: ros2 run angel_system_nodes pose_estimator --ros-args 
+  - pose_estimation: ros2 run angel_system_nodes pose_estimator --ros-args
       -r __ns:=${ROS_NAMESPACE}
-      -p image_topic:=\image_0 
-      -p det_topic:=pose_dets 
-      -p pose_topic:=PatientPose 
-      -p det_net_checkpoint:=${MODEL_DIR}/pose_estimation/pose_det_model.pth 
-      -p pose_net_checkpoint:=${MODEL_DIR}/pose_estimation/pose_model.pth 
-      -p det_config:=${ANGEL_WORKSPACE_DIR}/python-tpl/TCN_HPL/tcn_hpl/data/utils/pose_generation/configs/medic_pose.yaml 
+      -p image_topic:=PVFramesBGR
+      -p det_topic:=pose_dets
+      -p pose_topic:=PatientPose
+      -p det_net_checkpoint:=${MODEL_DIR}/pose_estimation/pose_det_model.pth
+      -p pose_net_checkpoint:=${MODEL_DIR}/pose_estimation/pose_model.pth
+      -p det_config:=${ANGEL_WORKSPACE_DIR}/python-tpl/TCN_HPL/tcn_hpl/data/utils/pose_generation/configs/medic_pose.yaml
       -p pose_config:=${ANGEL_WORKSPACE_DIR}/python-tpl/TCN_HPL/tcn_hpl/data/utils/pose_generation/configs/ViTPose_base_medic_casualty_256x192.py
       -p cuda_device_id:=0
 
-  - objects_hands_detection: ros2 run angel_system_nodes object_hand_detector --ros-args 
+  - objects_hands_detection: ros2 run angel_system_nodes object_hand_detector --ros-args
       -r __ns:=${ROS_NAMESPACE}
-      -p image_topic:=\image_0 
-      -p det_topic:=ObjectDetections2d 
+      -p image_topic:=PVFramesBGR
+      -p det_topic:=ObjectDetections2d
       -p net_checkpoint:=${MODEL_DIR}/object_detector/m3_det.pt
       -p hand_net_checkpoint:=${MODEL_DIR}/object_detector/hands_model.pt
 
-  - run_tcn: ros2 run angel_system_nodes activity_classifier_tcn --ros-args 
+  - run_tcn: ros2 run angel_system_nodes activity_classifier_tcn --ros-args
       -r __ns:=${ROS_NAMESPACE}
-      -p image_ts_topic:=\image_0_ts 
-      -p det_topic:=ObjectDetections2d 
-      -p pose_topic:=PatientPose 
-      -p model_weights:=${MODEL_DIR}/activity_classifier/m3_tcn.ckpt 
-      -p model_mapping:=${MODEL_DIR}/activity_classifier/m3_mapping.txt 
-      -p model_det_label_mapping:=${ANGEL_WORKSPACE_DIR}/config/object_labels/medical/m3.json 
+      -p image_ts_topic:=PVFramesBGR_ts
+      -p det_topic:=ObjectDetections2d
+      -p pose_topic:=PatientPose
+      -p model_weights:=${MODEL_DIR}/activity_classifier/m3_tcn.ckpt
+      -p model_mapping:=${MODEL_DIR}/activity_classifier/m3_mapping.txt
+      -p model_det_label_mapping:=${ANGEL_WORKSPACE_DIR}/config/object_labels/medical/m3.json
       -p act_topic:=activity_topic
 
   - task_monitor: ros2 run angel_system_nodes global_step_predictor --ros-args
       -r __ns:=${ROS_NAMESPACE}
-      -p config_file:=${CONFIG_DIR}/tasks/medical/multi-task-config-medical.yaml
+      -p config_file:=${CONFIG_DIR}/tasks/medical/multi-task-config-medical-m3.yaml
       -p activity_config_file:=${CONFIG_DIR}/activity_labels/medical/m3.yaml
       -p task_state_topic:=TaskUpdates
       -p task_error_topic:=TaskErrors
       -p system_command_topic:=SystemCommands
       -p det_topic:=activity_topic
       -p model_file:=${MODEL_DIR}/task_monitor/m3_test_activity_preds.mscoco.json
-      -p thresh_frame_count:=8
-      -p deactivate_thresh_frame_count:=20
-      -p threshold_multiplier_weak:=0.05
-      -p threshold_frame_count_weak:=8
-      -p step_mode:=broad
+      -p thresh_frame_count:=3
+      -p deactivate_thresh_frame_count:=10
+      -p threshold_multiplier_weak:=0.00
+      -p threshold_frame_count_weak:=3
+      -p step_mode:=granular
       -p query_task_graph_topic:=query_task_graph
 
 
   - BBN Interface:
       layout: even-vertical
       panes:
-        - task-converter: ros2 run bbn_integration_py task_to_bbn_update --ros-args 
+        - task-converter: ros2 run bbn_integration_py task_to_bbn_update --ros-args
             -r __ns:=${ROS_NAMESPACE}
             -p task_update_topic:=TaskUpdates
             -p bbn_update_topic:=BBNUpdates

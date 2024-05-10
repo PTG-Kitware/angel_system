@@ -1,0 +1,19 @@
+#
+# File paths will be resolved expanding environment variables via
+# `os.path.expandvars`.
+# If a variable is referenced that does not exist in the environment then it
+# will not be expanded and the text will be left as is.
+#
+# Be sure to consider the environment varaibles set by the tmuxinator
+# configuration that will ultimately be running the node that consumes this
+# file.
+#
+task_config:
+  m2:
+    object_net_checkpoint: "${MODEL_DIR}/object_detector/m2_det.pt"
+  m3:
+    object_net_checkpoint: "${MODEL_DIR}/object_detector/m3_det.pt"
+  m5:
+    object_net_checkpoint: "${MODEL_DIR}/object_detector/m5_det.pt"
+  r18:
+    object_net_checkpoint: "${MODEL_DIR}/object_detector/r18_det.pt"

@@ -96,6 +96,7 @@ class IntentToCommand(Node):
             return
 
         sys_cmd_msg = SystemCommands()
+        sys_cmd_msg.stamp = self.get_clock().now().to_msg()
 
         # TODO: This only works currently since we only recognize a few boolean
         # based commands (next step, previous step). This will break down if
