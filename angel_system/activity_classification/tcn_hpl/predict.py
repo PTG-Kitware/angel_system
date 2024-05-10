@@ -169,6 +169,7 @@ def objects_to_feats(
     for i, (pose, detection) in enumerate(
         zip(frame_patient_poses, frame_object_detections)
     ):
+
         if detection is None:
             continue
         labels = detection.labels
