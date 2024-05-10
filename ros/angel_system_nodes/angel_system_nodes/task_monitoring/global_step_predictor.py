@@ -214,7 +214,9 @@ class GlobalStepPredictorNode(Node):
             elif self._step_mode == "granular" and sys_cmd_msg.previous_step:
                 update_function = self.gsp.decrement_granular_step
             else:
-                # This should never happen
+                # No next/previous step command received, nothing to do.
+                # TODO: Handle resetting the current task if that command is
+                #       set.
                 return
 
             try:

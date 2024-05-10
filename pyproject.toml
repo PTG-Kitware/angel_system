@@ -25,6 +25,7 @@ openpyxl = "^3.0.10"
 pandas = ">=1.4.3"
 Pillow = "=9.1.0"
 pyarrow = ">=9.0.0"  # for feature file support
+pydantic = "^1"
 pynput = "^1.7.6"
 wheel = "<=0.43.0"
 python-dotenv = ">=1.0.0"

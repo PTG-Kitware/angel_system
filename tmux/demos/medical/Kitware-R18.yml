@@ -98,8 +98,9 @@ windows:
       -r __ns:=${ROS_NAMESPACE}
       -p image_topic:=PVFramesBGR
       -p det_topic:=ObjectDetections2d
-      -p object_net_checkpoint:=${MODEL_DIR}/object_detector/r18_det.pt
       -p hand_net_checkpoint:=${MODEL_DIR}/object_detector/hands_model.pt
+      -p per_task_config:=${CONFIG_DIR}/task_change_support/object_detection/object_and_hand_detection.yml
+      -p default_task:=r18
 
   - activity_classifier: ros2 run angel_system_nodes activity_classifier_tcn --ros-args
       -r __ns:=${ROS_NAMESPACE}
