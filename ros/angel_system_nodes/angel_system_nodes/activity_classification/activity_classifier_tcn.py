@@ -53,6 +53,10 @@ PARAM_ACT_TOPIC = "act_topic"
 PARAM_MODEL_WEIGHTS = "model_weights"
 # Filesystem path to the class mapping file.
 PARAM_MODEL_MAPPING = "model_mapping"
+# Bool flag to indicate if the NormalizePixelPts augmentation should be applied
+PARAM_MODEL_NORMALIZE_PIXEL_PTS = "model_normalize_pixel_pts"
+# Bool flag to indicate if the NormalizeFromCenter augmentation should be applied
+PARAM_MODEL_NORMALIZE_CENTER_PTS = "model_normalize_center_pts"
 # Filesystem path to the input object detection label mapping.
 # This is expected to be a JSON file containing a list of strings.
 PARAM_MODEL_OD_MAPPING = "model_det_label_mapping"
@@ -115,6 +119,8 @@ class ActivityClassifierTCN(Node):
                 (PARAM_ACT_TOPIC,),
                 (PARAM_MODEL_WEIGHTS,),
                 (PARAM_MODEL_MAPPING,),
+                (PARAM_MODEL_NORMALIZE_PIXEL_PTS, False),
+                (PARAM_MODEL_NORMALIZE_CENTER_PTS, False)
                 (PARAM_MODEL_OD_MAPPING,),
                 (PARAM_MODEL_DEVICE, "cuda"),
                 (PARAM_MODEL_DETS_CONV_VERSION, 6),
@@ -126,6 +132,7 @@ class ActivityClassifierTCN(Node):
                 (PARAM_OUTPUT_COCO_FILEPATH, ""),
                 (PARAM_INPUT_COCO_FILEPATH, ""),
                 (PARAM_TIME_TRACE_LOGGING, True),
+                
             ],
         )
         self._img_ts_topic = param_values[PARAM_IMG_TS_TOPIC]
@@ -138,6 +145,8 @@ class ActivityClassifierTCN(Node):
         self._img_pix_height = param_values[PARAM_IMAGE_PIX_HEIGHT]
         self._enable_trace_logging = param_values[PARAM_TIME_TRACE_LOGGING]
 
+        self.model_normalize_pixel_pts = param_values[PARAM_MODEL_NORMALIZE_PIXEL_PTS]
+        self.model_normalize_center_pts = param_values[PARAM_MODEL_NORMALIZE_CENTER_PTS]
         # Load in TCN classification model and weights
         with SimpleTimer("Loading inference module", log.info):
             self._model_device = torch.device(param_values[PARAM_MODEL_DEVICE])
@@ -724,6 +733,8 @@ class ActivityClassifierTCN(Node):
             image_width=self._img_pix_width,
             image_height=self._img_pix_height,
             feature_memo=memo_object_to_feats,
+            normalize_pixel_pts=self.normalize_pixel_pts,
+            normalize_center_pts=self.normalize_center_pts
         )
         # except ValueError:
         #     # feature detections were all None
