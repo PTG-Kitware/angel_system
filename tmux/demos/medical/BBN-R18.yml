@@ -17,12 +17,21 @@ root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 # Runs on project start, always
 # on_project_start: command
 on_project_start: |
-    export ROS_NAMESPACE=${ROS_NAMESPACE:-/kitware}
-    export HL2SS_API_URL=${HL2SS_API_URL:-128.33.193.178:8000}
-    export BBN_OUTPUT_URL=${BBN_OUTPUT_URL:-tcp://128.33.193.178:6669}
-    export CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/config
-    export NODE_CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/src/angel_system_nodes/configs
-    export MODEL_DIR=${ANGEL_WORKSPACE_DIR}/model_files
+  export ROS_NAMESPACE=${ROS_NAMESPACE:-/kitware}
+  export HL2SS_API_URL=${HL2SS_API_URL:-128.33.193.178:8000}
+  export BBN_OUTPUT_URL=${BBN_OUTPUT_URL:-tcp://128.33.193.178:6669}
+  export CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/config
+  export NODE_CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/src/angel_system_nodes/configs
+  export MODEL_DIR=${ANGEL_WORKSPACE_DIR}/model_files
+
+  # Changing the domain ID was important at KHQ to unblock perceived network
+  # congestion slowdowns to message sending.
+  export ROS_DOMAIN_ID=77
+
+  # Set the frame-rate to be used by multiple sources. This should be in frames
+  # per second (Hz).
+  export FRAME_RATE=15
+
 # Run on project start, the first time
 # on_project_first_start: command
 
