@@ -160,11 +160,12 @@ def objects_to_feats(
     feature_dtype = None
 
     # hands-joints offset vectors
-    zero_offset = [0 for i in range(22)]
+    zero_joint_offset = [0 for i in range(22)]
     joint_left_hand_offset_all_frames = [None] * window_size
     joint_right_hand_offset_all_frames = [None] * window_size
     joint_object_offset_all_frames = [None] * window_size
     # for pose in frame_patient_poses:
+    pose_keypoints = []
     for i, (pose, detection) in enumerate(
         zip(frame_patient_poses, frame_object_detections)
     ):
@@ -179,45 +180,14 @@ def objects_to_feats(
         )
 
         # iterate over all detections in that frame
-        joint_object_offset = []
-        for j, label in enumerate(labels):
-            if label == "hand (right)" or label == "hand (left)":
-                x, y, w, h = bx[j], by[j], bw[j], bh[j]
-
-                cx, cy = x + (w // 2), y + (h // 2)
-                hand_point = np.array((cx, cy))
-
-                offset_vector = []
-                if pose is not None:
-                    for joint in pose:
-                        jx, jy = joint.positions.x, joint.positions.y
-                        joint_point = np.array((jx, jy))
-                        dist = np.linalg.norm(joint_point - hand_point)
-                        offset_vector.append(dist)
-                else:
-                    offset_vector = zero_offset
-
-                if label == "hand (left)":
-                    joint_left_hand_offset_all_frames[i] = offset_vector
-                elif label == "hand (right)":
-                    joint_right_hand_offset_all_frames[i] = offset_vector
-            else:
-                # if objects_joints and num_objects > 0:
-                x, y, w, h = bx[j], by[j], bw[j], bh[j]
-                cx, cy = x + (w // 2), y + (h // 2)
-                object_point = np.array((cx, cy))
-                offset_vector = []
-                if pose is not None:
-                    for joint in pose:
-                        jx, jy = joint.positions.x, joint.positions.y
-                        joint_point = np.array((jx, jy))
-                        dist = np.linalg.norm(joint_point - object_point)
-                        offset_vector.append(dist)
-                else:
-                    offset_vector = zero_offset
-                joint_object_offset.append(offset_vector)
-
-        joint_object_offset_all_frames[i] = joint_object_offset
+        if pose is not None:
+            for joint in pose:
+                kwcoco_format_joint = {
+                    "xy": [joint.positions.x, joint.positions.y], 
+                    "keypoint_category_id": 0, 
+                    "keypoint_category": "temp"
+                }
+                pose_keypoints.append(kwcoco_format_joint)
 
     for i, frame_dets in enumerate(frame_object_detections):
         frame_dets: ObjectDetectionsLTRB
@@ -239,39 +209,12 @@ def objects_to_feats(
                     ws,
                     hs,
                     frame_dets.confidences,
-                    None,
-                    None,
-                    None,
-                    None,
-                    None,
+                    pose_keypoints=zero_joint_offset,
                     obj_label_to_ind=det_label_to_idx,
                     version=feat_version,
-                    top_n_objects=top_n_objects,
+                    top_k_objects=top_n_objects,
                 )
 
-                offset_vector = []
-
-                if joint_left_hand_offset_all_frames[i] is not None:
-                    offset_vector.extend(joint_left_hand_offset_all_frames[i])
-                else:
-                    offset_vector.extend(zero_offset)
-
-                if joint_right_hand_offset_all_frames[i] is not None:
-                    offset_vector.extend(joint_right_hand_offset_all_frames[i])
-                else:
-                    offset_vector.extend(zero_offset)
-
-                for j in range(top_n_objects):
-                    if joint_object_offset_all_frames[i] is not None:
-                        if len(joint_object_offset_all_frames[i]) > j:
-                            offset_vector.extend(joint_object_offset_all_frames[i][j])
-                        else:
-                            offset_vector.extend(zero_offset)
-                    else:
-                        offset_vector.extend(zero_offset)
-
-                feat.extend(offset_vector)
-                feat = np.array(feat, dtype=np.float64).ravel()
                 feat_memo[f_id] = feat
 
                 print(f"feat: {feat}")
