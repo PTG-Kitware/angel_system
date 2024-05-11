@@ -173,55 +173,55 @@ def objects_to_feats(
     zero_joint_offset = [0 for i in range(22)]
     
     # for pose in frame_patient_poses:
-    pose_keypoints = []
     for i, (pose, detections) in enumerate(
         zip(frame_patient_poses, frame_object_detections)
     ):
+        pose_keypoints = []
+        print(pose)
         if detections is None:
             continue
 
         detection_id = detections.id
         confidences = detections.confidences
-        if detection_id in feat_memo:
+        if detection_id in feat_memo.keys():
             # We've already processed this set
             feat = feat_memo[detection_id]
-            continue
+        else:
+            labels = detections.labels
+            xs, ys, ws, hs = tlbr_to_xywh(
+                detections.top,
+                detections.left,
+                detections.bottom,
+                detections.right,
+            )
 
-        labels = detections.labels
-        xs, ys, ws, hs = tlbr_to_xywh(
-            detections.top,
-            detections.left,
-            detections.bottom,
-            detections.right,
-        )
+            if pose is not None:
+                for joint in pose:
+                    kwcoco_format_joint = {
+                        "xy": [joint.positions.x, joint.positions.y], 
+                        "keypoint_category_id": -1, # TODO: not in message
+                        "keypoint_category": joint.labels,
+                    }
+                    pose_keypoints.append(kwcoco_format_joint)
 
-        if pose is not None:
-            for joint in pose:
-                kwcoco_format_joint = {
-                    "xy": [joint.positions.x, joint.positions.y], 
-                    "keypoint_category_id": -1, # TODO: not in message
-                    "keypoint_category": joint.positions.labels
-                }
-                pose_keypoints.append(kwcoco_format_joint)
+            feat = obj_det2d_set_to_feature(
+                labels,
+                xs,
+                ys,
+                ws,
+                hs,
+                confidences,
+                pose_keypoints=pose_keypoints if pose_keypoints else zero_joint_offset,
+                obj_label_to_ind=det_label_to_idx,
+                version=feat_version,
+                top_k_objects=top_k_objects,
+            ).ravel().astype(np.float32)
 
-        feat = obj_det2d_set_to_feature(
-            labels,
-            xs,
-            ys,
-            ws,
-            hs,
-            confidences,
-            pose_keypoints=pose_keypoints if pose_keypoints else zero_joint_offset,
-            obj_label_to_ind=det_label_to_idx,
-            version=feat_version,
-            top_k_objects=top_k_objects,
-        )
+            feat_memo[detection_id] = feat
 
-        feat_memo[detection_id] = feat
-
-    feature_ndim = feat.shape
-    feature_dtype = feat.dtype
-    feature_list[i] = feat
+        feature_ndim = feat.shape
+        feature_dtype = feat.dtype
+        feature_list[i] = feat
     # Already checked that we should have non-zero frames with detections above
     # so feature_ndim/_dtype should not be None at this stage
     assert feature_ndim is not None
