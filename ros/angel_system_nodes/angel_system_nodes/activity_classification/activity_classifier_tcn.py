@@ -170,7 +170,7 @@ class ActivityClassifierTCN(Node):
         print(f"json path: {param_values[PARAM_MODEL_OD_MAPPING]}")
         with open(param_values[PARAM_MODEL_OD_MAPPING]) as infile:
             det_label_list = json.load(infile)
-        self._det_label_to_id = {c: i for i, c in enumerate(det_label_list)}
+        self._det_label_to_id = {c: i for i, c in enumerate(det_label_list) if c not in ["patient", "user"]}
         print(self._det_label_to_id)
         # Feature version aligned with model current architecture
         self._feat_version = param_values[PARAM_MODEL_DETS_CONV_VERSION]
