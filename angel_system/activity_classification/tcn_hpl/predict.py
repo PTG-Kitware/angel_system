@@ -129,7 +129,7 @@ def objects_to_feats(
     image_width: int,
     image_height: int,
     feature_memo: Optional[Dict[int, npt.NDArray]] = None,
-    top_k_objects: int = 3,
+    top_k_objects: int = 1,
     normalize_pixel_pts=False,
     normalize_center_pts=False
 ) -> Tuple[torch.Tensor, torch.Tensor]:
