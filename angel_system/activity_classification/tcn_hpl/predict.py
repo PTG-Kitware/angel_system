@@ -23,7 +23,9 @@ from angel_system.activity_classification.utils import (
 )
 
 
-def load_module(checkpoint_file, label_mapping_file, torch_device, topic) -> PTGLitModule:
+def load_module(
+    checkpoint_file, label_mapping_file, torch_device, topic
+) -> PTGLitModule:
     """
 
     :param checkpoint_file:
@@ -98,7 +100,7 @@ def normalize_detection_features(
     img_height: int,
     num_det_classes: int,
     normalize_pixel_pts: bool,
-    normalize_center_pts: bool
+    normalize_center_pts: bool,
 ) -> None:
     """
     Normalize input object detection descriptor vectors, outputting new vectors
@@ -116,9 +118,13 @@ def normalize_detection_features(
     if normalize_pixel_pts:
         # This method is known to normalize in-place.
         # Shape [window_size, n_feats]
-        NormalizePixelPts(img_width, img_height, num_det_classes, feat_version, top_k_objects)(det_feats)
+        NormalizePixelPts(
+            img_width, img_height, num_det_classes, feat_version, top_k_objects
+        )(det_feats)
     if normalize_center_pts:
-        NormalizeFromCenter(img_width, img_height, num_det_classes, feat_version, top_k_objects)(det_feats)
+        NormalizeFromCenter(
+            img_width, img_height, num_det_classes, feat_version, top_k_objects
+        )(det_feats)
 
 
 def objects_to_feats(
@@ -131,7 +137,7 @@ def objects_to_feats(
     feature_memo: Optional[Dict[int, npt.NDArray]] = None,
     top_k_objects: int = 1,
     normalize_pixel_pts=False,
-    normalize_center_pts=False
+    normalize_center_pts=False,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Convert some object detections for some window of frames into a feature
@@ -171,7 +177,7 @@ def objects_to_feats(
 
     # hands-joints offset vectors
     zero_joint_offset = [0 for i in range(22)]
-    
+
     # for pose in frame_patient_poses:
     for i, (pose, detections) in enumerate(
         zip(frame_patient_poses, frame_object_detections)
@@ -198,24 +204,30 @@ def objects_to_feats(
             if pose is not None:
                 for joint in pose:
                     kwcoco_format_joint = {
-                        "xy": [joint.positions.x, joint.positions.y], 
-                        "keypoint_category_id": -1, # TODO: not in message
+                        "xy": [joint.positions.x, joint.positions.y],
+                        "keypoint_category_id": -1,  # TODO: not in message
                         "keypoint_category": joint.labels,
                     }
                     pose_keypoints.append(kwcoco_format_joint)
 
-            feat = obj_det2d_set_to_feature(
-                labels,
-                xs,
-                ys,
-                ws,
-                hs,
-                confidences,
-                pose_keypoints=pose_keypoints if pose_keypoints else zero_joint_offset,
-                obj_label_to_ind=det_label_to_idx,
-                version=feat_version,
-                top_k_objects=top_k_objects,
-            ).ravel().astype(np.float32)
+            feat = (
+                obj_det2d_set_to_feature(
+                    labels,
+                    xs,
+                    ys,
+                    ws,
+                    hs,
+                    confidences,
+                    pose_keypoints=(
+                        pose_keypoints if pose_keypoints else zero_joint_offset
+                    ),
+                    obj_label_to_ind=det_label_to_idx,
+                    version=feat_version,
+                    top_k_objects=top_k_objects,
+                )
+                .ravel()
+                .astype(np.float32)
+            )
 
             feat_memo[detection_id] = feat
 
@@ -248,8 +260,14 @@ def objects_to_feats(
     # Shape [window_size, n_feats]
     if normalize_pixel_pts or normalize_center_pts:
         normalize_detection_features(
-            feature_vec, feat_version, top_k_objects, image_width, image_height, len(det_label_to_idx),
-            normalize_pixel_pts, normalize_center_pts
+            feature_vec,
+            feat_version,
+            top_k_objects,
+            image_width,
+            image_height,
+            len(det_label_to_idx),
+            normalize_pixel_pts,
+            normalize_center_pts,
         )
 
     return feature_vec, mask

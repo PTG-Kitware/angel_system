@@ -27,7 +27,7 @@ from angel_system.data.common.load_data import (
     activities_from_dive_csv,
     objs_as_dataframe,
     sanitize_str,
-    time_from_name
+    time_from_name,
 )
 from angel_system.data.common.load_data import Re_order
 
@@ -81,7 +81,9 @@ def add_activity_gt_to_kwcoco(topic, task, dset, activity_config_fn):
         if "_extracted" in video_name:
             video_name = video_name.split("_extracted")[0]
 
-        activity_gt_fn = f"{activity_gt_dir}/{video_name}_activity_labels_v{label_version}.csv"
+        activity_gt_fn = (
+            f"{activity_gt_dir}/{video_name}_activity_labels_v{label_version}.csv"
+        )
         gt = activities_from_dive_csv(topic, activity_gt_fn)
         gt = objs_as_dataframe(gt)
 
@@ -95,7 +97,9 @@ def add_activity_gt_to_kwcoco(topic, task, dset, activity_config_fn):
             if time:
                 matching_gt = gt.loc[(gt["start"] <= time) & (gt["end"] >= time)]
             else:
-                matching_gt = gt.loc[(gt["start_frame"] <= frame_idx) & (gt["end_frame"] >= frame_idx)]
+                matching_gt = gt.loc[
+                    (gt["start_frame"] <= frame_idx) & (gt["end_frame"] >= frame_idx)
+                ]
 
             if matching_gt.empty:
                 label = "background"
@@ -108,9 +112,7 @@ def add_activity_gt_to_kwcoco(topic, task, dset, activity_config_fn):
 
                 try:
                     activity = [
-                        x
-                        for x in activity_labels
-                        if int(x["id"]) == int(float(label))
+                        x for x in activity_labels if int(x["id"]) == int(float(label))
                     ]
                 except:
                     activity = []
@@ -136,7 +138,7 @@ def add_activity_gt_to_kwcoco(topic, task, dset, activity_config_fn):
     dset.dump(dset.fpath, newlines=True)
     return dset
 
-    
+
 def visualize_kwcoco_by_label(dset=None, save_dir=""):
     """Draw the bounding boxes from the kwcoco file on
     the associated images
@@ -185,7 +187,7 @@ def visualize_kwcoco_by_label(dset=None, save_dir=""):
             conf = ann.get("confidence", 1)
             # if conf < 0.1:
             #    continue
-            
+
             cat_id = ann["category_id"]
             cat = dset.cats[cat_id]["name"]
 
@@ -226,7 +228,7 @@ def visualize_kwcoco_by_label(dset=None, save_dir=""):
                     "left_lower_leg": ["left_foot"],
                     "right_upper_leg": ["right_knee"],
                     "right_knee": ["right_lower_leg"],
-                    "right_lower_leg": ["right_foot"]
+                    "right_lower_leg": ["right_foot"],
                 }
                 kps = {}
 
@@ -237,7 +239,12 @@ def visualize_kwcoco_by_label(dset=None, save_dir=""):
                     for connect in connects:
                         pt1 = kps[kp_cat]
                         pt2 = kps[connect]
-                        ax.plot([pt1[0], pt2[0]], [pt1[1], pt2[1]], color=color, marker='o',)
+                        ax.plot(
+                            [pt1[0], pt2[0]],
+                            [pt1[1], pt2[1]],
+                            color=color,
+                            marker="o",
+                        )
 
             ax.annotate(label, (x, y), color="black", annotation_clip=False)
 

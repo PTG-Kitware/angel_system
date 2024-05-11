@@ -27,6 +27,7 @@ zero_joint_offset = [0 for i in range(22)]
 random_colors = list(mcolors.CSS4_COLORS.keys())
 random.shuffle(random_colors)
 
+
 def tlbr_to_xywh(
     top: npt.ArrayLike,
     left: npt.ArrayLike,
@@ -42,7 +43,7 @@ def tlbr_to_xywh(
     :param bottom: Array-like of bottom box coordinate values.
     :param right: Array-like of right box coordinate values.
 
-    :return: 
+    :return:
         List of x values, List of y values, List of width values, List of height values
     """
     assert (
@@ -54,12 +55,13 @@ def tlbr_to_xywh(
     hs = np.asarray(bottom) - ys
     return xs, ys, ws, hs
 
+
 def feature_version_to_options(feature_version: int) -> Dict[str, bool]:
     """Convert the feature version number to a dict of
     boolean flags indicating which data values should be added to the feature vector
 
     :param feature_version: Version of the feature conversion approach.
-    
+
     :return:
         Dictionary of flag names and boolean values that match the input parameters
         to the functions that create/utilize the feature vector
@@ -76,9 +78,7 @@ def feature_version_to_options(feature_version: int) -> Dict[str, bool]:
             A[obj1] ... A[objN]
     ]
     """
-    options[1] = {      
-        "use_activation": True
-    }
+    options[1] = {"use_activation": True}
 
     """
     Feature vector that encodes the distance of each object from each hand,
@@ -127,7 +127,7 @@ def feature_version_to_options(feature_version: int) -> Dict[str, bool]:
     options[3] = {
         "use_activation": True,
         "use_center_dist": True,
-        "use_intersection": True
+        "use_intersection": True,
     }
 
     """
@@ -154,7 +154,7 @@ def feature_version_to_options(feature_version: int) -> Dict[str, bool]:
     options[5] = {
         "use_activation": True,
         "use_hand_dist": True,
-        "use_intersection": True
+        "use_intersection": True,
     }
 
     """
@@ -195,10 +195,11 @@ def feature_version_to_options(feature_version: int) -> Dict[str, bool]:
         "use_hand_dist": True,
         "use_intersection": True,
         "use_joint_hand_offset": True,
-        "use_joint_object_offset": True
+        "use_joint_object_offset": True,
     }
 
     return options[feature_version]
+
 
 def obj_det2d_set_to_feature(
     label_vec: List[str],
@@ -210,7 +211,7 @@ def obj_det2d_set_to_feature(
     pose_keypoints: List[Dict],
     obj_label_to_ind: Dict[str, int],
     version: int = 1,
-    top_k_objects: int=1,
+    top_k_objects: int = 1,
 ):
     """Convert ObjectDetection2dSet fields into a feature vector.
 
@@ -227,7 +228,7 @@ def obj_det2d_set_to_feature(
     :param version:
         Version of the feature conversion approach.
     :param top_k_objects: Number top confidence objects to use per label, defaults to 1
-    
+
     :return: resulting feature data
     """
     opts = feature_version_to_options(version)
@@ -241,30 +242,62 @@ def obj_det2d_set_to_feature(
         pose_keypoints,
         obj_label_to_ind,
         top_k_objects=top_k_objects,
-        **opts
+        **opts,
     )
 
     # print(f"feat {feature_vec}")
     # print(len(feature_vec))
     return feature_vec
 
+
 def plot_feature_vec(
-        image_fn: str,
-        right_hand_center: list,
-        left_hand_center: list,
-        feature_vec: np.array,
-        obj_label_to_ind: Dict[str, int],
-        output_dir: str,
-        top_k_objects: int=1,
-        use_activation: bool=False,
-        use_hand_dist: bool=False,
-        use_center_dist: bool=False,
-        use_intersection: bool=False,
-        use_joint_hand_offset: bool=False,
-        use_joint_object_offset: bool=False,
-        joint_names: List[str]=["nose", "mouth", "throat", "chest", "stomach", "left_upper_arm", "right_upper_arm", "left_lower_arm", "right_lower_arm", "left_wrist", "right_wrist", "left_hand", "right_hand", "left_upper_leg", "right_upper_leg", "left_knee", "right_knee", "left_lower_leg", "right_lower_leg", "left_foot", "right_foot", "back"],
-        colors: List[str]=['yellow', 'red', 'green', 'lightblue', 'blue', 'purple', 'orange'],
-    ):
+    image_fn: str,
+    right_hand_center: list,
+    left_hand_center: list,
+    feature_vec: np.array,
+    obj_label_to_ind: Dict[str, int],
+    output_dir: str,
+    top_k_objects: int = 1,
+    use_activation: bool = False,
+    use_hand_dist: bool = False,
+    use_center_dist: bool = False,
+    use_intersection: bool = False,
+    use_joint_hand_offset: bool = False,
+    use_joint_object_offset: bool = False,
+    joint_names: List[str] = [
+        "nose",
+        "mouth",
+        "throat",
+        "chest",
+        "stomach",
+        "left_upper_arm",
+        "right_upper_arm",
+        "left_lower_arm",
+        "right_lower_arm",
+        "left_wrist",
+        "right_wrist",
+        "left_hand",
+        "right_hand",
+        "left_upper_leg",
+        "right_upper_leg",
+        "left_knee",
+        "right_knee",
+        "left_lower_leg",
+        "right_lower_leg",
+        "left_foot",
+        "right_foot",
+        "back",
+    ],
+    colors: List[str] = [
+        "yellow",
+        "red",
+        "green",
+        "lightblue",
+        "blue",
+        "purple",
+        "orange",
+    ],
+):
     """Plot the object and joint points based on the hand bbox centers and the distance values
     in the feature vector
 
@@ -292,13 +325,12 @@ def plot_feature_vec(
     lh_dists_k = [[] for i in range(top_k_objects)]
     obj_confs_k = [[] for i in range(top_k_objects)]
     obj_im_center_dists_k = [[] for i in range(top_k_objects)]
-    obj_joint_dists_k = [[] for i in range(top_k_objects)]      
+    obj_joint_dists_k = [[] for i in range(top_k_objects)]
 
     non_object_labels = ["hand (left)", "hand (right)", "user", "patient"]
     labels = sorted(obj_label_to_ind)
     for non_obj_label in non_object_labels:
         labels.remove(non_obj_label)
-
 
     ind = -1
     for object_k_index in range(top_k_objects):
@@ -319,12 +351,12 @@ def plot_feature_vec(
         if use_center_dist:
             ind += 1
             rh_im_center_dist_x = feature_vec[ind]
-            ind +=1 
+            ind += 1
             rh_im_center_dist_y = feature_vec[ind]
 
         # LEFT HAND
         if use_activation:
-            ind +=1
+            ind += 1
             left_hand_conf = feature_vec[ind]
 
         if use_hand_dist:
@@ -336,7 +368,7 @@ def plot_feature_vec(
                 obj_lh_dist_y = feature_vec[ind]
 
                 lh_dists_k[object_k_index].append([obj_lh_dist_x, obj_lh_dist_y])
-        
+
         if use_center_dist:
             ind += 1
             lh_im_center_dist_x = feature_vec[ind]
@@ -378,7 +410,9 @@ def plot_feature_vec(
                 ind += 1
                 obj_im_center_dist_y = feature_vec[ind]
 
-                obj_im_center_dists_k[object_k_index].append([obj_im_center_dist_x, obj_im_center_dist_y])
+                obj_im_center_dists_k[object_k_index].append(
+                    [obj_im_center_dist_x, obj_im_center_dist_y]
+                )
 
     # HANDS-JOINTS
     if use_joint_hand_offset:
@@ -390,7 +424,7 @@ def plot_feature_vec(
             lh_jointi_dist_y = feature_vec[ind]
 
             lh_joint_dists.append([lh_jointi_dist_x, lh_jointi_dist_y])
-            
+
         # right hand - joints distances
         for i in range(22):
             ind += 1
@@ -417,16 +451,34 @@ def plot_feature_vec(
                 obj_joint_dists_k[object_k_index].append(joints_dists)
 
     # Draw
-    fig, ((lh_dist_ax, rh_dist_ax), (im_center_dist_ax, obj_joint_dist_ax), (lh_joint_dist_ax, rh_joint_dist_ax)) = plt.subplots(3, 2, figsize=(15, 15))
-    axes = [rh_dist_ax, lh_dist_ax, im_center_dist_ax, obj_joint_dist_ax, rh_joint_dist_ax, lh_joint_dist_ax]
-    flags = [use_hand_dist, use_hand_dist, use_center_dist, use_joint_object_offset, use_joint_hand_offset, use_joint_hand_offset]
+    fig, (
+        (lh_dist_ax, rh_dist_ax),
+        (im_center_dist_ax, obj_joint_dist_ax),
+        (lh_joint_dist_ax, rh_joint_dist_ax),
+    ) = plt.subplots(3, 2, figsize=(15, 15))
+    axes = [
+        rh_dist_ax,
+        lh_dist_ax,
+        im_center_dist_ax,
+        obj_joint_dist_ax,
+        rh_joint_dist_ax,
+        lh_joint_dist_ax,
+    ]
+    flags = [
+        use_hand_dist,
+        use_hand_dist,
+        use_center_dist,
+        use_joint_object_offset,
+        use_joint_hand_offset,
+        use_joint_hand_offset,
+    ]
 
-    rh_dist_ax.set_title('Objects from distance to right hand')
-    lh_dist_ax.set_title('Objects from distance to left hand')
-    im_center_dist_ax.set_title('Objects from distance to image center')
+    rh_dist_ax.set_title("Objects from distance to right hand")
+    lh_dist_ax.set_title("Objects from distance to left hand")
+    im_center_dist_ax.set_title("Objects from distance to image center")
     obj_joint_dist_ax.set_title("Joints from distance to objects*")
-    rh_joint_dist_ax.set_title('Joints from distance to right hand')
-    lh_joint_dist_ax.set_title('Joints from distance to left hand')
+    rh_joint_dist_ax.set_title("Joints from distance to right hand")
+    lh_joint_dist_ax.set_title("Joints from distance to left hand")
 
     rh_dist_color = colors[2]
     lh_dist_color = colors[3]
@@ -444,11 +496,21 @@ def plot_feature_vec(
 
         ax.imshow(image)
 
-        ax.plot(right_hand_center[0], right_hand_center[1], color=colors[0], marker='o')
-        ax.annotate(f"hand (right): {round(right_hand_conf, 2)}", right_hand_center, color="black", annotation_clip=False)
+        ax.plot(right_hand_center[0], right_hand_center[1], color=colors[0], marker="o")
+        ax.annotate(
+            f"hand (right): {round(right_hand_conf, 2)}",
+            right_hand_center,
+            color="black",
+            annotation_clip=False,
+        )
 
-        ax.plot(left_hand_center[0], left_hand_center[1], color=colors[1], marker='o')
-        ax.annotate(f"hand (left): {round(left_hand_conf, 2)}", left_hand_center, color="black", annotation_clip=False)
+        ax.plot(left_hand_center[0], left_hand_center[1], color=colors[1], marker="o")
+        ax.annotate(
+            f"hand (left): {round(left_hand_conf, 2)}",
+            left_hand_center,
+            color="black",
+            annotation_clip=False,
+        )
 
     def draw_points_by_distance(ax, distances, pt, color, labels, confs):
         # Make sure the reference point exists
@@ -460,52 +522,117 @@ def plot_feature_vec(
             if dist == list(default_dist):
                 continue
 
-            obj_pt = [pt[0] - dist[0], pt[1] - dist[1]] # pt - obj_pt = dist
-            
-            ax.plot([pt[0], obj_pt[0]], [pt[1], obj_pt[1]], color=color, marker='o')
-            ax.annotate(f"{labels[i]}: {round(confs[i], 2)}", obj_pt, color="black", annotation_clip=False)
-    
+            obj_pt = [pt[0] - dist[0], pt[1] - dist[1]]  # pt - obj_pt = dist
+
+            ax.plot([pt[0], obj_pt[0]], [pt[1], obj_pt[1]], color=color, marker="o")
+            ax.annotate(
+                f"{labels[i]}: {round(confs[i], 2)}",
+                obj_pt,
+                color="black",
+                annotation_clip=False,
+            )
+
     if use_joint_hand_offset:
-        draw_points_by_distance(rh_joint_dist_ax, rh_joint_dists, right_hand_center, rh_joint_color, joint_names, [1]*len(joint_names))
-        draw_points_by_distance(lh_joint_dist_ax, lh_joint_dists, left_hand_center, lh_joint_color, joint_names, [1]*len(joint_names))
+        draw_points_by_distance(
+            rh_joint_dist_ax,
+            rh_joint_dists,
+            right_hand_center,
+            rh_joint_color,
+            joint_names,
+            [1] * len(joint_names),
+        )
+        draw_points_by_distance(
+            lh_joint_dist_ax,
+            lh_joint_dists,
+            left_hand_center,
+            lh_joint_color,
+            joint_names,
+            [1] * len(joint_names),
+        )
 
     if use_hand_dist:
-        rh_dist_ax.plot([right_hand_center[0], right_hand_center[0]-rh_lh_dist_x], [right_hand_center[1], right_hand_center[1]-rh_lh_dist_y], color=random_colors[0], marker='o')
-            
+        rh_dist_ax.plot(
+            [right_hand_center[0], right_hand_center[0] - rh_lh_dist_x],
+            [right_hand_center[1], right_hand_center[1] - rh_lh_dist_y],
+            color=random_colors[0],
+            marker="o",
+        )
+
     for object_k_index in range(top_k_objects):
         if use_hand_dist:
-            draw_points_by_distance(rh_dist_ax, rh_dists_k[object_k_index], right_hand_center, rh_dist_color, labels, obj_confs_k[object_k_index])
-            draw_points_by_distance(lh_dist_ax, lh_dists_k[object_k_index], left_hand_center, lh_dist_color, labels, obj_confs_k[object_k_index])
+            draw_points_by_distance(
+                rh_dist_ax,
+                rh_dists_k[object_k_index],
+                right_hand_center,
+                rh_dist_color,
+                labels,
+                obj_confs_k[object_k_index],
+            )
+            draw_points_by_distance(
+                lh_dist_ax,
+                lh_dists_k[object_k_index],
+                left_hand_center,
+                lh_dist_color,
+                labels,
+                obj_confs_k[object_k_index],
+            )
 
         if use_center_dist:
-            image_center = [1280//2, 720//2]
-            im_center_dist_ax.plot(image_center, color=colors[1], marker='o')
-            im_center_dist_ax.annotate("image_center", image_center, color="black", annotation_clip=False)
-            draw_points_by_distance(im_center_dist_ax, obj_im_center_dists_k[object_k_index], image_center, obj_im_center_dist_color, labels, obj_confs_k[object_k_index])
+            image_center = [1280 // 2, 720 // 2]
+            im_center_dist_ax.plot(image_center, color=colors[1], marker="o")
+            im_center_dist_ax.annotate(
+                "image_center", image_center, color="black", annotation_clip=False
+            )
+            draw_points_by_distance(
+                im_center_dist_ax,
+                obj_im_center_dists_k[object_k_index],
+                image_center,
+                obj_im_center_dist_color,
+                labels,
+                obj_confs_k[object_k_index],
+            )
 
         if use_joint_object_offset:
-            
+
             obj_pts = []
             if use_hand_dist:
                 if right_hand_center != default_center_list:
                     obj_pts = [
-                        [right_hand_center[0] - rh_dist[0], right_hand_center[1] - rh_dist[1]]  
-                        if rh_dist != list(default_dist) else default_center_list  
+                        (
+                            [
+                                right_hand_center[0] - rh_dist[0],
+                                right_hand_center[1] - rh_dist[1],
+                            ]
+                            if rh_dist != list(default_dist)
+                            else default_center_list
+                        )
                         for rh_dist in rh_dists_k[object_k_index]
                     ]
                 elif left_hand_center != default_center_list:
                     obj_pts = [
-                        [left_hand_center[0] - lh_dist[0], left_hand_center[1] - lh_dist[1]]  
-                        if lh_dist != list(default_dist) else default_center_list  
+                        (
+                            [
+                                left_hand_center[0] - lh_dist[0],
+                                left_hand_center[1] - lh_dist[1],
+                            ]
+                            if lh_dist != list(default_dist)
+                            else default_center_list
+                        )
                         for lh_dist in lh_dists_k[object_k_index]
                     ]
             elif use_center_dist:
                 obj_pts = [
-                    [image_center[0] - im_center_dist[0], image_center[1] - im_center_dist[1]] 
-                    if im_center_dist != list(default_dist) else default_center_list 
+                    (
+                        [
+                            image_center[0] - im_center_dist[0],
+                            image_center[1] - im_center_dist[1],
+                        ]
+                        if im_center_dist != list(default_dist)
+                        else default_center_list
+                    )
                     for im_center_dist in obj_im_center_dists_k[object_k_index]
                 ]
-            
+
             if not obj_pts:
                 continue
 
@@ -514,9 +641,23 @@ def plot_feature_vec(
                     continue
 
                 obj_joint_color = random_colors[(object_k_index * len(obj_pt)) + i]
-                obj_joint_dist_ax.plot(obj_pt[0], obj_pt[1], color=obj_joint_color, marker='o')
-                obj_joint_dist_ax.annotate(f"{labels[i]}: {round(obj_confs_k[object_k_index][i], 2)}", obj_pt, color="black", annotation_clip=False)
-                draw_points_by_distance(obj_joint_dist_ax, obj_joint_dists_k[object_k_index][i], obj_pt, obj_joint_color, joint_names, [1]*len(joint_names))
+                obj_joint_dist_ax.plot(
+                    obj_pt[0], obj_pt[1], color=obj_joint_color, marker="o"
+                )
+                obj_joint_dist_ax.annotate(
+                    f"{labels[i]}: {round(obj_confs_k[object_k_index][i], 2)}",
+                    obj_pt,
+                    color="black",
+                    annotation_clip=False,
+                )
+                draw_points_by_distance(
+                    obj_joint_dist_ax,
+                    obj_joint_dists_k[object_k_index][i],
+                    obj_pt,
+                    obj_joint_color,
+                    joint_names,
+                    [1] * len(joint_names),
+                )
 
     Path(f"{output_dir}/full_feature_vec").mkdir(parents=True, exist_ok=True)
     plt.savefig(f"{output_dir}/full_feature_vec/{os.path.basename(image_fn)}")
@@ -525,7 +666,7 @@ def plot_feature_vec(
         ax.remove()
 
         fig2 = plt.figure(figsize=(15, 15))
-        ax.figure=fig2
+        ax.figure = fig2
         fig2.axes.append(ax)
         fig2.add_axes(ax)
 
@@ -540,16 +681,30 @@ def plot_feature_vec(
 
     # Save each subplot as its own image
     for ax, subfolder, flag in zip(
-        [lh_dist_ax, rh_dist_ax, im_center_dist_ax, obj_joint_dist_ax, lh_joint_dist_ax, rh_joint_dist_ax], 
-        ["left_hand_obj_dist", "right_hand_obj_dist", "image_center_obj_dist", "obj_joints_dist", "left_hand_joints_dist", "right_hand_joints_dist"],
-        flags
+        [
+            lh_dist_ax,
+            rh_dist_ax,
+            im_center_dist_ax,
+            obj_joint_dist_ax,
+            lh_joint_dist_ax,
+            rh_joint_dist_ax,
+        ],
+        [
+            "left_hand_obj_dist",
+            "right_hand_obj_dist",
+            "image_center_obj_dist",
+            "obj_joints_dist",
+            "left_hand_joints_dist",
+            "right_hand_joints_dist",
+        ],
+        flags,
     ):
         if not flag:
             continue
         copy_ax_to_new_fig(ax, subfolder)
-    
+
     plt.close(fig)
-    
+
 
 def obj_det2d_set_to_feature_by_method(
     label_vec: List[str],
@@ -560,13 +715,13 @@ def obj_det2d_set_to_feature_by_method(
     label_confidences: List[float],
     pose_keypoints: List[Dict],
     obj_label_to_ind: Dict[str, int],
-    top_k_objects: int=1,
-    use_activation: bool=False,
-    use_hand_dist: bool=False,
-    use_center_dist: bool=False,
-    use_intersection: bool=False,
-    use_joint_hand_offset: bool=False,
-    use_joint_object_offset: bool=False,
+    top_k_objects: int = 1,
+    use_activation: bool = False,
+    use_hand_dist: bool = False,
+    use_center_dist: bool = False,
+    use_intersection: bool = False,
+    use_joint_hand_offset: bool = False,
+    use_joint_object_offset: bool = False,
 ):
     """
     :param label_vec: List of object labels for each detection (length: # detections)
@@ -585,8 +740,8 @@ def obj_det2d_set_to_feature_by_method(
     :param use_intersection: If True, add the intersection of the detection boxes with the hand boxes to the feature vector, defaults to False
     :param use_joint_hand_offset: If True, add the distance of the hand centers to the patient joints to the feature vector, defaults to False
     :param use_joint_object_offset: If True, add the distance of the object centers to the patient joints to the feature vector, defaults to False
-    
-    :return: 
+
+    :return:
         resulting feature data
     """
     #########################
@@ -621,14 +776,14 @@ def obj_det2d_set_to_feature_by_method(
             conf_list[min_conf_ind] = conf
             det_class_bbox[min_conf_ind, ind] = [xs[i], ys[i], ws[i], hs[i]]
             det_class_mask[min_conf_ind, ind] = True
-            
+
             # Sort the confidences to determine the top_k order
             sorted_index = np.argsort(conf_list)[::-1]
             sorted_conf_list = np.array([conf_list[k] for k in sorted_index])
 
             # Reorder the values to match the confidence top_k order
             det_class_max_conf[ind] = sorted_conf_list
-            
+
             bboxes = det_class_bbox.copy()
             mask = det_class_mask.copy()
             for idx, sorted_ind in enumerate(sorted_index):
@@ -636,7 +791,6 @@ def obj_det2d_set_to_feature_by_method(
                 det_class_mask[idx, ind] = mask[sorted_ind, ind]
 
     det_class_kwboxes = kwimage.Boxes(det_class_bbox, "xywh")
-
 
     #########################
     # util functions
@@ -675,13 +829,23 @@ def obj_det2d_set_to_feature_by_method(
     LEFT_IDX = 1
     hand_mask = [det_class_mask[0][right_hand_idx], det_class_mask[0][left_hand_idx]]
     # Mask detailing hand and object presence in the scene.
-    hand_by_object_mask_k = np.zeros((top_k_objects, 2, num_det_classes), dtype=np.bool_)
+    hand_by_object_mask_k = np.zeros(
+        (top_k_objects, 2, num_det_classes), dtype=np.bool_
+    )
 
     for object_k_index in range(top_k_objects):
-        x = np.array([
-            [hand_mask[RIGHT_IDX] and det_class for det_class in det_class_mask[object_k_index]],
-            [hand_mask[LEFT_IDX] and det_class for det_class in det_class_mask[object_k_index]]
-        ])
+        x = np.array(
+            [
+                [
+                    hand_mask[RIGHT_IDX] and det_class
+                    for det_class in det_class_mask[object_k_index]
+                ],
+                [
+                    hand_mask[LEFT_IDX] and det_class
+                    for det_class in det_class_mask[object_k_index]
+                ],
+            ]
+        )
         hand_by_object_mask_k[object_k_index] = x
 
     #########################
@@ -694,14 +858,14 @@ def obj_det2d_set_to_feature_by_method(
         # [n_boxes, 1].
         all_obj_centers_x, all_obj_centers_y = det_class_kwboxes.center  # [n_dets, 1]
         hand_centers_x, hand_centers_y = right_left_hand_kwboxes.center  # [2, 1]
-        
+
         # Hand distances from objects. Shape: [top_k, n_dets, 2]
         right_hand_dist_k = np.zeros((top_k_objects, num_det_classes, 2))
         left_hand_dist_k = np.zeros((top_k_objects, num_det_classes, 2))
         for object_k_index in range(top_k_objects):
             obj_centers_x = all_obj_centers_x[object_k_index]
             obj_centers_y = all_obj_centers_y[object_k_index]
-        
+
             hand_dist_x = np.subtract(
                 hand_centers_x,
                 obj_centers_x.T,
@@ -721,7 +885,7 @@ def obj_det2d_set_to_feature_by_method(
             right_hand_dist = np.stack(
                 [hand_dist_x[RIGHT_IDX], hand_dist_y[RIGHT_IDX]], axis=1
             )
-            #for dist in right_hand_dist:
+            # for dist in right_hand_dist:
             #    if not hand_by_object_mask_k[object_k_index][RIGHT_IDX]
             left_hand_dist = np.stack(
                 [hand_dist_x[LEFT_IDX], hand_dist_y[LEFT_IDX]], axis=1
@@ -734,11 +898,13 @@ def obj_det2d_set_to_feature_by_method(
         right_hand_dist_k = left_hand_dist_k = None
 
     #########################
-    # Image center 
+    # Image center
     # distances
     #########################
     if use_center_dist:
-        image_center = kwimage.Boxes([0, 0, 1280, 720], "xywh").center # Hard coded image size
+        image_center = kwimage.Boxes(
+            [0, 0, 1280, 720], "xywh"
+        ).center  # Hard coded image size
         default_center_dist = [image_center[0][0][0] * 2, image_center[1][0][0] * 2]
 
         # Object distances from image center. Shape: [top_k, n_dets, 2]
@@ -750,7 +916,9 @@ def obj_det2d_set_to_feature_by_method(
             for obj_ind in range(num_det_classes):
                 obj_conf = det_class_max_conf[obj_ind]
 
-                obj_bbox = kwimage.Boxes([det_class_bbox[object_k_index][obj_ind]], "xywh")
+                obj_bbox = kwimage.Boxes(
+                    [det_class_bbox[object_k_index][obj_ind]], "xywh"
+                )
                 obj_center = obj_bbox.center
 
                 center_dist = (
@@ -773,20 +941,14 @@ def obj_det2d_set_to_feature_by_method(
         # If a hand or object is not present in the scene, then their
         # respective intersection area is 0.
         # Shape: [top_k, n_dets]
-        right_hand_intersection_k = np.zeros(
-            (top_k_objects, num_det_classes)
-        )
-        left_hand_intersection_k = np.zeros(
-            (top_k_objects, num_det_classes)
-        )
+        right_hand_intersection_k = np.zeros((top_k_objects, num_det_classes))
+        left_hand_intersection_k = np.zeros((top_k_objects, num_det_classes))
         for object_k_index in range(top_k_objects):
             obj_bboxes = det_class_kwboxes[object_k_index]
-            
-            hand_obj_intersection_vol = right_left_hand_kwboxes.isect_area(
-                obj_bboxes
-            )
+
+            hand_obj_intersection_vol = right_left_hand_kwboxes.isect_area(obj_bboxes)
             right_left_hand_area = right_left_hand_kwboxes.area
-            
+
             # Handling avoiding div-by-zero using the `where` parameter.
             hand_obj_intersection = np.divide(
                 hand_obj_intersection_vol,
@@ -809,25 +971,32 @@ def obj_det2d_set_to_feature_by_method(
     #########################
     def calc_joint_offset(bbox_center_x, bbox_center_y):
         offset_vector = []
-        if pose_keypoints == zero_joint_offset or (bbox_center_x == default_center_list[0] and bbox_center_y == default_center_list[1]):
+        if pose_keypoints == zero_joint_offset or (
+            bbox_center_x == default_center_list[0]
+            and bbox_center_y == default_center_list[1]
+        ):
             # If we don't have the joints or the object, return default values
             for joint in pose_keypoints:
                 offset_vector.append(default_dist)
             return offset_vector
-        
+
         for joint in pose_keypoints:
-            jx, jy = joint['xy']
+            jx, jy = joint["xy"]
             joint_point = [jx, jy]
 
             dist = [bbox_center_x - joint_point[0], bbox_center_y - joint_point[1]]
             offset_vector.append(dist)
-            
+
         return offset_vector
 
     # HAND - JOINTS
     if use_joint_hand_offset:
-        joint_right_hand_offset = calc_joint_offset(right_hand_center[0][0][0], right_hand_center[1][0][0])
-        joint_left_hand_offset = calc_joint_offset(left_hand_center[0][0][0], left_hand_center[1][0][0])
+        joint_right_hand_offset = calc_joint_offset(
+            right_hand_center[0][0][0], right_hand_center[1][0][0]
+        )
+        joint_left_hand_offset = calc_joint_offset(
+            left_hand_center[0][0][0], left_hand_center[1][0][0]
+        )
 
     # OBJECTS - JOINTS
     if use_joint_object_offset:
@@ -839,9 +1008,11 @@ def obj_det2d_set_to_feature_by_method(
 
             joint_object_offset = []
             for obj_ind in range(num_det_classes):
-                offset_vector = calc_joint_offset(obj_centers_x[obj_ind], obj_centers_y[obj_ind])
+                offset_vector = calc_joint_offset(
+                    obj_centers_x[obj_ind], obj_centers_y[obj_ind]
+                )
                 joint_object_offset.append(offset_vector)
-            
+
             obj_joints_dist_k[object_k_index] = joint_object_offset
 
     #########################
@@ -892,7 +1063,7 @@ def obj_det2d_set_to_feature_by_method(
     if use_joint_hand_offset:
         for lh_offset in joint_left_hand_offset:
             feature_vec.append(lh_offset)
-    
+
         for rh_offset in joint_right_hand_offset:
             feature_vec.append(rh_offset)
 
@@ -908,7 +1079,5 @@ def obj_det2d_set_to_feature_by_method(
 
     feature_vec = [item for sublist in feature_vec for item in sublist]  # flatten
     feature_vec = np.array(feature_vec, dtype=np.float64)
-
-
 
     return feature_vec

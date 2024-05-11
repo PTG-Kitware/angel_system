@@ -3,6 +3,7 @@ TCN config: https://github.com/PTG-Kitware/TCN_HPL/blob/c987b3d4f65ff7d4f9696333
 Use get_hydra_config to get cfg dict, use eval.py content as how-to-call example using
 trainer.predict(model=model, dataloaders=dataloaders, ckpt_path=cfg.ckpt_path)
 """
+
 import json
 from heapq import heappush, heappop
 from pathlib import Path
@@ -135,7 +136,6 @@ class ActivityClassifierTCN(Node):
                 (PARAM_INPUT_COCO_FILEPATH, ""),
                 (PARAM_TIME_TRACE_LOGGING, True),
                 (PARAM_TOPIC, "medical"),
-                
             ],
         )
         self._img_ts_topic = param_values[PARAM_IMG_TS_TOPIC]
@@ -170,7 +170,9 @@ class ActivityClassifierTCN(Node):
         print(f"json path: {param_values[PARAM_MODEL_OD_MAPPING]}")
         with open(param_values[PARAM_MODEL_OD_MAPPING]) as infile:
             det_label_list = json.load(infile)
-        self._det_label_to_id = {c: i for i, c in enumerate(det_label_list) if c not in ["patient", "user"]}
+        self._det_label_to_id = {
+            c: i for i, c in enumerate(det_label_list) if c not in ["patient", "user"]
+        }
         print(self._det_label_to_id)
         # Feature version aligned with model current architecture
         self._feat_version = param_values[PARAM_MODEL_DETS_CONV_VERSION]
@@ -403,9 +405,9 @@ class ActivityClassifierTCN(Node):
                 # Creates [n_det, n_label] matrix, which we assign to and then
                 # ravel into the message slot.
                 conf_mat = np.zeros((n_dets, len(obj_labels)), dtype=np.float64)
-                conf_mat[
-                    np.arange(n_dets), image_annots.get("category_id")
-                ] = image_annots.get("confidence")
+                conf_mat[np.arange(n_dets), image_annots.get("category_id")] = (
+                    image_annots.get("confidence")
+                )
                 det_msg.label_confidences.extend(conf_mat.ravel())
 
             # Calling the image callback last since image frames define the
@@ -740,7 +742,7 @@ class ActivityClassifierTCN(Node):
             image_height=self._img_pix_height,
             feature_memo=memo_object_to_feats,
             normalize_pixel_pts=self.model_normalize_pixel_pts,
-            normalize_center_pts=self.model_normalize_center_pts
+            normalize_center_pts=self.model_normalize_center_pts,
         )
         # except ValueError:
         #     # feature detections were all None

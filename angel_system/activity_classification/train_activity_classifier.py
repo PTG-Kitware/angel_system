@@ -125,7 +125,7 @@ def compute_feats(
     :param feat_version:
         Version of the feature conversion approach.
     :param top_k_objects: Number top confidence objects to use per label, defaults to 1
-    
+
     :return: resulting feature data and its labels
     """
     print("Computing features...")
@@ -143,7 +143,7 @@ def compute_feats(
         hs = []
         label_confidences = []
         pose_keypoints = []
-        
+
         # Reorganize detections into lists
         if len(ann_by_image[image_id]) == 0:
             continue
@@ -168,7 +168,11 @@ def compute_feats(
             label_confidences.append(ann["confidence"])
 
         # Ignore the patient and user labels in the feature vector
-        only_obj_label_to_ind = {k:i for i, (k, v) in enumerate(obj_label_to_ind.items()) if k not in ["patient", "user"]}
+        only_obj_label_to_ind = {
+            k: i
+            for i, (k, v) in enumerate(obj_label_to_ind.items())
+            if k not in ["patient", "user"]
+        }
 
         # Compute feature vector
         feature_vec = obj_det2d_set_to_feature(
@@ -183,9 +187,9 @@ def compute_feats(
             version=feat_version,
             top_k_objects=top_k_objects,
         )
-        
+
         X.append(feature_vec.ravel())
-         
+
         try:
             dataset_id.append(image_id_to_dataset[image_id])
             last_dset = dataset_id[-1]

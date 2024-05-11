@@ -29,6 +29,7 @@ def sanitize_str(str_: str):
     """
     return str_.lower().strip(" .")
 
+
 def time_from_name(fname, topic="cooking"):
     if topic == "medical":
         from angel_system.data.medical.load_bbn_data import time_from_name as tfn
@@ -50,6 +51,7 @@ def Re_order(image_list, image_number):
         idx = s[i]
         new_list.append(image_list[idx])
     return new_list
+
 
 def load_from_file(
     gt_fn, detections_fn
@@ -131,9 +133,9 @@ def activities_from_dive_csv(topic, filepath: str) -> List[Activity]:
     """
     if topic == "medical":
         from angel_system.data.medical.load_bbn_data import time_from_name
-    elif topic == "cooking": 
+    elif topic == "cooking":
         from angel_system.data.cooking.load_kitware_data import time_from_name
-    
+
     print(f"Loading ground truth activities from: {filepath}")
     df = pd.read_csv(filepath)
 

@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
 import scipy.ndimage as ndi
 
-#from angel_system.global_step_prediction.global_step_predictor import (
+# from angel_system.global_step_prediction.global_step_predictor import (
 from global_step_predictor import (
     GlobalStepPredictor,
 )
@@ -25,7 +25,7 @@ def run_inference_all_vids(
         step_predictor = GlobalStepPredictor(
             recipe_types=["r18"],
             activity_config_fpath="/home/local/KHQ/cameron.johnson/code/tmp_hannah_code/angel_system/config/activity_labels/medical/r18.yaml",
-            #activity_config_fpath="/data/PTG/medical/training/activity_classifier/TCN_HPL/logs/r18_pro_data_top_1_objs_feat_v6_NEW_ORDER_win_25/runs/2024-05-08_12-05-20/test_activity_preds.mscoco.json",
+            # activity_config_fpath="/data/PTG/medical/training/activity_classifier/TCN_HPL/logs/r18_pro_data_top_1_objs_feat_v6_NEW_ORDER_win_25/runs/2024-05-08_12-05-20/test_activity_preds.mscoco.json",
             recipe_config_dict={
                 "r18": "/home/local/KHQ/cameron.johnson/code/tmp_hannah_code/angel_system/config/tasks/medical/r18.yaml"
             },

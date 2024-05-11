@@ -4,6 +4,7 @@ based on the ground truth annotations.
 
 This should be run on videos not used during training. 
 """
+
 import os
 import re
 import glob
@@ -22,10 +23,7 @@ from angel_system.data.medical.data_paths import KNOWN_BAD_VIDEOS
 os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1, 2, 3"
 
 
-
-RE_FILENAME_TIME = re.compile(
-    r"(?P<task>\w+)-(?P<vid>\d+)_(?P<frame>\d+).(?P<ext>\w+)"
-)
+RE_FILENAME_TIME = re.compile(r"(?P<task>\w+)-(?P<vid>\d+)_(?P<frame>\d+).(?P<ext>\w+)")
 
 
 def time_from_name(fname):
@@ -232,7 +230,7 @@ def save_as_kwcoco(classes, data, save_fn="bbn-data.mscoco.json"):
 
 
 def activity_label_fixes(task, activity_label, target):
-    #print(activity_label, target)
+    # print(activity_label, target)
     if task == "m2":
         if activity_label == "put_tourniquet_around":
             label = "place-tourniquet"
@@ -268,8 +266,12 @@ def activity_label_fixes(task, activity_label, target):
         if activity_label == "apply_pressure_to" and target == "casualty_wound":
             label = "cover-seal-wound"
             label_id = 1
-        if (activity_label == "grabs" or activity_label == "opens" or activity_label == "removes" or activity_label == "discard") \
-            and (target == "hyfin_package" or target == "gauze"):
+        if (
+            activity_label == "grabs"
+            or activity_label == "opens"
+            or activity_label == "removes"
+            or activity_label == "discard"
+        ) and (target == "hyfin_package" or target == "gauze"):
             label = "open-pack"
             label_id = 2
         if activity_label == "wipes_gauze_on":
@@ -281,7 +283,7 @@ def activity_label_fixes(task, activity_label, target):
         if activity_label == "apply" and target == "chest_seal":
             label = "place-seal"
             label_id = 5
-    
+
     return label, label_id
 
 
