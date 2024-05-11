@@ -23,12 +23,13 @@ from angel_system.activity_classification.utils import (
 )
 
 
-def load_module(checkpoint_file, label_mapping_file, torch_device) -> PTGLitModule:
+def load_module(checkpoint_file, label_mapping_file, torch_device, topic) -> PTGLitModule:
     """
 
     :param checkpoint_file:
     :param label_mapping_file:
     :param torch_device:
+    :param topic:
     :return:
     """
     # # https://docs.nvidia.com/cuda/cublas/index.html#cublasApi_reproducibility
@@ -45,6 +46,7 @@ def load_module(checkpoint_file, label_mapping_file, torch_device) -> PTGLitModu
         # HParam overrides
         data_dir=mapping_file_dir,
         mapping_file_name=mapping_file_name,
+        topic=topic,
     )
 
     # print(f"CLASSES IN MODEL: {model.classes}")
