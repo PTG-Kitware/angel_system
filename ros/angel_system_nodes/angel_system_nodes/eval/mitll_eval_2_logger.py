@@ -6,6 +6,7 @@ as documented here in the "Log Format Specification" section:
 This node is currently only compatible with the `global_step_predictor` task
 monitoring node due to leveraging specific implementation/output semantics.
 """
+
 import csv
 import math
 from pathlib import Path

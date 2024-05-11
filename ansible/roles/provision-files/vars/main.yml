@@ -122,16 +122,16 @@ girder_file_downloads:
       sha512: 7183385f8eaca85997725a107a76034de2bd4a59c1434b4bdb7c1ac8931cf4b68a53f6e736734643386364b9f0856de795a14965b6a02bc5eb5891252e6a73c9
       dest: "{{ stage_dirs.object_detector }}/r18_det.pt"
     # Activity classifier
-    - file_id: 6605dfc78b763ca20ae99f8c
-      sha512: 0091b751e046f7816061ab11e99ffc709dd5506453e711407a7a5925d168f29ce9fd2a3d97eeeb6f08008aa62d76c7a99279024d27ce42cbd9544a590c528960
+    - file_id: 663e7294687336214e7cdc07
+      sha512: b0166110745c39bb14447ddde34f789fcf7808dc8443a5dc1371de484e995e4fc24b426d1b884321ac51f63c88560ccbbed3a09be5006afa69445ec8d9e04151
       dest: "{{ stage_dirs.activity_classifier }}/r18_tcn.ckpt"
     - file_id: 6606b6e9aa5c8de3874c3f4a
       sha512: 3c84333390ee6b12327bb7e5debed37149c7f95cc437b16939f77b599d1a0b3b8c4f0995820b95973170b94df695494000a1c45fbf46632267c212e125fe58a3
       dest: "{{ stage_dirs.activity_classifier }}/r18_mapping.txt"
     # Global Step predictor model
-    - file_id: 660ebb1caa5c8de3874c43c9
-      sha512: 20c168a220626aaa07192c234366cbc4e998314430632e18b7ea7eb4b1bff491bcd22f131a67ba7713ade9efb49d43ce37010fdc398890deaff13c6022373667
-      dest: "{{ stage_dirs.task_monitor }}/r18_test_activity_preds.mscoco.json"
+    - file_id: 663e4c5d687336214e7cdbff
+      sha512: 12b5bf950f64d9609182f795f7243edb6438b3919d920f0f527127660bb632abd5917ed149c28aa5ebcef7e7f6d8ed6edff39b27286eb0ce37a1ff7de2da4c77
+      dest: "{{ stage_dirs.task_monitor }}/global_step_predictor_act_avgs_R18.npy"
     
 # List of git repositories to check out at a specific ref and then archive.
 # Destination files will be written as GZipped TAR files, so please suffix

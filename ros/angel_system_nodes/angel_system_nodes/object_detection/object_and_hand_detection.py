@@ -89,7 +89,7 @@ class ObjectAndHandDetector(Node):
             self._inference_img_size,
         )
         log.info(
-            f"Loaded model with classes:\n"
+            f"Loaded object model with classes:\n"
             + "\n".join(f'\t- "{n}"' for n in self.object_model.names)
         )
 
@@ -112,7 +112,12 @@ class ObjectAndHandDetector(Node):
             callback_group=MutuallyExclusiveCallbackGroup(),
         )
 
+        # Hand model
         self.hand_model = YOLOv8(self._hand_model_chpt_fp)
+        log.info(
+            f"Loaded hand model with classes:\n"
+            + "\n".join(f'\t- "{n}"' for n in self.hand_model.names)
+        )
 
         if not self._no_trace:
             self.object_model = TracedModel(

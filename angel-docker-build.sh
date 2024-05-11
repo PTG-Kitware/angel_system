@@ -4,6 +4,7 @@
 #
 set -e
 SCRIPT_DIR="$(cd "$(dirname "${0}")" && pwd)"
+export DOCKER_BUILDKIT=1
 
 # source common functionalities
 . "${SCRIPT_DIR}/scripts/common.bash"

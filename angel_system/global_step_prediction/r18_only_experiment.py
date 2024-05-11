@@ -7,7 +7,8 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
 import scipy.ndimage as ndi
 
-from angel_system.global_step_prediction.global_step_predictor import (
+# from angel_system.global_step_prediction.global_step_predictor import (
+from global_step_predictor import (
     GlobalStepPredictor,
 )
 
@@ -23,9 +24,10 @@ def run_inference_all_vids(
 
         step_predictor = GlobalStepPredictor(
             recipe_types=["r18"],
-            activity_config_fpath="/home/local/KHQ/peri.akiva/projects/angel_system/config/activity_labels/r18.yaml",
+            activity_config_fpath="/home/local/KHQ/cameron.johnson/code/tmp_hannah_code/angel_system/config/activity_labels/medical/r18.yaml",
+            # activity_config_fpath="/data/PTG/medical/training/activity_classifier/TCN_HPL/logs/r18_pro_data_top_1_objs_feat_v6_NEW_ORDER_win_25/runs/2024-05-08_12-05-20/test_activity_preds.mscoco.json",
             recipe_config_dict={
-                "r18": "/home/local/KHQ/peri.akiva/projects/angel_system/config/tasks/r18.yaml"
+                "r18": "/home/local/KHQ/cameron.johnson/code/tmp_hannah_code/angel_system/config/tasks/medical/r18.yaml"
             },
             # threshold_multiplier=0.3,
             # threshold_frame_count=2
@@ -36,7 +38,7 @@ def run_inference_all_vids(
         else:
             avg_probs = step_predictor.compute_average_TP_activations(coco_train)
             np.save(
-                "/home/local/KHQ/peri.akiva/projects/angel_system/model_files/global_step_predictor_act_avgs_all_classes.npy",
+                "/home/local/KHQ/cameron.johnson/code/tmp_hannah_code/angel_system/model_files/global_step_predictor_act_avgs_all_classes.npy",
                 avg_probs,
             )
             print(f"average_probs = {avg_probs}")
@@ -135,11 +137,11 @@ def run_inference_all_vids(
 
 if __name__ == "__main__":
     coco_train = kwcoco.CocoDataset(
-        "/home/local/KHQ/peri.akiva/projects/angel_system/model_files/coco/r18_test_activity_preds.mscoco.json"
+        "/data/PTG/medical/training/activity_classifier/TCN_HPL/logs/r18_pro_data_top_1_objs_feat_v6_NEW_ORDER_win_25/runs/2024-05-08_12-05-20/test_activity_preds.mscoco.json"
     )
     # Same file for now since I don't have another.
     coco_test = kwcoco.CocoDataset(
-        "/home/local/KHQ/peri.akiva/projects/angel_system/model_files/coco/r18_test_activity_preds.mscoco.json"
+        "/data/PTG/medical/training/activity_classifier/TCN_HPL/logs/r18_pro_data_top_1_objs_feat_v6_NEW_ORDER_win_25/runs/2024-05-08_12-05-20/test_activity_preds.mscoco.json"
     )
 
     recipe_config = {"r18": "config/tasks/medical/r18.yaml"}

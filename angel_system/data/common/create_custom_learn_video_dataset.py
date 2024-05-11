@@ -65,9 +65,9 @@ def main(args):
             ):
                 temp_df = df[df["# 1: Detection or Track-id"] == str(label)]
                 if temp_df.iloc[0]["10-11+: Repeated Species"] not in label_dict.keys():
-                    label_dict[
-                        temp_df.iloc[0]["10-11+: Repeated Species"]
-                    ] = label_counter
+                    label_dict[temp_df.iloc[0]["10-11+: Repeated Species"]] = (
+                        label_counter
+                    )
                     label_counter += 1
                 min_frame = pd.to_numeric(temp_df["3: Unique Frame Identifier"]).min()
                 max_frame = pd.to_numeric(temp_df["3: Unique Frame Identifier"]).max()

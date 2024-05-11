@@ -14,7 +14,7 @@ import numpy as np
 import numpy.typing as npt
 import torch
 
-from tcn_hpl.data.components.augmentations import NormalizePixelPts
+from tcn_hpl.data.components.augmentations import NormalizePixelPts, NormalizeFromCenter
 from tcn_hpl.models.ptg_module import PTGLitModule
 
 from angel_system.activity_classification.utils import (
@@ -23,12 +23,15 @@ from angel_system.activity_classification.utils import (
 )
 
 
-def load_module(checkpoint_file, label_mapping_file, torch_device) -> PTGLitModule:
+def load_module(
+    checkpoint_file, label_mapping_file, torch_device, topic
+) -> PTGLitModule:
     """
 
     :param checkpoint_file:
     :param label_mapping_file:
     :param torch_device:
+    :param topic:
     :return:
     """
     # # https://docs.nvidia.com/cuda/cublas/index.html#cublasApi_reproducibility
@@ -45,6 +48,7 @@ def load_module(checkpoint_file, label_mapping_file, torch_device) -> PTGLitModu
         # HParam overrides
         data_dir=mapping_file_dir,
         mapping_file_name=mapping_file_name,
+        topic=topic,
     )
 
     # print(f"CLASSES IN MODEL: {model.classes}")
@@ -91,9 +95,12 @@ class PatientPose:
 def normalize_detection_features(
     det_feats: npt.ArrayLike,
     feat_version: int,
+    top_k_objects: int,
     img_width: int,
     img_height: int,
     num_det_classes: int,
+    normalize_pixel_pts: bool,
+    normalize_center_pts: bool,
 ) -> None:
     """
     Normalize input object detection descriptor vectors, outputting new vectors
@@ -108,9 +115,16 @@ def normalize_detection_features(
 
     :return: Normalized object detection features.
     """
-    # This method is known to normalize in-place.
-    # Shape [window_size, n_feats]
-    NormalizePixelPts(img_width, img_height, num_det_classes, feat_version)(det_feats)
+    if normalize_pixel_pts:
+        # This method is known to normalize in-place.
+        # Shape [window_size, n_feats]
+        NormalizePixelPts(
+            img_width, img_height, num_det_classes, feat_version, top_k_objects
+        )(det_feats)
+    if normalize_center_pts:
+        NormalizeFromCenter(
+            img_width, img_height, num_det_classes, feat_version, top_k_objects
+        )(det_feats)
 
 
 def objects_to_feats(
@@ -121,7 +135,9 @@ def objects_to_feats(
     image_width: int,
     image_height: int,
     feature_memo: Optional[Dict[int, npt.NDArray]] = None,
-    top_n_objects: int = 3,
+    top_k_objects: int = 1,
+    normalize_pixel_pts=False,
+    normalize_center_pts=False,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Convert some object detections for some window of frames into a feature
@@ -160,128 +176,64 @@ def objects_to_feats(
     feature_dtype = None
 
     # hands-joints offset vectors
-    zero_offset = [0 for i in range(22)]
-    joint_left_hand_offset_all_frames = [None] * window_size
-    joint_right_hand_offset_all_frames = [None] * window_size
-    joint_object_offset_all_frames = [None] * window_size
+    zero_joint_offset = [0 for i in range(22)]
+
     # for pose in frame_patient_poses:
-    for i, (pose, detection) in enumerate(
+    for i, (pose, detections) in enumerate(
         zip(frame_patient_poses, frame_object_detections)
     ):
-        if detection is None:
+        pose_keypoints = []
+        print(pose)
+        if detections is None:
             continue
-        labels = detection.labels
-        bx, by, bw, bh = tlbr_to_xywh(
-            detection.top,
-            detection.left,
-            detection.bottom,
-            detection.right,
-        )
 
-        # iterate over all detections in that frame
-        joint_object_offset = []
-        for j, label in enumerate(labels):
-            if label == "hand (right)" or label == "hand (left)":
-                x, y, w, h = bx[j], by[j], bw[j], bh[j]
+        detection_id = detections.id
+        confidences = detections.confidences
+        if detection_id in feat_memo.keys():
+            # We've already processed this set
+            feat = feat_memo[detection_id]
+        else:
+            labels = detections.labels
+            xs, ys, ws, hs = tlbr_to_xywh(
+                detections.top,
+                detections.left,
+                detections.bottom,
+                detections.right,
+            )
 
-                cx, cy = x + (w // 2), y + (h // 2)
-                hand_point = np.array((cx, cy))
+            if pose is not None:
+                for joint in pose:
+                    kwcoco_format_joint = {
+                        "xy": [joint.positions.x, joint.positions.y],
+                        "keypoint_category_id": -1,  # TODO: not in message
+                        "keypoint_category": joint.labels,
+                    }
+                    pose_keypoints.append(kwcoco_format_joint)
 
-                offset_vector = []
-                if pose is not None:
-                    for joint in pose:
-                        jx, jy = joint.positions.x, joint.positions.y
-                        joint_point = np.array((jx, jy))
-                        dist = np.linalg.norm(joint_point - hand_point)
-                        offset_vector.append(dist)
-                else:
-                    offset_vector = zero_offset
-
-                if label == "hand (left)":
-                    joint_left_hand_offset_all_frames[i] = offset_vector
-                elif label == "hand (right)":
-                    joint_right_hand_offset_all_frames[i] = offset_vector
-            else:
-                # if objects_joints and num_objects > 0:
-                x, y, w, h = bx[j], by[j], bw[j], bh[j]
-                cx, cy = x + (w // 2), y + (h // 2)
-                object_point = np.array((cx, cy))
-                offset_vector = []
-                if pose is not None:
-                    for joint in pose:
-                        jx, jy = joint.positions.x, joint.positions.y
-                        joint_point = np.array((jx, jy))
-                        dist = np.linalg.norm(joint_point - object_point)
-                        offset_vector.append(dist)
-                else:
-                    offset_vector = zero_offset
-                joint_object_offset.append(offset_vector)
-
-        joint_object_offset_all_frames[i] = joint_object_offset
-
-    for i, frame_dets in enumerate(frame_object_detections):
-        frame_dets: ObjectDetectionsLTRB
-        if frame_dets is not None:
-            f_id = frame_dets.id
-            if f_id not in feat_memo:
-                # the input message has tlbr, but obj_det2d_set_to_feature
-                # requires xywh.
-                xs, ys, ws, hs = tlbr_to_xywh(
-                    frame_dets.top,
-                    frame_dets.left,
-                    frame_dets.bottom,
-                    frame_dets.right,
-                )
-                feat = obj_det2d_set_to_feature(
-                    frame_dets.labels,
+            feat = (
+                obj_det2d_set_to_feature(
+                    labels,
                     xs,
                     ys,
                     ws,
                     hs,
-                    frame_dets.confidences,
-                    None,
-                    None,
-                    None,
-                    None,
-                    None,
-                    label_to_ind=det_label_to_idx,
+                    confidences,
+                    pose_keypoints=(
+                        pose_keypoints if pose_keypoints else zero_joint_offset
+                    ),
+                    obj_label_to_ind=det_label_to_idx,
                     version=feat_version,
-                    top_n_objects=top_n_objects,
+                    top_k_objects=top_k_objects,
                 )
+                .ravel()
+                .astype(np.float32)
+            )
 
-                offset_vector = []
+            feat_memo[detection_id] = feat
 
-                if joint_left_hand_offset_all_frames[i] is not None:
-                    offset_vector.extend(joint_left_hand_offset_all_frames[i])
-                else:
-                    offset_vector.extend(zero_offset)
-
-                if joint_right_hand_offset_all_frames[i] is not None:
-                    offset_vector.extend(joint_right_hand_offset_all_frames[i])
-                else:
-                    offset_vector.extend(zero_offset)
-
-                for j in range(top_n_objects):
-                    if joint_object_offset_all_frames[i] is not None:
-                        if len(joint_object_offset_all_frames[i]) > j:
-                            offset_vector.extend(joint_object_offset_all_frames[i][j])
-                        else:
-                            offset_vector.extend(zero_offset)
-                    else:
-                        offset_vector.extend(zero_offset)
-
-                feat.extend(offset_vector)
-                feat = np.array(feat, dtype=np.float64).ravel()
-                feat_memo[f_id] = feat
-
-                print(f"feat: {feat}")
-                print(f"feat shape: {feat.shape}")
-
-            else:
-                feat = feat_memo[f_id]
-            feature_ndim = feat.shape
-            feature_dtype = feat.dtype
-            feature_list[i] = feat
+        feature_ndim = feat.shape
+        feature_dtype = feat.dtype
+        feature_list[i] = feat
     # Already checked that we should have non-zero frames with detections above
     # so feature_ndim/_dtype should not be None at this stage
     assert feature_ndim is not None
@@ -306,9 +258,17 @@ def objects_to_feats(
 
     # Normalize features
     # Shape [window_size, n_feats]
-    normalize_detection_features(
-        feature_vec, feat_version, image_width, image_height, len(det_label_to_idx)
-    )
+    if normalize_pixel_pts or normalize_center_pts:
+        normalize_detection_features(
+            feature_vec,
+            feat_version,
+            top_k_objects,
+            image_width,
+            image_height,
+            len(det_label_to_idx),
+            normalize_pixel_pts,
+            normalize_center_pts,
+        )
 
     return feature_vec, mask
 

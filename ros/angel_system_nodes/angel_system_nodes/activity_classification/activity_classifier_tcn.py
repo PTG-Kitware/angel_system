@@ -3,6 +3,7 @@ TCN config: https://github.com/PTG-Kitware/TCN_HPL/blob/c987b3d4f65ff7d4f9696333
 Use get_hydra_config to get cfg dict, use eval.py content as how-to-call example using
 trainer.predict(model=model, dataloaders=dataloaders, ckpt_path=cfg.ckpt_path)
 """
+
 import json
 from heapq import heappush, heappop
 from pathlib import Path
@@ -53,6 +54,10 @@ PARAM_ACT_TOPIC = "act_topic"
 PARAM_MODEL_WEIGHTS = "model_weights"
 # Filesystem path to the class mapping file.
 PARAM_MODEL_MAPPING = "model_mapping"
+# Bool flag to indicate if the NormalizePixelPts augmentation should be applied
+PARAM_MODEL_NORMALIZE_PIXEL_PTS = "model_normalize_pixel_pts"
+# Bool flag to indicate if the NormalizeFromCenter augmentation should be applied
+PARAM_MODEL_NORMALIZE_CENTER_PTS = "model_normalize_center_pts"
 # Filesystem path to the input object detection label mapping.
 # This is expected to be a JSON file containing a list of strings.
 PARAM_MODEL_OD_MAPPING = "model_det_label_mapping"
@@ -88,6 +93,8 @@ PARAM_TIME_TRACE_LOGGING = "enable_time_trace_logging"
 
 PARAM_POSE_TOPIC = "pose_topic"
 
+PARAM_TOPIC = "topic"
+
 
 class NoActivityClassification(Exception):
     """
@@ -115,10 +122,12 @@ class ActivityClassifierTCN(Node):
                 (PARAM_ACT_TOPIC,),
                 (PARAM_MODEL_WEIGHTS,),
                 (PARAM_MODEL_MAPPING,),
+                (PARAM_MODEL_NORMALIZE_PIXEL_PTS, False),
+                (PARAM_MODEL_NORMALIZE_CENTER_PTS, False),
                 (PARAM_MODEL_OD_MAPPING,),
                 (PARAM_MODEL_DEVICE, "cuda"),
                 (PARAM_MODEL_DETS_CONV_VERSION, 6),
-                (PARAM_WINDOW_FRAME_SIZE, 45),
+                (PARAM_WINDOW_FRAME_SIZE, 25),
                 (PARAM_BUFFER_MAX_SIZE_SECONDS, 15),
                 (PARAM_IMAGE_PIX_WIDTH, 1280),
                 (PARAM_IMAGE_PIX_HEIGHT, 720),
@@ -126,6 +135,7 @@ class ActivityClassifierTCN(Node):
                 (PARAM_OUTPUT_COCO_FILEPATH, ""),
                 (PARAM_INPUT_COCO_FILEPATH, ""),
                 (PARAM_TIME_TRACE_LOGGING, True),
+                (PARAM_TOPIC, "medical"),
             ],
         )
         self._img_ts_topic = param_values[PARAM_IMG_TS_TOPIC]
@@ -138,6 +148,10 @@ class ActivityClassifierTCN(Node):
         self._img_pix_height = param_values[PARAM_IMAGE_PIX_HEIGHT]
         self._enable_trace_logging = param_values[PARAM_TIME_TRACE_LOGGING]
 
+        self.model_normalize_pixel_pts = param_values[PARAM_MODEL_NORMALIZE_PIXEL_PTS]
+        self.model_normalize_center_pts = param_values[PARAM_MODEL_NORMALIZE_CENTER_PTS]
+
+        self.topic = param_values[PARAM_TOPIC]
         # Load in TCN classification model and weights
         with SimpleTimer("Loading inference module", log.info):
             self._model_device = torch.device(param_values[PARAM_MODEL_DEVICE])
@@ -145,6 +159,7 @@ class ActivityClassifierTCN(Node):
                 param_values[PARAM_MODEL_WEIGHTS],
                 param_values[PARAM_MODEL_MAPPING],
                 self._model_device,
+                topic=self.topic,
             ).eval()
             # from pytorch_lightning.utilities.model_summary import summarize
             # from torchsummary import summary
@@ -155,7 +170,9 @@ class ActivityClassifierTCN(Node):
         print(f"json path: {param_values[PARAM_MODEL_OD_MAPPING]}")
         with open(param_values[PARAM_MODEL_OD_MAPPING]) as infile:
             det_label_list = json.load(infile)
-        self._det_label_to_id = {c: i for i, c in enumerate(det_label_list)}
+        self._det_label_to_id = {
+            c: i for i, c in enumerate(det_label_list) if c not in ["patient", "user"]
+        }
         print(self._det_label_to_id)
         # Feature version aligned with model current architecture
         self._feat_version = param_values[PARAM_MODEL_DETS_CONV_VERSION]
@@ -388,9 +405,9 @@ class ActivityClassifierTCN(Node):
                 # Creates [n_det, n_label] matrix, which we assign to and then
                 # ravel into the message slot.
                 conf_mat = np.zeros((n_dets, len(obj_labels)), dtype=np.float64)
-                conf_mat[
-                    np.arange(n_dets), image_annots.get("category_id")
-                ] = image_annots.get("confidence")
+                conf_mat[np.arange(n_dets), image_annots.get("category_id")] = (
+                    image_annots.get("confidence")
+                )
                 det_msg.label_confidences.extend(conf_mat.ravel())
 
             # Calling the image callback last since image frames define the
@@ -724,6 +741,8 @@ class ActivityClassifierTCN(Node):
             image_width=self._img_pix_width,
             image_height=self._img_pix_height,
             feature_memo=memo_object_to_feats,
+            normalize_pixel_pts=self.model_normalize_pixel_pts,
+            normalize_center_pts=self.model_normalize_center_pts,
         )
         # except ValueError:
         #     # feature detections were all None

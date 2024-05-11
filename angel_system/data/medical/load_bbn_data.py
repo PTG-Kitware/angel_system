@@ -4,6 +4,7 @@ based on the ground truth annotations.
 
 This should be run on videos not used during training. 
 """
+
 import os
 import re
 import glob
@@ -11,6 +12,7 @@ import cv2
 import kwcoco
 import kwimage
 import shutil
+import warnings
 
 import pandas as pd
 import numpy as np
@@ -19,6 +21,26 @@ from angel_system.data.common.load_data import activities_from_dive_csv
 from angel_system.data.medical.data_paths import KNOWN_BAD_VIDEOS
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1, 2, 3"
+
+
+RE_FILENAME_TIME = re.compile(r"(?P<task>\w+)-(?P<vid>\d+)_(?P<frame>\d+).(?P<ext>\w+)")
+
+
+def time_from_name(fname):
+    """
+    Extract the float timestamp from the filename.
+
+    :param fname: Filename of an image in the format
+        frame_<frame number>_<seconds>_<nanoseconds>.<extension>
+
+    :return: timestamp (float) in seconds
+    """
+    fname = os.path.basename(fname)
+    match = RE_FILENAME_TIME.match(fname)
+
+    frame = match.group("frame")
+    time = None
+    return int(frame), time
 
 
 def dive_to_activity_file(videos_dir):
@@ -207,42 +229,65 @@ def save_as_kwcoco(classes, data, save_fn="bbn-data.mscoco.json"):
     dset.dump(dset.fpath, newlines=True)
 
 
-def activity_label_fixes(activity_label, target):
-    if activity_label == "put_tourniquet_around":
-        label = "place-tourniquet"
-        label_id = 1
-    if activity_label == "pulls_tight":
-        label = "pull-tight"
-        label_id = 2
-    if activity_label == "secures" and target == "velcro_strap":
-        label = "apply-strap-to-strap-body"
-        label_id = 3
-    if activity_label == "twist" and target == "windlass":
-        label = "turn-windless"
-        label_id = 4
-    if (
-        activity_label == "locks_into_windlass_keeper"
-        or activity_label == "lock_into_windlass_keeper"
-    ):
-        label = "lock-windless"
-        label_id = 5
-    if (
-        activity_label == "wraps_remaining_strap_around"
-        or activity_label == "wrap_remaining_strap_around"
-    ):
-        label = "pull-remaining-strap"
-        label_id = 6
-    if activity_label == "secures" and target == "windlass":
-        label = "secure-strap"
-        label_id = 7
-    if activity_label == "writes_on" and target == "tourniquet_label":
-        label = "mark-time"
-        label_id = 8
+def activity_label_fixes(task, activity_label, target):
+    # print(activity_label, target)
+    if task == "m2":
+        if activity_label == "put_tourniquet_around":
+            label = "place-tourniquet"
+            label_id = 1
+        if activity_label == "pulls_tight":
+            label = "pull-tight"
+            label_id = 2
+        if activity_label == "secures" and target == "velcro_strap":
+            label = "apply-strap-to-strap-body"
+            label_id = 3
+        if activity_label == "twist" and target == "windlass":
+            label = "turn-windless"
+            label_id = 4
+        if (
+            activity_label == "locks_into_windlass_keeper"
+            or activity_label == "lock_into_windlass_keeper"
+        ):
+            label = "lock-windless"
+            label_id = 5
+        if (
+            activity_label == "wraps_remaining_strap_around"
+            or activity_label == "wrap_remaining_strap_around"
+        ):
+            label = "pull-remaining-strap"
+            label_id = 6
+        if activity_label == "secures" and target == "windlass":
+            label = "secure-strap"
+            label_id = 7
+        if activity_label == "writes_on" and target == "tourniquet_label":
+            label = "mark-time"
+            label_id = 8
+    elif task == "r18":
+        if activity_label == "apply_pressure_to" and target == "casualty_wound":
+            label = "cover-seal-wound"
+            label_id = 1
+        if (
+            activity_label == "grabs"
+            or activity_label == "opens"
+            or activity_label == "removes"
+            or activity_label == "discard"
+        ) and (target == "hyfin_package" or target == "gauze"):
+            label = "open-pack"
+            label_id = 2
+        if activity_label == "wipes_gauze_on":
+            label = "clean-wound-site"
+            label_id = 3
+        if activity_label == "removes" and target == "chest_seal_backing":
+            label = "peel-seal-backer"
+            label_id = 4
+        if activity_label == "apply" and target == "chest_seal":
+            label = "place-seal"
+            label_id = 5
 
     return label, label_id
 
 
-def bbn_activity_txt_to_csv(root_dir, output_dir):
+def bbn_activity_txt_to_csv(task, root_dir, output_dir, label_version):
     """
     Generate DIVE csv format activity annotations from BBN's text annotations
 
@@ -263,21 +308,22 @@ def bbn_activity_txt_to_csv(root_dir, output_dir):
         # Lab videos
         action_fns = glob.glob(f"{root_dir}/*/*_skills_frame.txt")
     if not action_fns:
-        warnings.warn(f"No text annotations found in {root_dir}")
+        warnings.warn(f"No text annotations found in {root_dir} subfolders")
         return
 
-    for action_txt_fn in action_fns:
+    for action_txt_fn in sorted(action_fns):
         track_id = 0
         video_dir = os.path.dirname(action_txt_fn)
         video_name = os.path.basename(video_dir)
         if video_name in KNOWN_BAD_VIDEOS:
             continue
 
-        action_f = open(action_txt_fn)
-        lines = action_f.readlines()
+        print(action_txt_fn)
+        with open(action_txt_fn) as action_f:
+            lines = action_f.readlines()
 
         # Create output csv
-        csv_fn = f"{output_dir}/{video_name}_activity_labels_v2.csv"
+        csv_fn = f"{output_dir}/{video_name}_activity_labels_v{label_version}.csv"
         csv_f = open(csv_fn, "w")
         csv_f.write(
             "# 1: Detection or Track-id,2: Video or Image Identifier,3: Unique Frame Identifier,4-7: Img-bbox(TL_x,TL_y,BR_x,BR_y),8: Detection or Length Confidence,9: Target Length (0 or -1 if invalid),10-11+: Repeated Species,Confidence Pairs or Attributes\n"
@@ -292,10 +338,10 @@ def bbn_activity_txt_to_csv(root_dir, output_dir):
             end_frame = int(data[1])
 
             start_frame_fn = os.path.basename(
-                glob.glob(f"{video_dir}/images/frame_{start_frame}_*.png")[0]
+                glob.glob(f"{video_dir}/images/*_{start_frame}.png")[0]
             )
             end_frame_fn = os.path.basename(
-                glob.glob(f"{video_dir}/images/frame_{end_frame}_*.png")[0]
+                glob.glob(f"{video_dir}/images/*_{end_frame}.png")[0]
             )
 
             # Determine activity
@@ -307,7 +353,7 @@ def bbn_activity_txt_to_csv(root_dir, output_dir):
             # convert activity_str info to our activity labels
             # this is hacky: fix later
             label = None
-            label, label_id = activity_label_fixes(activity_label, target)
+            label, label_id = activity_label_fixes(task, activity, target)
 
             if label is not None:
                 line1 = f"{track_id},{start_frame_fn},{start_frame},1,1,2,2,1,-1,{label_id},1"
@@ -318,7 +364,6 @@ def bbn_activity_txt_to_csv(root_dir, output_dir):
                 csv_f.write(f"{line2}\n")
 
                 track_id += 1
-        action_f.close()
         csv_f.close()
 
 

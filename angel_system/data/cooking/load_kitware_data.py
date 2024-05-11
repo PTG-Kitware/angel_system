@@ -1,11 +1,39 @@
+import os
 import kwcoco
 import glob
 import warnings
-
+import re
 import ubelt as ub
 
 from angel_system.data.common.load_data import Re_order
 from angel_system.data.common.kwcoco_utils import load_kwcoco
+
+
+RE_FILENAME_TIME = re.compile(
+    r"frame_(?P<frame>\d+)_(?P<ts>\d+(?:_|.)\d+).(?P<ext>\w+)"
+)
+
+
+def time_from_name(fname):
+    """
+    Extract the float timestamp from the filename.
+
+    :param fname: Filename of an image in the format
+        frame_<frame number>_<seconds>_<nanoseconds>.<extension>
+
+    :return: timestamp (float) in seconds
+    """
+    fname = os.path.basename(fname)
+    match = RE_FILENAME_TIME.match(fname)
+    time = match.group("ts")
+    if "_" in time:
+        time = time.split("_")
+        time = float(time[0]) + (float(time[1]) * 1e-9)
+    elif "." in time:
+        time = float(time)
+
+    frame = match.group("frame")
+    return int(frame), time
 
 
 def object_label_fixes(obj_cat):

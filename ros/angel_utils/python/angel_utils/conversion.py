@@ -1,6 +1,7 @@
 """
 Various conversion functions into and out of angel_msg types.
 """
+
 import array
 import itertools
 import math

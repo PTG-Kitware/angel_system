@@ -153,19 +153,19 @@ class BagConverter(Node):
         if self.extract_head_pose_data or self.extract_depth_head_pose_data:
             self.msg_type_to_handler_map[HeadsetPoseData] = self.handle_head_pose_msg
         if self.extract_hand_pose_data:
-            self.msg_type_to_handler_map[
-                HandJointPosesUpdate
-            ] = self.handle_hand_pose_msg
+            self.msg_type_to_handler_map[HandJointPosesUpdate] = (
+                self.handle_hand_pose_msg
+            )
         if self.extract_spatial_map_data:
             self.msg_type_to_handler_map[SpatialMesh] = self.handle_spatial_mesh_msg
         if self.extract_annotation_event_data:
-            self.msg_type_to_handler_map[
-                AnnotationEvent
-            ] = self.handle_annotation_event_msg
+            self.msg_type_to_handler_map[AnnotationEvent] = (
+                self.handle_annotation_event_msg
+            )
         if self.extract_activity_detection_data:
-            self.msg_type_to_handler_map[
-                ActivityDetection
-            ] = self.handle_activity_detection_msg
+            self.msg_type_to_handler_map[ActivityDetection] = (
+                self.handle_activity_detection_msg
+            )
         if self.extract_task_update_data:
             self.msg_type_to_handler_map[TaskUpdate] = self.handle_task_update_msg
 
