@@ -92,6 +92,8 @@ PARAM_TIME_TRACE_LOGGING = "enable_time_trace_logging"
 
 PARAM_POSE_TOPIC = "pose_topic"
 
+PARAM_TOPIC = "topic"
+
 
 class NoActivityClassification(Exception):
     """
@@ -132,6 +134,7 @@ class ActivityClassifierTCN(Node):
                 (PARAM_OUTPUT_COCO_FILEPATH, ""),
                 (PARAM_INPUT_COCO_FILEPATH, ""),
                 (PARAM_TIME_TRACE_LOGGING, True),
+                (PARAM_TOPIC, "medical"),
                 
             ],
         )
@@ -147,6 +150,8 @@ class ActivityClassifierTCN(Node):
 
         self.model_normalize_pixel_pts = param_values[PARAM_MODEL_NORMALIZE_PIXEL_PTS]
         self.model_normalize_center_pts = param_values[PARAM_MODEL_NORMALIZE_CENTER_PTS]
+
+        self.topic = param_values[PARAM_TOPIC]
         # Load in TCN classification model and weights
         with SimpleTimer("Loading inference module", log.info):
             self._model_device = torch.device(param_values[PARAM_MODEL_DEVICE])
@@ -154,6 +159,7 @@ class ActivityClassifierTCN(Node):
                 param_values[PARAM_MODEL_WEIGHTS],
                 param_values[PARAM_MODEL_MAPPING],
                 self._model_device,
+                topic=self.topic,
             ).eval()
             # from pytorch_lightning.utilities.model_summary import summarize
             # from torchsummary import summary
