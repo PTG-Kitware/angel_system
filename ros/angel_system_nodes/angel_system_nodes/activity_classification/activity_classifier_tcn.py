@@ -122,7 +122,7 @@ class ActivityClassifierTCN(Node):
                 (PARAM_MODEL_WEIGHTS,),
                 (PARAM_MODEL_MAPPING,),
                 (PARAM_MODEL_NORMALIZE_PIXEL_PTS, False),
-                (PARAM_MODEL_NORMALIZE_CENTER_PTS, False)
+                (PARAM_MODEL_NORMALIZE_CENTER_PTS, False),
                 (PARAM_MODEL_OD_MAPPING,),
                 (PARAM_MODEL_DEVICE, "cuda"),
                 (PARAM_MODEL_DETS_CONV_VERSION, 6),
@@ -739,8 +739,8 @@ class ActivityClassifierTCN(Node):
             image_width=self._img_pix_width,
             image_height=self._img_pix_height,
             feature_memo=memo_object_to_feats,
-            normalize_pixel_pts=self.normalize_pixel_pts,
-            normalize_center_pts=self.normalize_center_pts
+            normalize_pixel_pts=self.model_normalize_pixel_pts,
+            normalize_center_pts=self.model_normalize_center_pts
         )
         # except ValueError:
         #     # feature detections were all None
