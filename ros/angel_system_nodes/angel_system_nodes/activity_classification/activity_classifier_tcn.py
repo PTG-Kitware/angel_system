@@ -126,7 +126,7 @@ class ActivityClassifierTCN(Node):
                 (PARAM_MODEL_OD_MAPPING,),
                 (PARAM_MODEL_DEVICE, "cuda"),
                 (PARAM_MODEL_DETS_CONV_VERSION, 6),
-                (PARAM_WINDOW_FRAME_SIZE, 45),
+                (PARAM_WINDOW_FRAME_SIZE, 25),
                 (PARAM_BUFFER_MAX_SIZE_SECONDS, 15),
                 (PARAM_IMAGE_PIX_WIDTH, 1280),
                 (PARAM_IMAGE_PIX_HEIGHT, 720),
