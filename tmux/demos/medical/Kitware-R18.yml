@@ -97,7 +97,7 @@ windows:
       -p pose_config:=${ANGEL_WORKSPACE_DIR}/python-tpl/TCN_HPL/tcn_hpl/data/utils/pose_generation/configs/ViTPose_base_medic_casualty_256x192.py
       -p cuda_device_id:=0
 
-  - objects_hands_detection: ros2 run angel_system_nodes object_hand_detector --ros-args
+  - object_and_hand_detection: ros2 run angel_system_nodes object_and_hand_detector --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p image_topic:=PVFramesBGR
       -p det_topic:=ObjectDetections2d
