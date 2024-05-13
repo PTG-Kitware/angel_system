@@ -38,6 +38,12 @@ do
       shift
       FORCE_BUILD=1
       ;;
+    --)
+      # Escape the remainder of args as to be considered passthrough
+      shift
+      dc_forward_params+=("${@}")
+      break
+      ;;
     *)  # anything else
       dc_forward_params+=("$1")
       shift

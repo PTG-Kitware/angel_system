@@ -2,10 +2,10 @@
 # System configuration to run the ANGEL system for the Kitware system with the
 # Kitware HL2 ARUI app.
 #
-# This configuration is for the R18 Chest Seal task.
+# This configuration is for the M2 tourniquet task.
 #
 
-name: Kitware-R18-Chest-Seal
+name: Kitware-M2-Tourniquet
 root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 
 # Optional tmux socket
@@ -57,7 +57,7 @@ windows:
       layout: even-vertical
       panes:
         # Read sensor input from bag file.
-        - sensor_input: echo ros2 bag play ${ANGEL_WORKSPACE_DIR}/ros_bags/rosbag2_2024_04_10-18_57_36-R18_Chris_live/
+        - sensor_input: echo ros2 bag play ${ANGEL_WORKSPACE_DIR}/ros_bags/...
         - run_image_timestamp: ros2 run angel_system_nodes image_timestamp_relay --ros-args
             -r __ns:=${ROS_NAMESPACE}
             -p image_topic:=PVFramesBGR
@@ -97,11 +97,11 @@ windows:
       -p pose_config:=${ANGEL_WORKSPACE_DIR}/python-tpl/TCN_HPL/tcn_hpl/data/utils/pose_generation/configs/ViTPose_base_medic_casualty_256x192.py
       -p cuda_device_id:=0
 
-  - objects_hands_detection: ros2 run angel_system_nodes object_hand_detector --ros-args
+  - object_and_hand_detection: ros2 run angel_system_nodes object_and_hand_detector --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p image_topic:=PVFramesBGR
       -p det_topic:=ObjectDetections2d
-      -p object_net_checkpoint:=${MODEL_DIR}/object_detector/r18_det.pt
+      -p object_net_checkpoint:=${MODEL_DIR}/object_detector/m2_det.pt
       -p hand_net_checkpoint:=${MODEL_DIR}/object_detector/hands_model.pt
 
   - activity_classifier: ros2 run angel_system_nodes activity_classifier_tcn --ros-args
@@ -109,9 +109,9 @@ windows:
       -p image_ts_topic:=PVFramesBGR_ts
       -p det_topic:=ObjectDetections2d
       -p pose_topic:=PatientPose
-      -p model_weights:=${MODEL_DIR}/activity_classifier/r18_tcn.ckpt
-      -p model_mapping:=${MODEL_DIR}/activity_classifier/r18_mapping.txt
-      -p model_det_label_mapping:=${ANGEL_WORKSPACE_DIR}/config/object_labels/medical/r18.json
+      -p model_weights:=${MODEL_DIR}/activity_classifier/m2_tcn.ckpt
+      -p model_mapping:=${MODEL_DIR}/activity_classifier/m2_mapping.txt
+      -p model_det_label_mapping:=${ANGEL_WORKSPACE_DIR}/config/object_labels/medical/m2.json
       -p act_topic:=activity_topic
 
   - task_monitor:
@@ -119,13 +119,13 @@ windows:
       panes:
         - gsp: ros2 run angel_system_nodes global_step_predictor --ros-args
             -r __ns:=${ROS_NAMESPACE}
-            -p config_file:=${CONFIG_DIR}/tasks/medical/multi-task-config-medical-r18.yaml
-            -p activity_config_file:=${CONFIG_DIR}/activity_labels/medical/r18.yaml
+            -p config_file:=${CONFIG_DIR}/tasks/medical/multi-task-config-medical-m2.yaml
+            -p activity_config_file:=${CONFIG_DIR}/activity_labels/medical/m2.yaml
             -p task_state_topic:=TaskUpdates
             -p task_error_topic:=TaskErrors
             -p system_command_topic:=SystemCommands
             -p det_topic:=activity_topic
-            -p model_file:=${MODEL_DIR}/task_monitor/global_step_predictor_act_avgs_R18.npy
+            -p model_file:=${MODEL_DIR}/task_monitor/m2_test_activity_preds.mscoco.json
             -p thresh_frame_count:=3
             -p deactivate_thresh_frame_count:=10
             -p threshold_multiplier_weak:=0.00
