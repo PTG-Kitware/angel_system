@@ -1,0 +1,51 @@
+version: "1"
+title: "Patient Joints"
+labels:
+  # Item:
+  # - id: Integer identification number of the label.
+  # - label: Short human-readable semantic string to succinctly represent the
+  #          label.
+  - id: 0
+    label: "nose"
+  - id: 1
+    label: "mouth"
+  - id: 2
+    label: "throat"
+  - id: 3
+    label: "chest"
+  - id: 4
+    label: "stomach"
+  - id: 5
+    label: "left_upper_arm"
+  - id: 6
+    label: "right_upper_arm"
+  - id: 7
+    label: "left_lower_arm"
+  - id: 8
+    label: "right_lower_arm"
+  - id: 9
+    label: "left_wrist"
+  - id: 10
+    label: "right_wrist"
+  - id: 11
+    label: "left_hand"
+  - id: 12
+    label: "right_hand"
+  - id: 13
+    label: "left_upper_leg"
+  - id: 14
+    label: "right_upper_leg"
+  - id: 15
+    label: "left_knee"
+  - id: 16
+    label: "right_knee"
+  - id: 17
+    label: "left_lower_leg"
+  - id: 18
+    label: "right_lower_leg"
+  - id: 19
+    label: "left_foot"
+  - id: 20
+    label: "right_foot"
+  - id: 21
+    label: "back"
