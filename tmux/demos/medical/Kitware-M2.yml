@@ -137,18 +137,25 @@ windows:
   - engineering-ui:
       layout: even-vertical
       panes:
+        - simple_2d_overlay: ros2 run angel_utils Simple2dDetectionOverlay --ros-args
+            -r __ns:=${ROS_NAMESPACE}
+            -p topic_input_images:=PVFramesBGR
+            -p topic_input_det_2d:=ObjectDetections2d
+            -p topic_input_joints:=PatientPose
+            -p topic_output_images:=pv_image_detections_2d
+            -p filter_top_k:=5
         - websocket: ros2 launch rosbridge_server rosbridge_websocket_launch.xml port:=9090
-        - server: node src/angel_utils/demo_ui/index.js
+        - engineering_ui_server: node ros/angel_utils/multi_task_demo_ui/index.js
             --namespace=${ROS_NAMESPACE}
             --image_topic=pv_image_detections_2d/compressed
             --query_task_graph_topic=query_task_graph
             --task_updates_topic=TaskUpdates
-            --activity_detections_topic=ActivityDetections
+            --activity_detections_topic=activity_topic
             --task_errors_topic=TaskErrors
 
   - feedback_generator: ros2 run angel_system_nodes feedback_generator --ros-args
       -r __ns:=${ROS_NAMESPACE}
-      -p activity_detector_topic:=ActivityDetections
+      -p activity_detector_topic:=activity_topic
       -p object_detection_topic:=ObjectDetections3d
       -p task_monitor_topic:=TaskUpdates
       -p arui_update_topic:=AruiUpdates
