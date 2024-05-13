@@ -159,13 +159,25 @@ def objects_to_feats(
         access and insert into based on the IDs given to `ObjectDetectionsLTRB`
         instances encountered.
 
+    :raises ValueError: No object detections nor patient poses passed in.
     :raises ValueError: No non-None object detections in the given input
+        window.
+    :raises ValueError: No non-None patient poses in the given input
         window.
 
     :return: Window of normalized feature vectors for the given object
         detections (shape=[window_size, n_feats]), and an appropriate mask
         vector for use with activity classification (shape=[window_size]).
     """
+    if 0 in [len(frame_patient_poses), len(frame_object_detections)]:
+        raise ValueError(
+            "Need at least one patient pose or object det in input sequences"
+        )
+    if all([d is None for d in frame_object_detections]):
+        raise ValueError("No frames with detections in input.")
+    if all([p is None for p in frame_patient_poses]):
+        raise ValueError("No frames with patient poses in input.")
+
     feat_memo = {} if feature_memo is None else feature_memo
 
     window_size = len(frame_object_detections)

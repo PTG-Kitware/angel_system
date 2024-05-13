@@ -733,20 +733,22 @@ class ActivityClassifierTCN(Node):
 
         # print(f"frame_object_detections: {frame_object_detections}")
 
-        feats, mask = objects_to_feats(
-            frame_object_detections=frame_object_detections,
-            frame_patient_poses=frame_patient_poses,
-            det_label_to_idx=self._det_label_to_id,
-            feat_version=self._feat_version,
-            image_width=self._img_pix_width,
-            image_height=self._img_pix_height,
-            feature_memo=memo_object_to_feats,
-            normalize_pixel_pts=self.model_normalize_pixel_pts,
-            normalize_center_pts=self.model_normalize_center_pts,
-        )
-        # except ValueError:
-        #     # feature detections were all None
-        #     raise NoActivityClassification()
+        try:
+            feats, mask = objects_to_feats(
+                frame_object_detections=frame_object_detections,
+                frame_patient_poses=frame_patient_poses,
+                det_label_to_idx=self._det_label_to_id,
+                feat_version=self._feat_version,
+                image_width=self._img_pix_width,
+                image_height=self._img_pix_height,
+                feature_memo=memo_object_to_feats,
+                normalize_pixel_pts=self.model_normalize_pixel_pts,
+                normalize_center_pts=self.model_normalize_center_pts,
+            )
+        except ValueError as ex:
+            log.warn(f"object-to-feats: ValueError: {ex}")
+            # feature detections were all None
+            raise NoActivityClassification()
 
         feats = feats.to(self._model_device)
         mask = mask.to(self._model_device)
