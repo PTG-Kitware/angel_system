@@ -138,6 +138,7 @@ def objects_to_feats(
     top_k_objects: int = 1,
     normalize_pixel_pts=False,
     normalize_center_pts=False,
+    pose_repeat_rate=0,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Convert some object detections for some window of frames into a feature
@@ -178,6 +179,9 @@ def objects_to_feats(
     if all([p is None for p in frame_patient_poses]):
         raise ValueError("No frames with patient poses in input.")
 
+    print(f"{len(frame_object_detections)} detections")
+    print(f"{len(frame_patient_poses)} poses")
+
     feat_memo = {} if feature_memo is None else feature_memo
 
     window_size = len(frame_object_detections)
@@ -190,21 +194,26 @@ def objects_to_feats(
     # hands-joints offset vectors
     zero_joint_offset = [0 for i in range(22)]
 
+    last_pose = None
+    repeated_pose_count = 0
     # for pose in frame_patient_poses:
     for i, (pose, detections) in enumerate(
         zip(frame_patient_poses, frame_object_detections)
     ):
-        pose_keypoints = []
-        print(pose)
+        
         if detections is None:
+            print("no detections!")
             continue
 
         detection_id = detections.id
+        print(f"detection id: {detection_id}")
         confidences = detections.confidences
         if detection_id in feat_memo.keys():
             # We've already processed this set
+            print("feature already in history")
             feat = feat_memo[detection_id]
         else:
+            # Detections
             labels = detections.labels
             xs, ys, ws, hs = tlbr_to_xywh(
                 detections.top,
@@ -213,8 +222,35 @@ def objects_to_feats(
                 detections.right,
             )
 
+            # Pose
+            pose_keypoints = []
+
             if pose is not None:
-                for joint in pose:
+                print("======================")
+                print("======================")
+                print("New pose")
+                print("======================")
+                print("======================")
+                repeated_pose_count = 0
+                last_pose = pose
+            elif last_pose is not None:
+                repeated_pose_count += 1
+                # Repeat at most {pose_repeat_rate} poses in a row
+                if repeated_pose_count > pose_repeat_rate:
+                    last_pose = None
+                    print("Resetting pose to None")
+                    repeated_pose_count = 0
+                else:
+                    print("************************")
+                    print("************************")
+                    print("Repeating pose")
+                    print("************************")
+                    print("************************")
+            else:
+                print("pose is None")
+            
+            if last_pose:
+                for joint in last_pose:
                     kwcoco_format_joint = {
                         "xy": [joint.positions.x, joint.positions.y],
                         "keypoint_category_id": -1,  # TODO: not in message

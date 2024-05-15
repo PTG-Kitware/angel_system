@@ -94,6 +94,8 @@ PARAM_TIME_TRACE_LOGGING = "enable_time_trace_logging"
 PARAM_POSE_TOPIC = "pose_topic"
 
 PARAM_TOPIC = "topic"
+#
+PARAM_POSE_REPEAT_RATE = "pose_repeat_rate"
 
 
 class NoActivityClassification(Exception):
@@ -136,12 +138,14 @@ class ActivityClassifierTCN(Node):
                 (PARAM_INPUT_COCO_FILEPATH, ""),
                 (PARAM_TIME_TRACE_LOGGING, True),
                 (PARAM_TOPIC, "medical"),
+                (PARAM_POSE_REPEAT_RATE, 0)
             ],
         )
         self._img_ts_topic = param_values[PARAM_IMG_TS_TOPIC]
         self._det_topic = param_values[PARAM_DET_TOPIC]
 
         self._pose_topic = param_values[PARAM_POSE_TOPIC]
+        self._pose_repeat_rate = param_values[PARAM_POSE_REPEAT_RATE]
 
         self._act_topic = param_values[PARAM_ACT_TOPIC]
         self._img_pix_width = param_values[PARAM_IMAGE_PIX_WIDTH]
@@ -744,6 +748,7 @@ class ActivityClassifierTCN(Node):
                 feature_memo=memo_object_to_feats,
                 normalize_pixel_pts=self.model_normalize_pixel_pts,
                 normalize_center_pts=self.model_normalize_center_pts,
+                pose_repeat_rate=self._pose_repeat_rate
             )
         except ValueError as ex:
             log.warn(f"object-to-feats: ValueError: {ex}")
