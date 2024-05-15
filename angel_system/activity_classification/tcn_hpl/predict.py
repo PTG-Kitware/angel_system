@@ -208,14 +208,17 @@ def objects_to_feats(
             continue
 
         detection_id = detections.id
-        print(f"detection id: {detection_id}")
+        pose_id = pose[0].id if pose else None
+        memo_key = (detection_id, pose_id)
+
+        print(f"memo_key: {memo_key}")
         confidences = detections.confidences
-        if detection_id in feat_memo.keys():
+        if memo_key in feat_memo:
             # We've already processed this set
             print("feature already in history")
-            feat = feat_memo[detection_id]
-            last_pose = pose_memo[detection_id]["last_pose"]
-            repeated_pose_count = pose_memo[detection_id]["repeated_pose_count"]
+            feat = feat_memo[memo_key]
+            last_pose = pose_memo[memo_key]["last_pose"]
+            repeated_pose_count = pose_memo[memo_key]["repeated_pose_count"]
         else:
             # Detections
             labels = detections.labels
@@ -240,7 +243,7 @@ def objects_to_feats(
             elif last_pose is not None:
                 repeated_pose_count += 1
                 # Repeat at most {pose_repeat_rate} poses in a row
-                if repeated_pose_count > pose_repeat_rate:
+                if repeated_pose_count > (pose_repeat_rate/2):
                     last_pose = None
                     print("Resetting pose to None")
                     repeated_pose_count = 0
@@ -253,7 +256,7 @@ def objects_to_feats(
             else:
                 print("pose is None")
 
-            pose_memo[detection_id] = {
+            pose_memo[memo_key] = {
                 "last_pose": last_pose,
                 "repeated_pose_count": repeated_pose_count
             }
@@ -289,7 +292,7 @@ def objects_to_feats(
             )
 
             
-            feat_memo[detection_id] = feat
+            feat_memo[memo_key] = feat
 
         feature_ndim = feat.shape
         feature_dtype = feat.dtype
@@ -330,7 +333,7 @@ def objects_to_feats(
             normalize_center_pts,
         )
 
-    return feature_vec, mask, pose_memo
+    return feature_vec, mask
 
 
 def predict(

@@ -222,6 +222,8 @@ class ActivityClassifierTCN(Node):
         self._memo_preproc_input_id_heap = []
         self._memo_preproc_input_id_heap_poses = []
         self._memo_objects_to_feats_id_heap = []
+        # Queue of poses and repeat pose count
+        self._queued_pose_memo = {}
 
         # Optionally initialize buffer-feeding from input COCO-file of object
         # detections.
@@ -672,6 +674,7 @@ class ActivityClassifierTCN(Node):
 
         memo_object_to_feats = self._memo_objects_to_feats
         memo_object_to_feats_h = self._memo_objects_to_feats_id_heap
+        queued_pose_memo = self._queued_pose_memo
 
         # TCN wants to know the label and confidence for the maximally
         # confident class only. Input object detection messages
@@ -740,20 +743,19 @@ class ActivityClassifierTCN(Node):
         # print(f"frame_object_detections: {frame_object_detections}")
 
         try:
-            feats, mask, pose_memo = objects_to_feats(
+            feats, mask = objects_to_feats(
                 frame_object_detections=frame_object_detections,
                 frame_patient_poses=frame_patient_poses,
                 det_label_to_idx=self._det_label_to_id,
                 feat_version=self._feat_version,
                 image_width=self._img_pix_width,
                 image_height=self._img_pix_height,
-                feature_memo=memo_object_to_feats,
-                pose_memo=self.queued_pose_memo,
+                feature_memo=memo_object_to_feats, # passed by reference so this gets updated in the function and changes persist here
+                pose_memo=queued_pose_memo,
                 normalize_pixel_pts=self.model_normalize_pixel_pts,
                 normalize_center_pts=self.model_normalize_center_pts,
                 pose_repeat_rate=self._pose_repeat_rate
             )
-            self.queued_pose_memo.update(pose_memo)
         except ValueError as ex:
             log.warn(f"object-to-feats: ValueError: {ex}")
             # feature detections were all None
