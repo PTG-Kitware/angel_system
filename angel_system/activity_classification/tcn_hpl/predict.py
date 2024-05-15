@@ -135,6 +135,7 @@ def objects_to_feats(
     image_width: int,
     image_height: int,
     feature_memo: Optional[Dict[int, npt.NDArray]] = None,
+    pose_memo: Optional[Dict[int, npt.NDArray]] = None,
     top_k_objects: int = 1,
     normalize_pixel_pts=False,
     normalize_center_pts=False,
@@ -183,6 +184,7 @@ def objects_to_feats(
     print(f"{len(frame_patient_poses)} poses")
 
     feat_memo = {} if feature_memo is None else feature_memo
+    pose_memo = {} if pose_memo is None else pose_memo
 
     window_size = len(frame_object_detections)
 
@@ -212,6 +214,8 @@ def objects_to_feats(
             # We've already processed this set
             print("feature already in history")
             feat = feat_memo[detection_id]
+            last_pose = pose_memo[detection_id]["last_pose"]
+            repeated_pose_count = pose_memo[detection_id]["repeated_pose_count"]
         else:
             # Detections
             labels = detections.labels
@@ -222,7 +226,7 @@ def objects_to_feats(
                 detections.right,
             )
 
-            # Pose
+            # Determine what pose to use
             pose_keypoints = []
 
             if pose is not None:
@@ -248,7 +252,13 @@ def objects_to_feats(
                     print("************************")
             else:
                 print("pose is None")
-            
+
+            pose_memo[detection_id] = {
+                "last_pose": last_pose,
+                "repeated_pose_count": repeated_pose_count
+            }
+
+            # Grab the joint keypoints
             if last_pose:
                 for joint in last_pose:
                     kwcoco_format_joint = {
@@ -258,6 +268,7 @@ def objects_to_feats(
                     }
                     pose_keypoints.append(kwcoco_format_joint)
 
+            # Create the feature vector
             feat = (
                 obj_det2d_set_to_feature(
                     labels,
@@ -277,6 +288,7 @@ def objects_to_feats(
                 .astype(np.float32)
             )
 
+            
             feat_memo[detection_id] = feat
 
         feature_ndim = feat.shape
@@ -318,7 +330,7 @@ def objects_to_feats(
             normalize_center_pts,
         )
 
-    return feature_vec, mask
+    return feature_vec, mask, pose_memo
 
 
 def predict(

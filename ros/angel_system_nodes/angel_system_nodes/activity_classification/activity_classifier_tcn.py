@@ -185,6 +185,8 @@ class ActivityClassifierTCN(Node):
         # embedding function in the `_predict` method.
         self._memo_preproc_input: Dict[int, ObjectDetectionsLTRB] = {}
         self._memo_preproc_input_poses: Dict[int, PatientPose] = {}
+        # History of poses and the repeated pose count for each frame
+        self.queued_pose_memo = {}
 
         self.keypoints_cats = [
             "nose",
@@ -738,7 +740,7 @@ class ActivityClassifierTCN(Node):
         # print(f"frame_object_detections: {frame_object_detections}")
 
         try:
-            feats, mask = objects_to_feats(
+            feats, mask, pose_memo = objects_to_feats(
                 frame_object_detections=frame_object_detections,
                 frame_patient_poses=frame_patient_poses,
                 det_label_to_idx=self._det_label_to_id,
@@ -746,10 +748,12 @@ class ActivityClassifierTCN(Node):
                 image_width=self._img_pix_width,
                 image_height=self._img_pix_height,
                 feature_memo=memo_object_to_feats,
+                pose_memo=self.queued_pose_memo,
                 normalize_pixel_pts=self.model_normalize_pixel_pts,
                 normalize_center_pts=self.model_normalize_center_pts,
                 pose_repeat_rate=self._pose_repeat_rate
             )
+            self.queued_pose_memo.update(pose_memo)
         except ValueError as ex:
             log.warn(f"object-to-feats: ValueError: {ex}")
             # feature detections were all None
@@ -790,7 +794,9 @@ class ActivityClassifierTCN(Node):
         while (
             memo_object_to_feats_h and memo_object_to_feats_h[0] <= window_start_time_ns
         ):
-            del memo_object_to_feats[heappop(memo_object_to_feats_h)]
+            detection_id = heappop(memo_object_to_feats_h)
+            del memo_object_to_feats[detection_id]
+            del self.queued_pose_memo[detection_id]
 
         self._rate_tracker.tick()
         log.info(
