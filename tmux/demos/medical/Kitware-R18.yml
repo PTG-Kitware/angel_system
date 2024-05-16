@@ -105,6 +105,7 @@ windows:
       -p det_topic:=ObjectDetections2d
       -p object_net_checkpoint:=${MODEL_DIR}/object_detector/r18_det.pt
       -p hand_net_checkpoint:=${MODEL_DIR}/object_detector/hands_model.pt
+      -p cuda_device_id:=0
 
   - activity_classifier: ros2 run angel_system_nodes activity_classifier_tcn --ros-args
       -r __ns:=${ROS_NAMESPACE}
@@ -115,6 +116,9 @@ windows:
       -p model_mapping:=${MODEL_DIR}/activity_classifier/r18_mapping.txt
       -p model_det_label_mapping:=${ANGEL_WORKSPACE_DIR}/config/object_labels/medical/r18.json
       -p act_topic:=activity_topic
+      -p pose_repeat_rate:=7.5
+      -p window_leads_with_objects:=true
+      -p model_device:=0
 
   - task_monitor:
       layout: even-vertical
@@ -129,7 +133,7 @@ windows:
             -p det_topic:=activity_topic
             -p model_file:=${MODEL_DIR}/task_monitor/global_step_predictor_act_avgs_R18.npy
             -p thresh_frame_count:=3
-            -p deactivate_thresh_frame_count:=10
+            -p deactivate_thresh_frame_count:=5
             -p threshold_multiplier_weak:=0.00
             -p threshold_frame_count_weak:=3
             -p step_mode:=granular

@@ -112,6 +112,17 @@ def normalize_detection_features(
     if that is not desired.
 
     :param det_feats: Object Detection features to be normalized.
+    :param feature_version: Version of the feature conversion approach.
+    :param top_k_objects: Number top confidence objects to use per label, defaults to 1
+    :param image_width: Integer pixel width of the image that object detections
+        were generated on.
+    :param image_height: Integer pixel height of the image that object
+        detections were generated on.
+    :param num_det_classes: Number of object detection classes (note: DOES include the hand labels but DOES NOT include the patient and user labels)
+    :param normalize_pixel_pts: If true, will apply the NormalizePixelPts data augmentation to 
+        the ``det_feats``
+    :param normalize_center_pts: If true, will apply the NormalizeFromCenter data augmentation to 
+        the ``det_feats``
 
     :return: Normalized object detection features.
     """
@@ -135,9 +146,11 @@ def objects_to_feats(
     image_width: int,
     image_height: int,
     feature_memo: Optional[Dict[int, npt.NDArray]] = None,
+    pose_memo: Optional[Dict[int, npt.NDArray]] = None,
     top_k_objects: int = 1,
     normalize_pixel_pts=False,
     normalize_center_pts=False,
+    pose_repeat_rate=0,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Convert some object detections for some window of frames into a feature
@@ -147,6 +160,10 @@ def objects_to_feats(
         window of frames. The window size is dictated by this length of this
         sequence. Some frame "slots" may be None to indicate there were no
         object detections for that frame.
+    :param frame_patient_poses: Sequence of poses for some
+        window of frames. The window size is dictated by this length of this
+        sequence. Some frame "slots" may be None to indicate there were was not
+        a pose for that frame.
     :param det_label_to_idx: Mapping of object detector classes to the
         activity-classifier input index expectation.
     :param feat_version: Integer version of the feature vector to generate.
@@ -158,6 +175,16 @@ def objects_to_feats(
     :param feature_memo: Optional memoization cache to given us that we will
         access and insert into based on the IDs given to `ObjectDetectionsLTRB`
         instances encountered.
+    :param pose_memo: Optional memoization cache of the pose used for each
+        frame and the repeat pose count at each frame
+    :param top_k_objects: Number top confidence objects to use per label, defaults to 1
+    :param normalize_pixel_pts: If true, will apply the NormalizePixelPts data augmentation to 
+        the feature vector
+    :param normalize_center_pts: If true, will apply the NormalizeFromCenter data augmentation to 
+        the feature vector
+    :param pose_repeat_rate: The maximum number of sequential None value poses that can be replaced with
+        a valid pose in a previous frame. If this number is exceeded, the pose 
+        for the frame will remain None. 
 
     :raises ValueError: No object detections nor patient poses passed in.
     :raises ValueError: No non-None object detections in the given input
@@ -178,7 +205,11 @@ def objects_to_feats(
     if all([p is None for p in frame_patient_poses]):
         raise ValueError("No frames with patient poses in input.")
 
+    print(f"{len(frame_object_detections)} detections")
+    print(f"{len(frame_patient_poses)} poses")
+
     feat_memo = {} if feature_memo is None else feature_memo
+    pose_memo = {} if pose_memo is None else pose_memo
 
     window_size = len(frame_object_detections)
 
@@ -190,21 +221,31 @@ def objects_to_feats(
     # hands-joints offset vectors
     zero_joint_offset = [0 for i in range(22)]
 
+    last_pose = None
+    repeated_pose_count = 0
     # for pose in frame_patient_poses:
     for i, (pose, detections) in enumerate(
         zip(frame_patient_poses, frame_object_detections)
     ):
-        pose_keypoints = []
-        print(pose)
+        
         if detections is None:
+            print("no detections!")
             continue
 
         detection_id = detections.id
+        pose_id = pose[0].id if pose else None
+        memo_key = (detection_id, pose_id)
+
+        print(f"memo_key: {memo_key}")
         confidences = detections.confidences
-        if detection_id in feat_memo.keys():
+        if memo_key in feat_memo:
             # We've already processed this set
-            feat = feat_memo[detection_id]
+            print("feature already in history")
+            feat = feat_memo[memo_key]
+            last_pose = pose_memo[memo_key]["last_pose"]
+            repeated_pose_count = pose_memo[memo_key]["repeated_pose_count"]
         else:
+            # Detections
             labels = detections.labels
             xs, ys, ws, hs = tlbr_to_xywh(
                 detections.top,
@@ -213,8 +254,41 @@ def objects_to_feats(
                 detections.right,
             )
 
+            # Determine what pose to use
+            pose_keypoints = []
+
             if pose is not None:
-                for joint in pose:
+                print("======================")
+                print("======================")
+                print("New pose")
+                print("======================")
+                print("======================")
+                repeated_pose_count = 0
+                last_pose = pose
+            elif last_pose is not None:
+                repeated_pose_count += 1
+                # Repeat at most {pose_repeat_rate} poses in a row
+                if repeated_pose_count > (pose_repeat_rate/2):
+                    last_pose = None
+                    print("Resetting pose to None")
+                    repeated_pose_count = 0
+                else:
+                    print("************************")
+                    print("************************")
+                    print("Repeating pose")
+                    print("************************")
+                    print("************************")
+            else:
+                print("pose is None")
+
+            pose_memo[memo_key] = {
+                "last_pose": last_pose,
+                "repeated_pose_count": repeated_pose_count
+            }
+
+            # Grab the joint keypoints
+            if last_pose:
+                for joint in last_pose:
                     kwcoco_format_joint = {
                         "xy": [joint.positions.x, joint.positions.y],
                         "keypoint_category_id": -1,  # TODO: not in message
@@ -222,6 +296,7 @@ def objects_to_feats(
                     }
                     pose_keypoints.append(kwcoco_format_joint)
 
+            # Create the feature vector
             feat = (
                 obj_det2d_set_to_feature(
                     labels,
@@ -241,7 +316,8 @@ def objects_to_feats(
                 .astype(np.float32)
             )
 
-            feat_memo[detection_id] = feat
+            
+            feat_memo[memo_key] = feat
 
         feature_ndim = feat.shape
         feature_dtype = feat.dtype

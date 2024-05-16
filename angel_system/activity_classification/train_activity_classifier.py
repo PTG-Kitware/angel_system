@@ -113,6 +113,7 @@ def compute_feats(
     ann_by_image: dict,
     feat_version=1,
     top_k_objects=1,
+    pose_repeat_rate=4
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Compute features from object detections
 
@@ -125,6 +126,7 @@ def compute_feats(
     :param feat_version:
         Version of the feature conversion approach.
     :param top_k_objects: Number top confidence objects to use per label, defaults to 1
+    :param pose_repeat_rate: Only use every Nth frame, otherwise use a copy of the Nth frame's pose
 
     :return: resulting feature data and its labels
     """
@@ -135,6 +137,8 @@ def compute_feats(
     last_dset = 0
     zero_joint_offset = [0 for i in range(22)]
 
+    last_pose = None
+    repeated_pose_count = 0
     for image_id in sorted(list(ann_by_image.keys())):
         label_vec = []
         xs = []
@@ -142,12 +146,12 @@ def compute_feats(
         ws = []
         hs = []
         label_confidences = []
-        pose_keypoints = []
 
         # Reorganize detections into lists
         if len(ann_by_image[image_id]) == 0:
             continue
-        pose_keypoints = zero_joint_offset
+        pose_keypoints = None
+
         for ann in ann_by_image[image_id]:
             cat = obj_ind_to_label[ann["category_id"]]
 
@@ -167,6 +171,12 @@ def compute_feats(
 
             label_confidences.append(ann["confidence"])
 
+        # Determine what pose to use based on the sample rate
+        repeated_pose_count += 1
+        if repeated_pose_count > pose_repeat_rate:
+            last_pose = pose_keypoints
+            repeated_pose_count = 0
+
         # Ignore the patient and user labels in the feature vector
         only_obj_label_to_ind = {
             k: i
@@ -182,7 +192,7 @@ def compute_feats(
             ws,
             hs,
             label_confidences,
-            pose_keypoints,
+            last_pose if last_pose else zero_joint_offset,
             only_obj_label_to_ind,
             version=feat_version,
             top_k_objects=top_k_objects,

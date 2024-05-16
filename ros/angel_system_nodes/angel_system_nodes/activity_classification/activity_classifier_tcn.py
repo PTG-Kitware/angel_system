@@ -92,8 +92,16 @@ PARAM_INPUT_COCO_FILEPATH = "input_obj_det_kwcoco"
 PARAM_TIME_TRACE_LOGGING = "enable_time_trace_logging"
 
 PARAM_POSE_TOPIC = "pose_topic"
-
+# "Topic" of the model being loaded, e.g. "cooking" or "medical".
 PARAM_TOPIC = "topic"
+#
+PARAM_POSE_REPEAT_RATE = "pose_repeat_rate"
+# Boolean parameter that, when true, causes the temporal windows processed to
+# be constructed such that the most recent frame is one with object detections
+# associated with it. This will introduce additional latency to the system as
+# activity prediction for the "live" image will not occur until object
+# detections are predicted for that frame.
+PARAM_WINDOW_LEADS_WITH_OBJECTS = "window_leads_with_objects"
 
 
 class NoActivityClassification(Exception):
@@ -136,12 +144,15 @@ class ActivityClassifierTCN(Node):
                 (PARAM_INPUT_COCO_FILEPATH, ""),
                 (PARAM_TIME_TRACE_LOGGING, True),
                 (PARAM_TOPIC, "medical"),
+                (PARAM_POSE_REPEAT_RATE, 0),
+                (PARAM_WINDOW_LEADS_WITH_OBJECTS, False),
             ],
         )
         self._img_ts_topic = param_values[PARAM_IMG_TS_TOPIC]
         self._det_topic = param_values[PARAM_DET_TOPIC]
 
         self._pose_topic = param_values[PARAM_POSE_TOPIC]
+        self._pose_repeat_rate = param_values[PARAM_POSE_REPEAT_RATE]
 
         self._act_topic = param_values[PARAM_ACT_TOPIC]
         self._img_pix_width = param_values[PARAM_IMAGE_PIX_WIDTH]
@@ -150,6 +161,8 @@ class ActivityClassifierTCN(Node):
 
         self.model_normalize_pixel_pts = param_values[PARAM_MODEL_NORMALIZE_PIXEL_PTS]
         self.model_normalize_center_pts = param_values[PARAM_MODEL_NORMALIZE_CENTER_PTS]
+
+        self._window_lead_with_objects = param_values[PARAM_WINDOW_LEADS_WITH_OBJECTS]
 
         self.topic = param_values[PARAM_TOPIC]
         # Load in TCN classification model and weights
@@ -216,6 +229,8 @@ class ActivityClassifierTCN(Node):
         self._memo_preproc_input_id_heap = []
         self._memo_preproc_input_id_heap_poses = []
         self._memo_objects_to_feats_id_heap = []
+        # Queue of poses and repeat pose count
+        self._queued_pose_memo = {}
 
         # Optionally initialize buffer-feeding from input COCO-file of object
         # detections.
@@ -585,7 +600,10 @@ class ActivityClassifierTCN(Node):
 
                 # log.info(f"buffer contents: {self._buffer.obj_dets}")
 
-                window = self._buffer.get_window(self._window_size)
+                window = self._buffer.get_window(
+                    self._window_size,
+                    have_leading_object=self._window_lead_with_objects
+                )
 
                 # log.info(f"buffer contents: {window.obj_dets}")
 
@@ -666,6 +684,9 @@ class ActivityClassifierTCN(Node):
 
         memo_object_to_feats = self._memo_objects_to_feats
         memo_object_to_feats_h = self._memo_objects_to_feats_id_heap
+        queued_pose_memo = self._queued_pose_memo
+
+        log.info(f"Input Window (oldest-to-newest frame):\n{window}")
 
         # TCN wants to know the label and confidence for the maximally
         # confident class only. Input object detection messages
@@ -741,9 +762,11 @@ class ActivityClassifierTCN(Node):
                 feat_version=self._feat_version,
                 image_width=self._img_pix_width,
                 image_height=self._img_pix_height,
-                feature_memo=memo_object_to_feats,
+                #feature_memo=memo_object_to_feats, # passed by reference so this gets updated in the function and changes persist here
+                #pose_memo=queued_pose_memo,
                 normalize_pixel_pts=self.model_normalize_pixel_pts,
                 normalize_center_pts=self.model_normalize_center_pts,
+                pose_repeat_rate=self._pose_repeat_rate
             )
         except ValueError as ex:
             log.warn(f"object-to-feats: ValueError: {ex}")
@@ -785,7 +808,9 @@ class ActivityClassifierTCN(Node):
         while (
             memo_object_to_feats_h and memo_object_to_feats_h[0] <= window_start_time_ns
         ):
-            del memo_object_to_feats[heappop(memo_object_to_feats_h)]
+            detection_id = heappop(memo_object_to_feats_h)
+            del memo_object_to_feats[detection_id]
+            del queued_pose_memo[detection_id]
 
         self._rate_tracker.tick()
         log.info(

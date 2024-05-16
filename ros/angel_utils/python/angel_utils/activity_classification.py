@@ -11,6 +11,7 @@ from typing import Tuple
 
 import numpy as np
 import numpy.typing as npt
+import pandas as pd
 
 # ROS Message types
 from builtin_interfaces.msg import Time
@@ -46,6 +47,30 @@ class InputWindow:
 
     def __len__(self):
         return len(self.frames)
+
+    def __repr__(self):
+        """
+        Construct a tabular representation of the window state.
+
+        This table will show, for some frame timestamp (nanoseconds):
+            * number of object detections
+            * number of pose key-points
+
+        Either of the above may show as "NaN" if there were no object
+        detections or pose key-points received for that particular frame.
+
+        The order of the table representation will show the most recent
+        timestamp frame and correlated data **lower** in the table (higher
+        index). This order is arbitrary.
+        """
+        return repr(pd.DataFrame(
+            data={
+                "frames": [time_to_int(f[0]) for f in self.frames],
+                "detections": [(d.num_detections if d else None) for d in self.obj_dets],
+                "poses": [(len(p.joints) if p else None) for p in self.patient_joint_kps],
+            },
+            dtype=pd.Int64Dtype,
+        ))
 
 
 # TODO: A more generic version of InputBuffer
@@ -246,7 +271,11 @@ class InputBuffer:
         # Using stamp that should associate to the source image
         return time_to_int(msg.source_stamp)
 
-    def get_window(self, window_size: int) -> InputWindow:
+    def get_window(
+        self,
+        window_size: int,
+        have_leading_object: bool = False,
+    ) -> InputWindow:
         """
         Get a window of buffered data as it is associated to frame data.
 
@@ -256,6 +285,10 @@ class InputBuffer:
 
         :param window_size: number of frames from the head of the buffer to
             consider "the window."
+        :param have_leading_object: Indicate that we want the leading frame of
+            the returned window to be the most recent frame with object
+            detections associated with it, as opposed to the most recent frame
+            period.
 
         :return: Mapping of associated data, each of window_size items.
         """
@@ -264,11 +297,51 @@ class InputBuffer:
         #   timestamp *exactly*.
 
         with self.__state_lock:
-            # This window's frame in ascending time order
-            # deques don't support slicing, so thus the following madness
-            window_frames = list(itertools.islice(reversed(self.frames), window_size))[
-                ::-1
-            ]
+            # Normally, we consider frames for the window starting with the
+            # most recent frame. When the frames deque is reverse iterated,
+            # this would be indexed zero.
+            window_frame_start_idx = 0
+
+            if have_leading_object:
+                # Determine the slice of `window_frames` to use such that the
+                # most recent frame of the window is the same frame for which
+                # our most recent object detections are for.
+
+                # If `obj_dets` is empty, return empty window.
+                if not self.obj_dets:
+                    return InputWindow(frames=[], obj_dets=[], patient_joint_kps=[])
+
+                # Use the last object detection to get a timestamp. Find that
+                # timestamp in the `frames` deque, traversing backwards.
+                last_det_ts = self._objdet_msg_to_time_ns(self.obj_dets[-1])
+                last_det_frame_idx = None
+                for i, frame in enumerate(reversed(self.frames)):
+                    if time_to_int(frame[0]) == last_det_ts:
+                        last_det_frame_idx = i
+                        break
+                if last_det_frame_idx is None:
+                    # Failed to find a queued frame for the object detection.
+                    # This is not expected, but can technically happen.
+                    # Return an empty window.
+                    return InputWindow(frames=[], obj_dets=[], patient_joint_kps=[])
+                # Update the window frame start index to the
+                window_frame_start_idx = last_det_frame_idx
+
+            # This window's frame in ascending time order.
+            # `deque` instances don't support slicing, so we use
+            # `itertools.islice` of the reverse iterator of the frames deque to
+            # slice backwards from the most recent frame (or specified starting
+            # index).
+            # The `window_size` is increased by the starting index so that we
+            # actually get a `window_size` list back regardless of where we are
+            # starting.
+            # Finally, the extracted slice is reversed in order again so that
+            # the final list is in temporally ascending order.
+            window_frames = list(itertools.islice(
+                reversed(self.frames),
+                window_frame_start_idx,
+                window_size + window_frame_start_idx
+            ))[::-1]
             window_frame_times: List[Time] = [wf[0] for wf in window_frames]
             window_frame_times_ns: List[int] = [
                 time_to_int(wft) for wft in window_frame_times
