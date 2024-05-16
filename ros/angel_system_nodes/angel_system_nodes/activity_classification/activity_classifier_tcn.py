@@ -764,8 +764,8 @@ class ActivityClassifierTCN(Node):
                 feat_version=self._feat_version,
                 image_width=self._img_pix_width,
                 image_height=self._img_pix_height,
-                feature_memo=memo_object_to_feats, # passed by reference so this gets updated in the function and changes persist here
-                pose_memo=queued_pose_memo,
+                #feature_memo=memo_object_to_feats, # passed by reference so this gets updated in the function and changes persist here
+                #pose_memo=queued_pose_memo,
                 normalize_pixel_pts=self.model_normalize_pixel_pts,
                 normalize_center_pts=self.model_normalize_center_pts,
                 pose_repeat_rate=self._pose_repeat_rate
