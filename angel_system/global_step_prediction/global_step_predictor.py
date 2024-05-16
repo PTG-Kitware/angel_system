@@ -235,9 +235,9 @@ class GlobalStepPredictor:
                 },
             )
 
-        tracker_dict["last_granular_step_per_broad_step"] = (
-            self.get_last_granular_step_per_broad_step(broad_steps)
-        )
+        tracker_dict[
+            "last_granular_step_per_broad_step"
+        ] = self.get_last_granular_step_per_broad_step(broad_steps)
         tracker_dict["recipe"] = recipe
 
         tracker_dict["current_broad_step"] = 0
@@ -254,9 +254,9 @@ class GlobalStepPredictor:
         tracker_dict["broad_step_to_activity_ids"] = [
             self.get_unique(step["activity_ids"]) for step in broad_steps
         ]
-        tracker_dict["granular_step_to_activity_id"] = (
-            self.get_activity_per_granular_step(broad_steps)
-        )
+        tracker_dict[
+            "granular_step_to_activity_id"
+        ] = self.get_activity_per_granular_step(broad_steps)
 
         # Labels
         tracker_dict["broad_step_to_label"] = [step["label"] for step in broad_steps]
@@ -300,9 +300,9 @@ class GlobalStepPredictor:
 
         if current_granular_step < num_granular_steps:
             self.trackers[tracker_ind]["current_granular_step"] += 1
-            self.trackers[tracker_ind]["current_broad_step"] = (
-                self.granular_to_broad_step(tracker, current_granular_step)
-            )
+            self.trackers[tracker_ind][
+                "current_broad_step"
+            ] = self.granular_to_broad_step(tracker, current_granular_step)
         elif current_granular_step == num_granular_steps and tracker["active"] == True:
             self.trackers[tracker_ind]["active"] = False
         else:
@@ -335,9 +335,9 @@ class GlobalStepPredictor:
 
         if current_granular_step > 0:
             self.trackers[tracker_ind]["current_granular_step"] -= 1
-            self.trackers[tracker_ind]["current_broad_step"] = (
-                self.granular_to_broad_step(tracker, current_granular_step)
-            )
+            self.trackers[tracker_ind][
+                "current_broad_step"
+            ] = self.granular_to_broad_step(tracker, current_granular_step)
         else:
             raise Exception(
                 f"Tried to decrement tracker #{tracker_ind}: "

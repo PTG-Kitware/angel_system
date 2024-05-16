@@ -113,7 +113,7 @@ def compute_feats(
     ann_by_image: dict,
     feat_version=1,
     top_k_objects=1,
-    pose_repeat_rate=4
+    pose_repeat_rate=4,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Compute features from object detections
 

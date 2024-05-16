@@ -420,9 +420,9 @@ class ActivityClassifierTCN(Node):
                 # Creates [n_det, n_label] matrix, which we assign to and then
                 # ravel into the message slot.
                 conf_mat = np.zeros((n_dets, len(obj_labels)), dtype=np.float64)
-                conf_mat[np.arange(n_dets), image_annots.get("category_id")] = (
-                    image_annots.get("confidence")
-                )
+                conf_mat[
+                    np.arange(n_dets), image_annots.get("category_id")
+                ] = image_annots.get("confidence")
                 det_msg.label_confidences.extend(conf_mat.ravel())
 
             # Calling the image callback last since image frames define the
@@ -602,7 +602,7 @@ class ActivityClassifierTCN(Node):
 
                 window = self._buffer.get_window(
                     self._window_size,
-                    have_leading_object=self._window_lead_with_objects
+                    have_leading_object=self._window_lead_with_objects,
                 )
 
                 # log.info(f"buffer contents: {window.obj_dets}")
@@ -762,11 +762,11 @@ class ActivityClassifierTCN(Node):
                 feat_version=self._feat_version,
                 image_width=self._img_pix_width,
                 image_height=self._img_pix_height,
-                #feature_memo=memo_object_to_feats, # passed by reference so this gets updated in the function and changes persist here
-                #pose_memo=queued_pose_memo,
+                # feature_memo=memo_object_to_feats, # passed by reference so this gets updated in the function and changes persist here
+                # pose_memo=queued_pose_memo,
                 normalize_pixel_pts=self.model_normalize_pixel_pts,
                 normalize_center_pts=self.model_normalize_center_pts,
-                pose_repeat_rate=self._pose_repeat_rate
+                pose_repeat_rate=self._pose_repeat_rate,
             )
         except ValueError as ex:
             log.warn(f"object-to-feats: ValueError: {ex}")

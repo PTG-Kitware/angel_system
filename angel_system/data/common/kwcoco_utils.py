@@ -92,7 +92,7 @@ def add_activity_gt_to_kwcoco(topic, task, dset, activity_config_fn):
         # Update the activity gt for each image
         for gid in sorted(image_ids):
             im = dset.imgs[gid]
-            
+
             frame_idx, time = time_from_name(im["file_name"], topic)
 
             if time:
@@ -106,7 +106,7 @@ def add_activity_gt_to_kwcoco(topic, task, dset, activity_config_fn):
                 label = "background"
                 activity_label = label
             else:
-                label = matching_gt.iloc[0]["class_label"] # default to the first gt
+                label = matching_gt.iloc[0]["class_label"]  # default to the first gt
 
                 # Hacky temporary fix
                 # In the medical data, step 1 can cover the same frames as other steps,
@@ -134,7 +134,7 @@ def add_activity_gt_to_kwcoco(topic, task, dset, activity_config_fn):
                         f"Label: {label} is not in the activity labels config, ignoring"
                     )
                     print(f"LABEL: {label}, {type(label)}")
-                    
+
                     label = "background"
                     activity_label = label
                 else:
