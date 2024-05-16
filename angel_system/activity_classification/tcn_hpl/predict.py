@@ -112,6 +112,17 @@ def normalize_detection_features(
     if that is not desired.
 
     :param det_feats: Object Detection features to be normalized.
+    :param feature_version: Version of the feature conversion approach.
+    :param top_k_objects: Number top confidence objects to use per label, defaults to 1
+    :param image_width: Integer pixel width of the image that object detections
+        were generated on.
+    :param image_height: Integer pixel height of the image that object
+        detections were generated on.
+    :param num_det_classes: Number of object detection classes (note: DOES include the ahnd labels but DOES NOT include the patient and user labels)
+    :param normalize_pixel_pts: If true, will apply the NormalizePixelPts data augmentation to 
+        the ``det_feats``
+    :param normalize_center_pts: If true, will apply the NormalizeFromCenter data augmentation to 
+        the ``det_feats``
 
     :return: Normalized object detection features.
     """
@@ -149,6 +160,10 @@ def objects_to_feats(
         window of frames. The window size is dictated by this length of this
         sequence. Some frame "slots" may be None to indicate there were no
         object detections for that frame.
+    :param frame_patient_poses: Sequence of poses for some
+        window of frames. The window size is dictated by this length of this
+        sequence. Some frame "slots" may be None to indicate there were was not
+        a pose for that frame.
     :param det_label_to_idx: Mapping of object detector classes to the
         activity-classifier input index expectation.
     :param feat_version: Integer version of the feature vector to generate.
@@ -160,6 +175,16 @@ def objects_to_feats(
     :param feature_memo: Optional memoization cache to given us that we will
         access and insert into based on the IDs given to `ObjectDetectionsLTRB`
         instances encountered.
+    :param pose_memo: Optional memoization cache of the pose used for each
+        frame and the repeat pose count at each frame
+    :param top_k_objects: Number top confidence objects to use per label, defaults to 1
+    :param normalize_pixel_pts: If true, will apply the NormalizePixelPts data augmentation to 
+        the feature vector
+    :param normalize_center_pts: If true, will apply the NormalizeFromCenter data augmentation to 
+        the feature vector
+    :param pose_repeat_rate: The maximum number of sequential None value poses that can be replaced with
+        a valid pose in a previous frame. If this number is exceeded, the pose 
+        for the frame will remain None. 
 
     :raises ValueError: No object detections nor patient poses passed in.
     :raises ValueError: No non-None object detections in the given input
