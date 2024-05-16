@@ -39,7 +39,8 @@ class TestUtil_obj_det2d_set_to_feature_by_method_v5:
                 0.451171875,
                 0.93310546875,
             ],
-            label_to_ind={
+            pose_keypoints=[0 for i in range(22)],
+            obj_label_to_ind={
                 "banana": 58,
                 "banana (peeled)": 59,
                 "bowl": 80,
