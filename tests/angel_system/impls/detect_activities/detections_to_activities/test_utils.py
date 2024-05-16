@@ -18,7 +18,9 @@ class TestUtil_obj_det2d_set_to_feature_by_method_v5:
         """
         Testing that object distance to hand is output correctly.
         """
-        norm = NormalizePixelPts(1280, 720, 124, 5)
+        norm = NormalizePixelPts(
+            1280, 720, num_obj_classes=124, feat_version=5, top_k_objects=1
+        )
 
         test_input = dict(
             label_vec=[
@@ -39,7 +41,8 @@ class TestUtil_obj_det2d_set_to_feature_by_method_v5:
                 0.451171875,
                 0.93310546875,
             ],
-            label_to_ind={
+            pose_keypoints=[0 for i in range(22)],
+            obj_label_to_ind={
                 "banana": 58,
                 "banana (peeled)": 59,
                 "bowl": 80,
@@ -166,7 +169,7 @@ class TestUtil_obj_det2d_set_to_feature_by_method_v5:
                 "water jug lid": 4,
             },
             version=5,
-            top_n_objects=1,
+            top_k_objects=1,
         )
 
         feature_vec = obj_det2d_set_to_feature(**test_input)
