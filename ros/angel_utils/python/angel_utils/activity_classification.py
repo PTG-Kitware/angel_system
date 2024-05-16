@@ -11,6 +11,7 @@ from typing import Tuple
 
 import numpy as np
 import numpy.typing as npt
+import pandas as pd
 
 # ROS Message types
 from builtin_interfaces.msg import Time
@@ -46,6 +47,30 @@ class InputWindow:
 
     def __len__(self):
         return len(self.frames)
+
+    def __repr__(self):
+        """
+        Construct a tabular representation of the window state.
+
+        This table will show, for some frame timestamp (nanoseconds):
+            * number of object detections
+            * number of pose key-points
+
+        Either of the above may show as "NaN" if there were no object
+        detections or pose key-points received for that particular frame.
+
+        The order of the table representation will show the most recent
+        timestamp frame and correlated data **lower** in the table (higher
+        index). This order is arbitrary.
+        """
+        return repr(pd.DataFrame(
+            data={
+                "frames": [time_to_int(f[0]) for f in self.frames],
+                "detections": [(d.num_detections if d else None) for d in self.obj_dets],
+                "poses": [(len(p.joints) if p else None) for p in self.patient_joint_kps],
+            },
+            dtype=pd.Int64Dtype,
+        ))
 
 
 # TODO: A more generic version of InputBuffer

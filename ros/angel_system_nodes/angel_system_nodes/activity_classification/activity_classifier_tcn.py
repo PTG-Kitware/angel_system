@@ -676,6 +676,8 @@ class ActivityClassifierTCN(Node):
         memo_object_to_feats_h = self._memo_objects_to_feats_id_heap
         queued_pose_memo = self._queued_pose_memo
 
+        log.info(f"Input Window (oldest-to-newest frame):\n{window}")
+
         # TCN wants to know the label and confidence for the maximally
         # confident class only. Input object detection messages
         log.info("processing window...")
