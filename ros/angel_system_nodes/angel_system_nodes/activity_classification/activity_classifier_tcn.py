@@ -194,8 +194,6 @@ class ActivityClassifierTCN(Node):
         # embedding function in the `_predict` method.
         self._memo_preproc_input: Dict[int, ObjectDetectionsLTRB] = {}
         self._memo_preproc_input_poses: Dict[int, PatientPose] = {}
-        # History of poses and the repeated pose count for each frame
-        self.queued_pose_memo = {}
 
         self.keypoints_cats = [
             "nose",
