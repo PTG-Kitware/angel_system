@@ -92,10 +92,16 @@ PARAM_INPUT_COCO_FILEPATH = "input_obj_det_kwcoco"
 PARAM_TIME_TRACE_LOGGING = "enable_time_trace_logging"
 
 PARAM_POSE_TOPIC = "pose_topic"
-
+# "Topic" of the model being loaded, e.g. "cooking" or "medical".
 PARAM_TOPIC = "topic"
 #
 PARAM_POSE_REPEAT_RATE = "pose_repeat_rate"
+# Boolean parameter that, when true, causes the temporal windows processed to
+# be constructed such that the most recent frame is one with object detections
+# associated with it. This will introduce additional latency to the system as
+# activity prediction for the "live" image will not occur until object
+# detections are predicted for that frame.
+PARAM_WINDOW_LEADS_WITH_OBJECTS = "window_leads_with_objects"
 
 
 class NoActivityClassification(Exception):
@@ -138,7 +144,8 @@ class ActivityClassifierTCN(Node):
                 (PARAM_INPUT_COCO_FILEPATH, ""),
                 (PARAM_TIME_TRACE_LOGGING, True),
                 (PARAM_TOPIC, "medical"),
-                (PARAM_POSE_REPEAT_RATE, 0)
+                (PARAM_POSE_REPEAT_RATE, 0),
+                (PARAM_WINDOW_LEADS_WITH_OBJECTS, False),
             ],
         )
         self._img_ts_topic = param_values[PARAM_IMG_TS_TOPIC]
@@ -154,6 +161,8 @@ class ActivityClassifierTCN(Node):
 
         self.model_normalize_pixel_pts = param_values[PARAM_MODEL_NORMALIZE_PIXEL_PTS]
         self.model_normalize_center_pts = param_values[PARAM_MODEL_NORMALIZE_CENTER_PTS]
+
+        self._window_lead_with_objects = param_values[PARAM_WINDOW_LEADS_WITH_OBJECTS]
 
         self.topic = param_values[PARAM_TOPIC]
         # Load in TCN classification model and weights
@@ -593,7 +602,10 @@ class ActivityClassifierTCN(Node):
 
                 # log.info(f"buffer contents: {self._buffer.obj_dets}")
 
-                window = self._buffer.get_window(self._window_size)
+                window = self._buffer.get_window(
+                    self._window_size,
+                    have_leading_object=self._window_lead_with_objects
+                )
 
                 # log.info(f"buffer contents: {window.obj_dets}")
 
