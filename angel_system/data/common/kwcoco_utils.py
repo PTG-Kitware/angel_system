@@ -92,6 +92,7 @@ def add_activity_gt_to_kwcoco(topic, task, dset, activity_config_fn):
         # Update the activity gt for each image
         for gid in sorted(image_ids):
             im = dset.imgs[gid]
+            
             frame_idx, time = time_from_name(im["file_name"], topic)
 
             if time:
@@ -105,7 +106,17 @@ def add_activity_gt_to_kwcoco(topic, task, dset, activity_config_fn):
                 label = "background"
                 activity_label = label
             else:
-                label = matching_gt.iloc[0]["class_label"]
+                label = matching_gt.iloc[0]["class_label"] # default to the first gt
+
+                # Hacky temporary fix
+                # In the medical data, step 1 can cover the same frames as other steps,
+                # So we attempt to find the "hidden" step instead
+                if len(matching_gt) > 1:
+                    possible_labels = []
+                    for i, row in matching_gt.iterrows():
+                        possible_labels.append(row["class_label"])
+                    label = max(possible_labels)
+
                 if type(label) == float or type(label) == int:
                     label = int(label)
                 label = str(label)
@@ -118,16 +129,13 @@ def add_activity_gt_to_kwcoco(topic, task, dset, activity_config_fn):
                     activity = []
 
                 if not activity:
-                    if "timer" in label:
-                        # Ignoring timer based labels
-                        label = "background"
-                        activity_label = label
-                    else:
-                        warnings.warn(
-                            f"Label: {label} is not in the activity labels config, ignoring"
-                        )
-                        print(f"LABEL: {label}, {type(label)}")
-                        continue
+                    warnings.warn(
+                        f"Label: {label} is not in the activity labels config, ignoring"
+                    )
+                    print(f"LABEL: {label}, {type(label)}")
+                    
+                    label = "background"
+                    activity_label = label
                 else:
                     activity = activity[0]
                     activity_label = activity["label"]
