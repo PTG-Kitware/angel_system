@@ -812,7 +812,7 @@ class ActivityClassifierTCN(Node):
         ):
             detection_id = heappop(memo_object_to_feats_h)
             del memo_object_to_feats[detection_id]
-            del self.queued_pose_memo[detection_id]
+            del queued_pose_memo[detection_id]
 
         self._rate_tracker.tick()
         log.info(
