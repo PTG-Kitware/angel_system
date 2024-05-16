@@ -119,9 +119,9 @@ def normalize_detection_features(
     :param image_height: Integer pixel height of the image that object
         detections were generated on.
     :param num_det_classes: Number of object detection classes (note: DOES include the hand labels but DOES NOT include the patient and user labels)
-    :param normalize_pixel_pts: If true, will apply the NormalizePixelPts data augmentation to 
+    :param normalize_pixel_pts: If true, will apply the NormalizePixelPts data augmentation to
         the ``det_feats``
-    :param normalize_center_pts: If true, will apply the NormalizeFromCenter data augmentation to 
+    :param normalize_center_pts: If true, will apply the NormalizeFromCenter data augmentation to
         the ``det_feats``
 
     :return: Normalized object detection features.
@@ -178,13 +178,13 @@ def objects_to_feats(
     :param pose_memo: Optional memoization cache of the pose used for each
         frame and the repeat pose count at each frame
     :param top_k_objects: Number top confidence objects to use per label, defaults to 1
-    :param normalize_pixel_pts: If true, will apply the NormalizePixelPts data augmentation to 
+    :param normalize_pixel_pts: If true, will apply the NormalizePixelPts data augmentation to
         the feature vector
-    :param normalize_center_pts: If true, will apply the NormalizeFromCenter data augmentation to 
+    :param normalize_center_pts: If true, will apply the NormalizeFromCenter data augmentation to
         the feature vector
     :param pose_repeat_rate: The maximum number of sequential None value poses that can be replaced with
-        a valid pose in a previous frame. If this number is exceeded, the pose 
-        for the frame will remain None. 
+        a valid pose in a previous frame. If this number is exceeded, the pose
+        for the frame will remain None.
 
     :raises ValueError: No object detections nor patient poses passed in.
     :raises ValueError: No non-None object detections in the given input
@@ -227,7 +227,7 @@ def objects_to_feats(
     for i, (pose, detections) in enumerate(
         zip(frame_patient_poses, frame_object_detections)
     ):
-        
+
         if detections is None:
             print("no detections!")
             continue
@@ -268,7 +268,7 @@ def objects_to_feats(
             elif last_pose is not None:
                 repeated_pose_count += 1
                 # Repeat at most {pose_repeat_rate} poses in a row
-                if repeated_pose_count > (pose_repeat_rate/2):
+                if repeated_pose_count > (pose_repeat_rate / 2):
                     last_pose = None
                     print("Resetting pose to None")
                     repeated_pose_count = 0
@@ -283,7 +283,7 @@ def objects_to_feats(
 
             pose_memo[memo_key] = {
                 "last_pose": last_pose,
-                "repeated_pose_count": repeated_pose_count
+                "repeated_pose_count": repeated_pose_count,
             }
 
             # Grab the joint keypoints
@@ -316,7 +316,6 @@ def objects_to_feats(
                 .astype(np.float32)
             )
 
-            
             feat_memo[memo_key] = feat
 
         feature_ndim = feat.shape

@@ -63,14 +63,20 @@ class InputWindow:
         timestamp frame and correlated data **lower** in the table (higher
         index). This order is arbitrary.
         """
-        return repr(pd.DataFrame(
-            data={
-                "frames": [time_to_int(f[0]) for f in self.frames],
-                "detections": [(d.num_detections if d else None) for d in self.obj_dets],
-                "poses": [(len(p.joints) if p else None) for p in self.patient_joint_kps],
-            },
-            dtype=pd.Int64Dtype,
-        ))
+        return repr(
+            pd.DataFrame(
+                data={
+                    "frames": [time_to_int(f[0]) for f in self.frames],
+                    "detections": [
+                        (d.num_detections if d else None) for d in self.obj_dets
+                    ],
+                    "poses": [
+                        (len(p.joints) if p else None) for p in self.patient_joint_kps
+                    ],
+                },
+                dtype=pd.Int64Dtype,
+            )
+        )
 
 
 # TODO: A more generic version of InputBuffer
@@ -337,11 +343,13 @@ class InputBuffer:
             # starting.
             # Finally, the extracted slice is reversed in order again so that
             # the final list is in temporally ascending order.
-            window_frames = list(itertools.islice(
-                reversed(self.frames),
-                window_frame_start_idx,
-                window_size + window_frame_start_idx
-            ))[::-1]
+            window_frames = list(
+                itertools.islice(
+                    reversed(self.frames),
+                    window_frame_start_idx,
+                    window_size + window_frame_start_idx,
+                )
+            )[::-1]
             window_frame_times: List[Time] = [wf[0] for wf in window_frames]
             window_frame_times_ns: List[int] = [
                 time_to_int(wft) for wft in window_frame_times
