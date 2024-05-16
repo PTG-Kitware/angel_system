@@ -105,7 +105,7 @@ windows:
       -p det_topic:=ObjectDetections2d
       -p object_net_checkpoint:=${MODEL_DIR}/object_detector/r18_det.pt
       -p hand_net_checkpoint:=${MODEL_DIR}/object_detector/hands_model.pt
-      -p cuda_device_id:=1
+      -p cuda_device_id:=0
 
   - activity_classifier: ros2 run angel_system_nodes activity_classifier_tcn --ros-args
       -r __ns:=${ROS_NAMESPACE}
@@ -118,7 +118,7 @@ windows:
       -p act_topic:=activity_topic
       -p pose_repeat_rate:=7.5
       -p window_leads_with_objects:=true
-      -p model_device:=2
+      -p model_device:=0
 
   - task_monitor:
       layout: even-vertical

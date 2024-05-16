@@ -110,7 +110,8 @@ def add_activity_gt_to_kwcoco(topic, task, dset, activity_config_fn):
 
                 # Hacky temporary fix
                 # In the medical data, step 1 can cover the same frames as other steps,
-                # So we attempt to find the "hidden" step instead
+                # So we use the highest step available as ground truth to avoid
+                # only getting step 1 as most of our ground truth
                 if len(matching_gt) > 1:
                     possible_labels = []
                     for i, row in matching_gt.iterrows():

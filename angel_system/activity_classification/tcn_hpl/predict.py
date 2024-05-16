@@ -118,7 +118,7 @@ def normalize_detection_features(
         were generated on.
     :param image_height: Integer pixel height of the image that object
         detections were generated on.
-    :param num_det_classes: Number of object detection classes (note: DOES include the ahnd labels but DOES NOT include the patient and user labels)
+    :param num_det_classes: Number of object detection classes (note: DOES include the hand labels but DOES NOT include the patient and user labels)
     :param normalize_pixel_pts: If true, will apply the NormalizePixelPts data augmentation to 
         the ``det_feats``
     :param normalize_center_pts: If true, will apply the NormalizeFromCenter data augmentation to 
