@@ -2,12 +2,13 @@ import json
 import openai
 import os
 import queue
-from rclpy.node import Node
+
 import requests
 from termcolor import colored
 import threading
 
 from angel_msgs.msg import InterpretedAudioUserEmotion, SystemTextResponse
+from angel_system_nodes.audio import dialogue
 from angel_utils import declare_and_get_parameters
 from angel_utils import make_default_main
 
@@ -20,10 +21,9 @@ OUT_QA_TOPIC = "system_text_response_topic"
 FEW_SHOT_PROMPT = "few_shot_prompt_file"
 
 
-class QuestionAnswerer(Node):
+class QuestionAnswerer(dialogue.AbstractDialogueNode):
     def __init__(self):
-        super().__init__(self.__class__.__name__)
-        self.log = self.get_logger()
+        super().__init__()
 
         param_values = declare_and_get_parameters(
             self,

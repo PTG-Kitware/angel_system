@@ -1,10 +1,10 @@
 import queue
-from rclpy.node import Node
 from termcolor import colored
 import threading
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 from angel_msgs.msg import InterpretedAudioUserEmotion, InterpretedAudioUserIntent
+from angel_system_nodes.audio import dialogue
 from angel_utils import declare_and_get_parameters
 from angel_utils import make_default_main
 
@@ -24,15 +24,15 @@ VADER_NEGATIVE_COMPOUND_THRESHOLD = -0.05
 VADER_POSITIVE_COMPOUND_THRESHOLD = 0.05
 
 
-class BaseEmotionDetector(Node):
+class BaseEmotionDetector(dialogue.AbstractDialogueNode):
     """
     As of Q22023, emotion detection is derived via VaderSentiment
     (https://github.com/cjhutto/vaderSentiment).
     """
 
     def __init__(self):
-        super().__init__(self.__class__.__name__)
-        self.log = self.get_logger()
+        super().__init__()
+
 
         # Handle parameterization.
         param_values = declare_and_get_parameters(

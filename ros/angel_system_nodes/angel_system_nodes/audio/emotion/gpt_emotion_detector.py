@@ -27,7 +27,6 @@ FEW_SHOT_EXAMPLES = [
 class GptEmotionDetector(BaseEmotionDetector):
     def __init__(self):
         super().__init__()
-        self.log = self.get_logger()
 
         # This node additionally includes fields for interacting with OpenAI
         # via LangChain.
