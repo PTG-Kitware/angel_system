@@ -99,7 +99,9 @@ Workspace root: `./ros/`
 System requirements
 * ansible
 * docker
-* (pip-installed) docker-compose
+* `apt install docker-compose-plugin`
+  OR
+  `pip install docker-compose`
 
 Some files required from the `https://data.kitware.com` Girder service require
 authentication due to their protected nature.
@@ -114,7 +116,7 @@ docker-compose configuration and scripting does not yet handle.
 ## Provision Files
 External large files should be provisioned by running the ansible tool:
 
-    ansible-playbook -i ansible/hosts.yml ansible/provision_files.yml
+    ./angel-provision-files.sh
 
 This may include large files for running the system, like ML model files, or
 other files required for building docker images.
