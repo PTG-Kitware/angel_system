@@ -33,7 +33,6 @@ class BaseEmotionDetector(dialogue.AbstractDialogueNode):
     def __init__(self):
         super().__init__()
 
-
         # Handle parameterization.
         param_values = declare_and_get_parameters(
             self,
