@@ -18,12 +18,14 @@ class AbstractDialogueNode(Node):
 
         msg.utterance_text = src_msg.utterance_text
 
+        # Copy all optional fields below.
+
         # Copy over intent classification information if present.
         if src_msg.intent:
             msg.intent = src_msg.intent
             msg.intent_confidence_score = src_msg.intent_confidence_score
 
-        # Copy over intent classification information if present.
+        # Copy over emotion classification information if present.
         if msg.emotion:
             msg.emotion = src_msg.emotion
             msg.emotion_confidence_score = src_msg.emotion_confidence_score
