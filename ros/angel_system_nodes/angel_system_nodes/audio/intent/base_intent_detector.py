@@ -4,6 +4,7 @@ from termcolor import colored
 import threading
 
 from angel_msgs.msg import InterpretedAudioUserIntent, Utterance
+from angel_system_nodes.audio import dialogue
 from angel_utils import declare_and_get_parameters
 from angel_utils import make_default_main
 
@@ -23,10 +24,9 @@ PARAM_EXPECT_USER_INTENT_TOPIC = "expect_user_intent_topic"
 PARAM_INTERP_USER_INTENT_TOPIC = "interp_user_intent_topic"
 
 
-class BaseIntentDetector(Node):
+class BaseIntentDetector(dialogue.AbstractDialogueNode):
     def __init__(self):
-        super().__init__(self.__class__.__name__)
-        self.log = self.get_logger()
+        super().__init__()
 
         # Handle parameterization.
         param_values = declare_and_get_parameters(

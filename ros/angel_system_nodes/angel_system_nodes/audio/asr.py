@@ -8,10 +8,9 @@ import threading
 
 from nltk.tokenize import sent_tokenize
 import rclpy
-from rclpy.node import Node
-import simpleaudio as sa
 
 from angel_msgs.msg import HeadsetAudioData, Utterance
+from angel_system_nodes.audio import dialogue
 from angel_utils import make_default_main
 
 
@@ -27,10 +26,9 @@ DEBUG_MODE = "debug_mode"
 WAV_SAMPLE_WIDTH = 4  # Derived from audio_player.py
 
 
-class ASR(Node):
+class ASR(dialogue.AbstractDialogueNode):
     def __init__(self):
-        super().__init__(self.__class__.__name__)
-        self.log = self.get_logger()
+        super().__init__()
 
         parameter_names = [
             AUDIO_TOPIC,
