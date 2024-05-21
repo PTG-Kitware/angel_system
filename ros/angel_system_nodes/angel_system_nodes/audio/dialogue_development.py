@@ -15,6 +15,12 @@ MESSAGES = [
     "The following messages are for development and debugging use only.",
     "Every 3-5 seconds, a new message will be emitted from this node.",
     "This will provide data to downstream nodes in the absence of rosbag data.",
+    "An example utterance may request the next step.",
+    "I'd like to go to the next step.",
+    "Another example utterance may request the previous step.",
+    "I'd like to go to the previous step.",
+    "Some utterances may request that angel override to the next step with maximum confidence.",
+    "Why are we doing this?",
 ]
 
 
@@ -44,7 +50,7 @@ class DevelopmentDialoguePublisherNode(dialogue.AbstractDialogueNode):
 
     def _forever_publish_messages(self, messages: List[str]):
         """
-        Handles message publishing for an utterance with a detected emotion classification.
+        Handles message publishing.
         """
         while True:
             for message_text in messages:
