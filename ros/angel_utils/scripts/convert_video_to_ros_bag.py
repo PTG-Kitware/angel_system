@@ -13,7 +13,10 @@ from rclpy.serialization import serialize_message
 
 
 def convert_video_to_bag(
-    video_fn, output_bag_folder, output_image_topic="/kitware/image_0"
+    video_fn,
+    output_bag_folder,
+    output_image_topic="/kitware/PVFramesBGR",
+    downsample_rate=None,
 ):
     """Convert a mp4 video to a ros bag
 
@@ -46,13 +49,19 @@ def convert_video_to_bag(
     # Read video
     cam = cv2.VideoCapture(video_fn)
 
-    frame_id = 0
+    # Starting at this so our first increment starts us at frame ID 0.
+    frame_id = -1
     time_nanosec = time.time_ns()
     start_ts = rclpy.time.Time(nanoseconds=time_nanosec)
     while True:
         ret, frame = cam.read()
+        frame_id += 1
         if not ret:
             break
+        # Only proceed if we don't have a down-sample rate specified or if the
+        # current frame aligns with the down-sample rate.
+        if downsample_rate is not None and frame_id % downsample_rate != 0:
+            continue
         print(f"==== FRAME {frame_id} ====")
         # Create timestamp
         frame_secs = cam.get(cv2.CAP_PROP_POS_MSEC) / 1000
@@ -78,8 +87,6 @@ def convert_video_to_bag(
             print("error", type(err), str(err)[:400])
             exit(1)
 
-        frame_id += 1
-
     cam.release()
     del bag_writer
 
@@ -104,10 +111,29 @@ def main():
         default="/kitware/image_0",
         help=f"ROS topic to publish the images to in the ROS bag. Must include the namespace",
     )
+    parser.add_argument(
+        "--downsample-rate",
+        type=int,
+        default=None,
+        help=(
+            "Only capture every N frames from the input video into the "
+            "output bag. E.g. a value of 2 here will mean that only every "
+            "other frame is written to the bag, turning an M Hz video info "
+            "an M/2 Hz bag."
+        ),
+    )
 
     args = parser.parse_args()
+    if args.downsample_rate is not None and args.downsample_rate < 2:
+        print("ERROR: Down-sample rate must be a positive value >1")
+        exit(1)
 
-    convert_video_to_bag(args.video_fn, args.output_bag_folder, args.output_image_topic)
+    convert_video_to_bag(
+        args.video_fn,
+        args.output_bag_folder,
+        args.output_image_topic,
+        args.downsample_rate,
+    )
 
 
 if __name__ == "__main__":
