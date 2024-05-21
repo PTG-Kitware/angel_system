@@ -14,8 +14,9 @@ OUTPUT_TOPIC = "dev_dialogue_output_topic"
 MESSAGES = [
     "The following messages are for development and debugging use only.",
     "Every 3-5 seconds, a new message will be emitted from this node.",
-    "This will provide data to downstream nodes in the absence of rosbag data."
+    "This will provide data to downstream nodes in the absence of rosbag data.",
 ]
+
 
 class DevelopmentDialoguePublisherNode(dialogue.AbstractDialogueNode):
     """
@@ -29,10 +30,7 @@ class DevelopmentDialoguePublisherNode(dialogue.AbstractDialogueNode):
         # Handle parameterization.
         param_values = declare_and_get_parameters(
             self,
-            [
-                (OUTPUT_TOPIC,),
-                (INTERVAL_SECONDS, 5)
-            ],
+            [(OUTPUT_TOPIC,), (INTERVAL_SECONDS, 5)],
         )
 
         self._output_topic = param_values[OUTPUT_TOPIC]
@@ -57,7 +55,8 @@ class DevelopmentDialoguePublisherNode(dialogue.AbstractDialogueNode):
                 self._publisher.publish(development_msg)
                 colored_utterance = colored(message_text, "light_blue")
                 self.log.info(
-                    f'Publishing \"{colored_utterance}\" to {self._output_topic}.')
+                    f'Publishing "{colored_utterance}" to {self._output_topic}.'
+                )
                 time.sleep(self._interval_seconds)
 
 
