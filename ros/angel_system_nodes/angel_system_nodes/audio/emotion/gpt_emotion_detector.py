@@ -4,6 +4,7 @@ from langchain.chat_models import ChatOpenAI
 import openai
 import os
 
+from angel_msgs.msg import DialogueUtterance
 from angel_system_nodes.audio.emotion.base_emotion_detector import (
     BaseEmotionDetector,
     LABEL_MAPPINGS,
@@ -82,7 +83,7 @@ class GptEmotionDetector(BaseEmotionDetector):
         )
         return LLMChain(llm=openai_llm, prompt=few_shot_prompt)
 
-    def get_inference(self, msg):
+    def get_inference(self, msg: DialogueUtterance):
         """
         Detects the user intent via langchain execution of GPT.
         """
