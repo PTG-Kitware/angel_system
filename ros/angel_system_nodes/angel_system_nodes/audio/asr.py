@@ -4,12 +4,13 @@ import queue
 import requests
 import soundfile
 import tempfile
+from termcolor import colored
 import threading
 
 from nltk.tokenize import sent_tokenize
 import rclpy
 
-from angel_msgs.msg import HeadsetAudioData, Utterance
+from angel_msgs.msg import HeadsetAudioData, DialogueUtterance
 from angel_system_nodes.audio import dialogue
 from angel_utils import make_default_main
 
@@ -203,15 +204,18 @@ class ASR(dialogue.AbstractDialogueNode):
                 self.log.info("Complete ASR text is:\n" + f'"{response_text}"')
                 if self._is_sentence_tokenize_mode:
                     for sentence in sent_tokenize(response_text):
-                        utterance_msg = Utterance()
-                        utterance_msg.value = sentence
-                        self.log.info("Publishing message: " + f'"{sentence}"')
-                        self._publisher.publish(utterance_msg)
+                        self._publish_text(sentence)
                 else:
-                    utterance_msg = Utterance()
-                    utterance_msg.value = response_text
-                    self.log.info("Publishing message: " + f'"{response_text}"')
-                    self._publisher.publish(utterance_msg)
+                    self._publish_text(response_text)
+
+    def _publish_text(self, text: str):
+        published_msg = DialogueUtterance()
+        published_msg.header.frame_id = "ASR"
+        published_msg.header.stamp = self.get_clock().now().to_msg()
+        published_msg.utterance_text = text
+        colored_utterance = colored(published_msg.utterance_text, "light_blue")
+        self.log.info("Publishing message: " + f'"{colored_utterance}"')
+        self._publisher.publish(published_msg)
 
 
 main = make_default_main(ASR)
