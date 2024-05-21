@@ -9,7 +9,7 @@ class AbstractDialogueNode(Node):
         self.log = self.get_logger()
 
     def _copy_dialogue_utterance(
-        src_msg: DialogueUtterance, node_name: str, copy_time
+        self, src_msg: DialogueUtterance, node_name: str, copy_time
     ) -> DialogueUtterance:
         msg = DialogueUtterance()
 
