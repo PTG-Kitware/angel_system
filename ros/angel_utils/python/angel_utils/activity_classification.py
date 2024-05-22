@@ -40,7 +40,7 @@ class InputWindow:
 
     # Buffer of RGB image matrices and the associated timestamp.
     # Set at construction time with the known window of frames.
-    frames: List[Tuple[Time, npt.NDArray]]
+    frames: List[Tuple[Time, npt.NDArray, int]]
     obj_dets: List[Optional[ObjectDetection2dSet]]
     # Buffer for patient poses
     patient_joint_kps: List[Optional[HandJointPosesUpdate]]
@@ -66,7 +66,8 @@ class InputWindow:
         return repr(
             pd.DataFrame(
                 data={
-                    "frames": [time_to_int(f[0]) for f in self.frames],
+                    "frame_number": [f[2] for f in self.frames],
+                    "frame_nsec": [time_to_int(f[0]) for f in self.frames],
                     "detections": [
                         (d.num_detections if d else None) for d in self.obj_dets
                     ],
@@ -124,7 +125,7 @@ class InputBuffer:
     get_logger_fn: Callable[[], Any]  # don't know where to get the type for this...
 
     # Buffer of RGB image matrices and the associated timestamp
-    frames: Deque[Tuple[Time, npt.NDArray]] = field(
+    frames: Deque[Tuple[Time, npt.NDArray, int]] = field(
         default_factory=deque, init=False, repr=False
     )
     # Buffer of left-hand pose messages
@@ -177,7 +178,7 @@ class InputBuffer:
             return self.frames[-1][0]
 
     def queue_image(
-        self, img_mat: npt.NDArray[np.uint8], img_header_stamp: Time
+        self, img_mat: npt.NDArray[np.uint8], img_header_stamp: Time, image_frame_number: int
     ) -> bool:
         """
         Queue up a new image frame.
@@ -197,7 +198,7 @@ class InputBuffer:
                     f"!< {time_to_int(img_header_stamp)} (new)"
                 )
                 return False
-            self.frames.append((img_header_stamp, img_mat))
+            self.frames.append((img_header_stamp, img_mat, image_frame_number))
             return True
 
     def queue_hand_pose(self, msg: HandJointPosesUpdate) -> bool:
