@@ -108,7 +108,7 @@ def main():
     parser.add_argument(
         "--output-image-topic",
         type=str,
-        default="/kitware/image_0",
+        default="/kitware/PVFramesBGR",
         help=f"ROS topic to publish the images to in the ROS bag. Must include the namespace",
     )
     parser.add_argument(
