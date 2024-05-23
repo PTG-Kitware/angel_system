@@ -1,26 +1,82 @@
 #!/usr/bin/env python3
-import cv2
 import argparse
+from glob import glob
+from pathlib import Path
+import PIL.Image
+import time
+from typing import Generator
+from typing import Iterable
+from typing import Tuple
+
+import cv2
+from cv_bridge import CvBridge
+import numpy as np
 import rclpy
 import rclpy.time
 import rclpy.duration
-import time
-
+from rclpy.serialization import serialize_message
 import rosbag2_py
 from sensor_msgs.msg import Image
-from cv_bridge import CvBridge
-from rclpy.serialization import serialize_message
+
+
+def iter_video_frames(video_filepath: str):
+    """
+    Iterate output frames via OpenCV's VideoCapture functionality.
+
+    Mock's starting time as "right now".
+
+    :param video_filepath: Filepath to the video file.
+
+    :return: Iterator returning a tuple of:
+        0) BGR format image pixel matrices.
+        1) Relative time in seconds of this frame since the beginning of the
+           sequence.
+    """
+    cap = cv2.VideoCapture(video_filepath)
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+        frame_secs = cap.get(cv2.CAP_PROP_POS_MSEC) / 1000
+        yield frame, frame_secs
+    cap.release()
+
+
+def iter_file_frames(filepath_glob: str, frame_rate: float):
+    """
+    Iterate output frames found from the input glob pattern.
+
+    Using PIL.Image for image loading.
+
+    Mock's starting time as "right now".
+
+    :param filepath_glob: Filepath glob pattern.
+    :param frame_rate: FPS in float Hz.
+
+    :return: Iterator returning a tuple of:
+        0) BGR format image pixel matrices.
+        1) Relative time in seconds of this frame since the beginning of the
+           sequence.
+    """
+    sec_per_frame = 1. / frame_rate
+    cur_ts = 0
+    for filepath in sorted(glob(filepath_glob)):
+        img = PIL.Image.open(filepath)
+        if img.mode != "RGB":
+            img = img.convert("RGB")
+        yield np.asarray(img)[:, :, ::-1], cur_ts
+        cur_ts += sec_per_frame
 
 
 def convert_video_to_bag(
-    video_fn,
+    frame_iter: Iterable[Tuple[np.ndarray, float]],
     output_bag_folder,
     output_image_topic="/kitware/PVFramesBGR",
     downsample_rate=None,
 ):
     """Convert a mp4 video to a ros bag
 
-    :param video_fn: Path to an mp4 video file
+    :param frame_iter: Iterable of frame matrices.
     :param output_bag_folder: Path to the folder that will be created to contain the ROS bag
     :param output_image_topic: ROS topic to publish the images to in the ROS bag. Must include the namespace
     """
@@ -46,27 +102,19 @@ def convert_video_to_bag(
 
     bridge = CvBridge()
 
-    # Read video
-    cam = cv2.VideoCapture(video_fn)
-
     # Starting at this so our first increment starts us at frame ID 0.
     frame_id = -1
-    time_nanosec = time.time_ns()
-    start_ts = rclpy.time.Time(nanoseconds=time_nanosec)
-    while True:
-        ret, frame = cam.read()
+    start_ts = rclpy.time.Time(nanoseconds=time.time_ns())
+    for frame, frame_rel_ts in frame_iter:
         frame_id += 1
-        if not ret:
-            break
         # Only proceed if we don't have a down-sample rate specified or if the
         # current frame aligns with the down-sample rate.
         if downsample_rate is not None and frame_id % downsample_rate != 0:
             continue
         print(f"==== FRAME {frame_id} ====")
         # Create timestamp
-        frame_secs = cam.get(cv2.CAP_PROP_POS_MSEC) / 1000
 
-        frame_ts = start_ts + rclpy.duration.Duration(seconds=frame_secs)
+        frame_ts = start_ts + rclpy.duration.Duration(seconds=frame_rel_ts)
         frame_ts_msg = frame_ts.to_msg()
         print("timestamp", frame_ts)
 
@@ -87,7 +135,6 @@ def convert_video_to_bag(
             print("error", type(err), str(err)[:400])
             exit(1)
 
-    cam.release()
     del bag_writer
 
 
@@ -96,8 +143,13 @@ def main():
     parser.add_argument(
         "--video-fn",
         type=str,
-        default="video123.mp4",
-        help=f"Path to an mp4 video file",
+        help=f"Use video mode, and is the path to an mp4 video file.",
+    )
+    parser.add_argument(
+        "-i", "--image-file-glob",
+        type=str,
+        help="Use image glob mode, and is the glob for images to pick up an "
+             "use in lexicographic order."
     )
     parser.add_argument(
         "--output-bag-folder",
@@ -122,14 +174,51 @@ def main():
             "an M/2 Hz bag."
         ),
     )
+    parser.add_argument(
+        "--file-frame-rate",
+        type=float,
+        help=(
+            "Frame-rate of the input imagery provided via the "
+            "-i/--image-file-glob input mode. This option is only considered "
+            "when that input mode is specified, otherwise this value is "
+            "ignored. This must be a value greater than zero."
+        )
+    )
 
     args = parser.parse_args()
+
+    # Can only be in one "mode" at a time.
+    if None not in [args.video_fn, args.image_file_glob]:
+        print(
+            "ERROR: Both input selection modes provided. Providing both is "
+            "ambiguous."
+        )
+        exit(1)
+    # Need to provide at least *one* of the input selection modes...
+    if not any([args.video_fn, args.image_file_glob]):
+        print("ERROR: No input selection mode options provided.")
+        exit(1)
+    # Down-sample value, if given, must be 2 or more.
     if args.downsample_rate is not None and args.downsample_rate < 2:
         print("ERROR: Down-sample rate must be a positive value >1")
         exit(1)
 
+    if args.video_fn is not None:
+        frame_iter = iter_video_frames(args.video_fn)
+    elif args.image_file_glob is not None:
+        # Frame-rate if given must be a positive value.
+        if args.file_frame_rate is None:
+            print("ERROR: Input frame-rate required.")
+            exit(1)
+        elif args.file_frame_rate <= 0:
+            print("ERROR: Provided input image file frame-rate was not positive.")
+            exit(1)
+        frame_iter = iter_file_frames(args.image_file_glob, args.file_frame_rate)
+    else:
+        raise RuntimeError("How did we get here?")
+
     convert_video_to_bag(
-        args.video_fn,
+        frame_iter,
         args.output_bag_folder,
         args.output_image_topic,
         args.downsample_rate,
