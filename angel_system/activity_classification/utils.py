@@ -1111,7 +1111,7 @@ def obj_det2d_set_to_feature_by_method(
             feature_vec_name.append(f'{joint_names[ii]} Joint left hand offset X')
             feature_vec_name.append(f'{joint_names[ii]} Joint left hand offset Y')
 
-        for rh_offset in joint_right_hand_offset:
+        for ii, rh_offset in enumerate(joint_left_hand_offset):
             feature_vec.append(rh_offset)
             feature_vec_name.append(f'{joint_names[ii]} Joint right hand offset X')
             feature_vec_name.append(f'{joint_names[ii]} Joint right hand offset Y')
