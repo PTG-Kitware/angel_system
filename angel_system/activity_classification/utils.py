@@ -28,6 +28,31 @@ random_colors = list(mcolors.CSS4_COLORS.keys())
 random.shuffle(random_colors)
 
 
+joint_names: List[str] = [
+    "nose",
+    "mouth",
+    "throat",
+    "chest",
+    "stomach",
+    "left_upper_arm",
+    "right_upper_arm",
+    "left_lower_arm",
+    "right_lower_arm",
+    "left_wrist",
+    "right_wrist",
+    "left_hand",
+    "right_hand",
+    "left_upper_leg",
+    "right_upper_leg",
+    "left_knee",
+    "right_knee",
+    "left_lower_leg",
+    "right_lower_leg",
+    "left_foot",
+    "right_foot",
+    "back",
+]
+
 def tlbr_to_xywh(
     top: npt.ArrayLike,
     left: npt.ArrayLike,
@@ -1019,15 +1044,19 @@ def obj_det2d_set_to_feature_by_method(
     # Feature vector
     #########################
     feature_vec = []
+    feature_vec_name = []
+
+    obj_ind_to_label = {v: k for k, v in obj_label_to_ind.items()}
 
     for object_k_index in range(top_k_objects):
         # HANDS
-        for hand_conf, hand_idx, hand_dist in [
-            (right_hand_conf, right_hand_idx, right_hand_dist_k[object_k_index]),
-            (left_hand_conf, left_hand_idx, left_hand_dist_k[object_k_index]),
+        for hand_conf, hand_idx, hand_dist, hand_name in [
+            (right_hand_conf, right_hand_idx, right_hand_dist_k[object_k_index], 'Right'),
+            (left_hand_conf, left_hand_idx, left_hand_dist_k[object_k_index], 'Left'),
         ]:
             if use_activation:
                 feature_vec.append([hand_conf])
+                feature_vec_name.append(f'Top-{object_k_index} {hand_name} Hand Conf')
             if use_hand_dist:
                 hd1 = [
                     item
@@ -1036,14 +1065,23 @@ def obj_det2d_set_to_feature_by_method(
                     if ii not in [right_hand_idx, left_hand_idx]
                 ]
                 feature_vec.append(hd1)
+                for ii, tupl in enumerate(hand_dist):
+                    if ii not in [right_hand_idx, left_hand_idx]:
+                        feature_vec_name.append(f'{hand_name} Hand Top-{object_k_index} Object-{ii} {obj_ind_to_label[ii]} Diff X')
+                        feature_vec_name.append(f'{hand_name} Hand Top-{object_k_index} Object-{ii} {obj_ind_to_label[ii]} Diff Y')
+
             if use_center_dist:
                 feature_vec.append(image_center_obj_dist_k[0][hand_idx])
+                feature_vec_name.append(f'{hand_name} Hand conf')
 
         # RIGHT-LEFT HAND
         if use_hand_dist:
             feature_vec.append(right_hand_dist_k[0][left_hand_idx])
+            feature_vec_name.append(f'Top-{object_k_index} Distance between hands X')
+            feature_vec_name.append(f'Top-{object_k_index} Distance between hands Y')
         if use_intersection:
             feature_vec.append([right_hand_intersection_k[0][left_hand_idx]])
+            feature_vec_name.append(f'Top-{object_k_index} Intersection between hands')
 
         # OBJECTS
         for obj_ind in range(num_det_classes):
@@ -1053,19 +1091,30 @@ def obj_det2d_set_to_feature_by_method(
 
             if use_activation:
                 feature_vec.append([det_class_max_conf[obj_ind][object_k_index]])
+                feature_vec_name.append(f'Top-{object_k_index} Object-{obj_ind} {obj_ind_to_label[obj_ind]} Activation')
             if use_intersection:
                 feature_vec.append([right_hand_intersection_k[object_k_index][obj_ind]])
+                feature_vec_name.append(f'Top-{object_k_index} Object-{obj_ind} {obj_ind_to_label[obj_ind]} Right Hand Intersection')
                 feature_vec.append([left_hand_intersection_k[object_k_index][obj_ind]])
+                feature_vec_name.append(f'Top-{object_k_index} Object-{obj_ind} {obj_ind_to_label[obj_ind]} Left Hand Intersection')
+                
             if use_center_dist:
                 feature_vec.append(image_center_obj_dist_k[object_k_index][obj_ind])
+                feature_vec_name.append(f'Top-{object_k_index} Object-{obj_ind} {obj_ind_to_label[obj_ind]} Center Dist X')
+                feature_vec_name.append(f'Top-{object_k_index} Object-{obj_ind} {obj_ind_to_label[obj_ind]} Center Dist Y')
+
 
     # HANDS-JOINTS
     if use_joint_hand_offset:
-        for lh_offset in joint_left_hand_offset:
+        for ii, lh_offset in enumerate(joint_left_hand_offset):
             feature_vec.append(lh_offset)
+            feature_vec_name.append(f'{joint_names[ii]} Joint left hand offset X')
+            feature_vec_name.append(f'{joint_names[ii]} Joint left hand offset Y')
 
         for rh_offset in joint_right_hand_offset:
             feature_vec.append(rh_offset)
+            feature_vec_name.append(f'{joint_names[ii]} Joint right hand offset X')
+            feature_vec_name.append(f'{joint_names[ii]} Joint right hand offset Y')
 
     # OBJ-JOINTS
     if use_joint_object_offset:
@@ -1074,8 +1123,12 @@ def obj_det2d_set_to_feature_by_method(
                 if obj_ind in [right_hand_idx, left_hand_idx]:
                     # We already have the hand data
                     continue
-                for offset in obj_joints_dist_k[object_k_index][obj_ind]:
+                for ii, offset in enumerate(obj_joints_dist_k[object_k_index][obj_ind]):
                     feature_vec.append(offset)
+                    feature_vec_name.append(f'{joint_names[ii]} Top-{object_k_index} Object-{obj_ind} {obj_ind_to_label[obj_ind]} offset X')
+                    feature_vec_name.append(f'{joint_names[ii]} Top-{object_k_index} Object-{obj_ind} {obj_ind_to_label[obj_ind]} offset Y')
+
+
 
     feature_vec = [item for sublist in feature_vec for item in sublist]  # flatten
     feature_vec = np.array(feature_vec, dtype=np.float64)
