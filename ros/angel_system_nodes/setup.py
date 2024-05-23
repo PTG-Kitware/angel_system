@@ -56,6 +56,7 @@ setup(
             "asr = angel_system_nodes.audio.asr:main",
             "audio_player = angel_system_nodes.audio.audio_player:main",
             "voice_activity_detector = angel_system_nodes.audio.voice_activity_detector:main",
+            "dialogue_development = angel_system_nodes.audio.dialogue_development:main",
             # Task Monitoring
             "berkeley_task_monitor = angel_system_nodes.task_monitoring.berkeley_task_monitor:main",
             "task_monitor_v1 = angel_system_nodes.task_monitoring.task_monitor_v1:main",
