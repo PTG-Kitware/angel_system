@@ -1,17 +1,17 @@
 import queue
 from termcolor import colored
 import threading
+from typing import Tuple
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
-from angel_msgs.msg import InterpretedAudioUserEmotion, InterpretedAudioUserIntent
+from angel_msgs.msg import DialogueUtterance
 from angel_system_nodes.audio import dialogue
 from angel_utils import declare_and_get_parameters
 from angel_utils import make_default_main
 
 
-IN_EXPECT_USER_INTENT_TOPIC = "expect_user_intent_topic"
-IN_INTERP_USER_INTENT_TOPIC = "interp_user_intent_topic"
-OUT_INTERP_USER_EMOTION_TOPIC = "user_emotion_topic"
+INPUT_EMOTION_TOPIC = "in_emotion_topic"
+OUTPUT_EMOTION_TOPIC = "out_emotion_topic"
 
 # Currently supported emotions. This is tied with the emotions
 # output to VaderSentiment (https://github.com/cjhutto/vaderSentiment) and
@@ -26,8 +26,8 @@ VADER_POSITIVE_COMPOUND_THRESHOLD = 0.05
 
 class BaseEmotionDetector(dialogue.AbstractDialogueNode):
     """
-    As of Q22023, emotion detection is derived via VaderSentiment
-    (https://github.com/cjhutto/vaderSentiment).
+    Base Emotion Detection node. The default emotion detection algorithm leverages Vader
+    Sentiment analysis (https://github.com/cjhutto/vaderSentiment).
     """
 
     def __init__(self):
@@ -37,31 +37,23 @@ class BaseEmotionDetector(dialogue.AbstractDialogueNode):
         param_values = declare_and_get_parameters(
             self,
             [
-                (IN_EXPECT_USER_INTENT_TOPIC,),
-                (IN_INTERP_USER_INTENT_TOPIC,),
-                (OUT_INTERP_USER_EMOTION_TOPIC,),
+                (INPUT_EMOTION_TOPIC,),
+                (OUTPUT_EMOTION_TOPIC,),
             ],
         )
 
-        self._in_expect_uintent_topic = param_values[IN_EXPECT_USER_INTENT_TOPIC]
-        self._in_interp_uintent_topic = param_values[IN_INTERP_USER_INTENT_TOPIC]
-        self._out_interp_uemotion_topic = param_values[OUT_INTERP_USER_EMOTION_TOPIC]
+        self._in_emotion_topic = param_values[INPUT_EMOTION_TOPIC]
+        self._out_emotion_topic = param_values[OUTPUT_EMOTION_TOPIC]
 
         # Handle subscription/publication topics.
-        self.expect_uintent_subscription = self.create_subscription(
-            InterpretedAudioUserIntent,
-            self._in_expect_uintent_topic,
-            self.intent_detection_callback,
+        self._subscriber = self.create_subscription(
+            DialogueUtterance,
+            self._in_emotion_topic,
+            self.emotion_detection_callback,
             1,
         )
-        self.interp_uintent_subscription = self.create_subscription(
-            InterpretedAudioUserIntent,
-            self._in_interp_uintent_topic,
-            self.intent_detection_callback,
-            1,
-        )
-        self._interp_emo_publisher = self.create_publisher(
-            InterpretedAudioUserEmotion, self._out_interp_uemotion_topic, 1
+        self._publisher = self.create_publisher(
+            DialogueUtterance, self._out_emotion_topic, 1
         )
 
         self.message_queue = queue.Queue()
@@ -70,12 +62,14 @@ class BaseEmotionDetector(dialogue.AbstractDialogueNode):
 
         self.sentiment_analysis_model = SentimentIntensityAnalyzer()
 
-    def _get_vader_sentiment_analysis(self, utterance: str):
+    def _get_vader_sentiment_analysis(self, msg: DialogueUtterance):
         """
         Applies Vader Sentiment Analysis model to assign 'positive,' 'negative,'
         and 'neutral' sentiment labels. Returns with  a 100% confidence.
         """
-        polarity_scores = self.sentiment_analysis_model.polarity_scores(utterance)
+        polarity_scores = self.sentiment_analysis_model.polarity_scores(
+            msg.utterance_text
+        )
         if polarity_scores["compound"] >= VADER_POSITIVE_COMPOUND_THRESHOLD:
             classification = LABEL_MAPPINGS["pos"]
         elif polarity_scores["compound"] <= VADER_NEGATIVE_COMPOUND_THRESHOLD:
@@ -84,7 +78,7 @@ class BaseEmotionDetector(dialogue.AbstractDialogueNode):
             classification = LABEL_MAPPINGS["neu"]
 
         confidence = 1.00
-        colored_utterance = colored_utterance = colored(utterance, "light_blue")
+        colored_utterance = colored(msg.utterance_text, "light_blue")
         colored_emotion = colored(classification, "light_green")
         self.log.info(
             f'Rated user utterance:\n>>> "{colored_utterance}"'
@@ -94,14 +88,14 @@ class BaseEmotionDetector(dialogue.AbstractDialogueNode):
         )
         return (classification, confidence)
 
-    def get_inference(self, msg):
+    def get_inference(self, msg: DialogueUtterance) -> Tuple[str, int]:
         """
         Abstract away the different model inference calls depending on the
         node's configure model mode.
         """
-        return self._get_vader_sentiment_analysis(msg.utterance_text)
+        return self._get_vader_sentiment_analysis(msg)
 
-    def intent_detection_callback(self, msg):
+    def emotion_detection_callback(self, msg: DialogueUtterance):
         """
         This is the main ROS node listener callback loop that will process
         all messages received via subscribed topics.
@@ -119,28 +113,30 @@ class BaseEmotionDetector(dialogue.AbstractDialogueNode):
             msg = self.message_queue.get()
             self.log.debug(f'Processing message:\n\n"{msg.utterance_text}"')
             classification, confidence_score = self.get_inference(msg)
-            self.publish_detected_emotion(
-                msg.utterance_text, classification, confidence_score
-            )
+            self.publish_detected_emotion(msg, classification, confidence_score)
 
     def publish_detected_emotion(
-        self, utterance: str, classification: str, confidence_score: float
+        self,
+        subscribe_msg: DialogueUtterance,
+        classification: str,
+        confidence_score: float,
     ):
         """
         Handles message publishing for an utterance with a detected emotion classification.
         """
-        emotion_msg = InterpretedAudioUserEmotion()
-        emotion_msg.header.frame_id = "Emotion Detection"
-        emotion_msg.header.stamp = self.get_clock().now().to_msg()
-        emotion_msg.utterance_text = utterance
-        emotion_msg.user_emotion = classification
-        emotion_msg.confidence = confidence_score
-        self._interp_emo_publisher.publish(emotion_msg)
-        colored_utterance = colored(utterance, "light_blue")
-        colored_emotion = colored(classification, "light_green")
+        publish_msg = self._copy_dialogue_utterance(
+            subscribe_msg, "Emotion Detection", self.get_clock().now().to_msg()
+        )
+
+        publish_msg.emotion = classification
+        publish_msg.emotion_confidence_score = confidence_score
+        self._publisher.publish(publish_msg)
+        colored_utterance = colored(publish_msg.utterance_text, "light_blue")
+        colored_emotion = colored(publish_msg.emotion, "light_green")
         self.log.info(
-            f'Publishing {{"{colored_emotion}": {confidence_score}}} '
-            + f'to {self._out_interp_uemotion_topic} for:\n>>> "{colored_utterance}"'
+            f'Classifying "{colored_utterance}" as '
+            f'{{"{colored_emotion}":{confidence_score}}}. Publishing '
+            + f"to {self._out_emotion_topic}"
         )
 
     def _apply_filter(self, msg):
@@ -149,10 +145,6 @@ class BaseEmotionDetector(dialogue.AbstractDialogueNode):
         none if the message should be filtered out. Else, return the incoming
         msg if it can be included.
         """
-        # if msg.user_intent.lower() == "user inquiry":
-        #     return msg
-        # else:
-        #     return None
         return msg
 
 
