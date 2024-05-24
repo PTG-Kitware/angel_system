@@ -7,7 +7,7 @@ import requests
 from termcolor import colored
 import threading
 
-from angel_msgs.msg import InterpretedAudioUserEmotion, SystemTextResponse
+from angel_msgs.msg import DialogueUtterance, SystemTextResponse
 from angel_system_nodes.audio import dialogue
 from angel_utils import declare_and_get_parameters
 from angel_utils import make_default_main
@@ -16,8 +16,8 @@ from angel_utils import make_default_main
 openai.organization = os.getenv("OPENAI_ORG_ID")
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-IN_EMOTION_TOPIC = "user_emotion_topic"
-OUT_QA_TOPIC = "system_text_response_topic"
+INPUT_QA_TOPIC = "in_qa_topic"
+OUT_QA_TOPIC = "out_qa_topic"
 FEW_SHOT_PROMPT = "few_shot_prompt_file"
 
 
@@ -28,12 +28,12 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
         param_values = declare_and_get_parameters(
             self,
             [
-                (IN_EMOTION_TOPIC,),
+                (INPUT_QA_TOPIC,),
                 (OUT_QA_TOPIC,),
                 (FEW_SHOT_PROMPT,),
             ],
         )
-        self._in_emotion_topic = param_values[IN_EMOTION_TOPIC]
+        self._in_qa_topic = param_values[INPUT_QA_TOPIC]
         self._out_qa_topic = param_values[OUT_QA_TOPIC]
         self.prompt_file = param_values[FEW_SHOT_PROMPT]
 
@@ -59,8 +59,8 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
 
         # Handle subscription/publication topics.
         self.subscription = self.create_subscription(
-            InterpretedAudioUserEmotion,
-            self._in_emotion_topic,
+            DialogueUtterance,
+            self._in_qa_topic,
             self.question_answer_callback,
             1,
         )
@@ -68,34 +68,21 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
             SystemTextResponse, self._out_qa_topic, 1
         )
 
-    def get_response(self, user_utterance: str, user_emotion: str):
-        """
-        Generate a  response to the utterance, enriched with the addition of
-        the user's detected emotion. Inference calls can be added and revised
-        here.
-        """
-        return_msg = ""
+    def get_response(self, msg: DialogueUtterance) -> str:
+        response_text = ""
         try:
             if self.is_openai_ready:
-                return_msg = colored(
-                    self.prompt_gpt(user_utterance) + "\n", "light_green"
+                response_text = colored(
+                    f"{self.prompt_gpt(msg.utterance_text)}\n", "light_green"
                 )
         except RuntimeError as err:
             self.log.info(err)
-            colored_apology = colored(
+            response_text = colored(
                 "I'm sorry. I don't know how to answer your statement.", "light_red"
             )
-            colored_emotion = colored(user_emotion, "light_red")
-            return_msg = (
-                f"{colored_apology} I understand that you feel {colored_emotion}."
-            )
-        return return_msg
+        return response_text
 
     def question_answer_callback(self, msg):
-        """
-        This is the main ROS node listener callback loop that will process
-        all messages received via subscribed topics.
-        """
         self.log.debug(f"Received message:\n\n{msg.utterance_text}")
         if not self._apply_filter(msg):
             return
@@ -107,23 +94,24 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
         """
         while True:
             msg = self.question_queue.get()
-            emotion = msg.user_emotion
-            response = self.get_response(msg.utterance_text, emotion)
-            self.publish_generated_response(msg.utterance_text, response)
+            response = self.get_response(msg)
+            self.publish_generated_response(msg, response)
 
-    def publish_generated_response(self, utterance: str, response: str):
-        msg = SystemTextResponse()
-        msg.header.frame_id = "GPT Question Answering"
-        msg.header.stamp = self.get_clock().now().to_msg()
-        msg.utterance_text = utterance
-        msg.response = response
-        colored_utterance = colored(utterance, "light_blue")
+    def publish_generated_response(
+        self, subscribe_msg: DialogueUtterance, response: str
+    ):
+        publish_msg = SystemTextResponse()
+        publish_msg.header.frame_id = "GPT Question Answering"
+        publish_msg.header.stamp = self.get_clock().now().to_msg()
+        publish_msg.utterance_text = subscribe_msg.utterance_text
+        publish_msg.response = response
+        colored_utterance = colored(publish_msg.utterance_text, "light_blue")
         colored_response = colored(response, "light_green")
         self.log.info(
             f'Responding to utterance:\n>>> "{colored_utterance}"\n>>> with:\n'
             + f'>>> "{colored_response}"'
         )
-        self._qa_publisher.publish(msg)
+        self._qa_publisher.publish(publish_msg)
 
     def prompt_gpt(self, question, model: str = "gpt-3.5-turbo"):
         prompt = self.prompt.format(question)
