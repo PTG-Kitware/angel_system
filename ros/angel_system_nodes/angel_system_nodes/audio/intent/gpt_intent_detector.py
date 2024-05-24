@@ -3,8 +3,8 @@ from langchain.chains import LLMChain
 from langchain.chat_models import ChatOpenAI
 import openai
 import os
-import rclpy
 
+from angel_msgs.msg import DialogueUtterance
 from angel_system_nodes.audio.intent.base_intent_detector import (
     BaseIntentDetector,
     INTENT_LABELS,
@@ -60,7 +60,10 @@ class GptIntentDetector(BaseIntentDetector):
         example_prompt = PromptTemplate(
             input_variables=["utterance", "label"], template=template
         )
-        prompt_instructions = f"Classify each utterance as {all_intents}.\n"
+        prompt_instructions = (
+            f"Classify each utterance using only the following labels:"
+            f"{all_intents}.\n"
+        )
         inference_sample = (
             f"Utterance: {{utterance}}\nIntent {all_intents_parenthetical}:"
         )
@@ -84,11 +87,11 @@ class GptIntentDetector(BaseIntentDetector):
         )
         return LLMChain(llm=openai_llm, prompt=few_shot_prompt)
 
-    def detect_intents(self, msg):
+    def detect_intents(self, msg: DialogueUtterance):
         """
         Detects the user intent via langchain execution of GPT.
         """
-        return self.chain.run(utterance=msg), 0.5
+        return self.chain.run(utterance=msg.utterance_text), 0.5
 
 
 main = make_default_main(GptIntentDetector)
