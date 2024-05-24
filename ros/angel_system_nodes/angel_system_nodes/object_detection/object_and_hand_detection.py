@@ -49,7 +49,7 @@ class ObjectAndHandDetector(Node):
                 ("hand_net_checkpoint",),
                 ##################################
                 # Defaulted parameters
-                ("inference_img_size", 1280),  # inference size (pixels)
+                ("inference_img_size", 768),  # inference size (pixels)
                 ("det_conf_threshold", 0.2),  # object confidence threshold
                 ("iou_threshold", 0.35),  # IOU threshold for NMS
                 ("cuda_device_id", 0),  # cuda device: ID int or CPU
@@ -183,8 +183,10 @@ class ObjectAndHandDetector(Node):
 
         if "background" in self.object_model.names:
             label_vector = self.object_model.names[1:]  # remove background label
+            bkgd_cls = True
         else:
             label_vector = self.object_model.names
+            bkgd_cls = False
 
         label_vector.append("hand (left)")
         label_vector.append("hand (right)")
@@ -236,7 +238,7 @@ class ObjectAndHandDetector(Node):
                 hand_classids = [hand_cid_label_dict[label] for label in hand_labels]
 
                 # Detect objects
-                objcet_boxes, object_confs, objects_classids = predict_image(
+                object_boxes, object_confs, objects_classids = predict_image(
                     img0,
                     self.device,
                     self.object_model,
@@ -249,12 +251,15 @@ class ObjectAndHandDetector(Node):
                     None,
                     self._agnostic_nms,
                 )
+                if bkgd_cls:
+                    objects_classids = [cls_id-1 for cls_id in objects_classids]
 
-                objcet_boxes.extend(hand_boxes)
+
+                object_boxes.extend(hand_boxes)
                 object_confs.extend(hand_confs)
                 objects_classids.extend(hand_classids)
                 for xyxy, conf, cls_id in zip(
-                    objcet_boxes, object_confs, objects_classids
+                    object_boxes, object_confs, objects_classids
                 ):
 
                     n_dets += 1
