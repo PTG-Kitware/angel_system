@@ -75,6 +75,7 @@ black = "21.4b2"
 nltk = "^3.8.1"
 soundfile = "^0.12.1"
 vadersentiment = "^3.3.2"
+termcolor = "^2"
 
 # For BBN ZMQ client
 pyzmq = "==25.0.0"
