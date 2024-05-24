@@ -29,6 +29,7 @@ class BaseEmotionDetector(dialogue.AbstractDialogueNode):
     Base Emotion Detection node. The default emotion detection algorithm leverages Vader
     Sentiment analysis (https://github.com/cjhutto/vaderSentiment).
     """
+
     def __init__(self):
         super().__init__()
 
@@ -77,9 +78,7 @@ class BaseEmotionDetector(dialogue.AbstractDialogueNode):
             classification = LABEL_MAPPINGS["neu"]
 
         confidence = 1.00
-        colored_utterance = colored_utterance = colored(
-            msg.utterance_text, "light_blue"
-        )
+        colored_utterance = colored(msg.utterance_text, "light_blue")
         colored_emotion = colored(classification, "light_green")
         self.log.info(
             f'Rated user utterance:\n>>> "{colored_utterance}"'
