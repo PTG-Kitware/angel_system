@@ -453,7 +453,9 @@ class ActivityClassifierTCN(Node):
         """
         log = self.get_logger()
         self._current_frame_number += 1
-        if self.rt_alive() and self._buffer.queue_image(None, msg, self._current_frame_number):
+        if self.rt_alive() and self._buffer.queue_image(
+            None, msg, self._current_frame_number
+        ):
             if self._enable_trace_logging:
                 log.info(f"Queueing image TS {msg} frame {self._current_frame_number}")
 

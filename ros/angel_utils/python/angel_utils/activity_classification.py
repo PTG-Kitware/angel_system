@@ -178,7 +178,10 @@ class InputBuffer:
             return self.frames[-1][0]
 
     def queue_image(
-        self, img_mat: npt.NDArray[np.uint8], img_header_stamp: Time, image_frame_number: int
+        self,
+        img_mat: npt.NDArray[np.uint8],
+        img_header_stamp: Time,
+        image_frame_number: int,
     ) -> bool:
         """
         Queue up a new image frame.

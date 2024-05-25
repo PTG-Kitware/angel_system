@@ -58,7 +58,7 @@ def iter_file_frames(filepath_glob: str, frame_rate: float):
         1) Relative time in seconds of this frame since the beginning of the
            sequence.
     """
-    sec_per_frame = 1. / frame_rate
+    sec_per_frame = 1.0 / frame_rate
     cur_ts = 0
     for filepath in sorted(glob(filepath_glob)):
         img = PIL.Image.open(filepath)
@@ -146,10 +146,13 @@ def main():
         help=f"Use video mode, and is the path to an mp4 video file.",
     )
     parser.add_argument(
-        "-i", "--image-file-glob",
+        "-i",
+        "--image-file-glob",
         type=str,
-        help="Use image glob mode, and is the glob for images to pick up an "
-             "use in lexicographic order."
+        help=(
+            "Use image glob mode, and is the glob for images to pick up an "
+            "use in lexicographic order."
+        ),
     )
     parser.add_argument(
         "--output-bag-folder",
@@ -182,7 +185,7 @@ def main():
             "-i/--image-file-glob input mode. This option is only considered "
             "when that input mode is specified, otherwise this value is "
             "ignored. This must be a value greater than zero."
-        )
+        ),
     )
 
     args = parser.parse_args()
