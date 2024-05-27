@@ -33,11 +33,11 @@ public class OrbFace : MonoBehaviour
         set => SetNotificationPulse(value);
     }
 
-    public void UpdateNotification(bool note)
+    public void UpdateNotification(bool warning)
     {
-        SetNotificationPulse(note);
+        SetNotificationPulse(warning);
 
-        if (note)
+        if (warning)
         {
             _face.ColorInnerStart = Color.yellow;
             _face.ColorInnerEnd = Color.yellow;
@@ -47,7 +47,7 @@ public class OrbFace : MonoBehaviour
             _face.ColorInnerEnd = _faceColorInnerEnd;
         }
 
-        _noteIcon.SetActive(note);
+        _noteIcon.SetActive(warning);
     }
 
     private float _initialMouthScale;
@@ -115,6 +115,11 @@ public class OrbFace : MonoBehaviour
 
         else if (!_userIsLooking && !_userIsGrabbing && _eyes.gameObject.activeSelf)
             _eyes.gameObject.SetActive(false);
+
+        if (Orb.Instance.OrbBehavior.Equals(MovementBehavior.Fixed))
+            _mouth.Type = Shapes.DiscType.Disc;
+        else
+            _mouth.Type = Shapes.DiscType.Ring;
     }
 
     private void SetNotificationPulse(bool pulsing)
@@ -156,28 +161,19 @@ public class OrbFace : MonoBehaviour
         _face.ColorOuterEnd = _face.ColorOuterStart;
     }
 
-    public void SetOrbGuidance(bool isGuidanceActive)
-    {
-        transform.GetChild(0).gameObject.SetActive(isGuidanceActive);
-        transform.GetChild(1).gameObject.SetActive(!isGuidanceActive);
-    }
-
     public void SetOrbState(OrbStates newState)
     {
         if (newState.Equals(OrbStates.Loading) &&
             _currentFaceState!= OrbStates.Loading)
         {
-            _face.Type = Shapes.DiscType.Arc;
+            _currentFaceState = OrbStates.Loading;
             StartCoroutine(Rotating());
 
         } else if (newState.Equals(OrbStates.Idle) &&
             _currentFaceState != OrbStates.Idle)
         {
-            _face.Type = Shapes.DiscType.Ring;
-            StopCoroutine(Rotating());
+            _currentFaceState = OrbStates.Idle;
         }
-
-        _currentFaceState = newState;
     }
 
     /// <summary>
@@ -186,10 +182,16 @@ public class OrbFace : MonoBehaviour
     /// <returns></returns>
     private IEnumerator Rotating()
     {
+        _face.Type = Shapes.DiscType.Arc;
+        _mouth.Type = Shapes.DiscType.Arc;
         while (_currentFaceState == OrbStates.Loading)
         {
-            _face.transform.Rotate(new Vector3(0,0,20f),Space.Self);
+            _face.transform.Rotate(new Vector3(0, 0, 20f), Space.Self);
+            _mouth.transform.Rotate(new Vector3(0, 0, 15f), Space.Self);
             yield return new WaitForEndOfFrame();
         }
+
+        _mouth.Type = Shapes.DiscType.Ring;
+        _face.Type = Shapes.DiscType.Ring;
     }
 }

@@ -19,8 +19,8 @@ public class DataProvider : Singleton<DataProvider>
         get => _manual != null;
     }
 
-    private Dictionary<string, TaskList> _currentSelectedTasks = new Dictionary<string, TaskList>();
-    public Dictionary<string, TaskList> CurrentSelectedTasks => _currentSelectedTasks;
+    private Dictionary<string, TaskList> _currentActiveTasks = new Dictionary<string, TaskList>();
+    public Dictionary<string, TaskList> CurrentActiveTasks => _currentActiveTasks;
 
     private string _currentObservedTask = "";
     public string CurrentObservedTask => _currentObservedTask;
@@ -107,7 +107,7 @@ public class DataProvider : Singleton<DataProvider>
     {
         if (!ManualInitialized || tasksToBe == null || tasksToBe.Count > _manual.Keys.Count) return;
 
-        Dictionary<string, TaskList> copy = new Dictionary<string, TaskList>(_currentSelectedTasks);
+        Dictionary<string, TaskList> copy = new Dictionary<string, TaskList>(_currentActiveTasks);
 
         bool listChanged = false;
         //Add potential new ones that have not been selected before and existing tasks
@@ -125,7 +125,7 @@ public class DataProvider : Singleton<DataProvider>
         }
 
         //Check if tasks were removed from new list
-        foreach (string taskID in _currentSelectedTasks.Keys)
+        foreach (string taskID in _currentActiveTasks.Keys)
         {
             if (!tasksToBe.Contains(taskID))
             {//check if it exists in manual 
@@ -137,14 +137,14 @@ public class DataProvider : Singleton<DataProvider>
         if (!listChanged) return; //Do nothing if the currently observed task list did not change
 
         //Set new currently selected task
-        _currentSelectedTasks = copy;
+        _currentActiveTasks = copy;
 
         //Update currently observed task
         if (copy.Keys.Count > 0 && (_currentObservedTask.Equals("") || !copy.ContainsKey(_currentObservedTask))) //Set the a random initial value for the currentObservedTask
             SetCurrentObservedTask(copy.First().Key);
 
         string debug = "DATA PROVIDER: selected tasks set to: ";
-        foreach (string taskID in _currentSelectedTasks.Keys)
+        foreach (string taskID in _currentActiveTasks.Keys)
             debug += taskID + ", ";
         AngelARUI.Instance.DebugLogMessage(debug, true);
         PublishToSubscribers(SusbcriberType.TaskListChanged);
@@ -159,8 +159,8 @@ public class DataProvider : Singleton<DataProvider>
     /// <param name="taskID"></param>
     public void SetCurrentObservedTask(string taskID)
     {
-        if (!ManualInitialized || _currentSelectedTasks == null 
-            || !_currentSelectedTasks.ContainsKey(taskID)
+        if (!ManualInitialized || _currentActiveTasks == null 
+            || !_currentActiveTasks.ContainsKey(taskID)
             || _currentObservedTask == taskID) return;
 
         _currentObservedTask = taskID;
@@ -184,42 +184,42 @@ public class DataProvider : Singleton<DataProvider>
     /// <param name="stepIndex">index of current step in the task list given by taskID</param>
     public void SetCurrentStep(string taskID, int stepIndex)
     {
-        if (!ManualInitialized || _currentSelectedTasks == null 
-            || !_currentSelectedTasks.ContainsKey(taskID)
-            || _currentSelectedTasks[taskID].CurrStepIndex == stepIndex) return;
+        if (!ManualInitialized || _currentActiveTasks == null 
+            || !_currentActiveTasks.ContainsKey(taskID)
+            || _currentActiveTasks[taskID].CurrStepIndex == stepIndex) return;
 
         if (stepIndex <= 0)
         {
-            _currentSelectedTasks[taskID].PrevStepIndex = -1;
-            _currentSelectedTasks[taskID].CurrStepIndex = 0;
-            _currentSelectedTasks[taskID].NextStepIndex = 1;
+            _currentActiveTasks[taskID].PrevStepIndex = -1;
+            _currentActiveTasks[taskID].CurrStepIndex = 0;
+            _currentActiveTasks[taskID].NextStepIndex = 1;
 
             if (stepIndex==0)
             {
-                AudioManager.Instance.PlayText("For "+ taskID+", "+_currentSelectedTasks[taskID].Steps[stepIndex].StepDesc);
+                AudioManager.Instance.PlayMessage("For "+ taskID+", "+_currentActiveTasks[taskID].Steps[stepIndex].StepDesc);
             }
 
-        } else if (stepIndex == _currentSelectedTasks[taskID].Steps.Count - 1)
+        } else if (stepIndex == _currentActiveTasks[taskID].Steps.Count - 1)
         {
-            _currentSelectedTasks[taskID].PrevStepIndex = _currentSelectedTasks[taskID].Steps.Count-2;
-            _currentSelectedTasks[taskID].CurrStepIndex = _currentSelectedTasks[taskID].Steps.Count-1;
-            _currentSelectedTasks[taskID].NextStepIndex = -1;
-            AudioManager.Instance.PlayText("For " + taskID + ", " + _currentSelectedTasks[taskID].Steps[stepIndex].StepDesc);
+            _currentActiveTasks[taskID].PrevStepIndex = _currentActiveTasks[taskID].Steps.Count-2;
+            _currentActiveTasks[taskID].CurrStepIndex = _currentActiveTasks[taskID].Steps.Count-1;
+            _currentActiveTasks[taskID].NextStepIndex = -1;
+            AudioManager.Instance.PlayMessage("For " + taskID + ", " + _currentActiveTasks[taskID].Steps[stepIndex].StepDesc);
         }
-        else if (stepIndex > _currentSelectedTasks[taskID].Steps.Count - 1)
+        else if (stepIndex > _currentActiveTasks[taskID].Steps.Count - 1)
         {
             //set the current task as count if the task is done
-            _currentSelectedTasks[taskID].PrevStepIndex = _currentSelectedTasks[taskID].Steps.Count-1;
-            _currentSelectedTasks[taskID].CurrStepIndex = _currentSelectedTasks[taskID].Steps.Count;
-            _currentSelectedTasks[taskID].NextStepIndex = -1;
+            _currentActiveTasks[taskID].PrevStepIndex = _currentActiveTasks[taskID].Steps.Count-1;
+            _currentActiveTasks[taskID].CurrStepIndex = _currentActiveTasks[taskID].Steps.Count;
+            _currentActiveTasks[taskID].NextStepIndex = -1;
         }
         else
         {
-            _currentSelectedTasks[taskID].PrevStepIndex = stepIndex - 1;
-            _currentSelectedTasks[taskID].CurrStepIndex = stepIndex;
-            _currentSelectedTasks[taskID].NextStepIndex = stepIndex + 1;
+            _currentActiveTasks[taskID].PrevStepIndex = stepIndex - 1;
+            _currentActiveTasks[taskID].CurrStepIndex = stepIndex;
+            _currentActiveTasks[taskID].NextStepIndex = stepIndex + 1;
 
-            AudioManager.Instance.PlayText("For " + taskID + ", " + _currentSelectedTasks[taskID].Steps[stepIndex].StepDesc);
+            AudioManager.Instance.PlayMessage("For " + taskID + ", " + _currentActiveTasks[taskID].Steps[stepIndex].StepDesc);
         }
 
         AudioManager.Instance.PlaySound(Orb.Instance.transform.position,SoundType.taskDone);
@@ -233,8 +233,8 @@ public class DataProvider : Singleton<DataProvider>
     /// <param name="taskID"></param>
     private void GoToNextStep(string taskID)
     {
-        if (!ManualInitialized || _currentSelectedTasks == null || !_currentSelectedTasks.ContainsKey(taskID)) return;
-        int potentialStepIndex = _currentSelectedTasks[taskID].CurrStepIndex + 1;
+        if (!ManualInitialized || _currentActiveTasks == null || !_currentActiveTasks.ContainsKey(taskID)) return;
+        int potentialStepIndex = _currentActiveTasks[taskID].CurrStepIndex + 1;
 
         SetCurrentStep(taskID, potentialStepIndex);
     }
@@ -245,8 +245,8 @@ public class DataProvider : Singleton<DataProvider>
     /// <param name="taskID"></param>
     private void GoToPreviousStep(string taskID)
     {
-        if (_manual == null || _currentSelectedTasks == null || !_currentSelectedTasks.ContainsKey(taskID)) return;
-        int potentialStepIndex = _currentSelectedTasks[taskID].CurrStepIndex -1;
+        if (_manual == null || _currentActiveTasks == null || !_currentActiveTasks.ContainsKey(taskID)) return;
+        int potentialStepIndex = _currentActiveTasks[taskID].CurrStepIndex -1;
 
         SetCurrentStep(taskID, potentialStepIndex);
     }

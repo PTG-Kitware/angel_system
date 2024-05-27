@@ -1,9 +1,13 @@
 using UnityEngine;
-using UnityEngine.Events;
 using System.Collections;
 using System.Collections.Generic;
 using Shapes;
 using System;
+using UnityEngine.Events;
+
+#if ENABLE_WINMD_SUPPORT
+using Windows.Foundation.Diagnostics;
+#endif
 
 /// <summary>
 /// Interface to the ARUI Components - a floating assistant in the shape as an orb and a task overview panel.
@@ -26,9 +30,6 @@ public class AngelARUI : Singleton<AngelARUI>
     private bool _useViewManagement = true;           /// <If true, the ARUI view mangement will run
     [HideInInspector]
     public bool IsVMActiv => ViewManagement.Instance != null && _useViewManagement;
-
-    ///****** Confirmation Dialogue
-    private GameObject _confirmationWindowPrefab = null;
 
     private void Awake() => StartCoroutine(InitProjectSettingsAndScene());
 
@@ -79,6 +80,11 @@ public class AngelARUI : Singleton<AngelARUI>
         //handPoseManager.gameObject.name = "***ARUI-" + StringResources.HandPoseManager_name;
         yield return new WaitForEndOfFrame();
 
+        //Instantiate the heuristic based hand pose detector
+        GameObject handPoseManager = Instantiate(Resources.Load(StringResources.HandPoseManager_path)) as GameObject;
+        handPoseManager.gameObject.name = "***ARUI-" + StringResources.HandPoseManager_name;
+        yield return new WaitForEndOfFrame();
+
         //Instantiate the AI assistant - orb
         GameObject orb = Instantiate(Resources.Load(StringResources.Orb_path)) as GameObject;
         orb.gameObject.name = "***ARUI-" + StringResources.orb_name;
@@ -93,9 +99,6 @@ public class AngelARUI : Singleton<AngelARUI>
         if (_useViewManagement)
             StartCoroutine(TryStartVM());
 
-        //Load resources for UI elements
-        _confirmationWindowPrefab = Resources.Load(StringResources.ConfNotification_path) as GameObject;
-        _confirmationWindowPrefab.gameObject.name = "***ARUI-" + StringResources.confirmationWindow_name;
 
         //Initialize components for the visibility computation of physical objects
         Camera zBufferCam = new GameObject("zBuffer").AddComponent<Camera>();
@@ -126,19 +129,13 @@ public class AngelARUI : Singleton<AngelARUI>
     /// </summary>
     /// <param name="taskID">ID of the task that should be updated</param>
     /// <param name="stepIndex">index of the current task that should be highlighted in the UI</param>
-    public void GoToStep(string taskID, int stepIndex)
-    {
-        DataProvider.Instance.SetCurrentStep(taskID, stepIndex);   
-    }
+    public void GoToStep(string taskID, int stepIndex) => DataProvider.Instance.SetCurrentStep(taskID, stepIndex);
 
     /// <summary>
     /// Set the 
     /// </summary>
     /// <param name="taskID"></param>
-    public void SetCurrentObservedTask(string taskID)
-    {
-        DataProvider.Instance.SetCurrentObservedTask(taskID);
-    }
+    public void SetCurrentObservedTask(string taskID) => DataProvider.Instance.SetCurrentObservedTask(taskID);
 
     /// <summary>
     /// Mute voice feedback for task guidance. ONLY influences task guidance.
@@ -148,36 +145,134 @@ public class AngelARUI : Singleton<AngelARUI>
 
     #endregion
 
+    #region Taskoverview Panel
+
+    /// <summary>
+    /// Turn the task overview panel on or off. If 'show' is true, the task overview panel will appear in front of the user
+    /// </summary>
+    /// <param name="show"></param>
+    public void ShowTaskoverviewPanel(bool show) => MultiTaskList.Instance.SetTaskOverViewVisibility(show);
+
+    /// <summary>
+    /// Change the position of the task overview panel 
+    /// </summary>
+    /// <param name="worldSpacePos"></param>
+    public void SetTaskOverviewPosition(Vector3 worldSpacePos) => MultiTaskList.Instance.SetPosition(worldSpacePos);
+
+    /// <summary>
+    /// Toggle the visibiliy of the task overview panel
+    /// </summary>
+    public void ToggleTaskOverview() => MultiTaskList.Instance.ToggleOverview();
+
+
+    #endregion
 
     #region Notifications
 
     /// <summary>
-    /// Forward a text-base message to the orb, and the orb will output the message using audio.
+    /// Forward a message to the orb, and the orb will output the message using audio.
     /// The message will be cut off after 50 words, which take around 25 seconds to speak on average. 
     /// 
-    /// Iterrupts the last message that was spoken
+    /// The utterance string will not be spoken, but visually appear for the user. This is used to provide the user feedback
+    /// for what voice command was recognized.
+    /// 
+    /// Iterrupts the last message that was spoken.
+    /// </summary>
+    /// <param name="utterance">THIS IS OPTIONAL</param>
+    /// <param name="message"></param>
+    public void PlayDialogueAtAgent(string utterance,string message, float timeout = 30)
+    {
+        if (!Utils.StringValid(message) || Orb.Instance == null || AudioManager.Instance == null) return;
+        AudioManager.Instance.PlayAndShowDialogue(utterance, message, timeout);
+        Orb.Instance.SetOrbThinking(false);
+    }
+
+    /// <summary>
+    /// Forward a message to the orb, and the orb will output the message using audio..
+    /// The message will be cut off after 50 words, which take around 25 seconds to speak on average.
     /// </summary>
     /// <param name="message"></param>
-    public void PlayMessageAtOrb(string message)
+    public void PlayMessageAtAgent(string message, float timeout = 10)
     {
-        if (message.Length == 0 || Orb.Instance == null || AudioManager.Instance == null) return;
-        AudioManager.Instance.PlayText(message);
+        if (!Utils.StringValid(message) || Orb.Instance == null || AudioManager.Instance == null) return;
+        AudioManager.Instance.PlayAndShowMessage(message, timeout);
+        Orb.Instance.SetOrbThinking(false);
     }
 
     /// <summary>
     /// If given paramter is true, the orb will show message to the user that the system detected an attempt to skip the current task.
     /// The message will disappear if "SetCurrentTaskID(..)" is called, or ShowSkipNotification(false)
-    /// 
-    /// //TODO
     /// </summary>
-    /// <param name="show">if true, the orb will show a skip notification, if false, the notification will disappear</param>
-    public void SetNotification(string message) => Orb.Instance.AddNotification(message);
+    /// <param name="message"></param>
+    /// <param name="urgent"></param>
+    public void SetWarningMessage(string message, bool urgent = false)
+    {
+        if (urgent)
+        {
+            AngelARUI.Instance.CallAgentToUser();
+        }
+        Orb.Instance.AddWarning(message);
+    }
 
     /// <summary>
     /// //TODO
     /// </summary>
     /// <param name="type"></param>
-    public void RemoveNotification() => Orb.Instance.RemoveNotification();
+    public void RemoveWarningMessage() => Orb.Instance.RemoveWarning();
+
+    /// <summary>
+    /// If confirmation action is set - SetUserIntentCallback(...) - and no confirmation window is active at the moment, the user is shown a 
+    /// timed confirmation window. Recommended text: "Did you mean ...". If the user confirms the dialogue, the onUserIntentConfirmedAction action is invoked. 
+    /// </summary>
+    /// <param name="msg">Message that is shown in the Confirmation Dialogue</param>
+    /// <param name="actionOnConfirmation">Action triggerd if the user confirms the dialogue</param>
+    /// <param name="actionOnTimeOut">OPTIONAL - Action triggered if notification times out</param>
+    public void TryGetUserConfirmation(string msg, UnityAction actionOnConfirmation, UnityAction actionOnTimeOut, float timeout = 10, bool urgent = false)
+    {
+        if (!Utils.StringValid(msg) || actionOnConfirmation==null) return;
+        List<UnityAction> allConfirmationActions = new List<UnityAction>() { actionOnConfirmation };
+        if (urgent)
+        {
+            AngelARUI.Instance.CallAgentToUser();
+        }
+        Orb.Instance.TryGetUserConfirmation(msg, allConfirmationActions, actionOnTimeOut, timeout);
+    }
+
+    /// <summary>
+    /// TODO
+    /// </summary>
+    /// <param name="selectionMsg"></param>
+    /// <param name="choices"></param>
+    /// <param name="actionOnSelection"></param>
+    /// <param name="actionOnTimeOut"></param>
+    /// <param name="timeout"></param>
+    public void TryGetUserMultipleChoice(string selectionMsg, List<string> choices, List<UnityAction> actionOnSelection, UnityAction actionOnTimeOut, float timeout = 10, bool urgent = false)
+    {
+        if (actionOnSelection == null || choices.Count!= actionOnSelection.Count) return;
+
+        if (urgent) {
+            AngelARUI.Instance.CallAgentToUser();
+        }
+        
+        Orb.Instance.TryGetUserChoice(selectionMsg,choices, actionOnSelection, actionOnTimeOut, timeout);
+    }
+
+    /// <summary>
+    /// TODO
+    /// </summary>
+    /// <param name="selectionMsg"></param>
+    /// <param name="actionOnYes"></param>
+    /// <param name="actionOnNo"></param>
+    /// <param name="actionOnTimeOut"></param>
+    /// <param name="timeout"></param>
+    public void TryGetUserYesNoChoice(string selectionMsg, UnityAction actionOnYes, UnityAction actionOnNo, UnityAction actionOnTimeOut, float timeout = 10, bool urgent = false)
+    {
+        if (urgent)
+        {
+            AngelARUI.Instance.CallAgentToUser();
+        }
+        Orb.Instance.TryGetUserYesNoChoice(selectionMsg, actionOnYes, actionOnNo, actionOnTimeOut, timeout);
+    }
 
     #endregion
 
@@ -202,6 +297,42 @@ public class AngelARUI : Singleton<AngelARUI>
     {
         if (DataProvider.Instance == null) return;
         DataProvider.Instance.RemoveDetectedObjects(ID);
+    }
+
+    #endregion
+
+    #region Orb Behavior
+
+    /// <summary>
+    /// Get the 3D world position of the agent
+    /// </summary>
+    /// <returns></returns>
+    public Transform GetAgentTransform()
+    {
+        if (Orb.Instance != null && Orb.Instance.orbTransform != null)
+        {
+            return Orb.Instance.orbTransform;
+        }
+        return transform;
+    }
+
+    /// <summary>
+    /// If true, changes the visual appearance of the agent to a 'thinking' state, else idle.
+    /// </summary>
+    /// <param name="isThinking"></param>
+    public void SetAgentThinking(bool isThinking) => Orb.Instance.SetOrbThinking(isThinking);
+
+    public void CallAgentToUser() => Orb.Instance.MoveToUser();
+
+    public void SetAgentMessageAlignment(MessageAlignment newAlignment) => Orb.Instance.SetMessageAlignmentTo(newAlignment);
+
+    #endregion
+
+    #region Voice Activation
+
+    public bool RegisterKeyword(string keyword, UnityAction keyWordDetectedCallBack)
+    {
+        return AudioManager.Instance.RegisterKeyword(keyword, keyWordDetectedCallBack);
     }
 
     #endregion
@@ -289,6 +420,11 @@ public class AngelARUI : Singleton<AngelARUI>
             if (showInLogger && FindObjectOfType<Logger>() != null)
                 Logger.Instance.LogInfo("***ARUI: " + message);
             Debug.Log("***ARUI: " + message);
+
+#if ENABLE_WINMD_SUPPORT
+        LoggingChannel lc = new LoggingChannel("ARUI", null, new Guid("2df964bb-cd29-4ac0-a462-59b4c484ae3d"));
+        lc.LogMessage("***ARUI: " + message);
+#endif
         }
     }
 

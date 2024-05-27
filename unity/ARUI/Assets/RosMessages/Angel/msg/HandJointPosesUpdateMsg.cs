@@ -20,6 +20,8 @@ namespace RosMessageTypes.Angel
         //  Position and rotation are provided for each joint.
         // 
         public Std.HeaderMsg header;
+        //  Timestamp of the source image these predictions pertain to.
+        public BuiltinInterfaces.TimeMsg source_stamp;
         //  Which hand this update is for ('left' or 'right')
         public string hand;
         //  List of joints
@@ -28,13 +30,15 @@ namespace RosMessageTypes.Angel
         public HandJointPosesUpdateMsg()
         {
             this.header = new Std.HeaderMsg();
+            this.source_stamp = new BuiltinInterfaces.TimeMsg();
             this.hand = "";
             this.joints = new HandJointPoseMsg[0];
         }
 
-        public HandJointPosesUpdateMsg(Std.HeaderMsg header, string hand, HandJointPoseMsg[] joints)
+        public HandJointPosesUpdateMsg(Std.HeaderMsg header, BuiltinInterfaces.TimeMsg source_stamp, string hand, HandJointPoseMsg[] joints)
         {
             this.header = header;
+            this.source_stamp = source_stamp;
             this.hand = hand;
             this.joints = joints;
         }
@@ -44,6 +48,7 @@ namespace RosMessageTypes.Angel
         private HandJointPosesUpdateMsg(MessageDeserializer deserializer)
         {
             this.header = Std.HeaderMsg.Deserialize(deserializer);
+            this.source_stamp = BuiltinInterfaces.TimeMsg.Deserialize(deserializer);
             deserializer.Read(out this.hand);
             deserializer.Read(out this.joints, HandJointPoseMsg.Deserialize, deserializer.ReadLength());
         }
@@ -51,6 +56,7 @@ namespace RosMessageTypes.Angel
         public override void SerializeTo(MessageSerializer serializer)
         {
             serializer.Write(this.header);
+            serializer.Write(this.source_stamp);
             serializer.Write(this.hand);
             serializer.WriteLength(this.joints);
             serializer.Write(this.joints);
@@ -60,6 +66,7 @@ namespace RosMessageTypes.Angel
         {
             return "HandJointPosesUpdateMsg: " +
             "\nheader: " + header.ToString() +
+            "\nsource_stamp: " + source_stamp.ToString() +
             "\nhand: " + hand.ToString() +
             "\njoints: " + System.String.Join(", ", joints.ToList());
         }

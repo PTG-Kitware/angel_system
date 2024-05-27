@@ -1,0 +1,68 @@
+{"Name": "Pinwheels", "Steps":[
+    {
+        "StepDesc": "Place tortilla on cutting board.",
+        "RequiredItems": [ "tortilla", "cutting board" ],
+        "SubSteps": [],
+        "CurrSubStepIndex": -1
+    },
+    {
+        "StepDesc": "Use a butter knife to scoop nut butter from the jar. Spread nut butter onto tortilla, leaving 1/2-inch uncovered at the edges.",
+        "RequiredItems": [ "nut butter", "tortilla", "jar", "butter knife"],
+        "SubSteps": [],
+        "CurrSubStepIndex": -1
+    },
+    {
+        "StepDesc": "Clean the knife by wiping with a paper towel.",
+        "RequiredItems": [ "knife", "paper towel"],
+        "SubSteps": [],
+        "CurrSubStepIndex": -1
+    },
+    {
+        "StepDesc": "Use the knife to scoop jelly from the jar. Spread jelly over the nut butter.",
+        "RequiredItems": [ "knife", "jar", "nut butter" ],
+        "SubSteps": [],
+        "CurrSubStepIndex": -1
+    },
+    {
+        "StepDesc": "Clean the knife by wiping with a paper towel.",
+        "RequiredItems": [ "knife", "paper towel" ],
+        "SubSteps": [],
+        "CurrSubStepIndex": -1
+    },
+    {
+        "StepDesc": "Roll the tortilla from one end to the other into a log shape, about 1.5 inches thick. Roll it tight enough to prevent gaps, but not so tight that the filling leaks.",
+        "RequiredItems": [ "tortilla" ],
+        "SubSteps": [],
+        "CurrSubStepIndex": -1
+    },
+    {
+        "StepDesc": "Secure the rolled tortilla by inserting 5 toothpicks about 1 inch apart.",
+        "RequiredItems": [ "tortilla", "toothpicks" ],
+        "SubSteps": [],
+        "CurrSubStepIndex": -1
+    },
+    {
+        "StepDesc": "Trim the ends of the tortilla roll with the butter knife, leaving 1⁄2 inch margin between the last toothpick and the end of the roll. Discard ends.",
+        "RequiredItems": [ "tortilla", "butter knife" ],
+        "SubSteps": [],
+        "CurrSubStepIndex": -1
+    },
+    {
+        "StepDesc": "Cross the two ends of the floss over the top of the tortilla roll. Holding one end of the floss in each hand, pull the floss ends in opposite directions to slice.",
+        "RequiredItems": [ "tortilla", "butter knife" ],
+        "SubSteps": [],
+        "CurrSubStepIndex": -1
+    },
+    {
+        "StepDesc": "Continue slicing with floss to create 5 pinwheels.",
+        "RequiredItems": [ "floss", "tortilla" ],
+        "SubSteps": [],
+        "CurrSubStepIndex": -1
+    },
+    {
+        "StepDesc": "Place the pinwheels on a plate.",
+        "RequiredItems": [ "plate", "tortilla" ],
+        "SubSteps": [],
+        "CurrSubStepIndex": -1
+    }],
+"CurrStepIndex":0,"PrevStepIndex":-1,"NextStepIndex":1}

@@ -266,6 +266,18 @@ PrefabInstance:
       propertyPath: m_Materials.Array.data[0]
       value: 
       objectReference: {fileID: 0}
+    - target: {fileID: 9017675414041027418, guid: a6823ba7abbeb35459b7c1ea4274a76d, type: 3}
+      propertyPath: m_fontAsset
+      value: 
+      objectReference: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+    - target: {fileID: 9017675414041027418, guid: a6823ba7abbeb35459b7c1ea4274a76d, type: 3}
+      propertyPath: m_sharedMaterial
+      value: 
+      objectReference: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+    - target: {fileID: 9017675414041027419, guid: a6823ba7abbeb35459b7c1ea4274a76d, type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
     - target: {fileID: 9017675414162035557, guid: a6823ba7abbeb35459b7c1ea4274a76d, type: 3}
       propertyPath: m_Name
       value: Rectangle_listmenubutton_tasks_Overview

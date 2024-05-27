@@ -97,7 +97,7 @@ public class AngelARUIBridge : MonoBehaviour
         // Handle user notifications
         for (int i = 0; i < msg.notifications.Length; i++)
         {
-            AngelARUI.Instance.PlayMessageAtOrb(msg.notifications[i].description);
+            AngelARUI.Instance.PlayMessageAtAgent(msg.notifications[i].description);
         }
     }
 

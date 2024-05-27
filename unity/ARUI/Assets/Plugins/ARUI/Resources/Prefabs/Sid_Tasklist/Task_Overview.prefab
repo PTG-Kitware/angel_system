@@ -44,6 +44,7 @@ GameObject:
   - component: {fileID: 7387432270431237105}
   - component: {fileID: 6473157197095737792}
   - component: {fileID: 3063197846603743796}
+  - component: {fileID: 7961778718004383392}
   m_Layer: 0
   m_Name: Task_Overview
   m_TagString: Untagged
@@ -79,12 +80,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4a4b9a6f8ad4d1342860c3a9903ae6e3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  objs: []
-  LinePrefab: {fileID: 7063555848741500438, guid: 1398ba00eb8dccd419ca4febd09f374b, type: 3}
   movementSpeed: 1
   xOffset: 0
   zOffset: 0.5
-  heightOffset: 0.04
 --- !u!114 &1750494463168848157
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -170,6 +168,18 @@ MonoBehaviour:
   handType: 1
   proximityType: 3
   faceAway: 1
+--- !u!114 &7961778718004383392
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1735085396694344570}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bb30febd5c1b22a4f84104084fdba6ba, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &5401681680357383070
 GameObject:
   m_ObjectHideFlags: 0

@@ -5,6 +5,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 
 public enum SoundType
 {
@@ -15,7 +16,9 @@ public enum SoundType
     moveStart = 4,
     moveEnd = 5,
     select = 6,
-    warning = 7
+    warning = 7,
+    voiceConfirmation = 8,
+    actionConfirmation = 9,
 }
 
 /// <summary>
@@ -32,12 +35,14 @@ public class AudioManager : Singleton<AudioManager>, IMixedRealitySpeechHandler
     private Dictionary<SoundType, string> _soundTypeToPathMapping = new Dictionary<SoundType, string>()
     {
         { SoundType.notification,StringResources.NotificationSound_path},
-        { SoundType.confirmation, StringResources.ConfirmationSound_path},
+        { SoundType.confirmation, StringResources.BtnConfirmationSound_path},
         { SoundType.taskDone,StringResources.NextTaskSound_path},
         { SoundType.moveStart,StringResources.MoveStart_path},
         { SoundType.moveEnd,StringResources.MoveEnd_path},
         { SoundType.select,StringResources.SelectSound_path},
-        { SoundType.warning,StringResources.WarningSound_path}
+        { SoundType.warning,StringResources.WarningSound_path},
+        { SoundType.voiceConfirmation,StringResources.VoiceConfirmation_path},
+        { SoundType.actionConfirmation, StringResources.ActionConfirmation_path }
     };
 
     private List<AudioSource> _currentlyPlayingSound = null;             /// <Reference to all sounds that are currently playing
@@ -47,12 +52,14 @@ public class AudioManager : Singleton<AudioManager>, IMixedRealitySpeechHandler
     private float _updateTime = 0f;
     private float _updateDelay = 0.04f;
     private float[] _spectrumData = new float[64];
-    private float _multiplier = 2f;
 
     ///** Mute audio feedback for task guidance
     private bool _isMute = false;                                        /// <if true, task instructions or dialogue system audio feedback is not played. BUT system sound is.
     public bool IsMute => _isMute;
-    
+
+    ///** Voice commands callback storage
+    private Dictionary<string, UnityAction> _keywordToActionMapping = new Dictionary<string, UnityAction>();
+
     public void Awake() => CoreServices.InputSystem?.RegisterHandler<IMixedRealitySpeechHandler>(this);
 
     private void Start()
@@ -63,6 +70,8 @@ public class AudioManager : Singleton<AudioManager>, IMixedRealitySpeechHandler
         _tTos = _tTosGO.AddComponent<TextToSpeech>();
 
         _currentlyPlayingSound = new List<AudioSource>();
+
+        RegisterKeyword("stop", () => UserSaidStopAction());
     }
 
     /// <summary>
@@ -71,10 +80,47 @@ public class AudioManager : Singleton<AudioManager>, IMixedRealitySpeechHandler
     /// NOTE: THIS ONLY WORKS IN BUILD (NOT HOLOGRAPHIC REMOTING)
     /// </summary>
     /// <param name="text">The text that is turned into audion and played</param>
-    public void PlayText(string text)
+    public void PlayAndShowDialogue(string utterance, string answer, float timeout = 30)
+    {
+        if (utterance==null)
+        {
+            utterance = string.Empty;
+        }
+
+        if (!_isMute)
+            StartCoroutine(PlayTextDialogue(Orb.Instance.orbTransform.position, utterance, answer, timeout));
+    }
+
+    /// <summary>
+    /// Speech-To-Text for the task. Plays the text at the orb's position 
+    /// and stops any other currently playing text instructions
+    /// NOTE: THIS ONLY WORKS IN BUILD (NOT HOLOGRAPHIC REMOTING)
+    /// </summary>
+    /// <param name="text">The text that is turned into audion and played</param>
+    public void PlayAndShowMessage(string message, float timeout = 30)
     {
         if (!_isMute)
-            StartCoroutine(PlayTextLocalized(Orb.Instance.transform.position, text));
+            StartCoroutine(PlayTextDialogue(Orb.Instance.orbTransform.position, "", message, timeout));
+    }
+
+    /// <summary>
+    /// Speech-To-Text for the task. Plays the text at the orb's position 
+    /// and stops any other currently playing text instructions
+    /// NOTE: THIS ONLY WORKS IN BUILD (NOT HOLOGRAPHIC REMOTING)
+    /// </summary>
+    /// <param name="text">The text that is turned into audion and played</param>
+    public void PlayMessage(string text, float timeout = 30)
+    {
+        if (!_isMute)
+            StartCoroutine(PlayTextLocalized(Orb.Instance.orbTransform.position, text));
+    }
+
+    public void PlayTextIfNotPlaying(string text)
+    {
+        if (!_isMute && _currentlyPlayingText != null && _currentlyPlayingText == false && _tTos.AudioSource.isPlaying == false)
+        {
+            StartCoroutine(PlayTextLocalized(Orb.Instance.orbTransform.position, text));
+        }
     }
 
     /// <summary>
@@ -162,13 +208,13 @@ public class AudioManager : Singleton<AudioManager>, IMixedRealitySpeechHandler
     /// <returns></returns>
     private IEnumerator PlayTextLocalized(Vector3 pos, String text)
     {
-        if (_currentlyPlayingText!= null)
+        if (_currentlyPlayingText != null)
         {
             _tTos.AudioSource.Stop();
             _tTos.StopSpeaking();
             _currentlyPlayingText.Stop();
         }
-            
+
         yield return new WaitForEndOfFrame();
 
         _tTos.gameObject.transform.position = pos;
@@ -197,11 +243,82 @@ public class AudioManager : Singleton<AudioManager>, IMixedRealitySpeechHandler
             Orb.Instance.MouthScale = barHeight;
 
             yield return new WaitForEndOfFrame();
+        }
+
+        yield return new WaitForEndOfFrame();
+
+        Orb.Instance.MouthScale = 0;
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="pos"></param>
+    /// <param name="utterance"></param>
+    /// <param name="answer"></param>
+    /// <returns></returns>
+    private IEnumerator PlayTextDialogue(Vector3 pos, String utterance, string answer, float timeout)
+    {
+        if (_currentlyPlayingText!= null)
+        {
+            _tTos.AudioSource.Stop();
+            _tTos.StopSpeaking();
+            _currentlyPlayingText.Stop();
+            Orb.Instance.SetDialogueActive(false);
+        }
+            
+        yield return new WaitForEndOfFrame();
+
+        _tTos.gameObject.transform.position = pos;
+        Orb.Instance.SetDialogueActive(true);
+        Orb.Instance.SetDialogueText(utterance, answer, timeout);
+
+        yield return new WaitForEndOfFrame();
+
+        string cappedText = Utils.GetCappedText(answer, 50);
+        AngelARUI.Instance.DebugLogMessage("Orb says: " + cappedText, true);
+        _tTos.StartSpeaking(cappedText);
+        _currentlyPlayingText = _tTos.AudioSource;
+
+        yield return new WaitForEndOfFrame();
+
+        while (!_tTos.AudioSource.isPlaying)
+            yield return new WaitForEndOfFrame();
+
+        while (_tTos.AudioSource.isPlaying)
+        {
+            if (_updateTime > Time.time)
+                yield return new WaitForEndOfFrame();
+
+            _tTos.AudioSource.GetSpectrumData(_spectrumData, 0, FFTWindow.BlackmanHarris);
+            _updateTime = Time.time + _updateDelay;
+
+            var barHeight = Mathf.Clamp(_spectrumData[1], 0.001f, 1f);
+            Orb.Instance.MouthScale = barHeight;
+
+            yield return new WaitForEndOfFrame();
         } 
         
         yield return new WaitForEndOfFrame();
 
         Orb.Instance.MouthScale = 0; 
+    }
+
+    #region Keyword Detection
+
+    /// <summary>
+    /// This function is called if user said 'stop'
+    /// Stops any ongoing TTS at the orb
+    /// </summary>
+    private void UserSaidStopAction()
+    {
+        if (_currentlyPlayingText != null)
+            _currentlyPlayingText.Stop();
+
+        if (_tTos)
+            _tTos.StopSpeaking();
+
+        AngelARUI.Instance.DebugLogMessage("Orb stopped speaking", true);
     }
 
     /// <summary>
@@ -211,18 +328,29 @@ public class AudioManager : Singleton<AudioManager>, IMixedRealitySpeechHandler
     /// <param name="eventData"></param>
     public void OnSpeechKeywordRecognized(SpeechEventData eventData)
     {
-        if (eventData.Command.Keyword.ToLower().Equals("stop"))
+        AngelARUI.Instance.DebugLogMessage("Detected keyword: " + eventData.Command.Keyword.ToLower(), true);
+        foreach (string keyword in _keywordToActionMapping.Keys)
         {
-            if (_currentlyPlayingText != null)
-                _currentlyPlayingText.Stop();
+            if (eventData.Command.Keyword.ToLower().Equals(keyword.ToLower()))
+            {
+                _keywordToActionMapping[keyword].Invoke();
+                PlaySound(Orb.Instance.orbTransform.position, SoundType.voiceConfirmation);
+            }
+        }
+    }
 
-            if (_tTos)
-                _tTos.StopSpeaking();
-
-            AngelARUI.Instance.DebugLogMessage("User triggered: Orb stopped speaking", true);
+    public bool RegisterKeyword(string keyword, UnityAction keyWordDetectedCallBack)
+    {
+        if (keyword != null && keyword.Length >= 2)
+        {
+            _keywordToActionMapping.Add(keyword, keyWordDetectedCallBack);
+            AngelARUI.Instance.DebugLogMessage("Successfully registered keyword '" + keyword + "'.", true);
+            return true;
         }
 
-        if (eventData.Command.Keyword.ToLower().Equals("mute"))
-            MuteAudio(!_isMute);
+        AngelARUI.Instance.DebugLogMessage("Keyword '" + keyword + "'is already registered or not long enough. (>=2)", true);
+        return false;
     }
+
+    #endregion
 }

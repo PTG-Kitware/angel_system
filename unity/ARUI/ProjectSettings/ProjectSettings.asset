@@ -134,7 +134,7 @@ PlayerSettings:
     16:10: 1
     16:9: 1
     Others: 1
-  bundleVersion: 0.1
+  bundleVersion: 0.12
   preloadedAssets:
   - {fileID: 0}
   - {fileID: 0}
@@ -233,6 +233,7 @@ PlayerSettings:
   - {fileID: 0}
   - {fileID: 2967866567791723272, guid: d5af298d434800c49bc83a4b5492e0d2, type: 2}
   - {fileID: 4604378723832204979, guid: aba23145b8872e44091e5ad4fc79c2b0, type: 2}
+  - {fileID: 0}
   metroInputSource: 0
   wsaTransparentSwapchain: 0
   m_HolographicPauseOnTrackingLoss: 1
@@ -709,13 +710,13 @@ PlayerSettings:
     WSA: 3
   m_RenderingPath: 1
   m_MobileRenderingPath: 1
-  metroPackageName: Test
+  metroPackageName: AngelARUI
   metroPackageVersion: 1.0.0.0
   metroCertificatePath: Assets/WSATestCertificate.pfx
   metroCertificatePassword: 
   metroCertificateSubject: DefaultCompany
   metroCertificateIssuer: DefaultCompany
-  metroCertificateNotAfter: 80d3356f6b51da01
+  metroCertificateNotAfter: 00323cc5a6cadb01
   metroApplicationDescription: Template_3D
   wsaImages: {}
   metroTileShortName: Angel_ARUI
