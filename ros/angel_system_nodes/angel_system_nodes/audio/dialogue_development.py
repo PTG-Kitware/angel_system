@@ -12,6 +12,8 @@ INTERVAL_SECONDS = "interval_seconds"
 OUTPUT_TOPIC = "dev_dialogue_output_topic"
 
 MESSAGES = [
+    "Who are you?",
+    "What did I just ask you?",
     "The following messages are for development and debugging use only.",
     "Every 3-5 seconds, a new message will be emitted from this node.",
     "This will provide data to downstream nodes in the absence of rosbag data.",
