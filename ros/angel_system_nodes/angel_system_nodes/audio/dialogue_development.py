@@ -52,18 +52,18 @@ class DevelopmentDialoguePublisherNode(dialogue.AbstractDialogueNode):
         """
         Handles message publishing.
         """
-        while True:
-            for message_text in messages:
-                development_msg = DialogueUtterance()
-                development_msg.header.frame_id = "Development Dialogue Publisher Node"
-                development_msg.header.stamp = self.get_clock().now().to_msg()
-                development_msg.utterance_text = message_text
-                self._publisher.publish(development_msg)
-                colored_utterance = colored(message_text, "light_blue")
-                self.log.info(
-                    f'Publishing "{colored_utterance}" to {self._output_topic}.'
-                )
-                time.sleep(self._interval_seconds)
+        time.sleep(4)
+        for message_text in messages:
+            development_msg = DialogueUtterance()
+            development_msg.header.frame_id = "Development Dialogue Publisher Node"
+            development_msg.header.stamp = self.get_clock().now().to_msg()
+            development_msg.utterance_text = message_text
+            self._publisher.publish(development_msg)
+            colored_utterance = colored(message_text, "light_blue")
+            self.log.info(
+                f'Publishing "{colored_utterance}" to {self._output_topic}.'
+            )
+            time.sleep(self._interval_seconds)
 
 
 main = make_default_main(DevelopmentDialoguePublisherNode)
