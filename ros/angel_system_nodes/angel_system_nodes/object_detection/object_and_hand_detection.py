@@ -49,7 +49,7 @@ class ObjectAndHandDetector(Node):
                 ("hand_net_checkpoint",),
                 ##################################
                 # Defaulted parameters
-                ("inference_img_size", 1280),  # inference size (pixels)
+                ("inference_img_size", 768),  # inference size (pixels)
                 ("det_conf_threshold", 0.2),  # object confidence threshold
                 ("iou_threshold", 0.35),  # IOU threshold for NMS
                 ("cuda_device_id", 0),  # cuda device: ID int or CPU
@@ -60,6 +60,8 @@ class ObjectAndHandDetector(Node):
                 # If we should enable additional logging to the info level
                 # about when we receive and process data.
                 ("enable_time_trace_logging", False),
+                # Name of the background class to check for.
+                ("object_background_class_name", "background"),
             ],
         )
         self._image_topic = param_values["image_topic"]
@@ -77,6 +79,7 @@ class ObjectAndHandDetector(Node):
 
         self._enable_trace_logging = param_values["enable_time_trace_logging"]
 
+        ##########################################
         # Object Model
         self.object_model: Union[yolov7.models.yolo.Model, TracedModel]
         if not self._object_model_ckpt_fp.is_file():
@@ -93,10 +96,66 @@ class ObjectAndHandDetector(Node):
             + "\n".join(f'\t- "{n}"' for n in self.object_model.names)
         )
 
+        if not self._no_trace:
+            self.object_model = TracedModel(
+                self.object_model, self.device, self._inference_img_size
+            )
+
+        self.half = half = (
+            self.device.type != "cpu"
+        )  # half precision only supported on CUDA
+        if half:
+            self.object_model.half()  # to FP16
+
+        # The object detection model may have a background class. We do not
+        # want to publish that in our communication object detections message
+        # as this is implied by the lack of an object or otherwise low
+        # confidence class prediction. When formatting our output, we need to
+        # discount the index positions for objects *after* the background
+        # class.
+        self._object_model_background_class_name = param_values[
+            "object_background_class_name"
+        ]
+        self._object_model_background_idx = None
+        try:
+            self._object_model_background_idx = self.object_model.names.index(
+                self._object_model_background_class_name
+            )
+            log.info(
+                f"Background class identified @ index: {self._object_model_background_idx}"
+            )
+        except ValueError:
+            # No background class name in the model's name list. This is
+            # acceptable, but we'll just warn about it anyway.
+            log.warn(
+                f'No background class "{self._object_model_background_class_name}" '
+                f"in object model names list: {self.object_model.names}"
+            )
+
+        log.info("Object Detector initialized")
+
+        ##########################################
+        # Hand model
+        self.hand_model = YOLOv8(self._hand_model_chpt_fp)
+        log.info(
+            f"Loaded hand model with classes:\n"
+            + "\n".join(f'\t- "{n}"' for n in self.hand_model.names)
+        )
+
+        log.info("Hand Detector initialized")
+
+        ##########################################
+        # Other stateful properties
+
         # Single slot for latest image message to process detection over.
+        # This should be written by the image topic subscriber callback, and
+        # read from the runtime loop once per iteration.
         self._cur_image_msg: Image = None
         self._cur_image_msg_lock = Lock()
 
+        self._rate_tracker = RateTracker()
+
+        ##########################################
         # Initialize ROS hooks
         self._subscription = self.create_subscription(
             Image,
@@ -112,27 +171,7 @@ class ObjectAndHandDetector(Node):
             callback_group=MutuallyExclusiveCallbackGroup(),
         )
 
-        # Hand model
-        self.hand_model = YOLOv8(self._hand_model_chpt_fp)
-        log.info(
-            f"Loaded hand model with classes:\n"
-            + "\n".join(f'\t- "{n}"' for n in self.hand_model.names)
-        )
-
-        if not self._no_trace:
-            self.object_model = TracedModel(
-                self.object_model, self.device, self._inference_img_size
-            )
-
-        self.half = half = (
-            self.device.type != "cpu"
-        )  # half precision only supported on CUDA
-        if half:
-            self.object_model.half()  # to FP16
-
-        self._rate_tracker = RateTracker()
-        log.info("Detector initialized")
-
+        ##########################################
         # Create and start detection runtime thread and loop.
         log.info("Starting runtime thread...")
         # On/Off Switch for runtime loop
@@ -181,7 +220,9 @@ class ObjectAndHandDetector(Node):
         log.info("Runtime loop starting")
         enable_trace_logging = self._enable_trace_logging
 
-        if "background" in self.object_model.names:
+        # Create object class label vector for later inclusion in published
+        # messages.
+        if self._object_model_background_idx is not None:
             label_vector = self.object_model.names[1:]  # remove background label
         else:
             label_vector = self.object_model.names
@@ -219,13 +260,12 @@ class ObjectAndHandDetector(Node):
                 msg.source_stamp = image.header.stamp
                 msg.label_vec[:] = label_vector
 
-                print(f"object model names: {self.object_model.names}")
-
                 n_dets = 0
 
                 dflt_conf_vec = np.zeros(n_classes, dtype=np.float64)
 
                 # Detect hands
+                # with SimpleTimer("predict_hands", log_func=log.info):
                 hand_boxes, hand_labels, hand_confs = predict_hands(
                     hand_model=self.hand_model,
                     img0=img0,
@@ -236,7 +276,8 @@ class ObjectAndHandDetector(Node):
                 hand_classids = [hand_cid_label_dict[label] for label in hand_labels]
 
                 # Detect objects
-                objcet_boxes, object_confs, objects_classids = predict_image(
+                # with SimpleTimer("predict_objects", log_func=log.info):
+                object_boxes, object_confs, object_classids = predict_image(
                     img0,
                     self.device,
                     self.object_model,
@@ -249,24 +290,38 @@ class ObjectAndHandDetector(Node):
                     None,
                     self._agnostic_nms,
                 )
+                # If we have a background class, decrement the class IDs by one
+                # that are after the background class index.
+                if self._object_model_background_idx is not None:
+                    # This is a little faster than doing a naive list
+                    # comprehension.
+                    id_arr = np.asarray(object_classids)
+                    id_arr[id_arr > self._object_model_background_idx] -= 1
+                    object_classids = id_arr.tolist()
 
-                objcet_boxes.extend(hand_boxes)
+                object_boxes.extend(hand_boxes)
                 object_confs.extend(hand_confs)
-                objects_classids.extend(hand_classids)
+                object_classids.extend(hand_classids)
                 for xyxy, conf, cls_id in zip(
-                    objcet_boxes, object_confs, objects_classids
+                    object_boxes, object_confs, object_classids
                 ):
-
                     n_dets += 1
                     msg.left.append(xyxy[0])
                     msg.top.append(xyxy[1])
                     msg.right.append(xyxy[2])
                     msg.bottom.append(xyxy[3])
 
+                    # Object and Hand detection class prediction output only
+                    # consists of a single confidence value for the
+                    # most-confident non-background class. Here we slot that
+                    # confidence into the appropriate index of a zeroed array
+                    # and then extend the output messages confidence matrix
+                    # (flattened). The temporary confidence vector is then
+                    # zeroed out again in preparation for the next loop.
                     dflt_conf_vec[cls_id] = conf
-                    # copies data into array
+                    # This extend copies data into msg.label_confidences array
                     msg.label_confidences.extend(dflt_conf_vec)
-                    # reset before next passthrough
+                    # Reset before next passthrough
                     dflt_conf_vec[cls_id] = 0.0
 
                 msg.num_detections = n_dets
