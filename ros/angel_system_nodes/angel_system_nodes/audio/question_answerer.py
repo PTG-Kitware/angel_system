@@ -23,6 +23,7 @@ OUT_QA_TOPIC = "out_qa_topic"
 FEW_SHOT_PROMPT = "few_shot_prompt_file"
 CHAT_HISTORY_LENGTH = "chat_history_length"
 
+
 class QuestionAnswerer(dialogue.AbstractDialogueNode):
     def __init__(self):
         super().__init__()
@@ -33,7 +34,7 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
                 (INPUT_QA_TOPIC,),
                 (OUT_QA_TOPIC,),
                 (FEW_SHOT_PROMPT,),
-                (CHAT_HISTORY_LENGTH, -1)
+                (CHAT_HISTORY_LENGTH, -1),
             ],
         )
         self._in_qa_topic = param_values[INPUT_QA_TOPIC]
@@ -75,20 +76,22 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
         self._chat_history = None
         if self._is_using_chat_history():
             self._chat_history = collections.deque([], maxlen=self._chat_history_length)
-    
+
     def _is_using_chat_history(self):
         return self._chat_history_length > 0
-        
 
     def get_response(self, msg: DialogueUtterance) -> str:
         response_text = ""
         try:
             if self.is_openai_ready:
                 prompt_fn = (
-                    self.prompt_gpt_with_chat_history if self._is_using_chat_history()
+                    self.prompt_gpt_with_chat_history
+                    if self._is_using_chat_history()
                     else self.prompt_gpt
                 )
-                response_text = colored(f"{prompt_fn(msg.utterance_text)}\n", "light_green")
+                response_text = colored(
+                    f"{prompt_fn(msg.utterance_text)}\n", "light_green"
+                )
         except RuntimeError as err:
             self.log.info(err)
             response_text = colored(
@@ -143,13 +146,14 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
         )
         return (
             json.loads(req.text)["choices"][0]["message"]["content"]
-                .split("A:")[-1]
-                .lstrip()
+            .split("A:")[-1]
+            .lstrip()
         )
 
     def prompt_gpt_with_chat_history(self, question, model: str = "gpt-3.5-turbo"):
-        prompt = self.prompt.format(chat_history=self._format_chat_history_str(),
-                                    question=question)
+        prompt = self.prompt.format(
+            chat_history=self._format_chat_history_str(), question=question
+        )
         self.log.info(f"Prompting OpenAI with\n {prompt}\n")
         payload = {
             "model": model,
@@ -164,16 +168,18 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
         )
         answer = (
             json.loads(req.text)["choices"][0]["message"]["content"]
-                .split("Assistant:")[-1]
-                .lstrip()
+            .split("Assistant:")[-1]
+            .lstrip()
         )
         self._append_chat_history(role="User", text=question)
         self._append_chat_history(role="Assistant", text=answer)
-        return answer 
+        return answer
 
     def _append_chat_history(self, role: str, text: str):
         if self._is_using_chat_history():
-            self._chat_history.append(QuestionAnswerer.ChatMessage(role=role, text=text))
+            self._chat_history.append(
+                QuestionAnswerer.ChatMessage(role=role, text=text)
+            )
 
     def _format_chat_history_str(self):
         result = ""
@@ -190,7 +196,7 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
         if msg.intent == "inquiry":
             return msg
         return None
-    
+
     @dataclass(frozen=True)
     class ChatMessage:
         role: str

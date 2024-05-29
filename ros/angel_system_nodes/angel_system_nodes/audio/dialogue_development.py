@@ -62,9 +62,7 @@ class DevelopmentDialoguePublisherNode(dialogue.AbstractDialogueNode):
             development_msg.utterance_text = message_text
             self._publisher.publish(development_msg)
             colored_utterance = colored(message_text, "light_blue")
-            self.log.info(
-                f'Publishing "{colored_utterance}" to {self._output_topic}.'
-            )
+            self.log.info(f'Publishing "{colored_utterance}" to {self._output_topic}.')
             time.sleep(self._interval_seconds)
 
 
