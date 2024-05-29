@@ -105,7 +105,9 @@ class ASR(dialogue.AbstractDialogueNode):
         self.subscription = self.create_subscription(
             HeadsetAudioData, self._audio_topic, self.listener_callback, 1
         )
-        self._publisher = self.create_publisher(Utterance, self._utterances_topic, 1)
+        self._publisher = self.create_publisher(
+            DialogueUtterance, self._utterances_topic, 1
+        )
 
         self.audio_stream = []
         self.t = threading.Thread()
