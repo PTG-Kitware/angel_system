@@ -137,7 +137,7 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
             "model": model,
             "messages": [{"role": "user", "content": prompt}],
             "temperature": 0.7,
-            "max_tokens": 64,
+            "max_tokens": 128,
         }
         req = requests.post(
             "https://api.openai.com/v1/chat/completions",
@@ -159,7 +159,7 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
             "model": model,
             "messages": [{"role": "user", "content": prompt}],
             "temperature": 0.7,
-            "max_tokens": 64,
+            "max_tokens": 128,
         }
         req = requests.post(
             "https://api.openai.com/v1/chat/completions",
