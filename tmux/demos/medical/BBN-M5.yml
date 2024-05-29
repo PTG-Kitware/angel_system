@@ -1,7 +1,7 @@
 #
 # System configuration to run the ANGEL system for the BBN system.
 #
-# This configuration is for the M5 Pressure-Dressing task.
+# This configuration is for the M5 XStat task.
 #
 
 name: BBN-M5-Pressure-Dressing
@@ -84,6 +84,7 @@ windows:
       -p image_topic:=PVFramesBGR
       -p det_topic:=ObjectDetections2d
       -p object_net_checkpoint:=${MODEL_DIR}/object_detector/m5_det.pt
+      -p inference_img_size:=768
       -p hand_net_checkpoint:=${MODEL_DIR}/object_detector/hands_model.pt
       -p cuda_device_id:=0
 
