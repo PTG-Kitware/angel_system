@@ -173,7 +173,7 @@ windows:
             -p config_file:=${CONFIG_DIR}/tasks/medical/multi-task-config-medical-r18.yaml
             -p activity_config_file:=${CONFIG_DIR}/activity_labels/medical/r18.yaml
             -p task_state_topic:=TaskUpdates
-            -p task_error_topic:=TaskErrors
+            -p system_notification_topic:=ARUISystemNotifications
             -p system_command_topic:=SystemCommands
             -p det_topic:=activity_topic
             -p model_file:=${MODEL_DIR}/task_monitor/global_step_predictor_act_avgs_R18.npy
@@ -208,8 +208,9 @@ windows:
       -r __ns:=${ROS_NAMESPACE}
       -p activity_detector_topic:=activity_topic
       -p object_detection_topic:=ObjectDetections3d
-      -p task_monitor_topic:=TaskUpdates
       -p arui_update_topic:=AruiUpdates
       -p interp_user_intent_topic:=UserIntentPredicted
       -p utterances_topic:=utterances_topic
       -p system_text_response_topic:=system_response_topic
+      -p task_monitor_topic:=TaskUpdates
+      -p system_notification_topic:=ARUISystemNotifications
