@@ -385,13 +385,17 @@ PrefabInstance:
   m_Modification:
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 567458211482183321, guid: c1348dc87c50b1a409f26d64f4da0da4, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 676094571621763009, guid: c1348dc87c50b1a409f26d64f4da0da4, type: 3}
       propertyPath: m_Name
       value: Logger
       objectReference: {fileID: 0}
     - target: {fileID: 676094571621763009, guid: c1348dc87c50b1a409f26d64f4da0da4, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 676094571621763023, guid: c1348dc87c50b1a409f26d64f4da0da4, type: 3}
       propertyPath: m_RootOrder

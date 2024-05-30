@@ -413,6 +413,8 @@ public class AngelARUI : Singleton<AngelARUI>
         if (Logger.Instance != null)
         {
             Logger.Instance.transform.GetChild(0).gameObject.SetActive(showLogger);
+            Logger.Instance.transform.position = Vector3.Scale(ARCamera.transform.forward, new Vector3(1.5f, 1.5f, 1.5f));
+            Logger.Instance.transform.rotation = Quaternion.LookRotation(Logger.Instance.transform.position- ARCamera.transform.position, Vector3.up);
         }
     }
 

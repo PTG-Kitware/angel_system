@@ -82,11 +82,13 @@ public class AngelARUIBridge : MonoBehaviour
         for (int i = 0; i < msg.notifications.Length; i++)
         {
             if (msg.notifications[i].context.Equals(AruiUserNotificationMsg.N_CONTEXT_TASK_ERROR)) {
+                AngelARUI.Instance.DebugLogMessage("Show skipped step dialogue to user", true);
                 AngelARUI.Instance.TryGetUserConfirmation("We noticed you skipped a step, do you want to go back?",
                     () => { SendGoToPrevious(); },
                     null, 20, true);
             } else if (msg.notifications[i].context.Equals(AruiUserNotificationMsg.N_CONTEXT_USER_MODELING))
             {
+                AngelARUI.Instance.DebugLogMessage("Show skipped step dialogue to user", true);
                 if (msg.notifications[i].title.Length==0 && msg.notifications[i].description.ToLower().Contains("thinking"))
                     AngelARUI.Instance.SetAgentThinking(true);
                 else
