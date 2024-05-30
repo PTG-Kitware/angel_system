@@ -10,13 +10,14 @@ import threading
 from nltk.tokenize import sent_tokenize
 import rclpy
 
-from angel_msgs.msg import HeadsetAudioData, DialogueUtterance
+from angel_msgs.msg import HeadsetAudioData, DialogueUtterance, SystemTextResponse
 from angel_system_nodes.audio import dialogue
 from angel_utils import make_default_main
 
 
 AUDIO_TOPIC = "audio_topic"
 UTTERANCES_TOPIC = "utterances_topic"
+FEEDBACK_TOPIC = "feedback_topic"
 ASR_SERVER_URL = "asr_server_url"
 ASR_REQ_SEGMENT_SECONDS_DURATION = "asr_req_segment_duration"
 IS_SENTENCE_TOKENIZE = "is_sentence_tokenize"
@@ -34,6 +35,7 @@ class ASR(dialogue.AbstractDialogueNode):
         parameter_names = [
             AUDIO_TOPIC,
             UTTERANCES_TOPIC,
+            FEEDBACK_TOPIC,
             ASR_SERVER_URL,
             ASR_REQ_SEGMENT_SECONDS_DURATION,
             IS_SENTENCE_TOKENIZE,
@@ -70,6 +72,10 @@ class ASR(dialogue.AbstractDialogueNode):
         self._debug_mode = (
             self.get_parameter(DEBUG_MODE).get_parameter_value().bool_value
         )
+        self._feedback_topic = (
+            self.get_parameter(FEEDBACK_TOPIC).get_parameter_value().string_value
+        )
+    
         self.log.info(
             f"Audio topic: "
             f"({type(self._audio_topic).__name__}) "
@@ -105,7 +111,12 @@ class ASR(dialogue.AbstractDialogueNode):
         self.subscription = self.create_subscription(
             HeadsetAudioData, self._audio_topic, self.listener_callback, 1
         )
-        self._publisher = self.create_publisher(Utterance, self._utterances_topic, 1)
+        self._publisher = self.create_publisher(
+            DialogueUtterance, self._utterances_topic, 1
+        )
+        self._feedback_publisher = self.create_publisher(
+            SystemTextResponse, self._feedback_topic, 1
+        )
 
         self.audio_stream = []
         self.t = threading.Thread()
@@ -215,8 +226,22 @@ class ASR(dialogue.AbstractDialogueNode):
         published_msg.utterance_text = text
         colored_utterance = colored(published_msg.utterance_text, "light_blue")
         self.log.info("Publishing message: " + f'"{colored_utterance}"')
+        
+        if "angela" in text.utterance_text.lower() or "angel" in text.utterance_text.lower() or "angela," in text.utterance_text.lower() or "angel," in text.utterance_text.lower():
+            self.log.info("Publish thinking feedback")
+            self.publish_feedback_response()
+
         self._publisher.publish(published_msg)
 
+    def publish_feedback_response(
+        self
+    ):
+        publish_msg = SystemTextResponse()
+        publish_msg.header.frame_id = "GPT thinking"
+        publish_msg.header.stamp = self.get_clock().now().to_msg()
+        publish_msg.utterance_text = ""
+        publish_msg.response = "thinking"
+        self._feedback_publisher.publish(publish_msg)
 
 main = make_default_main(ASR)
 

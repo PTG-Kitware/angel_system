@@ -250,7 +250,7 @@ class FeedbackGenerator(Node):
         notification.category = notification.N_CAT_NOTICE
         notification.context = notification.N_CONTEXT_USER_MODELING
 
-        notification.title = f"System response for: {msg.utterance_text}"
+        notification.title = f"{msg.utterance_text}"
         notification.description = f"{msg.response}"
 
         self.publish_update(notifications=[notification])

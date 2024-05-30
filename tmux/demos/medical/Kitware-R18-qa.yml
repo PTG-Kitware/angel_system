@@ -2,10 +2,10 @@
 # System configuration to run the ANGEL system for the Kitware system with the
 # Kitware HL2 ARUI app.
 #
-# This configuration is for the M2 tourniquet task.
+# This configuration is for the R18 Chest Seal task.
 #
 
-name: Kitware-M2-Tourniquet
+name: Kitware-R18-Chest-Seal
 root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 
 # Optional tmux socket
@@ -20,7 +20,7 @@ root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 # on_project_start: command
 on_project_start: |
   export ROS_NAMESPACE=${ROS_NAMESPACE:-/kitware}
-  export HL2_IP=${HL2_IP:-192.168.1.4}
+  export HL2_IP=${HL2_IP:-192.168.4.70}
   export CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/config
   export NODE_CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/src/angel_system_nodes/configs
   export MODEL_DIR=${ANGEL_WORKSPACE_DIR}/model_files
@@ -53,39 +53,86 @@ on_project_start: |
 tmux_options: -f <%= ENV["ANGEL_WORKSPACE_DIR"] %>/tmux/tmux.conf
 
 windows:
-  - sensor_input_bag:
+  - sensor_input_stream:
       layout: even-vertical
       panes:
-        # Read sensor input from bag file.
-        - sensor_input: echo ros2 bag play ${ANGEL_WORKSPACE_DIR}/ros_bags/...
-        - run_image_timestamp: ros2 run angel_system_nodes image_timestamp_relay --ros-args
+        # Read sensor input from a HoloLens2 unit using HL2SS.
+        - hl2ss_bridge: ros2 run angel_system_nodes hl2ss_ros_bridge --ros-args
             -r __ns:=${ROS_NAMESPACE}
+            -p ip_addr:=${HL2_IP}
             -p image_topic:=PVFramesBGR
-            -p output_topic:=PVFramesBGR_ts
-
-#  - sensor_input_stream:
-#      layout: even-vertical
-#      panes:
-#        # Read sensor input from a HoloLens2 unit using HL2SS.
-#        - hl2ss_bridge: ros2 run angel_system_nodes hl2ss_ros_bridge --ros-args
-#            -r __ns:=${ROS_NAMESPACE}
-#            -p ip_addr:=${HL2_IP}
-#            -p image_topic:=PVFramesBGR
-#            -p image_ts_topic:=PVFramesBGR_TS
-#            -p hand_pose_topic:=disable
-#            -p audio_topic:=disable
-#            -p sm_topic:=disable
-#            -p head_pose_topic:=disable
-#            -p pv_width:=1280
-#            -p pv_height:=720
-#            -p pv_framerate:=${FRAME_RATE}
-#            -p sm_freq:=5
-#            -p rm_depth_AHAT:=disable
-#        # Enable sending ROS2 messages to receiving agents in an HoloLens2 app.
-#        - datahub: ros2 run ros_tcp_endpoint default_server_endpoint --ros-args
-#            -r __ns:=${ROS_NAMESPACE}
-#            -p ROS_IP:=0.0.0.0
-
+            -p image_ts_topic:=PVFramesBGR_TS
+            -p hand_pose_topic:=disable
+            -p audio_topic:=HeadsetAudioData
+            -p sm_topic:=disable
+            -p head_pose_topic:=disable
+            -p pv_width:=1280
+            -p pv_height:=720
+            -p pv_framerate:=${FRAME_RATE}
+            -p sm_freq:=5
+            -p rm_depth_AHAT:=disable
+        # Enable sending ROS2 messages to receiving agents in an HoloLens2 app.
+        - datahub: ros2 run ros_tcp_endpoint default_server_endpoint --ros-args
+            -r __ns:=${ROS_NAMESPACE}
+            -p ROS_IP:=0.0.0.0
+  - vocal:
+      layout: even-vertical
+      panes:
+        - vad: ros2 run angel_system_nodes voice_activity_detector --ros-args
+            -r __ns:=${ROS_NAMESPACE}
+            -p input_audio_topic:=HeadsetAudioData
+            -p output_voice_activity_topic:=DetectedVoiceData
+            -p vad_server_url:=http://127.0.0.1:55667/vad
+            -p vad_cadence:=2
+            -p vad_margin:=0.20
+            -p max_accumulation_length:=10
+            -p debug_mode:=True
+        - asr: ros2 run angel_system_nodes asr --ros-args
+            -r __ns:=${ROS_NAMESPACE}
+            -p audio_topic:=DetectedVoiceData
+            -p utterances_topic:=utterances_topic
+            -p feedback_topic:=system_response_topic
+            -p asr_server_url:=http://127.0.0.1:55667/asr
+            -p asr_req_segment_duration:=1
+            -p is_sentence_tokenize:=False
+            -p debug_mode:=True
+            
+  - emotion_detection:
+      layout: even-vertical
+      panes:
+        - base_emotion_detection: ros2 run angel_system_nodes base_emotion_detector --ros-args
+           -r __ns:=${ROS_NAMESPACE}
+           -p in_emotion_topic:=utterances_topic
+           -p out_emotion_topic:=base_emotion_output_topic
+        - gpt_emotion_detection: ros2 run angel_system_nodes gpt_emotion_detector --ros-args
+           -r __ns:=${ROS_NAMESPACE}
+           -p in_emotion_topic:=utterances_topic
+           -p out_emotion_topic:=gpt_emotion_output_topic
+           
+  - intent_detection:
+      layout: even-vertical
+      panes:
+        - base_intent_detection: ros2 run angel_system_nodes base_intent_detector --ros-args
+           -r __ns:=${ROS_NAMESPACE}
+           -p in_intent_topic:=base_emotion_output_topic
+           -p out_intent_topic:=base_intent_output_topic
+        - gpt_intent_detection: ros2 run angel_system_nodes gpt_intent_detector --ros-args
+           -r __ns:=${ROS_NAMESPACE}
+           -p in_intent_topic:=base_emotion_output_topic
+           -p out_intent_topic:=gpt_intent_output_topic
+           
+  - question_answering:
+      layout: even-vertical
+      panes:
+        - gpt_question_answering: ros2 run angel_system_nodes question_answerer --ros-args
+           -r __ns:=${ROS_NAMESPACE}
+           -p in_qa_topic:=gpt_intent_output_topic
+           -p out_qa_topic:=system_response_topic
+           -p must_contain_target_phrase:=True
+           -p task_state_topic:=TaskUpdates
+           -p image_topic:=PVFramesBGR
+           -p few_shot_prompt_file:=${CONFIG_DIR}/llm_prompts/r18_steps_prompt
+           
   - pose_estimation: ros2 run angel_system_nodes pose_estimator --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p image_topic:=PVFramesBGR
@@ -101,19 +148,18 @@ windows:
       -r __ns:=${ROS_NAMESPACE}
       -p image_topic:=PVFramesBGR
       -p det_topic:=ObjectDetections2d
-      -p object_net_checkpoint:=${MODEL_DIR}/object_detector/m2_det.pt
-      -p inference_img_size:=768
+      -p object_net_checkpoint:=${MODEL_DIR}/object_detector/r18_det.pt
       -p hand_net_checkpoint:=${MODEL_DIR}/object_detector/hands_model.pt
       -p cuda_device_id:=0
 
   - activity_classifier: ros2 run angel_system_nodes activity_classifier_tcn --ros-args
       -r __ns:=${ROS_NAMESPACE}
-      -p image_ts_topic:=PVFramesBGR_ts
+      -p image_ts_topic:=PVFramesBGR_TS
       -p det_topic:=ObjectDetections2d
       -p pose_topic:=PatientPose
-      -p model_weights:=${MODEL_DIR}/activity_classifier/m2_tcn.ckpt
-      -p model_mapping:=${MODEL_DIR}/activity_classifier/m2_mapping.txt
-      -p model_det_label_mapping:=${ANGEL_WORKSPACE_DIR}/config/object_labels/medical/m2.json
+      -p model_weights:=${MODEL_DIR}/activity_classifier/r18_tcn.ckpt
+      -p model_mapping:=${MODEL_DIR}/activity_classifier/r18_mapping.txt
+      -p model_det_label_mapping:=${ANGEL_WORKSPACE_DIR}/config/object_labels/medical/r18.json
       -p act_topic:=activity_topic
       -p pose_repeat_rate:=7.5
       -p window_leads_with_objects:=true
@@ -124,15 +170,15 @@ windows:
       panes:
         - gsp: ros2 run angel_system_nodes global_step_predictor --ros-args
             -r __ns:=${ROS_NAMESPACE}
-            -p config_file:=${CONFIG_DIR}/tasks/medical/multi-task-config-medical-m2.yaml
-            -p activity_config_file:=${CONFIG_DIR}/activity_labels/medical/m2.yaml
+            -p config_file:=${CONFIG_DIR}/tasks/medical/multi-task-config-medical-r18.yaml
+            -p activity_config_file:=${CONFIG_DIR}/activity_labels/medical/r18.yaml
             -p task_state_topic:=TaskUpdates
             -p task_error_topic:=TaskErrors
             -p system_command_topic:=SystemCommands
             -p det_topic:=activity_topic
-            -p model_file:=${MODEL_DIR}/task_monitor/m2_test_activity_preds.mscoco.json
+            -p model_file:=${MODEL_DIR}/task_monitor/global_step_predictor_act_avgs_R18.npy
             -p thresh_frame_count:=3
-            -p deactivate_thresh_frame_count:=10
+            -p deactivate_thresh_frame_count:=5
             -p threshold_multiplier_weak:=0.00
             -p threshold_frame_count_weak:=3
             -p step_mode:=granular
@@ -165,3 +211,5 @@ windows:
       -p task_monitor_topic:=TaskUpdates
       -p arui_update_topic:=AruiUpdates
       -p interp_user_intent_topic:=UserIntentPredicted
+      -p utterances_topic:=utterances_topic
+      -p system_text_response_topic:=system_response_topic

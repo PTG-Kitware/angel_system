@@ -121,6 +121,8 @@ class ActivityClassifierTCN(Node):
         super().__init__(self.__class__.__name__)
         log = self.get_logger()
 
+        self._current_frame_number = -1
+
         param_values = declare_and_get_parameters(
             self,
             [
@@ -450,15 +452,19 @@ class ActivityClassifierTCN(Node):
         Capture a detection source image timestamp message.
         """
         log = self.get_logger()
-        # log.info("image call back")
-        # log.info(f"self.rt_alive(): {self.rt_alive()}")
-        # log.info(f"self._buffer.queue_image(None, msg): {self._buffer.queue_image(None, msg)}")
-        if self.rt_alive() and self._buffer.queue_image(None, msg):
+        self._current_frame_number += 1
+        if self.rt_alive() and self._buffer.queue_image(
+            None, msg, self._current_frame_number
+        ):
             if self._enable_trace_logging:
-                log.info(f"Queueing image TS {msg}")
-            # Let the runtime know we've queued something.
-            # Only triggering here as a new image frame (TS) is the
-            self._rt_awake_evt.set()
+                log.info(f"Queueing image TS {msg} frame {self._current_frame_number}")
+
+            # If we are configured to prefer the latest image received as the
+            # latest image in the processing window, indicate the runtime upon
+            # receiving new images that it should try to process a window now.
+            if not self._window_lead_with_objects:
+                # Let the runtime know we've queued something.
+                self._rt_awake_evt.set()
 
     def det_callback(self, msg: ObjectDetection2dSet) -> None:
         """
@@ -466,17 +472,19 @@ class ActivityClassifierTCN(Node):
         creates an `ActivityDetection` message from the results the classifier,
         and publish the `ActivityDetection` message.
         """
-
         if self.rt_alive() and self._buffer.queue_object_detections(msg):
             if self._enable_trace_logging:
                 self.get_logger().info(
-                    f"Queueing object detections (ts={msg.header.stamp})"
+                    f"Queueing object detections (ts={msg.header.stamp}, source_stamp_time={msg.source_stamp})"
                 )
-                # self.get_logger().info(f"message contents: {msg}")
-                # self.get_logger().info(f"buffer contents: {self._buffer.obj_dets}")
 
-            # Let the runtime know we've queued something.
-            # self._rt_awake_evt.set()
+            # If we are configured to prefer the most recent image with object
+            # detections associated with it as the latest image in the
+            # processing window, indicate the runtime upon receiving new object
+            # detections received that it should try to process a window now.
+            if self._window_lead_with_objects:
+                # Let the runtime know we've queued something.
+                self._rt_awake_evt.set()
 
     def pose_callback(self, msg: HandJointPosesUpdate) -> None:
         """
@@ -487,9 +495,9 @@ class ActivityClassifierTCN(Node):
         if self.rt_alive() and self._buffer.queue_joint_keypoints(msg):
             if self._enable_trace_logging:
                 self.get_logger().info(
-                    f"Queueing pose estimations (ts={msg.header.stamp})"
+                    f"Queueing pose estimations (ts={msg.header.stamp}, source_stamp_time={msg.source_stamp})"
                 )
-                # self.get_logger().info(f"message contents: {msg}")
+
             # Let the runtime know we've queued something.
             # self._rt_awake_evt.set()
 
