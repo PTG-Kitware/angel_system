@@ -61,7 +61,6 @@ windows:
             -r __ns:=${ROS_NAMESPACE}
             -p ip_addr:=${HL2_IP}
             -p image_topic:=PVFramesBGR
-            -p qa_image_topic:=PVFramesRGB
             -p image_ts_topic:=PVFramesBGR_TS
             -p hand_pose_topic:=disable
             -p audio_topic:=HeadsetAudioData
@@ -84,7 +83,7 @@ windows:
             -p input_audio_topic:=HeadsetAudioData
             -p output_voice_activity_topic:=DetectedVoiceData
             -p vad_server_url:=http://127.0.0.1:55667/vad
-            -p vad_cadence:=3
+            -p vad_cadence:=2
             -p vad_margin:=0.20
             -p max_accumulation_length:=10
             -p debug_mode:=True
@@ -92,6 +91,7 @@ windows:
             -r __ns:=${ROS_NAMESPACE}
             -p audio_topic:=DetectedVoiceData
             -p utterances_topic:=utterances_topic
+            -p feedback_topic:=system_response_topic
             -p asr_server_url:=http://127.0.0.1:55667/asr
             -p asr_req_segment_duration:=1
             -p is_sentence_tokenize:=False
@@ -129,7 +129,8 @@ windows:
            -p in_qa_topic:=gpt_intent_output_topic
            -p out_qa_topic:=system_response_topic
            -p must_contain_target_phrase:=True
-           -p image_topic:=PVFramesRGB
+           -p task_state_topic:=TaskUpdates
+           -p image_topic:=PVFramesBGR
            -p few_shot_prompt_file:=${CONFIG_DIR}/llm_prompts/r18_steps_prompt
            
   - pose_estimation: ros2 run angel_system_nodes pose_estimator --ros-args
@@ -153,7 +154,7 @@ windows:
 
   - activity_classifier: ros2 run angel_system_nodes activity_classifier_tcn --ros-args
       -r __ns:=${ROS_NAMESPACE}
-      -p image_ts_topic:=PVFramesBGR_ts
+      -p image_ts_topic:=PVFramesBGR_TS
       -p det_topic:=ObjectDetections2d
       -p pose_topic:=PatientPose
       -p model_weights:=${MODEL_DIR}/activity_classifier/r18_tcn.ckpt
@@ -184,6 +185,24 @@ windows:
             -p query_task_graph_topic:=query_task_graph
         - echo: sleep 0.5 && ros2 topic echo --no-arr "${ROS_NAMESPACE}/TaskUpdates"
 
+  - engineering-ui:
+      layout: even-vertical
+      panes:
+        - simple_2d_overlay: ros2 run angel_utils Simple2dDetectionOverlay --ros-args
+            -r __ns:=${ROS_NAMESPACE}
+            -p topic_input_images:=PVFramesBGR
+            -p topic_input_det_2d:=ObjectDetections2d
+            -p topic_input_joints:=PatientPose
+            -p topic_output_images:=pv_image_detections_2d
+            -p filter_top_k:=5
+        - websocket: ros2 launch rosbridge_server rosbridge_websocket_launch.xml port:=9090
+        - engineering_ui_server: node ros/angel_utils/multi_task_demo_ui/index.js
+            --namespace=${ROS_NAMESPACE}
+            --image_topic=pv_image_detections_2d/compressed
+            --query_task_graph_topic=query_task_graph
+            --task_updates_topic=TaskUpdates
+            --activity_detections_topic=activity_topic
+            --task_errors_topic=TaskErrors
 
   - feedback_generator: ros2 run angel_system_nodes feedback_generator --ros-args
       -r __ns:=${ROS_NAMESPACE}

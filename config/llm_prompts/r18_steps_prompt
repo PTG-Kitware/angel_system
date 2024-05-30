@@ -29,6 +29,7 @@ Here are the instructions of the current task you are trying to teach me:
 3) Wipe blood and body fluids from wound site.
 4) Peel away chest seal backer.
 5) Place chest seal with circle of vents over wound site and seal to chest.
+{taskactivity}
 
 When you answer my question, follow the these rules: 
 * Use information from the instructions above.
@@ -38,8 +39,9 @@ When you answer my question, follow the these rules:
 * DO NOT ANSWER "I'm sorry, I am an AI language model and I cannot see or perceive anything."
 * Don't use the phrasing "However,.."
 * Don't say "Based on the information you provided,"
+* Do not read the entire instrutions to me. Just give me one at a time.
 
 ###
 
-{}
+{question}
 Your answer (very short, precise, helpful with empathy):

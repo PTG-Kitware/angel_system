@@ -15,7 +15,11 @@ from termcolor import colored
 from sensor_msgs.msg import Image
 import threading
 
-from angel_msgs.msg import DialogueUtterance, SystemTextResponse
+from angel_msgs.msg import (
+    DialogueUtterance, 
+    SystemTextResponse,
+    TaskUpdate
+)
 from angel_system_nodes.audio import dialogue
 from angel_utils import declare_and_get_parameters
 from angel_utils import make_default_main
@@ -30,6 +34,7 @@ OUT_QA_TOPIC = "out_qa_topic"
 FEW_SHOT_PROMPT = "few_shot_prompt_file"
 CHAT_HISTORY_LENGTH = "chat_history_length"
 IMAGE_TOPIC = "image_topic"
+TASK_STATE_TOPIC = "task_state_topic"
 
 class QuestionAnswerer(dialogue.AbstractDialogueNode):
     def __init__(self):
@@ -43,9 +48,11 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
                 (FEW_SHOT_PROMPT,),
                 (CHAT_HISTORY_LENGTH, -1),
                 (IMAGE_TOPIC,),
+                (TASK_STATE_TOPIC,),
             ],
         )
         self._in_qa_topic = param_values[INPUT_QA_TOPIC]
+        self._in_task_state_topic = param_values[TASK_STATE_TOPIC]
         self._out_qa_topic = param_values[OUT_QA_TOPIC]
         self._chat_history_length = param_values[CHAT_HISTORY_LENGTH]
         self.prompt_file = param_values[FEW_SHOT_PROMPT]
@@ -85,6 +92,13 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
             SystemTextResponse, self._out_qa_topic, 1
         )
 
+        publish_msg = SystemTextResponse()
+        publish_msg.header.frame_id = "GPT Question Answering"
+        publish_msg.header.stamp = self.get_clock().now().to_msg()
+        publish_msg.utterance_text = ""
+        publish_msg.response = "Hello! Ask me anything. Just start with my name."
+        self._qa_publisher.publish(publish_msg)
+
         # Single slot for latest image message to process detection over.
         self.image_msg: Image = ""
 
@@ -97,6 +111,19 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
             1,
         )
 
+        self.log.info("Creating subscription to task topic")
+        # Configure the optional task updates subscription.
+        self.task_state_subscription = None
+        self.current_step = None
+        self.completed_steps = None
+        if self._in_task_state_topic:
+            self.task_state_subscription = self.create_subscription(
+                TaskUpdate,
+                self._in_task_state_topic,
+                self._set_task_topic,
+                1,
+            )
+
         self._chat_history = None
         if self._is_using_chat_history():
             self._chat_history = collections.deque([], maxlen=self._chat_history_length)
@@ -104,14 +131,15 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
     def _is_using_chat_history(self):
         return self._chat_history_length > 0
 
-    def get_response(self, msg: DialogueUtterance) -> str:
+    def _set_task_topic(self, msg: TaskUpdate):
+        self.current_step = msg.current_step_id
+        self.completed_steps = msg.completed_steps
+
+    def get_response(self, msg: DialogueUtterance, optional_fields: str) -> str:
         response_text = ""
         try:
             if self.is_openai_ready:
-                prompt_fn = (
-                    self.prompt_gpt
-                )
-                response_text = prompt_fn(msg.utterance_text)
+                response_text = self.prompt_gpt(msg.utterance_text, optional_fields)
         except RuntimeError as err:
             self.log.info(err)
             response_text = "I'm sorry. I don't know how to answer your statement."
@@ -126,7 +154,7 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
         img_rgb = img_rgb.resize(np.divide(img_rgb.size, 4).astype(int))
         jpg_container = io.BytesIO()
         img_rgb.save(jpg_container, format="JPEG")
-        self.image_msg = base64.encodebytes(jpg_container.getvalue())
+        self.image_msg = base64.b64encode(jpg_container.getvalue()).decode("utf-8")
         
     def question_answer_callback(self, msg):
         self.log.debug(f"Received message:\n\n{msg.utterance_text}")
@@ -140,7 +168,11 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
         """
         while True:
             msg = self.question_queue.get()
-            response = self.get_response(msg)
+            # Get the optional fields.
+            optional_fields = \
+                self._get_optional_fields_string(self.current_step,self.completed_steps)
+            
+            response = self.get_response(msg,optional_fields)
             self.publish_generated_response(msg, response)
 
     def publish_generated_response(
@@ -159,9 +191,9 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
         )
         self._qa_publisher.publish(publish_msg)
 
-    def prompt_gpt(self, question, model: str = "gpt-4o"):
-        prompt = self.prompt.format(question=question)
-        self.log.info(f"Prompting OpenAI with\n{prompt}\n")
+    def prompt_gpt(self, question, optional_fields: str, model: str = "gpt-4o"):
+        prompt = self.prompt.format(question=question, taskactivity=optional_fields)
+        self.log.info(f"Prompting OpenAI with\n{question} with \"{optional_fields}\"\n")
 
         if self.image_msg==None or len(self.image_msg)<=1:
             payload = {
@@ -183,7 +215,7 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
                     }
                 ]}],
             "temperature": 0.0,
-            "max_tokens": 128,
+            "max_tokens": 128
         }
 
 
@@ -197,6 +229,27 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
             .split("A:")[-1]
             .lstrip()
         )
+
+    def _get_optional_fields_string(self, current_step: int, completed_steps: list) -> str:
+        optional_fields_string = ""
+
+        if current_step==None:
+            #non started case
+            return "I didn't start the recipe yet."
+        else:
+            if completed_steps[-1]==True:
+                #the last step is finished
+                optional_fields_string += f"I am done with all steps."
+            elif current_step==0:
+                #user is at step 1
+                optional_fields_string += f"I am doing {current_step+1}"
+                optional_fields_string += f" and I am about to do {current_step+2}"
+            else:
+                optional_fields_string += f"I am doing {current_step+1}"
+                if current_step<=len(completed_steps)-2:
+                    optional_fields_string += f" and I am about to do {current_step+2}"
+
+        return optional_fields_string.rstrip("\n")
 
     def prompt_gpt_with_chat_history(self, question, model: str = "gpt-3.5-turbo"):
         prompt = self.prompt.format(
@@ -241,7 +294,7 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
         none if the message should be filtered out. Else, return the incoming
         msg if it can be included.
         """
-        if "angel" in msg.utterance_text.lower() or "angela" in msg.utterance_text.lower() or "angela," in msg.utterance_text.lower() or "angel," in msg.utterance_text.lower():
+        if "angela" in msg.utterance_text.lower() or "angel" in msg.utterance_text.lower() or "angela," in msg.utterance_text.lower() or "angel," in msg.utterance_text.lower():
             return msg
         return None
 
