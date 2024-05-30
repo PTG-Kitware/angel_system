@@ -192,7 +192,7 @@ public class AngelARUI : Singleton<AngelARUI>
     /// The message will be cut off after 50 words, which take around 25 seconds to speak on average.
     /// </summary>
     /// <param name="message"></param>
-    public void PlayMessageAtAgent(string message, float timeout = 10)
+    public void PlayMessageAtAgent(string message, float timeout = 20)
     {
         if (!Utils.StringValid(message) || Orb.Instance == null || AudioManager.Instance == null) return;
         AudioManager.Instance.PlayAndShowMessage(message, timeout);
@@ -408,6 +408,14 @@ public class AngelARUI : Singleton<AngelARUI>
         EyeGazeManager.Instance.ShowDebugTarget(_showEyeGazeTarget);
     }
 
+    public void ShowLogger(bool showLogger)
+    {
+        if (Logger.Instance != null)
+        {
+            Logger.Instance.transform.GetChild(0).gameObject.SetActive(showLogger);
+        }
+    }
+
     /// <summary>
     /// ********FOR DEBUGGING ONLY, prints ARUI logging messages
     /// </summary>
@@ -417,7 +425,7 @@ public class AngelARUI : Singleton<AngelARUI>
     {
         if (_showARUIDebugMessages)
         {
-            if (showInLogger && FindObjectOfType<Logger>() != null)
+            if (showInLogger && Logger.Instance != null)
                 Logger.Instance.LogInfo("***ARUI: " + message);
             Debug.Log("***ARUI: " + message);
 

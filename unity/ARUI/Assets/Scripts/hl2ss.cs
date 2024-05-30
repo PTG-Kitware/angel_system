@@ -122,10 +122,7 @@ public class hl2ss : MonoBehaviour
         byte[] ipaddress = new byte[16 * 2];
         GetLocalIPv4Address(ipaddress, ipaddress.Length);
         string ip = System.Text.Encoding.Unicode.GetString(ipaddress);
-        DebugMessage(string.Format("UNITY: Local IP Address is: {0}", ip));
-
-        Logger log = logger();
-        log.LogInfo(string.Format("UNITY: HL2 IP Address is: {0}", ip));
+        DebugMessage(string.Format("UNITY: Local IP Address is: "+ip));
     }
 
     // Update is called once per frame
