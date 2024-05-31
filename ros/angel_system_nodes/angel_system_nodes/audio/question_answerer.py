@@ -167,7 +167,7 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
             msg = self.question_queue.get()
             # Get the optional fields.
             optional_fields = self._get_optional_fields_string(
-                self.current_step,self.completed_steps
+                self.current_step, self.completed_steps
             )
             
             response = self.get_response(msg, optional_fields)
@@ -191,16 +191,13 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
 
     def prompt_gpt(self, question, optional_fields: str, model: str = "gpt-4o"):
         prompt = self.prompt.format(question=question, taskactivity=optional_fields)
-        self.log.info(f'Prompting OpenAI with\n{question} with \"{optional_fields}\"\n')
+        self.log.info(f'Prompting OpenAI with\n{question} with "{optional_fields}"\n')
 
-        if self.image_msg==None or len(self.image_msg) <= 1:
+        if self.image_msg == None or len(self.image_msg) <= 1:
             payload = {
                 "model": model,
                 "messages": [
-                    {
-                        "role": "user", 
-                        "content": prompt
-                    },
+                    {"role": "user", "content": prompt},
                 ],
                 "temperature": 0.0,
                 "max_tokens": 128,
@@ -215,19 +212,19 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
                             { 
                                 "type": "text",
                                 "text": "Use the image to answer the question."
-                                + prompt
+                                + prompt,
                             },
                             {
                                 "type": "image_url",
-                                "image_url" : {
-                                    "url" : "data:image/jpeg;base64,"+self.image_msg
+                                "image_url": {
+                                    "url": "data:image/jpeg;base64,"+self.image_msg
                                 },
                             },
                         ],
                     }
                 ],
-            "temperature": 0.0,
-            "max_tokens": 128
+                "temperature": 0.0,
+                "max_tokens": 128,
         }
 
 

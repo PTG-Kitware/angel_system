@@ -268,7 +268,7 @@ class FeedbackGenerator(Node):
 
         notification.title = f"{msg.utterance_text}"
         notification.description = f"{msg.response}"
-
+        self.log.debug(f"Publishing message to ARUI {msg.response}")
         self.publish_update(notifications=[notification])
 
 

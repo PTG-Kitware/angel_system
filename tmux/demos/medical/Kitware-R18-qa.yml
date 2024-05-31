@@ -5,7 +5,7 @@
 # This configuration is for the R18 Chest Seal task.
 #
 
-name: Kitware-R18-Chest-Seal
+name: Kitware-R18-Chest-Seal-qa-demo
 root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 
 # Optional tmux socket
@@ -170,8 +170,8 @@ windows:
       panes:
         - gsp: ros2 run angel_system_nodes global_step_predictor --ros-args
             -r __ns:=${ROS_NAMESPACE}
-            -p config_file:=${CONFIG_DIR}/tasks/medical/multi-task-config-medical-r18.yaml
-            -p activity_config_file:=${CONFIG_DIR}/activity_labels/medical/r18.yaml
+            -p config_file:=${CONFIG_DIR}/tasks/medical/multi-task-config-medical-r18-demo.yaml
+            -p activity_config_file:=${CONFIG_DIR}/activity_labels/medical/r18-demo.yaml
             -p task_state_topic:=TaskUpdates
             -p system_notification_topic:=ARUISystemNotifications
             -p system_text_topic:=system_response_topic
