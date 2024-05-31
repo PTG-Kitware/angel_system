@@ -67,7 +67,7 @@ ENV LD_LIBRARY_PATH /usr/local/cuda-12.5/lib64:$LD_LIBRARY_PATH
 # TODO: Getting a warning about this script being deprecated, so update the installation method, too.
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    (curl -sL https://deb.nodesource.com/setup_14.x | bash -) \
+    (curl -sL https://deb.nodesource.com/setup_20.x | bash -) \
  && apt-get install -y nodejs \
  && node -v \
  && npm -v
