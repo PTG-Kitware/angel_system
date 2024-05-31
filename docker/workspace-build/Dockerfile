@@ -53,9 +53,14 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 RUN echo "source /etc/bash_completion" >> ~/.bashrc \
  && echo "source /usr/share/colcon_argcomplete/hook/colcon-argcomplete.bash" >> ~/.bashrc
 
-# Env vars for the nvidia-container-runtime.
-ENV NVIDIA_VISIBLE_DEVICES all
-ENV NVIDIA_DRIVER_CAPABILITIES graphics,utility,compute
+# Acquire and install NVIDIA CUDA 12.5
+RUN --mount=type=cache,target=/root/nvidia,sharing=locked \
+    wget https://developer.download.nvidia.com/compute/cuda/12.5.0/local_installers/cuda_12.5.0_555.42.02_linux.run \
+      --no-verbose -c -O /root/nvidia/cuda_12.5.0_555.42.02_linux.run \
+  && chmod +x /root/nvidia/cuda_12.5.0_555.42.02_linux.run \
+  && /root/nvidia/cuda_12.5.0_555.42.02_linux.run --silent --toolkit
+ENV PATH /usr/local/cuda-12.5/bin:$PATH
+ENV LD_LIBRARY_PATH /usr/local/cuda-12.5/lib64:$LD_LIBRARY_PATH
 
 # For the demo-ui
 # TODO: Probably upgrade what nodejs version is being used.
