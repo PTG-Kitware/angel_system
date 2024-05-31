@@ -30,14 +30,14 @@ function get_docker_compose_cmd()
   fi
   # Check for v1 docker-compose tool, otherwise try to make use of v2
   # docker-compose plugin
-  if ( command -v docker-compose >/dev/null 2>&1 )
-  then
-    log "[INFO] Using v1 docker-compose python tool"
-    EVAL_STR="${EXPORT_VAR_NAME}=( docker-compose )"
-  elif ( docker compose >/dev/null 2>&1 )
+  if ( docker compose >/dev/null 2>&1 )
   then
     log "[INFO] Using v2 docker compose plugin"
     EVAL_STR="${EXPORT_VAR_NAME}=( docker compose )"
+  elif ( command -v docker-compose >/dev/null 2>&1 )
+  then
+    log "[INFO] Using v1 docker-compose python tool"
+    EVAL_STR="${EXPORT_VAR_NAME}=( docker-compose )"
   else
     log "[ERROR] No docker compose functionality found on the system."
     return 1
