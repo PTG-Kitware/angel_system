@@ -93,7 +93,7 @@ services:
       resources:
         reservations:
           devices:
-            - capabilities: [ gpu ]
+            - capabilities: [ gpu, compute, graphics, utility, video ]
               driver: nvidia
               count: all
               # device_ids: ['0', '3']  # mutually exclusive with count
