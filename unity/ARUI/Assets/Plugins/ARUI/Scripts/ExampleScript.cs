@@ -118,7 +118,8 @@ public class ExampleScript : MonoBehaviour
 
         AngelARUI.Instance.RegisterKeyword("Right", () => { AngelARUI.Instance.SetAgentMessageAlignment(MessageAlignment.LockRight); });
         AngelARUI.Instance.RegisterKeyword("Left", () => { AngelARUI.Instance.SetAgentMessageAlignment(MessageAlignment.LockLeft); });
-        AngelARUI.Instance.RegisterKeyword("Automatic", () => { AngelARUI.Instance.SetAgentMessageAlignment(MessageAlignment.Auto); });
+        AngelARUI.Instance.RegisterKeyword("Automatic", () => { ShowTestMultipleChoice(); });
+        AngelARUI.Instance.RegisterKeyword("toggle debug", () => { AngelARUI.Instance.SetLoggerVisible(!Logger.Instance.IsVisible); });
 
         AngelARUI.Instance.RegisterKeyword("Hello", () => { AngelARUI.Instance.PlayMessageAtAgent("How can I help you?"); });
 
@@ -176,6 +177,18 @@ public class ExampleScript : MonoBehaviour
     private void DialogueTestFailed()
     {
         AngelARUI.Instance.PlayMessageAtAgent("okay, i wont");
+    }
+
+    private void ShowTestMultipleChoice()
+    {
+        AngelARUI.Instance.TryGetUserMultipleChoice("Please select your preferred instruction alignment:",
+            new List<string> { "Right", "Left", "Automatic" },
+            new List<UnityAction>()
+            {
+                    () => AngelARUI.Instance.SetAgentMessageAlignment(MessageAlignment.LockRight),
+                    () => AngelARUI.Instance.SetAgentMessageAlignment(MessageAlignment.LockLeft),
+                    () => AngelARUI.Instance.SetAgentMessageAlignment(MessageAlignment.Auto),
+            }, null, 30);
     }
 
     private IEnumerator SpeechCommandRegistrationTest()
@@ -266,14 +279,7 @@ public class ExampleScript : MonoBehaviour
 
         if (Input.GetKeyUp(KeyCode.N))
         {
-            AngelARUI.Instance.TryGetUserMultipleChoice("Please select your preferred instruction alignment:",
-                new List<string> { "Right", "Left", "Automatic" },
-                new List<UnityAction>()
-                {
-                    () => AngelARUI.Instance.SetAgentMessageAlignment(MessageAlignment.LockRight),
-                    () => AngelARUI.Instance.SetAgentMessageAlignment(MessageAlignment.LockLeft),
-                    () => AngelARUI.Instance.SetAgentMessageAlignment(MessageAlignment.Auto),
-                }, null, 30);
+            ShowTestMultipleChoice();
         }
 
         if (Input.GetKeyUp(KeyCode.B))
@@ -293,6 +299,7 @@ public class ExampleScript : MonoBehaviour
         if (Input.GetKeyUp(KeyCode.D))
         {
             AngelARUI.Instance.PrintVMDebug = !AngelARUI.Instance.PrintVMDebug;
+            AngelARUI.Instance.SetLoggerVisible(!Logger.Instance.IsVisible);
         }
         if (Input.GetKeyUp(KeyCode.F))
         {
@@ -308,6 +315,7 @@ public class ExampleScript : MonoBehaviour
             AngelARUI.Instance.RemoveWarningMessage();
         }
     }
+
 
     private void CheckForRecipeChange()
     {

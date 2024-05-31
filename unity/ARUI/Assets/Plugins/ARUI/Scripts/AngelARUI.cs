@@ -31,6 +31,7 @@ public class AngelARUI : Singleton<AngelARUI>
     [HideInInspector]
     public bool IsVMActiv => ViewManagement.Instance != null && _useViewManagement;
 
+
     private void Awake() => StartCoroutine(InitProjectSettingsAndScene());
 
     private IEnumerator InitProjectSettingsAndScene()
@@ -94,6 +95,13 @@ public class AngelARUI : Singleton<AngelARUI>
         //Instantiate the Task Overview
         GameObject TaskOverview = Instantiate(Resources.Load(StringResources.Sid_Tasklist_path)) as GameObject;
         TaskOverview.gameObject.name = "***ARUI-" + StringResources.tasklist_name;
+
+        //Instantiate the logger if not in scene
+        if (Logger.Instance==null)
+        {
+            GameObject LoggerWindow = Instantiate(Resources.Load(StringResources.LoggerPrefab_path)) as GameObject;
+            LoggerWindow.gameObject.name = "***ARUI-Logger";
+        }
 
         //Start View Management, if enabled
         if (_useViewManagement)
@@ -408,13 +416,15 @@ public class AngelARUI : Singleton<AngelARUI>
         EyeGazeManager.Instance.ShowDebugTarget(_showEyeGazeTarget);
     }
 
-    public void ShowLogger(bool showLogger)
+    /// <summary>
+    /// Set the logger window visible or not visible. visible is true, the logger will appear in front of the user.
+    /// </summary>
+    /// <param name="visible"></param>
+    public void SetLoggerVisible(bool visible)
     {
         if (Logger.Instance != null)
         {
-            Logger.Instance.transform.GetChild(0).gameObject.SetActive(showLogger);
-            Logger.Instance.transform.position = Vector3.Scale(ARCamera.transform.forward, new Vector3(1.5f, 1.5f, 1.5f));
-            Logger.Instance.transform.rotation = Quaternion.LookRotation(Logger.Instance.transform.position- ARCamera.transform.position, Vector3.up);
+            Logger.Instance.IsVisible = visible;
         }
     }
 

@@ -196,7 +196,11 @@ public class DataProvider : Singleton<DataProvider>
 
             if (stepIndex==0)
             {
-                AudioManager.Instance.PlayMessage("For "+ taskID+", "+_currentActiveTasks[taskID].Steps[stepIndex].StepDesc);
+                string id = "";
+                if (_currentActiveTasks.Count >1)
+                    id = "For " + taskID + ", ";
+                AudioManager.Instance.PlayMessage(id + _currentActiveTasks[taskID].Steps[stepIndex].StepDesc);
+
             }
 
         } else if (stepIndex == _currentActiveTasks[taskID].Steps.Count - 1)
@@ -204,7 +208,11 @@ public class DataProvider : Singleton<DataProvider>
             _currentActiveTasks[taskID].PrevStepIndex = _currentActiveTasks[taskID].Steps.Count-2;
             _currentActiveTasks[taskID].CurrStepIndex = _currentActiveTasks[taskID].Steps.Count-1;
             _currentActiveTasks[taskID].NextStepIndex = -1;
-            AudioManager.Instance.PlayMessage("For " + taskID + ", " + _currentActiveTasks[taskID].Steps[stepIndex].StepDesc);
+
+            string id = "";
+            if (_currentActiveTasks.Count > 1)
+                id = "For " + taskID + ", ";
+            AudioManager.Instance.PlayMessage(id + _currentActiveTasks[taskID].Steps[stepIndex].StepDesc);
         }
         else if (stepIndex > _currentActiveTasks[taskID].Steps.Count - 1)
         {
@@ -219,7 +227,10 @@ public class DataProvider : Singleton<DataProvider>
             _currentActiveTasks[taskID].CurrStepIndex = stepIndex;
             _currentActiveTasks[taskID].NextStepIndex = stepIndex + 1;
 
-            AudioManager.Instance.PlayMessage("For " + taskID + ", " + _currentActiveTasks[taskID].Steps[stepIndex].StepDesc);
+            string id = "";
+            if (_currentActiveTasks.Count > 1)
+                id = "For " + taskID + ", ";
+            AudioManager.Instance.PlayMessage(id + _currentActiveTasks[taskID].Steps[stepIndex].StepDesc);
         }
 
         AudioManager.Instance.PlaySound(Orb.Instance.transform.position,SoundType.taskDone);

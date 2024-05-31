@@ -170,7 +170,7 @@ public class AngelARUIBridge : MonoBehaviour
 
         AngelARUI.Instance.RegisterKeyword("restart", () => { SendRestart(); });
 
-        AngelARUI.Instance.RegisterKeyword("toggle debug", () => { _showLogger = !_showLogger; AngelARUI.Instance.ShowLogger(_showLogger); });
+        AngelARUI.Instance.RegisterKeyword("toggle debug", () => { AngelARUI.Instance.SetLoggerVisible(!Logger.Instance.IsVisible); });
         AngelARUI.Instance.RegisterKeyword("angel", () => { AngelARUI.Instance.CallAgentToUser(); });
     }
 }

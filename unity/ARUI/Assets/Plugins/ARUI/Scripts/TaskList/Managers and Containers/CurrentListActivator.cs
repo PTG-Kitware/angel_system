@@ -33,7 +33,7 @@ public class CurrentListActivator : MonoBehaviour
 
     private Line progressPoints;
 
-    private GameObject _eyeGazeTarget;
+    public GameObject EyeGazeTarget;
 
     private void Awake()
     {
@@ -49,15 +49,15 @@ public class CurrentListActivator : MonoBehaviour
 
         _rectProgress.End = new Vector3(_xStart, 0, 0);
         _textMeshProUGUI = GetComponentInChildren<TextMeshPro>();
-        _eyeGazeTarget = gameObject;
-        EyeGazeManager.Instance.RegisterEyeTargetID(_eyeGazeTarget);
+        EyeGazeTarget = gameObject;
+        EyeGazeManager.Instance.RegisterEyeTargetID(EyeGazeTarget);
     }
 
     // Update is called once per frame
     void Update()
     {
         //Once user looks at this object, set the task list visible
-        if (EyeGazeManager.Instance != null && EyeGazeManager.Instance.CurrentHitID == _eyeGazeTarget.GetInstanceID())
+        if (EyeGazeManager.Instance != null && EyeGazeManager.Instance.CurrentHitID == EyeGazeTarget.GetInstanceID())
         {
             MultiTaskList.Instance.SetMenuActive(_index);
         } 

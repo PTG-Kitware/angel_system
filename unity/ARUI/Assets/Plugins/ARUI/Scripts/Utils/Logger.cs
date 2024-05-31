@@ -16,22 +16,31 @@ public class Logger : Singleton<Logger>
 
     public bool showUnityLog = true;
 
+    public bool IsVisible {
+        get => transform.GetChild(0).gameObject.activeSelf;
+        set
+        {
+            transform.GetChild(0).gameObject.SetActive(value);
+            transform.position = AngelARUI.Instance.ARCamera.transform.position + Vector3.Scale(AngelARUI.Instance.ARCamera.transform.forward, new Vector3(1.5f, 1.5f, 1.5f));
+            transform.rotation = Quaternion.LookRotation(Logger.Instance.transform.position - AngelARUI.Instance.ARCamera.transform.position, Vector3.up);
+        }
+    }
 
-    void OnEnable()
+    private void OnEnable()
     {
         if (_debugAreaText == null) return;
 
         Application.logMessageReceived += HandleUnityLog;
     }
 
-    void OnDisable()
+    private void OnDisable()
     {
         if (_debugAreaText == null) return;
 
         Application.logMessageReceived -= HandleUnityLog;
     }
 
-    void HandleUnityLog(string logString, string stackTrace, LogType type)
+    private void HandleUnityLog(string logString, string stackTrace, LogType type)
     {
         if (showUnityLog == false) return;
 

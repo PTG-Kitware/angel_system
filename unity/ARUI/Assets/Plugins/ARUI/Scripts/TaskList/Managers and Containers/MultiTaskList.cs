@@ -7,6 +7,7 @@ using System;
 public class MultiTaskList : Singleton<MultiTaskList>
 {
     private List<CanvasGroup> _allTasklists = new List<CanvasGroup>();
+    private List<BoxCollider> _allColliders = new List<BoxCollider>();
     private Dictionary<string, TaskOverviewContainerRepo> _containers;
 
     private GameObject _taskOverviewContainer;
@@ -19,7 +20,9 @@ public class MultiTaskList : Singleton<MultiTaskList>
     [SerializeField]
     private float disableDelay = 1.0f;
 
-    private bool _isActive = false; 
+    private bool _isActive = false;
+
+    private GameObject _eyeGazeTarget;
 
     public void Start()
     {
@@ -35,6 +38,9 @@ public class MultiTaskList : Singleton<MultiTaskList>
 
         _taskOverviewContainer.SetActive(false);
         _isActive = false;
+
+        _eyeGazeTarget = gameObject;
+        EyeGazeManager.Instance.RegisterEyeTargetID(_eyeGazeTarget);
     }
 
     /// <summary>
@@ -49,12 +55,8 @@ public class MultiTaskList : Singleton<MultiTaskList>
     {
         if (!_isActive) return;
 
-        var isLookingAtAnyTask = false;
-
-
-
         //if eye gaze not on task objects then do fade out currentindex
-        if (EyeGazeManager.Instance != null && EyeGazeManager.Instance.CurrentHitID != gameObject.GetInstanceID())
+        if (!isLookingAtAnyTaskOverviewObject())
         {
             if (delta > disableDelay)
                 StartCoroutine(FadeOut());
@@ -83,8 +85,27 @@ public class MultiTaskList : Singleton<MultiTaskList>
         foreach (var tasklist in _containers.Values)
             tasklist.multiListInstance.Text.gameObject.SetActive(!anyMenuActive);
 
-        // Snap orb
-        Orb.Instance.SetSticky(!anyMenuActive || (EyeGazeManager.Instance != null && EyeGazeManager.Instance.CurrentHitID == gameObject.GetInstanceID()));
+    }
+
+    private bool isLookingAtAnyTaskOverviewObject()
+    {
+        foreach (var tasklist in _allColliders)
+        {
+            if (EyeGazeManager.Instance != null && EyeGazeManager.Instance.CurrentHitID == tasklist.gameObject.GetInstanceID())
+            {
+                return true;
+            }
+        }
+        
+        foreach (var container in _containers.Values)
+        {
+            if (EyeGazeManager.Instance != null && EyeGazeManager.Instance.CurrentHitID == container.multiListInstance.EyeGazeTarget.gameObject.GetInstanceID())
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     #region Setting inidvidual recipe menus active/inative
@@ -176,6 +197,13 @@ public class MultiTaskList : Singleton<MultiTaskList>
             _containers[pair.Key].multiListInstance.UpdateProgres(Mathf.Min(1f, Mathf.Max(0f, (float)pair.Value.CurrStepIndex / (float)pair.Value.Steps.Count)));
             index++;
         }
+
+        _allColliders = new List<BoxCollider>();
+        foreach (var tasklist in _allTasklists)
+            _allColliders.AddRange(tasklist.GetComponentsInChildren<BoxCollider>());
+
+        foreach (var tasklist in _allColliders)
+            EyeGazeManager.Instance.RegisterEyeTargetID(tasklist.gameObject);
     }
 
     #endregion
@@ -244,7 +272,7 @@ public class MultiTaskList : Singleton<MultiTaskList>
             bool broken = false;
             while (counter < duration)
             {
-                if (EyeGazeManager.Instance.CurrentHitID == gameObject.GetInstanceID())
+                if (isLookingAtAnyTaskOverviewObject())
                 {
                     broken = true;
                     break;
