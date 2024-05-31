@@ -227,15 +227,18 @@ class ASR(dialogue.AbstractDialogueNode):
         colored_utterance = colored(published_msg.utterance_text, "light_blue")
         self.log.info("Publishing message: " + f'"{colored_utterance}"')
         
-        if "angela" in text.lower() or "angel" in text.lower() or "angela," in text.lower() or "angel," in text.lower():
+        if (
+            "angela" in text.lower() 
+            or "angel" in text.lower() 
+            or "angela," in text.lower() 
+            or "angel," in text.lower()
+        ):
             self.log.info("Publish thinking feedback")
             self.publish_feedback_response()
 
         self._publisher.publish(published_msg)
 
-    def publish_feedback_response(
-        self
-    ):
+    def publish_feedback_response(self):
         publish_msg = SystemTextResponse()
         publish_msg.header.frame_id = "GPT thinking"
         publish_msg.header.stamp = self.get_clock().now().to_msg()

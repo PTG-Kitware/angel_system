@@ -399,7 +399,7 @@ class GlobalStepPredictorNode(Node):
 
         self._task_error_publisher.publish(message)
 
-        #Publish a voice message to user
+        # Publish a voice message to user
         publish_msg = SystemTextResponse()
         publish_msg.header.frame_id = "Skip detected"
         publish_msg.header.stamp = self.get_clock().now().to_msg()

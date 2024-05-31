@@ -15,11 +15,8 @@ from termcolor import colored
 from sensor_msgs.msg import Image
 import threading
 
-from angel_msgs.msg import (
-    DialogueUtterance, 
-    SystemTextResponse,
-    TaskUpdate
-)
+from angel_msgs.msg import DialogueUtterance, SystemTextResponse, TaskUpdate
+
 from angel_system_nodes.audio import dialogue
 from angel_utils import declare_and_get_parameters
 from angel_utils import make_default_main
@@ -169,10 +166,11 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
         while True:
             msg = self.question_queue.get()
             # Get the optional fields.
-            optional_fields = \
-                self._get_optional_fields_string(self.current_step,self.completed_steps)
+            optional_fields = self._get_optional_fields_string(
+                self.current_step,self.completed_steps
+            )
             
-            response = self.get_response(msg,optional_fields)
+            response = self.get_response(msg, optional_fields)
             self.publish_generated_response(msg, response)
 
     def publish_generated_response(
@@ -193,27 +191,41 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
 
     def prompt_gpt(self, question, optional_fields: str, model: str = "gpt-4o"):
         prompt = self.prompt.format(question=question, taskactivity=optional_fields)
-        self.log.info(f"Prompting OpenAI with\n{question} with \"{optional_fields}\"\n")
+        self.log.info(f'Prompting OpenAI with\n{question} with \"{optional_fields}\"\n')
 
-        if self.image_msg==None or len(self.image_msg)<=1:
+        if self.image_msg==None or len(self.image_msg) <= 1:
             payload = {
                 "model": model,
-                "messages": [{"role": "user", "content": prompt}],
+                "messages": [
+                    {
+                        "role": "user", 
+                        "content": prompt
+                    },
+                ],
                 "temperature": 0.0,
                 "max_tokens": 128,
             }
         else:
             payload = {
                 "model": model,
-                "messages": [{"role": "user", "content": [
-                    { "type": "text",
-                    "text": "Use the image to answer the question."+ prompt},
-                    {"type": "image_url",
-                    "image_url" : {
-                      "url" : "data:image/jpeg;base64,"+self.image_msg
+                "messages": [
+                    {
+                        "role": "user", 
+                        "content": [
+                            { 
+                                "type": "text",
+                                "text": "Use the image to answer the question."
+                                + prompt
+                            },
+                            {
+                                "type": "image_url",
+                                "image_url" : {
+                                    "url" : "data:image/jpeg;base64,"+self.image_msg
+                                },
+                            },
+                        ],
                     }
-                    }
-                ]}],
+                ],
             "temperature": 0.0,
             "max_tokens": 128
         }
@@ -230,23 +242,25 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
             .lstrip()
         )
 
-    def _get_optional_fields_string(self, current_step: int, completed_steps: list) -> str:
+    def _get_optional_fields_string(
+        self, current_step: int, completed_steps: list
+    ) -> str:
         optional_fields_string = ""
 
-        if current_step==None:
-            #non started case
+        if current_step == None:
+            # non started case
             return "I didn't start the recipe yet."
         else:
-            if completed_steps[-1]==True:
-                #the last step is finished
+            if completed_steps[-1] == True:
+                # the last step is finished
                 optional_fields_string += f"I am done with all steps."
-            elif current_step==0:
-                #user is at step 1
+            elif current_step == 0:
+                # user is at step 1
                 optional_fields_string += f"I am doing {current_step+1}"
                 optional_fields_string += f" and I am about to do {current_step+2}"
             else:
                 optional_fields_string += f"I am doing {current_step+1}"
-                if current_step<=len(completed_steps)-2:
+                if current_step <= len(completed_steps) - 2:
                     optional_fields_string += f" and I am about to do {current_step+2}"
 
         return optional_fields_string.rstrip("\n")
@@ -294,7 +308,12 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
         none if the message should be filtered out. Else, return the incoming
         msg if it can be included.
         """
-        if "angela" in msg.utterance_text.lower() or "angel" in msg.utterance_text.lower() or "angela," in msg.utterance_text.lower() or "angel," in msg.utterance_text.lower():
+        if (
+            "angela" in msg.utterance_text.lower() 
+            or "angel" in msg.utterance_text.lower() 
+            or "angela," in msg.utterance_text.lower() 
+            or "angel," in msg.utterance_textxt.lower()
+        ):
             return msg
         return None
 
