@@ -6,33 +6,14 @@ services:
   # Build requirements
   #
 
-  workspace-base-dev:
-    image: ${PTG_REGISTRY}/workspace-base-dev:${PTG_TAG}
-    build:
-      context: ..  # repo root
-      dockerfile: docker/workspace-base-dev/Dockerfile
-      args:
-        ROS_VERSION:  # from .env file
-      cache_from:
-        # In order of descending precedence
-        - ${PTG_REGISTRY}/workspace-base-dev:${PTG_TAG}
-        - ${PTG_REGISTRY}/workspace-base-dev:latest
-    profiles:
-      - build-only
-
-
   workspace-build-dev:
     image: ${PTG_REGISTRY}/workspace-build-dev:${PTG_TAG}
-    depends_on:
-      - workspace-base-dev
     build:
       context: ..  # repo root
       dockerfile: docker/workspace-build/Dockerfile
       args:
-        BASE_IMAGE: workspace-base-dev
+        ROS_VERSION:  # from .env file
         ANGEL_WORKSPACE_DIR:  # from .env file
-        PTG_REGISTRY:  # from .env file
-        PTG_TAG:  # from .env file
       cache_from:
         # In order of descending precedence
         - ${PTG_REGISTRY}/workspace-build-dev:${PTG_TAG}

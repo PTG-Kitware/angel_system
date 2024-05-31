@@ -4,10 +4,8 @@
 # Assumptions:
 # - ROS_DISTRO is defined with the name of a distribution installed under /opt/ros/
 #
-ARG PTG_REGISTRY
-ARG BASE_IMAGE
-ARG PTG_TAG
-FROM ${PTG_REGISTRY}/${BASE_IMAGE}:${PTG_TAG} AS base
+ARG ROS_VERSION
+FROM osrf/ros:${ROS_VERSION}-desktop AS base
 
 SHELL ["/bin/bash", "-c"]
 
@@ -16,11 +14,22 @@ ENV LC_ALL=C.UTF-8 \
     LANG=C.UTF-8
 
 # Basic system package installations
+ENV DEBIAN_FRONTEND=noninteractive
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     apt-get -y update \
  && apt-get -y install \
+        bash-completion \
+        gdb \
         gettext-base \
+        htop \
+        iproute2 \
+        less \
+        vim \
+        parallel \
+        tmux \
+        tree \
+        wget \
         python3-pip \
         python3-venv \
         ros-${ROS_DISTRO}-image-transport-plugins \
@@ -39,6 +48,10 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         libegl1 \
         libxext6 \
         libx11-6
+
+# Activate some bash completion
+RUN echo "source /etc/bash_completion" >> ~/.bashrc \
+ && echo "source /usr/share/colcon_argcomplete/hook/colcon-argcomplete.bash" >> ~/.bashrc
 
 # Env vars for the nvidia-container-runtime.
 ENV NVIDIA_VISIBLE_DEVICES all
