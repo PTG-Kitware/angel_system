@@ -71,7 +71,7 @@ windows:
 #            -r __ns:=${ROS_NAMESPACE}
 #            -p ip_addr:=${HL2_IP}
 #            -p image_topic:=PVFramesBGR
-#            -p image_ts_topic:=PVFramesBGR_TS
+#            -p image_ts_topic:=PVFramesBGR_ts
 #            -p hand_pose_topic:=disable
 #            -p audio_topic:=disable
 #            -p sm_topic:=disable
