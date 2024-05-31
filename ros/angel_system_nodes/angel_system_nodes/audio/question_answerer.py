@@ -312,7 +312,7 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
             "angela" in msg.utterance_text.lower() 
             or "angel" in msg.utterance_text.lower() 
             or "angela," in msg.utterance_text.lower() 
-            or "angel," in msg.utterance_textxt.lower()
+            or "angel," in msg.utterance_text.lower()
         ):
             return msg
         return None

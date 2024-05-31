@@ -83,7 +83,7 @@ windows:
             -p input_audio_topic:=HeadsetAudioData
             -p output_voice_activity_topic:=DetectedVoiceData
             -p vad_server_url:=http://127.0.0.1:55667/vad
-            -p vad_cadence:=2
+            -p vad_cadence:=3
             -p vad_margin:=0.20
             -p max_accumulation_length:=10
             -p debug_mode:=True
