@@ -62,6 +62,24 @@ RUN --mount=type=cache,target=/root/nvidia,sharing=locked \
 ENV PATH /usr/local/cuda-12.5/bin:$PATH
 ENV LD_LIBRARY_PATH /usr/local/cuda-12.5/lib64:$LD_LIBRARY_PATH
 
+# Install ZED SDK and dependencies.
+# We are skipping the python installation here as the pacakge version has been
+# manually deduced and added to our poetry configuration to allow for its
+# depedencies to be resolved along side everything else we use.
+RUN --mount=type=cache,target=/root/zed,sharing=locked \
+    --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt install zstd \
+ && wget https://download.stereolabs.com/zedsdk/4.1/cu121/ubuntu20 \
+      --no-verbose -c -O /root/zed/ZED_SDK_Ubuntu20_cuda12.1_v4.1.2.zstd.run \
+ && chmod +x /root/zed/ZED_SDK_Ubuntu20_cuda12.1_v4.1.2.zstd.run \
+ && /root/zed/ZED_SDK_Ubuntu20_cuda12.1_v4.1.2.zstd.run \
+    --quiet \
+    --target /root/zed/install \
+    -- \
+    --silent \
+    --skip_python
+
 # For the demo-ui
 # TODO: Probably upgrade what nodejs version is being used.
 # TODO: Getting a warning about this script being deprecated, so update the installation method, too.
@@ -136,18 +154,6 @@ RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked \
 RUN mkdir "${ANGEL_WORKSPACE_DIR}"/angel_system \
  && touch "${ANGEL_WORKSPACE_DIR}"/angel_system/__init__.py \
  && pip install --no-deps -e .
-
-## TODO: Remove -- environment only container
-## Build the ROS workspace.
-#COPY ./ros "${ANGEL_WORKSPACE_DIR}/src"
-#COPY docker/workspace_build_ros.sh "${ANGEL_WORKSPACE_DIR}"/
-#RUN "${ANGEL_WORKSPACE_DIR}/workspace_build_ros.sh"
-#
-## TODO: Remove -- environment only container
-## Build the required NPM envirnment for the Engineering UI.
-#COPY docker/workspace_build_npm_install.sh "${ANGEL_WORKSPACE_DIR}"/
-#RUN cd "${ANGEL_WORKSPACE_DIR}"/src/angel_utils/demo_ui/ \
-# && "${ANGEL_WORKSPACE_DIR}/workspace_build_npm_install.sh"
 
 # Bring in tmux run configurations
 # - add symlink to tmuxinator's expected "config home"

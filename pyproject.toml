@@ -90,6 +90,15 @@ tcn-hpl = {path = "python-tpl/TCN_HPL", develop = true}
 # Yolo v7 object detection
 yolov7 = {path = "python-tpl/yolov7", develop = true}
 
+# ZED SDK Python Package
+# Deduced from a manual installation of the ZED SDK, however the installation
+# script uses the `--ignore-installed` option for `pip install`, which clobbers
+# transitive dependency requirements of other packages specified here.
+# Including the known wheel via URL is our best option to avoid this issue.
+# This will need to be updated (or removed) if we change our platform or SDK
+# version used.
+pyzed = {url = "https://download.stereolabs.com/zedsdk/4.1/whl/linux_x86_64/pyzed-4.1-cp38-cp38-linux_x86_64.whl"}
+
 [tool.poetry.dev-dependencies]
 ipython = "*"
 # Docs
