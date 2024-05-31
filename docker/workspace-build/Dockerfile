@@ -90,6 +90,7 @@ RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked \
 # This should be an absolute path.
 ARG ANGEL_WORKSPACE_DIR
 ENV ANGEL_WORKSPACE_DIR="${ANGEL_WORKSPACE_DIR}"
+WORKDIR "${ANGEL_WORKSPACE_DIR}"
 
 #
 # Isolate package.xml files for rosdep dependency installation.
@@ -120,8 +121,7 @@ COPY poetry.lock pyproject.toml docker/workspace_build_pydep_install.sh "${ANGEL
 COPY ./python-tpl "${ANGEL_WORKSPACE_DIR}/python-tpl"
 RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked \
     --mount=type=cache,target=/root/.cache/pypoetry,sharing=locked \
-    cd "${ANGEL_WORKSPACE_DIR}" \
- && "${ANGEL_WORKSPACE_DIR}/workspace_build_pydep_install.sh"
+    "${ANGEL_WORKSPACE_DIR}/workspace_build_pydep_install.sh"
 
 # Create editable-installation hooks for the angel_system python package.
 # * The container is intended to be environment-only, but it is highly
@@ -133,8 +133,7 @@ RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked \
 # * This is intentionally separated from the above dep installation so as to
 #   not trigger re-installation of all dependencies if there is only a change
 #   in the library and not with the libraries dependencies.
-RUN cd "${ANGEL_WORKSPACE_DIR}" \
- && mkdir "${ANGEL_WORKSPACE_DIR}"/angel_system \
+RUN mkdir "${ANGEL_WORKSPACE_DIR}"/angel_system \
  && touch "${ANGEL_WORKSPACE_DIR}"/angel_system/__init__.py \
  && pip install --no-deps -e .
 
@@ -165,6 +164,5 @@ COPY docker/cyclonedds_profile.xml.tmpl \
      docker/workspace_test.sh \
      "${ANGEL_WORKSPACE_DIR}"/
 
-WORKDIR "${ANGEL_WORKSPACE_DIR}"
 ENTRYPOINT ["./workspace_entrypoint.sh"]
 CMD ["bash"]
