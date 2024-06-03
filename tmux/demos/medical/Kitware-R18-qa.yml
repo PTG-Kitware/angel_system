@@ -173,7 +173,7 @@ windows:
             -p config_file:=${CONFIG_DIR}/tasks/medical/multi-task-config-medical-r18-demo.yaml
             -p activity_config_file:=${CONFIG_DIR}/activity_labels/medical/r18-demo.yaml
             -p task_state_topic:=TaskUpdates
-            -p system_notification_topic:=ARUISystemNotifications
+            -p task_error_topic:=ARUISystemNotifications
             -p system_text_topic:=system_response_topic
             -p system_command_topic:=SystemCommands
             -p det_topic:=activity_topic
@@ -214,4 +214,4 @@ windows:
       -p utterances_topic:=utterances_topic
       -p system_text_response_topic:=system_response_topic
       -p task_monitor_topic:=TaskUpdates
-      -p system_notification_topic:=ARUISystemNotifications
+      -p task_error_topic:=ARUISystemNotifications

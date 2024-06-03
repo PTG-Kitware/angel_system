@@ -209,7 +209,7 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
                     {
                         "role": "user", 
                         "content": [
-                            { 
+                            {
                                 "type": "text",
                                 "text": "Use the image to answer the question."
                                 + prompt,
@@ -217,7 +217,7 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
                             {
                                 "type": "image_url",
                                 "image_url": {
-                                    "url": "data:image/jpeg;base64,"+self.image_msg
+                                    "url": "data:image/jpeg;base64," + self.image_msg
                                 },
                             },
                         ],
@@ -225,7 +225,7 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
                 ],
                 "temperature": 0.0,
                 "max_tokens": 128,
-        }
+            }
 
 
         req = requests.post(
@@ -306,8 +306,8 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
         msg if it can be included.
         """
         if (
-            "angela" in msg.utterance_text.lower() 
-            or "angel" in msg.utterance_text.lower() 
+            "angela" in msg.utterance_text.lower()
+            or "angel" in msg.utterance_text.lower()
             or "angela," in msg.utterance_text.lower() 
             or "angel," in msg.utterance_text.lower()
         ):

@@ -30,7 +30,7 @@ from angel_system.global_step_prediction.global_step_predictor import (
 PARAM_CONFIG_FILE = "config_file"
 PARAM_ACTIVITY_CONFIG_FILE = "activity_config_file"
 PARAM_TASK_STATE_TOPIC = "task_state_topic"
-PARAM_TASK_ERROR_TOPIC = "system_notification_topic"
+PARAM_TASK_ERROR_TOPIC = "task_error_topic"
 PARAM_SYSTEM_TEXT_TOPIC = "system_text_topic"
 PARAM_SYS_CMD_TOPIC = "system_command_topic"
 PARAM_QUERY_TASK_GRAPH_TOPIC = "query_task_graph_topic"

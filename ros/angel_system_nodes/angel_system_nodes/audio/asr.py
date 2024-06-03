@@ -228,9 +228,9 @@ class ASR(dialogue.AbstractDialogueNode):
         self.log.info("Publishing message: " + f'"{colored_utterance}"')
         
         if (
-            "angela" in text.lower() 
-            or "angel" in text.lower() 
-            or "angela," in text.lower() 
+            "angela" in text.lower()
+            or "angel" in text.lower()
+            or "angela," in text.lower()
             or "angel," in text.lower()
         ):
             self.log.info("Publish thinking feedback")
