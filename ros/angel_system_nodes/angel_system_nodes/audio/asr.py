@@ -75,7 +75,7 @@ class ASR(dialogue.AbstractDialogueNode):
         self._feedback_topic = (
             self.get_parameter(FEEDBACK_TOPIC).get_parameter_value().string_value
         )
-    
+
         self.log.info(
             f"Audio topic: "
             f"({type(self._audio_topic).__name__}) "
@@ -226,7 +226,7 @@ class ASR(dialogue.AbstractDialogueNode):
         published_msg.utterance_text = text
         colored_utterance = colored(published_msg.utterance_text, "light_blue")
         self.log.info("Publishing message: " + f'"{colored_utterance}"')
-        
+
         if (
             "angela" in text.lower()
             or "angel" in text.lower()
@@ -245,6 +245,7 @@ class ASR(dialogue.AbstractDialogueNode):
         publish_msg.utterance_text = ""
         publish_msg.response = "thinking"
         self._feedback_publisher.publish(publish_msg)
+
 
 main = make_default_main(ASR)
 

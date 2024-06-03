@@ -51,7 +51,6 @@ PARAM_GT_VIDEO_ID = "gt_video_id"
 PARAM_GT_OUTPUT_DIR = "gt_output_dir"  # output directory override.
 
 
-
 VALID_STEP_MODES = {"broad", "granular"}
 
 
