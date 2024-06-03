@@ -33,6 +33,7 @@ CHAT_HISTORY_LENGTH = "chat_history_length"
 IMAGE_TOPIC = "image_topic"
 TASK_STATE_TOPIC = "task_state_topic"
 
+
 class QuestionAnswerer(dialogue.AbstractDialogueNode):
     def __init__(self):
         super().__init__()
@@ -152,7 +153,7 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
         jpg_container = io.BytesIO()
         img_rgb.save(jpg_container, format="JPEG")
         self.image_msg = base64.b64encode(jpg_container.getvalue()).decode("utf-8")
-        
+
     def question_answer_callback(self, msg):
         self.log.debug(f"Received message:\n\n{msg.utterance_text}")
         if not self._apply_filter(msg):
@@ -169,7 +170,7 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
             optional_fields = self._get_optional_fields_string(
                 self.current_step, self.completed_steps
             )
-            
+
             response = self.get_response(msg, optional_fields)
             self.publish_generated_response(msg, response)
 
@@ -207,7 +208,7 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
                 "model": model,
                 "messages": [
                     {
-                        "role": "user", 
+                        "role": "user",
                         "content": [
                             {
                                 "type": "text",
@@ -226,7 +227,6 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
                 "temperature": 0.0,
                 "max_tokens": 128,
             }
-
 
         req = requests.post(
             "https://api.openai.com/v1/chat/completions",
@@ -308,7 +308,7 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
         if (
             "angela" in msg.utterance_text.lower()
             or "angel" in msg.utterance_text.lower()
-            or "angela," in msg.utterance_text.lower() 
+            or "angela," in msg.utterance_text.lower()
             or "angel," in msg.utterance_text.lower()
         ):
             return msg

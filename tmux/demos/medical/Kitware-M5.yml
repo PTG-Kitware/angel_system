@@ -127,7 +127,7 @@ windows:
             -p config_file:=${CONFIG_DIR}/tasks/medical/multi-task-config-medical-m5.yaml
             -p activity_config_file:=${CONFIG_DIR}/activity_labels/medical/m5.yaml
             -p task_state_topic:=TaskUpdates
-            -p task_error_topic:=TaskErrors
+            -p task_error_topic:=ARUISystemNotifications
             -p system_command_topic:=SystemCommands
             -p det_topic:=activity_topic
             -p model_file:=${MODEL_DIR}/task_monitor/m5_test_activity_preds.mscoco.json
@@ -156,7 +156,7 @@ windows:
             --query_task_graph_topic=query_task_graph
             --task_updates_topic=TaskUpdates
             --activity_detections_topic=activity_topic
-            --task_errors_topic=TaskErrors
+            --task_errors_topic=ARUISystemNotifications
 
   - feedback_generator: ros2 run angel_system_nodes feedback_generator --ros-args
       -r __ns:=${ROS_NAMESPACE}
@@ -165,3 +165,5 @@ windows:
       -p task_monitor_topic:=TaskUpdates
       -p arui_update_topic:=AruiUpdates
       -p interp_user_intent_topic:=UserIntentPredicted
+      -p system_text_response_topic:=SystemTextResponse
+      -p system_notification_topic:=ARUISystemNotifications
