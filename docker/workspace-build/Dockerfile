@@ -81,8 +81,6 @@ RUN --mount=type=cache,target=/root/zed,sharing=locked \
     --skip_python
 
 # For the demo-ui
-# TODO: Probably upgrade what nodejs version is being used.
-# TODO: Getting a warning about this script being deprecated, so update the installation method, too.
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     (curl -sL https://deb.nodesource.com/setup_20.x | bash -) \
