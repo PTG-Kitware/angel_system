@@ -2,61 +2,70 @@
 using TMPro;
 using UnityEngine;
 using System;
+using System.Collections.Generic;
+using System.Diagnostics.Eventing.Reader;
 
 public class Logger : Singleton<Logger>
 {
     [SerializeField]
-    private TextMeshProUGUI debugAreaText = null;
+    private TextMeshProUGUI _debugAreaText = null;
 
-    [SerializeField]
-    private bool enableDebug = false;
+    private int _maxMessages = 15;
 
-    [SerializeField]
-    private int maxLines = 15;
+    private List<string> _allMessages = new List<string>();
 
-    void Awake()
-    {
-        if (debugAreaText == null)
+    public bool showUnityLog = true;
+
+    public bool IsVisible {
+        get => transform.GetChild(0).gameObject.activeSelf;
+        set
         {
-            debugAreaText = GetComponent<TextMeshProUGUI>();
+            transform.GetChild(0).gameObject.SetActive(value);
+            transform.position = AngelARUI.Instance.ARCamera.transform.position + Vector3.Scale(AngelARUI.Instance.ARCamera.transform.forward, new Vector3(1.5f, 1.5f, 1.5f));
+            transform.rotation = Quaternion.LookRotation(Logger.Instance.transform.position - AngelARUI.Instance.ARCamera.transform.position, Vector3.up);
         }
     }
 
-    void OnEnable()
+    private void OnEnable()
     {
-        debugAreaText.enabled = enableDebug;
-        enabled = enableDebug;
+        if (_debugAreaText == null) return;
 
-        if (enabled)
-        {
-            debugAreaText.text += $"<color=\"white\">{DateTime.Now.ToString("HH:mm:ss.fff")} {this.GetType().Name} enabled</color>\n";
-        }
+        Application.logMessageReceived += HandleUnityLog;
+    }
+
+    private void OnDisable()
+    {
+        if (_debugAreaText == null) return;
+
+        Application.logMessageReceived -= HandleUnityLog;
+    }
+
+    private void HandleUnityLog(string logString, string stackTrace, LogType type)
+    {
+        if (showUnityLog == false) return;
+
+        if (logString.Contains("colliders found in PokePointer overlap query")) return;
+
+        string newMessage = $"<color=\"white\"><b>{DateTime.Now.ToString("HH:mm:ss.fff")} {logString} </b></color> <size=12><color=#d3d3d3>{"\n" + stackTrace}</color></size>\n";
+        _allMessages.Add(newMessage);
+        UpdateString();
     }
 
     public void LogInfo(string message)
     {
-        ClearLines();
+        if (_debugAreaText==null || showUnityLog) return;
 
-        debugAreaText.text += $"<color=\"green\">{DateTime.Now.ToString("HH:mm:ss.fff")} {message}</color>\n";
+        string newMessage = $"<color=\"green\"><b>{DateTime.Now.ToString("HH:mm:ss.fff")} {message}</b></color>\n";
+        _allMessages.Add(newMessage);
+        UpdateString();
     }
 
-    public void LogError(string message)
+    private void UpdateString()
     {
-        ClearLines();
-        debugAreaText.text += $"<color=\"red\">{DateTime.Now.ToString("HH:mm:ss.fff")} {message}</color>\n";
+        string[] outputArray = _allMessages.ToArray();
+        Array.Reverse(outputArray);
+
+        _debugAreaText.text = String.Join(String.Empty, outputArray);
     }
 
-    public void LogWarning(string message)
-    {
-        ClearLines();
-        debugAreaText.text += $"<color=\"yellow\">{DateTime.Now.ToString("HH:mm:ss.fff")} {message}</color>\n";
-    }
-
-    private void ClearLines()
-    {
-        if (debugAreaText.text.Split('\n').Count() >= maxLines)
-        {
-            debugAreaText.text = string.Empty;
-        }
-    }
 }

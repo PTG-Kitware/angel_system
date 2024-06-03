@@ -28,6 +28,7 @@ PARAM_TASK_MONITOR_TOPIC = "task_monitor_topic"
 PARAM_ARUI_UPDATE_TOPIC = "arui_update_topic"
 PARAM_INTERP_USER_INTENT_TOPIC = "interp_user_intent_topic"
 PARAM_SYSTEM_TEXT_RESPONSE_TOPIC = "system_text_response_topic"
+PARAM_SYSTEM_NOTIFICATION_TOPIC = "system_notification_topic"
 
 
 class FeedbackGenerator(Node):
@@ -57,6 +58,7 @@ class FeedbackGenerator(Node):
                 (PARAM_ARUI_UPDATE_TOPIC,),
                 (PARAM_INTERP_USER_INTENT_TOPIC,),
                 (PARAM_SYSTEM_TEXT_RESPONSE_TOPIC,),
+                (PARAM_SYSTEM_NOTIFICATION_TOPIC,),
             ],
         )
 
@@ -64,6 +66,7 @@ class FeedbackGenerator(Node):
         self._object_detection_topic = param_values[PARAM_OBJECT_DET_TOPIC]
         self._task_monitor_topic = param_values[PARAM_TASK_MONITOR_TOPIC]
         self._arui_update_topic = param_values[PARAM_ARUI_UPDATE_TOPIC]
+        self._system_notification_topic = param_values[PARAM_SYSTEM_NOTIFICATION_TOPIC]
         self._interp_uintent_topic = param_values[PARAM_INTERP_USER_INTENT_TOPIC]
         self._system_text_response_topic = param_values[
             PARAM_SYSTEM_TEXT_RESPONSE_TOPIC
@@ -93,6 +96,13 @@ class FeedbackGenerator(Node):
             SystemTextResponse,
             self._system_text_response_topic,
             self.system_text_response_callback,
+            1,
+        )
+
+        self.system_text_subscriber = self.create_subscription(
+            AruiUserNotification,
+            self._system_notification_topic,
+            self.system_notification_callback,
             1,
         )
 
@@ -239,6 +249,12 @@ class FeedbackGenerator(Node):
         """
         self.publish_update(intents_for_confirmation=[msg])
 
+    def system_notification_callback(self, msg: AruiUserNotification) -> None:
+        """
+        Publish an ARUI notification to UI
+        """
+        self.publish_update(notifications=[msg])
+
     def system_text_response_callback(self, msg: SystemTextResponse) -> None:
         """
         Publish an ARUI update message with a *single* ARUI user notification.
@@ -250,9 +266,9 @@ class FeedbackGenerator(Node):
         notification.category = notification.N_CAT_NOTICE
         notification.context = notification.N_CONTEXT_USER_MODELING
 
-        notification.title = f"System response for: {msg.utterance_text}"
+        notification.title = f"{msg.utterance_text}"
         notification.description = f"{msg.response}"
-
+        self.log.debug(f"Publishing message to ARUI {msg.response}")
         self.publish_update(notifications=[notification])
 
 

@@ -124,7 +124,7 @@
 //            if (!btn.IsDisabled)
 //            {
 //                string taskID = btn.gameObject.name.Substring(0, btn.gameObject.name.LastIndexOf('_'));
-//                btn.Toggled = DataProvider.Instance.CurrentSelectedTasks.ContainsKey(taskID) && isActive;
+//                btn.Toggled = DataProvider.Instance.CurrentActiveTasks.ContainsKey(taskID) && isActive;
 //                btn.gameObject.SetActive(isActive);
 //            }
 //        }

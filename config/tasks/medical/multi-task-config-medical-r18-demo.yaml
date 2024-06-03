@@ -1,0 +1,17 @@
+# Schema version.
+version: "1.0"
+
+# Task title for display purposes.
+title: "Chest Seal Application Demo"
+
+# Layout of the steps that define this task.
+tasks:
+  # Item format:
+  # - id: Identifying integer for the task.
+  # - config_file: Path to the task config file representing this task.
+  #   It is expected that these paths are relative to where this tool is run.
+  #   (i.e. relative to $(ANGEL_WORKSPACE)).
+  - id: 0
+    label: "r18"
+    config_file: "./config/tasks/medical/r18-demo.yaml"
+    active: true

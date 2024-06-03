@@ -23,19 +23,22 @@ namespace RosMessageTypes.Angel
         //  received message instance.
         // 
         //  Task Monitor commands
+        public sbyte task_index;
         public bool reset_current_task;
         public bool previous_step;
         public bool next_step;
 
         public SystemCommandsMsg()
         {
+            this.task_index = 0;
             this.reset_current_task = false;
             this.previous_step = false;
             this.next_step = false;
         }
 
-        public SystemCommandsMsg(bool reset_current_task, bool previous_step, bool next_step)
+        public SystemCommandsMsg(sbyte task_index, bool reset_current_task, bool previous_step, bool next_step)
         {
+            this.task_index = task_index;
             this.reset_current_task = reset_current_task;
             this.previous_step = previous_step;
             this.next_step = next_step;
@@ -45,6 +48,7 @@ namespace RosMessageTypes.Angel
 
         private SystemCommandsMsg(MessageDeserializer deserializer)
         {
+            deserializer.Read(out this.task_index);
             deserializer.Read(out this.reset_current_task);
             deserializer.Read(out this.previous_step);
             deserializer.Read(out this.next_step);
@@ -52,6 +56,7 @@ namespace RosMessageTypes.Angel
 
         public override void SerializeTo(MessageSerializer serializer)
         {
+            serializer.Write(this.task_index);
             serializer.Write(this.reset_current_task);
             serializer.Write(this.previous_step);
             serializer.Write(this.next_step);
@@ -60,6 +65,7 @@ namespace RosMessageTypes.Angel
         public override string ToString()
         {
             return "SystemCommandsMsg: " +
+            "\ntask_index: " + task_index.ToString() +
             "\nreset_current_task: " + reset_current_task.ToString() +
             "\nprevious_step: " + previous_step.ToString() +
             "\nnext_step: " + next_step.ToString();

@@ -13,6 +13,7 @@ from rclpy.node import Node
 from angel_msgs.msg import (
     ActivityDetection,
     AruiUserNotification,
+    SystemTextResponse,
     SystemCommands,
     TaskUpdate,
     TaskGraph,
@@ -30,6 +31,7 @@ PARAM_CONFIG_FILE = "config_file"
 PARAM_ACTIVITY_CONFIG_FILE = "activity_config_file"
 PARAM_TASK_STATE_TOPIC = "task_state_topic"
 PARAM_TASK_ERROR_TOPIC = "task_error_topic"
+PARAM_SYSTEM_TEXT_TOPIC = "system_text_topic"
 PARAM_SYS_CMD_TOPIC = "system_command_topic"
 PARAM_QUERY_TASK_GRAPH_TOPIC = "query_task_graph_topic"
 PARAM_DET_TOPIC = "det_topic"
@@ -47,6 +49,7 @@ PARAM_STEP_MODE = "step_mode"
 PARAM_GT_ACT_COCO = "gt_activity_mscoco"
 PARAM_GT_VIDEO_ID = "gt_video_id"
 PARAM_GT_OUTPUT_DIR = "gt_output_dir"  # output directory override.
+
 
 
 VALID_STEP_MODES = {"broad", "granular"}
@@ -69,6 +72,7 @@ class GlobalStepPredictorNode(Node):
                 (PARAM_ACTIVITY_CONFIG_FILE,),
                 (PARAM_TASK_STATE_TOPIC,),
                 (PARAM_TASK_ERROR_TOPIC,),
+                (PARAM_SYSTEM_TEXT_TOPIC,),
                 (PARAM_SYS_CMD_TOPIC,),
                 (PARAM_QUERY_TASK_GRAPH_TOPIC,),
                 (PARAM_DET_TOPIC,),
@@ -87,6 +91,7 @@ class GlobalStepPredictorNode(Node):
         self._activity_config_file = param_values[PARAM_ACTIVITY_CONFIG_FILE]
         self._task_state_topic = param_values[PARAM_TASK_STATE_TOPIC]
         self._task_error_topic = param_values[PARAM_TASK_ERROR_TOPIC]
+        self._system_text_topic = param_values[PARAM_SYSTEM_TEXT_TOPIC]
         self._sys_cmd_topic = param_values[PARAM_SYS_CMD_TOPIC]
         self._query_task_graph_topic = param_values[PARAM_QUERY_TASK_GRAPH_TOPIC]
         self._det_topic = param_values[PARAM_DET_TOPIC]
@@ -165,6 +170,9 @@ class GlobalStepPredictorNode(Node):
         )
         self._task_error_publisher = self.create_publisher(
             AruiUserNotification, self._task_error_topic, 1
+        )
+        self._sytem_text_publisher = self.create_publisher(
+            SystemTextResponse, self._system_text_topic, 1
         )
         self._task_graph_service = self.create_service(
             QueryTaskGraph, self._query_task_graph_topic, self.query_task_graph_callback
@@ -390,6 +398,14 @@ class GlobalStepPredictorNode(Node):
         message.description = f"Detected skip: {skipped_step}"
 
         self._task_error_publisher.publish(message)
+
+        # Publish a voice message to user
+        publish_msg = SystemTextResponse()
+        publish_msg.header.frame_id = "Skip detected"
+        publish_msg.header.stamp = self.get_clock().now().to_msg()
+        publish_msg.utterance_text = ""
+        publish_msg.response = "We detected you skipped a step. Please confirm the dialog if you want to go back."
+        self._sytem_text_publisher.publish(publish_msg)
 
     def publish_task_state_message(
         self,

@@ -61,8 +61,7 @@ public class ARUIRayPointer : LinePointer
 
     public void Update()
     {
-        if (EyeGazeManager.Instance != null && (EyeGazeManager.Instance.CurrentHit.Equals(EyeTarget.orbFace) || EyeGazeManager.Instance.CurrentHit.Equals(EyeTarget.orbMessage) ||
-            EyeGazeManager.Instance.CurrentHit.Equals(EyeTarget.listmenuButton_tasks)|| EyeGazeManager.Instance.CurrentHit.Equals(EyeTarget.tasklist)|| EyeGazeManager.Instance.CurrentHit.Equals(EyeTarget.orbtasklistButton)))  
+        if (EyeGazeManager.Instance != null && EyeGazeManager.Instance.CurrentHitID!=-1)  
         {
             lineRenderer.enabled = true;
         } else

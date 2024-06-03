@@ -21,7 +21,6 @@ public class HandPoseManager : Singleton<HandPoseManager>
     void Update()
     {
         leftPose = left.LastDetectedPose;
-
         rightPose = right.LastDetectedPose;    
     }
 }

@@ -1,30 +1,13 @@
 using Microsoft.MixedReality.Toolkit;
+using System.Collections.Generic;
 using System.Diagnostics;
 using UnityEngine;
 
-public enum EyeTarget
-{
-    nothing = 0,
-    orbFace = 1,
-    orbMessage = 2,
-    tasklist = 3,
-    orbtasklistButton = 4,
-    menuBtn = 5,
-    listmenuButton_tasks = 6,
-    okButton = 7,
-    ringindicator = 8,
-    textConfirmationWindow = 9,
-    listmenuButton_items = 10,
-    upButton = 11,
-    downButton =12,
-    resetButton = 13,
-    pieCollider = 14
-}
-
 public class EyeGazeManager : Singleton<EyeGazeManager>
 {
-    public EyeTarget CurrentHit = EyeTarget.nothing;
-    public GameObject CurrentHitObj;
+    public int CurrentHitID = -1;
+
+    private List<int> _eyeTargetIDs = new List<int>();
 
     /// ** Debug eye gaze target cube
     private MeshRenderer _eyeGazeTargetCube;
@@ -51,77 +34,36 @@ public class EyeGazeManager : Singleton<EyeGazeManager>
             {
                 float dist = (hitInfo.point - AngelARUI.Instance.ARCamera.transform.position).magnitude;
                 gameObject.transform.position = eyeGazeProvider.GazeOrigin + eyeGazeProvider.GazeDirection.normalized * dist;
-                //Debug.Log(hitInfo.collider.gameObject.name);
-                string goName = hitInfo.collider.gameObject.name.ToLower();
 
-                if (goName.Contains("flexibletextcontainer_orb"))
-                    CurrentHit = EyeTarget.orbMessage;
-
-                else if (goName.Contains("bodyplacement"))
-                    CurrentHit = EyeTarget.orbFace;
-
-                else if (goName.Contains(StringResources.tasklist_name.ToLower()))
-                    CurrentHit = EyeTarget.tasklist;
-
-                else if (goName.Contains("facetasklistbutton"))
-                    CurrentHit = EyeTarget.orbtasklistButton;
-
-                else if (goName.Contains("okbutton"))
-                    CurrentHit = EyeTarget.okButton;
-
-                else if (goName.Contains("flexibletextcontainer_window"))
-                    CurrentHit = EyeTarget.textConfirmationWindow;
-
-                else if (goName.Contains("ringindicator"))
-                    CurrentHit = EyeTarget.ringindicator;
-
-                else if (goName.Contains("listmenubutton_tasks"))
-                    CurrentHit = EyeTarget.listmenuButton_tasks;
-
-                else if (goName.Contains("listmenubutton_items"))
-                    CurrentHit = EyeTarget.listmenuButton_items;
-
-                else if (goName.Contains("upbutton"))
-                    CurrentHit = EyeTarget.upButton;
-
-                else if (goName.Contains("downbutton"))
-                    CurrentHit = EyeTarget.downButton;
-
-                else if (goName.Contains("resetbutton"))
-                    CurrentHit = EyeTarget.resetButton;
-
-                else if (goName.Contains("piecollider"))
-                    CurrentHit = EyeTarget.pieCollider;
-
-                else if (goName.Contains("_menu"))
-                    CurrentHit = EyeTarget.menuBtn;
-
-                else
-                    CurrentHit = EyeTarget.nothing;
-
-                if (CurrentHit != EyeTarget.nothing)
+                //UnityEngine.Debug.Log("Currently looking at:" + hitInfo.collider.gameObject.name+" with ID"+ hitInfo.collider.gameObject.GetInstanceID());
+                
+                if (_eyeTargetIDs.Contains(hitInfo.collider.gameObject.GetInstanceID()))
                 {
-                    CurrentHitObj = hitInfo.collider.gameObject;
+                    CurrentHitID = hitInfo.collider.gameObject.GetInstanceID();
                     if (_showRayDebugCube)
+                    {
                         _eyeGazeTargetCube.enabled = true;
-                }
-                else if (CurrentHit == EyeTarget.nothing)
-                    CurrentHitObj = null;
-
+                    }
+                } else
+                    CurrentHitID = -1;
             }
             else
             {
                 // If no target is hit, show the object at a default distance along the gaze ray.
                 gameObject.transform.position = eyeGazeProvider.GazeOrigin + eyeGazeProvider.GazeDirection.normalized * 2.0f;
-                CurrentHit = EyeTarget.nothing;
-                CurrentHitObj = null;
+                CurrentHitID = -1;
             }
         }
         else
         {
-            CurrentHit = EyeTarget.nothing;
-            CurrentHitObj = null;
+            CurrentHitID = -1;
         }
+    }
+
+    public void RegisterEyeTargetID(GameObject ob)
+    {
+        AngelARUI.Instance.DebugLogMessage("Registered Collision Events with "+ ob.name+" and ID "+ ob.GetInstanceID(), false);
+        _eyeTargetIDs.Add(ob.GetInstanceID());
     }
 
     public void ShowDebugTarget(bool showEyeGazeTarget) => _showRayDebugCube = showEyeGazeTarget;

@@ -30,3 +30,45 @@ MonoBehaviour:
       id: 0
       description: 
       axisConstraint: 0
+  - localizationKey: 
+    keyword: previous step
+    keyCode: 0
+    action:
+      id: 0
+      description: 
+      axisConstraint: 0
+  - localizationKey: 
+    keyword: next step
+    keyCode: 0
+    action:
+      id: 0
+      description: 
+      axisConstraint: 0
+  - localizationKey: 
+    keyword: toggle debug
+    keyCode: 0
+    action:
+      id: 0
+      description: 
+      axisConstraint: 0
+  - localizationKey: 
+    keyword: restart
+    keyCode: 0
+    action:
+      id: 0
+      description: 
+      axisConstraint: 0
+  - localizationKey: 
+    keyword: angel
+    keyCode: 0
+    action:
+      id: 0
+      description: 
+      axisConstraint: 0
+  - localizationKey: 
+    keyword: select okay
+    keyCode: 0
+    action:
+      id: 0
+      description: 
+      axisConstraint: 0

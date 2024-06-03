@@ -1,0 +1,42 @@
+{"Name": "Filter Inspection", "Steps":[
+    {
+        "StepDesc": "Remove the nut.",
+        "RequiredItems": ["nut" ],
+        "SubSteps": [],
+        "CurrSubStepIndex": -1
+    },{
+        "StepDesc": "Remove the air clean cover.",
+        "RequiredItems": ["nut" ],
+        "SubSteps": [],
+        "CurrSubStepIndex": -1
+    },
+    {
+        "StepDesc": "Remove the wing nut and air filter assembly",
+        "RequiredItems": ["wingnut", "air filter" ],
+        "SubSteps": [],
+        "CurrSubStepIndex": -1
+    },
+    {
+        "StepDesc": "Separate the inner paper filter from the outer foam filter. Carefully check both filters for holes or tears and replace if damaged. If you want to see more information on how the tear looks like, please say 'show diagram'.",
+        "RequiredItems": ["inner paper filter", "outer foam filter" ],
+        "SubSteps": [],
+        "CurrSubStepIndex": -1
+    },
+    {
+        "StepDesc": "Separate the inner paper filter from the outer foam filter.",
+        "RequiredItems": ["inner paper filter", "outer foam filter"],
+        "SubSteps": [],
+        "CurrSubStepIndex": -1
+    },
+    {
+        "StepDesc": "Remove the wing nut and air filter assembly.",
+        "RequiredItems": ["wingnut", "air filter assembly"],
+        "CurrSubStepIndex": -1
+    },
+    {
+        "StepDesc": "Remove the nut and the air cleaner cover.",
+        "RequiredItems": ["nut","air cleaner cover"],
+        "SubSteps": [],
+        "CurrSubStepIndex": -1
+    }],
+    "CurrStepIndex":0,"PrevStepIndex":-1,"NextStepIndex":1}

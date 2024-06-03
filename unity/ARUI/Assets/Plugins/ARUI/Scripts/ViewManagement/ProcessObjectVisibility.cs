@@ -30,7 +30,7 @@ public class ProcessObjectVisibility : Singleton<ProcessObjectVisibility>
 
     public void Start()
     {
-        _zBufferCam = Camera.main.transform.GetChild(0).transform.GetComponent<Camera>();
+        _zBufferCam = FindObjectOfType<ZBufferCamera>().GetComponent<Camera>();
         scale = AngelARUI.Instance.ARCamera.pixelWidth / _zBufferCam.targetTexture.width;
         _imageTex = new Texture2D(_zBufferCam.targetTexture.width, _zBufferCam.targetTexture.height, TextureFormat.ARGB32, false);
 

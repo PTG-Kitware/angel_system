@@ -8,23 +8,29 @@ public static class StringResources
     public static int LayerToInt(string layer) => LayerToLayerInt[layer];
 
     //Sounds
-    public static string ConfirmationSound_path = "Sounds/MRTK_ButtonPress";
+    public static string BtnConfirmationSound_path = "Sounds/MRTK_ButtonPress";
     public static string NotificationSound_path = "Sounds/MRTK_Notification";
     public static string NextTaskSound_path = "Sounds/MRTK_Voice_Confirmation";
     public static string MoveStart_path = "Sounds/MRTK_Move_Start";
     public static string MoveEnd_path = "Sounds/MRTK_Move_End";
     public static string WarningSound_path = "Sounds/warning";
     public static string SelectSound_path = "Sounds/MRTK_Select_Secondary";
+    public static string VoiceConfirmation_path = "Sounds/MRTK_Select_Main";
+    public static string ActionConfirmation_path = "Sounds/Confirmation";
 
     //Prefabs
     public static string POIHalo_path = "Prefabs/Halo3D";
-    public static string Orb_path = "Prefabs/Orb";
+    public static string Orb_path = "Prefabs/Orb/Orb";
     public static string EyeTarget_path = "Prefabs/EyeTarget";
-    public static string ConfNotification_path = "Prefabs/ConfirmationNotification";
+    public static string ConfNotificationOrb_path = "Prefabs/Orb/OrbConfirmationNotification";
+    public static string MultiSelectNotificationOrb_path = "Prefabs/Orb/OrbSelectNotification";
+    public static string YesNoNotificationOrb_path = "Prefabs/Orb/OrbYesNoNotification";
     public static string HandPoseManager_path = "Prefabs/HandPoseManager";
     public static string Sid_Tasklist_path = "Prefabs/Sid_Tasklist/Task_Overview";
-    public static string Sid_TaskListComponent_path = "Prefabs/Sid_Tasklist/Flashcards/TaskListComponent";
     public static string TaskOverview_template_path = "Prefabs/Sid_Tasklist/TaskOverview_template";
+    public static string LoggerPrefab_path = "Prefabs/Logger";
+
+    public static string dialogue_path = "Prefabs/Dialogue";
 
     //Textures
     public static string zBufferTexture_path = "Textures/zBuffer";
@@ -43,6 +49,6 @@ public static class StringResources
     public static string eyeGazeManager_name = "EyeGazeManager";
     public static string dataManager_name = "DataManager";
     public static string audioManager_name = "AudioManager";
-    public static string confirmationWindow_name = "ConfirmatioWindow";
     public static string HandPoseManager_name = "HandPoseManager";
+    public static string NotificationManager_name = "NotificationManager";
 }

@@ -19,45 +19,30 @@ public class AngelARUIBridge : MonoBehaviour
     public string aruiUpdateTopicName = "AruiUpdates";
     public string querytaskgraphTopicName = "query_task_graph";
     public string confirmedUserIntentTopicName = "ConfirmedUserIntents";
+    public string systemCommandName = "SystemCommands";
     public string debugMsg = "";
-
-    private Logger _logger = null;
 
     private bool taskGraphInitialized = false;
     private int loopIdx = 0;
 
-    //private QueryTaskGraphResponse taskGraph = null;
-
-    /// <summary>
-    /// Lazy acquire the logger object and return the reference to it.
-    /// </summary>
-    /// <returns>Logger instance reference.</returns>
-    private ref Logger logger()
-    {
-        if (this._logger == null)
-        {
-            // TODO: Error handling for null loggerObject?
-            this._logger = GameObject.Find("Logger").GetComponent<Logger>();
-        }
-        return ref this._logger;
-    }
+    private bool _showLogger = false;
 
     void Start()
     {
-        Logger log = logger();
-
         // Create the AruiUpdate subscriber
         ros = ROSConnection.GetOrCreateInstance();
         ros.Subscribe<AruiUpdateMsg>(aruiUpdateTopicName, AruiUpdateCallback);
 
         // Register the QueryTaskGraph service
         ros.RegisterRosService<QueryTaskGraphRequest, QueryTaskGraphResponse>(querytaskgraphTopicName);
+
+        // Register the QueryTaskGraph service
+        ros.RegisterPublisher<SystemCommandsMsg>(systemCommandName);
+
     }
 
     void Update()
     {
-        Logger log = logger();
-
         // Check for a task graph every 5 seconds
         // TODO: probably a better way to do this
         if (taskGraphInitialized == false && (loopIdx % 300 == 0))
@@ -94,12 +79,50 @@ public class AngelARUIBridge : MonoBehaviour
             AngelARUI.Instance.GoToStep(msg.task_update.task_name, msg.task_update.current_step_id + 1);
         }
 
-        // Handle user notifications
         for (int i = 0; i < msg.notifications.Length; i++)
         {
-            AngelARUI.Instance.PlayMessageAtOrb(msg.notifications[i].description);
+            if (msg.notifications[i].context.Equals(AruiUserNotificationMsg.N_CONTEXT_TASK_ERROR)) {
+                AngelARUI.Instance.DebugLogMessage("Show skipped step dialogue to user", true);
+                AngelARUI.Instance.TryGetUserConfirmation("We noticed you skipped a step, do you want to go back?",
+                    () => { SendGoToPrevious(); },
+                    null, 20, true);
+            } else if (msg.notifications[i].context.Equals(AruiUserNotificationMsg.N_CONTEXT_USER_MODELING))
+            {
+                AngelARUI.Instance.DebugLogMessage("Show skipped step dialogue to user", true);
+                if (msg.notifications[i].title.Length==0 && msg.notifications[i].description.ToLower().Contains("thinking"))
+                    AngelARUI.Instance.SetAgentThinking(true);
+                else
+                {
+                    AngelARUI.Instance.SetAgentThinking(false);
+                    AngelARUI.Instance.PlayDialogueAtAgent(msg.notifications[i].title, msg.notifications[i].description);
+                }
+            }
         }
+        
     }
+    private void SendGoToPrevious()
+    {
+        SystemCommandsMsg msg = new SystemCommandsMsg();
+        msg.previous_step = true;
+        ros.Publish(systemCommandName, msg);
+        AngelARUI.Instance.DebugLogMessage("Sending message to backend to go to previous step.", true);
+    }
+
+    private void SendGoToNext()
+    {
+        SystemCommandsMsg msg = new SystemCommandsMsg();
+        msg.next_step = true;
+        ros.Publish(systemCommandName, msg);
+        AngelARUI.Instance.DebugLogMessage("Sending message to backend to go to next step.", true);
+    }
+    private void SendRestart()
+    {
+        SystemCommandsMsg msg = new SystemCommandsMsg();
+        msg.task_index = 1;
+        ros.Publish(systemCommandName, msg);
+        AngelARUI.Instance.DebugLogMessage("Sending message to go to the first step", true);
+    }
+
 
     /// <summary>
     /// Callback function for the QueryTaskGraph service.
@@ -141,5 +164,13 @@ public class AngelARUIBridge : MonoBehaviour
 
         AngelARUI.Instance.InitManual(tasks);
         taskGraphInitialized = true;
+
+        AngelARUI.Instance.RegisterKeyword("previous step", () => { SendGoToPrevious(); });
+        AngelARUI.Instance.RegisterKeyword("next step", () => { SendGoToNext(); });
+
+        AngelARUI.Instance.RegisterKeyword("restart", () => { SendRestart(); });
+
+        AngelARUI.Instance.RegisterKeyword("toggle debug", () => { AngelARUI.Instance.SetLoggerVisible(!Logger.Instance.IsVisible); });
+        AngelARUI.Instance.RegisterKeyword("angel", () => { AngelARUI.Instance.CallAgentToUser(); });
     }
 }

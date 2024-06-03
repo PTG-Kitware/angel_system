@@ -29,7 +29,7 @@ public class DwellButton : MonoBehaviour, IMixedRealityTouchHandler
 
     private bool _uniqueObj = false;
 
-    private EyeTarget _target;
+    private GameObject _eyeGazeTarget;
     private UnityEvent _selectEvent;
     private UnityEvent _quarterSelectEvent;
     private BoxCollider _btnCollider;
@@ -78,7 +78,7 @@ public class DwellButton : MonoBehaviour, IMixedRealityTouchHandler
 
     private Image _icon;
    
-    public void InitializeButton(EyeTarget target, UnityAction btnSelectEvent, UnityAction btnHalfSelect, 
+    public void InitializeButton(GameObject eyeGazeTarget, UnityAction btnSelectEvent, UnityAction btnHalfSelect, 
         bool touchable, DwellButtonType type, bool isUnique = false)
     {
         Shapes.Disc[] discs = GetComponentsInChildren<Shapes.Disc>(true);
@@ -104,10 +104,12 @@ public class DwellButton : MonoBehaviour, IMixedRealityTouchHandler
         _btnmesh = transform.GetChild(0).gameObject;
 
         _uniqueObj = isUnique;
-        //TODO: FIGURE OUT HOW TO GET RID OF THIS
+
         _selectEvent = new UnityEvent();
         _quarterSelectEvent = new UnityEvent();
-        this._target = target;
+        _eyeGazeTarget = eyeGazeTarget;
+        EyeGazeManager.Instance.RegisterEyeTargetID(_eyeGazeTarget);
+
         _selectEvent.AddListener(btnSelectEvent);
 
         if (btnHalfSelect != null)
@@ -127,7 +129,7 @@ public class DwellButton : MonoBehaviour, IMixedRealityTouchHandler
         if (!_btnInitialized) return;
 
         UpdateCurrentlyLooking();
-        IsInteractingWithBtn = _isTouchingBtn || _isLookingAtBtn || EyeGazeManager.Instance.CurrentHit.Equals(EyeTarget.textConfirmationWindow);
+        IsInteractingWithBtn = _isTouchingBtn || _isLookingAtBtn || EyeGazeManager.Instance.CurrentHitID== _eyeGazeTarget.GetInstanceID();
     }
 
     private void UpdateCurrentlyLooking()
@@ -136,15 +138,7 @@ public class DwellButton : MonoBehaviour, IMixedRealityTouchHandler
 
         bool currentLooking = false;
 
-        if (_uniqueObj)
-        {
-            currentLooking = EyeGazeManager.Instance.CurrentHitObj != null &&
-                    EyeGazeManager.Instance.CurrentHitObj.GetInstanceID() == this.gameObject.GetInstanceID();
-        }
-        else
-        {
-            currentLooking = EyeGazeManager.Instance.CurrentHit == _target;
-        }
+        currentLooking = EyeGazeManager.Instance.CurrentHitID == _eyeGazeTarget.GetInstanceID();
 
         if (currentLooking && !_isLookingAtBtn && !_isTouchingBtn && !_isDisabled)
         {
