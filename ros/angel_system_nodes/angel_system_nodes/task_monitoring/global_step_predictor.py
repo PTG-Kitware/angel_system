@@ -54,6 +54,11 @@ PARAM_GT_OUTPUT_DIR = "gt_output_dir"  # output directory override.
 VALID_STEP_MODES = {"broad", "granular"}
 
 
+# Local value meaning "no input given" for a parameter that we want to be
+# considered "optional".
+NO_VALUE_GIVEN = "__NO_VALUE_GIVEN__"
+
+
 class GlobalStepPredictorNode(Node):
     """
     ROS node that runs the GlobalStepPredictor and publishes TaskUpdate
@@ -71,7 +76,7 @@ class GlobalStepPredictorNode(Node):
                 (PARAM_ACTIVITY_CONFIG_FILE,),
                 (PARAM_TASK_STATE_TOPIC,),
                 (PARAM_TASK_ERROR_TOPIC,),
-                (PARAM_SYSTEM_TEXT_TOPIC,),
+                (PARAM_SYSTEM_TEXT_TOPIC, NO_VALUE_GIVEN),
                 (PARAM_SYS_CMD_TOPIC,),
                 (PARAM_QUERY_TASK_GRAPH_TOPIC,),
                 (PARAM_DET_TOPIC,),
@@ -170,9 +175,6 @@ class GlobalStepPredictorNode(Node):
         self._task_error_publisher = self.create_publisher(
             AruiUserNotification, self._task_error_topic, 1
         )
-        self._sytem_text_publisher = self.create_publisher(
-            SystemTextResponse, self._system_text_topic, 1
-        )
         self._task_graph_service = self.create_service(
             QueryTaskGraph, self._query_task_graph_topic, self.query_task_graph_callback
         )
@@ -182,6 +184,22 @@ class GlobalStepPredictorNode(Node):
         self._sys_cmd_subscription = self.create_subscription(
             SystemCommands, self._sys_cmd_topic, self.sys_cmd_callback, 1
         )
+
+        # Optionally enable the system text publisher if an input topic is
+        # provided. This is currently only used with the Question and Answer
+        # demo to provide a textual representation of the system notice to the
+        # user wearing a headset.
+        self._system_text_publisher = None
+        if self._system_text_topic != NO_VALUE_GIVEN:
+            self._system_text_publisher = self.create_publisher(
+                SystemTextResponse, self._system_text_topic, 1
+            )
+        else:
+            log.warn(
+                "System text response not enabled. Provide a topic name "
+                "to enable it."
+            )
+
         log.info("ROS services initialized.")
 
         self.gt_video_dset: Optional[kwcoco.CocoDataset] = None
@@ -398,13 +416,14 @@ class GlobalStepPredictorNode(Node):
 
         self._task_error_publisher.publish(message)
 
-        # Publish a voice message to user
-        publish_msg = SystemTextResponse()
-        publish_msg.header.frame_id = "Skip detected"
-        publish_msg.header.stamp = self.get_clock().now().to_msg()
-        publish_msg.utterance_text = ""
-        publish_msg.response = "We detected you skipped a step. Please confirm the dialog if you want to go back."
-        self._sytem_text_publisher.publish(publish_msg)
+        # Publish a voice message to user if enabled.
+        if self._system_text_publisher is not None:
+            publish_msg = SystemTextResponse()
+            publish_msg.header.frame_id = "Skip detected"
+            publish_msg.header.stamp = self.get_clock().now().to_msg()
+            publish_msg.utterance_text = ""
+            publish_msg.response = "We detected you skipped a step. Please confirm the dialog if you want to go back."
+            self._system_text_publisher.publish(publish_msg)
 
     def publish_task_state_message(
         self,
