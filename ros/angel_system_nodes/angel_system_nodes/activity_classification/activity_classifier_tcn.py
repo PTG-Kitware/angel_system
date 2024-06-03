@@ -598,7 +598,6 @@ class ActivityClassifierTCN(Node):
                 self._window_criterion_coco_input_mode
             )
 
-        log.info("keep looping starting...")
         # log.info(f"_rt_keep_looping: {self._rt_keep_looping()}")
         while self._rt_keep_looping():
             # log.info(f"self._rt_awake_evt.wait_and_clear(self._rt_active_heartbeat): {self._rt_awake_evt.wait_and_clear(self._rt_active_heartbeat)}")
