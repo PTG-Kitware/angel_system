@@ -96,7 +96,7 @@ windows:
             -p asr_req_segment_duration:=1
             -p is_sentence_tokenize:=False
             -p debug_mode:=True
-            
+
   - emotion_detection:
       layout: even-vertical
       panes:
@@ -108,7 +108,7 @@ windows:
            -r __ns:=${ROS_NAMESPACE}
            -p in_emotion_topic:=utterances_topic
            -p out_emotion_topic:=gpt_emotion_output_topic
-           
+
   - intent_detection:
       layout: even-vertical
       panes:
@@ -120,7 +120,7 @@ windows:
            -r __ns:=${ROS_NAMESPACE}
            -p in_intent_topic:=base_emotion_output_topic
            -p out_intent_topic:=gpt_intent_output_topic
-           
+
   - question_answering:
       layout: even-vertical
       panes:
@@ -132,7 +132,7 @@ windows:
            -p task_state_topic:=TaskUpdates
            -p image_topic:=PVFramesBGR
            -p few_shot_prompt_file:=${CONFIG_DIR}/llm_prompts/r18_steps_prompt
-           
+
   - pose_estimation: ros2 run angel_system_nodes pose_estimator --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p image_topic:=PVFramesBGR
@@ -203,7 +203,7 @@ windows:
             --query_task_graph_topic=query_task_graph
             --task_updates_topic=TaskUpdates
             --activity_detections_topic=activity_topic
-            --task_errors_topic=TaskErrors
+            --task_errors_topic=ARUISystemNotifications
 
   - feedback_generator: ros2 run angel_system_nodes feedback_generator --ros-args
       -r __ns:=${ROS_NAMESPACE}
