@@ -9,16 +9,16 @@ labels:
     full_str: "background"
   - id: 1
     label: "cover-seal-wound"
-    full_str: "With your non-dominant hand, cover and seal wound site."
+    full_str: "With one hand, cover and seal wound site."
   - id: 2
     label: "open-pack"
-    full_str: "With your dominant hand, open vented chest seal package. Keep your non-dominant hand on the wound site."
+    full_str: "Open vented chest seal package, while keeping one hand on wound site."
   - id: 3
     label: "clean-wound-site"
-    full_str: "With your dominant hand, wipe blood and body fluids from wound site."
+    full_str: "Wipe blood and body fluids from wound site, while keeping one hand on wound site."
   - id: 4
     label: "peel-seal-backer"
-    full_str: "Peel away chest seal backer."
+    full_str: "Peel away chest seal backer, while keeping one hand on wound site."
   - id: 5
     label: "place-seal"
     full_str: "Place chest seal with circle of vents over wound site and seal to chest."

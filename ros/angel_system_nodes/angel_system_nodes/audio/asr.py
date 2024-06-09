@@ -12,6 +12,8 @@ import numpy as np
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
 
+import nltk
+nltk.download('punkt')
 from nltk.tokenize import sent_tokenize
 import rclpy
 
@@ -254,10 +256,36 @@ class ASR(dialogue.AbstractDialogueNode):
                     self._publish_text(response_text)
 
     def _publish_text(self, text: str):
+
+        self.log.info("Utterance was: " + f'"{text}"')
+
+        if (
+            "angela" not in text.lower()
+            and "angel" not in text.lower()
+            and "angela," not in text.lower()
+            and "angel," not in text.lower()
+        ):
+            # If Angel keyword is not found, don't publish the utterance
+            return
+    
+        self.log.info("Publish thinking feedback")
+        self.publish_feedback_response()
+
         published_msg = DialogueUtterance()
         published_msg.header.frame_id = "ASR"
         published_msg.header.stamp = self.get_clock().now().to_msg()
-        published_msg.utterance_text = text
+
+        # Find the index of the first occurrence of the word
+        result_text = text
+        keywords = ["angela", "angela,", "angel", "angel,"]
+        for word in keywords:
+            index = text.lower().find(word)
+            if index != -1:
+                # Remove everything before the word
+                result_text = text[index+6:]
+                break
+    
+        published_msg.utterance_text = result_text
 
         if self.pov_frame is None or len(self.pov_frame)<=1:
             published_msg.pov_frame = ""
@@ -267,15 +295,6 @@ class ASR(dialogue.AbstractDialogueNode):
             self.log.info("Adding pov frame to utterance..")
         colored_utterance = colored(published_msg.utterance_text, "light_blue")
         self.log.info("Publishing message: " + f'"{colored_utterance}"')
-
-        if (
-            "angela" in text[:8].lower()
-            or "angel" in text[:8].lower()
-            or "angela," in text[:8].lower()
-            or "angel," in text[:8].lower()
-        ):
-            self.log.info("Publish thinking feedback")
-            self.publish_feedback_response()
 
         self._publisher.publish(published_msg)
 

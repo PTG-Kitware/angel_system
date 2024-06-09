@@ -355,9 +355,10 @@ class GlobalStepPredictor:
         to see zeros in your prediction history.
         """
         print(f"RESETTING tracker {tracker_ind}")
-        self.trackers[tracker_ind]["current_broad_step"] = 0
-        self.trackers[tracker_ind]["current_granular_step"] = 0
+        self.trackers[tracker_ind]["current_broad_step"] = 1
+        self.trackers[tracker_ind]["current_granular_step"] = 1
         self.tracker_resets.append(self.trackers[tracker_ind]["recipe"])
+        return self.trackers
 
     def granular_to_broad_step(self, tracker, granular_step):
         """

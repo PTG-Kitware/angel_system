@@ -232,6 +232,8 @@ class GlobalStepPredictorNode(Node):
                 update_function = self.gsp.manually_increment_current_broad_step
             elif self._step_mode == "broad" and sys_cmd_msg.previous_step:
                 update_function = self.gsp.manually_decrement_current_step
+            elif sys_cmd_msg.reset_current_task:
+                update_function = self.gsp.reset_one_tracker
             elif self._step_mode == "granular" and sys_cmd_msg.next_step:
                 update_function = self.gsp.increment_granular_step
             elif self._step_mode == "granular" and sys_cmd_msg.previous_step:

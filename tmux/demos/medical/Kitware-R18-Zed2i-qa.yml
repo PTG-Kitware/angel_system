@@ -20,7 +20,7 @@ root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 # on_project_start: command
 on_project_start: |
   export ROS_NAMESPACE=${ROS_NAMESPACE:-/kitware}
-  export HL2_IP=${HL2_IP:-192.168.4.70}
+  export HL2_IP=${HL2_IP:-192.168.0.87}
   export CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/config
   export NODE_CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/src/angel_system_nodes/configs
   export MODEL_DIR=${ANGEL_WORKSPACE_DIR}/model_files
@@ -60,27 +60,6 @@ on_project_start: |
 tmux_options: -f <%= ENV["ANGEL_WORKSPACE_DIR"] %>/tmux/tmux.conf
 
 windows:
-  - sensor_zed:
-      layout: even-vertical
-      panes:
-        # Read sensor input from a ZED 2i unit using the ROS2 wrapper.
-        # NOTE: The camera name given cannot start with a "/" as the value
-        # given is also used to prepend TF Frame IDs, which cannot begin with a
-        # slash.
-        - zed_bridge: ros2 launch zed_wrapper zed_camera.launch.py
-            camera_name:="${ROS_NAMESPACE#/}"/zed
-            camera_model:=zed2i
-            ros_params_override_path:=${ANGEL_WORKSPACE_DIR}/config/zed_params_override.yaml
-        # Enable sending ROS2 messages to receiving agents in an HoloLens2 app.
-        - datahub: ros2 run ros_tcp_endpoint default_server_endpoint  --ros-args
-            -r __ns:=${ROS_NAMESPACE}
-            -p ROS_IP:=0.0.0.0
-        # Trim out the timestamp of the image topic of choice.
-        - run_image_timestamp: ros2 run angel_system_nodes image_timestamp_relay --ros-args
-            -r __ns:=${ROS_NAMESPACE}
-            -p image_topic:="${ZED_IMAGE_TOPIC}"
-            -p output_topic:="${ZED_IMAGE_TS_TOPIC}"
-            
   - sensor_input_stream:
       layout: even-vertical
       panes:
@@ -103,6 +82,24 @@ windows:
         - datahub: ros2 run ros_tcp_endpoint default_server_endpoint --ros-args
             -r __ns:=${ROS_NAMESPACE}
             -p ROS_IP:=0.0.0.0
+            
+  - sensor_zed:
+      layout: even-vertical
+      panes:
+        # Read sensor input from a ZED 2i unit using the ROS2 wrapper.
+        # NOTE: The camera name given cannot start with a "/" as the value
+        # given is also used to prepend TF Frame IDs, which cannot begin with a
+        # slash.
+        - zed_bridge: ros2 launch zed_wrapper zed_camera.launch.py
+            camera_name:="${ROS_NAMESPACE#/}"/zed
+            camera_model:=zed2i
+            ros_params_override_path:=${ANGEL_WORKSPACE_DIR}/config/zed_params_override.yaml
+        # Trim out the timestamp of the image topic of choice.
+        - run_image_timestamp: ros2 run angel_system_nodes image_timestamp_relay --ros-args
+            -r __ns:=${ROS_NAMESPACE}
+            -p image_topic:="${ZED_IMAGE_TOPIC}"
+            -p output_topic:="${ZED_IMAGE_TS_TOPIC}"
+            
   - vocal:
       layout: even-vertical
       panes:

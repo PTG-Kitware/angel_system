@@ -179,8 +179,7 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
                         "content": [
                             {
                                 "type": "text",
-                                "text": "Use the image to answer the question."
-                                + prompt,
+                                "text": prompt,
                             },
                             {
                                 "type": "image_url",
@@ -224,12 +223,12 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
                 optional_fields_string += f"I am done with all steps."
             elif current_step == 0:
                 # user is at step 1
-                optional_fields_string += f"I am doing {current_step+1}"
-                optional_fields_string += f" and I am about to do {current_step+2}"
+                optional_fields_string += f"I am doing {current_step}"
+                optional_fields_string += f" and I am about to do {current_step+1}"
             else:
-                optional_fields_string += f"I am doing {current_step+1}"
+                optional_fields_string += f"I am doing {current_step}"
                 if current_step <= len(completed_steps) - 2:
-                    optional_fields_string += f" and I am about to do {current_step+2}"
+                    optional_fields_string += f" and I am about to do {current_step+1}"
 
         return optional_fields_string.rstrip("\n")
 
@@ -241,7 +240,7 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
         payload = {
             "model": model,
             "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0.7,
+            "temperature": 0.0,
             "max_tokens": 128,
         }
         req = requests.post(
@@ -276,14 +275,7 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
         none if the message should be filtered out. Else, return the incoming
         msg if it can be included.
         """
-        if (
-            "angela" in msg.utterance_text[:8].lower()
-            or "angel" in msg.utterance_text[:8].lower()
-            or "angela," in msg.utterance_text[:8].lower()
-            or "angel," in msg.utterance_text[:8].lower()
-        ):
-            return msg
-        return None
+        return msg
 
     @dataclass(frozen=True)
     class ChatMessage:

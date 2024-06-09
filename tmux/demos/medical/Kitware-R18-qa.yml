@@ -20,7 +20,7 @@ root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 # on_project_start: command
 on_project_start: |
   export ROS_NAMESPACE=${ROS_NAMESPACE:-/kitware}
-  export HL2_IP=${HL2_IP:-192.168.4.70}
+  export HL2_IP=${HL2_IP:-192.168.0.87}
   export CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/config
   export NODE_CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/src/angel_system_nodes/configs
   export MODEL_DIR=${ANGEL_WORKSPACE_DIR}/model_files
@@ -84,8 +84,8 @@ windows:
             -p output_voice_activity_topic:=DetectedVoiceData
             -p vad_server_url:=http://127.0.0.1:55667/vad
             -p vad_cadence:=4
-            -p vad_margin:=0.20
-            -p max_accumulation_length:=5
+            -p vad_margin:=0.25
+            -p max_accumulation_length:=6
             -p debug_mode:=True
         - asr: ros2 run angel_system_nodes asr --ros-args
             -r __ns:=${ROS_NAMESPACE}
@@ -94,7 +94,7 @@ windows:
             -p feedback_topic:=system_response_topic
             -p asr_server_url:=http://127.0.0.1:55667/asr
             -p asr_req_segment_duration:=1
-            -p is_sentence_tokenize:=False
+            -p is_sentence_tokenize:=True
             -p debug_mode:=True
             -p image_topic:=PVFramesBGR
 
