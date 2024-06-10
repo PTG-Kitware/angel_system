@@ -230,7 +230,6 @@ def save_as_kwcoco(classes, data, save_fn="bbn-data.mscoco.json"):
 
 
 def activity_label_fixes(task, activity_label, target):
-    print(f"task: {task}, target: {target}, activity_label: {activity_label}")
     label = None
     label_id = None
     if task == "m2":
@@ -264,19 +263,6 @@ def activity_label_fixes(task, activity_label, target):
         elif activity_label == "writes_on" and target == "tourniquet_label":
             label = "mark-time"
             label_id = 8
-
-    elif task == "m3":
-        pass
-
-    elif task == "m4":
-        pass
-
-    elif task == "m5":
-        if activity_label == "":
-            pass
-        elif activity_label == "apply_pressure_to":
-            label = "apply-pressure"
-            label_id = 5
 
     elif task == "r18":
         if activity_label == "apply_pressure_to" and target == "casualty_wound":
@@ -315,6 +301,8 @@ def bbn_activity_txt_to_csv(task, root_dir, output_dir, label_mapping, label_ver
                     images/
                         {filename}.png
                         ...
+    
+    :return: A list containing names of used videos
 
     """
     print(f"{root_dir}/*/*_skill_labels_by_frame.txt")
@@ -340,8 +328,6 @@ def bbn_activity_txt_to_csv(task, root_dir, output_dir, label_mapping, label_ver
             continue
         
         print(action_txt_fn)
-        # with open(action_txt_fn) as action_f:
-        #     lines = action_f.readlines()
         
         # Create output csv
         used_videos.append(video_name)
@@ -352,9 +338,8 @@ def bbn_activity_txt_to_csv(task, root_dir, output_dir, label_mapping, label_ver
         )
         csv_f.write('# metadata,fps: 1,"exported_by: ""dive:typescript"""\n')
         
-        f = open(action_txt_fn, "r")
-        text = f.read()
-        f.close()
+        with open(action_txt_fn, "r") as f:
+            text = f.read()
 
         text = text.replace("\n", "\t")
         text_list = text.split("\t")[:-1]
@@ -379,17 +364,6 @@ def bbn_activity_txt_to_csv(task, root_dir, output_dir, label_mapping, label_ver
             end_frame_fn = os.path.basename(
                 glob.glob(f"{video_dir}/images/*_{end_frame}.png")[0]
             )
-
-            # Determine activity
-            # activity_str = data[2].strip().split(" ")
-            # hand = activity_str[0]
-            # activity = activity_str[1]
-            # target = activity_str[2] if len(activity_str) > 2 else None
-
-            # convert activity_str info to our activity labels
-            # this is hacky: fix later
-            # label = None
-            # label, label_id = activity_label_fixes(task, activity, target)
 
             if label is not None:
                 line1 = f"{track_id},{start_frame_fn},{start_frame},1,1,2,2,1,-1,{label_id},1"
