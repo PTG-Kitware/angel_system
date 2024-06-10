@@ -20,7 +20,7 @@ root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 # on_project_start: command
 on_project_start: |
   export ROS_NAMESPACE=${ROS_NAMESPACE:-/kitware}
-  export HL2_IP=${HL2_IP:-192.168.0.87}
+  export HL2_IP=${HL2_IP:-172.20.10.12}
   export CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/config
   export NODE_CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/src/angel_system_nodes/configs
   export MODEL_DIR=${ANGEL_WORKSPACE_DIR}/model_files
@@ -190,6 +190,10 @@ windows:
       -p pose_repeat_rate:=7.5
       -p window_leads_with_objects:=true
       -p model_device:=0
+      
+  - keyboard_control: ros2 run angel_system_nodes keyboard_to_sys_cmd --ros-args
+          -r __ns:=${ROS_NAMESPACE}
+          -p system_command_topic:=SystemCommands
 
   - task_monitor:
       layout: even-vertical
