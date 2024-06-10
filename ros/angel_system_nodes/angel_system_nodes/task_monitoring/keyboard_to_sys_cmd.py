@@ -61,6 +61,10 @@ class KeyboardToSystemCommands(Node):
             log.info("Registering command to reset task monitor")
             return self.publish_monitor_reset
 
+        def for_pause_toggle():
+            log.info("Registering command to toggle task monitor pause")
+            return self.publish_pause_toggle
+
         with keyboard.GlobalHotKeys(
             {
                 "<ctrl>+<shift>+!": for_task_direction(0, False),
@@ -74,6 +78,7 @@ class KeyboardToSystemCommands(Node):
                 "<ctrl>+<shift>+(": for_task_direction(4, False),
                 "<ctrl>+<shift>+)": for_task_direction(4, True),
                 "<ctrl>+<shift>+R": for_monitor_reset(),
+                "<ctrl>+<shift>+P": for_pause_toggle(),
             }
         ) as h:
             h.join()
@@ -105,6 +110,16 @@ class KeyboardToSystemCommands(Node):
         msg = SystemCommands()
         msg.reset_monitor_state = True
         log.info("Publishing command to reset monitor")
+        self._sys_cmd_publisher.publish(msg)
+
+    def publish_pause_toggle(self) -> None:
+        """
+        Publishes a SystemCommand message indicating a pause toggle.
+        """
+        log = self.get_logger()
+        msg = SystemCommands()
+        msg.toggle_monitor_pause = True
+        log.info("Publishing command to toggle pause")
         self._sys_cmd_publisher.publish(msg)
 
 

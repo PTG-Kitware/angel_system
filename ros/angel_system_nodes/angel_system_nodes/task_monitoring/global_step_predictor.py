@@ -44,6 +44,9 @@ PARAM_THRESH_FRAME_COUNT_WEAK = "threshold_frame_count_weak"
 # The step mode to use for this predictor instance. This must be either "broad"
 # or "granular"
 PARAM_STEP_MODE = "step_mode"
+# If the GSP Node should start in "paused" mode as opposed to starting in an
+# active state.
+PARAM_START_PAUSED = "start_paused"
 # Enable ground-truth plotting mode by specifying the path to an MSCOCO file
 # that includes image level `activity_gt` attribute.
 # Requires co-specification of the video ID to select out of the COCO file.
@@ -90,6 +93,7 @@ class GlobalStepPredictorNode(Node):
                 (PARAM_GT_ACT_COCO, ""),
                 (PARAM_GT_VIDEO_ID, -1),
                 (PARAM_GT_OUTPUT_DIR, "outputs"),
+                (PARAM_START_PAUSED, False),
             ],
         )
         self._config_file = param_values[PARAM_CONFIG_FILE]
@@ -131,6 +135,10 @@ class GlobalStepPredictorNode(Node):
 
         # The GSP Instance, which we'll load now.
         self._gsp_lock = RLock()  # Control access to GSP
+        log.info(
+            f"Starting system in PAUSED mode? :: {param_values[PARAM_START_PAUSED]}"
+        )
+        self._gsp_active: bool = not param_values[PARAM_START_PAUSED]
         self.gsp: Optional[GlobalStepPredictor] = None
         self._reload_gsp()
 
@@ -362,6 +370,13 @@ class GlobalStepPredictorNode(Node):
         Forces an update of the GSP to a new step.
         """
         log = self.get_logger()
+
+        # Handle if we should toggle "active" state
+        if sys_cmd_msg.toggle_monitor_pause:
+            with self._gsp_lock:
+                self._gsp_active = not self._gsp_active
+                log.info(f"Toggling GSP active state to {self._gsp_active}")
+
         if sys_cmd_msg.reset_monitor_state:
             if sys_cmd_msg.next_step or sys_cmd_msg.previous_step:
                 log.warn(
@@ -386,6 +401,10 @@ class GlobalStepPredictorNode(Node):
         conf_array = np.expand_dims(conf_array, 0)
 
         with self._gsp_lock:
+            # If we are not "active", just immediately kick out
+            if not self._gsp_active:
+                return
+
             tracker_dict_list = self.gsp.process_new_confidences(conf_array)
 
             print(f"conf_array: {conf_array}")

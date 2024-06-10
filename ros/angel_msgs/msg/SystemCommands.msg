@@ -14,6 +14,9 @@
 # Reset the whole task monitor state.
 bool reset_monitor_state
 
+# Toggle the state of the monitor's "pause" command.
+bool toggle_monitor_pause
+
 # Index of the task to which the commands here pertain.
 int8 task_index
 # Reset the referenced task's state and start over from the beginning.
