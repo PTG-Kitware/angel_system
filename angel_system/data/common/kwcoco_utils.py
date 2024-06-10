@@ -144,7 +144,7 @@ def add_activity_gt_to_kwcoco(topic, task, dset, activity_config_fn):
             dset.imgs[gid]["activity_gt"] = activity_label
 
     # dset.fpath = dset.fpath.split(".")[0] + "_fixed.mscoco.json"
-    dset.dump(dset.fpath, newlines=True)
+    # dset.dump(dset.fpath, newlines=True)
     return dset
 
 

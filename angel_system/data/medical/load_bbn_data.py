@@ -230,38 +230,54 @@ def save_as_kwcoco(classes, data, save_fn="bbn-data.mscoco.json"):
 
 
 def activity_label_fixes(task, activity_label, target):
-    # print(activity_label, target)
+    print(f"task: {task}, target: {target}, activity_label: {activity_label}")
+    label = None
+    label_id = None
     if task == "m2":
-        if activity_label == "put_tourniquet_around":
+        if activity_label == "put_tourniquet_around" or activity_label == "open_up":
             label = "place-tourniquet"
             label_id = 1
-        if activity_label == "pulls_tight":
+        elif activity_label == "pulls_tight":
             label = "pull-tight"
             label_id = 2
-        if activity_label == "secures" and target == "velcro_strap":
+        elif activity_label == "secures" and target == "velcro_strap":
             label = "apply-strap-to-strap-body"
             label_id = 3
-        if activity_label == "twist" and target == "windlass":
+        elif activity_label == "twist" and target == "windlass":
             label = "turn-windless"
             label_id = 4
-        if (
+        elif (
             activity_label == "locks_into_windlass_keeper"
             or activity_label == "lock_into_windlass_keeper"
         ):
             label = "lock-windless"
             label_id = 5
-        if (
+        elif (
             activity_label == "wraps_remaining_strap_around"
             or activity_label == "wrap_remaining_strap_around"
         ):
             label = "pull-remaining-strap"
             label_id = 6
-        if activity_label == "secures" and target == "windlass":
+        elif activity_label == "secures" and target == "windlass":
             label = "secure-strap"
             label_id = 7
-        if activity_label == "writes_on" and target == "tourniquet_label":
+        elif activity_label == "writes_on" and target == "tourniquet_label":
             label = "mark-time"
             label_id = 8
+
+    elif task == "m3":
+        pass
+
+    elif task == "m4":
+        pass
+
+    elif task == "m5":
+        if activity_label == "":
+            pass
+        elif activity_label == "apply_pressure_to":
+            label = "apply-pressure"
+            label_id = 5
+
     elif task == "r18":
         if activity_label == "apply_pressure_to" and target == "casualty_wound":
             label = "cover-seal-wound"
@@ -287,7 +303,7 @@ def activity_label_fixes(task, activity_label, target):
     return label, label_id
 
 
-def bbn_activity_txt_to_csv(task, root_dir, output_dir, label_version):
+def bbn_activity_txt_to_csv(task, root_dir, output_dir, label_mapping, label_version):
     """
     Generate DIVE csv format activity annotations from BBN's text annotations
 
@@ -301,9 +317,15 @@ def bbn_activity_txt_to_csv(task, root_dir, output_dir, label_version):
                         ...
 
     """
-    print(f"{root_dir}/*/*_action_labels_by_frame.txt")
+    print(f"{root_dir}/*/*_skill_labels_by_frame.txt")
 
-    action_fns = glob.glob(f"{root_dir}/*/*.action_labels_by_frame.txt")
+    # action_fns = glob.glob(f"{root_dir}/*/*.action_labels_by_frame.txt")
+    action_fns = glob.glob(f"{root_dir}/*/*.skill_labels_by_frame.txt")
+    
+    # some videos dont have ground truth, but are still in the dataset object. 
+    # which even videos are not used should be removed from the dataset
+    used_videos = []
+    # print(f"skill files: {action_fns}")
     if not action_fns:
         # Lab videos
         action_fns = glob.glob(f"{root_dir}/*/*_skills_frame.txt")
@@ -317,12 +339,16 @@ def bbn_activity_txt_to_csv(task, root_dir, output_dir, label_version):
         video_name = os.path.basename(video_dir)
         if video_name in KNOWN_BAD_VIDEOS:
             continue
-
+        
         print(action_txt_fn)
-        with open(action_txt_fn) as action_f:
-            lines = action_f.readlines()
+        # with open(action_txt_fn) as action_f:
+        #     lines = action_f.readlines()
 
+        # print(f"lines: {lines}")
+        
+        
         # Create output csv
+        used_videos.append(video_name)
         csv_fn = f"{output_dir}/{video_name}_activity_labels_v{label_version}.csv"
         csv_f = open(csv_fn, "w")
         csv_f.write(
@@ -330,13 +356,52 @@ def bbn_activity_txt_to_csv(task, root_dir, output_dir, label_version):
         )
         csv_f.write('# metadata,fps: 1,"exported_by: ""dive:typescript"""\n')
 
-        for line in lines:
-            data = line.split("\t")
+        
+        f = open(action_txt_fn, "r")
+        text = f.read()
+        f.close()
+        print(f"lines: {text}")
+
+        text = text.replace("\n", "\t")
+        text_list = text.split("\t")[:-1]
+        
+        print(f"text_list: {text_list}")
+        # print(f"label mapping: {label_mapping}")
+        for index in range(0, len(text_list), 3):
+            triplet = text_list[index : index + 3]
+            # print(f"index: {index}, {text_list[index]}")
+            print(f"triplet: {text_list[index:index+3]}")
+            start_frame = int(triplet[0])
+            end_frame = int(triplet[1])
+            label = triplet[2]
+            label_id = label_mapping[label]
+            
+            num_images = len(glob.glob(f"{video_dir}/images/*.png"))
+            print(f"num_images: {num_images}")
+            
+            if end_frame > num_images-1:
+                end_frame = num_images-1
+                
+            #     ### address issue with GT activity labels
+            #     print(
+            #         "Max frame in GT is larger than number of frames in the video"
+            #     )
+
+            # for label_index in range(
+            #     start_frame, min(end_frame - 1, num_images)
+            # ):
+            #     activityi_gt_list[label_index] = gt_label
+        
+        ### old code for action GT
+        # for line in lines:
+        #     data = line.split("\t")
 
             # Find frame filenames
-            start_frame = int(data[0])
-            end_frame = int(data[1])
-
+            # start_frame = int(data[0])
+            # end_frame = int(data[1])
+            
+            print(f"start_frame: {start_frame}, end_frame: {end_frame}")
+            
             start_frame_fn = os.path.basename(
                 glob.glob(f"{video_dir}/images/*_{start_frame}.png")[0]
             )
@@ -345,15 +410,18 @@ def bbn_activity_txt_to_csv(task, root_dir, output_dir, label_version):
             )
 
             # Determine activity
-            activity_str = data[2].strip().split(" ")
-            hand = activity_str[0]
-            activity = activity_str[1]
-            target = activity_str[2] if len(activity_str) > 2 else None
+            # activity_str = data[2].strip().split(" ")
+            # hand = activity_str[0]
+            # activity = activity_str[1]
+            # target = activity_str[2] if len(activity_str) > 2 else None
 
             # convert activity_str info to our activity labels
             # this is hacky: fix later
-            label = None
-            label, label_id = activity_label_fixes(task, activity, target)
+            print(f"start_frame_fn: {start_frame_fn}, end_frame_fn: {end_frame_fn}, task: {task}")
+            # print(f"activity: {activity}, target: {target}, task: {task}")
+            print(f"video_name: {video_name}")
+            # label = None
+            # label, label_id = activity_label_fixes(task, activity, target)
 
             if label is not None:
                 line1 = f"{track_id},{start_frame_fn},{start_frame},1,1,2,2,1,-1,{label_id},1"
@@ -365,7 +433,8 @@ def bbn_activity_txt_to_csv(task, root_dir, output_dir, label_version):
 
                 track_id += 1
         csv_f.close()
-
+        
+    return used_videos
 
 def find_bad_images(imgs, good_imgs, output_dir):
     good_image_fns = [os.path.basename(f) for f in glob.glob(f"{good_imgs}/*")]
