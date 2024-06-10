@@ -28,25 +28,24 @@ Options:
 dc_forward_params=()
 while [[ $# -gt 0 ]]
 do
-  case "$1" in
+  key="$1"
+  shift
+  case "$key" in
     -h|--help)
       usage
       exit 0
       ;;
     -f|--force)
       log "Forcing build regardless of workspace hygiene."
-      shift
       FORCE_BUILD=1
       ;;
     --)
       # Escape the remainder of args as to be considered passthrough
-      shift
       dc_forward_params+=("${@}")
       break
       ;;
     *)  # anything else
-      dc_forward_params+=("$1")
-      shift
+      dc_forward_params+=("$key")
   esac
 done
 
@@ -74,7 +73,9 @@ git_clean_dr="$("${git_clean_dr_cmd[@]}")"
 # informational).
 git_sm_clean_dr_cmd=( git submodule foreach --recursive git clean -xdn )
 git_sm_q_clean_dr_cmd=( git submodule --quiet foreach --recursive git clean -xdn )
+# shellcheck disable=SC2068
 git_sm_clean_dr="$(${git_sm_clean_dr_cmd[@]})"
+# shellcheck disable=SC2068
 git_sm_q_clean_dr="$(${git_sm_q_clean_dr_cmd[@]})"
 if [[ -n "${git_status}" ]] || [[ -n "${git_sm_q_status}" ]] || [[ -n "${git_clean_dr}" ]] || [[ -n "${git_sm_q_clean_dr}" ]]
 then
@@ -91,12 +92,12 @@ then
   fi
   if [[ -n "${git_clean_dr}" ]]
   then
-    log "WARNING: -- There are unexpected ignored files (check \`${git_clean_dr_cmd[@]}\`)."
+    log "WARNING: -- There are unexpected ignored files (check \`${git_clean_dr_cmd[*]}\`)."
     log "${git_clean_dr}"
   fi
   if [[ -n "${git_sm_q_clean_dr}" ]]
   then
-    log "WARNING: -- Submodules have unclean states (check \`${git_sm_clean_dr_cmd[@]}\`).)"
+    log "WARNING: -- Submodules have unclean states (check \`${git_sm_clean_dr_cmd[*]}\`).)"
     log "${git_sm_clean_dr}"
   fi
   if [[ -n "$FORCE_BUILD" ]]
@@ -110,8 +111,7 @@ fi
 
 if [[ "${#dc_forward_params[@]}" -gt 0 ]]
 then
-  # shellcheck disable=SC2145
-  log "Forwarding to docker-compose: ${dc_forward_params[@]}"
+  log "Forwarding to docker-compose: ${dc_forward_params[*]}"
 fi
 
 get_docker_compose_cmd DC_CMD
@@ -120,4 +120,4 @@ get_docker_compose_cmd DC_CMD
   --env-file "$SCRIPT_DIR"/docker/.env \
   -f "$SCRIPT_DIR"/docker/docker-compose.yml \
   --profile build-only \
-  build "${dc_forward_params[@]}" "$@"
+  build "${dc_forward_params[@]}"

@@ -10,7 +10,9 @@ cd "$SCRIPT_DIR"
 # Run update if we have no cache yet
 if [[ ! -d ${HOME}/.ros/rosdep ]]
 then
-  rosdep update
+  # We need to specifically callout our ROS2 distro in case it is deprecated by
+  # default, so we actually do pull it instead of skipping it on accident.
+  rosdep update --rosdistro "${ROS_DISTRO}"
 fi
 
 rosdep install -i --from-path "${ANGEL_WORKSPACE_DIR}" --rosdistro "${ROS_DISTRO}" -y
