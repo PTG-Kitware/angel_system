@@ -28,6 +28,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+      # Check on free space before the build
+      - name: Check free space
+        run: |
+          echo "Free space on disk:"
+          df -h
       # Use scripting to perform a build for the current state of this branch.
       - name: Build image
         run: ./angel-docker-build.sh
