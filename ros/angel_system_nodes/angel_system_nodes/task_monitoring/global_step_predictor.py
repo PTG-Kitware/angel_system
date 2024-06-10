@@ -40,6 +40,7 @@ PARAM_THRESH_FRAME_COUNT = "thresh_frame_count"
 PARAM_DEACTIVATE_THRESH_FRAME_COUNT = "deactivate_thresh_frame_count"
 PARAM_THRESH_MULTIPLIER_WEAK = "threshold_multiplier_weak"
 PARAM_THRESH_FRAME_COUNT_WEAK = "threshold_frame_count_weak"
+PARAM_ONLY_MANUAL = "only_manual"
 # The step mode to use for this predictor instance. This must be either "broad"
 # or "granular"
 PARAM_STEP_MODE = "step_mode"
@@ -89,6 +90,7 @@ class GlobalStepPredictorNode(Node):
                 (PARAM_GT_ACT_COCO, ""),
                 (PARAM_GT_VIDEO_ID, -1),
                 (PARAM_GT_OUTPUT_DIR, "outputs"),
+                (PARAM_ONLY_MANUAL,),
             ],
         )
         self._config_file = param_values[PARAM_CONFIG_FILE]
@@ -105,6 +107,9 @@ class GlobalStepPredictorNode(Node):
         self._threshold_frame_count_weak = param_values[PARAM_THRESH_FRAME_COUNT_WEAK]
         self._deactivate_thresh_frame_count = param_values[
             PARAM_DEACTIVATE_THRESH_FRAME_COUNT
+        ]
+        self._only_manual = param_values[
+            PARAM_ONLY_MANUAL
         ]
         self._step_mode = param_values[PARAM_STEP_MODE]
 
@@ -323,6 +328,9 @@ class GlobalStepPredictorNode(Node):
         conf_array = np.array(activity_msg.conf_vec)
         conf_array = np.expand_dims(conf_array, 0)
 
+        if self._only_manual == True:
+            return
+        
         with self._gsp_lock:
             tracker_dict_list = self.gsp.process_new_confidences(conf_array)
 
