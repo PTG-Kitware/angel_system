@@ -358,6 +358,7 @@ class GlobalStepPredictor:
         print(f"RESETTING tracker {tracker_ind}")
         self.trackers[tracker_ind]["current_broad_step"] = 0
         self.trackers[tracker_ind]["current_granular_step"] = 0
+        self.trackers[tracker_ind]["active"] = True
         self.tracker_resets.append(self.trackers[tracker_ind]["recipe"])
 
     def granular_to_broad_step(self, tracker, granular_step):

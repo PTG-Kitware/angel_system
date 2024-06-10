@@ -55,7 +55,11 @@ class KeyboardToSystemCommands(Node):
                 f"Registering command to move task {t_id} "
                 f"{'forward' if forward else 'backward'}"
             )
-            return lambda: self.publish_sys_cmd(t_id, forward)
+            return lambda: self.publish_step_change(t_id, forward)
+
+        def for_monitor_reset():
+            log.info("Registering command to reset task monitor")
+            return self.publish_monitor_reset
 
         with keyboard.GlobalHotKeys(
             {
@@ -69,11 +73,12 @@ class KeyboardToSystemCommands(Node):
                 "<ctrl>+<shift>+*": for_task_direction(3, True),
                 "<ctrl>+<shift>+(": for_task_direction(4, False),
                 "<ctrl>+<shift>+)": for_task_direction(4, True),
+                "<ctrl>+<shift>+R": for_monitor_reset(),
             }
         ) as h:
             h.join()
 
-    def publish_sys_cmd(self, task_id: int, forward: bool) -> None:
+    def publish_step_change(self, task_id: int, forward: bool) -> None:
         """
         Publishes the SystemCommand message to the configured ROS topic.
         """
@@ -90,6 +95,16 @@ class KeyboardToSystemCommands(Node):
             cmd_str = "backward"
 
         log.info(f"Publishing command for task {task_id} to move {cmd_str}")
+        self._sys_cmd_publisher.publish(msg)
+
+    def publish_monitor_reset(self) -> None:
+        """
+        Publishes a SystemCommand message indicating a whole monitor reset
+        """
+        log = self.get_logger()
+        msg = SystemCommands()
+        msg.reset_monitor_state = True
+        log.info("Publishing command to reset monitor")
         self._sys_cmd_publisher.publish(msg)
 
 

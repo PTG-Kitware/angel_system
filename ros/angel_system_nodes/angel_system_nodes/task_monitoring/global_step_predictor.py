@@ -338,13 +338,38 @@ class GlobalStepPredictorNode(Node):
 
                     self.recipe_published_last_msg[task["recipe"]] = False
 
+    def _sys_cmd_reset_monitor(self):
+        """
+        Reset the GSP as a result of a system command.
+
+        NOTE: This approach is an initial implementation and does not take into
+        account the GSP tracking multiple instances of the
+        """
+        log = self.get_logger()
+        with self._gsp_lock:
+            # Latest "sensor input time", i.e. the reset request is right now.
+            ts = self.get_clock().now().to_msg()
+            # Reset all trackers and publish the reset state.
+            for i, task in enumerate(self.gsp.trackers):
+                self.gsp.reset_one_tracker(i)
+                log.info(f"Resetting task {i}")
+                self.publish_task_state_message(task, ts)
+                self.recipe_published_last_msg[task["recipe"]] = False
+
     def sys_cmd_callback(self, sys_cmd_msg: SystemCommands):
         """
         Callback function for the system command subscriber topic.
         Forces an update of the GSP to a new step.
         """
         log = self.get_logger()
-        if sys_cmd_msg.next_step or sys_cmd_msg.previous_step:
+        if sys_cmd_msg.reset_monitor_state:
+            if sys_cmd_msg.next_step or sys_cmd_msg.previous_step:
+                log.warn(
+                    "Change in task step requested alongside resetting "
+                    "monitor state, abiding reset and ignoring step change."
+                )
+            self._sys_cmd_reset_monitor()
+        elif sys_cmd_msg.next_step or sys_cmd_msg.previous_step:
             self._sys_cmd_change_step(sys_cmd_msg)
 
     def det_callback(self, activity_msg: ActivityDetection):

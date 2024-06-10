@@ -11,6 +11,9 @@
 ##############################
 # Task Monitor commands
 
+# Reset the whole task monitor state.
+bool reset_monitor_state
+
 # Index of the task to which the commands here pertain.
 int8 task_index
 # Reset the referenced task's state and start over from the beginning.
