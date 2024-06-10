@@ -8,8 +8,15 @@
 # received message instance.
 #
 
+##############################
 # Task Monitor commands
+
+# Index of the task to which the commands here pertain.
 int8 task_index
-bool reset_current_task
+# Reset the referenced task's state and start over from the beginning.
+# TODO: This is currently unused.
+bool reset_task
+# Revert our step tracking for the referenced task to the previous step.
 bool previous_step
+# Progress our step tracking for the referenced task to the next step.
 bool next_step

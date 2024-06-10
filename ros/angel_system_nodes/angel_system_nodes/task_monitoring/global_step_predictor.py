@@ -1,6 +1,7 @@
 from pathlib import Path
 from threading import RLock
 from typing import Dict
+from typing import List
 from typing import Optional
 
 from builtin_interfaces.msg import Time
@@ -114,59 +115,24 @@ class GlobalStepPredictorNode(Node):
                 f"one of {VALID_STEP_MODES}."
             )
 
-        # Determine what recipes are in the config
-        # TODO: make use of angel_system.data.config_structs instead of
-        #       manually loading and accessing by string keys.
-        with open(self._config_file, "r") as stream:
-            config = yaml.safe_load(stream)
-        recipe_types = [
-            recipe["label"] for recipe in config["tasks"] if recipe["active"]
-        ]
-        recipe_configs = [
-            recipe["config_file"] for recipe in config["tasks"] if recipe["active"]
-        ]
-
-        recipe_config_dict = dict(zip(recipe_types, recipe_configs))
-        log.info(f"Recipes: {recipe_config_dict}")
-
-        # Instantiate the GlobalStepPredictor module
-        self.gsp = GlobalStepPredictor(
-            threshold_multiplier_weak=self._threshold_multiplier_weak,
-            threshold_frame_count=self._thresh_frame_count,
-            threshold_frame_count_weak=self._threshold_frame_count_weak,
-            deactivate_thresh_frame_count=self._deactivate_thresh_frame_count,
-            recipe_types=recipe_types,
-            recipe_config_dict=recipe_config_dict,
-            activity_config_fpath=self._activity_config_file,
-        )
-
-        # model_file = pre-computed averages of TP activations
-        self.gsp.get_average_TP_activations_from_file(self._model_file)
-        log.info("Global state predictor loaded")
-
         # Mapping from recipe to current step. Used to track state changes
         # of the GSP and determine when to publish a TaskUpdate msg.
-        self.recipe_current_step_id = {}
+        self.recipe_current_step_id: Dict[str, int] = {}
 
         # Mapping from recipe to a list of skipped step IDs. Used to ensure
         # that duplicate task error messages are not published for the same
         # skipped step
-        self.recipe_skipped_step_ids = {}
-        self.recipe_published_last_msg = {}
+        self.recipe_skipped_step_ids: Dict[str, List[int]] = {}
+        self.recipe_published_last_msg: Dict[str, bool] = {}
 
         # Track the latest activity classification end time sent to the HMM
-        # Time is represented as a the ROS Time message
+        # Time is represented as the ROS Time message
         self._latest_act_classification_end_time = None
 
-        # Control access to GSP
-        self._gsp_lock = RLock()
-
-        for task in self.gsp.trackers:
-            self.recipe_current_step_id[task["recipe"]] = task[
-                f"current_{self._step_mode}_step"
-            ]
-            self.recipe_skipped_step_ids[task["recipe"]] = []
-            self.recipe_published_last_msg[task["recipe"]] = False
+        # The GSP Instance, which we'll load now.
+        self._gsp_lock = RLock()  # Control access to GSP
+        self.gsp: Optional[GlobalStepPredictor] = None
+        self._reload_gsp()
 
         # Initialize ROS hooks
         self._task_update_publisher = self.create_publisher(
@@ -220,30 +186,91 @@ class GlobalStepPredictorNode(Node):
             )
             log.info("GT params specified, initializing data... Done")
 
-    def sys_cmd_callback(self, sys_cmd_msg: SystemCommands):
+    def _reload_gsp(self) -> None:
         """
-        Callback function for the system command subscriber topic.
-        Forces an update of the GSP to a new step.
+        (Re)Load the GSP instance from input configuration parameters.
+
+        This will recreate the GSP instance and return it.
+
+        This will make use of the `_gsp_lock` for access protection.
+        """
+        log = self.get_logger()
+        with self._gsp_lock:
+            # Determine what recipes are in the config
+            # TODO: make use of angel_system.data.config_structs instead of
+            #       manually loading and accessing by string keys.
+            with open(self._config_file, "r") as stream:
+                config = yaml.safe_load(stream)
+            recipe_types = [
+                recipe["label"] for recipe in config["tasks"] if recipe["active"]
+            ]
+            recipe_configs = [
+                recipe["config_file"] for recipe in config["tasks"] if recipe["active"]
+            ]
+
+            recipe_config_dict = dict(zip(recipe_types, recipe_configs))
+            log.info(f"Recipes: {recipe_config_dict}")
+
+            # Instantiate the GlobalStepPredictor module
+            self.gsp = GlobalStepPredictor(
+                threshold_multiplier_weak=self._threshold_multiplier_weak,
+                threshold_frame_count=self._thresh_frame_count,
+                threshold_frame_count_weak=self._threshold_frame_count_weak,
+                deactivate_thresh_frame_count=self._deactivate_thresh_frame_count,
+                recipe_types=recipe_types,
+                recipe_config_dict=recipe_config_dict,
+                activity_config_fpath=self._activity_config_file,
+            )
+
+            # model_file = pre-computed averages of TP activations
+            self.gsp.get_average_TP_activations_from_file(self._model_file)
+            log.info("Global state predictor (re)loaded")
+
+            # Load default values into our stateful mappings.
+            for task in self.gsp.trackers:
+                self.recipe_current_step_id[task["recipe"]] = task[
+                    f"current_{self._step_mode}_step"
+                ]
+                self.recipe_skipped_step_ids[task["recipe"]] = []
+                self.recipe_published_last_msg[task["recipe"]] = False
+
+            # Track the latest activity classification end time sent to the HMM
+            # Time is represented as the ROS Time message
+            # Reset the last activity classification time to "not received yet"
+            self._latest_act_classification_end_time = None
+
+    def _sys_cmd_change_step(self, sys_cmd_msg: SystemCommands) -> None:
+        """
+        Handle one command message that changes the step.
+
+        This will do nothing if no previous/next step commands are given.
+
+        :param sys_cmd_msg: Message containing command content.
         """
         log = self.get_logger()
 
         with self._gsp_lock:
             if self._step_mode == "broad" and sys_cmd_msg.next_step:
+                log.info("Manual step change detected -> Next broad step")
                 update_function = self.gsp.manually_increment_current_broad_step
             elif self._step_mode == "broad" and sys_cmd_msg.previous_step:
+                log.info("Manual step change detected -> Previous broad step")
                 update_function = self.gsp.manually_decrement_current_step
             elif self._step_mode == "granular" and sys_cmd_msg.next_step:
+                log.info("Manual step change detected -> Next granular step")
                 update_function = self.gsp.increment_granular_step
             elif self._step_mode == "granular" and sys_cmd_msg.previous_step:
+                log.info("Manual step change detected -> Previous granular step")
                 update_function = self.gsp.decrement_granular_step
             else:
-                # This should never happen
+                # No previous/next step request, stopping.
                 return
 
             try:
                 tracker_dict_list = update_function(sys_cmd_msg.task_index)
-            except Exception:
+            except Exception as ex:
                 # GSP raises exception if this fails, so just ignore it
+                log.warn(f"Failed to update step: {ex}")
                 return
 
             if self._latest_act_classification_end_time is None:
@@ -267,8 +294,9 @@ class GlobalStepPredictorNode(Node):
                     and task["active"]
                 ):
                     log.info(
-                        f"Manual step change detected: {task['recipe']}. Current step: {current_step_id}"
-                        f" Previous step: {previous_step_id}."
+                        f"Manual step change detected: {task['recipe']}. "
+                        f"Current step: {current_step_id} "
+                        f"Previous step: {previous_step_id}."
                     )
                     self.publish_task_state_message(
                         task, self._latest_act_classification_end_time
@@ -283,7 +311,8 @@ class GlobalStepPredictorNode(Node):
                     if not self.recipe_published_last_msg[task["recipe"]]:
                         # The last step activity was completed.
                         log.info(
-                            f"Final step manually completed: {task['recipe']}. Current step: {current_step_id}"
+                            f"Final step manually completed: {task['recipe']}. "
+                            f"Current step: {current_step_id}"
                         )
                         self.publish_task_state_message(
                             task,
@@ -298,8 +327,9 @@ class GlobalStepPredictorNode(Node):
                     and task["active"]
                 ):
                     log.info(
-                        f"Manual step change detected: {task['recipe']}. Current step: {current_step_id}"
-                        f" Previous step: {previous_step_id}."
+                        f"Manual step change detected: {task['recipe']}. "
+                        f"Current step: {current_step_id} "
+                        f"Previous step: {previous_step_id}."
                     )
                     self.publish_task_state_message(
                         task, self._latest_act_classification_end_time
@@ -307,6 +337,15 @@ class GlobalStepPredictorNode(Node):
                     self.recipe_current_step_id[task["recipe"]] = current_step_id
 
                     self.recipe_published_last_msg[task["recipe"]] = False
+
+    def sys_cmd_callback(self, sys_cmd_msg: SystemCommands):
+        """
+        Callback function for the system command subscriber topic.
+        Forces an update of the GSP to a new step.
+        """
+        log = self.get_logger()
+        if sys_cmd_msg.next_step or sys_cmd_msg.previous_step:
+            self._sys_cmd_change_step(sys_cmd_msg)
 
     def det_callback(self, activity_msg: ActivityDetection):
         """

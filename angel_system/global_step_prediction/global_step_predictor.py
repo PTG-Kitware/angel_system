@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Any, Dict, List
 
 import yaml
 import seaborn as sn
@@ -77,7 +78,7 @@ class GlobalStepPredictor:
         self.recipe_configs = recipe_config_dict
 
         # Array of tracker dicts
-        self.trackers = []
+        self.trackers: List[Dict[str, Any]] = []
         for recipe in recipe_types:
             self.initialize_new_recipe_tracker(recipe)
 
