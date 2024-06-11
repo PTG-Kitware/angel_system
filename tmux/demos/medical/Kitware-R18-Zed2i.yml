@@ -113,6 +113,9 @@ windows:
   - task_monitor:
       layout: even-vertical
       panes:
+        - keyboard_to_sys_cmd: ros2 run angel_system_nodes keyboard_to_sys_cmd --ros-args
+            -r __ns:=${ROS_NAMESPACE}
+            -p system_command_topic:=SystemCommands
         - gsp: ros2 run angel_system_nodes global_step_predictor --ros-args
             -r __ns:=${ROS_NAMESPACE}
             -p config_file:=${CONFIG_DIR}/tasks/medical/multi-task-config-medical-r18.yaml
@@ -128,6 +131,7 @@ windows:
             -p threshold_frame_count_weak:=3
             -p step_mode:=granular
             -p query_task_graph_topic:=query_task_graph
+            -p start_paused:=true
         - echo: sleep 0.5 && ros2 topic echo --no-arr "${ROS_NAMESPACE}/TaskUpdates"
 
   - engineering-ui:
