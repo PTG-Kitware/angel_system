@@ -41,7 +41,6 @@ PARAM_THRESH_FRAME_COUNT = "thresh_frame_count"
 PARAM_DEACTIVATE_THRESH_FRAME_COUNT = "deactivate_thresh_frame_count"
 PARAM_THRESH_MULTIPLIER_WEAK = "threshold_multiplier_weak"
 PARAM_THRESH_FRAME_COUNT_WEAK = "threshold_frame_count_weak"
-PARAM_ONLY_MANUAL = "only_manual"
 # The step mode to use for this predictor instance. This must be either "broad"
 # or "granular"
 PARAM_STEP_MODE = "step_mode"
@@ -111,9 +110,6 @@ class GlobalStepPredictorNode(Node):
         self._threshold_frame_count_weak = param_values[PARAM_THRESH_FRAME_COUNT_WEAK]
         self._deactivate_thresh_frame_count = param_values[
             PARAM_DEACTIVATE_THRESH_FRAME_COUNT
-        ]
-        self._only_manual = param_values[
-            PARAM_ONLY_MANUAL
         ]
         self._step_mode = param_values[PARAM_STEP_MODE]
 
@@ -268,8 +264,6 @@ class GlobalStepPredictorNode(Node):
             elif self._step_mode == "broad" and sys_cmd_msg.previous_step:
                 log.info("Manual step change detected -> Previous broad step")
                 update_function = self.gsp.manually_decrement_current_step
-            elif sys_cmd_msg.reset_current_task:
-                update_function = self.gsp.reset_one_tracker
             elif self._step_mode == "granular" and sys_cmd_msg.next_step:
                 log.info("Manual step change detected -> Next granular step")
                 update_function = self.gsp.increment_granular_step
@@ -406,9 +400,6 @@ class GlobalStepPredictorNode(Node):
         conf_array = np.array(activity_msg.conf_vec)
         conf_array = np.expand_dims(conf_array, 0)
 
-        if self._only_manual == True:
-            return
-        
         with self._gsp_lock:
             # If we are not "active", just immediately kick out
             if not self._gsp_active:
@@ -417,7 +408,6 @@ class GlobalStepPredictorNode(Node):
             tracker_dict_list = self.gsp.process_new_confidences(conf_array)
 
             print(f"conf_array: {conf_array}")
-            print(f"tracker_dict_list: {tracker_dict_list}")
 
             step_mode = self._step_mode
             for task in tracker_dict_list:
@@ -507,15 +497,6 @@ class GlobalStepPredictorNode(Node):
         message.description = f"Detected skip: {skipped_step}"
 
         self._task_error_publisher.publish(message)
-
-        # Publish a voice message to user if enabled.
-        if self._system_text_publisher is not None:
-            publish_msg = SystemTextResponse()
-            publish_msg.header.frame_id = "Skip detected"
-            publish_msg.header.stamp = self.get_clock().now().to_msg()
-            publish_msg.utterance_text = ""
-            publish_msg.response = "We detected you skipped a step. Please confirm the dialog if you want to go back."
-            self._system_text_publisher.publish(publish_msg)
 
     def publish_task_state_message(
         self,
