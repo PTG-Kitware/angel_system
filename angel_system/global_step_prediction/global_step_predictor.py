@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Any, Dict, List
 
 import yaml
 import seaborn as sn
@@ -77,7 +78,7 @@ class GlobalStepPredictor:
         self.recipe_configs = recipe_config_dict
 
         # Array of tracker dicts
-        self.trackers = []
+        self.trackers: List[Dict[str, Any]] = []
         for recipe in recipe_types:
             self.initialize_new_recipe_tracker(recipe)
 
@@ -357,6 +358,7 @@ class GlobalStepPredictor:
         print(f"RESETTING tracker {tracker_ind}")
         self.trackers[tracker_ind]["current_broad_step"] = 0
         self.trackers[tracker_ind]["current_granular_step"] = 0
+        self.trackers[tracker_ind]["active"] = True
         self.tracker_resets.append(self.trackers[tracker_ind]["recipe"])
 
     def granular_to_broad_step(self, tracker, granular_step):
