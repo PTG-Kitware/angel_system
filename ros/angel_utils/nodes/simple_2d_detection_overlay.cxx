@@ -1,10 +1,10 @@
 #include <chrono>
 #include <cmath>
 #include <exception>
-#include <memory>
-#include <numeric>
 #include <map>
+#include <memory>
 #include <mutex>
+#include <numeric>
 
 // ROS2 things
 #include <builtin_interfaces/msg/time.hpp>
@@ -20,8 +20,8 @@
 #include <opencv2/opencv.hpp>
 
 // Our stuff
-#include <angel_msgs/msg/object_detection2d_set.hpp>
 #include <angel_msgs/msg/hand_joint_poses_update.hpp>
+#include <angel_msgs/msg/object_detection2d_set.hpp>
 #include <angel_utils/rate_tracker.hpp>
 
 using angel_msgs::msg::ObjectDetection2dSet;
@@ -37,7 +37,7 @@ namespace {
 
 // ----------------------------------------------------------------------------
 #define DEFINE_PARAM_NAME( var_name, param_name_str ) \
-  static constexpr char const* var_name = param_name_str
+        static constexpr char const* var_name = param_name_str
 
 // Topic we expect to receive headset RGB images from.
 DEFINE_PARAM_NAME( PARAM_TOPIC_INPUT_IMAGES, "topic_input_images" );
@@ -64,26 +64,26 @@ static constexpr size_t const TENe9 = 1000000000;
 static constexpr double const LINE_FACTOR = 0.0015;
 // Max length of the bounding box label displayed before wrapping the tezt
 static constexpr int const MAX_LINE_LEN = 15;
-// Map indicating joint->joint connecting lines
-static std::map<std::string, std::vector<std::string>> JOINT_CONNECTION_LINES = { // mapping of joint line connections
-    {"nose", {"mouth"}},
-    {"mouth", {"throat"}},
-    {"throat", {"chest", "left_upper_arm", "right_upper_arm"}},
-    {"chest", {"back"}},
-    {"left_upper_arm", {"left_lower_arm"}},
-    {"left_lower_arm", {"left_wrist"}},
-    {"left_wrist", {"left_hand"}},
-    {"right_upper_arm", {"right_lower_arm"}},
-    {"right_lower_arm", {"right_wrist"}},
-    {"right_wrist", {"right_hand"}},
-    {"back", {"left_upper_leg", "right_upper_leg"}},
-    {"left_upper_leg", {"left_knee"}},
-    {"left_knee", {"left_lower_leg"}},
-    {"left_lower_leg", {"left_foot"}},
-    {"right_upper_leg", {"right_knee"}},
-    {"right_knee", {"right_lower_leg"}},
-    {"right_lower_leg", {"right_foot"}}
-  };
+// Map indicating joint->joint connecting lines for drawing the pose on an
+// image.
+static std::map< std::string, std::vector< std::string > > JOINT_CONNECTION_LINES = {
+  { "nose", { "mouth" } },
+  { "mouth", { "throat" } },
+  { "throat", { "chest", "left_upper_arm", "right_upper_arm" } },
+  { "chest", { "back" } },
+  { "left_upper_arm", { "left_lower_arm" } },
+  { "left_lower_arm", { "left_wrist" } },
+  { "left_wrist", { "left_hand" } },
+  { "right_upper_arm", { "right_lower_arm" } },
+  { "right_lower_arm", { "right_wrist" } },
+  { "right_wrist", { "right_hand" } },
+  { "back", { "left_upper_leg", "right_upper_leg" } },
+  { "left_upper_leg", { "left_knee" } },
+  { "left_knee", { "left_lower_leg" } },
+  { "left_lower_leg", { "left_foot" } },
+  { "right_upper_leg", { "right_knee" } },
+  { "right_knee", { "right_lower_leg" } },
+  { "right_lower_leg", { "right_foot" } } };
 
 /// Convert a header instance into a single-value time component to be used as
 /// and order-able key.
@@ -213,8 +213,7 @@ Simple2dDetectionOverlay
 
   std::shared_ptr< Simple2dDetectionOverlay > node_handle = {
     this,
-    []( auto * ){}
-  };
+    []( auto* ){} };
 
   // Empty deleter to prevent double deletion of this class when this goes
   // out of scope
@@ -319,7 +318,7 @@ Simple2dDetectionOverlay
   auto log = this->get_logger();
 
   // Lock
-  std::lock_guard<std::mutex> guard(m_draw_lock);
+  std::lock_guard< std::mutex > guard( m_draw_lock );
 
   // lookup image for det_set->source_stamp
   // check that detection header frame_id matches
@@ -407,7 +406,7 @@ Simple2dDetectionOverlay
   /// Number of detections to draw.
   size_t draw_n = max_conf_vec.size();
   /// Indices of the detections to draw.
-  std::vector< size_t > draw_indices(max_conf_vec.size());
+  std::vector< size_t > draw_indices( max_conf_vec.size() );
   std::iota( draw_indices.begin(), draw_indices.end(), 0 );
 
   // Find top k results
@@ -419,11 +418,10 @@ Simple2dDetectionOverlay
     RCLCPP_DEBUG( log, "Top k: %d", filter_top_k );
 
     // Arg-sort the top-k highest confidence detections.
-    draw_n = std::min( max_conf_vec.size(), (size_t)filter_top_k );
+    draw_n = std::min( max_conf_vec.size(), (size_t) filter_top_k );
     std::partial_sort( draw_indices.begin(), draw_indices.begin() + draw_n, draw_indices.end(),
-                       [&]( size_t A, size_t B )
-                       {
-                         return max_conf_vec[A] > max_conf_vec[B];
+                       [ & ]( size_t A, size_t B ){
+                         return max_conf_vec[ A ] > max_conf_vec[ B ];
                        } );
   }
 
@@ -431,7 +429,8 @@ Simple2dDetectionOverlay
   size_t idx;
   for( size_t i = 0; i < draw_n; ++i )
   {
-    idx = draw_indices.at(i);
+    idx = draw_indices.at( i );
+
     cv::Point pt_ul = { (int) round( det_set->left[ idx ] ),
                         (int) round( det_set->top[ idx ] ) },
               pt_br = { (int) round( det_set->right[ idx ] ),
@@ -441,19 +440,18 @@ Simple2dDetectionOverlay
 
     std::string line = max_label_vec[ idx ];
     int line_len = line.length();
-    for (int i=0; i<line_len; i+=MAX_LINE_LEN)
+    for(int i = 0; i < line_len; i += MAX_LINE_LEN)
     {
       std::string split_line = line.substr(
-        i, std::min(MAX_LINE_LEN, line_len-i));
-      cv::Point line_loc = {pt_ul.x, pt_ul.y + i * (line_thickness + 1)};
+                                 i, std::min( MAX_LINE_LEN, line_len - i ) );
+      cv::Point line_loc = { pt_ul.x, pt_ul.y + i * ( line_thickness + 1 ) };
       cv::putText( img_ptr->image, split_line, line_loc,
                    cv::FONT_HERSHEY_COMPLEX, line_thickness, COLOR_TEXT,
                    line_thickness );
     }
-
   }
 
-  if(insert)
+  if( insert )
   {
     // Insert this frame into our drawing history.
     m_drawn_frame_map.insert( { source_nanosec_key, img_ptr } );
@@ -467,7 +465,8 @@ Simple2dDetectionOverlay
       m_drawn_frame_map.erase( m_drawn_frame_map.begin() );
     }
   }
-  else{
+  else
+  {
     // Frame was already drawn on by the other message, time to publish
     auto out_img_msg = img_ptr->toImageMsg();
     m_pub_overlay_image->publish( *out_img_msg );
@@ -488,7 +487,7 @@ Simple2dDetectionOverlay
   auto log = this->get_logger();
 
   // Lock
-  std::lock_guard<std::mutex> guard(m_draw_lock);
+  std::lock_guard< std::mutex > guard( m_draw_lock );
 
   // lookup image for joints_msg->source_stamp
   // check that detection header frame_id matches
@@ -525,7 +524,7 @@ Simple2dDetectionOverlay
   }
 
   // Only plot the patient skeleton
-  if(joints_msg->hand != "patient")
+  if( joints_msg->hand != "patient" )
   {
     RCLCPP_WARN(
       log,
@@ -552,9 +551,9 @@ Simple2dDetectionOverlay
     img_ptr = find_drawn_it->second;
   }
 
-  std::map<std::string, std::vector<double>> joint_positions = {};
-  
-  static auto const COLOR_PT = cv::Scalar{ 0, 255, 0 }; 
+  std::map< std::string, std::vector< double > > joint_positions = {};
+
+  static auto const COLOR_PT = cv::Scalar{ 0, 255, 0 };
   int line_thickness = thickness_for_drawing( img_ptr->image );
   RCLCPP_DEBUG( log, "Using line thickness: %d", line_thickness );
 
@@ -563,13 +562,13 @@ Simple2dDetectionOverlay
   {
     double x = joint.pose.position.x;
     double y = joint.pose.position.y;
-    joint_positions[joint.joint] = {x, y}; // save for later
+    joint_positions[ joint.joint ] = { x, y }; // save for later
 
     // Plot the point
     cv::Point pt = { (int) round( x ),
                      (int) round( y ) };
-    cv::circle( img_ptr->image, pt, line_thickness*3,
-                COLOR_PT, cv::FILLED);
+    cv::circle( img_ptr->image, pt, line_thickness * 3,
+                COLOR_PT, cv::FILLED );
   }
 
   // Draw the joint connections
@@ -578,26 +577,24 @@ Simple2dDetectionOverlay
   for(auto const& connection : JOINT_CONNECTION_LINES)
   {
     std::string joint_name = connection.first;
-    std::vector<std::string> joint_connections = connection.second;
-    std::vector<double> first_joint = joint_positions[joint_name];
-    pt1 = { 
-      (int) round( first_joint[0] ),
-      (int) round( first_joint[1] ) 
-    };
+    std::vector< std::string > joint_connections = connection.second;
+    std::vector< double > first_joint = joint_positions[ joint_name ];
+    pt1 = {
+      (int) round( first_joint[ 0 ] ),
+      (int) round( first_joint[ 1 ] ) };
 
     for(auto const& connecting_joint : joint_connections)
     {
-      std::vector<double> connecting_pt = joint_positions[connecting_joint];
-      pt2 = { 
-        (int) round( connecting_pt[0] ),
-        (int) round( connecting_pt[1] ) 
-      };
+      std::vector< double > connecting_pt = joint_positions[ connecting_joint ];
+      pt2 = {
+        (int) round( connecting_pt[ 0 ] ),
+        (int) round( connecting_pt[ 1 ] ) };
 
-      cv::line(img_ptr->image, pt1, pt2, COLOR_PT, line_thickness, cv::LINE_8);
+      cv::line( img_ptr->image, pt1, pt2, COLOR_PT, line_thickness, cv::LINE_8 );
     }
   }
 
-  if(insert)
+  if( insert )
   {
     // Insert this frame into our drawing history.
     m_drawn_frame_map.insert( { source_nanosec_key, img_ptr } );
@@ -611,7 +608,8 @@ Simple2dDetectionOverlay
       m_drawn_frame_map.erase( m_drawn_frame_map.begin() );
     }
   }
-  else{
+  else
+  {
     // Frame was already drawn on by the other message, time to publish
     auto out_img_msg = img_ptr->toImageMsg();
     m_pub_overlay_image->publish( *out_img_msg );
