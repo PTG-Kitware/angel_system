@@ -261,7 +261,10 @@ class PoseEstimator(Node):
                 all_poses_msg.hand = "patient"
 
                 boxes, labels, keypoints = predict_single(
-                    det_model=self.det_model, pose_model=self.pose_model, image=img0
+                    det_model=self.det_model,
+                    pose_model=self.pose_model,
+                    image=img0,
+                    bbox_thr=self._det_conf_thresh,
                 )
 
                 # at most, we have 1 set of keypoints for 1 patient
