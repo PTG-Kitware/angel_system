@@ -562,7 +562,7 @@ Simple2dDetectionOverlay
   // If there is no image to overlay on, then we're done.
   if( tdb.image_msg == nullptr )
   {
-    throw std::invalid_argument( "No image provided to over lay on" );
+    throw std::invalid_argument( "No image provided to overlay on" );
   }
 
   // Convert the image message to a cv::Mat to be drawn over.
