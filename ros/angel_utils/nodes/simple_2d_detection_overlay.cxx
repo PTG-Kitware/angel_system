@@ -108,6 +108,10 @@ time_key_from_header( builtin_interfaces::msg::Time const& header )
 
 /**
  * @brief Deduce a line thickness to use for drawing shapes on a given matrix.
+ *
+ * Larger image matrices will yield a larger line thickness, which is useful
+ * when viewing such images scaled down.
+ *
  * @param img_mat Image matrix to base thickness on.
  * @return Line thickness in pixels.
  */
@@ -240,6 +244,13 @@ private:
   frame_map_t m_frame_map;
   /// Mutex protecting m_frame_map
   std::mutex m_frame_map_lock;
+  /// Nanosecond timestamp of the most recently published frame.
+  /// This timestamp will be one that is `m_publish_latency_ns` behind the most
+  /// recently received frame.
+  /// We should not accept data that is at/earlier than this time.
+  /// This value should be updated when we create an overlay for publishing.
+  /// This value should be protected by the `m_frame_map_lock` mutex.
+  size_t m_latest_frame_published{ 0 };
 };
 
 // ----------------------------------------------------------------------------
@@ -352,20 +363,16 @@ Simple2dDetectionOverlay
   // Guard against concurrent map access.
   std::lock_guard< std::mutex > guard( this->m_frame_map_lock );
 
-  // If we have some frames, only retain this image if it newer than the oldest
-  // one we have.
-  if( m_frame_map.size() > 0 )
+  // If we have some frames, only retain this image if it newer than the last
+  // frame-overlay published.
+  if( image_nanosec_key <= m_latest_frame_published )
   {
-    size_t oldest_in_history = m_frame_map.begin()->first;
-    if( image_nanosec_key <= oldest_in_history )
-    {
-      RCLCPP_WARN(
-        log,
-        "Received frame has older time-key (%zu) than the current oldest "
-        "image in our history (%zu). ",
-        image_nanosec_key, oldest_in_history );
-      return;
-    }
+    RCLCPP_WARN(
+      log,
+      "Received frame has time-key (%zu) at/older than the last published "
+      "overlay (%zu).",
+      image_nanosec_key, m_latest_frame_published );
+    return;
   }
 
   // If this image has the same key as something in the map, something weird
@@ -421,6 +428,7 @@ Simple2dDetectionOverlay
       RCLCPP_DEBUG( log, "--> N-TS: %zu", next_it->first );
     }
 
+    // This should always trigger if there is *something* in the map.
     if( next_it == m_frame_map.cend() || next_it->first > target_ts )
     {
       if( ( it->second ).image_msg != nullptr )
@@ -428,6 +436,7 @@ Simple2dDetectionOverlay
         found_data = true;
         RCLCPP_DEBUG( log, "--> :) Found image: %zu", it->first );
         this->overlay_and_publish( it->second );
+        m_latest_frame_published = it->first;
       }
       else
       {
@@ -470,6 +479,19 @@ Simple2dDetectionOverlay
 
   // Guard against concurrent map access.
   std::lock_guard< std::mutex > guard( this->m_frame_map_lock );
+
+  // If we have some frames, only retain these detections if it is newer
+  // than the last frame-overlay published.
+  if( source_nanosec_key <= m_latest_frame_published )
+  {
+    RCLCPP_WARN(
+      log,
+      "Received detections has time-key (%zu) at/older than the last "
+      "published overlay (%zu).",
+      source_nanosec_key, m_latest_frame_published );
+    return;
+  }
+
   m_frame_map[ source_nanosec_key ].dets_msg = det_set;
 
   // Because we like to know how fast this is going.
@@ -508,6 +530,19 @@ Simple2dDetectionOverlay
 
   // Guard against concurrent map access.
   std::lock_guard< std::mutex > guard( this->m_frame_map_lock );
+
+  // If we have some frames, only retain these joints if it is newer than the
+  // last frame-overlay published.
+  if( source_nanosec_key <= m_latest_frame_published )
+  {
+    RCLCPP_WARN(
+      log,
+      "Received detections has time-key (%zu) at/older than the last "
+      "published overlay (%zu).",
+      source_nanosec_key, m_latest_frame_published );
+    return;
+  }
+
   m_frame_map[ source_nanosec_key ].joints_msg = joints_msg;
 
   // Because we like to know how fast this is going.
