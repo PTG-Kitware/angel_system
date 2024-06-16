@@ -54,29 +54,36 @@ done
 #       part of docker builds. Maybe read this in from somewhere else instead
 #       of encoding here?
 warn_build_spaces=(
-  "${SCRIPT_DIR}/ros"
-  "${SCRIPT_DIR}/docker"
-  "${SCRIPT_DIR}/pyproject.toml"
-  "${SCRIPT_DIR}/poetry.lock"
-  "${SCRIPT_DIR}/angel_system"
-  "${SCRIPT_DIR}/tmux"
+  "ros"
+  "docker"
+  "pyproject.toml"
+  "poetry.lock"
+  "angel_system"
+  "tmux"
 )
 # Check if there are tracked file modifications.
-git_status="$(git status --porcelain "${warn_build_spaces[@]}")"
-git_sm_status="$(git submodule foreach git status --porcelain)"
-git_sm_q_status="$(git submodule --quiet foreach git status --porcelain)"
+git_status="$(cd "${SCRIPT_DIR}" && git status --porcelain "${warn_build_spaces[@]}")"
+git_sm_status="$(cd "${SCRIPT_DIR}" && git submodule foreach git status --porcelain)"
+git_sm_q_status="$(cd "${SCRIPT_DIR}" && git submodule --quiet foreach git status --porcelain)"
 # Check if there are ignored files in the workspace that should not be there.
-git_clean_dr_cmd=( git clean "${warn_build_spaces[@]}" -Xdn )
-git_clean_dr="$("${git_clean_dr_cmd[@]}")"
+# Items that are excluded here (-e) are paths that are included in *both* the
+# .gitignore and .dockerignore files.
+git_clean_dr_cmd=(
+  git clean
+  "${warn_build_spaces[@]}"
+  -e "ros/angel_utils/multi_task_demo_ui/node_modules/"
+  -xdn
+)
+git_clean_dr="$(cd "${SCRIPT_DIR}" && "${git_clean_dr_cmd[@]}")"
 # Check for unclean files in submodules not caught by the above.
 # Quiet version is for checking, non-quiet version is for reporting (it's
 # informational).
 git_sm_clean_dr_cmd=( git submodule foreach --recursive git clean -xdn )
 git_sm_q_clean_dr_cmd=( git submodule --quiet foreach --recursive git clean -xdn )
 # shellcheck disable=SC2068
-git_sm_clean_dr="$(${git_sm_clean_dr_cmd[@]})"
+git_sm_clean_dr="$(cd "${SCRIPT_DIR}" && ${git_sm_clean_dr_cmd[@]})"
 # shellcheck disable=SC2068
-git_sm_q_clean_dr="$(${git_sm_q_clean_dr_cmd[@]})"
+git_sm_q_clean_dr="$(cd "${SCRIPT_DIR}" && ${git_sm_q_clean_dr_cmd[@]})"
 if [[ -n "${git_status}" ]] || [[ -n "${git_sm_q_status}" ]] || [[ -n "${git_clean_dr}" ]] || [[ -n "${git_sm_q_clean_dr}" ]]
 then
   log "WARNING: Docker/ROS workspace subtree is modified and/or un-clean."
