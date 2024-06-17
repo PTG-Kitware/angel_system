@@ -1,0 +1,122 @@
+#
+# Used to create ROS bags for all topics published from the HL2.
+# This configuration should be run by itself (e.g. not in combination with
+# another tmuxinator launch).
+#
+
+name: record-ros-bag
+root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
+
+# Optional tmux socket
+# socket_name: foo
+
+# Note that the pre and post options have been deprecated and will be replaced by
+# project hooks.
+
+# Project hooks
+
+# Runs on project start, always
+# on_project_start: command
+on_project_start: |
+  export ROS_NAMESPACE=${ROS_NAMESPACE:-/kitware}
+  export HL2_IP=${HL2_IP:-192.168.1.4}
+
+  # Changing the domain ID was important at KHQ to unblock perceived network
+  # congestion slowdowns to message sending.
+  export ROS_DOMAIN_ID=77
+
+  # Topic to use from those emitted from the ZED Wrapper launch stack.
+  # This name is *NOT* prepended with the common namespace.
+  export ZED_IMAGE_TOPIC="zed/zed_node/rgb_raw/image_raw_color"
+  # Expanding on the above, this is the topic for the timestamp extraction of
+  # the images used.
+  export ZED_IMAGE_TS_TOPIC="${ZED_IMAGE_TOPIC}_ts"
+
+# Run on project start, the first time
+# on_project_first_start: command
+
+# Run on project start, after the first time
+# on_project_restart: command
+
+# Run on project exit ( detaching from tmux session )
+# on_project_exit: command
+
+# Run on project stop
+# on_project_stop: command
+
+# Runs in each window and pane before window/pane specific commands. Useful for setting up interpreter versions.
+# pre_window: rbenv shell 2.0.0-p247
+
+# Pass command line options to tmux. Useful for specifying a different tmux.conf.
+# tmux_options: -f ~/.tmux.mac.conf
+tmux_options: -f <%= ENV["ANGEL_WORKSPACE_DIR"] %>/tmux/tmux.conf
+
+# Change the command to call tmux.  This can be used by derivatives/wrappers like byobu.
+# tmux_command: byobu
+
+# Specifies (by name or index) which window will be selected on project startup. If not set, the first window is used.
+# startup_window: editor
+
+# Specifies (by index) which pane of the specified window will be selected on project startup. If not set, the first pane is used.
+# startup_pane: 1
+
+# Controls whether the tmux session should be attached to automatically. Defaults to true.
+# attach: false
+
+windows:
+  # Connection with the HL2 app via HL2SS sensor data streaming and the
+  # ROS-TCP-Endpoint
+  # - sensor_input:
+  #     layout: even-vertical
+  #     panes:
+  #       - datahub: ros2 run ros_tcp_endpoint default_server_endpoint --ros-args
+  #           -r __ns:=${ROS_NAMESPACE}
+  #           -p ROS_IP:=0.0.0.0
+  #       - hl2ss_bridge: ros2 run angel_system_nodes hl2ss_ros_bridge --ros-args
+  #           -r __ns:=${ROS_NAMESPACE}
+  #           -p ip_addr:=${HL2_IP}
+  #           -p image_topic:=PVFramesBGR
+  #           -p image_ts_topic:=PVFramesBGR_TS
+  #           -p hand_pose_topic:=HandJointPoseData
+  #           -p audio_topic:=HeadsetAudioData
+  #           -p sm_topic:=SpatialMapData
+  #           -p head_pose_topic:=HeadsetPoseData
+  #           -p pv_width:=1280
+  #           -p pv_height:=720
+  #           -p pv_framerate:=30
+  #           -p sm_freq:=5
+  #           -p rm_depth_AHAT:=disable
+  #       # Visualize Images being output from the headset
+  #       - rqt_pv_images: rqt -s rqt_image_view/ImageView
+  #           --args ${ROS_NAMESPACE}/PVFramesBGR
+  #           --ros-args -p _image_transport:=raw 
+  - sensor_zed:
+      layout: even-vertical
+      panes:
+        # Read sensor input from a ZED 2i unit using the ROS2 wrapper.
+        # NOTE: The camera name given cannot start with a "/" as the value
+        # given is also used to prepend TF Frame IDs, which cannot begin with a
+        # slash.
+        - zed_bridge: ros2 launch zed_wrapper zed_camera.launch.py
+            camera_name:="${ROS_NAMESPACE#/}"/zed
+            camera_model:=zed2i
+            ros_params_override_path:=${ANGEL_WORKSPACE_DIR}/config/zed_params_override.yaml
+        # Enable sending ROS2 messages to receiving agents in an HoloLens2 app.
+        - datahub: ros2 run ros_tcp_endpoint default_server_endpoint  --ros-args
+            -r __ns:=${ROS_NAMESPACE}
+            -p ROS_IP:=0.0.0.0
+        # Trim out the timestamp of the image topic of choice.
+        - run_image_timestamp: ros2 run angel_system_nodes image_timestamp_relay --ros-args
+            -r __ns:=${ROS_NAMESPACE}
+            -p image_topic:="${ZED_IMAGE_TOPIC}"
+            -p output_topic:="${ZED_IMAGE_TS_TOPIC}"
+
+
+  - record:
+      layout: even-vertical
+      root: ./ros_bags
+      panes:
+        - ros_bag_record: ros2 bag record
+            "${ROS_NAMESPACE}/${ZED_IMAGE_TOPIC}"
+            "${ROS_NAMESPACE}/${ZED_IMAGE_TS_TOPIC}"
+
