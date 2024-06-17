@@ -58,6 +58,7 @@ windows:
       panes:
         # Read sensor input from bag file.
         - sensor_input: echo ros2 bag play ${ANGEL_WORKSPACE_DIR}/ros_bags/...
+            --remap /kitware/image_0:=/kitware/PVFramesBGR
         - run_image_timestamp: ros2 run angel_system_nodes image_timestamp_relay --ros-args
             -r __ns:=${ROS_NAMESPACE}
             -p image_topic:=PVFramesBGR
