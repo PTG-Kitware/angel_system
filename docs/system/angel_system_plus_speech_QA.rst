@@ -23,6 +23,14 @@ Note that for the QA portion, you'll need an OpenAI API key, which you export in
 Angel System ASR Server
 ======================
 
+Git-cloning the separate repo
+---------------------
+For now, this repo lives separately from the angel_system. Clone it by running:
+
+.. code-block:: bash
+
+   git clone git@github.com:ColumbiaNLP/angel-system-speech-processor.git
+
 Installing dependencies with apt
 ----------------------
 
