@@ -83,8 +83,6 @@ windows:
         - run_image_timestamp: ros2 run angel_system_nodes image_timestamp_relay --ros-args
             -r __ns:=${ROS_NAMESPACE}
             -p image_topic:="${ZED_IMAGE_TOPIC}"
-            -p output_topic:="${ZED_IMAGE_TS_TOPIC}"
-
 
   - record:
       layout: even-vertical
