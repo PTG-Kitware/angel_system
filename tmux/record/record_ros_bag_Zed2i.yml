@@ -64,32 +64,6 @@ tmux_options: -f <%= ENV["ANGEL_WORKSPACE_DIR"] %>/tmux/tmux.conf
 # attach: false
 
 windows:
-  # Connection with the HL2 app via HL2SS sensor data streaming and the
-  # ROS-TCP-Endpoint
-  # - sensor_input:
-  #     layout: even-vertical
-  #     panes:
-  #       - datahub: ros2 run ros_tcp_endpoint default_server_endpoint --ros-args
-  #           -r __ns:=${ROS_NAMESPACE}
-  #           -p ROS_IP:=0.0.0.0
-  #       - hl2ss_bridge: ros2 run angel_system_nodes hl2ss_ros_bridge --ros-args
-  #           -r __ns:=${ROS_NAMESPACE}
-  #           -p ip_addr:=${HL2_IP}
-  #           -p image_topic:=PVFramesBGR
-  #           -p image_ts_topic:=PVFramesBGR_TS
-  #           -p hand_pose_topic:=HandJointPoseData
-  #           -p audio_topic:=HeadsetAudioData
-  #           -p sm_topic:=SpatialMapData
-  #           -p head_pose_topic:=HeadsetPoseData
-  #           -p pv_width:=1280
-  #           -p pv_height:=720
-  #           -p pv_framerate:=30
-  #           -p sm_freq:=5
-  #           -p rm_depth_AHAT:=disable
-  #       # Visualize Images being output from the headset
-  #       - rqt_pv_images: rqt -s rqt_image_view/ImageView
-  #           --args ${ROS_NAMESPACE}/PVFramesBGR
-  #           --ros-args -p _image_transport:=raw 
   - sensor_zed:
       layout: even-vertical
       panes:
