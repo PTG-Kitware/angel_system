@@ -122,15 +122,15 @@ girder_file_downloads:
       sha512: 7183385f8eaca85997725a107a76034de2bd4a59c1434b4bdb7c1ac8931cf4b68a53f6e736734643386364b9f0856de795a14965b6a02bc5eb5891252e6a73c9
       dest: "{{ stage_dirs.object_detector }}/r18_det.pt"
     # Activity classifier
-    - file_id: 66463a80687336214e7cdeaa
-      sha512: 11c417480ef3b178cea5e9ba01878e2c1d2978129db4d8ac5d7eb0a1e6bdec0da74fc54f6bd69c8d04311809fc78503fad5c57fe45c5ee09f0f4f68197e34be1
+    - file_id: 666c8f5c35faf6f99fbb43ea
+      sha512: e8207b092f19659217f51dc41ba8c964ccb9c664d23d235b6166f8974c19eda3b1a098c451f6caa17bfc41148aea249eeeabdf794e2c4eff3c09bc2f009978ef
       dest: "{{ stage_dirs.activity_classifier }}/r18_tcn.ckpt"
     - file_id: 6606b6e9aa5c8de3874c3f4a
       sha512: 3c84333390ee6b12327bb7e5debed37149c7f95cc437b16939f77b599d1a0b3b8c4f0995820b95973170b94df695494000a1c45fbf46632267c212e125fe58a3
       dest: "{{ stage_dirs.activity_classifier }}/r18_mapping.txt"
     # Global Step predictor model
-    - file_id: 66464bf9687336214e7cdeae
-      sha512: bc7884c258cb8704372dd69a3e7d999eaf70d716d271982077c7216ef27ab01219ef1e488f6f9669e11a7e8aa6ffb9d8e07d74edc47294f90cc9e6a723f5a822
+    - file_id: 666c8ef435faf6f99fbb43e8
+      sha512: ff121c00a9406b21c7c193cbbf8a2a271fc4374f05709f170565e5b64617c41fef18281653968d43740648888d0aee9c9ab4009eb791857c9a28bd6063384807
       dest: "{{ stage_dirs.task_monitor }}/global_step_predictor_act_avgs_R18.npy"
     
 # List of git repositories to check out at a specific ref and then archive.

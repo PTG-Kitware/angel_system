@@ -6,10 +6,14 @@ import kwcoco
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
 import scipy.ndimage as ndi
+from pathlib import Path
 
 from angel_system.global_step_prediction.global_step_predictor import (
     GlobalStepPredictor,
 )
+
+code_dir = Path.home() / "code" / "angel_system"
+medical_task = "r18"
 
 
 def run_inference_all_vids(
@@ -22,11 +26,15 @@ def run_inference_all_vids(
         print(f"vid_id {vid_id}===========================")
 
         step_predictor = GlobalStepPredictor(
-            recipe_types=["r18"],
-            activity_config_fpath="/home/local/KHQ/cameron.johnson/code/tmp_hannah_code/angel_system/config/activity_labels/medical/r18.yaml",
+            recipe_types=[f"{medical_task}"],
+            activity_config_fpath=code_dir
+            / "config/activity_labels/medical"
+            / f"{medical_task}.yaml",
             # activity_config_fpath="/data/PTG/medical/training/activity_classifier/TCN_HPL/logs/r18_pro_data_top_1_objs_feat_v6_NEW_ORDER_win_25/runs/2024-05-08_12-05-20/test_activity_preds.mscoco.json",
             recipe_config_dict={
-                "r18": "/home/local/KHQ/cameron.johnson/code/tmp_hannah_code/angel_system/config/tasks/medical/r18.yaml"
+                f"{medical_task}": code_dir
+                / "config/tasks/medical"
+                / f"{medical_task}.yaml"
             },
             # threshold_multiplier=0.3,
             # threshold_frame_count=2
@@ -37,7 +45,8 @@ def run_inference_all_vids(
         else:
             avg_probs = step_predictor.compute_average_TP_activations(coco_train)
             np.save(
-                "/home/local/KHQ/cameron.johnson/code/tmp_hannah_code/angel_system/model_files/global_step_predictor_act_avgs_all_classes.npy",
+                code_dir
+                / f"model_files/global_step_predictor_act_avgs_{medical_task}.npy",
                 avg_probs,
             )
             print(f"average_probs = {avg_probs}")
@@ -136,14 +145,14 @@ def run_inference_all_vids(
 
 if __name__ == "__main__":
     coco_train = kwcoco.CocoDataset(
-        "/data/PTG/medical/training/activity_classifier/TCN_HPL/logs/r18_pro_data_top_1_objs_feat_v6_NEW_ORDER_win_25/runs/2024-05-08_12-05-20/test_activity_preds.mscoco.json"
+        "/data/PTG/medical/training/activity_classifier/TCN_HPL/logs/r18_pro_data_top_1_objs_feat_v6_pose_rate_2_NEW_ORDER_fix_overlap_gt_win_25_obj_sample_2/runs/2024-06-13_12-28-01/test_activity_preds.mscoco.json"
     )
     # Same file for now since I don't have another.
     coco_test = kwcoco.CocoDataset(
-        "/data/PTG/medical/training/activity_classifier/TCN_HPL/logs/r18_pro_data_top_1_objs_feat_v6_NEW_ORDER_win_25/runs/2024-05-08_12-05-20/test_activity_preds.mscoco.json"
+        "/data/PTG/medical/training/activity_classifier/TCN_HPL/logs/r18_pro_data_top_1_objs_feat_v6_pose_rate_2_NEW_ORDER_fix_overlap_gt_win_25_obj_sample_2/runs/2024-06-13_12-28-01/test_activity_preds.mscoco.json"
     )
 
-    recipe_config = {"r18": "config/tasks/medical/r18.yaml"}
+    recipe_config = {f"{medical_task}": f"config/tasks/medical/{medical_task}.yaml"}
 
     run_inference_all_vids(
         coco_train, coco_test, recipe_config, extra_output_suffix="test_set"
