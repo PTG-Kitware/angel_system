@@ -38,9 +38,6 @@ Installing dependencies with apt
 
    sudo apt update && apt install -y sox ffmpeg
 
-Running the Server
-----------------------
-
 Create conda environment
 ----------------------
 
@@ -48,6 +45,9 @@ Create conda environment
 
    conda env create -f speech_server.yml
    conda activate speech_server
+
+Running the Server
+----------------------
 
 The server can then be instantiated with:
 
@@ -57,16 +57,8 @@ The server can then be instantiated with:
 
 (Note: you may need to remove the "export" command above, for example if you only have one GPU, so device 4 does not exist.)
 
-Running the Client
+Running the Client (Not necessary when running a tmuxinator config)
 --------------------
-
-Create conda environment
---------------------
-
-.. code-block:: bash
-
-   conda env create -f speech_client.yml
-   conda activate speech_client
 
 Ensure the server is actively running on the server machine.
 Also ensure the client is connected to a microphone peripheral.
