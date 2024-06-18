@@ -1,7 +1,7 @@
 import os
 from glob import glob
 
-KNOWN_BAD_VIDEOS = ["M2-15"]  # Videos without any usable data
+KNOWN_BAD_VIDEOS = ["M2-15", "M3-14"]  # Videos without any usable data
 
 TASK_TO_NAME = {
     "m1": "M1_Trauma_Assessment",
