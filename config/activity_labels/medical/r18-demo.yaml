@@ -9,7 +9,7 @@ labels:
     full_str: "background"
   - id: 1
     label: "cover-seal-wound"
-    full_str: "Cover and seal wound site."
+    full_str: "With your hand, cover and seal wound site."
   - id: 2
     label: "open-pack"
     full_str: "Open vented chest seal package, while keeping wound site sealed."
