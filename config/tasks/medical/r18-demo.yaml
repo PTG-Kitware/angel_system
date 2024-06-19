@@ -15,7 +15,7 @@ labels:
     activity_ids: [0]
   - id: 1
     label: "cover-seal-wound"
-    full_str: "Cover and seal wound site."
+    full_str: "With your hand, cover and seal wound site."
     activity_ids: [1]
   - id: 2
     label: "open-pack"
