@@ -22,24 +22,38 @@ namespace RosMessageTypes.Angel
         //  a command needs to be enacted on or has just not been requested via the
         //  received message instance.
         // 
+        // #############################
         //  Task Monitor commands
+        //  Reset the whole task monitor state.
+        public bool reset_monitor_state;
+        //  Toggle the state of the monitor's "pause" command.
+        public bool toggle_monitor_pause;
+        //  Index of the task to which the commands here pertain.
         public sbyte task_index;
-        public bool reset_current_task;
+        //  Reset the referenced task's state and start over from the beginning.
+        //  TODO: This is currently unused.
+        public bool reset_task;
+        //  Revert our step tracking for the referenced task to the previous step.
         public bool previous_step;
+        //  Progress our step tracking for the referenced task to the next step.
         public bool next_step;
 
         public SystemCommandsMsg()
         {
+            this.reset_monitor_state = false;
+            this.toggle_monitor_pause = false;
             this.task_index = 0;
-            this.reset_current_task = false;
+            this.reset_task = false;
             this.previous_step = false;
             this.next_step = false;
         }
 
-        public SystemCommandsMsg(sbyte task_index, bool reset_current_task, bool previous_step, bool next_step)
+        public SystemCommandsMsg(bool reset_monitor_state, bool toggle_monitor_pause, sbyte task_index, bool reset_task, bool previous_step, bool next_step)
         {
+            this.reset_monitor_state = reset_monitor_state;
+            this.toggle_monitor_pause = toggle_monitor_pause;
             this.task_index = task_index;
-            this.reset_current_task = reset_current_task;
+            this.reset_task = reset_task;
             this.previous_step = previous_step;
             this.next_step = next_step;
         }
@@ -48,16 +62,20 @@ namespace RosMessageTypes.Angel
 
         private SystemCommandsMsg(MessageDeserializer deserializer)
         {
+            deserializer.Read(out this.reset_monitor_state);
+            deserializer.Read(out this.toggle_monitor_pause);
             deserializer.Read(out this.task_index);
-            deserializer.Read(out this.reset_current_task);
+            deserializer.Read(out this.reset_task);
             deserializer.Read(out this.previous_step);
             deserializer.Read(out this.next_step);
         }
 
         public override void SerializeTo(MessageSerializer serializer)
         {
+            serializer.Write(this.reset_monitor_state);
+            serializer.Write(this.toggle_monitor_pause);
             serializer.Write(this.task_index);
-            serializer.Write(this.reset_current_task);
+            serializer.Write(this.reset_task);
             serializer.Write(this.previous_step);
             serializer.Write(this.next_step);
         }
@@ -65,8 +83,10 @@ namespace RosMessageTypes.Angel
         public override string ToString()
         {
             return "SystemCommandsMsg: " +
+            "\nreset_monitor_state: " + reset_monitor_state.ToString() +
+            "\ntoggle_monitor_pause: " + toggle_monitor_pause.ToString() +
             "\ntask_index: " + task_index.ToString() +
-            "\nreset_current_task: " + reset_current_task.ToString() +
+            "\nreset_task: " + reset_task.ToString() +
             "\nprevious_step: " + previous_step.ToString() +
             "\nnext_step: " + next_step.ToString();
         }

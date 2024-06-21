@@ -13,7 +13,7 @@ var task_step_chart = new Chart(ctx, {
             legend: {
                 display: true,
                 labels: {
-                    fontSize: 20,
+                    fontSize: 15,
                 }
             },
             title: {

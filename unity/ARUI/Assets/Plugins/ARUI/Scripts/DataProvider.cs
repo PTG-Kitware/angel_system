@@ -143,6 +143,10 @@ public class DataProvider : Singleton<DataProvider>
         if (copy.Keys.Count > 0 && (_currentObservedTask.Equals("") || !copy.ContainsKey(_currentObservedTask))) //Set the a random initial value for the currentObservedTask
             SetCurrentObservedTask(copy.First().Key);
 
+        //If manual is set for the first time, say the step
+        if (_currentObservedTask != null)
+            AudioManager.Instance.PlayMessage(_currentActiveTasks[_currentObservedTask].Steps[0].StepDesc);
+
         string debug = "DATA PROVIDER: selected tasks set to: ";
         foreach (string taskID in _currentActiveTasks.Keys)
             debug += taskID + ", ";
@@ -239,15 +243,18 @@ public class DataProvider : Singleton<DataProvider>
     }
 
     /// <summary>
-    /// Proceed to the next step at the given task. Nothing happens if the taskID is not currently selected
+    /// TODO
     /// </summary>
     /// <param name="taskID"></param>
-    private void GoToNextStep(string taskID)
+    public void SetAsDone(string taskID)
     {
-        if (!ManualInitialized || _currentActiveTasks == null || !_currentActiveTasks.ContainsKey(taskID)) return;
-        int potentialStepIndex = _currentActiveTasks[taskID].CurrStepIndex + 1;
+        if (_manual == null || _currentActiveTasks == null || !_currentActiveTasks.ContainsKey(taskID)) return;
+        int potentialStepIndex = _currentActiveTasks[taskID].Steps.Count;
 
-        SetCurrentStep(taskID, potentialStepIndex);
+        if (potentialStepIndex != _currentActiveTasks[taskID].CurrStepIndex)
+        {
+            SetCurrentStep(taskID, potentialStepIndex);
+        }
     }
 
     /// <summary>

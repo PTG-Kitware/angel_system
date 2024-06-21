@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
 
   <link rel="stylesheet" href="css/layout.css">
-
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
   <script src="src/third_party/Chart.js/3.9.0/chart.js"></script>
   <script type="text/javascript">
     Chart.defaults.font.size = 15;
@@ -21,122 +21,102 @@
 </head>
 
 <body>
-  <!-- HEADER -->
-  <div id="header">
-    <img src="static/Kitware Logo Stacked.png" alt="kitware"/>
-    <div id="status">
-      <p class="text body-text">Rosbridge Websocket Status: <span id="status-msg">N/A</span></p>
+  <div class="container">
+
+    <!-- HEADER -->
+    <div id="header" class="row">
+      <div class="col">
+        <img src="static/Kitware Logo Stacked.png" alt="kitware" width="50px"/>
+      </div>
+      <div id="status" class="col">
+          <p class="text">
+            Rosbridge Websocket Status: <span id="status-msg">N/A</span>
+          </p>
+      </div>
     </div>
-  </div>
-  <!-- END HEADER -->
-  
-  <div class="columns">
-    <!-- LEFT COLUMN -->
-    <div id="left-column" class="column">
-      <div id="recipes">
+    <!-- END HEADER -->
+
+    <!-- TOP -->
+    <div id="top-section" class="row">
+      <div class="col-6">
+
         <div class="highlighted-title">
-          <span class="text title-hex">Recipes</span>
+          <span class="text title-hex">Instructions</span>
         </div>
 
         <!-- coffee -->
         <div id="blue-recipe" class="recipe">
-          <div class="highlighted-title">
-            <span id="blue-task_title" class="task-title text"></span>
+          <div id="blue-task_title" class="text">
           </div>
           <div id="blue-task-list" class="task-list">
             
           </div>
         </div>
         
-        <!-- tea -->
-        <div id="green-recipe" class="recipe">
-          <div class="highlighted-title">
-            <span id="green-task_title" class="task-title text"></span>
-          </div>
-          <div id="green-task-list" class="task-list">
-            
-          </div>
-        </div>
-
-        <!-- dessert quesadilla -->
-        <div id="yellow-recipe" class="recipe">
-          <div class="highlighted-title">
-            <span id="yellow-task_title" class="task-title text"></span>
-          </div>
-          <div id="yellow-task-list" class="task-list">
-            
-          </div>
-        </div>
-
-        <!-- pinwheels -->
-        <div id="red-recipe" class="recipe">
-          <div class="highlighted-title">
-            <span id="red-task_title" class="task-title text"></span>
-          </div>
-          <div id="red-task-list" class="task-list">
-            
-          </div>
-        </div>
-
-        <!-- oatmeal -->
-        <div id="orange-recipe" class="recipe">
-          <div class="highlighted-title">
-            <span id="orange-task_title" class="task-title text"></span>
-          </div>
-          <div id="orange-task-list" class="task-list">
-            
-          </div>
-        </div>
       </div>
 
-    </div>
-    <!-- END LEFT COLUMN -->
-
-    
-    <!-- RIGHT COLUMN -->
-    <div id="right-column" class="column">
-      <div id="HL-live">
+      <div id="HL-live" class="col-6">
         <div class="highlighted-title">
           <span class="text title-hex">Object Detections</span>
         </div>
-        <img id="hl-image" class="live-img" src="static/hl-live-filler.jpg" alt="HoloLens2 live view">
+        <img id="hl-image" class="live-img" src="static/hl-live-filler.jpg" width="90%" alt="HoloLens2 live view">
       </div>
 
-      <div id="task-step-display">
-        <div class="highlighted-title">
-          <span class="text title-hex">Step Progression</span>
-        </div>
+      
 
-        <canvas id="task-step-chart"></canvas>
-      </div>
-
-      <!-- TODO: Error messages -->
-      <div id="errors">
-        <div class="highlighted-title">
-          <span class="text title-hex">Error Messages</span>
-        </div>
-
-        <div id="error-msgs"></div>
-      </div>
     </div>
-    <!-- END RIGHT COLUMN -->
+
+      <!-- INSTRUCTIONS -->
+    <div id="recipes" class="row">
+      
+      <div class="col-6">
+
+        <div id="task-step-display" class="row">
+          <div class="highlighted-title">
+            <span class="text title-hex">Step Progression</span>
+          </div>
+  
+          <canvas id="task-step-chart" class="chart"></canvas>
+        </div>
+
+      </div>
+
+      <div class="col-6">
+        
+        <div id="activity">
+          <div class="highlighted-title">
+            <span class="text title-hex">Activity Classifications</span>
+          </div>
     
-  </div>
-  <div id="activity">
-    <div class="highlighted-title">
-      <span class="text title-hex">Activity Classifications</span>
+          <canvas id="activity-conf-chart" class="chart"></canvas>
+          
+        </div>
+        
+      </div>
     </div>
 
-    <canvas id="activity-conf-chart"></canvas>
+    <!-- ACTIVITY -->
+    <div id="errors" class="row">
+      <div class="highlighted-title">
+        <span class="text title-hex">Error Messages</span>
+      </div>
+
+      <div id="error-msgs"></div>
+    </div>
+
   </div>
   
-
   <!-- SCRIPTS -->
   <script type="text/javascript" src="src/hl_image.js"></script>
   <script type="text/javascript" src="src/task_lists.js"></script>
   <script type="text/javascript" src="src/connection_status.js"></script>
   <script type="text/javascript" src="src/errors.js"></script>
   <script type="text/javascript" src="src/activity_conf.js"></script>
+  <!-- Optional JavaScript -->
+  <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+  <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.14.7/dist/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
 </body>
 
 </html>

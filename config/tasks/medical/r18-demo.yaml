@@ -15,19 +15,19 @@ labels:
     activity_ids: [0]
   - id: 1
     label: "cover-seal-wound"
-    full_str: "With your non-dominant hand, cover and seal wound site."
+    full_str: "With your hand, cover and seal wound site."
     activity_ids: [1]
   - id: 2
     label: "open-pack"
-    full_str: "With your dominant hand, open vented chest seal package. Keep your non-dominant hand on the wound site."
+    full_str: "Open vented chest seal package, while keeping wound site sealed."
     activity_ids: [2]
   - id: 3
     label: "clean-wound-site"
-    full_str: "With your dominant hand, wipe blood and body fluids from wound site."
+    full_str: "Wipe blood and body fluids from wound site, while keeping wound site sealed."
     activity_ids: [3]
   - id: 4
     label: "peel-seal-backer"
-    full_str: "Peel away chest seal backer."
+    full_str: "Peel away chest seal backer, while keeping wound site sealed."
     activity_ids: [4]
   - id: 5
     label: "place-seal"

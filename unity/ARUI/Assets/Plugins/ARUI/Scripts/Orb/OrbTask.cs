@@ -141,6 +141,11 @@ public class OrbTask : MonoBehaviour
         _currentStepText.text = newPotentialMessage;
     }
 
+    public void SetDoneMessage()
+    {
+        _currentStepText.text = "All Done!";
+    }
+
     #region Update Pie
 
     /// <summary>

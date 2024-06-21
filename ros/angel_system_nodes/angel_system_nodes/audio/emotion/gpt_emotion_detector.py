@@ -76,7 +76,7 @@ class GptEmotionDetector(BaseEmotionDetector):
             example_separator="\n",
         )
         openai_llm = ChatOpenAI(
-            model_name="gpt-3.5-turbo",
+            model_name="gpt-4o",
             openai_api_key=self.openai_api_key,
             temperature=0.0,
             max_tokens=1,

@@ -25,6 +25,7 @@ body {
   margin-right: 0px;
   margin-top: 0px;
   height: 100vh;
+  font-size: 10pt;
 }
 
 .content {
@@ -37,35 +38,27 @@ body {
 .text {
   font-family: "Roboto",sans-serif;
 }
+
 .body-text {
-  font-size: clamp(1.5rem,1.5vw,2rem);
   font-weight: 300;
   line-height: 1;
-
   color: var(--kit-dark-blue);
-
   text-align: left;
 }
 
 /* ------------ */
 /* MENU         */
 /* ------------ */
-#header { /* main menu */
-  background: var(--light-gray-3);
-  position: relative;
-  display: flex;
-  height: 3%;
-  max-height: 5vh;
+#header { 
+  padding-top: 5px;
 }
-#header img { /* kitware logo */
-  width: auto; /* keep aspect ratio */
-  float: top;
-  padding: 5px;
-  
-}
+
+
 #status {
-  margin-left: auto; 
-  margin-right: 10px;
+  text-align: right;
+  font-weight: 300;
+  line-height: 1;
+  font-size: 8pt;
 }
 
 /* ------------ */
@@ -81,10 +74,6 @@ body {
 
   overflow: hidden;
   text-overflow: clip;
-
-  max-height: 15%;
-
-  font-size: 1.5rem;
   font-weight: 550;
   line-height: 1.3;
   color: var(--kit-dark-blue);
@@ -93,19 +82,9 @@ body {
 }
 .highlighted-title {
   padding: 0 0 10px 0;
-  position: relative;
   margin: 0 auto;
-
+    margin-bottom: 0px;
   margin-bottom: 4px;
-
-  overflow: hidden;
-  text-overflow: clip;
-
-  max-height: 15%;
-  max-width: 70%;
-
-  width: 60%;
-
   text-align: center;
 }
 .icon-hex {
@@ -125,16 +104,12 @@ body {
 .title-hex {
   position: relative;
   background-color: var(--kit-light-blue);
-  display: inline-block;
   vertical-align: middle;
-
   clip-path: polygon(12.5556px 0, calc(100% - 12.5556px) 0, 100% 50%, calc(100% - 12.5556px) 100%, 12.5556px 100%, 0% 50%);
-
-  padding: 0 2rem 0 2rem;
+  padding: 0.5rem 2rem 0.5rem 2rem;
   width: 70%;
   max-width: 80%;
-  
-  font-size: 2rem;
+  font-size: 0.9rem;
   font-weight: 550;
   line-height: 1.3;
   color: var(--kit-dark-blue);
@@ -163,17 +138,9 @@ body {
   position: relative;
 }
 
-#left-column{
-  float: left;
-  margin-left: 15px;
-}
-
-#right-column{
-  margin-left: 15px;
-  margin-right: 15px;
-
-  display: flex;
-  flex-direction: column;
+.container {
+  padding-left: 0px !important;
+  padding-right: 0px !important;
 }
 
 
@@ -181,31 +148,8 @@ body {
 /* RECIPE       */
 /* ------------ */
 #recipes{
-  height: 100%;
+  padding-top: 15px;
 }
-.recipe{ /* task list */
-  padding: 10px;
-  height: 18%;
-
-  text-align: left;
-}
-
-#blue-recipe{
-  background-color: var(--kit-light-blue);
-}
-#green-recipe{
-  background-color: rgb(217, 234, 211);
-}
-#yellow-recipe{
-  background-color: rgb(255, 242, 204);
-}
-#red-recipe{
-  background-color: rgb(234, 209, 220);
-}
-#orange-recipe{
-  background-color: rgb(252, 229, 205);
-}
-
 
 .task-list {
   overflow: scroll;
@@ -218,7 +162,6 @@ body {
 }
 .task-line {
   display: block;
-  margin-bottom: 5px;
 }
 /* task text */
 .task {
@@ -232,37 +175,26 @@ body {
 /* checkmark */
 .checkbox { 
   border: 1.5px solid black; 
-  width: 1.1em; 
-  height: 1.1em; 
-
+  width: 1em; 
+  height: 1em; 
   display: inline-block;
   vertical-align: middle;
   margin-right: 8px;
-
   background-color: white;
 }
 
 /* ------------ */
 /* LIVE VIEW    */
 /* ------------ */
-#HL-live{
-  max-height: 40%;
-  height: auto;
-  
+#hl-image {
+  padding-left:25px;
 }
-
-.live-img {
-  height: 75%;
-  width: auto; /* keep aspect ratio */
-}
-
 
 /* ------------ */
 /* TASK STEP    */
 /* ------------ */
-#task-step-display {
-  margin-top: 20px;
-  max-height: 30vh;
+.step {
+  font-size: 9pt;
 }
 
 #task-step-chart{
@@ -274,12 +206,11 @@ body {
 /* ERRORS       */
 /* ------------ */
 #errors {
-  margin-top: 20px;
-  
-  height:30%;
-  max-height: 20vh;
+  width: 100%;
   position: relative;
+  padding-top: 15px;
 }
+
 #error-msgs {
   max-height:100%;
   height: 60%;
@@ -288,20 +219,17 @@ body {
   scrollbar-color: var(--dark-gray-30) white;
 }
 
-.error-msg {
-  margin-bottom: 10px;
+.error-body-text {
+  font-size:8pt;
 }
 
 /* https://www.w3schools.com/howto/howto_js_collapsible.asp */
 .collapsible {
-  background-color: #eee;
-  cursor: pointer;
-  padding: 18px;
+  padding: 5px;
   width: 100%;
   border: none;
-  text-align: left;
   outline: none;
-  font-size: clamp(1rem,1vw,1.8rem);
+  font-size: 0.8em;
   font-weight: 550;
 }
 
@@ -333,20 +261,12 @@ body {
   background-color: rgb(238, 143, 77);
 }
 
-
-/* ------------ */
-/* ACT CONF     */
-/* ------------ */
-#activity {
-  text-align: center;
-
-  max-height: 15vh;
-  
-  margin-left: 10px;
-  margin-top: 20px;
+#activity-conf-chart {
+  max-height: 25vh;
 }
-#activity-conf-chart { /* chart */
-  width: 90%;
-  max-height: 10vh;
+
+.chart {
+  font-family: "Roboto",sans-serif;
+  font-size: 9pt;
 }
 

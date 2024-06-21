@@ -78,7 +78,7 @@ class GptIntentDetector(BaseIntentDetector):
 
         # Please refer to https://github.com/hwchase17/langchain/blob/master/langchain/llms/openai.py
         openai_llm = ChatOpenAI(
-            model_name="gpt-3.5-turbo",
+            model_name="gpt-4o",
             openai_api_key=self.openai_api_key,
             temperature=0.0,
             # Only 2 tokens needed for classification (tokens are delimited by use of '_', i.e.
