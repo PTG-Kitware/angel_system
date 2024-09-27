@@ -79,5 +79,4 @@ windows:
       panes:
         - ros_bag_record: ros2 bag record
             "${ROS_NAMESPACE}/${ZED_IMAGE_TOPIC}"
-            "${ROS_NAMESPACE}/${ZED_IMAGE_TS_TOPIC}"
 
