@@ -5057,12 +5057,12 @@ description = "Use the ZED SDK with Python"
 optional = false
 python-versions = ">=3.6"
 files = [
-    {file = "pyzed-4.1-cp38-cp38-linux_x86_64.whl", hash = "sha256:2ef6b8e4d9abb41e6aaa39d0a0b31a62b44b6ae3605616f5ba0d00eb3698e9be"},
+    {file = "pyzed-4.1-cp38-cp38-linux_x86_64.whl", hash = "sha256:487a73e6597347bcb959f231683cfe8dadaeebc5e40b2f310f4680f97fad89c2"},
 ]
 
 [package.dependencies]
 cython = ">=3.0.0"
-numpy = ">=1.13"
+numpy = ">=1.13,<2.0"
 
 [package.extras]
 sample = ["opencv-python", "pyopengl"]
