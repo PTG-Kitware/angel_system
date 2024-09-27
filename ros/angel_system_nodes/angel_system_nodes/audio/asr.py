@@ -13,7 +13,8 @@ from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
 
 import nltk
-nltk.download('punkt')
+
+nltk.download("punkt")
 from nltk.tokenize import sent_tokenize
 import rclpy
 
@@ -267,7 +268,7 @@ class ASR(dialogue.AbstractDialogueNode):
         ):
             # If Angel keyword is not found, don't publish the utterance
             return
-    
+
         self.log.info("Publish thinking feedback")
         self.publish_feedback_response()
 
@@ -282,12 +283,12 @@ class ASR(dialogue.AbstractDialogueNode):
             index = text.lower().find(word)
             if index != -1:
                 # Remove everything before the word
-                result_text = text[index+6:]
+                result_text = text[index + 6 :]
                 break
-    
+
         published_msg.utterance_text = result_text
 
-        if self.pov_frame is None or len(self.pov_frame)<=1:
+        if self.pov_frame is None or len(self.pov_frame) <= 1:
             published_msg.pov_frame = ""
             self.log.info("No pov frame available")
         else:

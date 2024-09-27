@@ -114,7 +114,9 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
         response_text = ""
         try:
             if self.is_openai_ready:
-                response_text = self.prompt_gpt(msg.utterance_text, optional_fields, msg.pov_frame)
+                response_text = self.prompt_gpt(
+                    msg.utterance_text, optional_fields, msg.pov_frame
+                )
         except RuntimeError as err:
             self.log.info(err)
             response_text = "I'm sorry. I don't know how to answer your statement."
@@ -156,7 +158,9 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
         )
         self._qa_publisher.publish(publish_msg)
 
-    def prompt_gpt(self, question, optional_fields: str, pov_frame: str, model: str = "gpt-4o"):
+    def prompt_gpt(
+        self, question, optional_fields: str, pov_frame: str, model: str = "gpt-4o"
+    ):
         prompt = self.prompt.format(question=question, taskactivity=optional_fields)
         self.log.info(f'Prompting OpenAI with\n{question} with "{optional_fields}"\n')
 
@@ -169,7 +173,9 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
                 "temperature": 0.0,
                 "max_tokens": 128,
             }
-            self.log.info(f'Prompting OpenAI with\n{question} with "{optional_fields}" without pov frame.\n')
+            self.log.info(
+                f'Prompting OpenAI with\n{question} with "{optional_fields}" without pov frame.\n'
+            )
         else:
             payload = {
                 "model": model,
@@ -193,7 +199,9 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
                 "temperature": 0.0,
                 "max_tokens": 128,
             }
-            self.log.info(f'Prompting OpenAI with\n{question} with "{optional_fields}" and pov frame.\n')
+            self.log.info(
+                f'Prompting OpenAI with\n{question} with "{optional_fields}" and pov frame.\n'
+            )
 
         req = requests.post(
             "https://api.openai.com/v1/chat/completions",
