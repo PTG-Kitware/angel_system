@@ -72,14 +72,6 @@ windows:
             camera_name:="${ROS_NAMESPACE#/}"/zed
             camera_model:=zed2i
             ros_params_override_path:=${ANGEL_WORKSPACE_DIR}/config/zed_params_override.yaml
-        # Enable sending ROS2 messages to receiving agents in an HoloLens2 app.
-        - datahub: ros2 run ros_tcp_endpoint default_server_endpoint  --ros-args
-            -r __ns:=${ROS_NAMESPACE}
-            -p ROS_IP:=0.0.0.0
-        # Trim out the timestamp of the image topic of choice.
-        - run_image_timestamp: ros2 run angel_system_nodes image_timestamp_relay --ros-args
-            -r __ns:=${ROS_NAMESPACE}
-            -p image_topic:="${ZED_IMAGE_TOPIC}"
 
   - record:
       layout: even-vertical
