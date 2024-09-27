@@ -256,6 +256,7 @@ public class OrbMessageContainer : MonoBehaviour
     {
         UpdateAnchorInstant();
 
+        bool isDone = false;
         string tempName = "";
         foreach (string taskName in currentActiveTasks.Keys)
         {
@@ -263,10 +264,18 @@ public class OrbMessageContainer : MonoBehaviour
             {
                 if (currentActiveTasks[taskName].CurrStepIndex >= currentActiveTasks[taskName].Steps.Count)
                 {
-                    if (_taskNameToOrbPie[taskName].gameObject.activeSelf)
+                    if (currentActiveTasks.Count > 1)
                     {
-                        AudioManager.Instance.PlaySound(transform.position, SoundType.confirmation);
-                        _taskNameToOrbPie[taskName].gameObject.SetActive(false);
+                        if (_taskNameToOrbPie[taskName].gameObject.activeSelf)
+                        {
+                            AudioManager.Instance.PlaySound(transform.position, SoundType.confirmation);
+                            _taskNameToOrbPie[taskName].gameObject.SetActive(false);
+                        }
+                    } else
+                    {
+                        _taskNameToOrbPie[taskName].SetDoneMessage();
+                        _taskNameToOrbPie[taskName].UpdateCurrentTaskStatus(1f);
+                        isDone = true;
                     }
                 }
                 else
@@ -286,7 +295,7 @@ public class OrbMessageContainer : MonoBehaviour
         }
 
         // Only show the previous and next step at the orb if there is only one task
-        if (_taskNameToOrbPie.Count==1)
+        if (_taskNameToOrbPie.Count==1 && !isDone)
         {
             _prevText.text = "";
             _nextText.text = "";

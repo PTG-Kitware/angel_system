@@ -29,6 +29,13 @@ on_project_start: |
   # congestion slowdowns to message sending.
   export ROS_DOMAIN_ID=77
 
+  # Topic to use from those emitted from the ZED Wrapper launch stack.
+  # This name is *NOT* prepended with the common namespace.
+  export ZED_IMAGE_TOPIC="zed/zed_node/rgb_raw/image_raw_color"
+  # Expanding on the above, this is the topic for the timestamp extraction of
+  # the images used.
+  export ZED_IMAGE_TS_TOPIC="${ZED_IMAGE_TOPIC}_ts"
+  
   # Set the frame-rate to be used by multiple sources. This should be in frames
   # per second (Hz).
   export FRAME_RATE=15
@@ -75,6 +82,24 @@ windows:
         - datahub: ros2 run ros_tcp_endpoint default_server_endpoint --ros-args
             -r __ns:=${ROS_NAMESPACE}
             -p ROS_IP:=0.0.0.0
+            
+  - sensor_zed:
+      layout: even-vertical
+      panes:
+        # Read sensor input from a ZED 2i unit using the ROS2 wrapper.
+        # NOTE: The camera name given cannot start with a "/" as the value
+        # given is also used to prepend TF Frame IDs, which cannot begin with a
+        # slash.
+        - zed_bridge: ros2 launch zed_wrapper zed_camera.launch.py
+            camera_name:="${ROS_NAMESPACE#/}"/zed
+            camera_model:=zed2i
+            ros_params_override_path:=${ANGEL_WORKSPACE_DIR}/config/zed_params_override.yaml
+        # Trim out the timestamp of the image topic of choice.
+        - run_image_timestamp: ros2 run angel_system_nodes image_timestamp_relay --ros-args
+            -r __ns:=${ROS_NAMESPACE}
+            -p image_topic:="${ZED_IMAGE_TOPIC}"
+            -p output_topic:="${ZED_IMAGE_TS_TOPIC}"
+            
   - vocal:
       layout: even-vertical
       panes:
@@ -84,8 +109,8 @@ windows:
             -p output_voice_activity_topic:=DetectedVoiceData
             -p vad_server_url:=http://127.0.0.1:55667/vad
             -p vad_cadence:=4
-            -p vad_margin:=0.25
-            -p max_accumulation_length:=6
+            -p vad_margin:=0.20
+            -p max_accumulation_length:=5
             -p debug_mode:=True
         - asr: ros2 run angel_system_nodes asr --ros-args
             -r __ns:=${ROS_NAMESPACE}
@@ -94,7 +119,7 @@ windows:
             -p feedback_topic:=system_response_topic
             -p asr_server_url:=http://127.0.0.1:55667/asr
             -p asr_req_segment_duration:=1
-            -p is_sentence_tokenize:=True
+            -p is_sentence_tokenize:=False
             -p debug_mode:=True
             -p image_topic:=PVFramesBGR
 
@@ -135,7 +160,7 @@ windows:
 
   - pose_estimation: ros2 run angel_system_nodes pose_estimator --ros-args
       -r __ns:=${ROS_NAMESPACE}
-      -p image_topic:=PVFramesBGR
+      -p image_topic:=${ZED_IMAGE_TOPIC}
       -p det_topic:=pose_dets
       -p pose_topic:=PatientPose
       -p det_net_checkpoint:=${MODEL_DIR}/pose_estimation/pose_det_model.pth
@@ -143,18 +168,20 @@ windows:
       -p det_config:=${ANGEL_WORKSPACE_DIR}/python-tpl/TCN_HPL/tcn_hpl/data/utils/pose_generation/configs/medic_pose.yaml
       -p pose_config:=${ANGEL_WORKSPACE_DIR}/python-tpl/TCN_HPL/tcn_hpl/data/utils/pose_generation/configs/ViTPose_base_medic_casualty_256x192.py
       -p cuda_device_id:=0
+      -p det_conf_threshold:=0.0
 
   - object_and_hand_detection: ros2 run angel_system_nodes object_and_hand_detector --ros-args
       -r __ns:=${ROS_NAMESPACE}
-      -p image_topic:=PVFramesBGR
+      -p image_topic:=${ZED_IMAGE_TOPIC}
       -p det_topic:=ObjectDetections2d
       -p object_net_checkpoint:=${MODEL_DIR}/object_detector/r18_det.pt
+      -p inference_img_size:=768
       -p hand_net_checkpoint:=${MODEL_DIR}/object_detector/hands_model.pt
       -p cuda_device_id:=0
 
   - activity_classifier: ros2 run angel_system_nodes activity_classifier_tcn --ros-args
       -r __ns:=${ROS_NAMESPACE}
-      -p image_ts_topic:=PVFramesBGR_TS
+      -p image_ts_topic:=${ZED_IMAGE_TS_TOPIC}
       -p det_topic:=ObjectDetections2d
       -p pose_topic:=PatientPose
       -p model_weights:=${MODEL_DIR}/activity_classifier/r18_tcn.ckpt
@@ -164,6 +191,10 @@ windows:
       -p pose_repeat_rate:=7.5
       -p window_leads_with_objects:=true
       -p model_device:=0
+      
+  - keyboard_control: ros2 run angel_system_nodes keyboard_to_sys_cmd --ros-args
+          -r __ns:=${ROS_NAMESPACE}
+          -p system_command_topic:=SystemCommands
 
   - task_monitor:
       layout: even-vertical
@@ -184,6 +215,7 @@ windows:
             -p threshold_frame_count_weak:=3
             -p step_mode:=granular
             -p query_task_graph_topic:=query_task_graph
+            -p start_paused:=true
         - echo: sleep 0.5 && ros2 topic echo --no-arr "${ROS_NAMESPACE}/TaskUpdates"
 
   - engineering-ui:
@@ -191,7 +223,7 @@ windows:
       panes:
         - simple_2d_overlay: ros2 run angel_utils Simple2dDetectionOverlay --ros-args
             -r __ns:=${ROS_NAMESPACE}
-            -p topic_input_images:=PVFramesBGR
+            -p topic_input_images:=${ZED_IMAGE_TOPIC}
             -p topic_input_det_2d:=ObjectDetections2d
             -p topic_input_joints:=PatientPose
             -p topic_output_images:=pv_image_detections_2d

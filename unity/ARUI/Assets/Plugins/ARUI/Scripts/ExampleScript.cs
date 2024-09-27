@@ -139,6 +139,7 @@ public class ExampleScript : MonoBehaviour
         AngelARUI.Instance.RemoveWarningMessage();
     }
 
+
     private void GoToNextStepConfirmation()
     {
         if (_currentStepMap == null)

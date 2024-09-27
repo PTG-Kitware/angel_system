@@ -408,7 +408,6 @@ class GlobalStepPredictorNode(Node):
             tracker_dict_list = self.gsp.process_new_confidences(conf_array)
 
             print(f"conf_array: {conf_array}")
-            print(f"tracker_dict_list: {tracker_dict_list}")
 
             step_mode = self._step_mode
             for task in tracker_dict_list:
@@ -498,15 +497,6 @@ class GlobalStepPredictorNode(Node):
         message.description = f"Detected skip: {skipped_step}"
 
         self._task_error_publisher.publish(message)
-
-        # Publish a voice message to user if enabled.
-        if self._system_text_publisher is not None:
-            publish_msg = SystemTextResponse()
-            publish_msg.header.frame_id = "Skip detected"
-            publish_msg.header.stamp = self.get_clock().now().to_msg()
-            publish_msg.utterance_text = ""
-            publish_msg.response = "We detected you skipped a step. Please confirm the dialog if you want to go back."
-            self._system_text_publisher.publish(publish_msg)
 
     def publish_task_state_message(
         self,
