@@ -28,9 +28,6 @@ on_project_start: |
   # Topic to use from those emitted from the ZED Wrapper launch stack.
   # This name is *NOT* prepended with the common namespace.
   export ZED_IMAGE_TOPIC="zed/zed_node/rgb_raw/image_raw_color"
-  # Expanding on the above, this is the topic for the timestamp extraction of
-  # the images used.
-  export ZED_IMAGE_TS_TOPIC="${ZED_IMAGE_TOPIC}_ts"
 
 # Run on project start, the first time
 # on_project_first_start: command
