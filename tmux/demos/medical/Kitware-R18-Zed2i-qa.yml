@@ -5,7 +5,7 @@
 # This configuration is for the R18 Chest Seal task.
 #
 
-name: Kitware-R18-Chest-Seal
+name: Kitware-R18-Chest-Seal-qa-demo
 root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 
 # Optional tmux socket
@@ -20,7 +20,7 @@ root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 # on_project_start: command
 on_project_start: |
   export ROS_NAMESPACE=${ROS_NAMESPACE:-/kitware}
-  export HL2_IP=${HL2_IP:-192.168.1.4}
+  export HL2_IP=${HL2_IP:-172.20.10.12}
   export CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/config
   export NODE_CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/src/angel_system_nodes/configs
   export MODEL_DIR=${ANGEL_WORKSPACE_DIR}/model_files
@@ -29,6 +29,13 @@ on_project_start: |
   # congestion slowdowns to message sending.
   export ROS_DOMAIN_ID=77
 
+  # Topic to use from those emitted from the ZED Wrapper launch stack.
+  # This name is *NOT* prepended with the common namespace.
+  export ZED_IMAGE_TOPIC="zed/zed_node/rgb_raw/image_raw_color"
+  # Expanding on the above, this is the topic for the timestamp extraction of
+  # the images used.
+  export ZED_IMAGE_TS_TOPIC="${ZED_IMAGE_TOPIC}_ts"
+  
   # Set the frame-rate to be used by multiple sources. This should be in frames
   # per second (Hz).
   export FRAME_RATE=15
@@ -53,44 +60,107 @@ on_project_start: |
 tmux_options: -f <%= ENV["ANGEL_WORKSPACE_DIR"] %>/tmux/tmux.conf
 
 windows:
-  - sensor_input_bag:
+  - sensor_input_stream:
       layout: even-vertical
       panes:
-        # Read sensor input from bag file.
-        - sensor_input: echo ros2 bag play \
-            ${ANGEL_WORKSPACE_DIR}/ros_bags/rosbag2_2024_04_10-18_57_36-R18_Chris_live/
-            --remap /kitware/image_0:=/kitware/PVFramesBGR
+        # Read sensor input from a HoloLens2 unit using HL2SS.
+        - hl2ss_bridge: ros2 run angel_system_nodes hl2ss_ros_bridge --ros-args
+            -r __ns:=${ROS_NAMESPACE}
+            -p ip_addr:=${HL2_IP}
+            -p image_topic:=PVFramesBGR
+            -p image_ts_topic:=PVFramesBGR_TS
+            -p hand_pose_topic:=disable
+            -p audio_topic:=HeadsetAudioData
+            -p sm_topic:=disable
+            -p head_pose_topic:=disable
+            -p pv_width:=1280
+            -p pv_height:=720
+            -p pv_framerate:=${FRAME_RATE}
+            -p sm_freq:=5
+            -p rm_depth_AHAT:=disable
+        # Enable sending ROS2 messages to receiving agents in an HoloLens2 app.
+        - datahub: ros2 run ros_tcp_endpoint default_server_endpoint --ros-args
+            -r __ns:=${ROS_NAMESPACE}
+            -p ROS_IP:=0.0.0.0
+            
+  - sensor_zed:
+      layout: even-vertical
+      panes:
+        # Read sensor input from a ZED 2i unit using the ROS2 wrapper.
+        # NOTE: The camera name given cannot start with a "/" as the value
+        # given is also used to prepend TF Frame IDs, which cannot begin with a
+        # slash.
+        - zed_bridge: ros2 launch zed_wrapper zed_camera.launch.py
+            camera_name:="${ROS_NAMESPACE#/}"/zed
+            camera_model:=zed2i
+            ros_params_override_path:=${ANGEL_WORKSPACE_DIR}/config/zed_params_override.yaml
+        # Trim out the timestamp of the image topic of choice.
         - run_image_timestamp: ros2 run angel_system_nodes image_timestamp_relay --ros-args
             -r __ns:=${ROS_NAMESPACE}
+            -p image_topic:="${ZED_IMAGE_TOPIC}"
+            -p output_topic:="${ZED_IMAGE_TS_TOPIC}"
+            
+  - vocal:
+      layout: even-vertical
+      panes:
+        - vad: ros2 run angel_system_nodes voice_activity_detector --ros-args
+            -r __ns:=${ROS_NAMESPACE}
+            -p input_audio_topic:=HeadsetAudioData
+            -p output_voice_activity_topic:=DetectedVoiceData
+            -p vad_server_url:=http://127.0.0.1:55667/vad
+            -p vad_cadence:=4
+            -p vad_margin:=0.20
+            -p max_accumulation_length:=5
+            -p debug_mode:=True
+        - asr: ros2 run angel_system_nodes asr --ros-args
+            -r __ns:=${ROS_NAMESPACE}
+            -p audio_topic:=DetectedVoiceData
+            -p utterances_topic:=utterances_topic
+            -p feedback_topic:=system_response_topic
+            -p asr_server_url:=http://127.0.0.1:55667/asr
+            -p asr_req_segment_duration:=1
+            -p is_sentence_tokenize:=False
+            -p debug_mode:=True
             -p image_topic:=PVFramesBGR
-            -p output_topic:=PVFramesBGR_ts
 
-#  - sensor_input_stream:
-#      layout: even-vertical
-#      panes:
-#        # Read sensor input from a HoloLens2 unit using HL2SS.
-#        - hl2ss_bridge: ros2 run angel_system_nodes hl2ss_ros_bridge --ros-args
-#            -r __ns:=${ROS_NAMESPACE}
-#            -p ip_addr:=${HL2_IP}
-#            -p image_topic:=PVFramesBGR
-#            -p image_ts_topic:=PVFramesBGR_ts
-#            -p hand_pose_topic:=disable
-#            -p audio_topic:=disable
-#            -p sm_topic:=disable
-#            -p head_pose_topic:=disable
-#            -p pv_width:=1280
-#            -p pv_height:=720
-#            -p pv_framerate:=${FRAME_RATE}
-#            -p sm_freq:=5
-#            -p rm_depth_AHAT:=disable
-#        # Enable sending ROS2 messages to receiving agents in an HoloLens2 app.
-#        - datahub: ros2 run ros_tcp_endpoint default_server_endpoint --ros-args
-#            -r __ns:=${ROS_NAMESPACE}
-#            -p ROS_IP:=0.0.0.0
+  - emotion_detection:
+      layout: even-vertical
+      panes:
+        - base_emotion_detection: ros2 run angel_system_nodes base_emotion_detector --ros-args
+           -r __ns:=${ROS_NAMESPACE}
+           -p in_emotion_topic:=utterances_topic
+           -p out_emotion_topic:=base_emotion_output_topic
+        - gpt_emotion_detection: ros2 run angel_system_nodes gpt_emotion_detector --ros-args
+           -r __ns:=${ROS_NAMESPACE}
+           -p in_emotion_topic:=utterances_topic
+           -p out_emotion_topic:=gpt_emotion_output_topic
+
+  - intent_detection:
+      layout: even-vertical
+      panes:
+        - base_intent_detection: ros2 run angel_system_nodes base_intent_detector --ros-args
+           -r __ns:=${ROS_NAMESPACE}
+           -p in_intent_topic:=base_emotion_output_topic
+           -p out_intent_topic:=base_intent_output_topic
+        - gpt_intent_detection: ros2 run angel_system_nodes gpt_intent_detector --ros-args
+           -r __ns:=${ROS_NAMESPACE}
+           -p in_intent_topic:=base_emotion_output_topic
+           -p out_intent_topic:=gpt_intent_output_topic
+
+  - question_answering:
+      layout: even-vertical
+      panes:
+        - gpt_question_answering: ros2 run angel_system_nodes question_answerer --ros-args
+           -r __ns:=${ROS_NAMESPACE}
+           -p in_qa_topic:=gpt_intent_output_topic
+           -p out_qa_topic:=system_response_topic
+           -p must_contain_target_phrase:=True
+           -p task_state_topic:=TaskUpdates
+           -p few_shot_prompt_file:=${CONFIG_DIR}/llm_prompts/r18_steps_prompt
 
   - pose_estimation: ros2 run angel_system_nodes pose_estimator --ros-args
       -r __ns:=${ROS_NAMESPACE}
-      -p image_topic:=PVFramesBGR
+      -p image_topic:=${ZED_IMAGE_TOPIC}
       -p det_topic:=pose_dets
       -p pose_topic:=PatientPose
       -p det_net_checkpoint:=${MODEL_DIR}/pose_estimation/pose_det_model.pth
@@ -98,10 +168,11 @@ windows:
       -p det_config:=${ANGEL_WORKSPACE_DIR}/python-tpl/TCN_HPL/tcn_hpl/data/utils/pose_generation/configs/medic_pose.yaml
       -p pose_config:=${ANGEL_WORKSPACE_DIR}/python-tpl/TCN_HPL/tcn_hpl/data/utils/pose_generation/configs/ViTPose_base_medic_casualty_256x192.py
       -p cuda_device_id:=0
+      -p det_conf_threshold:=0.0
 
   - object_and_hand_detection: ros2 run angel_system_nodes object_and_hand_detector --ros-args
       -r __ns:=${ROS_NAMESPACE}
-      -p image_topic:=PVFramesBGR
+      -p image_topic:=${ZED_IMAGE_TOPIC}
       -p det_topic:=ObjectDetections2d
       -p object_net_checkpoint:=${MODEL_DIR}/object_detector/r18_det.pt
       -p inference_img_size:=768
@@ -110,7 +181,7 @@ windows:
 
   - activity_classifier: ros2 run angel_system_nodes activity_classifier_tcn --ros-args
       -r __ns:=${ROS_NAMESPACE}
-      -p image_ts_topic:=PVFramesBGR_ts
+      -p image_ts_topic:=${ZED_IMAGE_TS_TOPIC}
       -p det_topic:=ObjectDetections2d
       -p pose_topic:=PatientPose
       -p model_weights:=${MODEL_DIR}/activity_classifier/r18_tcn.ckpt
@@ -120,16 +191,21 @@ windows:
       -p pose_repeat_rate:=7.5
       -p window_leads_with_objects:=true
       -p model_device:=0
+      
+  - keyboard_control: ros2 run angel_system_nodes keyboard_to_sys_cmd --ros-args
+          -r __ns:=${ROS_NAMESPACE}
+          -p system_command_topic:=SystemCommands
 
   - task_monitor:
       layout: even-vertical
       panes:
         - gsp: ros2 run angel_system_nodes global_step_predictor --ros-args
             -r __ns:=${ROS_NAMESPACE}
-            -p config_file:=${CONFIG_DIR}/tasks/medical/multi-task-config-medical-r18.yaml
-            -p activity_config_file:=${CONFIG_DIR}/activity_labels/medical/r18.yaml
+            -p config_file:=${CONFIG_DIR}/tasks/medical/multi-task-config-medical-r18-demo.yaml
+            -p activity_config_file:=${CONFIG_DIR}/activity_labels/medical/r18-demo.yaml
             -p task_state_topic:=TaskUpdates
             -p task_error_topic:=ARUISystemNotifications
+            -p system_text_topic:=system_response_topic
             -p system_command_topic:=SystemCommands
             -p det_topic:=activity_topic
             -p model_file:=${MODEL_DIR}/task_monitor/global_step_predictor_act_avgs_R18.npy
@@ -139,6 +215,7 @@ windows:
             -p threshold_frame_count_weak:=3
             -p step_mode:=granular
             -p query_task_graph_topic:=query_task_graph
+            -p start_paused:=true
         - echo: sleep 0.5 && ros2 topic echo --no-arr "${ROS_NAMESPACE}/TaskUpdates"
 
   - engineering-ui:
@@ -146,7 +223,7 @@ windows:
       panes:
         - simple_2d_overlay: ros2 run angel_utils Simple2dDetectionOverlay --ros-args
             -r __ns:=${ROS_NAMESPACE}
-            -p topic_input_images:=PVFramesBGR
+            -p topic_input_images:=${ZED_IMAGE_TOPIC}
             -p topic_input_det_2d:=ObjectDetections2d
             -p topic_input_joints:=PatientPose
             -p topic_output_images:=pv_image_detections_2d
@@ -166,8 +243,9 @@ windows:
       -r __ns:=${ROS_NAMESPACE}
       -p activity_detector_topic:=activity_topic
       -p object_detection_topic:=ObjectDetections3d
-      -p task_monitor_topic:=TaskUpdates
       -p arui_update_topic:=AruiUpdates
       -p interp_user_intent_topic:=UserIntentPredicted
-      -p system_text_response_topic:=SystemTextResponse
-      -p system_notification_topic:=ARUISystemNotifications
+      -p utterances_topic:=utterances_topic
+      -p system_text_response_topic:=system_response_topic
+      -p task_monitor_topic:=TaskUpdates
+      -p task_error_topic:=ARUISystemNotifications

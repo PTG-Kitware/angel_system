@@ -28,7 +28,7 @@ PARAM_TASK_MONITOR_TOPIC = "task_monitor_topic"
 PARAM_ARUI_UPDATE_TOPIC = "arui_update_topic"
 PARAM_INTERP_USER_INTENT_TOPIC = "interp_user_intent_topic"
 PARAM_SYSTEM_TEXT_RESPONSE_TOPIC = "system_text_response_topic"
-PARAM_SYSTEM_NOTIFICATION_TOPIC = "system_notification_topic"
+PARAM_SYSTEM_NOTIFICATION_TOPIC = "task_error_topic"
 
 
 class FeedbackGenerator(Node):
@@ -99,7 +99,7 @@ class FeedbackGenerator(Node):
             1,
         )
 
-        self.system_text_subscriber = self.create_subscription(
+        self.system_notification_subscriber = self.create_subscription(
             AruiUserNotification,
             self._system_notification_topic,
             self.system_notification_callback,
@@ -268,6 +268,7 @@ class FeedbackGenerator(Node):
 
         notification.title = f"{msg.utterance_text}"
         notification.description = f"{msg.response}"
+
         self.log.debug(f"Publishing message to ARUI {msg.response}")
         self.publish_update(notifications=[notification])
 

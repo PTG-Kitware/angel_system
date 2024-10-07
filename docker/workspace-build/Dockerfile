@@ -4,10 +4,8 @@
 # Assumptions:
 # - ROS_DISTRO is defined with the name of a distribution installed under /opt/ros/
 #
-ARG PTG_REGISTRY
-ARG BASE_IMAGE
-ARG PTG_TAG
-FROM ${PTG_REGISTRY}/${BASE_IMAGE}:${PTG_TAG} AS base
+ARG ROS_VERSION
+FROM osrf/ros:${ROS_VERSION}-desktop AS base
 
 SHELL ["/bin/bash", "-c"]
 
@@ -16,11 +14,22 @@ ENV LC_ALL=C.UTF-8 \
     LANG=C.UTF-8
 
 # Basic system package installations
+ENV DEBIAN_FRONTEND=noninteractive
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     apt-get -y update \
  && apt-get -y install \
+        bash-completion \
+        gdb \
         gettext-base \
+        htop \
+        iproute2 \
+        less \
+        vim \
+        parallel \
+        tmux \
+        tree \
+        wget \
         python3-pip \
         python3-venv \
         ros-${ROS_DISTRO}-image-transport-plugins \
@@ -40,16 +49,41 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         libxext6 \
         libx11-6
 
-# Env vars for the nvidia-container-runtime.
-ENV NVIDIA_VISIBLE_DEVICES all
-ENV NVIDIA_DRIVER_CAPABILITIES graphics,utility,compute
+# Activate some bash completion
+RUN echo "source /etc/bash_completion" >> ~/.bashrc \
+ && echo "source /usr/share/colcon_argcomplete/hook/colcon-argcomplete.bash" >> ~/.bashrc
+
+# Acquire and install NVIDIA CUDA 12.5
+RUN --mount=type=cache,target=/root/nvidia,sharing=locked \
+    wget https://developer.download.nvidia.com/compute/cuda/12.5.0/local_installers/cuda_12.5.0_555.42.02_linux.run \
+      --no-verbose -c -O /root/nvidia/cuda_12.5.0_555.42.02_linux.run \
+  && chmod +x /root/nvidia/cuda_12.5.0_555.42.02_linux.run \
+  && /root/nvidia/cuda_12.5.0_555.42.02_linux.run --silent --toolkit
+ENV PATH /usr/local/cuda-12.5/bin:$PATH
+ENV LD_LIBRARY_PATH /usr/local/cuda-12.5/lib64:$LD_LIBRARY_PATH
+
+# Install ZED SDK and dependencies.
+# We are skipping the python installation here as the pacakge version has been
+# manually deduced and added to our poetry configuration to allow for its
+# depedencies to be resolved along side everything else we use.
+RUN --mount=type=cache,target=/root/zed,sharing=locked \
+    --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt install zstd \
+ && wget https://download.stereolabs.com/zedsdk/4.1/cu121/ubuntu20 \
+      --no-verbose -c -O /root/zed/ZED_SDK_Ubuntu20_cuda12.1_v4.1.2.zstd.run \
+ && chmod +x /root/zed/ZED_SDK_Ubuntu20_cuda12.1_v4.1.2.zstd.run \
+ && /root/zed/ZED_SDK_Ubuntu20_cuda12.1_v4.1.2.zstd.run \
+    --quiet \
+    --target /root/zed/install \
+    -- \
+    --silent \
+    --skip_python
 
 # For the demo-ui
-# TODO: Probably upgrade what nodejs version is being used.
-# TODO: Getting a warning about this script being deprecated, so update the installation method, too.
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    (curl -sL https://deb.nodesource.com/setup_14.x | bash -) \
+    (curl -sL https://deb.nodesource.com/setup_20.x | bash -) \
  && apt-get install -y nodejs \
  && node -v \
  && npm -v
@@ -72,6 +106,7 @@ RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked \
 # This should be an absolute path.
 ARG ANGEL_WORKSPACE_DIR
 ENV ANGEL_WORKSPACE_DIR="${ANGEL_WORKSPACE_DIR}"
+WORKDIR "${ANGEL_WORKSPACE_DIR}"
 
 #
 # Isolate package.xml files for rosdep dependency installation.
@@ -102,8 +137,7 @@ COPY poetry.lock pyproject.toml docker/workspace_build_pydep_install.sh "${ANGEL
 COPY ./python-tpl "${ANGEL_WORKSPACE_DIR}/python-tpl"
 RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked \
     --mount=type=cache,target=/root/.cache/pypoetry,sharing=locked \
-    cd "${ANGEL_WORKSPACE_DIR}" \
- && "${ANGEL_WORKSPACE_DIR}/workspace_build_pydep_install.sh"
+    "${ANGEL_WORKSPACE_DIR}/workspace_build_pydep_install.sh"
 
 # Create editable-installation hooks for the angel_system python package.
 # * The container is intended to be environment-only, but it is highly
@@ -115,22 +149,9 @@ RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked \
 # * This is intentionally separated from the above dep installation so as to
 #   not trigger re-installation of all dependencies if there is only a change
 #   in the library and not with the libraries dependencies.
-RUN cd "${ANGEL_WORKSPACE_DIR}" \
- && mkdir "${ANGEL_WORKSPACE_DIR}"/angel_system \
+RUN mkdir "${ANGEL_WORKSPACE_DIR}"/angel_system \
  && touch "${ANGEL_WORKSPACE_DIR}"/angel_system/__init__.py \
  && pip install --no-deps -e .
-
-## TODO: Remove -- environment only container
-## Build the ROS workspace.
-#COPY ./ros "${ANGEL_WORKSPACE_DIR}/src"
-#COPY docker/workspace_build_ros.sh "${ANGEL_WORKSPACE_DIR}"/
-#RUN "${ANGEL_WORKSPACE_DIR}/workspace_build_ros.sh"
-#
-## TODO: Remove -- environment only container
-## Build the required NPM envirnment for the Engineering UI.
-#COPY docker/workspace_build_npm_install.sh "${ANGEL_WORKSPACE_DIR}"/
-#RUN cd "${ANGEL_WORKSPACE_DIR}"/src/angel_utils/demo_ui/ \
-# && "${ANGEL_WORKSPACE_DIR}/workspace_build_npm_install.sh"
 
 # Bring in tmux run configurations
 # - add symlink to tmuxinator's expected "config home"
@@ -147,6 +168,5 @@ COPY docker/cyclonedds_profile.xml.tmpl \
      docker/workspace_test.sh \
      "${ANGEL_WORKSPACE_DIR}"/
 
-WORKDIR "${ANGEL_WORKSPACE_DIR}"
 ENTRYPOINT ["./workspace_entrypoint.sh"]
 CMD ["bash"]

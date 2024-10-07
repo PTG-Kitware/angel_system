@@ -17,6 +17,7 @@ class AbstractDialogueNode(Node):
         msg.header.stamp = copy_time
 
         msg.utterance_text = src_msg.utterance_text
+        msg.pov_frame = src_msg.pov_frame
 
         # Copy all optional fields below.
 

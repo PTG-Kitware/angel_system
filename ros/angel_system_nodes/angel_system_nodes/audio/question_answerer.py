@@ -3,16 +3,10 @@ from dataclasses import dataclass
 import json
 import openai
 import os
-import io
 import queue
-import base64
-import PIL.Image
-import numpy as np
-from cv_bridge import CvBridge
 
 import requests
 from termcolor import colored
-from sensor_msgs.msg import Image
 import threading
 
 from angel_msgs.msg import DialogueUtterance, SystemTextResponse, TaskUpdate
@@ -24,13 +18,10 @@ from angel_utils import make_default_main
 openai.organization = os.getenv("OPENAI_ORG_ID")
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-BRIDGE = CvBridge()
-
 INPUT_QA_TOPIC = "in_qa_topic"
 OUT_QA_TOPIC = "out_qa_topic"
 FEW_SHOT_PROMPT = "few_shot_prompt_file"
 CHAT_HISTORY_LENGTH = "chat_history_length"
-IMAGE_TOPIC = "image_topic"
 TASK_STATE_TOPIC = "task_state_topic"
 
 
@@ -45,7 +36,6 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
                 (OUT_QA_TOPIC,),
                 (FEW_SHOT_PROMPT,),
                 (CHAT_HISTORY_LENGTH, -1),
-                (IMAGE_TOPIC,),
                 (TASK_STATE_TOPIC,),
             ],
         )
@@ -54,7 +44,6 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
         self._out_qa_topic = param_values[OUT_QA_TOPIC]
         self._chat_history_length = param_values[CHAT_HISTORY_LENGTH]
         self.prompt_file = param_values[FEW_SHOT_PROMPT]
-        self.image_topic = param_values[IMAGE_TOPIC]
 
         self.question_queue = queue.Queue()
         self.handler_thread = threading.Thread(target=self.process_question_queue)
@@ -94,20 +83,8 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
         publish_msg.header.frame_id = "GPT Question Answering"
         publish_msg.header.stamp = self.get_clock().now().to_msg()
         publish_msg.utterance_text = ""
-        publish_msg.response = "Hello! Ask me anything. Just start with my name."
+        publish_msg.response = "Hello! Ask me anything. Just start with 'Angel'"
         self._qa_publisher.publish(publish_msg)
-
-        # Single slot for latest image message to process detection over.
-        self.image_msg: Image = ""
-
-        self.log.info("Creating subscription to image topic")
-        # Initialize ROS hooks
-        self.subscription = self.create_subscription(
-            Image,
-            self.image_topic,
-            self.process_image_callback,
-            1,
-        )
 
         self.log.info("Creating subscription to task topic")
         # Configure the optional task updates subscription.
@@ -137,22 +114,13 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
         response_text = ""
         try:
             if self.is_openai_ready:
-                response_text = self.prompt_gpt(msg.utterance_text, optional_fields)
+                response_text = self.prompt_gpt(
+                    msg.utterance_text, optional_fields, msg.pov_frame
+                )
         except RuntimeError as err:
             self.log.info(err)
             response_text = "I'm sorry. I don't know how to answer your statement."
         return response_text
-
-    def process_image_callback(self, image: Image):
-        # image is type sensor_msgs.msg encoding BGR8
-        img0 = BRIDGE.imgmsg_to_cv2(image, desired_encoding="bgr8")
-
-        # Convert img0 into RGB and create a PIL image instance.
-        img_rgb = PIL.Image.fromarray(img0[:, :, ::-1], mode="RGB")
-        img_rgb = img_rgb.resize(np.divide(img_rgb.size, 4).astype(int))
-        jpg_container = io.BytesIO()
-        img_rgb.save(jpg_container, format="JPEG")
-        self.image_msg = base64.b64encode(jpg_container.getvalue()).decode("utf-8")
 
     def question_answer_callback(self, msg):
         self.log.debug(f"Received message:\n\n{msg.utterance_text}")
@@ -190,11 +158,13 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
         )
         self._qa_publisher.publish(publish_msg)
 
-    def prompt_gpt(self, question, optional_fields: str, model: str = "gpt-4o"):
+    def prompt_gpt(
+        self, question, optional_fields: str, pov_frame: str, model: str = "gpt-4o"
+    ):
         prompt = self.prompt.format(question=question, taskactivity=optional_fields)
         self.log.info(f'Prompting OpenAI with\n{question} with "{optional_fields}"\n')
 
-        if self.image_msg == None or len(self.image_msg) <= 1:
+        if pov_frame == None or len(pov_frame) <= 1:
             payload = {
                 "model": model,
                 "messages": [
@@ -203,6 +173,9 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
                 "temperature": 0.0,
                 "max_tokens": 128,
             }
+            self.log.info(
+                f'Prompting OpenAI with\n{question} with "{optional_fields}" without pov frame.\n'
+            )
         else:
             payload = {
                 "model": model,
@@ -212,13 +185,12 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
                         "content": [
                             {
                                 "type": "text",
-                                "text": "Use the image to answer the question."
-                                + prompt,
+                                "text": prompt,
                             },
                             {
                                 "type": "image_url",
                                 "image_url": {
-                                    "url": "data:image/jpeg;base64," + self.image_msg
+                                    "url": "data:image/jpeg;base64," + pov_frame
                                 },
                             },
                         ],
@@ -227,17 +199,23 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
                 "temperature": 0.0,
                 "max_tokens": 128,
             }
+            self.log.info(
+                f'Prompting OpenAI with\n{question} with "{optional_fields}" and pov frame.\n'
+            )
 
         req = requests.post(
             "https://api.openai.com/v1/chat/completions",
             json=payload,
             headers={"Authorization": "Bearer {}".format(self.openai_api_key)},
         )
-        return (
-            json.loads(req.text)["choices"][0]["message"]["content"]
-            .split("A:")[-1]
-            .lstrip()
-        )
+        try:
+            return (
+                json.loads(req.text)["choices"][0]["message"]["content"]
+                .split("A:")[-1]
+                .lstrip()
+            )
+        except:
+            return "I'm sorry. Please try to repeat your question."
 
     def _get_optional_fields_string(
         self, current_step: int, completed_steps: list
@@ -253,16 +231,16 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
                 optional_fields_string += f"I am done with all steps."
             elif current_step == 0:
                 # user is at step 1
-                optional_fields_string += f"I am doing {current_step+1}"
-                optional_fields_string += f" and I am about to do {current_step+2}"
+                optional_fields_string += f"I am doing {current_step}"
+                optional_fields_string += f" and I am about to do {current_step+1}"
             else:
-                optional_fields_string += f"I am doing {current_step+1}"
+                optional_fields_string += f"I am doing {current_step}"
                 if current_step <= len(completed_steps) - 2:
-                    optional_fields_string += f" and I am about to do {current_step+2}"
+                    optional_fields_string += f" and I am about to do {current_step+1}"
 
         return optional_fields_string.rstrip("\n")
 
-    def prompt_gpt_with_chat_history(self, question, model: str = "gpt-3.5-turbo"):
+    def prompt_gpt_with_chat_history(self, question, model: str = "gpt-4o"):
         prompt = self.prompt.format(
             chat_history=self._format_chat_history_str(), question=question
         )
@@ -270,7 +248,7 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
         payload = {
             "model": model,
             "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0.7,
+            "temperature": 0.0,
             "max_tokens": 128,
         }
         req = requests.post(
@@ -305,14 +283,7 @@ class QuestionAnswerer(dialogue.AbstractDialogueNode):
         none if the message should be filtered out. Else, return the incoming
         msg if it can be included.
         """
-        if (
-            "angela" in msg.utterance_text.lower()
-            or "angel" in msg.utterance_text.lower()
-            or "angela," in msg.utterance_text.lower()
-            or "angel," in msg.utterance_text.lower()
-        ):
-            return msg
-        return None
+        return msg
 
     @dataclass(frozen=True)
     class ChatMessage:

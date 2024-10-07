@@ -17,11 +17,11 @@ $.get( "/topics")
             var title = "TASK ERROR: " + m.title;
 
             var btn = document.createElement('button');
-            btn.className = "collapsible lapse text body-text";
+            btn.className = "collapsible lapse text error-btn";
             btn.innerText = btn.textContent = title;
 
             var content_box = document.createElement('div');
-            content_box.className = "content text body-text";
+            content_box.className = "content text error-body-text";
 
             var msg = document.createElement('p');
             msg.innerHTML = m.description;

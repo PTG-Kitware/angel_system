@@ -140,6 +140,12 @@ public class AngelARUI : Singleton<AngelARUI>
     public void GoToStep(string taskID, int stepIndex) => DataProvider.Instance.SetCurrentStep(taskID, stepIndex);
 
     /// <summary>
+    /// TODO
+    /// </summary>
+    /// <param name="taskID"></param>
+    public void SetAsDone(string taskID) => DataProvider.Instance.SetAsDone(taskID);
+
+    /// <summary>
     /// Set the 
     /// </summary>
     /// <param name="taskID"></param>

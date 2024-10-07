@@ -11,6 +11,9 @@ std_msgs/Header header
 # Speech-to-text of the user utterance we have interpreted
 string utterance_text
 
+# Image frame at the time the user utterance was captured
+string pov_frame
+
 # Below are optional fields 
 
 # Canonical user intent that has been interpreted. "Canonical" in this context

@@ -28,25 +28,24 @@ Options:
 dc_forward_params=()
 while [[ $# -gt 0 ]]
 do
-  case "$1" in
+  key="$1"
+  shift
+  case "$key" in
     -h|--help)
       usage
       exit 0
       ;;
     -f|--force)
       log "Forcing build regardless of workspace hygiene."
-      shift
       FORCE_BUILD=1
       ;;
     --)
       # Escape the remainder of args as to be considered passthrough
-      shift
       dc_forward_params+=("${@}")
       break
       ;;
     *)  # anything else
-      dc_forward_params+=("$1")
-      shift
+      dc_forward_params+=("$key")
   esac
 done
 
@@ -55,27 +54,36 @@ done
 #       part of docker builds. Maybe read this in from somewhere else instead
 #       of encoding here?
 warn_build_spaces=(
-  "${SCRIPT_DIR}/ros"
-  "${SCRIPT_DIR}/docker"
-  "${SCRIPT_DIR}/pyproject.toml"
-  "${SCRIPT_DIR}/poetry.lock"
-  "${SCRIPT_DIR}/angel_system"
-  "${SCRIPT_DIR}/tmux"
+  "ros"
+  "docker"
+  "pyproject.toml"
+  "poetry.lock"
+  "angel_system"
+  "tmux"
 )
 # Check if there are tracked file modifications.
-git_status="$(git status --porcelain "${warn_build_spaces[@]}")"
-git_sm_status="$(git submodule foreach git status --porcelain)"
-git_sm_q_status="$(git submodule --quiet foreach git status --porcelain)"
+git_status="$(cd "${SCRIPT_DIR}" && git status --porcelain "${warn_build_spaces[@]}")"
+git_sm_status="$(cd "${SCRIPT_DIR}" && git submodule foreach git status --porcelain)"
+git_sm_q_status="$(cd "${SCRIPT_DIR}" && git submodule --quiet foreach git status --porcelain)"
 # Check if there are ignored files in the workspace that should not be there.
-git_clean_dr_cmd=( git clean "${warn_build_spaces[@]}" -Xdn )
-git_clean_dr="$("${git_clean_dr_cmd[@]}")"
+# Items that are excluded here (-e) are paths that are included in *both* the
+# .gitignore and .dockerignore files.
+git_clean_dr_cmd=(
+  git clean
+  "${warn_build_spaces[@]}"
+  -e "ros/angel_utils/multi_task_demo_ui/node_modules/"
+  -xdn
+)
+git_clean_dr="$(cd "${SCRIPT_DIR}" && "${git_clean_dr_cmd[@]}")"
 # Check for unclean files in submodules not caught by the above.
 # Quiet version is for checking, non-quiet version is for reporting (it's
 # informational).
 git_sm_clean_dr_cmd=( git submodule foreach --recursive git clean -xdn )
 git_sm_q_clean_dr_cmd=( git submodule --quiet foreach --recursive git clean -xdn )
-git_sm_clean_dr="$(${git_sm_clean_dr_cmd[@]})"
-git_sm_q_clean_dr="$(${git_sm_q_clean_dr_cmd[@]})"
+# shellcheck disable=SC2068
+git_sm_clean_dr="$(cd "${SCRIPT_DIR}" && ${git_sm_clean_dr_cmd[@]})"
+# shellcheck disable=SC2068
+git_sm_q_clean_dr="$(cd "${SCRIPT_DIR}" && ${git_sm_q_clean_dr_cmd[@]})"
 if [[ -n "${git_status}" ]] || [[ -n "${git_sm_q_status}" ]] || [[ -n "${git_clean_dr}" ]] || [[ -n "${git_sm_q_clean_dr}" ]]
 then
   log "WARNING: Docker/ROS workspace subtree is modified and/or un-clean."
@@ -91,12 +99,12 @@ then
   fi
   if [[ -n "${git_clean_dr}" ]]
   then
-    log "WARNING: -- There are unexpected ignored files (check \`${git_clean_dr_cmd[@]}\`)."
+    log "WARNING: -- There are unexpected ignored files (check \`${git_clean_dr_cmd[*]}\`)."
     log "${git_clean_dr}"
   fi
   if [[ -n "${git_sm_q_clean_dr}" ]]
   then
-    log "WARNING: -- Submodules have unclean states (check \`${git_sm_clean_dr_cmd[@]}\`).)"
+    log "WARNING: -- Submodules have unclean states (check \`${git_sm_clean_dr_cmd[*]}\`).)"
     log "${git_sm_clean_dr}"
   fi
   if [[ -n "$FORCE_BUILD" ]]
@@ -110,8 +118,7 @@ fi
 
 if [[ "${#dc_forward_params[@]}" -gt 0 ]]
 then
-  # shellcheck disable=SC2145
-  log "Forwarding to docker-compose: ${dc_forward_params[@]}"
+  log "Forwarding to docker-compose: ${dc_forward_params[*]}"
 fi
 
 get_docker_compose_cmd DC_CMD
@@ -120,4 +127,4 @@ get_docker_compose_cmd DC_CMD
   --env-file "$SCRIPT_DIR"/docker/.env \
   -f "$SCRIPT_DIR"/docker/docker-compose.yml \
   --profile build-only \
-  build "${dc_forward_params[@]}" "$@"
+  build "${dc_forward_params[@]}"

@@ -44,7 +44,7 @@ rich = "==13.7.1"
 chumpy = "==0.66"
 #mmpose = "==0.24"
 mmpose = {git = "https://github.com/periakiva/mmpose.git", branch="exp"}
-mmcv= "==1.3.8"
+mmcv = "==1.3.8"
 torch = {url = "https://download.pytorch.org/whl/cu111/torch-1.9.1%2Bcu111-cp38-cp38-linux_x86_64.whl"}
 torchvision = {url = "https://download.pytorch.org/whl/cu111/torchvision-0.10.1%2Bcu111-cp38-cp38-linux_x86_64.whl"}
 detectron2 = {url = "https://dl.fbaipublicfiles.com/detectron2/wheels/cu111/torch1.9/detectron2-0.6%2Bcu111-cp38-cp38-linux_x86_64.whl"}
@@ -90,6 +90,15 @@ tcn-hpl = {path = "python-tpl/TCN_HPL", develop = true}
 # Yolo v7 object detection
 yolov7 = {path = "python-tpl/yolov7", develop = true}
 
+# ZED SDK Python Package
+# Deduced from a manual installation of the ZED SDK, however the installation
+# script uses the `--ignore-installed` option for `pip install`, which clobbers
+# transitive dependency requirements of other packages specified here.
+# Including the known wheel via URL is our best option to avoid this issue.
+# This will need to be updated (or removed) if we change our platform or SDK
+# version used.
+pyzed = {url = "https://download.stereolabs.com/zedsdk/4.1/whl/linux_x86_64/pyzed-4.1-cp38-cp38-linux_x86_64.whl"}
+
 [tool.poetry.dev-dependencies]
 ipython = "*"
 # Docs
@@ -129,7 +138,7 @@ extend-exclude = '''
   ^/angel_system/berkeley
   | ^/angel_system/fasterrcnn
   | ^/python-tpl
-  | ^/ros/(ROS-TCP-Endpoint|rosbag2)
+  | ^/ros/(ROS-TCP-Endpoint|rosbag2|zed-ros2-wrapper)
   | ^/hl2ss
   | ^/install  # container-environment location derivative to source tree
 )

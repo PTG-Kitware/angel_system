@@ -20,7 +20,7 @@ root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 # on_project_start: command
 on_project_start: |
   export ROS_NAMESPACE=${ROS_NAMESPACE:-/kitware}
-  export HL2_IP=${HL2_IP:-192.168.4.70}
+  export HL2_IP=${HL2_IP:-172.20.10.12}
   export CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/config
   export NODE_CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/src/angel_system_nodes/configs
   export MODEL_DIR=${ANGEL_WORKSPACE_DIR}/model_files
@@ -83,9 +83,9 @@ windows:
             -p input_audio_topic:=HeadsetAudioData
             -p output_voice_activity_topic:=DetectedVoiceData
             -p vad_server_url:=http://127.0.0.1:55667/vad
-            -p vad_cadence:=3
-            -p vad_margin:=0.20
-            -p max_accumulation_length:=10
+            -p vad_cadence:=4
+            -p vad_margin:=0.25
+            -p max_accumulation_length:=6
             -p debug_mode:=True
         - asr: ros2 run angel_system_nodes asr --ros-args
             -r __ns:=${ROS_NAMESPACE}
@@ -94,8 +94,9 @@ windows:
             -p feedback_topic:=system_response_topic
             -p asr_server_url:=http://127.0.0.1:55667/asr
             -p asr_req_segment_duration:=1
-            -p is_sentence_tokenize:=False
+            -p is_sentence_tokenize:=True
             -p debug_mode:=True
+            -p image_topic:=PVFramesBGR
 
   - emotion_detection:
       layout: even-vertical
@@ -130,7 +131,6 @@ windows:
            -p out_qa_topic:=system_response_topic
            -p must_contain_target_phrase:=True
            -p task_state_topic:=TaskUpdates
-           -p image_topic:=PVFramesBGR
            -p few_shot_prompt_file:=${CONFIG_DIR}/llm_prompts/r18_steps_prompt
 
   - pose_estimation: ros2 run angel_system_nodes pose_estimator --ros-args
@@ -196,6 +196,8 @@ windows:
             -p topic_input_joints:=PatientPose
             -p topic_output_images:=pv_image_detections_2d
             -p filter_top_k:=5
+            -p max_image_history_seconds:=2.0
+            -p publish_latency_seconds:=0.15
         - websocket: ros2 launch rosbridge_server rosbridge_websocket_launch.xml port:=9090
         - engineering_ui_server: node ros/angel_utils/multi_task_demo_ui/index.js
             --namespace=${ROS_NAMESPACE}

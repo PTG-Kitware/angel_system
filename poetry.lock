@@ -5051,6 +5051,27 @@ files = [
 ]
 
 [[package]]
+name = "pyzed"
+version = "4.1"
+description = "Use the ZED SDK with Python"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "pyzed-4.1-cp38-cp38-linux_x86_64.whl", hash = "sha256:487a73e6597347bcb959f231683cfe8dadaeebc5e40b2f310f4680f97fad89c2"},
+]
+
+[package.dependencies]
+cython = ">=3.0.0"
+numpy = ">=1.13,<2.0"
+
+[package.extras]
+sample = ["opencv-python", "pyopengl"]
+
+[package.source]
+type = "url"
+url = "https://download.stereolabs.com/zedsdk/4.1/whl/linux_x86_64/pyzed-4.1-cp38-cp38-linux_x86_64.whl"
+
+[[package]]
 name = "pyzmq"
 version = "25.0.0"
 description = "Python bindings for 0MQ"
@@ -7412,4 +7433,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "==3.8.10"
-content-hash = "1e56832b897aa553c246c8d9f54505dd28152ea414b84bd479932635d3f20b04"
+content-hash = "6ef36222e39202b7a2ef60e0c3fb0cfaf74ab75846990d148d1fcd89a37c7c64"
