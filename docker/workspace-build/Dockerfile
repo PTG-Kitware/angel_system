@@ -4,7 +4,7 @@
 # Assumptions:
 # - ROS_DISTRO is defined with the name of a distribution installed under /opt/ros/
 #
-ARG ROS_VERSION
+ARG ROS_VERSION="foxy"
 FROM osrf/ros:${ROS_VERSION}-desktop AS base
 
 SHELL ["/bin/bash", "-c"]
@@ -59,8 +59,8 @@ RUN --mount=type=cache,target=/root/nvidia,sharing=locked \
       --no-verbose -c -O /root/nvidia/cuda_12.5.0_555.42.02_linux.run \
   && chmod +x /root/nvidia/cuda_12.5.0_555.42.02_linux.run \
   && /root/nvidia/cuda_12.5.0_555.42.02_linux.run --silent --toolkit
-ENV PATH /usr/local/cuda-12.5/bin:$PATH
-ENV LD_LIBRARY_PATH /usr/local/cuda-12.5/lib64:$LD_LIBRARY_PATH
+ENV PATH=/usr/local/cuda-12.5/bin:${PATH}
+ENV LD_LIBRARY_PATH=/usr/local/cuda-12.5/lib64:${LD_LIBRARY_PATH}
 
 # Install ZED SDK and dependencies.
 # We are skipping the python installation here as the pacakge version has been
