@@ -15,6 +15,3 @@
 	path = ros/rosbag2
 	url = https://github.com/ros2/rosbag2.git
 	branch = foxy-future
-[submodule "ros/zed-ros2-wrapper"]
-	path = ros/zed-ros2-wrapper
-	url = https://github.com/stereolabs/zed-ros2-wrapper.git
