@@ -171,3 +171,4 @@ windows:
       -p interp_user_intent_topic:=UserIntentPredicted
       -p system_text_response_topic:=SystemTextResponse
       -p system_notification_topic:=ARUISystemNotifications
+      -p task_error_topic:=ARUISystemNotifications
