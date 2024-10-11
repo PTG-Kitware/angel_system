@@ -255,7 +255,6 @@ class PoseEstimator(Node):
                 # height, width, chans = img0.shape
 
                 all_poses_msg = HandJointPosesUpdate()
-                all_poses_msg.header.stamp = self.get_clock().now().to_msg()
                 all_poses_msg.header.frame_id = image.header.frame_id
                 all_poses_msg.source_stamp = image.header.stamp
                 all_poses_msg.hand = "patient"
@@ -294,6 +293,7 @@ class PoseEstimator(Node):
                         joint_msg.pose = pose_msg
                         all_poses_msg.joints.append(joint_msg)
 
+                    all_poses_msg.header.stamp = self.get_clock().now().to_msg()
                     self.patient_pose_publisher.publish(all_poses_msg)
 
                 self._rate_tracker.tick()

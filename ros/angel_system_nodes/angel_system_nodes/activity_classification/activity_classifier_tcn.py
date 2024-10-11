@@ -793,7 +793,6 @@ class ActivityClassifierTCN(Node):
         # Prepare output message
         activity_msg = ActivityDetection()
         activity_msg.header.frame_id = "Activity Classification"
-        activity_msg.header.stamp = self.get_clock().now().to_msg()
         activity_msg.source_stamp_start_frame = window.frames[0][0]
         activity_msg.source_stamp_end_frame = window.frames[-1][0]
         activity_msg.label_vec = self._model.classes
@@ -825,6 +824,8 @@ class ActivityClassifierTCN(Node):
             f"@ TS={activity_msg.source_stamp_end_frame} "
             f"(hz: {self._rate_tracker.get_rate_avg()})",
         )
+
+        activity_msg.header.stamp = self.get_clock().now().to_msg()
 
         return activity_msg
 

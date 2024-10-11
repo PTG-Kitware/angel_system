@@ -255,7 +255,6 @@ class ObjectAndHandDetector(Node):
                 print(f"img0 type: {type(img0)}")
 
                 msg = ObjectDetection2dSet()
-                msg.header.stamp = self.get_clock().now().to_msg()
                 msg.header.frame_id = image.header.frame_id
                 msg.source_stamp = image.header.stamp
                 msg.label_vec[:] = label_vector
@@ -326,6 +325,7 @@ class ObjectAndHandDetector(Node):
 
                 msg.num_detections = n_dets
 
+                msg.header.stamp = self.get_clock().now().to_msg()
                 self._det_publisher.publish(msg)
 
                 self._rate_tracker.tick()
