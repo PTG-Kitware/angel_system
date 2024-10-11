@@ -224,3 +224,11 @@ cython_debug/
 # Temporary auto-generated Android Assets
 /unity/ARUI/[Aa]ssets/[Ss]treamingAssets/aa.meta
 /unity/ARUI/[Aa]ssets/[Ss]treamingAssets/aa/*
+
+# ignore the stuff dir
+stuff/
+
+# ignore local poetry cache and build artifacts
+cache/
+build_log/
+ros_home/
