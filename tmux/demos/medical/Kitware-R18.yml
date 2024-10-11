@@ -5,7 +5,7 @@
 # This configuration is for the R18 Chest Seal task.
 #
 
-name: Kitware-R18-Chest-Seal
+name: kitware-r18-chest-seal
 root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 
 # Optional tmux socket
@@ -20,7 +20,7 @@ root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 # on_project_start: command
 on_project_start: |
   export ROS_NAMESPACE=${ROS_NAMESPACE:-/kitware}
-  export HL2_IP=${HL2_IP:-192.168.1.4}
+  export HL2_IP=${HL2_IP:-192.168.4.2}
   export CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/config
   export NODE_CONFIG_DIR=${ANGEL_WORKSPACE_DIR}/src/angel_system_nodes/configs
   export MODEL_DIR=${ANGEL_WORKSPACE_DIR}/model_files
@@ -57,13 +57,28 @@ windows:
       layout: even-vertical
       panes:
         # Read sensor input from bag file.
-        - sensor_input: echo ros2 bag play \
-            ${ANGEL_WORKSPACE_DIR}/ros_bags/rosbag2_2024_04_10-18_57_36-R18_Chris_live/
-            --remap /kitware/image_0:=/kitware/PVFramesBGR
+        - sensor_input: echo ros2 run angel_system_nodes hl2ss_ros_bridge --ros-args
+            -r __ns:=${ROS_NAMESPACE}
+            -p ip_addr:=${HL2_IP}
+            -p image_topic:=PVFramesBGR
+            -p image_ts_topic:=PVFramesBGR_TS
+            -p hand_pose_topic:=disable
+            -p audio_topic:=HeadsetAudioData
+            -p sm_topic:=disable
+            -p head_pose_topic:=disable
+            -p pv_width:=1280
+            -p pv_height:=720
+            -p pv_framerate:=${FRAME_RATE}
+            -p sm_freq:=5
+            -p rm_depth_AHAT:=disable
         - run_image_timestamp: ros2 run angel_system_nodes image_timestamp_relay --ros-args
             -r __ns:=${ROS_NAMESPACE}
             -p image_topic:=PVFramesBGR
             -p output_topic:=PVFramesBGR_ts
+        - run_latency_node: ros2 run angel_system_nodes latency_tracker --ros-args
+            -r __ns:=${ROS_NAMESPACE} -p image_ts_topic:=PVFramesBGR_ts
+            -p det_topic:=ObjectDetections2d -p pose_topic:=PatientPose
+            -p activity_topic:=activity_topic -p latency_topic:=latency
 
 #  - sensor_input_stream:
 #      layout: even-vertical
