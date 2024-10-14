@@ -642,6 +642,7 @@ class ActivityClassifierTCN(Node):
                         act_msg = self._process_window(window)
                         # log.info(f"activity message: {act_msg}")
                         self._collect_results(act_msg)
+                        act_msg.header.stamp = self.get_clock().now().to_msg()
                         self._activity_publisher.publish(act_msg)
                     except NoActivityClassification:
                         # No ramifications, but don't publish activity message.
@@ -824,8 +825,6 @@ class ActivityClassifierTCN(Node):
             f"@ TS={activity_msg.source_stamp_end_frame} "
             f"(hz: {self._rate_tracker.get_rate_avg()})",
         )
-
-        activity_msg.header.stamp = self.get_clock().now().to_msg()
 
         return activity_msg
 
