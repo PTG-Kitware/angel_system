@@ -82,7 +82,11 @@ windows:
         - datahub: ros2 run ros_tcp_endpoint default_server_endpoint --ros-args
             -r __ns:=${ROS_NAMESPACE}
             -p ROS_IP:=0.0.0.0
-            
+        - run_latency_node: ros2 run angel_system_nodes latency_tracker --ros-args
+            -r __ns:=${ROS_NAMESPACE} -p image_ts_topic:=PVFramesBGR_ts
+            -p det_topic:=ObjectDetections2d -p pose_topic:=PatientPose
+            -p activity_topic:=activity_topic -p latency_topic:=latency
+
   - sensor_zed:
       layout: even-vertical
       panes:
