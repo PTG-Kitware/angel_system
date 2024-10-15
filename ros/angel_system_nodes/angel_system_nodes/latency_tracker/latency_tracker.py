@@ -15,9 +15,6 @@ from builtin_interfaces.msg import Time
 from std_msgs.msg import String as ros2_string
 
 
-BRIDGE = CvBridge()
-
-
 class LatencyTracker(Node):
     """
     ROS node that tracks latency of ros2 messages.
@@ -180,24 +177,24 @@ class LatencyTracker(Node):
 
                 # save the info to the message
                 data = {
-                    'detection': det_lat,
-                    'pose:': pose_lat,
-                    'activity_start': act_lat_start,
-                    'activity_end': act_lat_end
+                    "detection": det_lat,
+                    "pose:": pose_lat,
+                    "activity_start": act_lat_start,
+                    "activity_end": act_lat_end,
                 }
                 det_str = f"{det_lat:.3f}" if det_lat else "NA"
                 pose_str = f"{pose_lat:.3f}" if pose_lat else "NA"
                 acts_str = f"{act_lat_start:.3f}" if act_lat_start else "NA"
                 acte_str = f"{act_lat_end:.3f}" if act_lat_end else "NA"
-                log.info(f"Detection: {det_str}, Pose: {pose_str}, Activity.start: {acts_str}, Activity.end: {acte_str}")
+                log.info(
+                    f"Detection: {det_str}, Pose: {pose_str}, Activity.start: {acts_str}, Activity.end: {acte_str}"
+                )
                 msg.data = json.dumps(data, indent=0)
 
                 self._latency_publisher.publish(msg)
 
                 self._rate_tracker.tick()
-                log.info(
-                    f"Latency Rate: {self._rate_tracker.get_rate_avg()} Hz"
-                )
+                log.info(f"Latency Rate: {self._rate_tracker.get_rate_avg()} Hz")
 
     def img_ts_callback(self, msg: Time) -> None:
         """
@@ -220,10 +217,6 @@ class LatencyTracker(Node):
             self._pose = msg
 
     def act_callback(self, msg: ActivityDetection) -> None:
-        #log = self.get_logger()
-        #if self._enable_trace_logging:
-        #    log.info(f"Received activity: {msg}")
-
         with self._cur_act_msg_lock:
             self._act = msg
 
