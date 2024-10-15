@@ -1,7 +1,6 @@
 from threading import Event, Lock, Thread
 import json
 
-from cv_bridge import CvBridge
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from rclpy.node import Node
 
