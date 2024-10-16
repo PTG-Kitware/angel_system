@@ -8,8 +8,11 @@ from angel_system.utils.event import WaitAndClearEvent
 from angel_utils.conversion import time_to_float
 
 from angel_msgs.msg import ObjectDetection2dSet, HandJointPosesUpdate, ActivityDetection
-from angel_utils import declare_and_get_parameters, RateTracker  # , DYNAMIC_TYPE
-from angel_utils import make_default_main
+from angel_utils import (
+    declare_and_get_parameters,
+    RateTracker,  # DYNAMIC_TYPE
+    make_default_main
+)
 from builtin_interfaces.msg import Time
 from std_msgs.msg import String as ros2_string
 

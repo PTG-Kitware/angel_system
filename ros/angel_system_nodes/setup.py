@@ -68,7 +68,7 @@ setup(
             # Pose Estimator
             "pose_estimator = angel_system_nodes.pose_estimation.pose_estimator:main",
             # latency tracker
-            "latency_tracker = angel_system_nodes.latency_tracker.latency_tracker:main",
+            "latency_tracker = angel_system_nodes.latency_tracker:main",
         ],
     },
 )
