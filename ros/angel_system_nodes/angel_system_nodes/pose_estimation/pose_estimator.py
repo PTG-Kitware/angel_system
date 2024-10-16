@@ -255,6 +255,7 @@ class PoseEstimator(Node):
                 # height, width, chans = img0.shape
 
                 all_poses_msg = HandJointPosesUpdate()
+                # note: setting metdata# note: setting metdata right before publishing below right before publishing below
 
                 boxes, labels, keypoints = predict_single(
                     det_model=self.det_model,

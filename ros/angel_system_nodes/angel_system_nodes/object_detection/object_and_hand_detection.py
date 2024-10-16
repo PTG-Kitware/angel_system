@@ -255,6 +255,8 @@ class ObjectAndHandDetector(Node):
                 print(f"img0 type: {type(img0)}")
 
                 msg = ObjectDetection2dSet()
+                # note: setting metdata right before publishing below
+
                 n_dets = 0
                 dflt_conf_vec = np.zeros(n_classes, dtype=np.float64)
 
