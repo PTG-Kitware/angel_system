@@ -11,7 +11,7 @@ from angel_msgs.msg import ObjectDetection2dSet, HandJointPosesUpdate, ActivityD
 from angel_utils import (
     declare_and_get_parameters,
     RateTracker,  # DYNAMIC_TYPE
-    make_default_main
+    make_default_main,
 )
 from builtin_interfaces.msg import Time
 from std_msgs.msg import String as ros2_string
