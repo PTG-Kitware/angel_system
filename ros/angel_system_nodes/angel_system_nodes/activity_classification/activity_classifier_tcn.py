@@ -641,13 +641,12 @@ class ActivityClassifierTCN(Node):
 
                         act_msg = self._process_window(window)
                         # log.info(f"activity message: {act_msg}")
+
                         self._collect_results(act_msg)
-                        # set the header right before publishing so that the time is post image processing
+                        # set the header right before publishing so that the time is after processing
                         act_msg.header.frame_id = "Activity Classification"
                         act_msg.header.stamp = self.get_clock().now().to_msg()
-                        act_msg.source_stamp_start_frame = window.frames[0][0]
-                        act_msg.source_stamp_end_frame = window.frames[-1][0]
-                        act_msg.label_vec = self._model.classes
+
                         self._activity_publisher.publish(act_msg)
                     except NoActivityClassification:
                         # No ramifications, but don't publish activity message.
@@ -798,6 +797,12 @@ class ActivityClassifierTCN(Node):
 
         # Prepare output message
         activity_msg = ActivityDetection()
+        # set the window frames
+        activity_msg.source_stamp_start_frame = window.frames[0][0]
+        activity_msg.source_stamp_end_frame = window.frames[-1][0]
+
+        # save label vector
+        activity_msg.label_vec = self._model.classes
 
         # save the activity probabilities
         activity_msg.conf_vec = proba.tolist()
