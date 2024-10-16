@@ -255,9 +255,6 @@ class PoseEstimator(Node):
                 # height, width, chans = img0.shape
 
                 all_poses_msg = HandJointPosesUpdate()
-                all_poses_msg.header.frame_id = image.header.frame_id
-                all_poses_msg.source_stamp = image.header.stamp
-                all_poses_msg.hand = "patient"
 
                 boxes, labels, keypoints = predict_single(
                     det_model=self.det_model,
@@ -293,6 +290,10 @@ class PoseEstimator(Node):
                         joint_msg.pose = pose_msg
                         all_poses_msg.joints.append(joint_msg)
 
+                    # set the header metadata right before publishing to ensure the correct time
+                    all_poses_msg.header.frame_id = image.header.frame_id
+                    all_poses_msg.source_stamp = image.header.stamp
+                    all_poses_msg.hand = "patient"
                     all_poses_msg.header.stamp = self.get_clock().now().to_msg()
                     self.patient_pose_publisher.publish(all_poses_msg)
 
