@@ -136,9 +136,9 @@ class ObjectAndHandDetector(Node):
 
         ##########################################
         # Hand model
-        self.hand_model = YOLOv8(self._hand_model_chpt_fp)
+        self.hand_model = YOLOv8(self._hand_model_chpt_fp, task="detect")
         log.info(
-            f"Loaded hand model with classes:\n"
+            "Loaded hand model with classes:\n"
             + "\n".join(f'\t- "{n}"' for n in self.hand_model.names)
         )
 
