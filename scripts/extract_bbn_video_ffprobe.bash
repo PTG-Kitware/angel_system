@@ -1,4 +1,15 @@
 #!/bin/bash
+#
+# This is a convenience script to invoke ffprobe on all of the MP4 files found
+# under a directory, and then log the output of ffprobe in a symmetric location
+# in a working directory. This is due to expecting the MP4 source location to
+# be a read-only "golden" space that we don't want to write computed files to.
+#
+# Example:
+#   $ export DATAPATH=/path/to/data
+#   $ export WORKDIR=/path/to/workdir
+#   $ ./extract_bbn_video_ffprobe.bash
+#
 shopt -s globstar nullglob
 
 DATAPATH="${DATAPATH:-"/home/local/KHQ/paul.tunison/data/darpa-ptg/bbn_data/lab_data-golden"}"
