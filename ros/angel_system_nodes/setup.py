@@ -67,6 +67,8 @@ setup(
             "transform_update_lod = angel_system_nodes.task_monitoring.transform_update_lod:main",
             # Pose Estimator
             "pose_estimator = angel_system_nodes.pose_estimation.pose_estimator:main",
+            # latency tracker
+            "latency_tracker = angel_system_nodes.latency_tracker:main",
         ],
     },
 )

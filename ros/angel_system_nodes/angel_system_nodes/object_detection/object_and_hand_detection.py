@@ -255,13 +255,9 @@ class ObjectAndHandDetector(Node):
                 print(f"img0 type: {type(img0)}")
 
                 msg = ObjectDetection2dSet()
-                msg.header.stamp = self.get_clock().now().to_msg()
-                msg.header.frame_id = image.header.frame_id
-                msg.source_stamp = image.header.stamp
-                msg.label_vec[:] = label_vector
+                # note: setting metdata right before publishing below
 
                 n_dets = 0
-
                 dflt_conf_vec = np.zeros(n_classes, dtype=np.float64)
 
                 # Detect hands
@@ -326,6 +322,11 @@ class ObjectAndHandDetector(Node):
 
                 msg.num_detections = n_dets
 
+                # set header metadata before publishing to get the correct publish time
+                msg.header.frame_id = image.header.frame_id
+                msg.source_stamp = image.header.stamp
+                msg.label_vec[:] = label_vector
+                msg.header.stamp = self.get_clock().now().to_msg()
                 self._det_publisher.publish(msg)
 
                 self._rate_tracker.tick()
