@@ -71,8 +71,8 @@ girder_file_downloads:
       sha512: e6b382f5ba3d4d7f17d29caa3f6ea06dd5db24fee3bf59b12ff748d58b1b064c374741c805ee7c07a2a6950761a38e5398f3707ed3e83d7d53218972c57d12a2
       dest: "{{ stage_dirs.object_detector }}/m2_det.pt"
     # Activity classifier
-    - file_id: 6605d2c58b763ca20ae99f80
-      sha512: 5c463bba54dc689c57a3688fffc51b63c520c4fb74dfe7f2d527c6d2bfd42e2055747cb09ceeb21edcda4e695cbae0b10d1421a8453cf811d735c2496300bd2f
+    - file_id: 6711746dba16447d41e16643
+      sha512: dc7ff17eb6da00d4e31324b12c3ecc9077f0eb093245f221ca3f9f44826d8a52ac31b62b33856664128e6633ce99f31eebc8a60160755516938a33c55961bf4b
       dest: "{{ stage_dirs.activity_classifier }}/m2_tcn.ckpt"
     - file_id: 660ebb0aaa5c8de3874c43bd
       sha512: fe4697156ca48739d635b46eeb367122dbadf88f270d1a4f9566f0de6a1bc314566bcbe858e85a6926316a612dc29cba0f917b20b58380ac26a50c008c471a7f
