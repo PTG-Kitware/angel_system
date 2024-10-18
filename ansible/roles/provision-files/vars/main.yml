@@ -88,8 +88,8 @@ girder_file_downloads:
       sha512: b87dbb141e5446e9edce9e9e3691523b8a8a8695bd5eb420e1227e0f1b281303ceed2850d4df9b81a098e38d0f2fd452828b236eebe6dbd511134cffe38ef0aa
       dest: "{{ stage_dirs.object_detector }}/m3_det.pt"
     # Activity classifier
-    - file_id: 660eb920aa5c8de3874c43b4
-      sha512: bc42099d0c18a225ba387afec2bb12fb01b61b8f51e0cce053e0f1a026a6d0086fbac116c9c46e0c919da517c7b88fd92fa99facbd2df3d491d05eaa5cb1dfe9
+    - file_id: 67118442ba16447d41e16647
+      sha512: 819fe4b8d66c598df96aef4bf1e310eaba44cca97b170c2d349c2038d44bb53f2eb9d53ab763ec2cff20eedb62961ee1000f9a6f282d32745d1aa8a2a607f830
       dest: "{{ stage_dirs.activity_classifier }}/m3_tcn.ckpt"
     - file_id: 660ebb09aa5c8de3874c43ba
       sha512: 828d836ebd71c5a97603a28a42803b68536a2324a9637ed0441afab3096eb6810071d769cf9d9b472f265d44273ccbfd5110a2d702668ca9e3dfd511f23ab6bb
@@ -122,8 +122,8 @@ girder_file_downloads:
       sha512: 7183385f8eaca85997725a107a76034de2bd4a59c1434b4bdb7c1ac8931cf4b68a53f6e736734643386364b9f0856de795a14965b6a02bc5eb5891252e6a73c9
       dest: "{{ stage_dirs.object_detector }}/r18_det.pt"
     # Activity classifier
-    - file_id: 66463a80687336214e7cdeaa
-      sha512: 11c417480ef3b178cea5e9ba01878e2c1d2978129db4d8ac5d7eb0a1e6bdec0da74fc54f6bd69c8d04311809fc78503fad5c57fe45c5ee09f0f4f68197e34be1
+    - file_id: 671254afe94d69f885808c9e
+      sha512: 61568658733c3c59268e0dd40fc1122f0b58e6503f30e97fa9c3337f2233e59fc4593d4e533b8d03149b054954145430d91c12a63ed587c9fac82c34e4bb87af
       dest: "{{ stage_dirs.activity_classifier }}/r18_tcn.ckpt"
     - file_id: 6606b6e9aa5c8de3874c3f4a
       sha512: 3c84333390ee6b12327bb7e5debed37149c7f95cc437b16939f77b599d1a0b3b8c4f0995820b95973170b94df695494000a1c45fbf46632267c212e125fe58a3
