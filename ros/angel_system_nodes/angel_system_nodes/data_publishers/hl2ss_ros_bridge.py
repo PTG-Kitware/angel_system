@@ -37,6 +37,7 @@ BRIDGE = CvBridge()
 PV_BITRATE = 5 * 1024 * 1024
 
 PARAM_PV_IMAGES_TOPIC = "image_topic"  # for publishing image data.
+PARAM_RM_VLC_LEFTFRONT = "rm_vlc_lf_image_topic" # grayscale left front camera
 PARAM_PV_IMAGES_TS_TOPIC = "image_ts_topic"  # for image timestamp publishing only.
 PARAM_HAND_POSE_TOPIC = "hand_pose_topic"
 PARAM_AUDIO_TOPIC = "audio_topic"
@@ -66,6 +67,7 @@ class HL2SSROSBridge(Node):
             self,
             [
                 (PARAM_PV_IMAGES_TOPIC,),
+                (PARAM_RM_VLC_LEFTFRONT,),
                 (PARAM_PV_IMAGES_TS_TOPIC,),
                 (PARAM_HAND_POSE_TOPIC,),
                 (PARAM_AUDIO_TOPIC,),
@@ -81,6 +83,7 @@ class HL2SSROSBridge(Node):
         )
 
         self._image_topic = param_values[PARAM_PV_IMAGES_TOPIC]
+        self._rm_vlc_lf_image_topic = param_values[PARAM_RM_VLC_LEFTFRONT]
         self._image_ts_topic = param_values[PARAM_PV_IMAGES_TS_TOPIC]
         self._hand_pose_topic = param_values[PARAM_HAND_POSE_TOPIC]
         self._audio_topic = param_values[PARAM_AUDIO_TOPIC]
@@ -95,6 +98,7 @@ class HL2SSROSBridge(Node):
 
         # Define HL2SS server ports
         self.pv_port = hl2ss.StreamPort.PERSONAL_VIDEO
+        self.rm_vlc_lf_port = hl2ss.StreamPort.RM_VLC_LEFTFRONT
         self.si_port = hl2ss.StreamPort.SPATIAL_INPUT
         self.audio_port = hl2ss.StreamPort.MICROPHONE
         self.sm_port = hl2ss.IPCPort.SPATIAL_MAPPING
@@ -135,6 +139,21 @@ class HL2SSROSBridge(Node):
             self._pv_thread = Thread(target=self.pv_publisher, name="publish_pv")
             self._pv_thread.daemon = True
             self._pv_thread.start()
+        if self._rm_vlc_lf_image_topic != DISABLE_TOPIC_STR:
+            # Create frame publisher
+            self.ros_rm_vlc_lf_frame_publisher = self.create_publisher(
+                Image, self._rm_vlc_lf_image_topic, 1
+            )
+            self.connect_hl2ss_rm_vlc()
+            log.info("RM VLC client connected!")
+
+            # Start the frame publishing thread
+            self._rm_vlc_active = Event()
+            self._rm_vlc_active.set()
+            self._rm_vlc_rate_tracker = RateTracker()
+            self._rm_vlc_thread = Thread(target=self.ros_rm_vlc_lf_frame_publisher, name="publish_rm_vlc_lf")
+            self._rm_vlc_thread.daemon = True
+            self._rm_vlc_thread.start()
         if self._hand_pose_topic != DISABLE_TOPIC_STR:
             # Create the hand joint pose publisher
             self.ros_hand_publisher = self.create_publisher(
@@ -225,7 +244,8 @@ class HL2SSROSBridge(Node):
             self.ip_addr, self.pv_port, self.pv_width, self.pv_height, self.pv_framerate
         )
         self.camera_intrinsics = [float(x) for x in pv_cam_params.intrinsics.flatten()]
-
+        print(f"camera intrinsics: ", pv_cam_params.intrinsics)
+        
         self.hl2ss_pv_client = hl2ss.rx_decoded_pv(
             self.ip_addr,
             self.pv_port,
@@ -239,6 +259,30 @@ class HL2SSROSBridge(Node):
             decoded_format,
         )
         self.hl2ss_pv_client.open()
+
+    def connect_hl2ss_rm_vlc(self) -> None:
+        """
+        Creates the HL2SS RM VLC client and connects it to the server on the headset.
+        """
+        # Operating mode
+        # 0: video
+        # 1: video + camera pose
+        # 2: query calibration (single transfer)
+        mode = hl2ss.StreamMode.MODE_1
+
+        # Video encoding profile
+        profile = hl2ss.VideoProfile.H265_MAIN
+
+        self.hl2ss_rm_vlc_client = hl2ss.rx_decoded_rm_vlc(
+            self.ip_addr,
+            self.rm_vlc_lf_port,
+            hl2ss.ChunkSize.RM_VLC,
+            mode,
+            profile,
+            PV_BITRATE,
+        )
+
+        self.hl2ss_rm_vlc_client.open()
 
     def connect_hl2ss_si(self) -> None:
         """
