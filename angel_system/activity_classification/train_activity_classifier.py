@@ -3,7 +3,6 @@ import yaml
 import pickle
 import kwcoco
 import argparse
-import json
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -16,7 +15,7 @@ from sklearn.metrics import average_precision_score
 
 from angel_system.data.common.load_data import sanitize_str
 
-from angel_system.activity_classification.utils import (
+from tcn_hpl.data.vectorize_classic import (
     obj_det2d_set_to_feature,
 )
 
