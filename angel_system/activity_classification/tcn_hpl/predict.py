@@ -17,7 +17,7 @@ import torch
 from tcn_hpl.data.components.augmentations import NormalizePixelPts, NormalizeFromCenter
 from tcn_hpl.models.ptg_module import PTGLitModule
 
-from angel_system.activity_classification.utils import (
+from tcn_hpl.data.vectorize_classic import (
     tlbr_to_xywh,
     obj_det2d_set_to_feature,
 )
@@ -545,7 +545,6 @@ def debug_from_array_file() -> None:
     import numpy as np
     import torch
     from tqdm import tqdm
-    from tcn_hpl.data.components.augmentations import NormalizePixelPts
     from angel_system.tcn_hpl.predict import (
         load_module,
         predict,
