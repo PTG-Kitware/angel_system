@@ -91,13 +91,13 @@ class PoseEstimator(Node):
         print("Initializing pose models...")
         # Encapsulates detection and pose models.
         self.pose_gen = PosesGenerator(
-            self.det_config,
-            self.pose_config,
-            self._det_conf_thresh,
-            self.det_model_ckpt_fp,
-            self._cuda_device_id,
-            self.pose_model_ckpt_fp,
-            self._cuda_device_id,
+            det_config_file=self.det_config,
+            pose_config_file=self.pose_config,
+            det_confidence_threshold=self._det_conf_thresh,
+            det_model_ckpt=self.det_model_ckpt_fp,
+            det_model_device=self._cuda_device_id,
+            pose_model_ckpt=self.pose_model_ckpt_fp,
+            pose_model_device=self._cuda_device_id,
         )
         print("Initializing pose models... Done")
         self.keypoints_cats = [
