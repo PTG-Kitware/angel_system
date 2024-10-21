@@ -15,8 +15,6 @@ Follow the following steps (the optional steps are for active development purpos
 
 ##### Get required repositories:
 ```
-(optional) git clone git@github.com:PTG-Kitware/TCN_HPL.git
-(optional) git clone git@github.com:PTG-Kitware/yolov7.git
 git clone git@github.com:PTG-Kitware/angel_system.git
 cd angel_system
 git submodule update --init --recursive
@@ -26,36 +24,105 @@ git submodule update --init --recursive
 ```
 conda create --name angel_systen python=3.8.10
 conda activate angel_test_env
-poetry lock --no-update
 poetry install
 ```
-
-##### 
 
 ## Docker Installation <a name = "dockerinstallation"></a>
 
 Follow the following steps (the optional steps are for active development purposes):
-##### Get required repositories:
+### Get required repositories:
 ```
-(optional) git clone git@github.com:PTG-Kitware/TCN_HPL.git
-(optional) git clone git@github.com:PTG-Kitware/yolov7.git
 git clone git@github.com:PTG-Kitware/angel_system.git
 cd angel_system
 git submodule update --init --recursive
 ```
-##### Create the environment
+### Create the environment
 ```
 ./angel-docker-build.sh -f
 ./angel-workspace-shell.sh
 ```
 
-##### Inside the docker container:
+### Inside the docker container:
 ```
 ./workspace_build.sh; source install/setup.sh
 ```
 
 ## Data <a name = "data"></a>
-- On gyges, raw data is located at `/data/PTG/medical/bbn_data/Release_v0.5/v0.56/<task>`
+
+### Object Detection Source Data
+TODO
+
+### Pose Detection Source Data
+TODO
+
+### TCN Source Data
+
+#### BBN Medical Datasets
+Source data from BBN can be acquired from https://bbn.com/private/ptg-magic/.
+Consult a team member for login information.
+
+Each task ("skill") has their own sub-page ("In-Lab Data" link) from which sets
+of data are described and referred to.
+Data is stored on their SFTP server, to which the "Click to Download" links
+refer to.
+
+Storage of downloaded ZIP archives, and their subsequent extractions, should 
+follow the pattern.
+A script is provided 
+```
+bbn_data/
+├── README.md  # Indicate where we have acquired this BBN data.
+└── lab_data-golden/
+    ├── m2_tourniquet/
+    │   ├── Fri-Apr-21/
+    │   │   ├── 20230420_122603_HoloLens.mp4
+    │   │   ├── 20230420_122603_HoloLens.skill_labels_by_frame.txt
+    │   │   ├── 20230420_123212_HoloLens.mp4
+    │   │   ├── 20230420_123212_HoloLens.skill_labels_by_frame.txt
+    │   │   ├── 20230420_124541_HoloLens.mp4
+    │   │   ├── 20230420_124541_HoloLens.skill_labels_by_frame.txt
+    │   │   ├── 20230420_125033_HoloLens.mp4
+    │   │   ├── 20230420_125033_HoloLens.skill_labels_by_frame.txt
+    │   │   ├── 20230420_125517_HoloLens.mp4
+    │   │   └── 20230420_125517_HoloLens.skill_labels_by_frame.txt
+    │   ├── Fri-Apr-21.zip
+    │   ├── Mon-Apr-17/
+    │   │   ...
+    │   ├── Mon-Apr-17.zip
+    │   ├── Mon-Apr-24/
+    │   │   ...
+    │   └── Mon-Apr-24.zip
+    ├── m3_pressure_dressing/
+    │   ...
+    └── r18_chest_seal/
+        ...
+```
+Golden data should be marked as read-only after downloading and extracting to 
+prevent accidental modification of the files:
+```
+chmod a-w -R bbn_data/lab_data-golden/
+```
+
+##### Extracting frames
+BBN archives provide MP4 videos, however we will need individual image frames
+for the following steps.
+The script to convert BBN Truth data into a COCO format will also, by necessity
+for down-stream processes, extract frames and dump them into a symmetric layout
+in another writable location:
+```bash
+python-tpl/TCN_HPL/tcn_hpl/data/utils/bbn.py ...
+# OR use the console-script entrypoint installed with the package
+bbn_create_truth_coco \
+  ./bbn_data/lab_data-golden \
+  ./bbn_data/lab_data-working
+  ../../config/activity_labels/medical/m2.yaml \
+  activity-truth-COCO.json
+```
+
+
+### Storage on Gyges
+- On gyges, raw data is located at
+  - `/data/PTG/medical/bbn_data/Release_v0.5/v0.56/<task>`
 - pre-trained models are available on `https://data.kitware.com/#collection/62cc5eb8bddec9d0c4fa9ee1/folder/6605bc558b763ca20ae99f55`
 - In this pipeline we are only provided with object detection ground truth training data, which is located `/data/PTG/medical/object_anns/<task>`
 - For real-time execution, we store our models in /angel_system/model_files
@@ -73,11 +140,90 @@ git submodule update --init --recursive
 ## Training Procedure <a name = "training"></a>
 
 We take the following steps:
+
 1. train object detection model
-2. predict objects in the scene
-3. predict poses and patient bounding boxes in the scene
-4. generate interaction feature vectors for the TCN
-5. train the TCN
+2. Generate activity classification truth COCO file.
+3. predict objects in the scene
+4. predict poses and patient bounding boxes in the scene
+5. generate interaction feature vectors for the TCN
+6. train the TCN
+
+### Example with M2
+
+#### Train Object Detection Model
+First we train the detection model on annotated data.
+This would be the same data source for both the lab and professional data.
+```
+python3 python-tpl/yolov7/yolov7/train.py \
+  --workers 8 --device 0 --batch-size 4 \
+  --data configs/data/PTG/medical/m2_task_objects.yaml \
+  --img 768 768 \
+  --cfg configs/model/training/PTG/medical/yolov7_m2.yaml \
+  --weights weights/yolov7.pt \
+  --project /data/PTG/medical/training/yolo_object_detector/train/ \
+  --name m2_all_v1_example
+```
+
+#### Generate activity classification truth COCO file
+Generate the truth MS-COCO file for per-frame activity truth annotations.
+This example presumes we are using BBN Medical data as our source (as of
+2024/10/15).
+```
+python-tpl/TCN_HPL/tcn_hpl/data/utils/bbn.py \
+  ~/data/darpa-ptg/bbn_data/lab_data-golden/m2_tourniquet \
+  ~/data/darpa-ptg/bbn_data/lab_data-working/m2_tourniquet \
+  ~/dev/darpa-ptg/angel_system/config/activity_labels/medical/m2.yaml \
+  ~/data/darpa-ptg/bbn_data/lab_data-working/m2_tourniquet-activity_truth.coco.json
+```
+
+Train, validation, and testing splits can be split from COCO files.
+The `kwcoco split` tool may be utilized to create splits at the video level,
+otherwise splits may be created manually.
+
+For example:
+```
+kwcoco split \
+  --src /home/local/KHQ/paul.tunison/data/darpa-ptg/bbn_data/lab_data-working/m2_tourniquet/positive/3_tourns_122023/activity_truth.coco.json \
+  --dst1 TRAIN-activity_truth.coco.json \
+  --dst2 REMAINDER-activity-truth.coco.json \
+  --splitter video \
+  --factor 2
+kwcoco split \
+  --src REMAINDER-activity-truth.coco.json \
+  --dst1 VALIDATION-activity-truth.coco.json \
+  --dst2 TEST-activity-truth.coco.json \
+  --splitter video \
+  --factor 2
+```
+
+#### Generate Object Predictions in the Scene
+Note that the input COCO file is that which was generated in the previous step.
+This is to ensure that all represented videos and image frames are predicted on
+and present in both COCO files.
+```
+python-tpl/yolov7/yolov7/detect_ptg.py \
+  -i ~/data/darpa-ptg/bbn_data/lab_data-working/m2_tourniquet/activity_truth.coco.json \
+  -o test_det_output.coco.json
+  --model-hands ./model_files/object_detector/hands_model.pt \
+  --model-objects ./model_files/object_detector/m2_det.pt \
+  --model-device 0 \
+  --img-size 768 \
+```
+Additional debug outputs may optionally be generated.
+See the `-h`/`--help` options for more details.
+
+#### Generate Pose Predictions
+Note that the input COCO file is that which was generated in the
+`Generate activity classification truth COCO file` section.
+```
+python-tpl/TCN_HPL/tcn_hpl/data/utils/pose_generation/generate_pose_data.py \\
+  -i ~/data/darpa-ptg/bbn_data/lab_data-working/m2_tourniquet/activity_truth.coco.json \\
+  -o ./test_pose_output.coco.json \\
+  --det-config ./python-tpl/TCN_HPL/tcn_hpl/data/utils/pose_generation/configs/medic_pose.yaml \\
+  --det-weights ./model_files/pose_estimation/pose_det_model.pth \\
+  --pose-config python-tpl/TCN_HPL/tcn_hpl/data/utils/pose_generation/configs/ViTPose_base_medic_casualty_256x192.py \\
+  --pose-weights ./model_files/pose_estimation/pose_model.pth
+```
 
 ##### Example with R18
 
@@ -169,4 +315,3 @@ git submodule update --init --recursive
 ./workspace_build.sh; source install/setup.sh
 tmuxinator start demos/medical/BBN-integrate-Kitware-R18
 ```
-
