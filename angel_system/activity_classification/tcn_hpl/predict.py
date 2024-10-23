@@ -464,19 +464,30 @@ class ResultsCollector:
                 raise RuntimeError(
                     "No video set before results collection. See `set_video` method."
                 )
-            packet = dict(
+            # get the global id for the image from the frame number
+
+            # add the image
+            img = dict(
                 video_id=self._vid,
                 frame_index=frame_index,
-                activity_pred=activity_pred,
-                activity_conf=list(activity_conf_vec),
             )
             if name is not None:
-                packet["name"] = name
+                img["name"] = name
             if file_name is not None:
-                packet["file_name"] = file_name
+                img["file_name"] = file_name
             if activity_gt is not None:
-                packet["activity_gt"] = activity_gt
-            self._dset.add_image(**packet)
+                img["activity_gt"] = activity_gt
+            # save the gid from the image to link to the annot
+            gid = self._dset.add_image(**img)
+
+            # additional items to save
+            add_items = dict(
+                prob=list(activity_conf_vec),
+            )
+            # add the annotation
+            self._dset.add_annotation(
+                image_id=gid, category_id=activity_pred, **add_items
+            )
 
     def write_file(self):
         """
