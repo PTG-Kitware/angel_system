@@ -29,4 +29,4 @@ do
 done
 
 # Collect all probed video streams metadata summary for resolution and fps info
-# $> grep -rin "Stream.*: Video" ../lab_data-working/ >../probe_summary.txt
+grep -rin "Stream.*: Video" "${WORKDIR}" >"${WORKDIR}/probe_summary.txt"
