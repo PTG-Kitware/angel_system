@@ -64,6 +64,7 @@ class PoseEstimator(Node):
                 ##################################
                 # Defaulted parameters
                 ("det_conf_threshold", 0.75),  # object confidence threshold
+                ("keypoint_conf_threshold", 0.75),  # keypoint confidence threshold
                 ("cuda_device_id", 0),  # cuda device: ID int or CPU
                 # Runtime thread checkin heartbeat interval in seconds.
                 ("rt_thread_heartbeat", 0.1),
@@ -84,6 +85,7 @@ class PoseEstimator(Node):
         self._ensure_image_resize = param_values["image_resize"]
 
         self._det_conf_thresh = param_values["det_conf_threshold"]
+        self._keypoint_conf_thresh = param_values["keypoint_conf_threshold"]
         self._cuda_device_id = param_values["cuda_device_id"]
 
         print("finished setting params")
@@ -91,13 +93,14 @@ class PoseEstimator(Node):
         print("Initializing pose models...")
         # Encapsulates detection and pose models.
         self.pose_gen = PosesGenerator(
-            self.det_config,
-            self.pose_config,
-            self._det_conf_thresh,
-            self.det_model_ckpt_fp,
-            self._cuda_device_id,
-            self.pose_model_ckpt_fp,
-            self._cuda_device_id,
+            det_config_file=self.det_config,
+            pose_config_file=self.pose_config,
+            det_confidence_threshold=self._det_conf_thresh,
+            keypoint_confidence_threshold=self._keypoint_conf_thresh,
+            det_model_ckpt=self.det_model_ckpt_fp,
+            det_model_device=self._cuda_device_id,
+            pose_model_ckpt=self.pose_model_ckpt_fp,
+            pose_model_device=self._cuda_device_id,
         )
         print("Initializing pose models... Done")
         self.keypoints_cats = [
