@@ -1,15 +1,15 @@
 # Step-by-step how to run the Angel System pipeline
 
 ## Table of Contents
-- [Local installation](#localinstallation)
-- [Docker installation](#dockerinstallation)
+- [Local installation](#local-installation)
+- [Docker installation](#docker-installation)
 - [Data and pretrained models](#data)
-- [Training](#training)
+- [Training](#training-procedure)
 - [Training on lab data](#lab_data)
-- [Docker local testing with pre-recorded data](#local)
-- [Real-time](#realtime)
+- [Docker local testing with pre-recorded data](#docker-local-testing)
+- [Real-time](#docker-real-time)
 
-## Local Installation <a name = "localinstallation"></a>
+## Local Installation
 
 Follow the following steps (the optional steps are for active development purposes):
 
@@ -22,12 +22,16 @@ git submodule update --init --recursive
 
 ##### Create the environment
 ```
+# IF YOU DON'T ALREADY HAVE PYTHON 3.8.10 AVAILABLE
 conda create --name angel_systen python=3.8.10
 conda activate angel_test_env
 poetry install
+
+# OR JUST
+poetry install
 ```
 
-## Docker Installation <a name = "dockerinstallation"></a>
+## Docker Installation
 
 Follow the following steps (the optional steps are for active development purposes):
 ### Get required repositories:
@@ -47,7 +51,7 @@ git submodule update --init --recursive
 ./workspace_build.sh; source install/setup.sh
 ```
 
-## Data <a name = "data"></a>
+## Data
 
 ### Object Detection Source Data
 TODO
@@ -66,7 +70,7 @@ of data are described and referred to.
 Data is stored on their SFTP server, to which the "Click to Download" links
 refer to.
 
-Storage of downloaded ZIP archives, and their subsequent extractions, should 
+Storage of downloaded ZIP archives, and their subsequent extractions, should
 follow the pattern.
 A script is provided 
 ```
@@ -97,7 +101,7 @@ bbn_data/
     └── r18_chest_seal/
         ...
 ```
-Golden data should be marked as read-only after downloading and extracting to 
+Golden data should be marked as read-only after downloading and extracting to
 prevent accidental modification of the files:
 ```
 chmod a-w -R bbn_data/lab_data-golden/
@@ -137,7 +141,7 @@ bbn_create_truth_coco \
 - `/angel_system/model_files/models/r18_det.pt`: object detection trained model
 
 
-## Training Procedure <a name = "training"></a>
+## Training Procedure
 
 We take the following steps:
 
@@ -149,6 +153,13 @@ We take the following steps:
 6. train the TCN
 
 ### Example with M2
+Contents:
+- [Train Object Detection Model](#train-object-detection-model)
+- [Generate activity classification truth COCO file](#generate-activity-classification-truth-coco-file)
+- [Generate Object Predictions in the Scene](#generate-object-predictions-in-the-scene)
+- [Generate Pose Predictions](#generate-pose-predictions)
+- [Configure TCN Training Experiment](#configure-tcn-training-experiment)
+- [Run TCN Training](#run-tcn-training)
 
 #### Train Object Detection Model
 First we train the detection model on annotated data.
@@ -183,17 +194,23 @@ otherwise splits may be created manually.
 For example:
 ```
 kwcoco split \
-  --src /home/local/KHQ/paul.tunison/data/darpa-ptg/bbn_data/lab_data-working/m2_tourniquet/positive/3_tourns_122023/activity_truth.coco.json \
+  --src ~/data/darpa-ptg/bbn_data/lab_data-working/m2_tourniquet-activity_truth.coco.json \
   --dst1 TRAIN-activity_truth.coco.json \
-  --dst2 REMAINDER-activity-truth.coco.json \
+  --dst2 REMAINDER-activity_truth.coco.json \
   --splitter video \
   --factor 2
 kwcoco split \
-  --src REMAINDER-activity-truth.coco.json \
-  --dst1 VALIDATION-activity-truth.coco.json \
-  --dst2 TEST-activity-truth.coco.json \
+  --src REMAINDER-activity_truth.coco.json \
+  --dst1 VALIDATION-activity_truth.coco.json \
+  --dst2 TEST-activity_truth.coco.json \
   --splitter video \
   --factor 2
+# Protect your files!
+chmod a-w \
+  TRAIN-activity_truth.coco.json \
+  REMAINDER-activity_truth.coco.json \
+  VALIDATION-activity_truth.coco.json \
+  TEST-activity_truth.coco.json
 ```
 
 #### Generate Object Predictions in the Scene
@@ -202,12 +219,13 @@ This is to ensure that all represented videos and image frames are predicted on
 and present in both COCO files.
 ```
 python-tpl/yolov7/yolov7/detect_ptg.py \
-  -i ~/data/darpa-ptg/bbn_data/lab_data-working/m2_tourniquet/activity_truth.coco.json \
+  -i TRAIN-activity_truth.coco.json \
   -o test_det_output.coco.json
   --model-hands ./model_files/object_detector/hands_model.pt \
   --model-objects ./model_files/object_detector/m2_det.pt \
   --model-device 0 \
   --img-size 768 \
+# Repeat for other relevant activity truth inputs
 ```
 Additional debug outputs may optionally be generated.
 See the `-h`/`--help` options for more details.
@@ -223,22 +241,49 @@ python-tpl/TCN_HPL/tcn_hpl/data/utils/pose_generation/generate_pose_data.py \\
   --det-weights ./model_files/pose_estimation/pose_det_model.pth \\
   --pose-config python-tpl/TCN_HPL/tcn_hpl/data/utils/pose_generation/configs/ViTPose_base_medic_casualty_256x192.py \\
   --pose-weights ./model_files/pose_estimation/pose_model.pth
+# Repeat for other relevant activity truth inputs
 ```
 
-##### Example with R18
+#### Configure TCN Training Experiment
+Create a new version of, or modify an existing (preferring the former) and
+modify attributes appropriately for your experiment.
 
-First we train the detection model on annotated data. This would be the same data source for both the lab and professional data
+TODO: Configuration file update guidance.
+
+#### Run TCN Training
+TODO
+
+## Example with R18
+
+First we train the detection model on annotated data. This would be the same
+data source for both the lab and professional data
 ```
 cd yolo7
-python yolov7/train.py --workers 8 --device 0 --batch-size 4 --data configs/data/PTG/medical/r18_task_objects.yaml --img 768 768 --cfg configs/model/training/PTG/medical/yolov7_r18.yaml --weights weights/yolov7.pt --project /data/PTG/medical/training/yolo_object_detector/train/ --name r18_all_v1_example
+python yolov7/train.py \
+  --workers 8 \
+  --device 0 \
+  --batch-size 4 \
+  --data configs/data/PTG/medical/r18_task_objects.yaml \
+  --img 768 768 \
+  --cfg configs/model/training/PTG/medical/yolov7_r18.yaml \
+  --weights weights/yolov7.pt \
+  --project /data/PTG/medical/training/yolo_object_detector/train/ \
+  --name r18_all_v1_example
 ```
 
 ###### Note on training on lab data <a name = "lab_data"></a>:
 since we do not have detection GT for lab data, this is our start point for training the TCN on the lab data
 
-Next, we generate detection predictions in kwcoco file using the following script. Note that this 
+Next, we generate detection predictions in kwcoco file using the following script. Note that this
 ```
-python yolov7/detect_ptg.py --tasks r18 --weights /data/PTG/medical/training/yolo_object_detector/train/r18_all_v1_example/weights/best.pt --project /data/PTG/medical/training/yolo_object_detector/detect/ --name r18_all_example --device 0 --img-size 768 --conf-thres 0.25
+python yolov7/detect_ptg.py \
+  --tasks r18 \
+  --weights /data/PTG/medical/training/yolo_object_detector/train/r18_all_v1_example/weights/best.pt \
+  --project /data/PTG/medical/training/yolo_object_detector/detect/ \
+  --name r18_all_example \
+  --device 0 \
+  --img-size 768 \
+  --conf-thres 0.25
 cd TCN_HPL/tcn_hpl/data/utils/pose_generation/configs
 ```
 
@@ -247,20 +292,23 @@ with the above scripts, we should get a kwcoco file at:
 /data/PTG/medical/training/yolo_object_detector/detect/r18_all_example/
 ```
 
-Edit `TCN_HPL/tcn_hpl/data/utils/pose_generation/configs/main.yaml` with the task in hand (here, we use r18), the path to the output detection kwcoco, and where to output kwcoco files from our pose generation step.
+Edit `TCN_HPL/tcn_hpl/data/utils/pose_generation/configs/main.yaml` with the
+task in hand (here, we use r18), the path to the output detection kwcoco, and
+where to output kwcoco files from our pose generation step.
 ```
 cd ..
 python generate_pose_data.py
 cd TCN_HPL/tcn_hpl/data/utils
 ```
-At this stage, there should be a new kwcoco file generated in the field defined at `main.yaml`:
+At this stage, there should be a new kwcoco file generated in the field defined
+at `main.yaml`:
 ```
 data:
     save_root: <path-to-kwcoco-file-with-pose-and-detections>
 ```
 
-Next, edit the `/TCN_HPL/configs/experiment/r18/feat_v6.yaml` file with the correct experiment name and kwcoco file in the following fields:
-
+Next, edit the `/TCN_HPL/configs/experiment/r18/feat_v6.yaml` file with the
+correct experiment name and kwcoco file in the following fields:
 ```
 exp_name: <experiment-name>
 path:
@@ -278,7 +326,7 @@ python train.py experiment=r18/feat_v6
 The TCN training script produced a `text_activity_preds.mscoco.json` which is used by the Global Step Predictor. That file should be copied to `/angel_system/model_files/coco/`.
 
 
-## Docker local testing <a name = "local"></a>
+## Docker local testing
 
 ***to start the service run:***
 ```
@@ -302,7 +350,7 @@ tmuxinator stop demos/medical/Kitware-R18
 ```
 
 
-## Docker real-time <a name = "realtime"></a>
+## Docker real-time
 
 This step requires a user on the BBN systems to login to the Kitware machine. After it is set up:
 
