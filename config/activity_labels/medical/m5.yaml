@@ -1,4 +1,5 @@
 version: "1"
+title: "X-Stat"
 labels:
   # Item:
   # - id: Integer identification number of the label.
