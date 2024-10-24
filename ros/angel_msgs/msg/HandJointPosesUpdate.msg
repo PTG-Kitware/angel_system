@@ -14,4 +14,5 @@ builtin_interfaces/Time source_stamp
 string hand
 
 # List of joints
+# The order of these should be the same as the model's predicted order.
 angel_msgs/HandJointPose[] joints

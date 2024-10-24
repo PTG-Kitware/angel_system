@@ -1,4 +1,3 @@
-from typing import List
 from typing import Tuple
 
 import numpy as np
@@ -12,8 +11,7 @@ def max_labels_and_confs(
 ) -> Tuple[npt.NDArray[str], npt.NDArray[float]]:
     """
     Get out a tuple of the maximally confident class label and
-    confidence value for each detection as a tuple of two lists for
-    expansion into the `ObjectDetectionsLTRB` constructor
+    confidence value for each detection as a tuple of two arrays.
 
     :param msg: Input 2D object detection set message.
 
