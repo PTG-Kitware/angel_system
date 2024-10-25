@@ -447,24 +447,45 @@ class ResultsCollector:
             else:
                 self._vid = self._dset.add_video(name=video_name)
 
-    def collect(
+    def check_for_existing_image(self, name, file_name) -> bool:
+        """
+        Check if an image already exists in the dataset.
+        """
+        already_exists = None
+        if name is not None:
+            try:
+                already_exists = self._dset.images().lookup(name)
+            except KeyError:
+                pass
+        if file_name is not None:
+            try:
+                already_exists = self._dset.images().lookup(file_name)
+            except KeyError:
+                pass
+        if already_exists:
+            return True
+        return False
+
+    def add_image(
         self,
         frame_index: int,
-        activity_pred: int,
-        activity_conf_vec: Sequence[float],
         name: Optional[str] = None,
         file_name: Optional[str] = None,
-    ) -> None:
+    ) -> int:
         """
-        See `CocoDataset.add_image` for more details.
+        Add an image to the dataset. Returns the global image id.
+        If the image was already added (by name or file name), returns -1.
         """
         with self._lock:
             if self._vid is None:
                 raise RuntimeError(
                     "No video set before results collection. See `set_video` method."
                 )
-            # get the global id for the image from the frame number
+            # confirm we haven't already added this image
+            if self.check_for_existing_image(name, file_name):
+                return -1
 
+            # get the global id for the image from the frame number
             # add the image
             img = dict(
                 video_id=self._vid,
@@ -476,6 +497,27 @@ class ResultsCollector:
                 img["file_name"] = file_name
             # save the gid from the image to link to the annot
             gid = self._dset.add_image(**img)
+
+            return gid
+
+    def collect(
+        self,
+        gid: int,
+        activity_pred: int,
+        activity_conf_vec: Sequence[float],
+    ) -> None:
+        """
+        See `CocoDataset.add_image` for more details.
+
+        :param gid: Global image id.
+        :param activity_pred: Predicted activity class index.
+        :param activity_conf_vec: Confidence vector for all activity classes.
+        """
+        with self._lock:
+            if self._vid is None:
+                raise RuntimeError(
+                    "No video set before results collection. See `set_video` method."
+                )
 
             # add the annotation
             self._dset.add_annotation(

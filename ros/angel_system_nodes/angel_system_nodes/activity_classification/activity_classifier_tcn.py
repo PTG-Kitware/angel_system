@@ -543,6 +543,21 @@ class ActivityClassifierTCN(Node):
         # TODO: add has-finished-processing-file-input check.
         return rt_active
 
+    def _save_image_to_coco(self, window: InputWindow) -> int:
+        """
+        This will add an image to the output coco file
+        if you are not saving to a coco file, this will return -1
+        """
+        if self._results_collector:
+            # Prepare output message
+            activity_msg = ActivityDetection()
+            # set the only needed items for collection
+            activity_msg.source_stamp_end_frame = window.frames[-1][0]
+            activity_msg.conf_vec = [0.0 for x in self._model.classes]
+            gid = self._collect_image(activity_msg)
+            return gid
+        return -1
+
     def _window_criterion_correct_size(self, window: InputBuffer) -> bool:
         window_ok = len(window) == self._window_size
         if not window_ok:
@@ -550,6 +565,8 @@ class ActivityClassifierTCN(Node):
                 f"Window is not the appropriate size "
                 f"(actual:{len(window)} != {self._window_size}:expected)"
             )
+            self._save_image_to_coco(window)
+
         return window_ok
 
     def _window_criterion_new_leading_frame(self, window: InputWindow) -> bool:
@@ -643,6 +660,7 @@ class ActivityClassifierTCN(Node):
                     # out older data at and before the first item in the window.
                     self._buffer.clear_before(time_to_int(window.frames[1][0]))
 
+                    image_gid = None  # set this to None to signal if we saved the image or not
                     try:
                         if enable_time_trace_logging:
                             log.info(
@@ -653,22 +671,17 @@ class ActivityClassifierTCN(Node):
                         act_msg = self._process_window(window)
                         # log.info(f"activity message: {act_msg}")
 
-                        self._collect_results(act_msg)
+                        image_gid = self._collect_image(act_msg)
+                        self._collect_results(act_msg, image_gid)
                         # set the header right before publishing so that the time is after processing
                         act_msg.header.frame_id = "Activity Classification"
                         act_msg.header.stamp = self.get_clock().now().to_msg()
 
                         self._activity_publisher.publish(act_msg)
                     except NoActivityClassification:
-                        # collect the results if we are saving to coco file
-                        if self._results_collector:
-                            # Prepare output message
-                            activity_msg = ActivityDetection()
-                            # set the only needed items for collection
-                            activity_msg.source_stamp_end_frame = window.frames[-1][0]
-                            activity_msg.conf_vec = [0.0 for x in self._model.classes]
-                            self._collect_results(activity_msg)
-
+                        # collect the image if we are saving to coco file
+                        if self._results_collector and image_gid is None:
+                            self._save_image_to_coco(window)
                         # No ramifications, but don't publish activity message.
                         log.warn(
                             "Runtime loop window processing function did "
@@ -864,7 +877,7 @@ class ActivityClassifierTCN(Node):
 
         return activity_msg
 
-    def _collect_results(self, msg: ActivityDetection):
+    def _collect_image(self, msg: ActivityDetection) -> int:
         """
         Collect into our ResultsCollector instance from the produced activity
         classification message if we were initialized to do that.
@@ -880,10 +893,30 @@ class ActivityClassifierTCN(Node):
             # When reading from an input COCO file, this aligns with the input
             # `image` `frame_index` attributes.
             frame_index = time_to_int(msg.source_stamp_end_frame)
-            pred_cls_idx = int(np.argmax(msg.conf_vec))
-            rc.collect(
+            gid = rc.add_image(
                 frame_index=frame_index,
                 name=f"ros-frame-nsec-{frame_index}",
+            )
+            return gid
+        return -1
+
+    def _collect_results(self, msg: ActivityDetection, gid: int) -> None:
+        """
+        Collect into our ResultsCollector instance from the produced activity
+        classification message if we were initialized to do that.
+
+        This method does nothing if this node has not been initialized to
+        collect results.
+
+        :param msg: ROS2 activity classification message that would be output.
+        :param gid: Global ID of the image associated with the activity
+        """
+        rc = self._results_collector
+        if rc is not None:
+            # use the gid that was created when the image was added
+            pred_cls_idx = int(np.argmax(msg.conf_vec))
+            rc.collect(
+                gid=gid,
                 activity_pred=pred_cls_idx,
                 activity_conf_vec=list(msg.conf_vec),
             )
