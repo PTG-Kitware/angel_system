@@ -454,7 +454,6 @@ class ResultsCollector:
         activity_conf_vec: Sequence[float],
         name: Optional[str] = None,
         file_name: Optional[str] = None,
-        activity_gt: Optional[int] = None,
     ) -> None:
         """
         See `CocoDataset.add_image` for more details.
@@ -475,8 +474,6 @@ class ResultsCollector:
                 img["name"] = name
             if file_name is not None:
                 img["file_name"] = file_name
-            if activity_gt is not None:
-                img["activity_gt"] = activity_gt
             # save the gid from the image to link to the annot
             gid = self._dset.add_image(**img)
 
