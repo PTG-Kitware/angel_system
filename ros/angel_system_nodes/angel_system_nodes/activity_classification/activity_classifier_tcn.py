@@ -5,30 +5,37 @@ trainer.predict(model=model, dataloaders=dataloaders, ckpt_path=cfg.ckpt_path)
 """
 
 import json
-from heapq import heappush, heappop
 from pathlib import Path
 from threading import Condition, Event, Lock, Thread
 from typing import Callable
-from typing import Dict
 from typing import List
 from typing import Optional
+from typing import Tuple
 
 import kwcoco
 from builtin_interfaces.msg import Time
 import numpy as np
 import numpy.typing as npt
+from pytorch_lightning.utilities import move_data_to_device
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from rclpy.node import Node
 import torch
+from torch.utils.data import DataLoader
+from tcn_hpl.data.ptg_datamodule import create_dataset_from_hydra
+from tcn_hpl.data.utils.pose_generation.generate_pose_data import (
+    DETECTION_CLASS_KEYPOINTS,
+)
+from tcn_hpl.data.vectorize import (
+    FrameData,
+    FrameObjectDetections,
+    FramePoses,
+)
+from tcn_hpl.models.ptg_module import PTGLitModule
 
 from angel_system.activity_classification.tcn_hpl.predict import (
-    load_module,
-    ObjectDetectionsLTRB,
-    objects_to_feats,
-    predict,
     ResultsCollector,
-    PatientPose,
 )
+from angel_system.data.common.config_structs import load_activity_label_set
 from angel_system.utils.event import WaitAndClearEvent
 from angel_system.utils.simple_timer import SimpleTimer
 
@@ -41,7 +48,6 @@ from angel_msgs.msg import (
 from angel_utils import declare_and_get_parameters, make_default_main, RateTracker
 from angel_utils.activity_classification import InputWindow, InputBuffer
 from angel_utils.conversion import time_to_int
-from angel_utils.object_detection import max_labels_and_confs
 
 
 # Input ROS topic for RGB Image Timestamps
@@ -50,25 +56,16 @@ PARAM_IMG_TS_TOPIC = "image_ts_topic"
 PARAM_DET_TOPIC = "det_topic"
 # Output ROS topic for activity classifications.
 PARAM_ACT_TOPIC = "act_topic"
+# Filesystem path to the Angel-System activity configuration file for the task
+# we are predicting for.
+PARAM_ACT_CONFIG_FILE = "activity_config_file"
 # Filesystem path to the TCN model weights
 PARAM_MODEL_WEIGHTS = "model_weights"
-# Filesystem path to the class mapping file.
-PARAM_MODEL_MAPPING = "model_mapping"
-# Bool flag to indicate if the NormalizePixelPts augmentation should be applied
-PARAM_MODEL_NORMALIZE_PIXEL_PTS = "model_normalize_pixel_pts"
-# Bool flag to indicate if the NormalizeFromCenter augmentation should be applied
-PARAM_MODEL_NORMALIZE_CENTER_PTS = "model_normalize_center_pts"
-# Filesystem path to the input object detection label mapping.
-# This is expected to be a JSON file containing a list of strings.
-PARAM_MODEL_OD_MAPPING = "model_det_label_mapping"
+# Filesystem path to the YAML config file paired with the model containing
+# relevant hyperparameters.
+PARAM_MODEL_CONFIG = "model_config"
 # Device the model should be loaded onto. "cuda" and "cpu" are
 PARAM_MODEL_DEVICE = "model_device"
-# Version of the detections-to-descriptors algorithm the model is expecting as
-# input.
-PARAM_MODEL_DETS_CONV_VERSION = "model_dets_conv_version"
-# Number of (image) frames to consider as the "window" when collating
-# correlated data.
-PARAM_WINDOW_FRAME_SIZE = "window_size"
 # Maximum amount of data we will buffer in seconds.
 PARAM_BUFFER_MAX_SIZE_SECONDS = "buffer_max_size_seconds"
 # Width in pixels of the imagery that object detections were predicted from.
@@ -111,6 +108,21 @@ class NoActivityClassification(Exception):
     """
 
 
+def max_det_class_score(
+    msg: ObjectDetection2dSet,
+) -> Tuple[npt.NDArray[int], npt.NDArray[float]]:
+    """
+    Get the index and score of the highest scoring class.
+    :param msg: Input message.
+    :return: Tuple of index and score.
+    """
+    mat_shape = (msg.num_detections, len(msg.label_vec))
+    conf_mat = np.asarray(msg.label_confidences).reshape(mat_shape)
+    max_conf_idxs = conf_mat.argmax(axis=1)
+    max_confs = conf_mat[np.arange(conf_mat.shape[0]), max_conf_idxs]
+    return max_conf_idxs, max_confs
+
+
 class ActivityClassifierTCN(Node):
     """
     ROS node that publishes `ActivityDetection` messages using a classifier and
@@ -130,14 +142,10 @@ class ActivityClassifierTCN(Node):
                 (PARAM_DET_TOPIC,),
                 (PARAM_POSE_TOPIC,),
                 (PARAM_ACT_TOPIC,),
+                (PARAM_ACT_CONFIG_FILE,),
                 (PARAM_MODEL_WEIGHTS,),
-                (PARAM_MODEL_MAPPING,),
-                (PARAM_MODEL_NORMALIZE_PIXEL_PTS, False),
-                (PARAM_MODEL_NORMALIZE_CENTER_PTS, False),
-                (PARAM_MODEL_OD_MAPPING,),
+                (PARAM_MODEL_CONFIG,),
                 (PARAM_MODEL_DEVICE, "cuda"),
-                (PARAM_MODEL_DETS_CONV_VERSION, 6),
-                (PARAM_WINDOW_FRAME_SIZE, 25),
                 (PARAM_BUFFER_MAX_SIZE_SECONDS, 15),
                 (PARAM_IMAGE_PIX_WIDTH, 1280),
                 (PARAM_IMAGE_PIX_HEIGHT, 720),
@@ -157,82 +165,47 @@ class ActivityClassifierTCN(Node):
         self._pose_repeat_rate = param_values[PARAM_POSE_REPEAT_RATE]
 
         self._act_topic = param_values[PARAM_ACT_TOPIC]
+        self._act_config = load_activity_label_set(param_values[PARAM_ACT_CONFIG_FILE])
         self._img_pix_width = param_values[PARAM_IMAGE_PIX_WIDTH]
         self._img_pix_height = param_values[PARAM_IMAGE_PIX_HEIGHT]
         self._enable_trace_logging = param_values[PARAM_TIME_TRACE_LOGGING]
 
-        self.model_normalize_pixel_pts = param_values[PARAM_MODEL_NORMALIZE_PIXEL_PTS]
-        self.model_normalize_center_pts = param_values[PARAM_MODEL_NORMALIZE_CENTER_PTS]
-
         self._window_lead_with_objects = param_values[PARAM_WINDOW_LEADS_WITH_OBJECTS]
 
-        self.topic = param_values[PARAM_TOPIC]
-        # Load in TCN classification model and weights
+        # Cache activity class labels in ID order
+        self._act_class_names = [
+            x[1] for x in sorted((l.id, l.label) for l in self._act_config.labels)
+        ]
+
+        # Load in TCN classification dataset and model/weights
+        # The dataset includes info on the window size appropriate for the
+        # model as well as how to embed input data into the appropriate
+        # vectorization the model requires.
+        self._model_dset = create_dataset_from_hydra(
+            Path(param_values[PARAM_MODEL_CONFIG])
+        )
         with SimpleTimer("Loading inference module", log.info):
             self._model_device = torch.device(param_values[PARAM_MODEL_DEVICE])
-            self._model = load_module(
+            self._model = PTGLitModule.load_from_checkpoint(
                 param_values[PARAM_MODEL_WEIGHTS],
-                param_values[PARAM_MODEL_MAPPING],
-                self._model_device,
-                topic=self.topic,
+                map_location=self._model_device,
             ).eval()
             # from pytorch_lightning.utilities.model_summary import summarize
             # from torchsummary import summary
             # print(summary(self._model))
             # print(self._model)
 
-        # Load labels list from configured activity_labels YAML file.
-        print(f"json path: {param_values[PARAM_MODEL_OD_MAPPING]}")
-        with open(param_values[PARAM_MODEL_OD_MAPPING]) as infile:
-            det_label_list = json.load(infile)
-        self._det_label_to_id = {
-            c: i for i, c in enumerate(det_label_list) if c not in ["patient", "user"]
-        }
-        print(self._det_label_to_id)
+        # # Load labels list from configured activity_labels YAML file.
+        # print(f"json path: {param_values[PARAM_MODEL_OD_MAPPING]}")
+        # with open(param_values[PARAM_MODEL_OD_MAPPING]) as infile:
+        #     det_label_list = json.load(infile)
+        # self._det_label_to_id = {
+        #     c: i for i, c in enumerate(det_label_list) if c not in ["patient", "user"]
+        # }
+        # print(self._det_label_to_id)
         # Feature version aligned with model current architecture
-        self._feat_version = param_values[PARAM_MODEL_DETS_CONV_VERSION]
 
-        # Memoization structure for structures created as input to feature
-        # embedding function in the `_predict` method.
-        self._memo_preproc_input: Dict[int, ObjectDetectionsLTRB] = {}
-        self._memo_preproc_input_poses: Dict[int, PatientPose] = {}
-
-        self.keypoints_cats = [
-            "nose",
-            "mouth",
-            "throat",
-            "chest",
-            "stomach",
-            "left_upper_arm",
-            "right_upper_arm",
-            "left_lower_arm",
-            "right_lower_arm",
-            "left_wrist",
-            "right_wrist",
-            "left_hand",
-            "right_hand",
-            "left_upper_leg",
-            "right_upper_leg",
-            "left_knee",
-            "right_knee",
-            "left_lower_leg",
-            "right_lower_leg",
-            "left_foot",
-            "right_foot",
-            "back",
-        ]
-
-        # Memoization structure for feature embedding function used in the
-        # `_predict` method.
-        self._memo_objects_to_feats: Dict[int, npt.NDArray] = {}
-        # We expire memoized content when the ID (nanosecond timestamp) is
-        # older than what will be processed going forward. That way we don't
-        # keep content around forever and "leak" memory.
-        self._memo_preproc_input_id_heap = []
-        self._memo_preproc_input_id_heap_poses = []
-        self._memo_objects_to_feats_id_heap = []
-        # Queue of poses and repeat pose count
-        self._queued_pose_memo = {}
+        self.keypoints_cats = DETECTION_CLASS_KEYPOINTS["patient"]
 
         # Optionally initialize buffer-feeding from input COCO-file of object
         # detections.
@@ -262,7 +235,7 @@ class ActivityClassifierTCN(Node):
             )
             self._results_collector = ResultsCollector(
                 self._output_kwcoco_path,
-                {i: c for i, c in enumerate(self._model.classes)},
+                {l.id: l.label for l in self._act_config.labels},
             )
             # If we are loading from a COCO detections file, it will set the
             # video in the loading thread.
@@ -274,7 +247,7 @@ class ActivityClassifierTCN(Node):
         # image frame with the object detections descriptor vector.
         # Buffer initialization must be before ROS callback and runtime-loop
         # initialization.
-        self._window_size = param_values[PARAM_WINDOW_FRAME_SIZE]
+        self._window_size = self._model_dset.window_size
         self._buffer = InputBuffer(
             0,  # Not using msgs with tolerance.
             self.get_logger,
@@ -691,109 +664,74 @@ class ActivityClassifierTCN(Node):
             determined for this input window.
         """
         log = self.get_logger()
-        memo_preproc_input = self._memo_preproc_input
-        memo_preproc_input_h = self._memo_preproc_input_id_heap
-
-        memo_object_to_feats = self._memo_objects_to_feats
-        memo_object_to_feats_h = self._memo_objects_to_feats_id_heap
-        queued_pose_memo = self._queued_pose_memo
-
         log.info(f"Input Window (oldest-to-newest frame):\n{window}")
 
         # TCN wants to know the label and confidence for the maximally
         # confident class only. Input object detection messages
         log.info("processing window...")
-        # log.info(f"window object detections: {window.obj_dets}")
-        frame_object_detections: List[Optional[ObjectDetectionsLTRB]]
-        frame_object_detections = [None] * len(window)
-        for i, det_msg in enumerate(window.obj_dets):
-            if det_msg is not None:
-                msg_id = time_to_int(det_msg.source_stamp)
-                if msg_id not in memo_preproc_input:
-                    memo_preproc_input[msg_id] = v = ObjectDetectionsLTRB(
-                        msg_id,
-                        det_msg.left,
-                        det_msg.top,
-                        det_msg.right,
-                        det_msg.bottom,
-                        *max_labels_and_confs(det_msg),
-                    )
-                    # print(f"DETECTION memo_preproc_input[msg_id]: {memo_preproc_input[msg_id]}")
-                    heappush(memo_preproc_input_h, msg_id)
-                else:
-                    v = memo_preproc_input[msg_id]
-                frame_object_detections[i] = v
-        log.debug(
-            f"[_process_window] Window vector presence: "
-            f"{[(v is not None) for v in frame_object_detections]}"
-        )
 
-        # log.info(f"window patient_joint_kps: {window.patient_joint_kps}")
-        memo_preproc_input_poses = self._memo_preproc_input_poses
-        memo_preproc_input_h_poses = self._memo_preproc_input_id_heap_poses
-        frame_patient_poses: List[Optional[PatientPose]]
-        frame_patient_poses = [None] * len(window)
-        for i, pose_msg in enumerate(window.patient_joint_kps):
-            if pose_msg is not None:
-                msg_id = time_to_int(pose_msg.source_stamp)
-                if msg_id not in memo_preproc_input_poses:
-                    # for pose in memo_preproc_input_poses[msg_id]:
-                    # print(f"num of joints: {len(pose_msg.joints)}")
-                    # if len(pose_msg.joints) > len(self.keypoints_cats):
-                    #     print(f"num of joints: {pose_msg}")
-                    # print(f"num of keypoints cats: {len(self.keypoints_cats)}")
-                    # print(f"message id: {msg_id}")
-                    # print(f"memo_preproc_input_poses length: {len(memo_preproc_input_poses)}")
-                    memo_preproc_input_poses[msg_id] = v = [
-                        PatientPose(msg_id, pm.pose.position, self.keypoints_cats[i])
-                        for i, pm in enumerate(pose_msg.joints)
-                    ]
+        # Convert window ROS Messages into something appropriate for setting to
+        # the vectorization dataset.
+        det_label_vec: List[Optional[str]] = []
+        window_data: List[FrameData] = []
+        for m_dets, m_pose in zip(window.obj_dets, window.patient_joint_kps):
+            m_dets: Optional[ObjectDetection2dSet]
+            m_pose: Optional[HandJointPosesUpdate]
+            f_dets: Optional[FrameObjectDetections] = None
+            f_pose: Optional[FramePoses] = None
+            if m_dets is not None:
+                det_label_vec = m_dets.label_vec
+                # Convert message xyxy into xywh
+                bbox = np.asarray(
+                    [m_dets.left, m_dets.top, m_dets.right, m_dets.bottom]
+                ).T
+                bbox[:, 2:] -= bbox[:, :2]
+                cats, scores = max_det_class_score(m_dets)
+                f_dets = FrameObjectDetections(
+                    bbox,
+                    cats,
+                    scores,
+                )
+            if m_pose is not None:
+                f_pose = FramePoses(
+                    # No whole-pose score, so just filling in 1.0 for now.
+                    np.array([1.0]),
+                    # (x,y) coordinates for each joint for our single pose.
+                    # Shape (1, n_joints, 2)
+                    np.array(
+                        [
+                            [
+                                (j.pose.position.x, j.pose.position.y)
+                                for j in m_pose.joints
+                            ]
+                        ]
+                    ),
+                    # Turns out, we are storing the confidence as the Z
+                    # position in the message.
+                    np.array([[j.pose.position.z for j in m_pose.joints]]),
+                )
+            window_data.append(FrameData(f_dets, f_pose))
+        assert len(det_label_vec)
+        # We do not set a slot in `det_label_vec` to represent background
+        # because the confidences pushed forward from the detection source
+        # because it should only be providing confidences for the provided
+        # labels.
 
-                    # print(f"POSE memo_preproc_input_poses[msg_id]: {memo_preproc_input_poses[msg_id]}")
-                    #     msg_id,
-                    #     pm.positions,
-                    #     # pose_msg.orientations,
-                    #     pm.labels,
-                    # )
-                    heappush(memo_preproc_input_h_poses, msg_id)
-                else:
-                    v = memo_preproc_input_poses[msg_id]
-                frame_patient_poses[i] = v
-        log.debug(
-            f"[_process_window] Window vector presence: "
-            f"{[(v is not None) for v in frame_patient_poses]}"
-        )
-
-        # print(f"frame_object_detections: {frame_object_detections}")
-
-        try:
-            feats, mask = objects_to_feats(
-                frame_object_detections=frame_object_detections,
-                frame_patient_poses=frame_patient_poses,
-                det_label_to_idx=self._det_label_to_id,
-                feat_version=self._feat_version,
-                image_width=self._img_pix_width,
-                image_height=self._img_pix_height,
-                # feature_memo=memo_object_to_feats, # passed by reference so this gets updated in the function and changes persist here
-                # pose_memo=queued_pose_memo,
-                normalize_pixel_pts=self.model_normalize_pixel_pts,
-                normalize_center_pts=self.model_normalize_center_pts,
-                pose_repeat_rate=self._pose_repeat_rate,
-            )
-        except ValueError as ex:
-            log.warn(f"object-to-feats: ValueError: {ex}")
-            # feature detections were all None
-            raise NoActivityClassification()
-
-        feats = feats.to(self._model_device)
-        mask = mask.to(self._model_device)
+        self._model_dset.load_data_online(window_data, det_label_vec)
+        loader = DataLoader(dataset=self._model_dset, batch_size=1)
+        batch = move_data_to_device(list(loader)[0], device=self._model_device)
 
         with SimpleTimer("[_process_window] Model processing", log.info):
-            proba = predict(self._model, feats, mask).cpu()
+            with torch.no_grad():
+                _, proba, preds, _, _, _ = self._model.model_step(
+                    batch,
+                    compute_loss=False,
+                )
+            pred = preds.cpu()[0]
+            proba = proba.cpu()[0]
 
-        pred = torch.argmax(proba)
         log.info(f"activity probabilities: {proba}, prediction class: {pred}")
-        log.info(f"self._model.classes: {self._model.classes}")
+        log.info(f"activity class names: {self._act_class_names}")
 
         # Prepare output message
         activity_msg = ActivityDetection()
@@ -802,7 +740,7 @@ class ActivityClassifierTCN(Node):
         activity_msg.source_stamp_end_frame = window.frames[-1][0]
 
         # save label vector
-        activity_msg.label_vec = self._model.classes
+        activity_msg.label_vec = self._act_class_names
 
         # save the activity probabilities
         activity_msg.conf_vec = proba.tolist()
@@ -814,18 +752,6 @@ class ActivityClassifierTCN(Node):
                 f"(time: {time_to_int(activity_msg.source_stamp_start_frame)} - "
                 f"{time_to_int(activity_msg.source_stamp_end_frame)})"
             )
-
-        # Clean up our memos from IDs at or earlier than this window's earliest
-        # frame.
-        window_start_time_ns = time_to_int(window.frames[0][0])
-        while memo_preproc_input_h and memo_preproc_input_h[0] <= window_start_time_ns:
-            del memo_preproc_input[heappop(memo_preproc_input_h)]
-        while (
-            memo_object_to_feats_h and memo_object_to_feats_h[0] <= window_start_time_ns
-        ):
-            detection_id = heappop(memo_object_to_feats_h)
-            del memo_object_to_feats[detection_id]
-            del queued_pose_memo[detection_id]
 
         self._rate_tracker.tick()
         log.info(
