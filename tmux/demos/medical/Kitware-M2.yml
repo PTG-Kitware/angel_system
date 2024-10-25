@@ -63,9 +63,12 @@ windows:
             -p image_topic:=PVFramesBGR
             -p output_topic:=PVFramesBGR_ts
         - run_latency_node: ros2 run angel_system_nodes latency_tracker --ros-args
-            -r __ns:=${ROS_NAMESPACE} -p image_ts_topic:=PVFramesBGR_ts
-            -p det_topic:=ObjectDetections2d -p pose_topic:=PatientPose
-            -p activity_topic:=activity_topic -p latency_topic:=latency
+            -r __ns:=${ROS_NAMESPACE}
+            -p image_ts_topic:=PVFramesBGR_ts
+            -p det_topic:=ObjectDetections2d
+            -p pose_topic:=PatientPose
+            -p activity_topic:=activity_topic
+            -p latency_topic:=latency
 
 #  - sensor_input_stream:
 #      layout: even-vertical
@@ -115,9 +118,9 @@ windows:
       -p image_ts_topic:=PVFramesBGR_ts
       -p det_topic:=ObjectDetections2d
       -p pose_topic:=PatientPose
+      -p activity_config_file:=${CONFIG_DIR}/activity_labels/medical/m2.yaml
       -p model_weights:=${MODEL_DIR}/activity_classifier/m2_tcn.ckpt
-      -p model_mapping:=${MODEL_DIR}/activity_classifier/m2_mapping.txt
-      -p model_det_label_mapping:=${ANGEL_WORKSPACE_DIR}/config/object_labels/medical/m2.json
+      -p model_config:=${MODEL_DIR}/activity_classifier/m2_config.yaml
       -p act_topic:=activity_topic
       -p pose_repeat_rate:=7.5
       -p window_leads_with_objects:=true

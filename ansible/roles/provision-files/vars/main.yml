@@ -61,9 +61,9 @@ girder_file_downloads:
       sha512: 7ded5cb71ef0efe2444a19c7452073c63a34d65e3038b24236b304836abd47e8911e3d3023d2ba7e5a8d8c1e337e6f4b8e3080709827eb2b0daaedb0b6248561
       dest: "{{ stage_dirs.pose_estimation }}/pose_model.pth"
     # Hand detector
-    - file_id: 6710037cba16447d41e1663a
-      sha512: cf6a20a966dcaee46354545ef5d2086f2dcf31112eb90282e5dd6a24824a584d5e549274112f6f028911050a48bcaba6c944e5d3d870edcafe2fcd34e61d95f5
-      dest: "{{ stage_dirs.object_detector }}/hands_model.engine"
+    - file_id: 6605ca2e8b763ca20ae99f77
+      sha512: 42b56f34c0c443ad00d71e66334d6e852a7811011b22a60da9b5e2721565c21d1b5daad17c8a708908c9658ded81a663729090526feb5286bd0a591cf4fb5d8f
+      dest: "{{ stage_dirs.object_detector }}/hands_model.pt"
 
     # ---- M2 ----
     # Object detector

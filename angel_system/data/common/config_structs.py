@@ -77,7 +77,7 @@ class ActivityLabel:
 class ActivityLabelSet:
     version: str
     title: str
-    labels: Tuple[ActivityLabel]
+    labels: Sequence[ActivityLabel]
 
     def __post_init__(self):
         # coerce nested label objects into the ObjectLabel type.
@@ -108,7 +108,7 @@ class TaskStep:
     id: int
     label: str
     full_str: str
-    activity_ids: Tuple[int]
+    activity_ids: Sequence[int]
 
 
 @dataclass
@@ -119,7 +119,7 @@ class LinearTask:
 
     version: str
     title: str
-    labels: Tuple[TaskStep]
+    labels: Sequence[TaskStep]
 
     def __post_init__(self):
         # Coerce pathlike input (str) into a Path instance if not already.
@@ -168,7 +168,7 @@ class MultiTaskConfig:
 
     version: str
     title: str
-    tasks: Tuple[OneTaskConfig]
+    tasks: Sequence[OneTaskConfig]
 
     def __post_init__(self):
         # coerce nested task objects into OneTaskConfig types

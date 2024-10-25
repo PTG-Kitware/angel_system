@@ -2,7 +2,7 @@ import numpy as np
 
 from tcn_hpl.data.components.augmentations import NormalizePixelPts
 
-from angel_system.activity_classification.utils import (
+from tcn_hpl.data.vectorize_classic import (
     obj_det2d_set_to_feature,
 )
 
