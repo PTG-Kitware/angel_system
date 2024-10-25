@@ -679,7 +679,9 @@ class ActivityClassifierTCN(Node):
                             # save the info for why this window was not processed
                             repr = window.__repr__()
                             with open(self._debug_file, "a") as f:
-                                f.write(f"timestamp: {self.get_clock().now().to_msg()}\n")
+                                f.write(
+                                    f"timestamp: {self.get_clock().now().to_msg()}\n"
+                                )
                                 f.write(f"{repr}\n")
 
                     # This window has completed processing - record its leading
@@ -887,35 +889,6 @@ class ActivityClassifierTCN(Node):
             )
 
     def _save_results(self):
-        """
-        Save results if we have been initialized to do that.
-
-        This method does nothing if this node has not been initialized to
-        collect results.
-        """
-        rc = self._results_collector
-        if rc is not None:
-            self.get_logger().info(
-                f"Writing classification results to: {self._output_kwcoco_path}"
-            )
-            self._results_collector.write_file()
-
-    def destroy_node(self):
-        log = self.get_logger()
-        log.info("Stopping node runtime")
-        self.rt_stop()
-        with SimpleTimer("Shutting down runtime thread...", log.info):
-            self._rt_active.clear()  # make RT active flag "False"
-            self._rt_thread.join()
-        self._save_results()
-        super().destroy_node()
-
-
-main = make_default_main(ActivityClassifierTCN, multithreaded_executor=4)
-
-
-if __name__ == "__main__":
-    main()
         """
         Save results if we have been initialized to do that.
 
