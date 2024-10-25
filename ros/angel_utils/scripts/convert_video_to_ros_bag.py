@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+"""
+Convert a video (mp4) or a series of images into a ROS bag.
+
+Example running (inside ROS environment):
+ros2 run angel_utils convert_video_to_ros_bag.py \
+  --video-fn video.mp4 \
+  --output-bag-folder ros_bags/new_bag
+"""
 import argparse
 from glob import glob
 from pathlib import Path
