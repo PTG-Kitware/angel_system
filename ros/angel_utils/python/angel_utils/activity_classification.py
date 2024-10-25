@@ -192,13 +192,17 @@ class InputBuffer:
         # self.get_logger_fn().info(f"self.frames[-1][0] header stamp: {self.frames[-1][0]}")
         with self.__state_lock:
             # before the current lead frame?
-            if self.frames and time_to_int(img_header_stamp) <= time_to_int(
-                self.frames[-1][0]
+            if (
+                self.frames
+                and self.frames[-1][2] == image_frame_number
+                and time_to_int(img_header_stamp) <= time_to_int(self.frames[-1][0])
             ):
                 self.get_logger_fn().warn(
                     f"Input image frame was NOT after the previous latest: "
                     f"(prev) {time_to_int(self.frames[-1][0])} "
-                    f"!< {time_to_int(img_header_stamp)} (new)"
+                    f"!< {time_to_int(img_header_stamp)} (new)\n"
+                    f"frame number: {image_frame_number}\n"
+                    f"prev frame number: {self.frames[-1][2]}"
                 )
                 return False
             self.frames.append((img_header_stamp, img_mat, image_frame_number))
