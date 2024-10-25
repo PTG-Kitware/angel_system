@@ -480,13 +480,12 @@ class ResultsCollector:
             # save the gid from the image to link to the annot
             gid = self._dset.add_image(**img)
 
-            # additional items to save
-            add_items = dict(
-                prob=list(activity_conf_vec),
-            )
             # add the annotation
             self._dset.add_annotation(
-                image_id=gid, category_id=activity_pred, **add_items
+                image_id=gid,
+                category_id=activity_pred,
+                score=activity_conf_vec[activity_pred],
+                prob=list(activity_conf_vec),
             )
 
     def write_file(self):
