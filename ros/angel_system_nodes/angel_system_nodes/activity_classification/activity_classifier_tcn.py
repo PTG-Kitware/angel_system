@@ -22,7 +22,9 @@ from rclpy.node import Node
 import torch
 from torch.utils.data import DataLoader
 from tcn_hpl.data.ptg_datamodule import create_dataset_from_hydra
-from tcn_hpl.data.utils.pose_generation.generate_pose_data import DETECTION_CLASS_KEYPOINTS
+from tcn_hpl.data.utils.pose_generation.generate_pose_data import (
+    DETECTION_CLASS_KEYPOINTS,
+)
 from tcn_hpl.data.vectorize import (
     FrameData,
     FrameObjectDetections,
@@ -107,7 +109,7 @@ class NoActivityClassification(Exception):
 
 
 def max_det_class_score(
-    msg: ObjectDetection2dSet
+    msg: ObjectDetection2dSet,
 ) -> Tuple[npt.NDArray[int], npt.NDArray[float]]:
     """
     Get the index and score of the highest scoring class.
@@ -163,9 +165,7 @@ class ActivityClassifierTCN(Node):
         self._pose_repeat_rate = param_values[PARAM_POSE_REPEAT_RATE]
 
         self._act_topic = param_values[PARAM_ACT_TOPIC]
-        self._act_config = load_activity_label_set(
-            param_values[PARAM_ACT_CONFIG_FILE]
-        )
+        self._act_config = load_activity_label_set(param_values[PARAM_ACT_CONFIG_FILE])
         self._img_pix_width = param_values[PARAM_IMAGE_PIX_WIDTH]
         self._img_pix_height = param_values[PARAM_IMAGE_PIX_HEIGHT]
         self._enable_trace_logging = param_values[PARAM_TIME_TRACE_LOGGING]
@@ -174,15 +174,16 @@ class ActivityClassifierTCN(Node):
 
         # Cache activity class labels in ID order
         self._act_class_names = [
-            x[1]
-            for x in sorted((l.id, l.label) for l in self._act_config.labels)
+            x[1] for x in sorted((l.id, l.label) for l in self._act_config.labels)
         ]
 
         # Load in TCN classification dataset and model/weights
         # The dataset includes info on the window size appropriate for the
         # model as well as how to embed input data into the appropriate
         # vectorization the model requires.
-        self._model_dset = create_dataset_from_hydra(Path(param_values[PARAM_MODEL_CONFIG]))
+        self._model_dset = create_dataset_from_hydra(
+            Path(param_values[PARAM_MODEL_CONFIG])
+        )
         with SimpleTimer("Loading inference module", log.info):
             self._model_device = torch.device(param_values[PARAM_MODEL_DEVICE])
             self._model = PTGLitModule.load_from_checkpoint(
@@ -681,7 +682,9 @@ class ActivityClassifierTCN(Node):
             if m_dets is not None:
                 det_label_vec = m_dets.label_vec
                 # Convert message xyxy into xywh
-                bbox = np.asarray([m_dets.left, m_dets.top, m_dets.right, m_dets.bottom]).T
+                bbox = np.asarray(
+                    [m_dets.left, m_dets.top, m_dets.right, m_dets.bottom]
+                ).T
                 bbox[:, 2:] -= bbox[:, :2]
                 cats, scores = max_det_class_score(m_dets)
                 f_dets = FrameObjectDetections(
@@ -695,7 +698,14 @@ class ActivityClassifierTCN(Node):
                     np.array([1.0]),
                     # (x,y) coordinates for each joint for our single pose.
                     # Shape (1, n_joints, 2)
-                    np.array([[(j.pose.position.x, j.pose.position.y) for j in m_pose.joints]]),
+                    np.array(
+                        [
+                            [
+                                (j.pose.position.x, j.pose.position.y)
+                                for j in m_pose.joints
+                            ]
+                        ]
+                    ),
                     # Turns out, we are storing the confidence as the Z
                     # position in the message.
                     np.array([[j.pose.position.z for j in m_pose.joints]]),
