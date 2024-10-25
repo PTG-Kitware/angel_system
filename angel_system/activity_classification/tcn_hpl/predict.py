@@ -447,25 +447,6 @@ class ResultsCollector:
             else:
                 self._vid = self._dset.add_video(name=video_name)
 
-    def check_for_existing_image(self, name, file_name) -> bool:
-        """
-        Check if an image already exists in the dataset.
-        """
-        already_exists = None
-        if name is not None:
-            try:
-                already_exists = self._dset.images().lookup(name)
-            except KeyError:
-                pass
-        if file_name is not None:
-            try:
-                already_exists = self._dset.images().lookup(file_name)
-            except KeyError:
-                pass
-        if already_exists:
-            return True
-        return False
-
     def add_image(
         self,
         frame_index: int,
@@ -481,9 +462,6 @@ class ResultsCollector:
                 raise RuntimeError(
                     "No video set before results collection. See `set_video` method."
                 )
-            # confirm we haven't already added this image
-            if self.check_for_existing_image(name, file_name):
-                return -1
 
             # get the global id for the image from the frame number
             # add the image
@@ -496,7 +474,10 @@ class ResultsCollector:
             if file_name is not None:
                 img["file_name"] = file_name
             # save the gid from the image to link to the annot
-            gid = self._dset.add_image(**img)
+            try:
+                gid = self._dset.add_image(**img)
+            except Exception:
+                return -1  # image already exists
 
             return gid
 
