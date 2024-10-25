@@ -552,7 +552,10 @@ class ActivityClassifierTCN(Node):
             # Prepare output message
             activity_msg = ActivityDetection()
             # set the only needed items for collection
-            activity_msg.source_stamp_end_frame = window.frames[-1][0]
+            if len(window.frames) > 0:
+                activity_msg.source_stamp_end_frame = window.frames[-1][0]
+            else:
+                self.get_logger().warn(f"window.frames: {window.frames}")
             activity_msg.conf_vec = [0.0 for x in self._model.classes]
             gid = self._collect_image(activity_msg)
             return gid
