@@ -660,6 +660,15 @@ class ActivityClassifierTCN(Node):
 
                         self._activity_publisher.publish(act_msg)
                     except NoActivityClassification:
+                        # collect the results if we are saving to coco file
+                        if self._results_collector:
+                            # Prepare output message
+                            activity_msg = ActivityDetection()
+                            # set the only needed items for collection
+                            activity_msg.source_stamp_end_frame = window.frames[-1][0]
+                            activity_msg.conf_vec = [0.0 for x in self._model.classes]
+                            self._collect_results(activity_msg)
+
                         # No ramifications, but don't publish activity message.
                         log.warn(
                             "Runtime loop window processing function did "
