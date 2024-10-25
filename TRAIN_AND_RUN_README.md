@@ -71,36 +71,48 @@ Data is stored on their SFTP server, to which the "Click to Download" links
 refer to.
 
 Storage of downloaded ZIP archives, and their subsequent extractions, should
-follow the pattern.
-A script is provided 
+follow the pattern below.
 ```
 bbn_data/
 ├── README.md  # Indicate where we have acquired this BBN data.
 └── lab_data-golden/
     ├── m2_tourniquet/
-    │   ├── Fri-Apr-21/
-    │   │   ├── 20230420_122603_HoloLens.mp4
-    │   │   ├── 20230420_122603_HoloLens.skill_labels_by_frame.txt
-    │   │   ├── 20230420_123212_HoloLens.mp4
-    │   │   ├── 20230420_123212_HoloLens.skill_labels_by_frame.txt
-    │   │   ├── 20230420_124541_HoloLens.mp4
-    │   │   ├── 20230420_124541_HoloLens.skill_labels_by_frame.txt
-    │   │   ├── 20230420_125033_HoloLens.mp4
-    │   │   ├── 20230420_125033_HoloLens.skill_labels_by_frame.txt
-    │   │   ├── 20230420_125517_HoloLens.mp4
-    │   │   └── 20230420_125517_HoloLens.skill_labels_by_frame.txt
-    │   ├── Fri-Apr-21.zip
-    │   ├── Mon-Apr-17/
-    │   │   ...
-    │   ├── Mon-Apr-17.zip
-    │   ├── Mon-Apr-24/
-    │   │   ...
-    │   └── Mon-Apr-24.zip
+    │   ├── positive/
+    │   │   ├── Fri-Apr-21/
+    │   │   │   ├── 20230420_122603_HoloLens.mp4
+    │   │   │   ├── 20230420_122603_HoloLens.skill_labels_by_frame.txt
+    │   │   │   ├── 20230420_123212_HoloLens.mp4
+    │   │   │   ├── 20230420_123212_HoloLens.skill_labels_by_frame.txt
+    │   │   │   ├── 20230420_124541_HoloLens.mp4
+    │   │   │   ├── 20230420_124541_HoloLens.skill_labels_by_frame.txt
+    │   │   │   ├── 20230420_125033_HoloLens.mp4
+    │   │   │   ├── 20230420_125033_HoloLens.skill_labels_by_frame.txt
+    │   │   │   ├── 20230420_125517_HoloLens.mp4
+    │   │   │   └── 20230420_125517_HoloLens.skill_labels_by_frame.txt
+    │   │   ├── Fri-Apr-21.zip
+    │   │   ├── Mon-Apr-17/
+    │   │   │   ...
+    │   │   └── Mon-Apr-17.zip
+    │   │       ...
+    │   └── negative/
+    │       ├── Fri-Aug-25/
+    │       │   ...
+    │       └── Fri-Aug-25.zip
     ├── m3_pressure_dressing/
     │   ...
     └── r18_chest_seal/
         ...
 ```
+A script is provided at `scripts/extract_bbn_video_archives.bash` to automate
+the recursive extraction of such ZIP files.
+To operate this script, change directories to be in a parent directory
+under which the ZIP files to be extracted are located, and then execute the
+script:
+```bash
+cd ${PATH_TO_DATA}/
+bash ${PATH_TO_ANGEL_SYSTEM}/scripts/extract_bbn_video_archives.bash
+```
+
 Golden data should be marked as read-only after downloading and extracting to
 prevent accidental modification of the files:
 ```
