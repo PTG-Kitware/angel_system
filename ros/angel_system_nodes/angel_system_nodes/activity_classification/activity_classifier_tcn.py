@@ -14,6 +14,7 @@ import re
 from typing import Tuple
 import re
 from typing import Tuple
+import re
 
 import kwcoco
 from builtin_interfaces.msg import Time
