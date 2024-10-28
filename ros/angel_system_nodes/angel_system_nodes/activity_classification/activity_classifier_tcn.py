@@ -12,6 +12,7 @@ from typing import Callable
 from typing import Dict
 from typing import List
 from typing import Optional
+import re
 
 import kwcoco
 from builtin_interfaces.msg import Time
@@ -694,10 +695,10 @@ class ActivityClassifierTCN(Node):
                         if self._debug_file != "":
                             # save the info for why this window was not processed
                             repr = window.__repr__()
+                            # clean this output for easier viewing (CSV)
+                            repr = "index" + repr  # add a column for the index
+                            repr = re.sub(" +", ",", repr)  # replace spaces with commas
                             with open(self._debug_file, "a") as f:
-                                f.write(
-                                    f"timestamp: {self.get_clock().now().to_msg()}\n"
-                                )
                                 f.write(f"{repr}\n")
 
                     # This window has completed processing - record its leading
