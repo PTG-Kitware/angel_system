@@ -12,6 +12,7 @@ from typing import List
 from typing import Optional
 import re
 from typing import Tuple
+import re
 
 import kwcoco
 from builtin_interfaces.msg import Time
