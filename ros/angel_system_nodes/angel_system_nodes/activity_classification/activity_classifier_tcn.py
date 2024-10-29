@@ -524,7 +524,7 @@ class ActivityClassifierTCN(Node):
                 activity_msg.source_stamp_end_frame = window.frames[-1][0]
             else:
                 self.get_logger().warn(f"window.frames: {window.frames}")
-            activity_msg.conf_vec = [0.0 for x in self._model.classes]
+            activity_msg.conf_vec = [0.0 for x in self._act_class_names]
             gid = self._collect_image(activity_msg)
             return gid
         return -1
