@@ -122,7 +122,7 @@ def convert_video_to_bag(
 
         # Create image message
         image_msg = bridge.cv2_to_imgmsg(frame, encoding="bgr8")
-        #image_msg.header.stamp = frame_ts_msg
+        # image_msg.header.stamp = frame_ts_msg
         # split the frame timestamp into sec and nsec
         msec = frame_rel_ts
         nsec = int((msec - int(msec)) * 1_000_000_000)
