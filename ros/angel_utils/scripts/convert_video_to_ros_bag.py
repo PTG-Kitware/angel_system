@@ -112,7 +112,6 @@ def convert_video_to_bag(
 
     # Starting at this so our first increment starts us at frame ID 0.
     frame_id = -1
-    start_ts = rclpy.time.Time(nanoseconds=time.time_ns())
     for frame, frame_rel_ts in frame_iter:
         frame_id += 1
         # Only proceed if we don't have a down-sample rate specified or if the
@@ -120,15 +119,18 @@ def convert_video_to_bag(
         if downsample_rate is not None and frame_id % downsample_rate != 0:
             continue
         print(f"==== FRAME {frame_id} ====")
-        # Create timestamp
-
-        frame_ts = start_ts + rclpy.duration.Duration(seconds=frame_rel_ts)
-        frame_ts_msg = frame_ts.to_msg()
-        print("timestamp", frame_ts)
 
         # Create image message
         image_msg = bridge.cv2_to_imgmsg(frame, encoding="bgr8")
-        image_msg.header.stamp = frame_ts_msg
+        #image_msg.header.stamp = frame_ts_msg
+        # split the frame timestamp into sec and nsec
+        msec = frame_rel_ts
+        nsec = int((msec - int(msec)) * 1_000_000_000)
+        msec = int(msec)
+        image_msg.header.stamp.sec = msec
+        image_msg.header.stamp.nanosec = nsec
+        print(f"timestamp: {image_msg.header.stamp}")
+
         image_msg.header.frame_id = "PVFramesBGR"
 
         # Write to bag
@@ -136,7 +138,7 @@ def convert_video_to_bag(
             bag_writer.write(
                 output_image_topic,
                 serialize_message(image_msg),
-                frame_ts.nanoseconds,
+                image_msg.header.stamp.nanosec,
             )
         except Exception as err:
             # Truncating the error message because it printed out the whole image_msg input
