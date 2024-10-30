@@ -511,24 +511,6 @@ class ActivityClassifierTCN(Node):
         # TODO: add has-finished-processing-file-input check.
         return rt_active
 
-    def _save_image_to_coco(self, window: InputWindow) -> int:
-        """
-        This will add an image to the output coco file
-        if you are not saving to a coco file, this will return -1
-        """
-        if self._results_collector:
-            # Prepare output message
-            activity_msg = ActivityDetection()
-            # set the only needed items for collection
-            if len(window.frames) > 0:
-                activity_msg.source_stamp_end_frame = window.frames[-1][0]
-            else:
-                self.get_logger().warn(f"window.frames: {window.frames}")
-            activity_msg.conf_vec = [0.0 for x in self._act_class_names]
-            gid = self._collect_image(activity_msg)
-            return gid
-        return -1
-
     def _window_criterion_correct_size(self, window: InputBuffer) -> bool:
         window_ok = len(window) == self._window_size
         if not window_ok:
@@ -536,7 +518,6 @@ class ActivityClassifierTCN(Node):
                 f"Window is not the appropriate size "
                 f"(actual:{len(window)} != {self._window_size}:expected)"
             )
-            self._save_image_to_coco(window)
 
         return window_ok
 
@@ -611,6 +592,9 @@ class ActivityClassifierTCN(Node):
                     have_leading_object=self._window_lead_with_objects,
                 )
 
+                window_end_frame = window.frames[-1][0]
+                image_gid = self._collect_image(window_end_frame)
+
                 # log.info(f"buffer contents: {window.obj_dets}")
 
                 # if enable_time_trace_logging:
@@ -632,7 +616,6 @@ class ActivityClassifierTCN(Node):
                     self._buffer.clear_before(time_to_int(window.frames[1][0]))
 
                     # set this to None to signal if we saved the image or not
-                    image_gid = None
                     try:
                         if enable_time_trace_logging:
                             log.info(
@@ -643,7 +626,6 @@ class ActivityClassifierTCN(Node):
                         act_msg = self._process_window(window)
                         # log.info(f"activity message: {act_msg}")
 
-                        image_gid = self._collect_image(act_msg)
                         self._collect_results(act_msg, image_gid)
                         # set the header right before publishing so that the time is after processing
                         act_msg.header.frame_id = "Activity Classification"
@@ -651,9 +633,6 @@ class ActivityClassifierTCN(Node):
 
                         self._activity_publisher.publish(act_msg)
                     except NoActivityClassification:
-                        # collect the image if we are saving to coco file
-                        if self._results_collector and image_gid is None:
-                            self._save_image_to_coco(window)
                         # No ramifications, but don't publish activity message.
                         log.warn(
                             "Runtime loop window processing function did "
@@ -802,7 +781,7 @@ class ActivityClassifierTCN(Node):
 
         return activity_msg
 
-    def _collect_image(self, msg: ActivityDetection) -> int:
+    def _collect_image(self, end_frame_time) -> int:
         """
         Collect into our ResultsCollector instance from the produced activity
         classification message if we were initialized to do that.
@@ -817,7 +796,7 @@ class ActivityClassifierTCN(Node):
             # Use window end timestamp nanoseconds as the frame index.
             # When reading from an input COCO file, this aligns with the input
             # `image` `frame_index` attributes.
-            frame_index = time_to_int(msg.source_stamp_end_frame)
+            frame_index = time_to_int(end_frame_time)
             gid = rc.add_image(
                 frame_index=frame_index,
                 name=f"ros-frame-nsec-{frame_index}",
