@@ -615,7 +615,6 @@ class ActivityClassifierTCN(Node):
                     # out older data at and before the first item in the window.
                     self._buffer.clear_before(time_to_int(window.frames[1][0]))
 
-                    # set this to None to signal if we saved the image or not
                     try:
                         if enable_time_trace_logging:
                             log.info(
