@@ -780,7 +780,7 @@ class ActivityClassifierTCN(Node):
 
         return activity_msg
 
-    def _collect_image(self, end_frame_time) -> int:
+    def _collect_image(self, end_frame_time: Time) -> int:
         """
         Collect into our ResultsCollector instance from the produced activity
         classification message if we were initialized to do that.
