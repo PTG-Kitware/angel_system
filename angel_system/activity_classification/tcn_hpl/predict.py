@@ -43,6 +43,10 @@ class ResultsCollector:
         dset.dataset["info"].append({"activity_labels": id_to_action})
         self._vid: Optional[int] = None
 
+        # convert the activity labels to categories
+        for act_id, act_name in id_to_action.items():
+            dset.add_category(name=act_name, id=act_id)
+
     def set_video(self, video_name: str) -> None:
         """
         Set the video for which we are currently collecting results for.
