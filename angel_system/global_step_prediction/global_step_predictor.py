@@ -6,6 +6,7 @@ import seaborn as sn
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.ndimage as ndi
+import kwcoco
 
 
 class GlobalStepPredictor:
@@ -140,33 +141,32 @@ class GlobalStepPredictor:
             )
         return self.get_activity_per_granular_step(broad_steps)
 
-    def compute_average_TP_activations(self, coco):
+    def compute_average_TP_activations(
+        self,
+        coco_train: kwcoco.CocoDataset,
+    ):
         # For each activity, given the Ground Truth-specified
         # frame subset where that activity is happening, get the
         # average activation of that class.
 
-        all_activity_ids = np.unique(np.asarray(coco.images().lookup("activity_gt")))
-        all_vid_ids = np.unique(np.asarray(coco.images().lookup("video_id")))
+        all_activity_ids = coco_train.categories().get("id")
+        print(f"all_activity_ids: {all_activity_ids}")
+
+        # create a mapping of all the annots ids to image ids in the training set
+        tr_aid_to_gid = coco_train.annots().get("image_id", keepid=True)
+        print(f"training set annotations: {len(tr_aid_to_gid)}")
+
+        all_vid_ids = coco_train.videos().get("id")
         print(
-            f"Computing average true positive activations for {len(all_vid_ids)} videos."
+            f"Computing average true positive activations for {len(all_vid_ids)} video(s)."
         )
 
         # Don't use len() here... There might be skipped indexes.
         avg_probs = np.zeros(max(all_activity_ids) + 1)
 
         for activity_id in all_activity_ids:
-            # image_ids = coco.index.vidid_to_gids[vid_id]
-            image_ids = []
-            for i in range(len(all_vid_ids)):
-                image_ids.extend(
-                    [
-                        img["id"]
-                        for img in coco.videos(video_ids=all_vid_ids).images[i].objs
-                        if img["activity_gt"] == activity_id
-                    ]
-                )
-            sub_dset = coco.subset(gids=image_ids, copy=True)
-            probs_for_true_inds = np.asarray(sub_dset.images().lookup("activity_conf"))[
+            sub_dset = coco_train.subset(gids=tr_aid_to_gid.keys(), copy=True)
+            probs_for_true_inds = np.asarray(sub_dset.annots().get("prob"))[
                 :, activity_id
             ]
             avg_prob = np.mean(probs_for_true_inds)
@@ -1036,7 +1036,7 @@ class GlobalStepPredictor:
         mapping perfect probably isn't worth the effort for now.
 
         """
-        activity_gts = video_dset.images().lookup("activity_gt")
+        activity_gts = video_dset.annots().get("category_id")
         broad_step_gts = []
         broad_step_gts_no_background = []
         granular_step_gts = []
