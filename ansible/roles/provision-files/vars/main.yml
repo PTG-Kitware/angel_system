@@ -78,9 +78,9 @@ girder_file_downloads:
       sha512: 0d8442741ae41c5f824909fe8830bc72041a2e39d1566648558150641e225a0a5e293f53dbcc4fe8d0a4fbdaf7d57c078b6f9b10028ea6d2737d4d28481cdcee
       dest: "{{ stage_dirs.activity_classifier }}/m2_config.yaml"
     # Global Step predictor model
-    - file_id: 660ebb1aaa5c8de3874c43c0
-      sha512: 6b04eaa2b68ba8de8d879364302b6b256487b5d0ffca87ae5e52423abc2ce855a258b8dcb5d1bc46aa0b7f8b09e8ff0d29fb50a2e7f929da373196538b7dce31
-      dest: "{{ stage_dirs.task_monitor }}/m2_test_activity_preds.mscoco.json"
+    - file_id: 6723f3d283e1acbfd87e7269
+      sha512: fb676aae6f768498df860bbf4a1621ee8403cba96a1b9acc088f5f23671c57ca1f06f6c535fa8b0eb5074c7fed56e8ff5a7f990e2893f3759662c76137db1746
+      dest: "{{ stage_dirs.task_monitor }}/global_step_predictor_act_avgs_m2.npy"
 
     # ---- M3 ----
     # Object detector

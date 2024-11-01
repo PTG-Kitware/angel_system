@@ -137,7 +137,7 @@ windows:
             -p task_error_topic:=ARUISystemNotifications
             -p system_command_topic:=SystemCommands
             -p det_topic:=activity_topic
-            -p model_file:=${MODEL_DIR}/task_monitor/m2_test_activity_preds.mscoco.json
+            -p model_file:=${MODEL_DIR}/task_monitor/global_step_predictor_act_avgs_m2.npy
             -p thresh_frame_count:=3
             -p deactivate_thresh_frame_count:=10
             -p threshold_multiplier_weak:=0.00
