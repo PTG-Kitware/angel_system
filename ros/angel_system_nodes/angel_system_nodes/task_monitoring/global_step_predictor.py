@@ -595,7 +595,7 @@ class GlobalStepPredictorNode(Node):
             log.info("No GT configured to score against, skipping.")
             return
         # List of per-frame truth activity classification IDs.
-        activity_gts = self.gt_video_dset.images().lookup("activity_gt")
+        activity_gts = self.gt_video_dset.annots().get("category_id")
         recipe_type = self.gsp.determine_recipe_from_gt_first_activity(activity_gts)
         log.info(f"recipe_type = {recipe_type}")
         if recipe_type == "unknown_recipe_type":
@@ -610,11 +610,15 @@ class GlobalStepPredictorNode(Node):
         ) = self.gsp.get_gt_steps_from_gt_activities(self.gt_video_dset, config_fn)
 
         vid_name = self.gt_video_dset.dataset["videos"][0]["name"]
+        # handle video name if it is a full path
+        if Path(vid_name).exists():
+            vid_name = Path(vid_name).stem  # just use the final part of the path
+
         vid_id = self.gt_video_dset.dataset["videos"][0]["id"]
-        log.info("Generating plots...")
+        log.info(f"Generating plots to folder: {self.gt_output_dir_override}...")
         out_p = self.gsp.plot_gt_vs_predicted_one_recipe(
-            granular_step_gts,
-            recipe_type,
+            step_gts=granular_step_gts,
+            recipe_type=recipe_type,
             fname_suffix=f"{vid_name}_{str(vid_id)}_granular",
             granular_or_broad="granular",
             output_dir=self.gt_output_dir_override,
