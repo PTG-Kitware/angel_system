@@ -222,21 +222,20 @@ class ObjectAndHandDetector(Node):
 
         # Create object class label vector for later inclusion in published
         # messages.
-        if self._object_model_background_idx is not None:
-            label_vector = self.object_model.names[1:]  # remove background label
-        else:
-            label_vector = self.object_model.names
-
+        label_vector = self.object_model.names
         label_vector.append("hand (left)")
         label_vector.append("hand (right)")
         n_classes = len(label_vector)
 
+        # Class index of hands based on how they are determined in
+        # `python-tpl/yolov7/yolov7/detect_ptg.py`
+        # TODO: un-hard-code this someday.
         left_hand_cid = n_classes - 2
         right_hand_cid = n_classes - 1
 
         hand_cid_label_dict = {
-            "hand (right)": right_hand_cid,
             "hand (left)": left_hand_cid,
+            "hand (right)": right_hand_cid,
         }
         while self._rt_active.wait(0):  # will quickly return false if cleared.
             if self._rt_awake_evt.wait_and_clear(self._rt_active_heartbeat):
@@ -286,14 +285,6 @@ class ObjectAndHandDetector(Node):
                     None,
                     self._agnostic_nms,
                 )
-                # If we have a background class, decrement the class IDs by one
-                # that are after the background class index.
-                if self._object_model_background_idx is not None:
-                    # This is a little faster than doing a naive list
-                    # comprehension.
-                    id_arr = np.asarray(object_classids)
-                    id_arr[id_arr > self._object_model_background_idx] -= 1
-                    object_classids = id_arr.tolist()
 
                 object_boxes.extend(hand_boxes)
                 object_confs.extend(hand_confs)
