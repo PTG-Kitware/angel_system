@@ -137,7 +137,8 @@ def convert_video_to_bag(
             bag_writer.write(
                 output_image_topic,
                 serialize_message(image_msg),
-                image_msg.header.stamp.nanosec,
+                # Time position of this message in nanoseconds (integer).
+                int(frame_rel_ts * 1e9),
             )
         except Exception as err:
             # Truncating the error message because it printed out the whole image_msg input
