@@ -23,9 +23,6 @@ from rclpy.node import Node
 import torch
 from torch.utils.data import DataLoader
 from tcn_hpl.data.ptg_datamodule import create_dataset_from_hydra
-from tcn_hpl.data.utils.pose_generation.generate_pose_data import (
-    DETECTION_CLASS_KEYPOINTS,
-)
 from tcn_hpl.data.vectorize import (
     FrameData,
     FrameObjectDetections,
@@ -196,22 +193,6 @@ class ActivityClassifierTCN(Node):
                 param_values[PARAM_MODEL_WEIGHTS],
                 map_location=self._model_device,
             ).eval()
-            # from pytorch_lightning.utilities.model_summary import summarize
-            # from torchsummary import summary
-            # print(summary(self._model))
-            # print(self._model)
-
-        # # Load labels list from configured activity_labels YAML file.
-        # print(f"json path: {param_values[PARAM_MODEL_OD_MAPPING]}")
-        # with open(param_values[PARAM_MODEL_OD_MAPPING]) as infile:
-        #     det_label_list = json.load(infile)
-        # self._det_label_to_id = {
-        #     c: i for i, c in enumerate(det_label_list) if c not in ["patient", "user"]
-        # }
-        # print(self._det_label_to_id)
-        # Feature version aligned with model current architecture
-
-        self.keypoints_cats = DETECTION_CLASS_KEYPOINTS["patient"]
 
         # Optionally initialize buffer-feeding from input COCO-file of object
         # detections.
@@ -692,7 +673,6 @@ class ActivityClassifierTCN(Node):
 
         # Convert window ROS Messages into something appropriate for setting to
         # the vectorization dataset.
-        det_label_vec: List[Optional[str]] = []
         window_data: List[FrameData] = []
         for m_dets, m_pose in zip(window.obj_dets, window.patient_joint_kps):
             m_dets: Optional[ObjectDetection2dSet]
@@ -700,7 +680,6 @@ class ActivityClassifierTCN(Node):
             f_dets: Optional[FrameObjectDetections] = None
             f_pose: Optional[FramePoses] = None
             if m_dets is not None:
-                det_label_vec = m_dets.label_vec
                 # Convert message xyxy into xywh
                 bbox = np.asarray(
                     [m_dets.left, m_dets.top, m_dets.right, m_dets.bottom]
@@ -731,13 +710,8 @@ class ActivityClassifierTCN(Node):
                     np.array([[j.pose.position.z for j in m_pose.joints]]),
                 )
             window_data.append(FrameData(f_dets, f_pose))
-        assert len(det_label_vec)
-        # We do not set a slot in `det_label_vec` to represent background
-        # because the confidences pushed forward from the detection source
-        # because it should only be providing confidences for the provided
-        # labels.
 
-        self._model_dset.load_data_online(window_data, det_label_vec)
+        self._model_dset.load_data_online(window_data)
         loader = DataLoader(dataset=self._model_dset, batch_size=1)
         batch = move_data_to_device(list(loader)[0], device=self._model_device)
 
