@@ -835,14 +835,14 @@ class GlobalStepPredictor:
 
         plt.legend()
         if not fname_suffix:
-            fname_suffix = f"vid{vid_id}"
+            fname_suffix = "vid_unknown"
         output_dir_p = Path(output_dir)
         output_dir_p.mkdir(parents=True, exist_ok=True)
         title = f"plot_pred_vs_gt_{recipe_type}_{fname_suffix}.png"
         plt.title(title)
         output_file_path = output_dir_p / title
-        fig.savefig(output_file_path)
-        return output_file_path, preds, step_gts
+        fig.savefig(output_file_path.as_posix())
+        return output_file_path
 
     def determine_recipe_from_gt_first_activity(self, activity_gts):
         """
