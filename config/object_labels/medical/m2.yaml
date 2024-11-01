@@ -17,4 +17,6 @@ labels:
   - id: 4
     label: "tourniquet_pen"
   - id: 5
-    label: "hand"
+    label: "hand (left)"
+  - id: 6
+    label: "hand (right)"

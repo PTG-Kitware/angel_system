@@ -5,7 +5,7 @@
 - [Docker installation](#docker-installation)
 - [Data and pretrained models](#data)
 - [Training](#training-procedure)
-- [Training on lab data](#lab_data)
+- [Training on lab data](#example-with-r18)
 - [Docker local testing with pre-recorded data](#docker-local-testing)
 - [Real-time](#docker-real-time)
 
@@ -52,6 +52,8 @@ git submodule update --init --recursive
 ```
 
 ## Data
+See our data "Where things are" document on Google Drive
+[here](https://docs.google.com/document/d/13etNTetmAEuUxbZdrxmHvQ83g3fyORYCHIYASLhS344/edit?).
 
 ### Object Detection Source Data
 TODO
@@ -119,7 +121,7 @@ prevent accidental modification of the files:
 chmod a-w -R bbn_data/lab_data-golden/
 ```
 
-##### Extracting frames
+##### Extracting Truth COCO and frame image files
 BBN archives provide MP4 videos, however we will need individual image frames
 for the following steps.
 The script to convert BBN Truth data into a COCO format will also, by necessity
@@ -204,18 +206,20 @@ The `kwcoco split` tool may be utilized to create splits at the video level,
 otherwise splits may be created manually.
 
 For example:
-```
+```bash
 kwcoco split \
   --src ~/data/darpa-ptg/bbn_data/lab_data-working/m2_tourniquet-activity_truth.coco.json \
   --dst1 TRAIN-activity_truth.coco.json \
   --dst2 REMAINDER-activity_truth.coco.json \
   --splitter video \
+  --rng 12345 \
   --factor 2
 kwcoco split \
   --src REMAINDER-activity_truth.coco.json \
   --dst1 VALIDATION-activity_truth.coco.json \
   --dst2 TEST-activity_truth.coco.json \
   --splitter video \
+  --rng 12345 \
   --factor 2
 # Protect your files!
 chmod a-w \
@@ -251,7 +255,7 @@ python-tpl/TCN_HPL/tcn_hpl/data/utils/pose_generation/generate_pose_data.py \\
   -o ./test_pose_output.coco.json \\
   --det-config ./python-tpl/TCN_HPL/tcn_hpl/data/utils/pose_generation/configs/medic_pose.yaml \\
   --det-weights ./model_files/pose_estimation/pose_det_model.pth \\
-  --pose-config python-tpl/TCN_HPL/tcn_hpl/data/utils/pose_generation/configs/ViTPose_base_medic_casualty_256x192.py \\
+  --pose-config ./python-tpl/TCN_HPL/tcn_hpl/data/utils/pose_generation/configs/ViTPose_base_medic_casualty_256x192.py \\
   --pose-weights ./model_files/pose_estimation/pose_model.pth
 # Repeat for other relevant activity truth inputs
 ```
@@ -260,7 +264,71 @@ python-tpl/TCN_HPL/tcn_hpl/data/utils/pose_generation/generate_pose_data.py \\
 Create a new version of, or modify an existing (preferring the former) and
 modify attributes appropriately for your experiment.
 
-TODO: Configuration file update guidance.
+* `task_name` -- This may be updated with a unique name that identifies this
+  training experiment. This is mostly encouraged for when the `paths:root_dir`
+  is shared between many experiments (see below).
+* `paths:root_dir` -- Update with the path to where the training "logs/"
+  directory should go. This may be shared between training experiments, in
+  which case customizing your "task_name" is important for separation, or set
+  to be a unique directory per experiment.
+* `data:coco_*` -- Update with the appropriate paths to the COCO input files to
+  be trained over.
+* `data:target_framerate` -- Update with the target framerate for input data to
+  ensure consistent temporal spacing in the dataset content loading.
+* `data:epoch_length` -- Update to a length appropriate for the quantity of
+  windows in the dataset. This may also be increased yet more if vector
+  augmentation is being utilized to increase the variety of window variations
+  seen during a single epoch.
+* `data:train_dataset:window_size` -- Update with the desired window size for
+  this experiment.
+* `data:train_dataset:vectorizer` -- Update with the type and hyperparameters
+  for the specific vectorizer to utilize for this experiment.
+* `data:train_dataset:transform:transforms` -- Update to include any vector
+  generalized transformations/augmentations that should be utilized during
+  dataset iteration.
+  * The transforms utilized for train, validation and testing may be customized
+    independently. By default, the test set will share the validation set's
+    transforms, however the hyperparameters for the test dataset can of course
+    be manually specified if something different is desired.
+  * Currently, the hyperparameters for the test dataset is what will be 
+    utilized by the ROS2 node integration.
+* `model:num_classes` -- Update with the total number of activity
+  classification classes.
+* `model:net:dim` -- Update with the dimensionality of the feature vector the
+  configured vectorizer class will produce.
+
+If a "master" activity truth COCO was specifically split for a training setup,
+then video/frame related object detections and pose estimations may be subset
+from equivalently "master" prediction COCO files via a utility provided in 
+TCN-HPL:
+```bash
+# Detections
+kwcoco_guided_subset \
+  object_detections-yolov7_baseline_20241030.coco.json \
+  TRAIN-activity_truth.coco.json \
+  TRAIN-object_detections.coco.json
+kwcoco_guided_subset \
+  object_detections-yolov7_baseline_20241030.coco.json \
+  VALIDATION-activity_truth.coco.json \
+  VALIDATION-object_detections.coco.json
+kwcoco_guided_subset \
+  object_detections-yolov7_baseline_20241030.coco.json \
+  TEST-activity_truth.coco.json \
+  TEST-object_detections.coco.json
+# Poses
+kwcoco_guided_subset \
+  pose_estimations-mmpose_baseline_20241030.coco.json \
+  TRAIN-activity_truth.coco.json \
+  TRAIN-pose_estimations.coco.json
+kwcoco_guided_subset \
+  pose_estimations-mmpose_baseline_20241030.coco.json \
+  VALIDATION-activity_truth.coco.json \
+  VALIDATION-pose_estimations.coco.json
+kwcoco_guided_subset \
+  pose_estimations-mmpose_baseline_20241030.coco.json \
+  TEST-activity_truth.coco.json \
+  TEST-pose_estimations.coco.json
+```
 
 #### Run TCN Training
 TODO
