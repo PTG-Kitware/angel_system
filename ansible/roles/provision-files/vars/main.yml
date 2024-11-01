@@ -74,8 +74,8 @@ girder_file_downloads:
     - file_id: 671bff2983e1acbfd87e723f
       sha512: 5165219f60e3a160a8ec51f0446db4ec23ed70c399df66f482a233566e177d1f8cf044fc6ccc5227f5c748cbe6d2f17143109e791a139dfc2225d75de67829b2
       dest: "{{ stage_dirs.activity_classifier }}/m2_tcn.ckpt"
-    - file_id: 671bfef983e1acbfd87e723d
-      sha512: 0d8442741ae41c5f824909fe8830bc72041a2e39d1566648558150641e225a0a5e293f53dbcc4fe8d0a4fbdaf7d57c078b6f9b10028ea6d2737d4d28481cdcee
+    - file_id: 672543fcca1110761bd32f7d
+      sha512: aef3ab3f8927f83b7ecad3cc28ea7b42e662d5c11740df1015542df6740db3633a7829187e9f5a35b4a66ebfeb48756c6598e4b7e6f68cc1ae90912fd71e31dd
       dest: "{{ stage_dirs.activity_classifier }}/m2_config.yaml"
     # Global Step predictor model
     - file_id: 6723f3d283e1acbfd87e7269
