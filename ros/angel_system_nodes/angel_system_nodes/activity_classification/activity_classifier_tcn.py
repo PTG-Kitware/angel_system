@@ -592,8 +592,10 @@ class ActivityClassifierTCN(Node):
                     have_leading_object=self._window_lead_with_objects,
                 )
 
-                window_end_frame = window.frames[-1][0]
-                image_gid = self._collect_image(window_end_frame)
+                image_gid = None
+                if len(window.frames) > 0 and len(window.frames[-1]) > 0:
+                    window_end_frame = window.frames[-1][0]
+                    image_gid = self._collect_image(window_end_frame)
 
                 # log.info(f"buffer contents: {window.obj_dets}")
 
