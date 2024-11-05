@@ -709,7 +709,8 @@ Simple2dDetectionOverlay
     cv::Scalar{ 0, 255, 85, 255 },
     cv::Scalar{ 0, 255, 170, 255 }
   };
-  static auto const num_joints = 22 -1;
+  static int const num_joints = 22 - 1;
+  static float const cutoff = 0.5;  // confidence cutoff to show nothing
 
   auto log = this->get_logger();
 
@@ -729,6 +730,10 @@ Simple2dDetectionOverlay
     double conf = joint.pose.position.z;  // confidence stored in z
     joint_positions[ joint.joint ] = { x, y, conf }; // save for later
 
+    if (conf < cutoff) continue;  // skip this joint if below cutoff
+    // adjust remaining cutoff to renormalize it from 0.0 to 1.0
+    conf = (conf - cutoff) / (1.0 - cutoff);
+
     // Plot the point
     cv::Point pt = { (int) round( x ),
                      (int) round( y ) };
@@ -736,7 +741,7 @@ Simple2dDetectionOverlay
                 colors[color_cnt], cv::FILLED );
 
     // add the alpha effect based on the confidence
-    cv::addWeighted( img_ptr->image, 1.0, overlay_img, conf, 0.0, img_ptr->image);
+    cv::addWeighted( img_ptr->image, 1.0, overlay_img, conf, 0.0, img_ptr->image );
 
     color_cnt++;
     if (color_cnt > num_joints) color_cnt = 0;
@@ -753,6 +758,13 @@ Simple2dDetectionOverlay
     std::string joint_name = connection.first;
     std::vector< std::string > joint_connections = connection.second;
     std::vector< double > first_joint = joint_positions[ joint_name ];
+
+    // get the confidence for the joint
+    auto conf = first_joint[ 2 ];  // confidence stored in z
+    if (conf < cutoff) continue;  // skip this joint if below cutoff
+    // adjust remaining cutoff to renormalize it from 0.0 to 1.0
+    conf = (conf - cutoff) / (1.0 - cutoff);
+
     pt1 = {
       (int) round( first_joint[ 0 ] ),
       (int) round( first_joint[ 1 ] ) };
@@ -767,7 +779,7 @@ Simple2dDetectionOverlay
       cv::line( overlay_img, pt1, pt2, colors[color_cnt], line_thickness, cv::LINE_8 );
     }
     // add the overlay weighted by the confidence score
-    auto conf = first_joint[ 2 ];
+
     cv::addWeighted( img_ptr->image, 1.0, overlay_img, conf, 0.0, img_ptr->image );
 
     color_cnt++;
