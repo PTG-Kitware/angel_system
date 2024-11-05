@@ -566,7 +566,8 @@ Simple2dDetectionOverlay
   }
 
   // Convert the image message to a cv::Mat to be drawn over.
-  cv_bridge::CvImagePtr img_ptr = cv_bridge::toCvCopy( tdb.image_msg, "rgb8" );
+  // alpha channel added for transparency
+  cv_bridge::CvImagePtr img_ptr = cv_bridge::toCvCopy( tdb.image_msg, "rgba8" );
 
   // Draw pose
   if( tdb.joints_msg != nullptr )
@@ -591,8 +592,8 @@ Simple2dDetectionOverlay
                              ObjectDetection2dSet::SharedPtr det_set ) const
 {
   // color constants we're using here.
-  static auto const COLOR_BOX = cv::Scalar{ 255, 0, 255 }; // magenta
-  static auto const COLOR_TEXT = cv::Scalar{ 255, 255, 255 }; // white
+  static auto const COLOR_BOX = cv::Scalar{ 255, 0, 255, 255 }; // magenta
+  static auto const COLOR_TEXT = cv::Scalar{ 255, 255, 255, 255 }; // white
 
   auto log = this->get_logger();
 
@@ -683,35 +684,72 @@ Simple2dDetectionOverlay
 ::overlay_pose_joints( cv_bridge::CvImagePtr img_ptr,
                        HandJointPosesUpdate::SharedPtr joints_msg ) const
 {
-  // color constants we're using here.
-  static auto const COLOR_PT = cv::Scalar{ 0, 255, 0 };
+  // color constants we're using here - for each of the joints
+  cv::Scalar colors[] = {
+    cv::Scalar{ 255, 0, 0, 255 },
+    cv::Scalar{ 255, 85, 0, 255 },
+    cv::Scalar{ 255, 170, 0, 255 },
+    cv::Scalar{ 255, 255, 0, 255 },
+    cv::Scalar{ 170, 255, 0, 255 },
+    cv::Scalar{ 85, 255, 0, 255 },
+    cv::Scalar{ 0, 255, 0, 255 },
+    cv::Scalar{ 0, 255, 85, 255 },
+    cv::Scalar{ 0, 255, 170, 255 },
+    cv::Scalar{ 0, 255, 255, 255 },
+    cv::Scalar{ 0, 170, 255, 255 },
+    cv::Scalar{ 0, 85, 255, 255 },
+    cv::Scalar{ 0, 0, 255 , 255 },
+    cv::Scalar{ 85, 0, 255, 255 },
+    cv::Scalar{ 170, 0, 255, 255 },
+    cv::Scalar{ 255, 0, 255, 255 },
+    cv::Scalar{ 255, 0, 170, 255 },
+    cv::Scalar{ 255, 0, 85, 255 },
+    cv::Scalar{ 255, 0, 0, 255 },
+    cv::Scalar{ 0, 255, 0, 255 },
+    cv::Scalar{ 0, 255, 85, 255 },
+    cv::Scalar{ 0, 255, 170, 255 }
+  };
+  static auto const num_joints = 22 -1;
 
   auto log = this->get_logger();
 
-  int line_thickness = thickness_for_drawing( img_ptr->image );
+  int line_thickness = thickness_for_drawing( img_ptr->image ) * 4.5;
   RCLCPP_DEBUG( log, "Using line thickness (joints): %d", line_thickness );
 
   // Draw the joint points
   // Save the joint positions for later so we can draw the connecting lines.
   std::map< std::string, std::vector< double > > joint_positions = {};
+  int color_cnt = 0;
   for( auto const& joint : joints_msg->joints )
   {
+    auto overlay_img = cv::Mat(img_ptr->image.rows, img_ptr->image.cols,
+        CV_8UC4, cv::Scalar(0,0,0,0));
     double x = joint.pose.position.x;
     double y = joint.pose.position.y;
-    joint_positions[ joint.joint ] = { x, y }; // save for later
+    double conf = joint.pose.position.z;  // confidence stored in z
+    joint_positions[ joint.joint ] = { x, y, conf }; // save for later
 
     // Plot the point
     cv::Point pt = { (int) round( x ),
                      (int) round( y ) };
-    cv::circle( img_ptr->image, pt, line_thickness * 3,
-                COLOR_PT, cv::FILLED );
+    cv::circle( overlay_img, pt, line_thickness * 1.2,
+                colors[color_cnt], cv::FILLED );
+
+    // add the alpha effect based on the confidence
+    cv::addWeighted( img_ptr->image, 1.0, overlay_img, conf, 0.0, img_ptr->image);
+
+    color_cnt++;
+    if (color_cnt > num_joints) color_cnt = 0;
   }
 
   // Draw the joint connections
   cv::Point pt1;
   cv::Point pt2;
+  color_cnt = 0;
   for(auto const& connection : JOINT_CONNECTION_LINES)
   {
+    auto overlay_img = cv::Mat(img_ptr->image.rows, img_ptr->image.cols,
+        CV_8UC4, cv::Scalar(0,0,0,0));
     std::string joint_name = connection.first;
     std::vector< std::string > joint_connections = connection.second;
     std::vector< double > first_joint = joint_positions[ joint_name ];
@@ -726,8 +764,14 @@ Simple2dDetectionOverlay
         (int) round( connecting_pt[ 0 ] ),
         (int) round( connecting_pt[ 1 ] ) };
 
-      cv::line( img_ptr->image, pt1, pt2, COLOR_PT, line_thickness, cv::LINE_8 );
+      cv::line( overlay_img, pt1, pt2, colors[color_cnt], line_thickness, cv::LINE_8 );
     }
+    // add the overlay weighted by the confidence score
+    auto conf = first_joint[ 2 ];
+    cv::addWeighted( img_ptr->image, 1.0, overlay_img, conf, 0.0, img_ptr->image );
+
+    color_cnt++;
+    if (color_cnt > num_joints) color_cnt = 0;
   }
 }
 
