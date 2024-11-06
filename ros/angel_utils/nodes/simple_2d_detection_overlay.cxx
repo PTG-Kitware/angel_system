@@ -709,7 +709,7 @@ Simple2dDetectionOverlay
     cv::Scalar{ 0, 255, 85, 255 },
     cv::Scalar{ 0, 255, 170, 255 }
   };
-  static int const num_joints = 22 - 1;
+  static int const num_joints = 22;
   static float const cutoff = 0.5;  // confidence cutoff to show nothing
 
   auto log = this->get_logger();
@@ -744,7 +744,7 @@ Simple2dDetectionOverlay
     cv::addWeighted( img_ptr->image, 1.0, overlay_img, conf, 0.0, img_ptr->image );
 
     color_cnt++;
-    if (color_cnt > num_joints) color_cnt = 0;
+    if (color_cnt > num_joints - 1) color_cnt = 0;
   }
 
   // Draw the joint connections
@@ -783,7 +783,7 @@ Simple2dDetectionOverlay
     cv::addWeighted( img_ptr->image, 1.0, overlay_img, conf, 0.0, img_ptr->image );
 
     color_cnt++;
-    if (color_cnt > num_joints) color_cnt = 0;
+    if (color_cnt > num_joints - 1) color_cnt = 0;
   }
 }
 
