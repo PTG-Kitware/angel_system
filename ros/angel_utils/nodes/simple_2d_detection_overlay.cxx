@@ -57,6 +57,9 @@ DEFINE_PARAM_NAME( PARAM_PUBLISH_LATENCY_SECONDS, "publish_latency_seconds" );
 // Filter detections to the highest <filter_top_k> values
 // Value of -1 means display all detections
 DEFINE_PARAM_NAME( PARAM_FILTER_TOP_K, "filter_top_k" );
+// hides poses below a certain threshold (0.5 is the default) from
+// being displayed. The threshold is normalized from 0.0 to 1.0
+DEFINE_PARAM_NAME( PARAM_POSE_MIN_THRESHOLD, "pose_min_threshold" );
 
 #undef DEFINE_PARAM_NAME
 
@@ -86,6 +89,31 @@ static std::map< std::string, std::vector< std::string > > JOINT_CONNECTION_LINE
   { "right_upper_leg", { "right_knee" } },
   { "right_knee", { "right_lower_leg" } },
   { "right_lower_leg", { "right_foot" } } };
+// colors used to draw the joints of a pose
+static cv::Scalar JOINT_COLORS[] = {
+  cv::Scalar{ 255, 0, 0, 255 },
+  cv::Scalar{ 255, 85, 0, 255 },
+  cv::Scalar{ 255, 170, 0, 255 },
+  cv::Scalar{ 255, 255, 0, 255 },
+  cv::Scalar{ 170, 255, 0, 255 },
+  cv::Scalar{ 85, 255, 0, 255 },
+  cv::Scalar{ 0, 255, 0, 255 },
+  cv::Scalar{ 0, 255, 85, 255 },
+  cv::Scalar{ 0, 255, 170, 255 },
+  cv::Scalar{ 0, 255, 255, 255 },
+  cv::Scalar{ 0, 170, 255, 255 },
+  cv::Scalar{ 0, 85, 255, 255 },
+  cv::Scalar{ 0, 0, 255 , 255 },
+  cv::Scalar{ 85, 0, 255, 255 },
+  cv::Scalar{ 170, 0, 255, 255 },
+  cv::Scalar{ 255, 0, 255, 255 },
+  cv::Scalar{ 255, 0, 170, 255 },
+  cv::Scalar{ 255, 0, 85, 255 },
+  cv::Scalar{ 255, 0, 0, 255 },
+  cv::Scalar{ 0, 255, 0, 255 },
+  cv::Scalar{ 0, 255, 85, 255 },
+  cv::Scalar{ 0, 255, 170, 255 }
+};
 
 /**
  * @brief Convert a seconds value into nanoseconds.
@@ -215,6 +243,8 @@ private:
   size_t m_publish_latency_ns;
   /// Number of detections to display
   int m_filter_top_k;
+  /// Minimum threshold for displaying poses
+  double m_pose_min_threshold;
 
   /// Measure and report receive/publish FPS - RGB Images
   RateTracker m_img_rate_tracker;
@@ -272,6 +302,7 @@ Simple2dDetectionOverlay
   declare_parameter( PARAM_MAX_IMAGE_HISTORY_SECONDS, 5.0 );
   declare_parameter( PARAM_PUBLISH_LATENCY_SECONDS, 1.0 );
   declare_parameter( PARAM_FILTER_TOP_K, -1 );
+  declare_parameter( PARAM_POSE_MIN_THRESHOLD, 0.5 );
 
   auto topic_input_images =
     this->get_parameter( PARAM_TOPIC_INPUT_IMAGES ).as_string();
@@ -314,6 +345,18 @@ Simple2dDetectionOverlay
       "performed.",
       m_filter_top_k );
   }
+
+  // store the pose min threshold
+  tmp_double = get_parameter( PARAM_POSE_MIN_THRESHOLD ).get_value< double >();
+  // make sure the values are between 0 and 1
+  if (tmp_double < 0 || tmp_double > 1)
+  {
+    std::stringstream ss;
+    ss  << "Invalid pose min threshold, must be between 0 and 1, given "
+        << tmp_double;
+    throw std::invalid_argument( ss.str() );
+  }
+  m_pose_min_threshold = tmp_double;
 
   // Create the ImageTransport instance with the empty-deleter-shared-ptr of
   // this.
@@ -566,7 +609,8 @@ Simple2dDetectionOverlay
   }
 
   // Convert the image message to a cv::Mat to be drawn over.
-  cv_bridge::CvImagePtr img_ptr = cv_bridge::toCvCopy( tdb.image_msg, "rgb8" );
+  // alpha channel added for transparency
+  cv_bridge::CvImagePtr img_ptr = cv_bridge::toCvCopy( tdb.image_msg, "rgba8" );
 
   // Draw pose
   if( tdb.joints_msg != nullptr )
@@ -591,8 +635,8 @@ Simple2dDetectionOverlay
                              ObjectDetection2dSet::SharedPtr det_set ) const
 {
   // color constants we're using here.
-  static auto const COLOR_BOX = cv::Scalar{ 255, 0, 255 }; // magenta
-  static auto const COLOR_TEXT = cv::Scalar{ 255, 255, 255 }; // white
+  static auto const COLOR_BOX = cv::Scalar{ 255, 0, 255, 255 }; // magenta
+  static auto const COLOR_TEXT = cv::Scalar{ 255, 255, 255, 255 }; // white
 
   auto log = this->get_logger();
 
@@ -683,38 +727,62 @@ Simple2dDetectionOverlay
 ::overlay_pose_joints( cv_bridge::CvImagePtr img_ptr,
                        HandJointPosesUpdate::SharedPtr joints_msg ) const
 {
-  // color constants we're using here.
-  static auto const COLOR_PT = cv::Scalar{ 0, 255, 0 };
+  // individual joints within JOINT_CONNECTION_LINES for different colors
+  static int const num_joints = 22;
 
   auto log = this->get_logger();
 
-  int line_thickness = thickness_for_drawing( img_ptr->image );
+  int line_thickness = thickness_for_drawing( img_ptr->image ) * 4.5;
   RCLCPP_DEBUG( log, "Using line thickness (joints): %d", line_thickness );
 
   // Draw the joint points
   // Save the joint positions for later so we can draw the connecting lines.
   std::map< std::string, std::vector< double > > joint_positions = {};
+  int color_cnt = 0;
   for( auto const& joint : joints_msg->joints )
   {
+    auto overlay_img = cv::Mat(img_ptr->image.rows, img_ptr->image.cols,
+        CV_8UC4, cv::Scalar(0,0,0,0));
     double x = joint.pose.position.x;
     double y = joint.pose.position.y;
-    joint_positions[ joint.joint ] = { x, y }; // save for later
+    double conf = joint.pose.position.z;  // confidence stored in z
+    joint_positions[ joint.joint ] = { x, y, conf }; // save for later
+
+    if (conf < m_pose_min_threshold) continue;  // skip this joint if below cutoff
+    // adjust remaining value to renormalize it from 0.0 to 1.0
+    conf = (conf - m_pose_min_threshold) / (1.0 - m_pose_min_threshold);
 
     // Plot the point
     cv::Point pt = { (int) round( x ),
                      (int) round( y ) };
-    cv::circle( img_ptr->image, pt, line_thickness * 3,
-                COLOR_PT, cv::FILLED );
+    cv::circle( overlay_img, pt, line_thickness * 1.2,
+                JOINT_COLORS[color_cnt], cv::FILLED );
+
+    // add the alpha effect based on the confidence
+    cv::addWeighted( img_ptr->image, 1.0, overlay_img, conf, 0.0, img_ptr->image );
+
+    color_cnt++;
+    if (color_cnt > num_joints - 1) color_cnt = 0;
   }
 
   // Draw the joint connections
   cv::Point pt1;
   cv::Point pt2;
+  color_cnt = 0;
   for(auto const& connection : JOINT_CONNECTION_LINES)
   {
+    auto overlay_img = cv::Mat(img_ptr->image.rows, img_ptr->image.cols,
+        CV_8UC4, cv::Scalar(0,0,0,0));
     std::string joint_name = connection.first;
     std::vector< std::string > joint_connections = connection.second;
     std::vector< double > first_joint = joint_positions[ joint_name ];
+
+    // get the confidence for the joint
+    auto conf = first_joint[ 2 ];  // confidence stored in z
+    if (conf < m_pose_min_threshold) continue;  // skip this joint if below cutoff
+    // adjust remaining value to renormalize it from 0.0 to 1.0
+    conf = (conf - m_pose_min_threshold) / (1.0 - m_pose_min_threshold);
+
     pt1 = {
       (int) round( first_joint[ 0 ] ),
       (int) round( first_joint[ 1 ] ) };
@@ -726,8 +794,14 @@ Simple2dDetectionOverlay
         (int) round( connecting_pt[ 0 ] ),
         (int) round( connecting_pt[ 1 ] ) };
 
-      cv::line( img_ptr->image, pt1, pt2, COLOR_PT, line_thickness, cv::LINE_8 );
+      cv::line( overlay_img, pt1, pt2, JOINT_COLORS[color_cnt], line_thickness, cv::LINE_8 );
     }
+    // add the overlay weighted by the confidence score
+
+    cv::addWeighted( img_ptr->image, 1.0, overlay_img, conf, 0.0, img_ptr->image );
+
+    color_cnt++;
+    if (color_cnt > num_joints - 1) color_cnt = 0;
   }
 }
 
