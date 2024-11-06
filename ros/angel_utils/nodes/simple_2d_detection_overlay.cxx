@@ -89,6 +89,31 @@ static std::map< std::string, std::vector< std::string > > JOINT_CONNECTION_LINE
   { "right_upper_leg", { "right_knee" } },
   { "right_knee", { "right_lower_leg" } },
   { "right_lower_leg", { "right_foot" } } };
+// colors used to draw the joints of a pose
+static cv::Scalar JOINT_COLORS[] = {
+  cv::Scalar{ 255, 0, 0, 255 },
+  cv::Scalar{ 255, 85, 0, 255 },
+  cv::Scalar{ 255, 170, 0, 255 },
+  cv::Scalar{ 255, 255, 0, 255 },
+  cv::Scalar{ 170, 255, 0, 255 },
+  cv::Scalar{ 85, 255, 0, 255 },
+  cv::Scalar{ 0, 255, 0, 255 },
+  cv::Scalar{ 0, 255, 85, 255 },
+  cv::Scalar{ 0, 255, 170, 255 },
+  cv::Scalar{ 0, 255, 255, 255 },
+  cv::Scalar{ 0, 170, 255, 255 },
+  cv::Scalar{ 0, 85, 255, 255 },
+  cv::Scalar{ 0, 0, 255 , 255 },
+  cv::Scalar{ 85, 0, 255, 255 },
+  cv::Scalar{ 170, 0, 255, 255 },
+  cv::Scalar{ 255, 0, 255, 255 },
+  cv::Scalar{ 255, 0, 170, 255 },
+  cv::Scalar{ 255, 0, 85, 255 },
+  cv::Scalar{ 255, 0, 0, 255 },
+  cv::Scalar{ 0, 255, 0, 255 },
+  cv::Scalar{ 0, 255, 85, 255 },
+  cv::Scalar{ 0, 255, 170, 255 }
+};
 
 /**
  * @brief Convert a seconds value into nanoseconds.
@@ -702,31 +727,7 @@ Simple2dDetectionOverlay
 ::overlay_pose_joints( cv_bridge::CvImagePtr img_ptr,
                        HandJointPosesUpdate::SharedPtr joints_msg ) const
 {
-  // color constants we're using here - for each of the joints
-  cv::Scalar colors[] = {
-    cv::Scalar{ 255, 0, 0, 255 },
-    cv::Scalar{ 255, 85, 0, 255 },
-    cv::Scalar{ 255, 170, 0, 255 },
-    cv::Scalar{ 255, 255, 0, 255 },
-    cv::Scalar{ 170, 255, 0, 255 },
-    cv::Scalar{ 85, 255, 0, 255 },
-    cv::Scalar{ 0, 255, 0, 255 },
-    cv::Scalar{ 0, 255, 85, 255 },
-    cv::Scalar{ 0, 255, 170, 255 },
-    cv::Scalar{ 0, 255, 255, 255 },
-    cv::Scalar{ 0, 170, 255, 255 },
-    cv::Scalar{ 0, 85, 255, 255 },
-    cv::Scalar{ 0, 0, 255 , 255 },
-    cv::Scalar{ 85, 0, 255, 255 },
-    cv::Scalar{ 170, 0, 255, 255 },
-    cv::Scalar{ 255, 0, 255, 255 },
-    cv::Scalar{ 255, 0, 170, 255 },
-    cv::Scalar{ 255, 0, 85, 255 },
-    cv::Scalar{ 255, 0, 0, 255 },
-    cv::Scalar{ 0, 255, 0, 255 },
-    cv::Scalar{ 0, 255, 85, 255 },
-    cv::Scalar{ 0, 255, 170, 255 }
-  };
+  // individual joints within JOINT_CONNECTION_LINES for different colors
   static int const num_joints = 22;
 
   auto log = this->get_logger();
@@ -755,7 +756,7 @@ Simple2dDetectionOverlay
     cv::Point pt = { (int) round( x ),
                      (int) round( y ) };
     cv::circle( overlay_img, pt, line_thickness * 1.2,
-                colors[color_cnt], cv::FILLED );
+                JOINT_COLORS[color_cnt], cv::FILLED );
 
     // add the alpha effect based on the confidence
     cv::addWeighted( img_ptr->image, 1.0, overlay_img, conf, 0.0, img_ptr->image );
@@ -793,7 +794,7 @@ Simple2dDetectionOverlay
         (int) round( connecting_pt[ 0 ] ),
         (int) round( connecting_pt[ 1 ] ) };
 
-      cv::line( overlay_img, pt1, pt2, colors[color_cnt], line_thickness, cv::LINE_8 );
+      cv::line( overlay_img, pt1, pt2, JOINT_COLORS[color_cnt], line_thickness, cv::LINE_8 );
     }
     // add the overlay weighted by the confidence score
 
