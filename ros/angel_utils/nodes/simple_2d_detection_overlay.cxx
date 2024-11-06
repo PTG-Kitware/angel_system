@@ -57,6 +57,9 @@ DEFINE_PARAM_NAME( PARAM_PUBLISH_LATENCY_SECONDS, "publish_latency_seconds" );
 // Filter detections to the highest <filter_top_k> values
 // Value of -1 means display all detections
 DEFINE_PARAM_NAME( PARAM_FILTER_TOP_K, "filter_top_k" );
+// hides poses below a certain threshold (0.5 is the default) from
+// being displayed. The threshold is normalized from 0.0 to 1.0
+DEFINE_PARAM_NAME( PARAM_POSE_MIN_THRESHOLD, "pose_min_threshold" );
 
 #undef DEFINE_PARAM_NAME
 
@@ -215,6 +218,8 @@ private:
   size_t m_publish_latency_ns;
   /// Number of detections to display
   int m_filter_top_k;
+  /// Minimum threshold for displaying poses
+  double m_pose_min_threshold;
 
   /// Measure and report receive/publish FPS - RGB Images
   RateTracker m_img_rate_tracker;
@@ -272,6 +277,7 @@ Simple2dDetectionOverlay
   declare_parameter( PARAM_MAX_IMAGE_HISTORY_SECONDS, 5.0 );
   declare_parameter( PARAM_PUBLISH_LATENCY_SECONDS, 1.0 );
   declare_parameter( PARAM_FILTER_TOP_K, -1 );
+  declare_parameter( PARAM_POSE_MIN_THRESHOLD, 0.5 );
 
   auto topic_input_images =
     this->get_parameter( PARAM_TOPIC_INPUT_IMAGES ).as_string();
@@ -314,6 +320,18 @@ Simple2dDetectionOverlay
       "performed.",
       m_filter_top_k );
   }
+
+  // store the pose min threshold
+  tmp_double = get_parameter( PARAM_POSE_MIN_THRESHOLD ).get_value< double >();
+  // make sure the values are between 0 and 1
+  if (tmp_double < 0 || tmp_double > 1)
+  {
+    std::stringstream ss;
+    ss  << "Invalid pose min threshold, must be between 0 and 1, given "
+        << tmp_double;
+    throw std::invalid_argument( ss.str() );
+  }
+  m_pose_min_threshold = tmp_double;
 
   // Create the ImageTransport instance with the empty-deleter-shared-ptr of
   // this.
@@ -710,7 +728,6 @@ Simple2dDetectionOverlay
     cv::Scalar{ 0, 255, 170, 255 }
   };
   static int const num_joints = 22;
-  static float const cutoff = 0.5;  // confidence cutoff to show nothing
 
   auto log = this->get_logger();
 
@@ -730,9 +747,9 @@ Simple2dDetectionOverlay
     double conf = joint.pose.position.z;  // confidence stored in z
     joint_positions[ joint.joint ] = { x, y, conf }; // save for later
 
-    if (conf < cutoff) continue;  // skip this joint if below cutoff
-    // adjust remaining cutoff to renormalize it from 0.0 to 1.0
-    conf = (conf - cutoff) / (1.0 - cutoff);
+    if (conf < m_pose_min_threshold) continue;  // skip this joint if below cutoff
+    // adjust remaining value to renormalize it from 0.0 to 1.0
+    conf = (conf - m_pose_min_threshold) / (1.0 - m_pose_min_threshold);
 
     // Plot the point
     cv::Point pt = { (int) round( x ),
@@ -761,9 +778,9 @@ Simple2dDetectionOverlay
 
     // get the confidence for the joint
     auto conf = first_joint[ 2 ];  // confidence stored in z
-    if (conf < cutoff) continue;  // skip this joint if below cutoff
-    // adjust remaining cutoff to renormalize it from 0.0 to 1.0
-    conf = (conf - cutoff) / (1.0 - cutoff);
+    if (conf < m_pose_min_threshold) continue;  // skip this joint if below cutoff
+    // adjust remaining value to renormalize it from 0.0 to 1.0
+    conf = (conf - m_pose_min_threshold) / (1.0 - m_pose_min_threshold);
 
     pt1 = {
       (int) round( first_joint[ 0 ] ),
