@@ -23,7 +23,7 @@ from rclpy.node import Node
 import torch
 from torch.utils.data import DataLoader
 from tcn_hpl.data.ptg_datamodule import create_dataset_from_hydra
-from tcn_hpl.data.vectorize import (
+from tcn_hpl.data.frame_data import (
     FrameData,
     FrameObjectDetections,
     FramePoses,
