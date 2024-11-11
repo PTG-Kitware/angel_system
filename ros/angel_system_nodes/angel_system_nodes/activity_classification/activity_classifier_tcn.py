@@ -23,7 +23,7 @@ from rclpy.node import Node
 import torch
 from torch.utils.data import DataLoader
 from tcn_hpl.data.ptg_datamodule import create_dataset_from_hydra
-from tcn_hpl.data.vectorize import (
+from tcn_hpl.data.frame_data import (
     FrameData,
     FrameObjectDetections,
     FramePoses,
@@ -169,8 +169,8 @@ class ActivityClassifierTCN(Node):
 
         self._act_topic = param_values[PARAM_ACT_TOPIC]
         self._act_config = load_activity_label_set(param_values[PARAM_ACT_CONFIG_FILE])
-        self._img_pix_width = param_values[PARAM_IMAGE_PIX_WIDTH]
-        self._img_pix_height = param_values[PARAM_IMAGE_PIX_HEIGHT]
+        self._img_pix_width = int(param_values[PARAM_IMAGE_PIX_WIDTH])
+        self._img_pix_height = int(param_values[PARAM_IMAGE_PIX_HEIGHT])
         self._enable_trace_logging = param_values[PARAM_TIME_TRACE_LOGGING]
 
         self._window_lead_with_objects = param_values[PARAM_WINDOW_LEADS_WITH_OBJECTS]
@@ -709,7 +709,13 @@ class ActivityClassifierTCN(Node):
                     # position in the message.
                     np.array([[j.pose.position.z for j in m_pose.joints]]),
                 )
-            window_data.append(FrameData(f_dets, f_pose))
+            window_data.append(
+                FrameData(
+                    f_dets,
+                    f_pose,
+                    (self._img_pix_width, self._img_pix_height),
+                )
+            )
 
         self._model_dset.load_data_online(window_data)
         loader = DataLoader(dataset=self._model_dset, batch_size=1)
