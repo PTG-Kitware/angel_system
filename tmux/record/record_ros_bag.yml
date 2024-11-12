@@ -65,7 +65,7 @@ windows:
             -r __ns:=${ROS_NAMESPACE}
             -p ip_addr:=${HL2_IP}
             -p image_topic:=PVFramesBGR
-            -p image_ts_topic:=PVFramesBGR_TS
+            -p image_md_topic:=PVFramesBGR_md
             -p hand_pose_topic:=HandJointPoseData
             -p audio_topic:=HeadsetAudioData
             -p sm_topic:=SpatialMapData
