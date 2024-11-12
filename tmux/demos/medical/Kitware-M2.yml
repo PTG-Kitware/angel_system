@@ -58,13 +58,13 @@ windows:
       panes:
         # Read sensor input from bag file.
         - sensor_input: echo ros2 bag play ${ANGEL_WORKSPACE_DIR}/ros_bags/...
-        - run_image_timestamp: ros2 run angel_system_nodes image_timestamp_relay --ros-args
+        - run_image_metadata: ros2 run angel_system_nodes image_metadata_relay --ros-args
             -r __ns:=${ROS_NAMESPACE}
             -p image_topic:=PVFramesBGR
-            -p output_topic:=PVFramesBGR_ts
+            -p output_topic:=PVFramesBGR_md
         - run_latency_node: ros2 run angel_system_nodes latency_tracker --ros-args
             -r __ns:=${ROS_NAMESPACE}
-            -p image_ts_topic:=PVFramesBGR_ts
+            -p image_md_topic:=PVFramesBGR_md
             -p det_topic:=ObjectDetections2d
             -p pose_topic:=PatientPose
             -p activity_topic:=activity_topic
@@ -78,7 +78,7 @@ windows:
 #            -r __ns:=${ROS_NAMESPACE}
 #            -p ip_addr:=${HL2_IP}
 #            -p image_topic:=PVFramesBGR
-#            -p image_ts_topic:=PVFramesBGR_ts
+#            -p image_md_topic:=PVFramesBGR_md
 #            -p hand_pose_topic:=disable
 #            -p audio_topic:=disable
 #            -p sm_topic:=disable
@@ -115,7 +115,7 @@ windows:
 
   - activity_classifier: ros2 run angel_system_nodes activity_classifier_tcn --ros-args
       -r __ns:=${ROS_NAMESPACE}
-      -p image_ts_topic:=PVFramesBGR_ts
+      -p image_md_topic:=PVFramesBGR_md
       -p det_topic:=ObjectDetections2d
       -p pose_topic:=PatientPose
       -p activity_config_file:=${CONFIG_DIR}/activity_labels/medical/m2.yaml
