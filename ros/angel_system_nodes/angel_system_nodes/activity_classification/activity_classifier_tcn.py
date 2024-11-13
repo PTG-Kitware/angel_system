@@ -164,8 +164,6 @@ class ActivityClassifierTCN(Node):
 
         self._act_topic = param_values[PARAM_ACT_TOPIC]
         self._act_config = load_activity_label_set(param_values[PARAM_ACT_CONFIG_FILE])
-        self._img_pix_width = 1280  # default size - replaced by metadata topic
-        self._img_pix_height = 720
         self._enable_trace_logging = param_values[PARAM_TIME_TRACE_LOGGING]
 
         self._window_lead_with_objects = param_values[PARAM_WINDOW_LEADS_WITH_OBJECTS]
@@ -412,14 +410,10 @@ class ActivityClassifierTCN(Node):
         """
         Capture a detection source image timestamp message.
         """
-        # set the image width and height
-        self._img_pix_width = msg.width
-        self._img_pix_height = msg.height
-
         log = self.get_logger()
         self._current_frame_number += 1
         if self.rt_alive() and self._buffer.queue_image(
-            None, msg.header.stamp, self._current_frame_number
+            None, msg, self._current_frame_number
         ):
             if self._enable_trace_logging:
                 log.info(
@@ -681,7 +675,9 @@ class ActivityClassifierTCN(Node):
         # Convert window ROS Messages into something appropriate for setting to
         # the vectorization dataset.
         window_data: List[FrameData] = []
-        for m_dets, m_pose in zip(window.obj_dets, window.patient_joint_kps):
+        for m_dets, m_pose, cam_info in zip(
+            window.obj_dets, window.patient_joint_kps, window.camera_info
+        ):
             m_dets: Optional[ObjectDetection2dSet]
             m_pose: Optional[HandJointPosesUpdate]
             f_dets: Optional[FrameObjectDetections] = None
@@ -720,7 +716,7 @@ class ActivityClassifierTCN(Node):
                 FrameData(
                     f_dets,
                     f_pose,
-                    (self._img_pix_width, self._img_pix_height),
+                    (cam_info.width, cam_info.height),
                 )
             )
 

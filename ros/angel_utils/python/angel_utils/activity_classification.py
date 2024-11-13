@@ -15,12 +15,11 @@ import pandas as pd
 
 # ROS Message types
 from builtin_interfaces.msg import Time
+from sensor_msgs.msg import CameraInfo
 
 from angel_msgs.msg import (
-    ActivityDetection,
     HandJointPosesUpdate,
     ObjectDetection2dSet,
-    HandJointPose,
 )
 
 from angel_system.utils.matching import descending_match_with_tolerance
@@ -44,6 +43,8 @@ class InputWindow:
     obj_dets: List[Optional[ObjectDetection2dSet]]
     # Buffer for patient poses
     patient_joint_kps: List[Optional[HandJointPosesUpdate]]
+    # Buffer for the image metadata
+    camera_info: List[Optional[CameraInfo]]
 
     def __len__(self):
         return len(self.frames)
@@ -145,6 +146,11 @@ class InputBuffer:
         default_factory=deque, init=False, repr=False
     )
 
+    # buffer for camera info
+    camera_info: Deque[CameraInfo] = field(
+        default_factory=deque, init=False, repr=False
+    )
+
     __state_lock: RLock = field(default_factory=RLock, init=False, repr=False)
 
     def __enter__(self):
@@ -180,7 +186,7 @@ class InputBuffer:
     def queue_image(
         self,
         img_mat: npt.NDArray[np.uint8],
-        img_header_stamp: Time,
+        camera_msg: CameraInfo,
         image_frame_number: int,
     ) -> bool:
         """
@@ -188,6 +194,8 @@ class InputBuffer:
         :returns: True if the image was queued, otherwise false because it was
             not newer than the current latest frame.
         """
+        # get the timestamp from the image header
+        img_header_stamp = camera_msg.header.stamp
         # self.get_logger_fn().info(f"image header stamp: {img_header_stamp}")
         # self.get_logger_fn().info(f"self.frames[-1][0] header stamp: {self.frames[-1][0]}")
         with self.__state_lock:
@@ -201,7 +209,10 @@ class InputBuffer:
                     f"!< {time_to_int(img_header_stamp)} (new)"
                 )
                 return False
+            # save the image frame
             self.frames.append((img_header_stamp, img_mat, image_frame_number))
+            # save the camera info
+            self.camera_info.append(camera_msg)
             return True
 
     def queue_hand_pose(self, msg: HandJointPosesUpdate) -> bool:
@@ -319,7 +330,9 @@ class InputBuffer:
 
                 # If `obj_dets` is empty, return empty window.
                 if not self.obj_dets:
-                    return InputWindow(frames=[], obj_dets=[], patient_joint_kps=[])
+                    return InputWindow(
+                        frames=[], obj_dets=[], patient_joint_kps=[], camera_info=[]
+                    )
 
                 # Use the last object detection to get a timestamp. Find that
                 # timestamp in the `frames` deque, traversing backwards.
@@ -333,7 +346,9 @@ class InputBuffer:
                     # Failed to find a queued frame for the object detection.
                     # This is not expected, but can technically happen.
                     # Return an empty window.
-                    return InputWindow(frames=[], obj_dets=[], patient_joint_kps=[])
+                    return InputWindow(
+                        frames=[], obj_dets=[], patient_joint_kps=[], camera_info=[]
+                    )
                 # Update the window frame start index to the
                 window_frame_start_idx = last_det_frame_idx
 
@@ -379,6 +394,11 @@ class InputBuffer:
                 frames=window_frames,
                 obj_dets=window_dets,
                 patient_joint_kps=window_joint_kps,
+                camera_info=[
+                    ci
+                    for ci in self.camera_info
+                    if ci.header.stamp in window_frame_times
+                ],
             )
             return output
 
@@ -412,3 +432,8 @@ class InputBuffer:
                 and time_to_int(self.patient_joint_kps[0].source_stamp) < time_nsec
             ):
                 self.patient_joint_kps.popleft()
+            while (
+                self.camera_info
+                and time_to_int(self.camera_info[0].header.stamp) < time_nsec
+            ):
+                self.camera_info.popleft()
