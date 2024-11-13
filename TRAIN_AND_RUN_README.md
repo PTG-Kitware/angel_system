@@ -280,9 +280,9 @@ modify attributes appropriately for your experiment.
   seen during a single epoch.
 * `data:train_dataset:window_size` -- Update with the desired window size for
   this experiment.
-* `data:train_dataset:vectorizer` -- Update with the type and hyperparameters
+* `data:train_dataset:vectorize` -- Update with the type and hyperparameters
   for the specific vectorizer to utilize for this experiment.
-* `data:train_dataset:transform:transforms` -- Update to include any vector
+* `data:train_dataset:transform_frame_data:transforms` -- Update to include any vector
   generalized transformations/augmentations that should be utilized during
   dataset iteration.
   * The transforms utilized for train, validation and testing may be customized
