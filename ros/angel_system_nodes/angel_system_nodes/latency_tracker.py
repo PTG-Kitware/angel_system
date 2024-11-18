@@ -13,8 +13,8 @@ from angel_utils import (
     RateTracker,  # DYNAMIC_TYPE
     make_default_main,
 )
-from builtin_interfaces.msg import Time
 from std_msgs.msg import String as ros2_string
+from sensor_msgs.msg import CameraInfo
 
 
 class LatencyTracker(Node):
@@ -32,7 +32,7 @@ class LatencyTracker(Node):
             [
                 ##################################
                 # Required parameter (no defaults)
-                ("image_ts_topic",),
+                ("image_md_topic",),
                 ("det_topic",),
                 ("pose_topic",),
                 ("activity_topic",),
@@ -45,7 +45,7 @@ class LatencyTracker(Node):
                 ("enable_time_trace_logging", False),
             ],
         )
-        self._image_ts_topic = param_values["image_ts_topic"]
+        self._image_md_topic = param_values["image_md_topic"]
         self._det_topic = param_values["det_topic"]
         self._pose_topic = param_values["pose_topic"]
         self._act_topic = param_values["activity_topic"]
@@ -75,9 +75,9 @@ class LatencyTracker(Node):
         # Initialize ROS hooks
         log.info("Setting up ROS subscriptions and publishers...")
         self._img_ts_subscriber = self.create_subscription(
-            Time,
-            self._image_ts_topic,
-            self.img_ts_callback,
+            CameraInfo,
+            self._image_md_topic,
+            self.img_md_callback,
             1,
             callback_group=MutuallyExclusiveCallbackGroup(),
         )
@@ -198,16 +198,16 @@ class LatencyTracker(Node):
                 self._rate_tracker.tick()
                 log.info(f"Latency Rate: {self._rate_tracker.get_rate_avg()} Hz")
 
-    def img_ts_callback(self, msg: Time) -> None:
+    def img_md_callback(self, msg: CameraInfo) -> None:
         """
         Capture a detection source image timestamp message.
         """
         log = self.get_logger()
         if self._enable_trace_logging:
-            log.info(f"Received image with TS: {msg}")
+            log.info(f"Received image with TS: {msg.header.stamp}")
 
         with self._cur_image_msg_lock:
-            self._img_time = msg
+            self._img_time = msg.header.stamp
             self._rt_awake_evt.set()
 
     def det_callback(self, msg: ObjectDetection2dSet) -> None:

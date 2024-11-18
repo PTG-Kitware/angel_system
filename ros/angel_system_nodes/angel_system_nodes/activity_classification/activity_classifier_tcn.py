@@ -29,6 +29,7 @@ from tcn_hpl.data.frame_data import (
     FramePoses,
 )
 from tcn_hpl.models.ptg_module import PTGLitModule
+from sensor_msgs.msg import CameraInfo
 
 from angel_system.activity_classification.tcn_hpl.predict import (
     ResultsCollector,
@@ -48,8 +49,8 @@ from angel_utils.activity_classification import InputWindow, InputBuffer
 from angel_utils.conversion import time_to_int
 
 
-# Input ROS topic for RGB Image Timestamps
-PARAM_IMG_TS_TOPIC = "image_ts_topic"
+# Input ROS topic for RGB Image Metadata
+PARAM_IMG_MD_TOPIC = "image_md_topic"
 # Input ROS topic for object detections.
 PARAM_DET_TOPIC = "det_topic"
 # Output ROS topic for activity classifications.
@@ -66,10 +67,6 @@ PARAM_MODEL_CONFIG = "model_config"
 PARAM_MODEL_DEVICE = "model_device"
 # Maximum amount of data we will buffer in seconds.
 PARAM_BUFFER_MAX_SIZE_SECONDS = "buffer_max_size_seconds"
-# Width in pixels of the imagery that object detections were predicted from.
-PARAM_IMAGE_PIX_WIDTH = "image_pix_width"
-# Height in pixels of the imagery that object detections were predicted from.
-PARAM_IMAGE_PIX_HEIGHT = "image_pix_height"
 # Runtime thread checkin heartbeat interval in seconds.
 PARAM_RT_HEARTBEAT = "rt_thread_heartbeat"
 # Where we should output an MS-COCO file with our activity predictions in it
@@ -140,7 +137,7 @@ class ActivityClassifierTCN(Node):
         param_values = declare_and_get_parameters(
             self,
             [
-                (PARAM_IMG_TS_TOPIC,),
+                (PARAM_IMG_MD_TOPIC,),
                 (PARAM_DET_TOPIC,),
                 (PARAM_POSE_TOPIC,),
                 (PARAM_ACT_TOPIC,),
@@ -149,8 +146,6 @@ class ActivityClassifierTCN(Node):
                 (PARAM_MODEL_CONFIG,),
                 (PARAM_MODEL_DEVICE, "cuda"),
                 (PARAM_BUFFER_MAX_SIZE_SECONDS, 15),
-                (PARAM_IMAGE_PIX_WIDTH, 1280),
-                (PARAM_IMAGE_PIX_HEIGHT, 720),
                 (PARAM_RT_HEARTBEAT, 0.1),
                 (PARAM_OUTPUT_COCO_FILEPATH, ""),
                 (PARAM_INPUT_COCO_FILEPATH, ""),
@@ -161,7 +156,7 @@ class ActivityClassifierTCN(Node):
                 (PARAM_DEBUG_FILE, ""),
             ],
         )
-        self._img_ts_topic = param_values[PARAM_IMG_TS_TOPIC]
+        self._img_md_topic = param_values[PARAM_IMG_MD_TOPIC]
         self._det_topic = param_values[PARAM_DET_TOPIC]
 
         self._pose_topic = param_values[PARAM_POSE_TOPIC]
@@ -169,8 +164,6 @@ class ActivityClassifierTCN(Node):
 
         self._act_topic = param_values[PARAM_ACT_TOPIC]
         self._act_config = load_activity_label_set(param_values[PARAM_ACT_CONFIG_FILE])
-        self._img_pix_width = int(param_values[PARAM_IMAGE_PIX_WIDTH])
-        self._img_pix_height = int(param_values[PARAM_IMAGE_PIX_HEIGHT])
         self._enable_trace_logging = param_values[PARAM_TIME_TRACE_LOGGING]
 
         self._window_lead_with_objects = param_values[PARAM_WINDOW_LEADS_WITH_OBJECTS]
@@ -261,9 +254,9 @@ class ActivityClassifierTCN(Node):
         # runtime-thread allocation.
         # This is intentionally before runtime-loop initialization.
         self._img_ts_subscriber = self.create_subscription(
-            Time,
-            self._img_ts_topic,
-            self.img_ts_callback,
+            CameraInfo,
+            self._img_md_topic,
+            self.img_md_callback,
             1,
             callback_group=MutuallyExclusiveCallbackGroup(),
         )
@@ -392,7 +385,13 @@ class ActivityClassifierTCN(Node):
             log.info(f"Queuing from COCO: n_dets={n_dets}, image_ts={image_ts}")
             self.det_callback(det_msg)
             # self.pose_callback(det_msg)
-            self.img_ts_callback(image_ts)
+            new_msg = CameraInfo()
+            new_msg.header.stamp = image_ts
+            # set the image width and height from the image in the dataset
+            img = dset.imgs[image_id]
+            new_msg.width = img.get("width")
+            new_msg.height = img.get("height")
+            self.img_md_callback(new_msg)
 
             # Wait until `image_ts` was considered in the runtime loop before
             # proceeding into the next iteration.
@@ -407,7 +406,7 @@ class ActivityClassifierTCN(Node):
         log.info("Completed COCO file object yielding")
         self._rt_active.clear()
 
-    def img_ts_callback(self, msg: Time) -> None:
+    def img_md_callback(self, msg: CameraInfo) -> None:
         """
         Capture a detection source image timestamp message.
         """
@@ -417,7 +416,9 @@ class ActivityClassifierTCN(Node):
             None, msg, self._current_frame_number
         ):
             if self._enable_trace_logging:
-                log.info(f"Queueing image TS {msg} frame {self._current_frame_number}")
+                log.info(
+                    f"Queueing image TS {msg.header.stamp} frame {self._current_frame_number}"
+                )
 
             # If we are configured to prefer the latest image received as the
             # latest image in the processing window, indicate the runtime upon
@@ -674,7 +675,9 @@ class ActivityClassifierTCN(Node):
         # Convert window ROS Messages into something appropriate for setting to
         # the vectorization dataset.
         window_data: List[FrameData] = []
-        for m_dets, m_pose in zip(window.obj_dets, window.patient_joint_kps):
+        for m_dets, m_pose, cam_info in zip(
+            window.obj_dets, window.patient_joint_kps, window.camera_info
+        ):
             m_dets: Optional[ObjectDetection2dSet]
             m_pose: Optional[HandJointPosesUpdate]
             f_dets: Optional[FrameObjectDetections] = None
@@ -713,7 +716,7 @@ class ActivityClassifierTCN(Node):
                 FrameData(
                     f_dets,
                     f_pose,
-                    (self._img_pix_width, self._img_pix_height),
+                    (cam_info.width, cam_info.height),
                 )
             )
 
