@@ -98,6 +98,11 @@ PARAM_WINDOW_LEADS_WITH_OBJECTS = "window_leads_with_objects"
 # inputs when it decides not to create an activity classification.
 # the format will be csv with a list of the object detections and the pose
 PARAM_DEBUG_FILE = "debug_file"
+# This is the number of seconds to assume that the image source timestamp is
+# coming from a bag and will not reflect the actual time taken to process the
+# image. This is used to adjust the image source timestamp to be more accurate
+# for the purposes of latency tracking.
+PARAM_IMAGE_SOURCE_TIME_THRESHOLD = "image_source_time_threshold"
 
 
 class NoActivityClassification(Exception):
@@ -154,6 +159,7 @@ class ActivityClassifierTCN(Node):
                 (PARAM_POSE_REPEAT_RATE, 0),
                 (PARAM_WINDOW_LEADS_WITH_OBJECTS, False),
                 (PARAM_DEBUG_FILE, ""),
+                (PARAM_IMAGE_SOURCE_TIME_THRESHOLD, 200),
             ],
         )
         self._img_md_topic = param_values[PARAM_IMG_MD_TOPIC]
@@ -167,6 +173,10 @@ class ActivityClassifierTCN(Node):
         self._enable_trace_logging = param_values[PARAM_TIME_TRACE_LOGGING]
 
         self._window_lead_with_objects = param_values[PARAM_WINDOW_LEADS_WITH_OBJECTS]
+
+        self._image_source_time_threshold = param_values[
+            PARAM_IMAGE_SOURCE_TIME_THRESHOLD
+        ]
 
         # Cache activity class labels in ID order
         self._act_class_names = [
@@ -668,6 +678,20 @@ class ActivityClassifierTCN(Node):
         log = self.get_logger()
         log.info(f"Input Window (oldest-to-newest frame):\n{window}")
 
+        # look at window times to detect bagged images with old timestamps
+        img_source_time_start = window.frames[0][0]
+        img_source_time_end = window.frames[-1][0]
+        # compare this to the current time
+        curr_time = self.get_clock().now().to_msg()
+        if (
+            curr_time.sec - img_source_time_start.sec
+        ) > self._image_source_time_threshold:
+            # this might be a bagged image - replace the time with the current time
+            img_source_time_start = curr_time - (
+                img_source_time_end - img_source_time_start
+            )
+            img_source_time_end = curr_time
+
         # TCN wants to know the label and confidence for the maximally
         # confident class only. Input object detection messages
         log.info("processing window...")
@@ -739,8 +763,8 @@ class ActivityClassifierTCN(Node):
         # Prepare output message
         activity_msg = ActivityDetection()
         # set the window frames
-        activity_msg.source_stamp_start_frame = window.frames[0][0]
-        activity_msg.source_stamp_end_frame = window.frames[-1][0]
+        activity_msg.source_stamp_start_frame = img_source_time_start
+        activity_msg.source_stamp_end_frame = img_source_time_end
 
         # save label vector
         activity_msg.label_vec = self._act_class_names

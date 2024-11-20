@@ -62,6 +62,7 @@ class ObjectAndHandDetector(Node):
                 ("enable_time_trace_logging", False),
                 # Name of the background class to check for.
                 ("object_background_class_name", "background"),
+                ("image_source_time_threshold", 200),
             ],
         )
         self._image_topic = param_values["image_topic"]
@@ -78,6 +79,8 @@ class ObjectAndHandDetector(Node):
         self._agnostic_nms = param_values["agnostic_nms"]
 
         self._enable_trace_logging = param_values["enable_time_trace_logging"]
+
+        self._image_source_time_threshold = param_values["image_source_time_threshold"]
 
         ##########################################
         # Object Model
@@ -245,8 +248,18 @@ class ObjectAndHandDetector(Node):
                     image = self._cur_image_msg
                     self._cur_image_msg = None
 
+                img_source_time = image.header.stamp  # store the image timestamp
+                # compare the image timestamp to the current time to see if this is a bagged image
+                curr_time = self.get_clock().now().to_msg()
+                # if it is too old, change the image timestamp to the current time (before processing)
+                if (
+                    curr_time.sec - img_source_time.sec
+                ) > self._image_source_time_threshold:
+                    # this must have been a bagged image - use current time (before processing)
+                    img_source_time = curr_time
+
                 if enable_trace_logging:
-                    log.info(f"[rt-loop] Processing image TS={image.header.stamp}")
+                    log.info(f"[rt-loop] Processing image TS={img_source_time}")
 
                 # Convert ROS img msg to CV2 image
                 img0 = BRIDGE.imgmsg_to_cv2(image, desired_encoding="bgr8")
@@ -315,7 +328,7 @@ class ObjectAndHandDetector(Node):
 
                 # set header metadata before publishing to get the correct publish time
                 msg.header.frame_id = image.header.frame_id
-                msg.source_stamp = image.header.stamp
+                msg.source_stamp = img_source_time
                 msg.label_vec[:] = label_vector
                 msg.header.stamp = self.get_clock().now().to_msg()
                 self._det_publisher.publish(msg)

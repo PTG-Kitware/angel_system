@@ -72,6 +72,7 @@ class PoseEstimator(Node):
                 # about when we receive and process data.
                 ("enable_time_trace_logging", False),
                 ("image_resize", False),
+                ("image_source_time_threshold", 200),
             ],
         )
         self._image_topic = param_values["image_topic"]
@@ -87,6 +88,8 @@ class PoseEstimator(Node):
         self._det_conf_thresh = param_values["det_conf_threshold"]
         self._keypoint_conf_thresh = param_values["keypoint_conf_threshold"]
         self._cuda_device_id = param_values["cuda_device_id"]
+
+        self._image_source_time_threshold = param_values["image_source_time_threshold"]
 
         print("finished setting params")
 
@@ -201,8 +204,18 @@ class PoseEstimator(Node):
                     image = self._cur_image_msg
                     self._cur_image_msg = None
 
+                img_source_time = image.header.stamp  # store the image timestamp
+                # compare the image timestamp to the current time to see if this is a bagged image
+                curr_time = self.get_clock().now().to_msg()
+                # if it is too old, change the image timestamp to the current time (before processing)
+                if (
+                    curr_time.sec - img_source_time.sec
+                ) > self._image_source_time_threshold:
+                    # this must have been a bagged image - use current time (before processing)
+                    img_source_time = curr_time
+
                 if enable_trace_logging:
-                    log.info(f"[rt-loop] Processing image TS={image.header.stamp}")
+                    log.info(f"[rt-loop] Processing image TS={img_source_time}")
                 # Convert ROS img msg to CV2 image
                 img0 = BRIDGE.imgmsg_to_cv2(image, desired_encoding="bgr8")
 
@@ -262,7 +275,7 @@ class PoseEstimator(Node):
 
                     # set the header metadata right before publishing to ensure the correct time
                     all_poses_msg.header.frame_id = image.header.frame_id
-                    all_poses_msg.source_stamp = image.header.stamp
+                    all_poses_msg.source_stamp = img_source_time
                     all_poses_msg.hand = "patient"
                     all_poses_msg.header.stamp = self.get_clock().now().to_msg()
                     self.patient_pose_publisher.publish(all_poses_msg)
