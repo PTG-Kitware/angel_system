@@ -53,7 +53,9 @@ def run_inference_all_vids(
         if avg_probs is not None:
             step_predictor.get_average_TP_activations_from_array(avg_probs)
         else:
-            avg_probs = step_predictor.compute_average_TP_activations(coco_train, coco_test)
+            avg_probs = step_predictor.compute_average_TP_activations(
+                coco_train, coco_test
+            )
             save_file = (
                 code_dir
                 / "model_files"
@@ -110,6 +112,7 @@ def run_inference_all_vids(
             fname_suffix=f"{str(vid_id)}_granular_{extra_output_suffix}",
             granular_or_broad="granular",
         )
+
 
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})
 @click.argument(

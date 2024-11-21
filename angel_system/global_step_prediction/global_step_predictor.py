@@ -170,8 +170,8 @@ class GlobalStepPredictor:
 
             for ann_id in coco_truth.index.anns:
                 ann = coco_truth.index.anns[ann_id]
-                if ann['category_id'] == activity_id:
-                    referenced_img_id = ann['image_id']
+                if ann["category_id"] == activity_id:
+                    referenced_img_id = ann["image_id"]
                     pred_ann = coco_train.annots(image_id=referenced_img_id).objs
                     assert len(pred_ann) == 1
                     pred_ann = pred_ann[0]
