@@ -338,7 +338,8 @@ train_command \
   task_name=my_m2_training
 ```
 
-## The Global Step Predictor (GSP), and how it relates to the TCN Activity Classifier
+## The Global Step Predictor (GSP)
+### How the GSP relates to the TCN Activity Classifier
 
 The above TCN activity classifier in its current configuration takes in a second or 
 two of video artifacts (e.g. for the "Locs&Confs" version, pose joint pixel coordinates 
