@@ -375,7 +375,7 @@ The TCN's training harness can be run with `train=false` to only run inference a
 output in the needed KWCOCO output format. Example:
 
 ```
-python train.py \
+python train_command \
     experiment=r18/feat_locsconfs \
     paths.root_dir=/path/to/my/data/splits/ \ # See above TCN docs for training data structure
     task_name=r18_my_TCN_i_just_trained \
