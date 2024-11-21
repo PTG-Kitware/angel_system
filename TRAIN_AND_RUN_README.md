@@ -372,8 +372,11 @@ only when ground truth states that activity is happening. This includes the back
 
 To do this, we must run inference on videos for which the TCN has never seen ground truth (and are hopefully 
 quite independent from the training videos). The validation or test splits of your dataset may suffice.
-The TCN's training harness can be run with `train=false` to only run inference and save the test data's 
-output in the needed KWCOCO output format. Example:
+*Note:* If you have run training, test set prediction outputs should have been produced, in a 
+file named `tcn_activity_predictions.kwcoco.json`.
+
+If you don't have that file, he TCN's training harness can be run with `train=false` to only run 
+inference and save the test data's output in the needed KWCOCO output format. Example:
 
 ```
 python train_command \
