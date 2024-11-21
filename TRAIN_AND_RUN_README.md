@@ -387,12 +387,13 @@ python train_command \
     ckpt_path=model_files/activity_classifier/r18_tcn.ckpt \
 ```
 
+This should create a new predictions output file, e.g. `tcn_activity_predictions.kwcoco.json`. 
+
 Then, for each class, we filter the video outputs by those which the ground truth indicates that class
 activity is occurring. Then we simply average the TCN output for that activity, for those frames.
 
-This should create a new predictions output file, e.g. `tcn_activity_predictions.kwcoco.json`. 
-And you just used the ground truth for that file when you created it... That gives both files you 
-need to train the GSP, e.g. create the average TP activation numpy file:
+Given the test dataset split ground truth you just gave as input to the `train_command`, and the predictions
+output file your `train_command` produced, create the average TP activation numpy file as follows:
 
 ```
 python angel_system/global_step_prediction/run_expirement.py r18 \
