@@ -1,7 +1,6 @@
 import time
 from threading import Event, Thread
 
-from builtin_interfaces.msg import Time
 from cv_bridge import CvBridge
 from geometry_msgs.msg import (
     Point,
@@ -10,7 +9,7 @@ from geometry_msgs.msg import (
 )
 import numpy as np
 from rclpy.node import Node
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import Image, CameraInfo
 from shape_msgs.msg import (
     Mesh,
     MeshTriangle,
@@ -37,7 +36,7 @@ BRIDGE = CvBridge()
 PV_BITRATE = 5 * 1024 * 1024
 
 PARAM_PV_IMAGES_TOPIC = "image_topic"  # for publishing image data.
-PARAM_PV_IMAGES_TS_TOPIC = "image_ts_topic"  # for image timestamp publishing only.
+PARAM_PV_IMAGES_MD_TOPIC = "image_md_topic"  # for image metadata publishing only.
 PARAM_HAND_POSE_TOPIC = "hand_pose_topic"
 PARAM_AUDIO_TOPIC = "audio_topic"
 PARAM_SM_TOPIC = "sm_topic"
@@ -66,7 +65,7 @@ class HL2SSROSBridge(Node):
             self,
             [
                 (PARAM_PV_IMAGES_TOPIC,),
-                (PARAM_PV_IMAGES_TS_TOPIC,),
+                (PARAM_PV_IMAGES_MD_TOPIC,),
                 (PARAM_HAND_POSE_TOPIC,),
                 (PARAM_AUDIO_TOPIC,),
                 (PARAM_SM_TOPIC,),
@@ -81,7 +80,7 @@ class HL2SSROSBridge(Node):
         )
 
         self._image_topic = param_values[PARAM_PV_IMAGES_TOPIC]
-        self._image_ts_topic = param_values[PARAM_PV_IMAGES_TS_TOPIC]
+        self._image_md_topic = param_values[PARAM_PV_IMAGES_MD_TOPIC]
         self._hand_pose_topic = param_values[PARAM_HAND_POSE_TOPIC]
         self._audio_topic = param_values[PARAM_AUDIO_TOPIC]
         self._sm_topic = param_values[PARAM_SM_TOPIC]
@@ -122,8 +121,8 @@ class HL2SSROSBridge(Node):
             self.ros_frame_publisher = self.create_publisher(
                 Image, self._image_topic, 1
             )
-            self.ros_frame_ts_publisher = self.create_publisher(
-                Time, self._image_ts_topic, 1
+            self.ros_frame_md_publisher = self.create_publisher(
+                CameraInfo, self._image_md_topic, 1
             )
             self.connect_hl2ss_pv()
             log.info("PV client connected!")
@@ -378,7 +377,11 @@ class HL2SSROSBridge(Node):
 
             # Publish the image msg
             self.ros_frame_publisher.publish(image_msg)
-            self.ros_frame_ts_publisher.publish(image_msg.header.stamp)
+            new_msg = CameraInfo()
+            new_msg.header = image_msg.header
+            new_msg.height = image_msg.height
+            new_msg.width = image_msg.width
+            self.ros_frame_md_publisher.publish(new_msg)
 
             # Publish the corresponding headset pose msg
             world_matrix = [float(x) for x in data.pose.flatten()]

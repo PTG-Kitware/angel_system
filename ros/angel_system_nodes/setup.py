@@ -34,7 +34,7 @@ setup(
             "frame_publisher = angel_system_nodes.data_publishers.ros_publisher:main",
             "generate_images = angel_system_nodes.data_publishers.generate_images:main",
             "hl2ss_ros_bridge = angel_system_nodes.data_publishers.hl2ss_ros_bridge:main",
-            "image_timestamp_relay = angel_system_nodes.data_publishers.image_timestamp_relay:main",
+            "image_metadata_relay = angel_system_nodes.data_publishers.image_metadata_relay:main",
             "redis_ros_bridge = angel_system_nodes.data_publishers.redis_ros_bridge:main",
             # Evaluation Components
             "eval_2_logger = angel_system_nodes.eval.mitll_eval_2_logger:main",

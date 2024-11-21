@@ -154,30 +154,8 @@ bbn_create_truth_coco \
 - `/angel_system/model_files/models/hands_model.pt`: hand detection trained model
 - `/angel_system/model_files/models/r18_det.pt`: object detection trained model
 
-
-## Training Procedure
-
-We take the following steps:
-
-1. train object detection model
-2. Generate activity classification truth COCO file.
-3. predict objects in the scene
-4. predict poses and patient bounding boxes in the scene
-5. generate interaction feature vectors for the TCN
-6. train the TCN
-
-### Example with M2
-Contents:
-- [Train Object Detection Model](#train-object-detection-model)
-- [Generate activity classification truth COCO file](#generate-activity-classification-truth-coco-file)
-- [Generate Object Predictions in the Scene](#generate-object-predictions-in-the-scene)
-- [Generate Pose Predictions](#generate-pose-predictions)
-- [Configure TCN Training Experiment](#configure-tcn-training-experiment)
-- [Run TCN Training](#run-tcn-training)
-
-#### Train Object Detection Model
-First we train the detection model on annotated data.
-This would be the same data source for both the lab and professional data.
+## Train or acquire an Object Detector
+Quick-start example for Yolo v7:
 ```
 python3 python-tpl/yolov7/yolov7/train.py \
   --workers 8 --device 0 --batch-size 4 \
@@ -188,6 +166,27 @@ python3 python-tpl/yolov7/yolov7/train.py \
   --project /data/PTG/medical/training/yolo_object_detector/train/ \
   --name m2_all_v1_example
 ```
+
+## Train or acquire Pose Estimator
+TODO:
+
+## Activity Classifier Training Procedure
+
+We take the following steps:
+
+1. Generate activity classification truth COCO file.
+2. predict objects in the scene
+3. predict poses and patient bounding boxes in the scene
+4. generate interaction feature vectors for the TCN
+5. train the TCN
+
+The following will use file path and value examples for the Medical M2
+Tourniquet use-case.
+- [Generate activity classification truth COCO file](#generate-activity-classification-truth-coco-file)
+- [Generate Object Predictions in the Scene](#generate-object-predictions-in-the-scene)
+- [Generate Pose Predictions](#generate-pose-predictions)
+- [Configure TCN Training Experiment](#configure-tcn-training-experiment)
+- [Run TCN Training](#run-tcn-training)
 
 #### Generate activity classification truth COCO file
 Generate the truth MS-COCO file for per-frame activity truth annotations.
@@ -281,9 +280,9 @@ modify attributes appropriately for your experiment.
   seen during a single epoch.
 * `data:train_dataset:window_size` -- Update with the desired window size for
   this experiment.
-* `data:train_dataset:vectorizer` -- Update with the type and hyperparameters
+* `data:train_dataset:vectorize` -- Update with the type and hyperparameters
   for the specific vectorizer to utilize for this experiment.
-* `data:train_dataset:transform:transforms` -- Update to include any vector
+* `data:train_dataset:transform_frame_data:transforms` -- Update to include any vector
   generalized transformations/augmentations that should be utilized during
   dataset iteration.
   * The transforms utilized for train, validation and testing may be customized
@@ -331,80 +330,13 @@ kwcoco_guided_subset \
 ```
 
 #### Run TCN Training
-TODO
-
-## Example with R18
-
-First we train the detection model on annotated data. This would be the same
-data source for both the lab and professional data
+Quick-start:
 ```
-cd yolo7
-python yolov7/train.py \
-  --workers 8 \
-  --device 0 \
-  --batch-size 4 \
-  --data configs/data/PTG/medical/r18_task_objects.yaml \
-  --img 768 768 \
-  --cfg configs/model/training/PTG/medical/yolov7_r18.yaml \
-  --weights weights/yolov7.pt \
-  --project /data/PTG/medical/training/yolo_object_detector/train/ \
-  --name r18_all_v1_example
+train_command \
+  experiment=m2/feat_locsconfs \
+  paths.root_dir="$PWD" \
+  task_name=my_m2_training
 ```
-
-###### Note on training on lab data <a name = "lab_data"></a>:
-since we do not have detection GT for lab data, this is our start point for training the TCN on the lab data
-
-Next, we generate detection predictions in kwcoco file using the following script. Note that this
-```
-python yolov7/detect_ptg.py \
-  --tasks r18 \
-  --weights /data/PTG/medical/training/yolo_object_detector/train/r18_all_v1_example/weights/best.pt \
-  --project /data/PTG/medical/training/yolo_object_detector/detect/ \
-  --name r18_all_example \
-  --device 0 \
-  --img-size 768 \
-  --conf-thres 0.25
-cd TCN_HPL/tcn_hpl/data/utils/pose_generation/configs
-```
-
-with the above scripts, we should get a kwcoco file at:
-```
-/data/PTG/medical/training/yolo_object_detector/detect/r18_all_example/
-```
-
-Edit `TCN_HPL/tcn_hpl/data/utils/pose_generation/configs/main.yaml` with the
-task in hand (here, we use r18), the path to the output detection kwcoco, and
-where to output kwcoco files from our pose generation step.
-```
-cd ..
-python generate_pose_data.py
-cd TCN_HPL/tcn_hpl/data/utils
-```
-At this stage, there should be a new kwcoco file generated in the field defined
-at `main.yaml`:
-```
-data:
-    save_root: <path-to-kwcoco-file-with-pose-and-detections>
-```
-
-Next, edit the `/TCN_HPL/configs/experiment/r18/feat_v6.yaml` file with the
-correct experiment name and kwcoco file in the following fields:
-```
-exp_name: <experiment-name>
-path:
-    dataset_kwcoco: <path-to-kwcoco-with-poses-and-dets>
-```
-
-Then run the following commands to generate features:
-```
-python  ptg_datagenerator –task r18 --data_type <bbn or gyges> --config-root <root-to-TCN-HPL-configs> --ptg-root <path-to-local-angel-systen-repo>
-cd TCN_HPL/tcn_hpl
-python train.py experiment=r18/feat_v6
-```
-
-==At this point, we have our trained model at the path specified in our config file. For real-time execurtion, we would need to copy it over to angel_system/model_files==
-The TCN training script produced a `text_activity_preds.mscoco.json` which is used by the Global Step Predictor. That file should be copied to `/angel_system/model_files/coco/`.
-
 
 ## The Global Step Predictor (GSP), and how it relates to the TCN Activity Classifier
 
