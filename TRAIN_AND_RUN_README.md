@@ -363,7 +363,7 @@ Skipping one step can also be allowed if the "skipped step" has been activated w
 (a lower confidence threshold and/or fewer frames above that threshold). We can also configure to skip one step
 simply given that a threshold number of frames have passed since we completed the most recent step.
 
-## Training the GSP
+### Training the GSP
 
 To "train" the GSP, we simply compute the average true positive output scores per class- that is, the 
 average confidence of each TCN activity classification in its output vector,
