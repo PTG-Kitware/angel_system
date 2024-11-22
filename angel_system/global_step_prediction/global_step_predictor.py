@@ -143,20 +143,21 @@ class GlobalStepPredictor:
 
     def compute_average_TP_activations(
         self,
-        coco_train: kwcoco.CocoDataset,
+        coco_preds: kwcoco.CocoDataset,
+        coco_truth: kwcoco.CocoDataset,
     ):
         # For each activity, given the Ground Truth-specified
         # frame subset where that activity is happening, get the
         # average activation of that class.
 
-        all_activity_ids = coco_train.categories().get("id")
+        all_activity_ids = coco_preds.categories().get("id")
         print(f"all_activity_ids: {all_activity_ids}")
 
         # create a mapping of all the annots ids to image ids in the training set
-        tr_aid_to_gid = coco_train.annots().get("image_id", keepid=True)
+        tr_aid_to_gid = coco_preds.annots().get("image_id", keepid=True)
         print(f"training set annotations: {len(tr_aid_to_gid)}")
 
-        all_vid_ids = coco_train.videos().get("id")
+        all_vid_ids = coco_preds.videos().get("id")
         print(
             f"Computing average true positive activations for {len(all_vid_ids)} video(s)."
         )
@@ -165,10 +166,18 @@ class GlobalStepPredictor:
         avg_probs = np.zeros(max(all_activity_ids) + 1)
 
         for activity_id in all_activity_ids:
-            sub_dset = coco_train.subset(gids=tr_aid_to_gid.keys(), copy=True)
-            probs_for_true_inds = np.asarray(sub_dset.annots().get("prob"))[
-                :, activity_id
-            ]
+            probs_for_true_inds = np.array([])
+
+            for ann_id in coco_truth.index.anns:
+                ann = coco_truth.index.anns[ann_id]
+                if ann["category_id"] == activity_id:
+                    referenced_img_id = ann["image_id"]
+                    pred_ann = coco_preds.annots(image_id=referenced_img_id).objs
+                    assert len(pred_ann) == 1
+                    pred_ann = pred_ann[0]
+                    TP_prob = pred_ann["prob"][activity_id]
+                    probs_for_true_inds = np.append(probs_for_true_inds, TP_prob)
+
             avg_prob = np.mean(probs_for_true_inds)
             avg_probs[activity_id] = avg_prob
 

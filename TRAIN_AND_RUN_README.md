@@ -338,6 +338,75 @@ train_command \
   task_name=my_m2_training
 ```
 
+## The Global Step Predictor (GSP)
+### How the GSP relates to the TCN Activity Classifier
+
+The above TCN activity classifier in its current configuration takes in a second or 
+two of video artifacts (e.g. for the "Locs&Confs" version, pose joint pixel coordinates 
+and confidences, the user's hand detection locations and confidences, and other procedure-relevant 
+object pixel coordinates and confidences), and outputs confidences for each of a vector 
+of activities (examples: "labels" in config/activity_labels/medical), assuming up to 
+one activity is ocurring "presently."
+
+Now, the GSP takes as input the confidence vector per frame window, and keeps track over time of which
+activities ("steps" in the GSP context) have occurred, and which step a user is on.
+
+Basically, if the "next step" at any point has been activated long enough, and with enough confidence, 
+the GSP progresses to that step as the latest "completed" step.
+
+Assumptions:
+- One activity or "background" (none of the listed activities) happens at a time.
+- The activities must happen in a specific linear order.
+- So, if an activity is detected with strong confidence way out of order (e.g. we're on step 3
+and we detect step 8), the GSP does not mark step 8 as completed.
+- A single "skipped step" is possible given some criteria. Skipping one step can be allowed unconditionally.
+Skipping one step can also be allowed if the "skipped step" has been activated with some "easier" criteria
+(a lower confidence threshold and/or fewer frames above that threshold). We can also configure to skip one step
+simply given that a threshold number of frames have passed since we completed the most recent step.
+
+### Training the GSP
+
+To "train" the GSP, we simply compute the average true positive output scores per class- that is, the 
+average confidence of each TCN activity classification in its output vector,
+only when ground truth states that activity is happening. This includes the background class.
+
+To do this, we must run inference on videos for which the TCN has never seen ground truth (and are hopefully 
+quite independent from the training videos). The validation or test splits of your dataset may suffice.
+*Note:* If you have run training, test set prediction outputs should have been produced, in a 
+file named `tcn_activity_predictions.kwcoco.json`.
+
+If you don't have that file, he TCN's training harness can be run with `train=false` to only run 
+inference and save the test data's output in the needed KWCOCO output format. Example:
+
+```
+python train_command \
+    experiment=r18/feat_locsconfs \
+    paths.root_dir=/path/to/my/data/splits/ \ # See above TCN docs for training data structure
+    task_name=r18_my_TCN_i_just_trained \
+    train=false \
+    ckpt_path=model_files/activity_classifier/r18_tcn.ckpt \
+```
+
+This should create a new predictions output file, e.g. `tcn_activity_predictions.kwcoco.json`. 
+
+Then, for each class, we filter the video outputs by those which the ground truth indicates that class
+activity is occurring. Then we simply average the TCN output for that activity, for those frames.
+
+Given the test dataset split ground truth you just gave as input to the `train_command`, and the predictions
+output file your `train_command` produced, create the average TP activation numpy file as follows:
+
+```
+python angel_system/global_step_prediction/run_expirement.py r18 \
+     path/to/TEST-activity_truth.coco.json \
+     path/to/tcn_activity_predictions.kwcoco.json \
+     path/to/tcn_activity_predictions.kwcoco.json
+
+```
+
+That numpy file then can be provisioned to load to the default GSP `model_files` filepath, e.g. in the case
+of the R18 task, `model_files/task_monitor/global_step_predictor_act_avgs_r18.npy`.
+
+
 ## Docker local testing
 
 ***to start the service run:***
