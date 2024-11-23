@@ -137,13 +137,15 @@ bbn_create_truth_coco \
   activity-truth-COCO.json
 ```
 
-
 ### Storage on Gyges
 - On gyges, raw data is located at
-  - `/data/PTG/medical/bbn_data/Release_v0.5/v0.56/<task>`
-- pre-trained models are available on `https://data.kitware.com/#collection/62cc5eb8bddec9d0c4fa9ee1/folder/6605bc558b763ca20ae99f55`
-- In this pipeline we are only provided with object detection ground truth training data, which is located `/data/PTG/medical/object_anns/<task>`
-- For real-time execution, we store our models in /angel_system/model_files
+  - Zed "Pro" data `/data/PTG/medical/bbn_data/Release_v0.5/v0.56/<task>`
+  - Hololens Golden data: `/data/PTG/medical/bbn_data/lab_data-golden/`
+  - Hololens Working data: `/data/PTG/medical/bbn_data/lab_data-working/`
+- In this pipeline we are only provided with object detection ground truth
+  training data, which is located `/data/PTG/medical/object_anns/<task>`
+- For real-time execution, we store our models in `angel_system/model_files/`
+  which are provisioned by Ansible by configuration.
 
 ##### Examples of files and what they are used for:
 
@@ -249,12 +251,12 @@ See the `-h`/`--help` options for more details.
 Note that the input COCO file is that which was generated in the
 `Generate activity classification truth COCO file` section.
 ```
-python-tpl/TCN_HPL/tcn_hpl/data/utils/pose_generation/generate_pose_data.py \\
-  -i ~/data/darpa-ptg/bbn_data/lab_data-working/m2_tourniquet/activity_truth.coco.json \\
-  -o ./test_pose_output.coco.json \\
-  --det-config ./python-tpl/TCN_HPL/tcn_hpl/data/utils/pose_generation/configs/medic_pose.yaml \\
-  --det-weights ./model_files/pose_estimation/pose_det_model.pth \\
-  --pose-config ./python-tpl/TCN_HPL/tcn_hpl/data/utils/pose_generation/configs/ViTPose_base_medic_casualty_256x192.py \\
+python-tpl/TCN_HPL/tcn_hpl/data/utils/pose_generation/generate_pose_data.py \
+  -i ~/data/darpa-ptg/bbn_data/lab_data-working/m2_tourniquet/activity_truth.coco.json \
+  -o ./test_pose_output.coco.json \
+  --det-config ./python-tpl/TCN_HPL/tcn_hpl/data/utils/pose_generation/configs/medic_pose.yaml \
+  --det-weights ./model_files/pose_estimation/pose_det_model.pth \
+  --pose-config ./python-tpl/TCN_HPL/tcn_hpl/data/utils/pose_generation/configs/ViTPose_base_medic_casualty_256x192.py \
   --pose-weights ./model_files/pose_estimation/pose_model.pth
 # Repeat for other relevant activity truth inputs
 ```
