@@ -5,7 +5,7 @@
 # This configuration is for the R18 Chest Seal task.
 #
 
-name: kitware-R18-Chest-Seal
+name: kitware-r18
 root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 
 # Optional tmux socket
@@ -56,10 +56,23 @@ windows:
   - sensor_input_bag:
       layout: even-vertical
       panes:
-        # Read sensor input from bag file.
-        # May have to use: --remap /kitware/image_0:=/kitware/PVFramesBGR
-#        - sensor_input: echo ros2 bag play ${ANGEL_WORKSPACE_DIR}/ros_bags/rosbag2-bbn_lab_data-r18-positive-seal_videos-seal_2-TEST_SET/
-        - sensor_input: echo ros2 bag play ${ANGEL_WORKSPACE_DIR}/ros_bags/rosbag2-bbn_lab_data-r18-positive-30424_NE_recordings-R18_5-TEST_SET/
+        # Read sensor input from the hololens
+        # the image size is set to 1280x720 because of the pose estimation node:
+        # https://github.com/PTG-Kitware/angel_system/blob/master/ros/angel_system_nodes/angel_system_nodes/pose_estimation/pose_estimator.py#L211
+        - hl2ss_bridge: ros2 run angel_system_nodes hl2ss_ros_bridge --ros-args
+            -r __ns:=${ROS_NAMESPACE}
+            -p ip_addr:=${HL2_IP}
+            -p image_topic:=PVFramesBGR
+            -p image_md_topic:=PVFramesBGR_md
+            -p hand_pose_topic:=HandJointPoseData
+            -p audio_topic:=HeadsetAudioData
+            -p sm_topic:=SpatialMapData
+            -p head_pose_topic:=HeadsetPoseData
+            -p pv_width:=1280
+            -p pv_height:=720
+            -p pv_framerate:=15
+            -p sm_freq:=5
+            -p rm_depth_AHAT:=disable
         - run_image_metadata: ros2 run angel_system_nodes image_metadata_relay --ros-args
             -r __ns:=${ROS_NAMESPACE}
             -p image_topic:=PVFramesBGR
@@ -71,36 +84,9 @@ windows:
             -p pose_topic:=PatientPose
             -p activity_topic:=activity_topic
             -p latency_topic:=latency
-
-#  - sensor_input_stream:
-#      layout: even-vertical
-#      panes:
-#        # Read sensor input from a HoloLens2 unit using HL2SS.
-#        - sensor_input: echo ros2 run angel_system_nodes hl2ss_ros_bridge --ros-args
-#            -r __ns:=${ROS_NAMESPACE}
-#            -p ip_addr:=${HL2_IP}
-#            -p image_topic:=PVFramesBGR
-#            -p image_md_topic:=PVFramesBGR_md
-#            -p hand_pose_topic:=disable
-#            -p audio_topic:=HeadsetAudioData
-#            -p sm_topic:=disable
-#            -p head_pose_topic:=disable
-#            -p pv_width:=1280
-#            -p pv_height:=720
-#            -p pv_framerate:=${FRAME_RATE}
-#            -p sm_freq:=5
-#            -p rm_depth_AHAT:=disable
-#        # Enable sending ROS2 messages to receiving agents in an HoloLens2 app.
-#        - datahub: ros2 run ros_tcp_endpoint default_server_endpoint --ros-args
-#            -r __ns:=${ROS_NAMESPACE}
-#            -p ROS_IP:=0.0.0.0
-#        - run_latency_node: ros2 run angel_system_nodes latency_tracker --ros-args
-#            -r __ns:=${ROS_NAMESPACE}
-#            -p image_md_topic:=PVFramesBGR_md
-#            -p det_topic:=ObjectDetections2d
-#            -p pose_topic:=PatientPose
-#            -p activity_topic:=activity_topic
-#            -p latency_topic:=latency
+        - datahub: ros2 run ros_tcp_endpoint default_server_endpoint --ros-args
+            -r __ns:=${ROS_NAMESPACE}
+            -p ROS_IP:=0.0.0.0
 
   - activity_classifier: ros2 run angel_system_nodes activity_classifier_tcn --ros-args
       -r __ns:=${ROS_NAMESPACE}
