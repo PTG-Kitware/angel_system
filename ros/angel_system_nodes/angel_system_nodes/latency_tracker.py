@@ -159,7 +159,8 @@ class LatencyTracker(Node):
                         det_msg = self._det
                     dt_time = time_to_float(det_msg.header.stamp)
                     img_time = self.get_msg_time_from_source(det_msg.source_stamp)
-                    det_lat = dt_time - time_to_float(img_time)
+                    if img_time is not None:
+                        det_lat = dt_time - time_to_float(img_time)
 
                 pose_lat = None
                 if self._pose:
@@ -167,7 +168,8 @@ class LatencyTracker(Node):
                         pose_msg = self._pose
                     ps_time = time_to_float(pose_msg.header.stamp)
                     img_time = self.get_msg_time_from_source(pose_msg.source_stamp)
-                    pose_lat = ps_time - time_to_float(img_time)
+                    if img_time is not None:
+                        pose_lat = ps_time - time_to_float(img_time)
 
                 act_lat_start = None
                 act_lat_end = None
@@ -178,11 +180,13 @@ class LatencyTracker(Node):
                     img_time = self.get_msg_time_from_source(
                         act_msg.source_stamp_start_frame
                     )
-                    act_lat_start = act_time - time_to_float(img_time)
+                    if img_time is not None:
+                        act_lat_start = act_time - time_to_float(img_time)
                     img_time = self.get_msg_time_from_source(
                         act_msg.source_stamp_end_frame
                     )
-                    act_lat_end = act_time - time_to_float(img_time)
+                    if img_time is not None:
+                        act_lat_end = act_time - time_to_float(img_time)
 
                 # save the info to the message
                 data = {
