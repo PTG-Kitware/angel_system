@@ -78,8 +78,8 @@ girder_file_downloads:
       sha512: 68bea2bd8748cc2ad55ca8784d45b9b0c9f21bd3cbca9d8983d158281adf15197d52a2582477ff1ac79ece0ce9187eb466056d407cb3e54894c3f9fd47dc5e41
       dest: "{{ stage_dirs.activity_classifier }}/m2_config.yaml"
     # Global Step predictor model
-    - file_id: 6723f3d283e1acbfd87e7269
-      sha512: fb676aae6f768498df860bbf4a1621ee8403cba96a1b9acc088f5f23671c57ca1f06f6c535fa8b0eb5074c7fed56e8ff5a7f990e2893f3759662c76137db1746
+    - file_id: 673f74eff4ba555b2ab8ae3e
+      sha512: 437f5557ff3670c75118d7699964ece42d3480502a71888de62c53c6998b42a297fb7b21ea0bc6bfc4da59e64f9730b69d61d55b5f2c9dd73d93eeee682d60de
       dest: "{{ stage_dirs.task_monitor }}/global_step_predictor_act_avgs_m2.npy"
 
     # ---- M3 ----
@@ -129,8 +129,8 @@ girder_file_downloads:
       sha512: 09a4c97e79c34ac95c95a4c63370b928527a98b9bab233aa12e4b14cfa95e0bb5a09bad90d19715ab656d17281ba5fbaa719647a5545bf2447ae584da5bd8d6a
       dest: "{{ stage_dirs.activity_classifier }}/r18_config.yaml"
     # Global Step predictor model
-    - file_id: 66464bf9687336214e7cdeae
-      sha512: bc7884c258cb8704372dd69a3e7d999eaf70d716d271982077c7216ef27ab01219ef1e488f6f9669e11a7e8aa6ffb9d8e07d74edc47294f90cc9e6a723f5a822
+    - file_id: 673f8cbcf4ba555b2ab8ae42
+      sha512: 4198d861961886b05b85dd178004ea2ca54ce4625bd9ea37a18f000f1090e8646e5838c1577090b799662e0cae779558f857b6a568c115f79bbca6d021a446f7
       dest: "{{ stage_dirs.task_monitor }}/global_step_predictor_act_avgs_R18.npy"
 
 # List of git repositories to check out at a specific ref and then archive.
