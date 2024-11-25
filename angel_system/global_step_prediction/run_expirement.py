@@ -53,7 +53,9 @@ def run_inference_all_vids(
         if avg_probs is not None:
             step_predictor.get_average_TP_activations_from_array(avg_probs)
         else:
-            avg_probs = step_predictor.compute_average_TP_activations(coco_train)
+            avg_probs = step_predictor.compute_average_TP_activations(
+                coco_train, coco_test
+            )
             save_file = (
                 code_dir
                 / "model_files"
@@ -104,57 +106,12 @@ def run_inference_all_vids(
 
         print(f"unique broad steps: {get_unique(broad_step_gts)}")
 
-        _, granular_preds, granular_gt = step_predictor.plot_gt_vs_predicted_one_recipe(
+        _ = step_predictor.plot_gt_vs_predicted_one_recipe(
             granular_step_gts,
             recipe_type,
             fname_suffix=f"{str(vid_id)}_granular_{extra_output_suffix}",
             granular_or_broad="granular",
         )
-        # _, broad_preds, broad_gt = step_predictor.plot_gt_vs_predicted_one_recipe(
-        #     broad_step_gts,
-        #     recipe_type,
-        #     fname_suffix=f"{str(vid_id)}_broad_{extra_output_suffix}",
-        #     granular_or_broad="broad",
-        # )
-
-        # print(f"broad_gt len: {len(broad_gt)}")
-        # print(f"broad_preds len: {len(broad_preds)}")
-        # print(f"granular_gt len: {len(granular_gt)}")
-        # print(f"granular_preds len: {len(granular_preds)}")
-
-        min_length = min(len(granular_preds), len(granular_gt))
-
-        preds.extend(granular_preds[:min_length])
-        gt.extend(granular_gt[:min_length])
-
-    num_act_classes = len(step_predictor.activity_config["labels"])
-    fig, ax = plt.subplots(figsize=(num_act_classes, num_act_classes))
-
-    print(f"gt len: {len(gt)}")
-    print(f"preds len: {len(preds)}")
-    print(f"labels: {step_predictor.activity_config['labels']}")
-    label_ids = [item["id"] for item in step_predictor.activity_config["labels"]]
-    labels = [item["full_str"] for item in step_predictor.activity_config["labels"]]
-
-    broad_cm = confusion_matrix(gt, preds, labels=label_ids, normalize="true")
-
-    # granular_cm = confusion_matrix(
-    #     granular_step_gts,
-    #     granular_preds,
-    #     labels=step_predictor.activity_config["labels"],
-    #     normalize="true"
-    # )
-
-    sns.heatmap(broad_cm, annot=True, ax=ax, fmt=".2f", linewidth=0.5, vmin=0, vmax=1)
-
-    ax.set_xlabel("Predicted labels")
-    ax.set_ylabel("True labels")
-    # ax.set_title(f'CM GSP Accuracy: {acc:.4f}')
-    ax.xaxis.set_ticklabels(labels, rotation=25)
-    ax.yaxis.set_ticklabels(labels, rotation=0)
-    # fig.savefig(f"{self.hparams.output_dir}/confusion_mat_val_acc_{acc:.4f}.png", pad_inches=5)
-    print(f"Saving confusion matrix to {out_file}")
-    fig.savefig(out_file.as_posix(), pad_inches=5)
 
 
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})
