@@ -927,7 +927,13 @@ class GlobalStepPredictor:
 
         plt.legend()
         if not fname_suffix:
-            fname_suffix = f"vid{vid_id}"
+            fname_suffix = "vid_unknown"
+
+        # check for a long path in the fname_suffix
+        if "/" in fname_suffix:
+            # get just the end part of the path
+            fname_suffix = fname_suffix.split("/")[-1]
+
         recipe_type = self.determine_recipe_from_gt_first_step(step_gts)
         title = f"plot_pred_vs_gt_{recipe_type}_{fname_suffix}.png"
         plt.title(title)
