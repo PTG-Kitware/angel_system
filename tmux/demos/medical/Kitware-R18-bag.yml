@@ -73,19 +73,6 @@ windows:
             -r __ns:=${ROS_NAMESPACE}
             -p ROS_IP:=0.0.0.0
 
-  - activity_classifier: ros2 run angel_system_nodes activity_classifier_tcn --ros-args
-      -r __ns:=${ROS_NAMESPACE}
-      -p image_md_topic:=PVFramesBGR_md
-      -p det_topic:=ObjectDetections2d
-      -p pose_topic:=PatientPose
-      -p activity_config_file:=${CONFIG_DIR}/activity_labels/medical/r18.yaml
-      -p model_weights:=${MODEL_DIR}/activity_classifier/r18_tcn.ckpt
-      -p model_config:=${MODEL_DIR}/activity_classifier/r18_config.yaml
-      -p act_topic:=activity_topic
-      -p pose_repeat_rate:=7.5
-      -p window_leads_with_objects:=true
-      -p model_device:=0
-
   - object_and_hand_detection: ros2 run angel_system_nodes object_and_hand_detector --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p image_topic:=PVFramesBGR
@@ -105,6 +92,19 @@ windows:
       -p det_config:=${ANGEL_WORKSPACE_DIR}/python-tpl/TCN_HPL/tcn_hpl/data/utils/pose_generation/configs/medic_pose.yaml
       -p pose_config:=${ANGEL_WORKSPACE_DIR}/python-tpl/TCN_HPL/tcn_hpl/data/utils/pose_generation/configs/ViTPose_base_medic_casualty_256x192.py
       -p cuda_device_id:=0
+
+  - activity_classifier: ros2 run angel_system_nodes activity_classifier_tcn --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p image_md_topic:=PVFramesBGR_md
+      -p det_topic:=ObjectDetections2d
+      -p pose_topic:=PatientPose
+      -p activity_config_file:=${CONFIG_DIR}/activity_labels/medical/r18.yaml
+      -p model_weights:=${MODEL_DIR}/activity_classifier/r18_tcn.ckpt
+      -p model_config:=${MODEL_DIR}/activity_classifier/r18_config.yaml
+      -p act_topic:=activity_topic
+      -p pose_repeat_rate:=7.5
+      -p window_leads_with_objects:=true
+      -p model_device:=0
 
   - task_monitor:
       layout: even-vertical
