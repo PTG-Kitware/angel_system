@@ -394,11 +394,7 @@ class InputBuffer:
                 frames=window_frames,
                 obj_dets=window_dets,
                 patient_joint_kps=window_joint_kps,
-                camera_info=[
-                    ci
-                    for ci in self.camera_info
-                    if ci.header.stamp in window_frame_times
-                ],
+                camera_info=[ci for ci in self.camera_info],
             )
             return output
 
