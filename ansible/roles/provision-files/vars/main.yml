@@ -71,11 +71,11 @@ girder_file_downloads:
       sha512: e6b382f5ba3d4d7f17d29caa3f6ea06dd5db24fee3bf59b12ff748d58b1b064c374741c805ee7c07a2a6950761a38e5398f3707ed3e83d7d53218972c57d12a2
       dest: "{{ stage_dirs.object_detector }}/m2_det.pt"
     # Activity classifier
-    - file_id: 671bff2983e1acbfd87e723f
-      sha512: 5165219f60e3a160a8ec51f0446db4ec23ed70c399df66f482a233566e177d1f8cf044fc6ccc5227f5c748cbe6d2f17143109e791a139dfc2225d75de67829b2
+    - file_id: 673f69bef4ba555b2ab8ae15
+      sha512: 91d69908ef49b4a43dd344ae36a1c11eda6afb9b15dd748292435343087e08a3b1c22347efe592d7f078669d52a3dc496ca605ba4463997878151973e4885e77
       dest: "{{ stage_dirs.activity_classifier }}/m2_tcn.ckpt"
-    - file_id: 672543fcca1110761bd32f7d
-      sha512: aef3ab3f8927f83b7ecad3cc28ea7b42e662d5c11740df1015542df6740db3633a7829187e9f5a35b4a66ebfeb48756c6598e4b7e6f68cc1ae90912fd71e31dd
+    - file_id: 673f69b3f4ba555b2ab8ae12
+      sha512: 68bea2bd8748cc2ad55ca8784d45b9b0c9f21bd3cbca9d8983d158281adf15197d52a2582477ff1ac79ece0ce9187eb466056d407cb3e54894c3f9fd47dc5e41
       dest: "{{ stage_dirs.activity_classifier }}/m2_config.yaml"
     # Global Step predictor model
     - file_id: 6723f3d283e1acbfd87e7269
@@ -122,11 +122,11 @@ girder_file_downloads:
       sha512: 7183385f8eaca85997725a107a76034de2bd4a59c1434b4bdb7c1ac8931cf4b68a53f6e736734643386364b9f0856de795a14965b6a02bc5eb5891252e6a73c9
       dest: "{{ stage_dirs.object_detector }}/r18_det.pt"
     # Activity classifier
-    - file_id: 672cf299ca1110761bd32ffd
-      sha512: 0bfd4c5a1f254120758b9802eefef8933bfebf80837bd61445c3c26228edaefa34f0ed81178670538426983a93d60198f1be82a767e350b26d4fb3d081972b0d
+    - file_id: 673f6e62f4ba555b2ab8ae35
+      sha512: e731dad0d0688ede4fc1b04b7c6c67478971ab97da062813ec04571daca07f413aa4775c385c3e8b28a8f5f50f8157e68547d45d033ab4bb0926935ad39e7f26
       dest: "{{ stage_dirs.activity_classifier }}/r18_tcn.ckpt"
-    - file_id: 672cf437ca1110761bd33009
-      sha512: d99c484071f22661425a9673ff351db90ce2fba40f2faa56f0b388deb2d0cdcc96931a2627e5aec45ab5a4624c9ab04da23b63364dd6eb1d5641a90701737006
+    - file_id: 673f6e58f4ba555b2ab8ae32
+      sha512: 09a4c97e79c34ac95c95a4c63370b928527a98b9bab233aa12e4b14cfa95e0bb5a09bad90d19715ab656d17281ba5fbaa719647a5545bf2447ae584da5bd8d6a
       dest: "{{ stage_dirs.activity_classifier }}/r18_config.yaml"
     # Global Step predictor model
     - file_id: 66464bf9687336214e7cdeae
