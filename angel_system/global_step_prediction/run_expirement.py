@@ -106,12 +106,33 @@ def run_inference_all_vids(
 
         print(f"unique broad steps: {get_unique(broad_step_gts)}")
 
+        _TP, _FP, _FN = step_predictor.save_TP_FP_FN_per_class(granular_step_gts)
+        if 'TP' in locals():
+            TP += _TP
+            FP += _FP
+            FN += _FN
+        else:
+            TP = _TP
+            FP = _FP
+            FN = _FN
+        class_F1s, mean_F1 = compute_class_f1s_and_mean_f1(TP,FP,FN)
+        print(f"class-wise F1s: {class_F1s}\nmean F1: {mean_F1}")
+
         _ = step_predictor.plot_gt_vs_predicted_one_recipe(
             granular_step_gts,
             recipe_type,
             fname_suffix=f"{str(vid_id)}_granular_{extra_output_suffix}",
             granular_or_broad="granular",
         )
+
+def compute_class_f1s_and_mean_f1(TP,FP,FN):
+    F1s = np.zeros(len(TP))
+    # class-wise F1s:
+    for i in range(len(TP)):
+        F1s[i] = 2*TP[i] / (2*TP[i] + FP[i] + FN[i])
+    # mean F1
+    mean_F1 = 2*np.sum(TP) / (2*np.sum(TP) + np.sum(FP) + np.sum(FN))
+    return F1s, mean_F1
 
 
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})
