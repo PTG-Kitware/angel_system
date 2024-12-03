@@ -943,6 +943,35 @@ class GlobalStepPredictor:
         fig.savefig(f"./outputs/{title}")
         plt.close()
 
+    def save_TP_FP_FN_per_class(self, step_gts):
+        """
+        Given the ground truth and predicted steps, return TP/FP/FN frame counts
+        for each class
+
+        Output form: TP, FP, FN, where each is an N-dimensional vector, where
+        N = number of step classes.
+        """
+        step_gts = [float(i) for i in step_gts][24:]
+        assert len(self.trackers) == 1
+        for i, tracker in enumerate(self.trackers):
+            #import ipdb; ipdb.set_trace()
+            step_predictions = tracker["granular_step_prediction_history"]
+            if len(step_predictions) * 1.8 < len(step_gts):
+                # This must be a 30Hz video, not 15Hz. Take every other GT frame.
+                step_gts = [a for ind, a in enumerate(step_gts) if i%2==0]
+        TP = np.zeros(len(self.avg_probs))
+        FP = np.zeros(len(self.avg_probs))
+        FN = np.zeros(len(self.avg_probs))
+        for ind in range(len(self.avg_probs)):
+            # i = the index we'll get TP, FN, and FP for.
+            _TP = len([a for j, a in enumerate(step_predictions) if a == ind and step_gts[j] == ind])
+            TP[ind] = _TP
+            _FP = len([a for j, a in enumerate(step_predictions) if a == ind and step_gts[j] != ind])
+            FP[ind] = _FP
+            _FN = len([a for j, a in enumerate(step_predictions) if a != ind and step_gts[j] == ind])
+            FN[ind] = _FN
+        return TP, FP, FN
+
     def sanitize_str(self, str_: str):
         """
         Convert string to lowercase and emove trailing whitespace and period.
