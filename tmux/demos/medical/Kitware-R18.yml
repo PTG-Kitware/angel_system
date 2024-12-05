@@ -134,9 +134,9 @@ windows:
             -p det_topic:=activity_topic
             -p model_file:=${MODEL_DIR}/task_monitor/global_step_predictor_act_avgs_R18.npy
             -p thresh_frame_count:=3
-            -p deactivate_thresh_frame_count:=5
-            -p threshold_multiplier_weak:=0.00
-            -p threshold_frame_count_weak:=3
+            -p deactivate_thresh_frame_count:=8
+            -p threshold_multiplier_weak:=1.0
+            -p threshold_frame_count_weak:=8
             -p step_mode:=granular
             -p query_task_graph_topic:=query_task_graph
         - echo: sleep 0.5 && ros2 topic echo --no-arr "${ROS_NAMESPACE}/TaskUpdates"
