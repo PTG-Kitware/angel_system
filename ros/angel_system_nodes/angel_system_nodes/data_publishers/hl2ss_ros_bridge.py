@@ -9,7 +9,7 @@ from geometry_msgs.msg import (
 )
 import numpy as np
 from rclpy.node import Node
-from sensor_msgs.msg import Image, CameraInfo
+from sensor_msgs.msg import Image
 from shape_msgs.msg import (
     Mesh,
     MeshTriangle,
@@ -21,6 +21,7 @@ from angel_msgs.msg import (
     HeadsetAudioData,
     HeadsetPoseData,
     SpatialMesh,
+    ImageMetadata,
 )
 from angel_utils import declare_and_get_parameters, RateTracker
 from angel_utils import make_default_main
@@ -122,7 +123,7 @@ class HL2SSROSBridge(Node):
                 Image, self._image_topic, 1
             )
             self.ros_frame_md_publisher = self.create_publisher(
-                CameraInfo, self._image_md_topic, 1
+                ImageMetadata, self._image_md_topic, 1
             )
             self.connect_hl2ss_pv()
             log.info("PV client connected!")
@@ -377,10 +378,11 @@ class HL2SSROSBridge(Node):
 
             # Publish the image msg
             self.ros_frame_publisher.publish(image_msg)
-            new_msg = CameraInfo()
-            new_msg.header = image_msg.header
+            new_msg = ImageMetadata()
+            new_msg.image_source_stamp = image_msg.header.stamp
             new_msg.height = image_msg.height
             new_msg.width = image_msg.width
+            new_msg.header.stamp = self.get_clock().now().to_msg()
             self.ros_frame_md_publisher.publish(new_msg)
 
             # Publish the corresponding headset pose msg

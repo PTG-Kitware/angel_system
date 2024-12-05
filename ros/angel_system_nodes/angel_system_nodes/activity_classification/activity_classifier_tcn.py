@@ -29,7 +29,7 @@ from tcn_hpl.data.frame_data import (
     FramePoses,
 )
 from tcn_hpl.models.ptg_module import PTGLitModule
-from sensor_msgs.msg import CameraInfo
+from angel_msgs.msg import ImageMetadata
 
 from angel_system.activity_classification.tcn_hpl.predict import (
     ResultsCollector,
@@ -254,7 +254,7 @@ class ActivityClassifierTCN(Node):
         # runtime-thread allocation.
         # This is intentionally before runtime-loop initialization.
         self._img_ts_subscriber = self.create_subscription(
-            CameraInfo,
+            ImageMetadata,
             self._img_md_topic,
             self.img_md_callback,
             1,
@@ -385,12 +385,13 @@ class ActivityClassifierTCN(Node):
             log.info(f"Queuing from COCO: n_dets={n_dets}, image_ts={image_ts}")
             self.det_callback(det_msg)
             # self.pose_callback(det_msg)
-            new_msg = CameraInfo()
-            new_msg.header.stamp = image_ts
+            new_msg = ImageMetadata()
+            new_msg.image_source_stamp = image_ts
             # set the image width and height from the image in the dataset
             img = dset.imgs[image_id]
             new_msg.width = img.get("width")
             new_msg.height = img.get("height")
+            new_msg.header.stamp = self.get_clock().now().to_msg()
             self.img_md_callback(new_msg)
 
             # Wait until `image_ts` was considered in the runtime loop before
@@ -406,7 +407,7 @@ class ActivityClassifierTCN(Node):
         log.info("Completed COCO file object yielding")
         self._rt_active.clear()
 
-    def img_md_callback(self, msg: CameraInfo) -> None:
+    def img_md_callback(self, msg: ImageMetadata) -> None:
         """
         Capture a detection source image timestamp message.
         """

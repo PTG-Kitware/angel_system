@@ -34,6 +34,7 @@ set( message_files
   msg/HandJointPosesUpdate.msg
   msg/HeadsetAudioData.msg
   msg/HeadsetPoseData.msg
+  msg/ImageMetadata.msg
   msg/InterpretedAudioUserIntent.msg
   msg/InterpretedAudioUserEmotion.msg
   msg/JointKeypoints.msg

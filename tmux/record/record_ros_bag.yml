@@ -58,9 +58,8 @@ windows:
   - sensor_input:
       layout: even-vertical
       panes:
-        - datahub: ros2 run ros_tcp_endpoint default_server_endpoint --ros-args
-            -r __ns:=${ROS_NAMESPACE}
-            -p ROS_IP:=0.0.0.0
+        # the image size is set to 1280x720 because of the pose estimation node:
+        # https://github.com/PTG-Kitware/angel_system/blob/master/ros/angel_system_nodes/angel_system_nodes/pose_estimation/pose_estimator.py#L211
         - hl2ss_bridge: ros2 run angel_system_nodes hl2ss_ros_bridge --ros-args
             -r __ns:=${ROS_NAMESPACE}
             -p ip_addr:=${HL2_IP}
