@@ -1,0 +1,25 @@
+version: "1"
+title: "Ventilate (BVM)"
+labels:
+  # Item:
+  # - id: Integer identification number of the label.
+  # - label: Short human-readable semantic string to succinctly represent the
+  #          label.
+  - id: 0
+    label: "background"
+    full_str: "background"
+  - id: 1
+    label: "position-head"
+    full_str: "Place casualty into 'sniffing position' with head tilted back and nostrils exposed."
+  - id: 2
+    label: "open-packaging"
+    full_str: "Open the BVM packaging."
+  - id: 3
+    label: "attach-mask"
+    full_str: "Attach mask to BVM and expand BVM to full size."
+  - id: 4
+    label: "place-mask"
+    full_str: "Place mask over patient’s mouth in proper orientation."
+  - id: 5
+    label: "squeeze-bvm"
+    full_str: "Squeeze BVM while holding mask to patient’s mouth."
