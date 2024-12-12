@@ -15,11 +15,11 @@ import pandas as pd
 
 # ROS Message types
 from builtin_interfaces.msg import Time
-from sensor_msgs.msg import CameraInfo
 
 from angel_msgs.msg import (
     HandJointPosesUpdate,
     ObjectDetection2dSet,
+    ImageMetadata,
 )
 
 from angel_system.utils.matching import descending_match_with_tolerance
@@ -44,7 +44,7 @@ class InputWindow:
     # Buffer for patient poses
     patient_joint_kps: List[Optional[HandJointPosesUpdate]]
     # Buffer for the image metadata
-    camera_info: List[Optional[CameraInfo]]
+    camera_info: List[Optional[ImageMetadata]]
 
     def __len__(self):
         return len(self.frames)
@@ -147,7 +147,7 @@ class InputBuffer:
     )
 
     # buffer for camera info
-    camera_info: Deque[CameraInfo] = field(
+    camera_info: Deque[ImageMetadata] = field(
         default_factory=deque, init=False, repr=False
     )
 
@@ -186,7 +186,7 @@ class InputBuffer:
     def queue_image(
         self,
         img_mat: npt.NDArray[np.uint8],
-        camera_msg: CameraInfo,
+        img_meta_msg: ImageMetadata,
         image_frame_number: int,
     ) -> bool:
         """
@@ -195,7 +195,7 @@ class InputBuffer:
             not newer than the current latest frame.
         """
         # get the timestamp from the image header
-        img_header_stamp = camera_msg.header.stamp
+        img_header_stamp = img_meta_msg.image_source_stamp
         # self.get_logger_fn().info(f"image header stamp: {img_header_stamp}")
         # self.get_logger_fn().info(f"self.frames[-1][0] header stamp: {self.frames[-1][0]}")
         with self.__state_lock:
@@ -212,7 +212,7 @@ class InputBuffer:
             # save the image frame
             self.frames.append((img_header_stamp, img_mat, image_frame_number))
             # save the camera info
-            self.camera_info.append(camera_msg)
+            self.camera_info.append(img_meta_msg)
             return True
 
     def queue_hand_pose(self, msg: HandJointPosesUpdate) -> bool:
@@ -394,11 +394,7 @@ class InputBuffer:
                 frames=window_frames,
                 obj_dets=window_dets,
                 patient_joint_kps=window_joint_kps,
-                camera_info=[
-                    ci
-                    for ci in self.camera_info
-                    if ci.header.stamp in window_frame_times
-                ],
+                camera_info=[ci for ci in self.camera_info],
             )
             return output
 

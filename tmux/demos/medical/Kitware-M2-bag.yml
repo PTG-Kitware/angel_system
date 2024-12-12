@@ -2,10 +2,10 @@
 # System configuration to run the ANGEL system for the Kitware system with the
 # Kitware HL2 ARUI app.
 #
-# This configuration is for the R18 Chest Seal task.
+# This configuration is for the M2 tourniquet task.
 #
 
-name: kitware-r18
+name: kitware-m2
 root: <%= ENV["ANGEL_WORKSPACE_DIR"] %>
 
 # Optional tmux socket
@@ -56,23 +56,8 @@ windows:
   - sensor_input_bag:
       layout: even-vertical
       panes:
-        # Read sensor input from the hololens
-        # the image size is set to 1280x720 because of the pose estimation node:
-        # https://github.com/PTG-Kitware/angel_system/blob/master/ros/angel_system_nodes/angel_system_nodes/pose_estimation/pose_estimator.py#L211
-        - hl2ss_bridge: ros2 run angel_system_nodes hl2ss_ros_bridge --ros-args
-            -r __ns:=${ROS_NAMESPACE}
-            -p ip_addr:=${HL2_IP}
-            -p image_topic:=PVFramesBGR
-            -p image_md_topic:=PVFramesBGR_md
-            -p hand_pose_topic:=HandJointPoseData
-            -p audio_topic:=HeadsetAudioData
-            -p sm_topic:=SpatialMapData
-            -p head_pose_topic:=HeadsetPoseData
-            -p pv_width:=1280
-            -p pv_height:=720
-            -p pv_framerate:=15
-            -p sm_freq:=5
-            -p rm_depth_AHAT:=disable
+        # Read sensor input from bag file.
+        - sensor_input: echo ros2 bag play ${ANGEL_WORKSPACE_DIR}/ros_bags/...
         - run_image_metadata: ros2 run angel_system_nodes image_metadata_relay --ros-args
             -r __ns:=${ROS_NAMESPACE}
             -p image_topic:=PVFramesBGR
@@ -88,15 +73,6 @@ windows:
             -r __ns:=${ROS_NAMESPACE}
             -p ROS_IP:=0.0.0.0
 
-  - object_and_hand_detection: ros2 run angel_system_nodes object_and_hand_detector --ros-args
-      -r __ns:=${ROS_NAMESPACE}
-      -p image_topic:=PVFramesBGR
-      -p det_topic:=ObjectDetections2d
-      -p object_net_checkpoint:=${MODEL_DIR}/object_detector/r18_det.pt
-      -p inference_img_size:=768
-      -p hand_net_checkpoint:=${MODEL_DIR}/object_detector/hands_model.pt
-      -p cuda_device_id:=0
-
   - pose_estimation: ros2 run angel_system_nodes pose_estimator --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p image_topic:=PVFramesBGR
@@ -108,14 +84,23 @@ windows:
       -p pose_config:=${ANGEL_WORKSPACE_DIR}/python-tpl/TCN_HPL/tcn_hpl/data/utils/pose_generation/configs/ViTPose_base_medic_casualty_256x192.py
       -p cuda_device_id:=0
 
+  - object_and_hand_detection: ros2 run angel_system_nodes object_and_hand_detector --ros-args
+      -r __ns:=${ROS_NAMESPACE}
+      -p image_topic:=PVFramesBGR
+      -p det_topic:=ObjectDetections2d
+      -p object_net_checkpoint:=${MODEL_DIR}/object_detector/m2_det.pt
+      -p inference_img_size:=768
+      -p hand_net_checkpoint:=${MODEL_DIR}/object_detector/hands_model.pt
+      -p cuda_device_id:=0
+
   - activity_classifier: ros2 run angel_system_nodes activity_classifier_tcn --ros-args
       -r __ns:=${ROS_NAMESPACE}
       -p image_md_topic:=PVFramesBGR_md
       -p det_topic:=ObjectDetections2d
       -p pose_topic:=PatientPose
-      -p activity_config_file:=${CONFIG_DIR}/activity_labels/medical/r18.yaml
-      -p model_weights:=${MODEL_DIR}/activity_classifier/r18_tcn.ckpt
-      -p model_config:=${MODEL_DIR}/activity_classifier/r18_config.yaml
+      -p activity_config_file:=${CONFIG_DIR}/activity_labels/medical/m2.yaml
+      -p model_weights:=${MODEL_DIR}/activity_classifier/m2_tcn.ckpt
+      -p model_config:=${MODEL_DIR}/activity_classifier/m2_config.yaml
       -p act_topic:=activity_topic
       -p pose_repeat_rate:=7.5
       -p window_leads_with_objects:=true
@@ -126,17 +111,17 @@ windows:
       panes:
         - gsp: ros2 run angel_system_nodes global_step_predictor --ros-args
             -r __ns:=${ROS_NAMESPACE}
-            -p config_file:=${CONFIG_DIR}/tasks/medical/multi-task-config-medical-r18.yaml
-            -p activity_config_file:=${CONFIG_DIR}/activity_labels/medical/r18.yaml
+            -p config_file:=${CONFIG_DIR}/tasks/medical/multi-task-config-medical-m2.yaml
+            -p activity_config_file:=${CONFIG_DIR}/activity_labels/medical/m2.yaml
             -p task_state_topic:=TaskUpdates
             -p task_error_topic:=ARUISystemNotifications
             -p system_command_topic:=SystemCommands
             -p det_topic:=activity_topic
-            -p model_file:=${MODEL_DIR}/task_monitor/global_step_predictor_act_avgs_R18.npy
+            -p model_file:=${MODEL_DIR}/task_monitor/global_step_predictor_act_avgs_m2.npy
             -p thresh_frame_count:=3
-            -p deactivate_thresh_frame_count:=8
-            -p threshold_multiplier_weak:=1.0
-            -p threshold_frame_count_weak:=8
+            -p deactivate_thresh_frame_count:=10
+            -p threshold_multiplier_weak:=0.00
+            -p threshold_frame_count_weak:=3
             -p step_mode:=granular
             -p query_task_graph_topic:=query_task_graph
         - echo: sleep 0.5 && ros2 topic echo --no-arr "${ROS_NAMESPACE}/TaskUpdates"

@@ -5,7 +5,8 @@ from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from rclpy.node import Node
 
 from angel_system.utils.event import WaitAndClearEvent
-from angel_utils.conversion import time_to_float
+from angel_utils.conversion import time_to_float, time_to_int
+from builtin_interfaces.msg import Time
 
 from angel_msgs.msg import ObjectDetection2dSet, HandJointPosesUpdate, ActivityDetection
 from angel_utils import (
@@ -14,7 +15,7 @@ from angel_utils import (
     make_default_main,
 )
 from std_msgs.msg import String as ros2_string
-from sensor_msgs.msg import CameraInfo
+from angel_msgs.msg import ImageMetadata
 
 
 class LatencyTracker(Node):
@@ -59,23 +60,23 @@ class LatencyTracker(Node):
         # Single slot for latest image message to process detection over.
         # This should be written by the image topic subscriber callback, and
         # read from the runtime loop once per iteration.
-        self._cur_image_msg_lock = Lock()
         self._cur_det_msg_lock = Lock()
         self._cur_pose_msg_lock = Lock()
         self._cur_act_msg_lock = Lock()
+        self._image_lookup_lock = Lock()
 
         self._rate_tracker = RateTracker()
 
-        self._img_time = None
         self._det = None
         self._pose = None
         self._act = None
+        self._image_lookup = {}
 
         ##########################################
         # Initialize ROS hooks
         log.info("Setting up ROS subscriptions and publishers...")
         self._img_ts_subscriber = self.create_subscription(
-            CameraInfo,
+            ImageMetadata,
             self._image_md_topic,
             self.img_md_callback,
             1,
@@ -151,31 +152,41 @@ class LatencyTracker(Node):
 
                 msg = ros2_string()
 
-                # get latency from image source stamp vs det_msg's
+                # get latency from image source stamp vs the time the message was created
                 det_lat = None
                 if self._det:
                     with self._cur_det_msg_lock:
                         det_msg = self._det
                     dt_time = time_to_float(det_msg.header.stamp)
-                    img_time = time_to_float(det_msg.source_stamp)
-                    det_lat = dt_time - img_time
+                    img_time = self.get_msg_time_from_source(det_msg.source_stamp)
+                    if img_time is not None:
+                        det_lat = dt_time - time_to_float(img_time)
+
                 pose_lat = None
                 if self._pose:
                     with self._cur_pose_msg_lock:
                         pose_msg = self._pose
                     ps_time = time_to_float(pose_msg.header.stamp)
-                    img_time = time_to_float(pose_msg.source_stamp)
-                    pose_lat = ps_time - img_time
+                    img_time = self.get_msg_time_from_source(pose_msg.source_stamp)
+                    if img_time is not None:
+                        pose_lat = ps_time - time_to_float(img_time)
+
                 act_lat_start = None
                 act_lat_end = None
                 if self._act:
                     with self._cur_act_msg_lock:
                         act_msg = self._act
                     act_time = time_to_float(act_msg.header.stamp)
-                    img_time = time_to_float(act_msg.source_stamp_start_frame)
-                    act_lat_start = act_time - img_time
-                    img_time = time_to_float(act_msg.source_stamp_end_frame)
-                    act_lat_end = act_time - img_time
+                    img_time = self.get_msg_time_from_source(
+                        act_msg.source_stamp_start_frame
+                    )
+                    if img_time is not None:
+                        act_lat_start = act_time - time_to_float(img_time)
+                    img_time = self.get_msg_time_from_source(
+                        act_msg.source_stamp_end_frame
+                    )
+                    if img_time is not None:
+                        act_lat_end = act_time - time_to_float(img_time)
 
                 # save the info to the message
                 data = {
@@ -198,7 +209,7 @@ class LatencyTracker(Node):
                 self._rate_tracker.tick()
                 log.info(f"Latency Rate: {self._rate_tracker.get_rate_avg()} Hz")
 
-    def img_md_callback(self, msg: CameraInfo) -> None:
+    def img_md_callback(self, msg: ImageMetadata) -> None:
         """
         Capture a detection source image timestamp message.
         """
@@ -206,8 +217,8 @@ class LatencyTracker(Node):
         if self._enable_trace_logging:
             log.info(f"Received image with TS: {msg.header.stamp}")
 
-        with self._cur_image_msg_lock:
-            self._img_time = msg.header.stamp
+        with self._image_lookup_lock:
+            self._image_lookup[time_to_int(msg.image_source_stamp)] = msg.header.stamp
             self._rt_awake_evt.set()
 
     def det_callback(self, msg: ObjectDetection2dSet) -> None:
@@ -221,6 +232,10 @@ class LatencyTracker(Node):
     def act_callback(self, msg: ActivityDetection) -> None:
         with self._cur_act_msg_lock:
             self._act = msg
+
+    def get_msg_time_from_source(self, source_stamp: Time) -> Time:
+        with self._image_lookup_lock:
+            return self._image_lookup.get(time_to_int(source_stamp))
 
     def destroy_node(self):
         print("Stopping runtime")

@@ -56,23 +56,8 @@ windows:
   - sensor_input_bag:
       layout: even-vertical
       panes:
-        # Read sensor input from the hololens
-        # the image size is set to 1280x720 because of the pose estimation node:
-        # https://github.com/PTG-Kitware/angel_system/blob/master/ros/angel_system_nodes/angel_system_nodes/pose_estimation/pose_estimator.py#L211
-        - hl2ss_bridge: ros2 run angel_system_nodes hl2ss_ros_bridge --ros-args
-            -r __ns:=${ROS_NAMESPACE}
-            -p ip_addr:=${HL2_IP}
-            -p image_topic:=PVFramesBGR
-            -p image_md_topic:=PVFramesBGR_md
-            -p hand_pose_topic:=HandJointPoseData
-            -p audio_topic:=HeadsetAudioData
-            -p sm_topic:=SpatialMapData
-            -p head_pose_topic:=HeadsetPoseData
-            -p pv_width:=1280
-            -p pv_height:=720
-            -p pv_framerate:=15
-            -p sm_freq:=5
-            -p rm_depth_AHAT:=disable
+        # Read sensor input from bag file.
+        - sensor_input: echo ros2 bag play ${ANGEL_WORKSPACE_DIR}/ros_bags/rosbag2-bbn_lab_data-r18-positive-30424_NE_recordings-R18_5-TEST_SET/
         - run_image_metadata: ros2 run angel_system_nodes image_metadata_relay --ros-args
             -r __ns:=${ROS_NAMESPACE}
             -p image_topic:=PVFramesBGR
@@ -134,9 +119,9 @@ windows:
             -p det_topic:=activity_topic
             -p model_file:=${MODEL_DIR}/task_monitor/global_step_predictor_act_avgs_R18.npy
             -p thresh_frame_count:=3
-            -p deactivate_thresh_frame_count:=8
-            -p threshold_multiplier_weak:=1.0
-            -p threshold_frame_count_weak:=8
+            -p deactivate_thresh_frame_count:=5
+            -p threshold_multiplier_weak:=0.00
+            -p threshold_frame_count_weak:=3
             -p step_mode:=granular
             -p query_task_graph_topic:=query_task_graph
         - echo: sleep 0.5 && ros2 topic echo --no-arr "${ROS_NAMESPACE}/TaskUpdates"
