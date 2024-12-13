@@ -1,0 +1,28 @@
+version: "1"
+title: "Needle_Chest_Decomp"
+labels:
+  # Item:
+  # - id: Integer identification number of the label.
+  # - label: Short human-readable semantic string to succinctly represent the
+  #          label.
+  - id: 0
+    label: "background"
+    full_str: "background"
+  - id: 1
+    label: "locate-insertion-site"
+    full_str: "Locate insertion site at the second intercostal space at the midclavicular line."
+  - id: 2
+    label: "wipe-insertion-site"
+    full_str: "Wipe the insertion site with an alcohol wipe."
+  - id: 3
+    label: "prepare-catheter-and-needle"
+    full_str: "Prepare catheter and needle."
+  - id: 4
+    label: "insert-needle"
+    full_str: "Insert needle into insertion site."
+  - id: 5
+    label: "remove-needle"
+    full_str: "Remove needle, keeping catheter inside the patient."
+  - id: 6
+    label: "apply-tape"
+    full_str: "Apply tape around catheter to secure it in place."
