@@ -126,6 +126,7 @@ pytest-cov = "*"
 # Evaluation
 ptg_eval_activity = "angel_system.ptg_eval.activity_classification.evaluate_activity:main"
 ptg_eval_step = "angel_system.ptg_eval.step_completion.evaluate_step:main"
+yolo_v11_inference_objects = "angel_system.object_detection.yolov11_detect:yolo_v11_inference_objects"
 
 [tool.poetry.plugins."smqtk_plugins"]
 # Activity detector
