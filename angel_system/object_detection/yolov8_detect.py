@@ -8,19 +8,19 @@ def predict_hands(
     hand_model: YOLOv8,
     img0: np.array,
     device: str,
-    imgsz: Optional[int] = None
+    **kwargs,
 ) -> tuple:
     """Predict hands using a YOLOv8 hand model and update the labels to be
     hand(left) and hand(right)
 
     Boxes returned are in xyxy format (upper-left, lower-right).
+
+    Any additional keyword arguments provided will be passed to the
+    `YOLO.predict` method.
     """
     width, height = img0.shape[:2]
-    pred_kwargs = {}
-    if imgsz:
-        pred_kwargs["imgsz"] = imgsz
     hands_preds = hand_model.predict(
-        source=img0, conf=0.1, device=device, verbose=False, **pred_kwargs
+        conf=0.1, **kwargs, source=img0, device=device, verbose=False,
     )[
         0
     ]  # list of length=num images

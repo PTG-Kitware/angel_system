@@ -109,6 +109,7 @@ def plot_one_box(xywh, img, color=None, label=None, line_thickness=1) -> None:
 @click.option(
     "--obj-img-size",
     type=int,
+    default=640,
     help=(
         "Data input size for the detection models for objects. This should be "
         "a multiple of the model's stride parameter."
@@ -117,6 +118,7 @@ def plot_one_box(xywh, img, color=None, label=None, line_thickness=1) -> None:
 @click.option(
     "--hand-img-size",
     type=int,
+    default=768,
     help=(
         "Data input size for the detection model for hands. This should be a "
         "multiple of the model's stride parameter."
@@ -138,6 +140,14 @@ def plot_one_box(xywh, img, color=None, label=None, line_thickness=1) -> None:
     help=(
         "IoU threshold used during NMS to filter out overlapping bounding "
         "boxes."
+    ),
+)
+@click.option(
+    "--tensorrt",
+    is_flag=True,
+    help=(
+        "Export object and hand models to TensorRT and use FP16 to "
+        "accelerate prediction performance."
     ),
 )
 @click.option(
@@ -186,6 +196,7 @@ def yolo_v11_inference_objects(
     hand_img_size: int,
     conf_thresh: float,
     iou_thresh: float,
+    tensorrt: bool,
     save_dir: Optional[Path],
     save_top_k: Optional[int],
     save_vid: bool,
@@ -229,8 +240,29 @@ def yolo_v11_inference_objects(
         + "\n".join(f'\t- [{n[0]}] "{n[1]}"' for n in hand_model.names.items())
     )
 
-    # TODO: option to use tensor RT -- Convert to a known location and reload
-    #       models.
+    if tensorrt:
+        LOG.info("Exporting object model to TensorRT")
+        om_trt_path = object_model.export(
+            format="engine",
+            imgsz=obj_img_size,
+            device=model_device,
+            half=True,  # this was taking a long time to process?
+            nms=True,
+        )
+        LOG.info("Loading TensorRT object model")
+        object_model = YOLO(om_trt_path, task="detect")
+        LOG.info("Exporting hand model to TensorRT")
+        hm_trt_path = hand_model.export(
+            format="engine",
+            imgsz=hand_img_size,
+            device=model_device,
+            half=True,  # this was taking a long time to process?
+            nms=True,
+        )
+        LOG.info("Loading TensorRT hand model")
+        hand_model = YOLO(hm_trt_path, task="detect")
+
+    model_half = model_device.lower() != "cpu"
 
     cls_names = [p[1] for p in sorted(object_model.names.items())]
     cls_colors = [[random.randint(0, 255) for _ in range(3)] for _ in cls_names]
@@ -266,8 +298,8 @@ def yolo_v11_inference_objects(
     # model warm-up going into the prediction loop
     LOG.info("Warming up models...")
     warmup_image = np.random.randint(0, 255, (16, 16, 3), dtype=np.uint8)
-    object_model(source=warmup_image, device=model_device, verbose=False)
-    hand_model(source=warmup_image, device=model_device, verbose=False)
+    object_model(source=warmup_image, device=model_device, half=model_half, verbose=False)
+    hand_model(source=warmup_image, device=model_device, half=model_half, verbose=False)
     LOG.info("Warming up models... Done")
 
     # -------------------------------------------------------------------------
@@ -283,6 +315,7 @@ def yolo_v11_inference_objects(
         conf=conf_thresh,
         device=model_device,
         nms=True,
+        half=model_half,
         verbose=False,
     )
     if obj_img_size is not None:
@@ -291,6 +324,8 @@ def yolo_v11_inference_objects(
     hand_predict_kwargs = dict(
         hand_model=hand_model,
         device=model_device,
+        nms=True,
+        half=model_half,
     )
     if hand_img_size is not None:
         hand_predict_kwargs["imgsz"] = hand_img_size
