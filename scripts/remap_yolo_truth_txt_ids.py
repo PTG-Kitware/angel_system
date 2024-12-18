@@ -18,9 +18,18 @@ RE_TRUTH_LINE = re.compile(r"^(?P<class_id>\d+)\s+(?P<remainder>.*)$")
 
 @click.command()
 @click.help_option("-h", "--help")
-@click.argument("ROOT_DIR", type=click.Path(exists=True, file_okay=False, path_type=Path))
-@click.option("-r", "--remap", "remap_tuple", nargs=2, multiple=True, type=int,
-              help="Remap class IDs in discovered txt files.")
+@click.argument(
+    "ROOT_DIR", type=click.Path(exists=True, file_okay=False, path_type=Path)
+)
+@click.option(
+    "-r",
+    "--remap",
+    "remap_tuple",
+    nargs=2,
+    multiple=True,
+    type=int,
+    help="Remap class IDs in discovered txt files.",
+)
 def main(root_dir, remap_tuple):
     """
     Remap class IDs in YOLO truth text files from the given values to some new
@@ -67,7 +76,9 @@ def main(root_dir, remap_tuple):
 
     # We are here if all files have successfully mapped content. Write out\
     # content to the original file locations.
-    for fpath, new_lines in tqdm(new_truth_lines.items(), desc="Writing files back out", unit="files"):
+    for fpath, new_lines in tqdm(
+        new_truth_lines.items(), desc="Writing files back out", unit="files"
+    ):
         with open(fpath, "w") as f:
             f.writelines(l + "\n" for l in new_lines)
 

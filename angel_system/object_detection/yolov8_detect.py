@@ -20,7 +20,11 @@ def predict_hands(
     """
     width, height = img0.shape[:2]
     hands_preds = hand_model.predict(
-        conf=0.1, **kwargs, source=img0, device=device, verbose=False,
+        conf=0.1,
+        **kwargs,
+        source=img0,
+        device=device,
+        verbose=False,
     )[
         0
     ]  # list of length=num images

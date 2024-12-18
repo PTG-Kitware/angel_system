@@ -38,22 +38,37 @@ def plot_one_box(xywh, img, color=None, label=None, line_thickness=1) -> None:
     :param line_thickness: Thickness of the box lines to draw.
     """
     # Plots one bounding box on image img
-    tl = line_thickness or round(0.002 * (img.shape[0] + img.shape[1]) / 2) + 1  # line/font thickness
+    tl = (
+        line_thickness or round(0.002 * (img.shape[0] + img.shape[1]) / 2) + 1
+    )  # line/font thickness
     color = color or [random.randint(0, 255) for _ in range(3)]
-    c1, c2 = (int(xywh[0]), int(xywh[1])), (int(xywh[0] + xywh[2]), int(xywh[1] + xywh[3]))
+    c1, c2 = (int(xywh[0]), int(xywh[1])), (
+        int(xywh[0] + xywh[2]),
+        int(xywh[1] + xywh[3]),
+    )
     cv2.rectangle(img, c1, c2, color, thickness=tl, lineType=cv2.LINE_AA)
     if label:
         tf = max(tl - 1, 1)  # font thickness
         t_size = cv2.getTextSize(label, 0, fontScale=tl / 3, thickness=tf)[0]
         c2 = c1[0] + t_size[0], c1[1] - t_size[1] - 3
         cv2.rectangle(img, c1, c2, color, -1, cv2.LINE_AA)  # filled
-        cv2.putText(img, label, (c1[0], c1[1] - 2), 0, tl / 3, [225, 255, 255], thickness=tf, lineType=cv2.LINE_AA)
+        cv2.putText(
+            img,
+            label,
+            (c1[0], c1[1] - 2),
+            0,
+            tl / 3,
+            [225, 255, 255],
+            thickness=tf,
+            lineType=cv2.LINE_AA,
+        )
 
 
 @click.command()
 @click.help_option("-h", "--help")
 @click.option(
-    "-i", "--input-coco-file",
+    "-i",
+    "--input-coco-file",
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
     help=(
         "MS-COCO file specifying image files to perform object detection over. "
@@ -73,25 +88,29 @@ def plot_one_box(xywh, img, color=None, label=None, line_thickness=1) -> None:
     ),
 )
 @click.option(
-    "-o", "--output-coco-file",
+    "-o",
+    "--output-coco-file",
     type=click.Path(dir_okay=False, path_type=Path),
     help="Output COCO file to write object detection results.",
     required=True,
 )
 @click.option(
-    "--model-hands", "hand_model_ckpt",
+    "--model-hands",
+    "hand_model_ckpt",
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
     help="Model checkpoint for the Yolo v8 hand detector.",
     required=True,
 )
 @click.option(
-    "--model-objects", "objs_model_ckpt",
+    "--model-objects",
+    "objs_model_ckpt",
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
     help="Model checkpoint for the Yolo v7 object detector.",
     required=True,
 )
 @click.option(
-    "-e", "--exclude-obj-class",
+    "-e",
+    "--exclude-obj-class",
     "obj_exclude_classes",
     multiple=True,
     help=(
@@ -99,12 +118,12 @@ def plot_one_box(xywh, img, color=None, label=None, line_thickness=1) -> None:
         "object model. This is for when the object model was trained with "
         "some classes excluded, but YOLO provided the metadata for them "
         "anyway."
-    )
+    ),
 )
 @click.option(
     "--model-device",
     default="",
-    help="The CUDA device to use, i.e. '0' or '0,1,2,3' or 'cpu'."
+    help="The CUDA device to use, i.e. '0' or '0,1,2,3' or 'cpu'.",
 )
 @click.option(
     "--obj-img-size",
@@ -113,7 +132,7 @@ def plot_one_box(xywh, img, color=None, label=None, line_thickness=1) -> None:
     help=(
         "Data input size for the detection models for objects. This should be "
         "a multiple of the model's stride parameter."
-    )
+    ),
 )
 @click.option(
     "--hand-img-size",
@@ -122,7 +141,7 @@ def plot_one_box(xywh, img, color=None, label=None, line_thickness=1) -> None:
     help=(
         "Data input size for the detection model for hands. This should be a "
         "multiple of the model's stride parameter."
-    )
+    ),
 )
 @click.option(
     "--conf-thresh",
@@ -142,7 +161,8 @@ def plot_one_box(xywh, img, color=None, label=None, line_thickness=1) -> None:
     ),
 )
 @click.option(
-    "--save-img", "save_dir",
+    "--save-img",
+    "save_dir",
     type=click.Path(file_okay=False, path_type=Path),
     default=None,
     help=(
@@ -150,7 +170,7 @@ def plot_one_box(xywh, img, color=None, label=None, line_thickness=1) -> None:
         "saving them out to disk, rooted in this directory. Only detections "
         "with confidence above our configured threshold will be considered "
         "for plotting."
-    )
+    ),
 )
 @click.option(
     "--save-vid",
@@ -160,7 +180,7 @@ def plot_one_box(xywh, img, color=None, label=None, line_thickness=1) -> None:
         "rendered due to --save-img. This option only has an effect if the "
         "--save-img option is provided. The video file will be save next to "
         "the directory into which component images are saved."
-    )
+    ),
 )
 @torch.inference_mode()
 def yolo_v11_inference_objects(
@@ -224,7 +244,7 @@ def yolo_v11_inference_objects(
             imgsz=obj_img_size,
             device=model_device,
             half=True,  # this was taking a long time to process?
-            nms=True,
+            # nms=True,
         )
         LOG.info("Loading TensorRT object model")
         object_model = YOLO(om_trt_path, task="detect")
@@ -234,7 +254,7 @@ def yolo_v11_inference_objects(
             imgsz=hand_img_size,
             device=model_device,
             half=True,  # this was taking a long time to process?
-            nms=True,
+            # nms=True,
         )
         LOG.info("Loading TensorRT hand model")
         hand_model = YOLO(hm_trt_path, task="detect")
@@ -246,8 +266,8 @@ def yolo_v11_inference_objects(
 
     # Port over the videos and images sections from the input dataset to the
     # new one.
-    dset.dataset['videos'] = guiding_dset.dataset['videos']
-    dset.dataset['images'] = guiding_dset.dataset['images']
+    dset.dataset["videos"] = guiding_dset.dataset["videos"]
+    dset.dataset["images"] = guiding_dset.dataset["images"]
     dset.index.build(dset)
     # Equality can later be tested with:
     #   guiding_dset.index.videos == dset.index.videos
@@ -257,7 +277,7 @@ def yolo_v11_inference_objects(
     for cls_name in obj_exclude_classes:
         if cls_name not in cls_names:
             warnings.warn(
-                f"Requested exclusion of object class named \"{cls_name}\", "
+                f'Requested exclusion of object class named "{cls_name}", '
                 f"however this class is not present in the object model."
             )
     exclude_set = set(obj_exclude_classes)
@@ -265,17 +285,18 @@ def yolo_v11_inference_objects(
         if object_label not in exclude_set:
             dset.ensure_category(name=object_label, id=i)
         else:
-            LOG.info(f"Excluding object model class: \"{object_label}\"")
+            LOG.info(f'Excluding object model class: "{object_label}"')
     # Inject categories for the hand-model additions.
     left_hand_cid = dset.ensure_category(name="hand (left)")
     right_hand_cid = dset.ensure_category(name="hand (right)")
-    hands_cat_to_cid = {"hand (left)": left_hand_cid,
-                        "hand (right)": right_hand_cid}
+    hands_cat_to_cid = {"hand (left)": left_hand_cid, "hand (right)": right_hand_cid}
 
     # model warm-up going into the prediction loop
     LOG.info("Warming up models...")
     warmup_image = np.random.randint(0, 255, (16, 16, 3), dtype=np.uint8)
-    object_model(source=warmup_image, device=model_device, half=model_half, verbose=False)
+    object_model(
+        source=warmup_image, device=model_device, half=model_half, verbose=False
+    )
     hand_model(source=warmup_image, device=model_device, half=model_half, verbose=False)
     LOG.info("Warming up models... Done")
 
@@ -408,8 +429,7 @@ def yolo_v11_inference_objects(
             video_save_path = save_dir / f"{Path(vid_obj['name']).stem}-objects.mp4"
             vid_frames = [p[0] for p in sorted(frame_set.items())]
             clip = moviepy.video.io.ImageSequenceClip.ImageSequenceClip(
-                vid_frames,
-                fps=vid_obj["framerate"]
+                vid_frames, fps=vid_obj["framerate"]
             )
             clip.write_videofile(video_save_path.as_posix())
             LOG.info(f"Saved video to: {video_save_path}")
