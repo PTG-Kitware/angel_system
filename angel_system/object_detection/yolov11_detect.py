@@ -337,6 +337,8 @@ def yolo_v11_inference_objects(
     ):
         img_path: Path = dset.get_image_fpath(img_id)
         img0 = cv2.imread(img_path.as_posix())
+        if img0 is None:
+            raise RuntimeError(f"Failed to read image file: {img_path}")
 
         # returns list of length=num images, which is always 1 here.
         object_preds = object_model.predict(source=img0, **object_predict_kwargs)[0]
