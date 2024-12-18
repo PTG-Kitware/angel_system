@@ -1,0 +1,8 @@
+FPATH="$1"
+
+FPATH_ORIG="${FPATH}-ORIGINAL"
+FPATH_FIXD="${FPATH}-FIXED"
+
+mv "${FPATH}" "${FPATH_ORIG}"
+cp "${FPATH_ORIG}" "${FPATH_FIXD}"
+ln -s "$(basename "${FPATH_FIXD}")" "${FPATH}"

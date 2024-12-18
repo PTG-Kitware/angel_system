@@ -231,6 +231,8 @@ chmod a-w \
 ```
 
 #### Generate Object Predictions in the Scene
+
+##### YoloV7 Models
 Note that the input COCO file is that which was generated in the previous step.
 This is to ensure that all represented videos and image frames are predicted on
 and present in both COCO files.
@@ -246,6 +248,23 @@ python-tpl/yolov7/yolov7/detect_ptg.py \
 ```
 Additional debug outputs may optionally be generated.
 See the `-h`/`--help` options for more details.
+
+##### YOLO V11 Models
+```
+yolo_v11_inference_objects \
+  -i m5_xstat-activity_truth.coco.json \
+  -o m5_xstat-object_detections/object_detections-yolov11_baseline_xl_sgd_20241216.coco.json \
+  --model-hands ~/dev/darpa-ptg/angel_system/model_files/object_detector/hands_model.pt \
+  --hand-img-size 768 \
+  --model-objects /data/paul.tunison/data/darpa-ptg/yolo_v11_object_detection/m5_v0.56/runs/detect/baseline-xl/weights/best.pt \
+  --obj-img-size 640 \
+  -e hands \
+  --model-device cuda:0 \
+  --trensorrt \
+  --conf-thresh 0.307 \
+  --save-img m5_xstat-object_detections-v11_images \
+  --save-vid
+```
 
 #### Generate Pose Predictions
 Note that the input COCO file is that which was generated in the
