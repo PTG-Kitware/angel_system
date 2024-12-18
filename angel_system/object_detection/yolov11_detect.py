@@ -134,15 +134,6 @@ def plot_one_box(xywh, img, color=None, label=None, line_thickness=1) -> None:
     ),
 )
 @click.option(
-    "--iou-thresh",
-    type=float,
-    default=0.45,
-    help=(
-        "IoU threshold used during NMS to filter out overlapping bounding "
-        "boxes."
-    ),
-)
-@click.option(
     "--tensorrt",
     is_flag=True,
     help=(
@@ -159,18 +150,6 @@ def plot_one_box(xywh, img, color=None, label=None, line_thickness=1) -> None:
         "saving them out to disk, rooted in this directory. Only detections "
         "with confidence above our configured threshold will be considered "
         "for plotting."
-    )
-)
-@click.option(
-    "--top-k", "save_top_k",
-    type=int,
-    default=None,
-    help=(
-        "Optionally specify that only the top N confidence detections should "
-        "be saved to the output images. If this is not provided, all "
-        "detections with confidence above the --conf-thres value will be "
-        "plotted. This only applies to objects, not detected hands by that "
-        "respective model."
     )
 )
 @click.option(
@@ -195,10 +174,8 @@ def yolo_v11_inference_objects(
     obj_img_size: int,
     hand_img_size: int,
     conf_thresh: float,
-    iou_thresh: float,
     tensorrt: bool,
     save_dir: Optional[Path],
-    save_top_k: Optional[int],
     save_vid: bool,
 ):
     """
