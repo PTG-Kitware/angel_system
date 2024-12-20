@@ -7,10 +7,12 @@ This class is meant to create a CSV file in the format that the BBN system expec
 # if larger, a correction will be made to make up for start up time
 START_UP_TIME_MAX = 0.6
 
+
 class BState:
     """
     Enum for the state of the belief
     """
+
     def __init__(self):
         self.current = "current"
         self.unobserved = "unobserved"
@@ -34,7 +36,7 @@ class BeliefFile:
         self.start_time = start_time
 
         # initialize the file - in case we need to overwrite it
-        with open(self.filename, 'w') as f:
+        with open(self.filename, "w") as f:
             f.write("")
 
         # flag for handling how long it takes to start up the video
@@ -42,7 +44,7 @@ class BeliefFile:
 
     def _add_row_to_file(self, row: str) -> None:
         # append the row to the file
-        with open(self.filename, 'a') as f:
+        with open(self.filename, "a") as f:
             f.write(row)
 
     def _add_rows(self, conf_array: list, ctime: float) -> None:
@@ -55,7 +57,9 @@ class BeliefFile:
         # add the rows
         for step in self.labels:
             _row = row + f",{step},{self.running_state[step]},"
-            _row = _row + f"{conf_array[int(step)]},{ctime}\n"  # _row = _row + f"{conf_array[int(step)]:0.8f},{ctime:0.8f}\n"
+            _row = (
+                _row + f"{conf_array[int(step)]},{ctime}\n"
+            )  # _row = _row + f"{conf_array[int(step)]:0.8f},{ctime:0.8f}\n"
             self._add_row_to_file(_row)
 
     def final_step_done(self) -> None:
@@ -65,12 +69,16 @@ class BeliefFile:
         # set the final step
         self.running_state[self.labels[-1]] = BState().done
 
-    def update_values(self, current_step: float, conf_array: list, current_time: int) -> None:
+    def update_values(
+        self, current_step: float, conf_array: list, current_time: int
+    ) -> None:
         """
         When you provide an update, this method will update internal state
         and trigger a write to the file.
         """
-        curr_time = float(current_time - self.start_time) * 1e-9  # get seconds from nano
+        curr_time = (
+            float(current_time - self.start_time) * 1e-9
+        )  # get seconds from nano
 
         # correction of the starting time if we notice that the first
         # time difference is too large

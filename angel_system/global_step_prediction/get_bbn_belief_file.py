@@ -20,12 +20,15 @@ threshold_frame_count = 3
 threshold_frame_count_weak = 8
 deactivate_thresh_frame_count = 8
 
+
 def get_belief_file(
     coco_ds: kwcoco.CocoDataset,
     medical_task="r18",
     code_dir=Path("."),
     out_file=Path("./belief_file.csv"),
-    model_file=Path("./model_files/task_monitor/global_step_predictor_act_avgs_R18.npy"),
+    model_file=Path(
+        "./model_files/task_monitor/global_step_predictor_act_avgs_R18.npy"
+    ),
 ) -> None:
     """
     Run the inference and create the belief file.
@@ -79,7 +82,7 @@ def get_belief_file(
 
         # get the frame_index from the images
         ftimes = annots_images.images().lookup("frame_index")
-        #print(ftimes)
+        # print(ftimes)
 
         step_mode = "granular"
         for i, conf_array in enumerate(activity_confs):
