@@ -957,26 +957,33 @@ class GlobalStepPredictor:
         Output form: TP, FP, FN, where each is an N-dimensional vector, where
         N = number of step classes.
         """
-        step_gts = [float(i) for i in step_gts][24:]
         assert len(self.trackers) == 1
         for i, tracker in enumerate(self.trackers):
             #import ipdb; ipdb.set_trace()
             step_predictions = tracker["granular_step_prediction_history"]
-            if len(step_predictions) * 1.8 < len(step_gts):
-                # This must be a 30Hz video, not 15Hz. Take every other GT frame.
-                step_gts = [a for ind, a in enumerate(step_gts) if i%2==0]
         TP = np.zeros(len(self.avg_probs))
         FP = np.zeros(len(self.avg_probs))
         FN = np.zeros(len(self.avg_probs))
         for ind in range(len(self.avg_probs)):
             # i = the index we'll get TP, FN, and FP for.
-            _TP = len([a for j, a in enumerate(step_predictions) if a == ind and step_gts[j] == ind])
+            _TP = len([a for j, a in enumerate(step_predictions[:len(step_gts)]) if a == ind and step_gts[j] == ind])
             TP[ind] = _TP
-            _FP = len([a for j, a in enumerate(step_predictions) if a == ind and step_gts[j] != ind])
+            _FP = len([a for j, a in enumerate(step_predictions[:len(step_gts)]) if a == ind and step_gts[j] != ind])
             FP[ind] = _FP
-            _FN = len([a for j, a in enumerate(step_predictions) if a != ind and step_gts[j] == ind])
+            _FN = len([a for j, a in enumerate(step_predictions[:len(step_gts)]) if a != ind and step_gts[j] == ind])
             FN[ind] = _FN
         return TP, FP, FN
+    def get_single_tracker_pred_history(self):
+        """
+        Get a single tracker's prediction history.
+        For now, this is only functional in the case of a single tracker instance
+        being initialized.
+
+        Output:
+        - list: prediction history. Length = number of frames processed.
+        """
+        assert len(self.trackers) == 1
+        return self.trackers[0]["granular_step_prediction_history"]
 
     def sanitize_str(self, str_: str):
         """
