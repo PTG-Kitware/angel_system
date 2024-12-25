@@ -260,7 +260,6 @@ yolo_v11_inference_objects \
   --obj-img-size 640 \
   -e hands \
   --model-device cuda:0 \
-  --trensorrt \
   --conf-thresh 0.307 \
   --save-img m5_xstat-object_detections-v11_images \
   --save-vid
