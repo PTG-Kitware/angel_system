@@ -9,6 +9,7 @@ import click
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.metrics import confusion_matrix
+import math
 
 from angel_system.global_step_prediction.global_step_predictor import (
     GlobalStepPredictor,
@@ -34,6 +35,7 @@ def run_inference_all_vids(
     preds, gt = [], []
     avg_smd, avg_smd_normd = np.array([]), np.array([])
     mean_F1s = np.array([])
+    tasks_completed = np.array([])
     for vid_id in all_vid_ids:
         print(f"vid_id {vid_id}===========================")
 
@@ -142,10 +144,12 @@ def run_inference_all_vids(
         mean_F1s = np.append(mean_F1s, mean_F1)
 
         pred_history = step_predictor.get_single_tracker_pred_history()
-        smds, smds_normd = get_start_moment_distances(pred_history, activity_gt_maxes)
+        smds, smds_normd, task_completed = get_start_moment_distances(pred_history, activity_gt_maxes)
+        tasks_completed = np.append(tasks_completed, task_completed)
 
-        avg_smd = np.append(avg_smd, np.mean(smds))
-        avg_smd_normd = np.append(avg_smd_normd, np.mean(smds_normd))
+        if not math.isnan(compute_mean_smd(smds)):
+            avg_smd = np.append(avg_smd, compute_mean_smd(smds))
+            avg_smd_normd = np.append(avg_smd_normd, compute_mean_smd(smds_normd))
 
         print(f"smds (# frames): {smds}, normalized:{smds_normd}")
         try:
@@ -161,6 +165,7 @@ def run_inference_all_vids(
         )
     print("########## OVERALL")
     print(f"Overall average smd: {np.mean(avg_smd)}. Normalized: {np.mean(avg_smd_normd)}")
+    print(f"tasks completed: {np.sum(tasks_completed)} / {len(tasks_completed)}")
     print(f"overall mean F1: {np.mean(mean_F1s)}")
 
 def get_start_moment_distances(pred_history, activity_gt_maxes):
@@ -175,14 +180,26 @@ def get_start_moment_distances(pred_history, activity_gt_maxes):
     vid_length = len(activity_gt_maxes)
     smds = np.zeros(num_classes)
     smds_normd = np.zeros(num_classes)
+    task_completed = 1
     for i in range(num_classes):
         if i+1 in pred_history:
             smds[i] = abs(np.where(pred_history == i+1)[0][0] - activity_gt_maxes.index(i+1))
             smds_normd[i] = smds[i] / vid_length
         else:
-            smds[i] = vid_length
-            smds_normd[i] = 1
-    return smds, smds_normd
+            smds[i] = -1
+            smds_normd[i] = -1
+            if i+1 == num_classes:
+                task_completed = 0
+    return smds, smds_normd, task_completed
+
+def compute_mean_smd(smd_array):
+    """
+    Compute mean starting moment difference. If a task was not completed,
+    the incomplete steps are not factored in here.
+    """
+
+    mask = smd_array >= 0
+    return np.mean(smd_array[mask])
 
 
 def compute_class_f1s_and_mean_f1(TP,FP,FN):
