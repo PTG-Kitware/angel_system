@@ -8,7 +8,7 @@ from angel_system.utils.event import WaitAndClearEvent
 from angel_utils.conversion import time_to_float, time_to_int
 from builtin_interfaces.msg import Time
 
-from angel_msgs.msg import ObjectDetection2dSet, HandJointPosesUpdate, ActivityDetection
+from angel_msgs.msg import ObjectDetection2dSet, HandJointPosesUpdate, ActivityDetection, TaskUpdate
 from angel_utils import (
     declare_and_get_parameters,
     RateTracker,  # DYNAMIC_TYPE
@@ -44,6 +44,7 @@ class LatencyTracker(Node):
                 # If we should enable additional logging to the info level
                 # about when we receive and process data.
                 ("enable_time_trace_logging", False),
+                ("gsp_topic", "TaskUpdates"),
             ],
         )
         self._image_md_topic = param_values["image_md_topic"]
@@ -51,6 +52,7 @@ class LatencyTracker(Node):
         self._pose_topic = param_values["pose_topic"]
         self._act_topic = param_values["activity_topic"]
         self._latency_topic = param_values["latency_topic"]
+        self._gsp_topic = param_values["gsp_topic"]
 
         self._enable_trace_logging = param_values["enable_time_trace_logging"]
 
@@ -64,12 +66,14 @@ class LatencyTracker(Node):
         self._cur_pose_msg_lock = Lock()
         self._cur_act_msg_lock = Lock()
         self._image_lookup_lock = Lock()
+        self._task_msg_lock = Lock()
 
         self._rate_tracker = RateTracker()
 
         self._det = None
         self._pose = None
         self._act = None
+        self._task = None
         self._image_lookup = {}
 
         ##########################################
@@ -100,6 +104,13 @@ class LatencyTracker(Node):
             ActivityDetection,
             self._act_topic,
             self.act_callback,
+            1,
+            callback_group=MutuallyExclusiveCallbackGroup(),
+        )
+        self._task_subscriber = self.create_subscription(
+            TaskUpdate,
+            self._gsp_topic,
+            self.task_callback,
             1,
             callback_group=MutuallyExclusiveCallbackGroup(),
         )
@@ -188,19 +199,31 @@ class LatencyTracker(Node):
                     if img_time is not None:
                         act_lat_end = act_time - time_to_float(img_time)
 
+                task_lat = None
+                if self._task:
+                    with self._task_msg_lock:
+                        task_msg = self._task
+                    task_time = time_to_float(task_msg.header.stamp)
+                    img_time = self.get_msg_time_from_source(task_msg.latest_sensor_input_time)
+                    if img_time is not None:
+                        task_lat = task_time - time_to_float(img_time)
+
                 # save the info to the message
                 data = {
                     "detection": det_lat,
                     "pose:": pose_lat,
                     "activity_start": act_lat_start,
                     "activity_end": act_lat_end,
+                    "task": task_lat,
                 }
                 det_str = f"{det_lat:.3f}" if det_lat else "NA"
                 pose_str = f"{pose_lat:.3f}" if pose_lat else "NA"
                 acts_str = f"{act_lat_start:.3f}" if act_lat_start else "NA"
                 acte_str = f"{act_lat_end:.3f}" if act_lat_end else "NA"
+                task_str = f"{task_lat:.3f}" if task_lat else "NA"
                 log.info(
                     f"Detection: {det_str}, Pose: {pose_str}, Activity.start: {acts_str}, Activity.end: {acte_str}"
+                    f", Task monitor: {task_str}"
                 )
                 msg.data = json.dumps(data, indent=0)
 
@@ -232,6 +255,10 @@ class LatencyTracker(Node):
     def act_callback(self, msg: ActivityDetection) -> None:
         with self._cur_act_msg_lock:
             self._act = msg
+
+    def task_callback(self, msg: TaskUpdate) -> None:
+        with self._task_msg_lock:
+            self._task = msg
 
     def get_msg_time_from_source(self, source_stamp: Time) -> Time:
         with self._image_lookup_lock:
