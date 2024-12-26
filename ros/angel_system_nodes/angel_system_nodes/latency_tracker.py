@@ -8,7 +8,12 @@ from angel_system.utils.event import WaitAndClearEvent
 from angel_utils.conversion import time_to_float, time_to_int
 from builtin_interfaces.msg import Time
 
-from angel_msgs.msg import ObjectDetection2dSet, HandJointPosesUpdate, ActivityDetection, TaskUpdate
+from angel_msgs.msg import (
+    ObjectDetection2dSet,
+    HandJointPosesUpdate,
+    ActivityDetection,
+    TaskUpdate,
+)
 from angel_utils import (
     declare_and_get_parameters,
     RateTracker,  # DYNAMIC_TYPE
@@ -204,7 +209,9 @@ class LatencyTracker(Node):
                     with self._task_msg_lock:
                         task_msg = self._task
                     task_time = time_to_float(task_msg.header.stamp)
-                    img_time = self.get_msg_time_from_source(task_msg.latest_sensor_input_time)
+                    img_time = self.get_msg_time_from_source(
+                        task_msg.latest_sensor_input_time
+                    )
                     if img_time is not None:
                         task_lat = task_time - time_to_float(img_time)
 
