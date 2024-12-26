@@ -949,6 +949,61 @@ class GlobalStepPredictor:
         fig.savefig(f"./outputs/{title}")
         plt.close()
 
+    def save_TP_FP_FN_per_class(self, step_gts):
+        """
+        Given the ground truth and predicted steps, return TP/FP/FN frame counts
+        for each class
+
+        Output form: TP, FP, FN, where each is an N-dimensional vector, where
+        N = number of step classes.
+        """
+        assert len(self.trackers) == 1
+        for i, tracker in enumerate(self.trackers):
+            # import ipdb; ipdb.set_trace()
+            step_predictions = tracker["granular_step_prediction_history"]
+        TP = np.zeros(len(self.avg_probs))
+        FP = np.zeros(len(self.avg_probs))
+        FN = np.zeros(len(self.avg_probs))
+        for ind in range(len(self.avg_probs)):
+            # i = the index we'll get TP, FN, and FP for.
+            _TP = len(
+                [
+                    a
+                    for j, a in enumerate(step_predictions[: len(step_gts)])
+                    if a == ind and step_gts[j] == ind
+                ]
+            )
+            TP[ind] = _TP
+            _FP = len(
+                [
+                    a
+                    for j, a in enumerate(step_predictions[: len(step_gts)])
+                    if a == ind and step_gts[j] != ind
+                ]
+            )
+            FP[ind] = _FP
+            _FN = len(
+                [
+                    a
+                    for j, a in enumerate(step_predictions[: len(step_gts)])
+                    if a != ind and step_gts[j] == ind
+                ]
+            )
+            FN[ind] = _FN
+        return TP, FP, FN
+
+    def get_single_tracker_pred_history(self):
+        """
+        Get a single tracker's prediction history.
+        For now, this is only functional in the case of a single tracker instance
+        being initialized.
+
+        Output:
+        - list: prediction history. Length = number of frames processed.
+        """
+        assert len(self.trackers) == 1
+        return self.trackers[0]["granular_step_prediction_history"]
+
     def sanitize_str(self, str_: str):
         """
         Convert string to lowercase and emove trailing whitespace and period.
