@@ -959,20 +959,39 @@ class GlobalStepPredictor:
         """
         assert len(self.trackers) == 1
         for i, tracker in enumerate(self.trackers):
-            #import ipdb; ipdb.set_trace()
+            # import ipdb; ipdb.set_trace()
             step_predictions = tracker["granular_step_prediction_history"]
         TP = np.zeros(len(self.avg_probs))
         FP = np.zeros(len(self.avg_probs))
         FN = np.zeros(len(self.avg_probs))
         for ind in range(len(self.avg_probs)):
             # i = the index we'll get TP, FN, and FP for.
-            _TP = len([a for j, a in enumerate(step_predictions[:len(step_gts)]) if a == ind and step_gts[j] == ind])
+            _TP = len(
+                [
+                    a
+                    for j, a in enumerate(step_predictions[: len(step_gts)])
+                    if a == ind and step_gts[j] == ind
+                ]
+            )
             TP[ind] = _TP
-            _FP = len([a for j, a in enumerate(step_predictions[:len(step_gts)]) if a == ind and step_gts[j] != ind])
+            _FP = len(
+                [
+                    a
+                    for j, a in enumerate(step_predictions[: len(step_gts)])
+                    if a == ind and step_gts[j] != ind
+                ]
+            )
             FP[ind] = _FP
-            _FN = len([a for j, a in enumerate(step_predictions[:len(step_gts)]) if a != ind and step_gts[j] == ind])
+            _FN = len(
+                [
+                    a
+                    for j, a in enumerate(step_predictions[: len(step_gts)])
+                    if a != ind and step_gts[j] == ind
+                ]
+            )
             FN[ind] = _FN
         return TP, FP, FN
+
     def get_single_tracker_pred_history(self):
         """
         Get a single tracker's prediction history.

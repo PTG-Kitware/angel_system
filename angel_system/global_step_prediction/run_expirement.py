@@ -42,7 +42,7 @@ def run_inference_all_vids(
         act_path = code_dir / "config/activity_labels/medical" / f"{medical_task}.yaml"
 
         # Get framerate
-        framerate = round(coco_test.videos(video_ids=[vid_id]).peek()['framerate'])
+        framerate = round(coco_test.videos(video_ids=[vid_id]).peek()["framerate"])
         # Assuming FR = 15 or 30
         assert framerate in [15, 30], f"framerate rounded to {framerate}"
 
@@ -56,7 +56,7 @@ def run_inference_all_vids(
                 / f"{medical_task}.yaml"
             },
             threshold_multiplier=0.6,
-            threshold_frame_count=5
+            threshold_frame_count=5,
         )
 
         if avg_probs is not None:
@@ -89,11 +89,10 @@ def run_inference_all_vids(
         if framerate == 30:
             # This must be a 30Hz video, not 15Hz. Take every other GT frame.
             print(f"halve gt for {vid_id}. Len = {len(activity_gts)}")
-            activity_gts = [a for ind, a in enumerate(activity_gts) if ind%2==0]
+            activity_gts = [a for ind, a in enumerate(activity_gts) if ind % 2 == 0]
             print(f"new len = {len(activity_gts)}")
         # ...and cut out the first 25 frames.
         activity_gts = activity_gts[25:]
-
 
         def get_unique(activity_ids):
             """
@@ -130,7 +129,7 @@ def run_inference_all_vids(
             activity_gt_maxes[ind] = max(activity_gts[:ind])
 
         _TP, _FP, _FN = step_predictor.save_TP_FP_FN_per_class(activity_gt_maxes)
-        if 'TP' in locals():
+        if "TP" in locals():
             TP += _TP
             FP += _FP
             FN += _FN
@@ -138,13 +137,15 @@ def run_inference_all_vids(
             TP = _TP
             FP = _FP
             FN = _FN
-        class_F1s, mean_F1 = compute_class_f1s_and_mean_f1(TP,FP,FN)
+        class_F1s, mean_F1 = compute_class_f1s_and_mean_f1(TP, FP, FN)
         print(f"class-wise F1s: {class_F1s}\nmean F1: {mean_F1}")
 
         mean_F1s = np.append(mean_F1s, mean_F1)
 
         pred_history = step_predictor.get_single_tracker_pred_history()
-        smds, smds_normd, task_completed = get_start_moment_distances(pred_history, activity_gt_maxes)
+        smds, smds_normd, task_completed = get_start_moment_distances(
+            pred_history, activity_gt_maxes
+        )
         tasks_completed = np.append(tasks_completed, task_completed)
 
         if not math.isnan(compute_mean_smd(smds)):
@@ -155,7 +156,9 @@ def run_inference_all_vids(
         try:
             print(f"avg frame-wise smd:{avg_smd[-1]}, normalized: {avg_smd_normd[-1]}")
         except:
-            import ipdb; ipdb.set_trace()
+            import ipdb
+
+            ipdb.set_trace()
 
         _ = step_predictor.plot_gt_vs_predicted_one_recipe(
             activity_gts,
@@ -164,9 +167,12 @@ def run_inference_all_vids(
             granular_or_broad="granular",
         )
     print("########## OVERALL")
-    print(f"Overall average smd: {np.mean(avg_smd)}. Normalized: {np.mean(avg_smd_normd)}")
+    print(
+        f"Overall average smd: {np.mean(avg_smd)}. Normalized: {np.mean(avg_smd_normd)}"
+    )
     print(f"tasks completed: {np.sum(tasks_completed)} / {len(tasks_completed)}")
     print(f"overall mean F1: {np.mean(mean_F1s)}")
+
 
 def get_start_moment_distances(pred_history, activity_gt_maxes):
     """
@@ -174,7 +180,7 @@ def get_start_moment_distances(pred_history, activity_gt_maxes):
     each step.
 
     Outputs:
-    - smds: list of length equal to number 
+    - smds: list of length equal to number
     """
     num_classes = max(activity_gt_maxes)
     vid_length = len(activity_gt_maxes)
@@ -182,15 +188,18 @@ def get_start_moment_distances(pred_history, activity_gt_maxes):
     smds_normd = np.zeros(num_classes)
     task_completed = 1
     for i in range(num_classes):
-        if i+1 in pred_history:
-            smds[i] = abs(np.where(pred_history == i+1)[0][0] - activity_gt_maxes.index(i+1))
+        if i + 1 in pred_history:
+            smds[i] = abs(
+                np.where(pred_history == i + 1)[0][0] - activity_gt_maxes.index(i + 1)
+            )
             smds_normd[i] = smds[i] / vid_length
         else:
             smds[i] = -1
             smds_normd[i] = -1
-            if i+1 == num_classes:
+            if i + 1 == num_classes:
                 task_completed = 0
     return smds, smds_normd, task_completed
+
 
 def compute_mean_smd(smd_array):
     """
@@ -202,14 +211,17 @@ def compute_mean_smd(smd_array):
     return np.mean(smd_array[mask])
 
 
-def compute_class_f1s_and_mean_f1(TP,FP,FN):
+def compute_class_f1s_and_mean_f1(TP, FP, FN):
     F1s = np.zeros(len(TP))
     # class-wise F1s:
     for i in range(len(TP)):
-        F1s[i] = 2*TP[i] / (2*TP[i] + FP[i] + FN[i])
+        F1s[i] = 2 * TP[i] / (2 * TP[i] + FP[i] + FN[i])
     # mean F1
-    mean_F1 = 2*np.sum(TP[:-1]) / (2*np.sum(TP[:-1]) + np.sum(FP[:-1]) + np.sum(FN[:-1]))
+    mean_F1 = (
+        2 * np.sum(TP[:-1]) / (2 * np.sum(TP[:-1]) + np.sum(FP[:-1]) + np.sum(FN[:-1]))
+    )
     return F1s, mean_F1
+
 
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})
 @click.argument(
