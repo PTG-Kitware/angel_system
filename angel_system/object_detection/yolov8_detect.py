@@ -1,15 +1,30 @@
-import numpy as np
+from typing import Optional
 
+import numpy as np
 from ultralytics import YOLO as YOLOv8
 
 
-def predict_hands(hand_model: YOLOv8, img0: np.array, device: str, imgsz: int) -> tuple:
+def predict_hands(
+    hand_model: YOLOv8,
+    img0: np.array,
+    device: str,
+    **kwargs,
+) -> tuple:
     """Predict hands using a YOLOv8 hand model and update the labels to be
     hand(left) and hand(right)
+
+    Boxes returned are in xyxy format (upper-left, lower-right).
+
+    Any additional keyword arguments provided will be passed to the
+    `YOLO.predict` method.
     """
     width, height = img0.shape[:2]
     hands_preds = hand_model.predict(
-        source=img0, conf=0.1, imgsz=imgsz, device=device, verbose=False
+        conf=0.1,
+        **kwargs,
+        source=img0,
+        device=device,
+        verbose=False,
     )[
         0
     ]  # list of length=num images
