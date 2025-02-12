@@ -1,0 +1,23 @@
+version: "1"
+title: "Wound Packing"
+labels:
+  # Item:
+  # - id: Integer identification number of the label.
+  # - label: Short human-readable semantic string to succinctly represent the
+  #          label.
+  - id: 0
+    label: "background"
+    full_str: "background"
+    activity_ids: [0]
+  - id: 1
+    label: "apply-pressure"
+    full_str: "Apply direct hand pressure to the wound."
+    activity_ids: [1]
+  - id: 2
+    label: "open-pack"
+    full_str: "Open gauze packaging."
+    activity_ids: [2]
+  - id: 3
+    label: "apply-dress-w-pressure"
+    full_str: "Pack the wound."
+    activity_ids: [3]
