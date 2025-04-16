@@ -130,7 +130,7 @@ class BagConverter(Node):
             .string_value
         )
         self.pv_image_frame_id = (
-            self.declare_parameter("pv_image_frame_id", "PVFramesBGR")
+            self.declare_parameter("pv_image_frame_id", "/kitware/pv_image_detections_2d")#"PVFramesBGR")
             .get_parameter_value()
             .string_value
         )
@@ -146,8 +146,11 @@ class BagConverter(Node):
         self.msg_type_to_handler_map = {}
         if self.extract_audio:
             self.msg_type_to_handler_map[HeadsetAudioData] = self.handle_audio_msg
-        if self.extract_images or self.extract_depth_images:
-            self.msg_type_to_handler_map[Image] = self.handle_image_msg
+        self.log.info(f"---------- images: {self.extract_images}")
+        #if self.extract_images or self.extract_depth_images:
+
+        self.msg_type_to_handler_map[Image] = self.handle_image_msg
+
         if self.extract_eye_gaze_data:
             self.msg_type_to_handler_map[EyeGazeData] = self.handle_eye_gaze_msg
         if self.extract_head_pose_data or self.extract_depth_head_pose_data:
@@ -259,7 +262,7 @@ class BagConverter(Node):
             self.num_total_msgs += 1
 
             if (self.num_total_msgs % 100) == 0:
-                self.log.info(f"Parsing message: {self.num_total_msgs}")
+                self.log.info(f"Parsing message: {self.num_total_msgs} type: {type(msg)}")
 
             # Attempt to call the message handler for this message type
             try:
@@ -561,7 +564,8 @@ class BagConverter(Node):
         Converts the PV images to RGB and saves them to disk.
         Converts the depth images to 16-bit grayscale and saves them to disk.
         """
-        if msg.encoding in ["nv12", "rgb8", "bgr8"] and self.extract_images:
+        print(f"Image message received: {msg.encoding}")
+        if msg.encoding in ["nv12", "rgb8", "rgba8", "bgr8"]: # and self.extract_images:
             self.num_image_msgs += 1
 
             if msg.encoding == "nv12":
@@ -569,6 +573,9 @@ class BagConverter(Node):
                 rgb_image = convert_nv12_to_rgb(msg.data, msg.height, msg.width)
             else:
                 rgb_image = bridge.imgmsg_to_cv2(msg, msg.encoding)
+
+            if "rgb" in msg.encoding:
+                rgb_image = cv2.cvtColor(rgb_image, cv2.COLOR_BGRA2RGBA)
 
             # Save image to disk
             timestamp_str = (

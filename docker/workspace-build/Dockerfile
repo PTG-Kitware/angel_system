@@ -55,31 +55,31 @@ RUN echo "source /etc/bash_completion" >> ~/.bashrc \
 
 ## Acquire and install NVIDIA CUDA 12.5
 ## * This is required for the ZED SDK installation.
-#RUN --mount=type=cache,target=/root/nvidia,sharing=locked \
-#    wget https://developer.download.nvidia.com/compute/cuda/12.5.0/local_installers/cuda_12.5.0_555.42.02_linux.run \
-#      --no-verbose -c -O /root/nvidia/cuda_12.5.0_555.42.02_linux.run \
-#  && chmod +x /root/nvidia/cuda_12.5.0_555.42.02_linux.run \
-#  && /root/nvidia/cuda_12.5.0_555.42.02_linux.run --silent --toolkit
-#ENV PATH=/usr/local/cuda-12.5/bin:${PATH}
-#ENV LD_LIBRARY_PATH=/usr/local/cuda-12.5/lib64:${LD_LIBRARY_PATH}
-#
+RUN --mount=type=cache,target=/root/nvidia,sharing=locked \
+    wget https://developer.download.nvidia.com/compute/cuda/12.5.0/local_installers/cuda_12.5.0_555.42.02_linux.run \
+      --no-verbose -c -O /root/nvidia/cuda_12.5.0_555.42.02_linux.run \
+  && chmod +x /root/nvidia/cuda_12.5.0_555.42.02_linux.run \
+  && /root/nvidia/cuda_12.5.0_555.42.02_linux.run --silent --toolkit
+ENV PATH=/usr/local/cuda-12.5/bin:${PATH}
+ENV LD_LIBRARY_PATH=/usr/local/cuda-12.5/lib64:${LD_LIBRARY_PATH}
+
 ## Install ZED SDK and dependencies.
 ## We are skipping the python installation here as the pacakge version has been
 ## manually deduced and added to our poetry configuration to allow for its
 ## depedencies to be resolved along side everything else we use.
-#RUN --mount=type=cache,target=/root/zed,sharing=locked \
-#    --mount=type=cache,target=/var/cache/apt,sharing=locked \
-#    --mount=type=cache,target=/var/lib/apt,sharing=locked \
-#    apt install zstd \
-# && wget https://download.stereolabs.com/zedsdk/4.1/cu121/ubuntu20 \
-#      --no-verbose -c -O /root/zed/ZED_SDK_Ubuntu20_cuda12.1_v4.1.2.zstd.run \
-# && chmod +x /root/zed/ZED_SDK_Ubuntu20_cuda12.1_v4.1.2.zstd.run \
-# && /root/zed/ZED_SDK_Ubuntu20_cuda12.1_v4.1.2.zstd.run \
-#    --quiet \
-#    --target /root/zed/install \
-#    -- \
-#    --silent \
-#    --skip_python
+RUN --mount=type=cache,target=/root/zed,sharing=locked \
+    --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt install zstd \
+ && wget https://download.stereolabs.com/zedsdk/4.1/cu121/ubuntu20 \
+      --no-verbose -c -O /root/zed/ZED_SDK_Ubuntu20_cuda12.1_v4.1.2.zstd.run \
+ && chmod +x /root/zed/ZED_SDK_Ubuntu20_cuda12.1_v4.1.2.zstd.run \
+ && /root/zed/ZED_SDK_Ubuntu20_cuda12.1_v4.1.2.zstd.run \
+    --quiet \
+    --target /root/zed/install \
+    -- \
+    --silent \
+    --skip_python
 
 # For the demo-ui
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \

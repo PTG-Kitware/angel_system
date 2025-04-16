@@ -119,6 +119,7 @@ windows:
       -p act_topic:=activity_topic
       -p pose_repeat_rate:=7.5
       -p window_leads_with_objects:=true
+      -p output_predictions_kwcoco:=${ANGEL_WORKSPACE_DIR}/stuff/activity_predictions.kwcoco
       -p model_device:=0
 
   - task_monitor:
